@@ -38,4 +38,5 @@ For any inquiries about this repository, please contact any of the team members 
 ## ⭐ Acknowledgment
 > “Once you learn to read, you will be forever free.”  
 > — Frederick Douglass
+
 This project is a product of our dedication and shared vision to help young learners grow through reading. We extend our sincere gratitude to the Technological University of the Philippines – Cavite Campus, our mentors, and the teachers and students of Salawag Elementary School for their guidance and inspiration. To our families and team members, thank you for your unwavering support and strength. May this system contribute, even in the smallest way, to a future where every child learns to read with confidence and purpose.
