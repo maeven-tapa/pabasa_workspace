@@ -1,5 +1,3 @@
-# pabasa_workspace
-
 ![TUP](https://img.shields.io/badge/TUP-Cavite-red?style=for-the-badge)
 ![BET-COET](https://img.shields.io/badge/BET--COET-green?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
@@ -13,10 +11,11 @@ Development of Guide Reading Evaluation System for Grade 2 Students in Salawag E
 
 ## 📚 About
 P.A.G.B.A.S.A is a web-based reading evaluation system designed to assist teachers in assessing and monitoring the reading literacy of Grade 2 students.
-The system utilizes speech recognition technology to evaluate:
-📊 Pronunciation Accuracy
-⏱️ Reading Speed
-🔍 Reading Clarity
+The system utilizes speech recognition technology to evaluate:  
+- 📊 Pronunciation Accuracy  
+- ⏱️ Reading Speed  
+- 🔍 Reading Clarity
+
 It provides automated feedback and performance reports, enabling data-driven decisions for remedial instruction.
 
 ## 👥 Team Members
