@@ -1,0 +1,38 @@
+<aside class="sidebar">
+    <div class="sidebar-top">
+        <div class="brand">
+            <span class="brand-mark">P</span>
+            <span class="brand-text">PABASA</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a class="nav-item" href="{% url 'dashboard' %}">
+            <img src="https://cdn-icons-png.flaticon.com/512/1828/1828765.png" alt="Dashboard">
+            <span>Dashboard</span>
+        </a>
+        <a class="nav-item" href="{% url 'courses' %}">
+            <img src="https://cdn-icons-png.flaticon.com/512/1828/1828874.png" alt="Courses">
+            <span>Courses</span>
+        </a>
+        <a class="nav-item" href="{% url 'calendar' %}">
+            <img src="https://cdn-icons-png.flaticon.com/512/747/747310.png" alt="Calendar">
+            <span>Calendar</span>
+        </a>
+        <a class="nav-item" href="{% url 'practice' %}">
+            <img src="https://cdn-icons-png.flaticon.com/512/2921/2921222.png" alt="Practice">
+            <span>Practice</span>
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-label="Toggle sidebar">
+            <img src="https://cdn-icons-png.flaticon.com/512/271/271220.png" alt="Toggle sidebar">
+            <span>Collapse</span>
+        </button>
+        <button class="account-button" type="button" data-account-open>
+            <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="Account">
+            <span>Account</span>
+        </button>
+    </div>
+</aside>

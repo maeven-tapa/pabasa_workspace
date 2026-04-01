@@ -1,0 +1,28 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Practice" page_date="April 2, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section class="practice">
+    <div class="practice-header">
+        <h2>Practice</h2>
+        <p>Choose what you want to work on today.</p>
+    </div>
+    <div class="practice-grid">
+        <article class="practice-card">
+            <h3>Word</h3>
+            <p>Short word drills to build confidence.</p>
+        </article>
+        <article class="practice-card">
+            <h3>Sentences</h3>
+            <p>Read and respond to guided sentences.</p>
+        </article>
+        <article class="practice-card">
+            <h3>Paragraphs</h3>
+            <p>Longer passages with fluency checks.</p>
+        </article>
+    </div>
+</section>
+{% endblock %}

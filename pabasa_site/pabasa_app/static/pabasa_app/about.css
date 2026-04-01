@@ -1,0 +1,235 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap");
+
+:root {
+    color-scheme: light;
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --panel: #f0efe9;
+    --ink: #1b1a17;
+    --accent: #1f6f8b;
+    --accent-strong: #155e75;
+    --accent-soft: #d9eef4;
+    --muted: #5f645f;
+    --shadow: 0 24px 50px rgba(27, 26, 23, 0.12);
+    --outline: rgba(27, 26, 23, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: radial-gradient(circle at top left, #ffffff 0%, var(--bg) 45%, #edf2f4 100%);
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(transparent 95%, rgba(27, 26, 23, 0.03) 100%),
+        linear-gradient(90deg, transparent 95%, rgba(27, 26, 23, 0.03) 100%);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: -1;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.page {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
+
+.site-header {
+    padding: 1.5rem clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 1rem 1.6rem;
+    box-shadow: var(--shadow);
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.4rem;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.nav-links a {
+    padding-bottom: 0.2rem;
+    border-bottom: 2px solid transparent;
+}
+
+.nav-links a:hover {
+    color: var(--ink);
+    border-color: var(--accent);
+}
+
+.nav-actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.site-main {
+    flex: 1;
+    padding: 0 clamp(1.5rem, 4vw, 3.5rem) 4rem;
+}
+
+.site-footer {
+    padding: 2rem clamp(1.5rem, 4vw, 3.5rem) 2.5rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.footer-meta {
+    font-size: 0.9rem;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-strong);
+    margin-bottom: 0.8rem;
+}
+
+.button-primary {
+    border: none;
+    border-radius: 999px;
+    padding: 0.75rem 1.6rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(31, 111, 139, 0.25);
+    transition: transform 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.button-primary:hover {
+    transform: translateY(-2px);
+}
+
+.about-hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.8rem;
+    padding: 2.5rem 0 2rem;
+}
+
+.about-card {
+    background: var(--surface);
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid var(--outline);
+    box-shadow: var(--shadow);
+}
+
+.about-card.accent {
+    background: var(--panel);
+}
+
+.team-list {
+    background: var(--surface);
+    padding: 2rem;
+    border-radius: 24px;
+    border: 1px solid var(--outline);
+    box-shadow: var(--shadow);
+    margin-bottom: 3rem;
+}
+
+.team-list h2 {
+    margin-top: 0;
+}
+
+.team-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.2rem;
+    margin-top: 1.2rem;
+}
+
+.team-card {
+    background: var(--panel);
+    border-radius: 20px;
+    padding: 1.4rem;
+    border: 1px solid var(--outline);
+    display: grid;
+    gap: 0.6rem;
+    text-align: center;
+}
+
+.team-photo {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(31, 111, 139, 0.15), rgba(21, 94, 117, 0.05));
+    border: 1px dashed rgba(21, 94, 117, 0.3);
+}
+
+.team-card h3 {
+    margin: 0.2rem 0 0;
+    font-size: 1rem;
+}
+
+.team-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 900px) {
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .nav-links {
+        flex-wrap: wrap;
+    }
+
+    .nav-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 600px) {
+    .nav-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+}

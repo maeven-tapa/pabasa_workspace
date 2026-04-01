@@ -1,0 +1,56 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Dashboard" page_date="April 2, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section class="timeline">
+    <div class="timeline-date">
+        <h2>Today · April 2</h2>
+    </div>
+    <div class="timeline-cards">
+        <article class="activity-card subject-design">
+            <div class="card-header">
+                <span class="subject">Software Design Lec</span>
+                <span class="badge submitted">Submitted</span>
+            </div>
+            <a class="card-link" href="#">Show 3 completed items</a>
+        </article>
+        <article class="activity-card subject-design">
+            <div class="card-header">
+                <span class="subject">Software Design Lab</span>
+                <span class="badge late">Late</span>
+            </div>
+            <a class="card-link" href="#">Show 1 completed item</a>
+        </article>
+        <article class="activity-card subject-research">
+            <div class="card-header">
+                <span class="subject">Technical Research</span>
+                <span class="badge submitted">Submitted</span>
+            </div>
+            <a class="card-link" href="#">Show 2 completed items</a>
+        </article>
+    </div>
+
+    <div class="timeline-date">
+        <h2>Yesterday · April 1</h2>
+    </div>
+    <div class="timeline-cards">
+        <article class="activity-card subject-reading">
+            <div class="card-header">
+                <span class="subject">Reading Fluency</span>
+                <span class="badge submitted">Submitted</span>
+            </div>
+            <a class="card-link" href="#">Show 4 completed items</a>
+        </article>
+        <article class="activity-card subject-writing">
+            <div class="card-header">
+                <span class="subject">Writing Workshop</span>
+                <span class="badge upcoming">Upcoming</span>
+            </div>
+            <a class="card-link" href="#">Show 1 completed item</a>
+        </article>
+    </div>
+</section>
+{% endblock %}

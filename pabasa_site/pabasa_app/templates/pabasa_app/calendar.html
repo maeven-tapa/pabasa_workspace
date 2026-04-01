@@ -1,0 +1,135 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Calendar" page_date="April 2, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section class="calendar">
+    <div class="calendar-top">
+        <div class="calendar-nav">
+            <button class="button-ghost" type="button">Today</button>
+            <div class="nav-arrows">
+                <button class="icon-button" type="button" aria-label="Previous month">&#8249;</button>
+                <button class="icon-button" type="button" aria-label="Next month">&#8250;</button>
+            </div>
+            <span class="calendar-label">April 2026</span>
+        </div>
+        <div class="calendar-actions">
+            <div class="view-switcher">
+                <button type="button">Week</button>
+                <button type="button" class="active">Month</button>
+                <button type="button">Agenda</button>
+            </div>
+            <button class="button-primary" type="button">+</button>
+        </div>
+    </div>
+
+    <div class="calendar-layout">
+        <div class="calendar-main">
+            <div class="calendar-weekdays">
+                <span>Sun</span>
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+            </div>
+            <div class="calendar-grid">
+                <div class="day-cell is-muted"><span class="day-number">29</span></div>
+                <div class="day-cell is-muted"><span class="day-number">30</span></div>
+                <div class="day-cell is-muted"><span class="day-number">31</span></div>
+                <div class="day-cell"><span class="day-number">1</span></div>
+                <div class="day-cell is-today"><span class="day-number">2</span></div>
+                <div class="day-cell"><span class="day-number">3</span></div>
+                <div class="day-cell"><span class="day-number">4</span></div>
+
+                <div class="day-cell"><span class="day-number">5</span></div>
+                <div class="day-cell"><span class="day-number">6</span></div>
+                <div class="day-cell"><span class="day-number">7</span></div>
+                <div class="day-cell"><span class="day-number">8</span></div>
+                <div class="day-cell"><span class="day-number">9</span></div>
+                <div class="day-cell"><span class="day-number">10</span></div>
+                <div class="day-cell"><span class="day-number">11</span></div>
+
+                <div class="day-cell"><span class="day-number">12</span></div>
+                <div class="day-cell"><span class="day-number">13</span></div>
+                <div class="day-cell"><span class="day-number">14</span></div>
+                <div class="day-cell"><span class="day-number">15</span></div>
+                <div class="day-cell"><span class="day-number">16</span></div>
+                <div class="day-cell"><span class="day-number">17</span></div>
+                <div class="day-cell"><span class="day-number">18</span></div>
+
+                <div class="day-cell"><span class="day-number">19</span></div>
+                <div class="day-cell"><span class="day-number">20</span></div>
+                <div class="day-cell"><span class="day-number">21</span></div>
+                <div class="day-cell"><span class="day-number">22</span></div>
+                <div class="day-cell"><span class="day-number">23</span></div>
+                <div class="day-cell"><span class="day-number">24</span></div>
+                <div class="day-cell"><span class="day-number">25</span></div>
+
+                <div class="day-cell"><span class="day-number">26</span></div>
+                <div class="day-cell"><span class="day-number">27</span></div>
+                <div class="day-cell"><span class="day-number">28</span></div>
+                <div class="day-cell"><span class="day-number">29</span></div>
+                <div class="day-cell"><span class="day-number">30</span></div>
+                <div class="day-cell is-muted"><span class="day-number">1</span></div>
+                <div class="day-cell is-muted"><span class="day-number">2</span></div>
+            </div>
+        </div>
+
+        <aside class="calendar-sidebar">
+            <div class="mini-calendar">
+                <div class="mini-header">
+                    <span>April 2026</span>
+                    <div class="nav-arrows">
+                        <button class="icon-button" type="button" aria-label="Previous month">&#8249;</button>
+                        <button class="icon-button" type="button" aria-label="Next month">&#8250;</button>
+                    </div>
+                </div>
+                <div class="mini-grid">
+                    <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                    <span class="mini-muted">29</span><span class="mini-muted">30</span><span class="mini-muted">31</span>
+                    <span>1</span><span class="mini-today">2</span><span>3</span><span>4</span>
+                    <span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span>
+                    <span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+                    <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+                    <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span class="mini-muted">1</span><span class="mini-muted">2</span>
+                </div>
+            </div>
+
+            <div class="calendar-list">
+                <div class="list-header">
+                    <h3>Calendars</h3>
+                </div>
+                <div class="list-item">
+                    <span class="color-dot teal"></span>
+                    <span>Logic Circuits and Switching Theory</span>
+                    <button class="icon-button" type="button">...</button>
+                </div>
+                <div class="list-item">
+                    <span class="color-dot blue"></span>
+                    <span>Software Design Lab</span>
+                    <button class="icon-button" type="button">...</button>
+                </div>
+                <div class="list-item">
+                    <span class="color-dot purple"></span>
+                    <span>Technical Research</span>
+                    <button class="icon-button" type="button">...</button>
+                </div>
+            </div>
+
+            <div class="calendar-section">
+                <h3>Undated</h3>
+                <p>No undated events</p>
+            </div>
+
+            <div class="calendar-section">
+                <h3>Calendar Feed</h3>
+                <button class="button-ghost" type="button">Import or Sync</button>
+            </div>
+        </aside>
+    </div>
+</section>
+{% endblock %}

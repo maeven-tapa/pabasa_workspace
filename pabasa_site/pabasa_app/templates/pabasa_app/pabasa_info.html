@@ -1,0 +1,35 @@
+{% extends "pabasa_app/base.html" %}
+{% load static %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'pabasa_app/pabasa_info.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="info-hero">
+    <div class="info-card">
+        <p class="eyebrow">What is PABASA</p>
+        <h1>Program for Automated Basic Reading and Speech Assessment</h1>
+        <p>PABASA helps teachers and learners track fluency with automated reading checks, speech feedback, and clear next steps.</p>
+    </div>
+    <div class="info-card highlight">
+        <h2>Why it matters</h2>
+        <p>Turn assessment into a guided experience so students can practice with confidence while teachers get instant insights.</p>
+    </div>
+</section>
+
+<section class="info-grid">
+    <article>
+        <h3>Automated checks</h3>
+        <p>Capture reading accuracy and speed with structured passages.</p>
+    </article>
+    <article>
+        <h3>Speech feedback</h3>
+        <p>Provide pronunciation hints and supportive prompts.</p>
+    </article>
+    <article>
+        <h3>Actionable reports</h3>
+        <p>Summaries that highlight strengths and next practice targets.</p>
+    </article>
+</section>
+{% endblock %}

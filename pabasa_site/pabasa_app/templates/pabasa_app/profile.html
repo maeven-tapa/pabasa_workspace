@@ -1,0 +1,65 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Profile" page_date="April 2, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section class="profile">
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="profile-avatar">MT</div>
+            <div>
+                <h2>Maeven Tapa</h2>
+                <p>Student · Grade 10</p>
+            </div>
+            <button class="button-primary" type="button">Edit Profile</button>
+        </div>
+        <div class="profile-grid">
+            <div class="profile-section">
+                <h3>Account Details</h3>
+                <div class="profile-fields">
+                    <label class="profile-field">
+                        <span>Full name</span>
+                        <input type="text" value="Maeven Tapa" disabled>
+                    </label>
+                    <label class="profile-field">
+                        <span>Email</span>
+                        <input type="email" value="maeven.tapa@example.com" disabled>
+                    </label>
+                    <label class="profile-field">
+                        <span>Username</span>
+                        <input type="text" value="maeventapa" disabled>
+                    </label>
+                    <label class="profile-field">
+                        <span>Join code</span>
+                        <input type="text" value="AB12-C3" disabled>
+                    </label>
+                </div>
+            </div>
+            <div class="profile-section">
+                <h3>Preferences</h3>
+                <div class="profile-fields">
+                    <label class="profile-field">
+                        <span>Language</span>
+                        <input type="text" value="English" disabled>
+                    </label>
+                    <label class="profile-field">
+                        <span>Notifications</span>
+                        <input type="text" value="Enabled" disabled>
+                    </label>
+                    <label class="profile-field">
+                        <span>Theme</span>
+                        <input type="text" value="Light" disabled>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="profile-actions">
+            <button class="button-primary" type="button">Save Changes</button>
+            <button class="button-ghost" type="button">Change Password</button>
+            <button class="button-ghost" type="button">Update Email</button>
+        </div>
+    </div>
+</section>
+{% endblock %}

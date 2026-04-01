@@ -1,0 +1,33 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Notifications" page_date="April 2, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section class="notifications">
+    <div class="notifications-card">
+        <h2>Notifications</h2>
+        <p>Control how you receive updates from PABASA.</p>
+        <div class="notification-list">
+            <label class="toggle-row">
+                <span>Assignment reminders</span>
+                <input type="checkbox" checked>
+            </label>
+            <label class="toggle-row">
+                <span>Teacher feedback alerts</span>
+                <input type="checkbox" checked>
+            </label>
+            <label class="toggle-row">
+                <span>Weekly progress summaries</span>
+                <input type="checkbox">
+            </label>
+            <label class="toggle-row">
+                <span>New practice content</span>
+                <input type="checkbox" checked>
+            </label>
+        </div>
+        <button class="button-primary" type="button">Save Preferences</button>
+    </div>
+</section>
+{% endblock %}

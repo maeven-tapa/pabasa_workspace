@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P.A.B.A.S.A</title>
+    {% block page_css %}{% endblock %}
+</head>
+<body>
+    <div class="page">
+        <header class="site-header">
+            <nav class="navbar">
+                <a class="logo" href="{% url 'home' %}">PABASA</a>
+                <div class="nav-actions">
+                    <div class="nav-links">
+                        <a href="{% url 'pabasa_info' %}">What is PABASA</a>
+                        <a href="{% url 'about' %}">About Us</a>
+                    </div>
+                    <a class="button-primary" href="{% url 'auth' %}">My Account</a>
+                </div>
+            </nav>
+        </header>
+        <main class="site-main">
+            {% block content %}{% endblock %}
+        </main>
+        <footer class="site-footer">
+            <div>
+                <strong>PABASA</strong> is the Program for Automated Basic Reading and Speech Assessment.
+            </div>
+            <div class="footer-meta">Canvas-inspired learning flows, built for clarity and speed.</div>
+        </footer>
+    </div>
+</body>
+</html>

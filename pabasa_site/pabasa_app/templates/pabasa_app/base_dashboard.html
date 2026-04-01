@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PABASA Dashboard</title>
+    <link rel="stylesheet" href="{% static 'pabasa_app/dashboard.css' %}">
+</head>
+<body class="dashboard">
+    <div class="dashboard-shell">
+        {% include "pabasa_app/partials/_sidebar.html" %}
+        <div class="dashboard-main">
+            {% block header %}
+                {% include "pabasa_app/partials/_header.html" with page_title="Dashboard" page_date="April 2, 2026" %}
+            {% endblock %}
+            <main class="dashboard-content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <div class="account-overlay" data-account-close></div>
+    <aside class="account-panel" aria-label="Account panel">
+        <div class="account-panel-header">
+            <h2>Account</h2>
+            <button class="icon-button" type="button" data-account-close aria-label="Close account panel">X</button>
+        </div>
+        <div class="account-panel-body">
+            <div class="account-profile">
+                <div class="account-avatar">MT</div>
+                <div>
+                    <h3>Maeven Tapa</h3>
+                    <p>Student</p>
+                </div>
+            </div>
+            <div class="account-actions">
+                <a class="panel-button" href="{% url 'profile' %}">Profile</a>
+                <a class="panel-button" href="{% url 'notifications' %}">Notifications</a>
+                <a class="panel-button" href="{% url 'settings' %}">Settings</a>
+            </div>
+            <a class="logout-link" href="{% url 'logout' %}">Logout</a>
+        </div>
+    </aside>
+    <script>
+        const toggleButton = document.querySelector("[data-sidebar-toggle]");
+        if (toggleButton) {
+            toggleButton.addEventListener("click", () => {
+                document.body.classList.toggle("sidebar-collapsed");
+            });
+        }
+        const accountOpen = document.querySelector("[data-account-open]");
+        const accountCloseButtons = document.querySelectorAll("[data-account-close]");
+
+        if (accountOpen) {
+            accountOpen.addEventListener("click", () => {
+                document.body.classList.add("account-open");
+            });
+        }
+
+        accountCloseButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                document.body.classList.remove("account-open");
+            });
+        });
+    </script>
+</body>
+</html>

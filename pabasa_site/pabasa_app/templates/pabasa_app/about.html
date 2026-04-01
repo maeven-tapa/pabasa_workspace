@@ -1,0 +1,56 @@
+{% extends "pabasa_app/base.html" %}
+{% load static %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'pabasa_app/about.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="about-hero">
+    <div class="about-card">
+        <p class="eyebrow">About Us</p>
+        <h1>Building reading confidence, one assessment at a time.</h1>
+        <p>We focus on accessible reading tools that keep students motivated and teachers informed.</p>
+    </div>
+    <div class="about-card accent">
+        <h2>Our Mission</h2>
+        <p>Support every learner with calm, structured assessment flows and clear feedback.</p>
+    </div>
+</section>
+
+<section class="team-list">
+    <h2>Meet the Team</h2>
+    <div class="team-cards">
+        <article class="team-card">
+            <div class="team-photo" aria-hidden="true"></div>
+            <h3>Leonardo Basco III</h3>
+            <p>Placeholder image</p>
+        </article>
+        <article class="team-card">
+            <div class="team-photo" aria-hidden="true"></div>
+            <h3>Lady Caroline Dorongon</h3>
+            <p>Placeholder image</p>
+        </article>
+        <article class="team-card">
+            <div class="team-photo" aria-hidden="true"></div>
+            <h3>Amiel John Padasay</h3>
+            <p>Placeholder image</p>
+        </article>
+        <article class="team-card">
+            <div class="team-photo" aria-hidden="true"></div>
+            <h3>Dona Palacios</h3>
+            <p>Placeholder image</p>
+        </article>
+        <article class="team-card">
+            <div class="team-photo" aria-hidden="true"></div>
+            <h3>Reyna Marie Santos</h3>
+            <p>Placeholder image</p>
+        </article>
+        <article class="team-card">
+            <div class="team-photo" aria-hidden="true"></div>
+            <h3>Maeven Tapa</h3>
+            <p>Placeholder image</p>
+        </article>
+    </div>
+</section>
+{% endblock %}

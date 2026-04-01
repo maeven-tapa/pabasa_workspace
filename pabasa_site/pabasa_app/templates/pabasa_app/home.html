@@ -1,9 +1,42 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>P.A.B.A.S.A</title>
-</head>
-<body>
-    <h1>Hello, Students!</h1>
-</body>
-</html>
+{% extends "pabasa_app/base.html" %}
+{% load static %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="hero-banner" id="top">
+    <div class="hero-content">
+        <p class="eyebrow">Platform for Automated Basic Reading and Speech Assessment</p>
+        <h1>Welcome to the most-visited education website in the world</h1>
+        <p>A modern, calm learning hub that helps teachers guide reading practice while students build confidence.</p>
+        <div class="actions">
+            <a class="button-primary" href="{% url 'pabasa_info' %}">See how</a>
+            <a class="button-secondary" href="{% url 'about' %}">Explore</a>
+        </div>
+    </div>
+    <div class="hero-media" aria-label="Students learning together"></div>
+</section>
+
+<section class="audience" id="audience">
+    <div class="audience-header">
+        <h2>Solutions by Audience</h2>
+        <p>Tailored experiences for every learner, classroom, and school leader.</p>
+    </div>
+    <div class="audience-grid">
+        <article class="audience-card">
+            <h3>Teachers</h3>
+            <p>Launch reading checks, track fluency, and get instant summaries with less paperwork.</p>
+        </article>
+        <article class="audience-card">
+            <h3>Students</h3>
+            <p>Practice with guided prompts and feedback that keep reading sessions confident and calm.</p>
+        </article>
+        <article class="audience-card">
+            <h3>Schools</h3>
+            <p>See progress across classes with consistent data and simple reporting tools.</p>
+        </article>
+    </div>
+</section>
+{% endblock %}

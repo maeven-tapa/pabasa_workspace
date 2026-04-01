@@ -4,7 +4,7 @@
 ![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
 
 # 📖 P.A.G.B.A.S.A
-Program for Automated Basic Reading and Speech Assessment
+Platform for Automated Basic Reading and Speech Assessment
 
 ## 📝 Research Title
 Development of Guide Reading Evaluation System for Grade 2 Students in Salawag Elementary School

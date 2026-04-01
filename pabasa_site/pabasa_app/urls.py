@@ -3,4 +3,18 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('auth/', views.auth, name='auth'),
+    path('signup/', views.signup, name='signup'),
+    path('signup/teacher/', views.teacher_signup, name='teacher_signup'),
+    path('signup/student/', views.student_signup, name='student_signup'),
+    path('dashboard/', views.dashboard, name='dashboard'),
+    path('dashboard/courses/', views.courses, name='courses'),
+    path('dashboard/calendar/', views.calendar, name='calendar'),
+    path('dashboard/settings/', views.settings, name='settings'),
+    path('dashboard/practice/', views.practice, name='practice'),
+    path('dashboard/profile/', views.profile, name='profile'),
+    path('dashboard/notifications/', views.notifications, name='notifications'),
+    path('logout/', views.logout, name='logout'),
+    path('what-is-pabasa/', views.pabasa_info, name='pabasa_info'),
+    path('about/', views.about, name='about'),
 ]

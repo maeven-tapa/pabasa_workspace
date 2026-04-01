@@ -1,0 +1,297 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap");
+
+:root {
+    color-scheme: light;
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --panel: #f0efe9;
+    --ink: #1b1a17;
+    --accent: #1f6f8b;
+    --accent-strong: #155e75;
+    --accent-soft: #d9eef4;
+    --muted: #5f645f;
+    --shadow: 0 24px 50px rgba(27, 26, 23, 0.12);
+    --outline: rgba(27, 26, 23, 0.08);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: radial-gradient(circle at top left, #ffffff 0%, var(--bg) 45%, #edf2f4 100%);
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(transparent 95%, rgba(27, 26, 23, 0.03) 100%),
+        linear-gradient(90deg, transparent 95%, rgba(27, 26, 23, 0.03) 100%);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: -1;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.page {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
+
+.site-header {
+    padding: 1.5rem clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 1rem 1.6rem;
+    box-shadow: var(--shadow);
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.4rem;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.nav-links a {
+    padding-bottom: 0.2rem;
+    border-bottom: 2px solid transparent;
+}
+
+.nav-links a:hover {
+    color: var(--ink);
+    border-color: var(--accent);
+}
+
+.nav-actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.site-main {
+    flex: 1;
+    padding: 0 clamp(1.5rem, 4vw, 3.5rem) 4rem;
+}
+
+.site-footer {
+    padding: 2rem clamp(1.5rem, 4vw, 3.5rem) 2.5rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.footer-meta {
+    font-size: 0.9rem;
+}
+
+.hero-banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 2rem;
+    align-items: center;
+    padding: 2.5rem 0 3.5rem;
+}
+
+.hero-content {
+    max-width: 560px;
+    animation: rise 0.7s ease both;
+}
+
+.hero-content h1 {
+    font-size: clamp(2.4rem, 4vw, 3.6rem);
+    margin: 0 0 1rem;
+    letter-spacing: -0.02em;
+}
+
+.hero-content p {
+    margin: 0 0 1.6rem;
+    font-size: 1.05rem;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-strong);
+    margin-bottom: 0.8rem;
+}
+
+.hero-media {
+    min-height: 320px;
+    border-radius: 28px;
+    border: 1px solid var(--outline);
+    box-shadow: var(--shadow);
+    background:
+        linear-gradient(135deg, rgba(31, 111, 139, 0.2), rgba(255, 255, 255, 0.3)),
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.6), rgba(31, 111, 139, 0.08));
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-media::after {
+    content: "Learning environment image";
+    position: absolute;
+    bottom: 1.2rem;
+    left: 1.4rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+.audience {
+    margin: 2rem 0 3rem;
+    display: grid;
+    gap: 1.6rem;
+}
+
+.audience-header h2 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.audience-header p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.audience-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.4rem;
+}
+
+.audience-card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid var(--outline);
+    box-shadow: var(--shadow);
+}
+
+.audience-card h3 {
+    margin-top: 0;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+
+.button-primary,
+.button-secondary,
+.button-ghost {
+    border: none;
+    border-radius: 999px;
+    padding: 0.75rem 1.6rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.button-primary {
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(31, 111, 139, 0.25);
+}
+
+.button-secondary {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+}
+
+.button-ghost {
+    background: transparent;
+    border: 1px solid var(--outline);
+    color: var(--ink);
+}
+
+.button-primary:hover,
+.button-secondary:hover,
+.button-ghost:hover {
+    transform: translateY(-2px);
+}
+
+.reveal {
+    animation: rise 0.7s ease both;
+}
+
+.delay {
+    animation-delay: 0.12s;
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 900px) {
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .nav-links {
+        flex-wrap: wrap;
+    }
+
+    .nav-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 600px) {
+    .nav-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
