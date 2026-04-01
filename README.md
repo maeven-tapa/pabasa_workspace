@@ -3,14 +3,14 @@
 ![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
 
-# 📖 P.A.G.B.A.S.A
+# 📖 P.A.B.A.S.A
 Platform for Automated Basic Reading and Speech Assessment
 
 ## 📝 Research Title
 Development of Guide Reading Evaluation System for Grade 2 Students in Salawag Elementary School
 
 ## 📚 About
-P.A.G.B.A.S.A is a web-based reading evaluation system designed to assist teachers in assessing and monitoring the reading literacy of Grade 2 students.
+P.A.B.A.S.A is a web-based reading evaluation system designed to assist teachers in assessing and monitoring the reading literacy of Grade 2 students.
 The system utilizes speech recognition technology to evaluate:  
 - 📊 Pronunciation Accuracy  
 - ⏱️ Reading Speed  
