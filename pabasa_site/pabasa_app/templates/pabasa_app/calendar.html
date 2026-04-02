@@ -1,135 +1,270 @@
 {% extends "pabasa_app/base_dashboard.html" %}
 
+{% block extra_head %}
+<style>
+    .calendar-grid-table td {
+        height: 68px;
+        vertical-align: top;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background: #fff;
+    }
+
+    .calendar-grid-table td.is-muted {
+        color: #98a0b5;
+        background: #fbfcff;
+    }
+
+    .calendar-grid-table td.is-today {
+        background: #f3ebff;
+        color: #6e10ee;
+        font-weight: 700;
+        box-shadow: inset 0 0 0 2px #d7c2ff;
+    }
+
+    .calendar-list-item {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.78rem 0.2rem;
+        border-bottom: 1px solid #eef1f7;
+    }
+
+    .calendar-list-item:last-child {
+        border-bottom: 0;
+    }
+
+    .calendar-list-name {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.45rem;
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 0.9rem;
+        color: #2b2f42;
+    }
+
+    .calendar-list-name > span:last-child {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        line-height: 1.45;
+    }
+
+    .calendar-list-item .btn {
+        flex-shrink: 0;
+    }
+
+    .calendar-dot {
+        width: 0.62rem;
+        height: 0.62rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .calendar-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .calendar-feed-note {
+        border: 1px dashed #d7dbeb;
+        background: #fafbff;
+        border-radius: 0.75rem;
+        padding: 0.95rem;
+    }
+
+    .calendar-feed-note p {
+        overflow-wrap: anywhere;
+        line-height: 1.45;
+        margin-bottom: 0.75rem !important;
+    }
+
+    .col-lg-4 .dash-card .card-body {
+        padding: 1rem 1.05rem;
+    }
+
+    .calendar-feed-note .btn {
+        margin-top: 0.1rem;
+    }
+</style>
+{% endblock %}
+
 {% block header %}
     {% include "pabasa_app/partials/_header.html" with page_title="Calendar" page_date="April 2, 2026" %}
 {% endblock %}
 
 {% block content %}
-<section class="calendar">
-    <div class="calendar-top">
-        <div class="calendar-nav">
-            <button class="button-ghost" type="button">Today</button>
-            <div class="nav-arrows">
-                <button class="icon-button" type="button" aria-label="Previous month">&#8249;</button>
-                <button class="icon-button" type="button" aria-label="Next month">&#8250;</button>
-            </div>
-            <span class="calendar-label">April 2026</span>
+<section>
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Calendar Overview</h2>
+            <p class="small text-secondary mb-0">Track class schedules, reading sessions, and upcoming activities.</p>
         </div>
-        <div class="calendar-actions">
-            <div class="view-switcher">
-                <button type="button">Week</button>
-                <button type="button" class="active">Month</button>
-                <button type="button">Agenda</button>
-            </div>
-            <button class="button-primary" type="button">+</button>
+        <span class="dash-pill" id="calendarMonthChip"><i class="bi bi-calendar3"></i> April 2026</span>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div class="btn-group" role="group" aria-label="Calendar navigation">
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="calendarTodayBtn">Today</button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="calendarPrevBtn" aria-label="Previous month">&lsaquo;</button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="calendarNextBtn" aria-label="Next month">&rsaquo;</button>
+        </div>
+        <h2 class="h5 mb-0" id="calendarMonthLabel">April 2026</h2>
+        <div class="btn-group" role="group" aria-label="View switch">
+            <button class="btn btn-outline-primary btn-sm" type="button">Week</button>
+            <button class="btn btn-primary btn-sm" type="button">Month</button>
+            <button class="btn btn-outline-primary btn-sm" type="button">Agenda</button>
         </div>
     </div>
 
-    <div class="calendar-layout">
-        <div class="calendar-main">
-            <div class="calendar-weekdays">
-                <span>Sun</span>
-                <span>Mon</span>
-                <span>Tue</span>
-                <span>Wed</span>
-                <span>Thu</span>
-                <span>Fri</span>
-                <span>Sat</span>
-            </div>
-            <div class="calendar-grid">
-                <div class="day-cell is-muted"><span class="day-number">29</span></div>
-                <div class="day-cell is-muted"><span class="day-number">30</span></div>
-                <div class="day-cell is-muted"><span class="day-number">31</span></div>
-                <div class="day-cell"><span class="day-number">1</span></div>
-                <div class="day-cell is-today"><span class="day-number">2</span></div>
-                <div class="day-cell"><span class="day-number">3</span></div>
-                <div class="day-cell"><span class="day-number">4</span></div>
-
-                <div class="day-cell"><span class="day-number">5</span></div>
-                <div class="day-cell"><span class="day-number">6</span></div>
-                <div class="day-cell"><span class="day-number">7</span></div>
-                <div class="day-cell"><span class="day-number">8</span></div>
-                <div class="day-cell"><span class="day-number">9</span></div>
-                <div class="day-cell"><span class="day-number">10</span></div>
-                <div class="day-cell"><span class="day-number">11</span></div>
-
-                <div class="day-cell"><span class="day-number">12</span></div>
-                <div class="day-cell"><span class="day-number">13</span></div>
-                <div class="day-cell"><span class="day-number">14</span></div>
-                <div class="day-cell"><span class="day-number">15</span></div>
-                <div class="day-cell"><span class="day-number">16</span></div>
-                <div class="day-cell"><span class="day-number">17</span></div>
-                <div class="day-cell"><span class="day-number">18</span></div>
-
-                <div class="day-cell"><span class="day-number">19</span></div>
-                <div class="day-cell"><span class="day-number">20</span></div>
-                <div class="day-cell"><span class="day-number">21</span></div>
-                <div class="day-cell"><span class="day-number">22</span></div>
-                <div class="day-cell"><span class="day-number">23</span></div>
-                <div class="day-cell"><span class="day-number">24</span></div>
-                <div class="day-cell"><span class="day-number">25</span></div>
-
-                <div class="day-cell"><span class="day-number">26</span></div>
-                <div class="day-cell"><span class="day-number">27</span></div>
-                <div class="day-cell"><span class="day-number">28</span></div>
-                <div class="day-cell"><span class="day-number">29</span></div>
-                <div class="day-cell"><span class="day-number">30</span></div>
-                <div class="day-cell is-muted"><span class="day-number">1</span></div>
-                <div class="day-cell is-muted"><span class="day-number">2</span></div>
-            </div>
-        </div>
-
-        <aside class="calendar-sidebar">
-            <div class="mini-calendar">
-                <div class="mini-header">
-                    <span>April 2026</span>
-                    <div class="nav-arrows">
-                        <button class="icon-button" type="button" aria-label="Previous month">&#8249;</button>
-                        <button class="icon-button" type="button" aria-label="Next month">&#8250;</button>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="dash-card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle text-center mb-0 calendar-grid-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="calendarBody">
+                                <tr><td class="is-muted">29</td><td class="is-muted">30</td><td class="is-muted">31</td><td>1</td><td>2</td><td>3</td><td>4</td></tr>
+                                <tr><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td></tr>
+                                <tr><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td>17</td><td>18</td></tr>
+                                <tr><td>19</td><td>20</td><td>21</td><td>22</td><td>23</td><td>24</td><td>25</td></tr>
+                                <tr><td>26</td><td>27</td><td>28</td><td>29</td><td>30</td><td class="is-muted">1</td><td class="is-muted">2</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="mini-grid">
-                    <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
-                    <span class="mini-muted">29</span><span class="mini-muted">30</span><span class="mini-muted">31</span>
-                    <span>1</span><span class="mini-today">2</span><span>3</span><span>4</span>
-                    <span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span>
-                    <span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
-                    <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
-                    <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span class="mini-muted">1</span><span class="mini-muted">2</span>
-                </div>
             </div>
+        </div>
 
-            <div class="calendar-list">
-                <div class="list-header">
-                    <h3>Calendars</h3>
-                </div>
-                <div class="list-item">
-                    <span class="color-dot teal"></span>
-                    <span>Logic Circuits and Switching Theory</span>
-                    <button class="icon-button" type="button">...</button>
-                </div>
-                <div class="list-item">
-                    <span class="color-dot blue"></span>
-                    <span>Software Design Lab</span>
-                    <button class="icon-button" type="button">...</button>
-                </div>
-                <div class="list-item">
-                    <span class="color-dot purple"></span>
-                    <span>Technical Research</span>
-                    <button class="icon-button" type="button">...</button>
+        <div class="col-lg-4">
+            <div class="dash-card mb-3">
+                <div class="card-body">
+                    <div class="calendar-card-head">
+                        <h3 class="h6 mb-0">Calendars</h3>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" type="button" aria-label="Add calendar">+</button>
+                    </div>
+                    <div class="calendar-list-item">
+                        <div class="calendar-list-name">
+                            <span class="calendar-dot bg-primary"></span>
+                            <span>Logic Circuits and Switching Theory</span>
+                        </div>
+                        <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
+                    </div>
+                    <div class="calendar-list-item">
+                        <div class="calendar-list-name">
+                            <span class="calendar-dot bg-success"></span>
+                            <span>Software Design Lab</span>
+                        </div>
+                        <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
+                    </div>
+                    <div class="calendar-list-item">
+                        <div class="calendar-list-name">
+                            <span class="calendar-dot" style="background:#6e10ee;"></span>
+                            <span>Technical Research</span>
+                        </div>
+                        <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
+                    </div>
                 </div>
             </div>
-
-            <div class="calendar-section">
-                <h3>Undated</h3>
-                <p>No undated events</p>
+            <div class="dash-card">
+                <div class="card-body d-grid gap-2">
+                    <div class="calendar-card-head mb-0">
+                        <h3 class="h6 mb-0">Calendar Feed</h3>
+                        <span class="dash-pill">Sync</span>
+                    </div>
+                    <div class="calendar-feed-note">
+                        <p class="small text-secondary mb-2">Import external events or connect your school calendar feed.</p>
+                        <button class="btn btn-primary btn-sm w-100" type="button">Import or Sync</button>
+                    </div>
+                </div>
             </div>
-
-            <div class="calendar-section">
-                <h3>Calendar Feed</h3>
-                <button class="button-ghost" type="button">Import or Sync</button>
-            </div>
-        </aside>
+        </div>
     </div>
 </section>
+
+<script>
+    (function () {
+        const monthLabel = document.getElementById("calendarMonthLabel");
+        const monthChip = document.getElementById("calendarMonthChip");
+        const body = document.getElementById("calendarBody");
+        const prevBtn = document.getElementById("calendarPrevBtn");
+        const nextBtn = document.getElementById("calendarNextBtn");
+        const todayBtn = document.getElementById("calendarTodayBtn");
+
+        if (!monthLabel || !body || !prevBtn || !nextBtn || !todayBtn) {
+            return;
+        }
+
+        const today = new Date();
+        let active = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        function renderCalendar() {
+            const year = active.getFullYear();
+            const month = active.getMonth();
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            const title = active.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+            monthLabel.textContent = title;
+            monthChip.innerHTML = '<i class="bi bi-calendar3"></i> ' + title;
+
+            let cells = [];
+
+            for (let i = firstDayIndex - 1; i >= 0; i -= 1) {
+                cells.push({ day: daysInPrevMonth - i, muted: true, today: false });
+            }
+
+            for (let d = 1; d <= daysInMonth; d += 1) {
+                const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+                cells.push({ day: d, muted: false, today: isToday });
+            }
+
+            while (cells.length % 7 !== 0) {
+                cells.push({ day: cells.length - (firstDayIndex + daysInMonth) + 1, muted: true, today: false });
+            }
+
+            let rows = "";
+            for (let i = 0; i < cells.length; i += 7) {
+                const week = cells.slice(i, i + 7);
+                rows += "<tr>" + week.map((cell) => {
+                    let classes = [];
+                    if (cell.muted) classes.push("is-muted");
+                    if (cell.today) classes.push("is-today");
+                    return '<td class="' + classes.join(" ") + '">' + cell.day + "</td>";
+                }).join("") + "</tr>";
+            }
+
+            body.innerHTML = rows;
+        }
+
+        prevBtn.addEventListener("click", function () {
+            active = new Date(active.getFullYear(), active.getMonth() - 1, 1);
+            renderCalendar();
+        });
+
+        nextBtn.addEventListener("click", function () {
+            active = new Date(active.getFullYear(), active.getMonth() + 1, 1);
+            renderCalendar();
+        });
+
+        todayBtn.addEventListener("click", function () {
+            active = new Date(today.getFullYear(), today.getMonth(), 1);
+            renderCalendar();
+        });
+
+        window.requestAnimationFrame(renderCalendar);
+    })();
+</script>
 {% endblock %}

@@ -1,52 +1,75 @@
 {% extends "pabasa_app/base.html" %}
-{% load static %}
-
-{% block page_css %}
-<link rel="stylesheet" href="{% static 'pabasa_app/teacher_signup.css' %}">
-{% endblock %}
 
 {% block content %}
-<div class="auth-page">
-    <div class="auth-stack">
-        <section class="auth-hero">
-            <div class="auth-intro">
-                <p class="eyebrow">Access Portal</p>
-            </div>
-        </section>
-
-        <section class="auth-grid">
-            <article class="auth-card reveal">
-                <div class="card-title">
-                    <h1>Create a Teacher Account</h1>
-                </div>
-                <p class="auth-switch">
-                    Already have an account?
-                    <a class="text-link" href="{% url 'auth' %}">Login</a>
-                </p>
-                <form class="auth-form">
-                    <label class="form-field">
-                        <span>Full name</span>
-                        <input type="text" name="full_name" placeholder="Enter full name" required>
-                    </label>
-                    <label class="form-field">
-                        <span>Email address</span>
-                        <input type="email" name="email" placeholder="you@example.com" required>
-                    </label>
-                    <label class="form-field">
-                        <span>Password</span>
-                        <input type="password" name="password" placeholder="Create a password" required>
-                    </label>
-                    <label class="form-field">
-                        <span>Confirm password</span>
-                        <input type="password" name="confirm_password" placeholder="Confirm password" required>
-                    </label>
-                    <div class="form-actions">
-                        <a class="button-ghost" href="{% url 'signup' %}">Back</a>
-                        <button class="button-primary" type="submit">Create Account</button>
+<section class="account-stage">
+    <div class="col-12 col-lg-8">
+        <article class="account-card card">
+            <div class="card-body p-4 p-md-5">
+                <span class="modern-chip mb-2">Teacher Account</span>
+                <h1 class="h4">Create a Teacher Account</h1>
+                <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
+                <form action="{% url 'dashboard' %}" method="get" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">First name</label>
+                        <input class="form-control" type="text" name="first_name" placeholder="Enter first name" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Last name</label>
+                        <input class="form-control" type="text" name="last_name" placeholder="Enter last name" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Birth month</label>
+                        <select class="form-select" name="birth_month" required>
+                            <option value="" selected disabled>Month</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Birth day</label>
+                        <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Birth year</label>
+                        <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email address</label>
+                        <input class="form-control" type="email" name="email" placeholder="you@example.com" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Username</label>
+                        <input class="form-control" type="text" name="username" placeholder="Choose a username" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Contact number</label>
+                        <input class="form-control" type="tel" name="contact_number" placeholder="09XXXXXXXXX">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Password</label>
+                        <input class="form-control" type="password" name="password" placeholder="Create a password" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Confirm password</label>
+                        <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" required>
+                    </div>
+                    <div class="col-12 d-flex justify-content-between">
+                        <a class="btn btn-outline-secondary" href="{% url 'signup' %}">Back</a>
+                        <button class="btn btn-primary" type="submit">Create Account</button>
                     </div>
                 </form>
-            </article>
-        </section>
+            </div>
+        </article>
     </div>
-</div>
+</section>
 {% endblock %}

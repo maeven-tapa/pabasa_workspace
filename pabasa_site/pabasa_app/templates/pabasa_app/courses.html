@@ -5,8 +5,62 @@
 {% endblock %}
 
 {% block content %}
-<section class="placeholder">
-    <h2>Courses</h2>
-    <p>Content coming soon</p>
+<section>
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Courses</h2>
+            <p class="small text-secondary mb-0">Manage class spaces and reading modules.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-plus-lg me-1"></i>Add Course</button>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6 col-xl-4">
+            <article class="course-card h-100">
+                <div class="card-body">
+                    <span class="course-icon"><i class="bi bi-journal-text"></i></span>
+                    <h3 class="h6 mb-1">Reading Fluency 101</h3>
+                    <p class="course-meta mb-1">32 students enrolled</p>
+                    <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
+                        <span class="dash-pill">Active</span>
+                        <button class="btn btn-outline-primary btn-sm">Open</button>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <article class="course-card h-100">
+                <div class="card-body">
+                    <span class="course-icon"><i class="bi bi-mic"></i></span>
+                    <h3 class="h6 mb-1">Speech Practice Lab</h3>
+                    <p class="course-meta mb-1">24 students enrolled</p>
+                    <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
+                        <span class="dash-pill">In Progress</span>
+                        <button class="btn btn-outline-primary btn-sm">Open</button>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <article class="course-card h-100">
+                <div class="card-body">
+                    <span class="course-icon"><i class="bi bi-book"></i></span>
+                    <h3 class="h6 mb-1">Comprehension Workshop</h3>
+                    <p class="course-meta mb-1">18 students enrolled</p>
+                    <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
+                        <span class="dash-pill">Upcoming</span>
+                        <button class="btn btn-outline-primary btn-sm">Open</button>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="dash-card mt-3">
+        <div class="card-body p-4">
+            <h3 class="h6">Course management</h3>
+            <p class="text-secondary mb-0">Use this area to assign lessons, monitor submissions, and review reading progress per class.</p>
+        </div>
+    </div>
 </section>
 {% endblock %}

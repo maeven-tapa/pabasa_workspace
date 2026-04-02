@@ -1,0 +1,139 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Students" page_date="April 3, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Student Directory</h2>
+            <p class="small text-secondary mb-0">Manage learner details, reading performance, and class status.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-secondary btn-sm" type="button"><i class="bi bi-download me-1"></i>Export</button>
+            <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-person-plus me-1"></i>Add Student</button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="dash-card">
+                <div class="card-body p-0">
+                    <div class="p-3 border-bottom d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                        <div class="input-group input-group-sm" style="max-width: 280px;">
+                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" placeholder="Search student..." aria-label="Search student">
+                        </div>
+                        <select class="form-select form-select-sm" style="max-width: 180px;" aria-label="Filter section">
+                            <option selected>All Sections</option>
+                            <option>Grade 5 - A</option>
+                            <option>Grade 5 - B</option>
+                            <option>Grade 6 - A</option>
+                        </select>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Section</th>
+                                    <th>Reading Level</th>
+                                    <th>Attendance</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">Lia Santos</div>
+                                        <small class="text-secondary">STU-1023</small>
+                                    </td>
+                                    <td>Grade 5 - A</td>
+                                    <td>Intermediate</td>
+                                    <td>96%</td>
+                                    <td><span class="badge text-bg-success">Active</span></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">Marco Dela Cruz</div>
+                                        <small class="text-secondary">STU-1038</small>
+                                    </td>
+                                    <td>Grade 5 - A</td>
+                                    <td>Advanced</td>
+                                    <td>92%</td>
+                                    <td><span class="badge dash-badge">On Track</span></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">Aira Mendoza</div>
+                                        <small class="text-secondary">STU-1091</small>
+                                    </td>
+                                    <td>Grade 6 - A</td>
+                                    <td>Beginning</td>
+                                    <td>87%</td>
+                                    <td><span class="badge text-bg-warning">Needs Support</span></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">Nico Ramos</div>
+                                        <small class="text-secondary">STU-1110</small>
+                                    </td>
+                                    <td>Grade 5 - B</td>
+                                    <td>Intermediate</td>
+                                    <td>94%</td>
+                                    <td><span class="badge text-bg-success">Active</span></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold">Trina Velasco</div>
+                                        <small class="text-secondary">STU-1128</small>
+                                    </td>
+                                    <td>Grade 6 - A</td>
+                                    <td>Advanced</td>
+                                    <td>98%</td>
+                                    <td><span class="badge dash-badge">On Track</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="dash-card mb-3">
+                <div class="card-body p-3">
+                    <h3 class="h6 mb-3">Class Snapshot</h3>
+                    <div class="d-grid gap-2">
+                        <div class="border rounded p-2 d-flex justify-content-between align-items-center">
+                            <span class="small text-secondary">Total Students</span>
+                            <strong>35</strong>
+                        </div>
+                        <div class="border rounded p-2 d-flex justify-content-between align-items-center">
+                            <span class="small text-secondary">Active Today</span>
+                            <strong>31</strong>
+                        </div>
+                        <div class="border rounded p-2 d-flex justify-content-between align-items-center">
+                            <span class="small text-secondary">Need Support</span>
+                            <strong>6</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-card">
+                <div class="card-body p-3">
+                    <h3 class="h6 mb-3">Quick Actions</h3>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary btn-sm" type="button">Assign Reading Task</button>
+                        <button class="btn btn-outline-primary btn-sm" type="button">Send Parent Update</button>
+                        <button class="btn btn-outline-primary btn-sm" type="button">Generate Progress Report</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

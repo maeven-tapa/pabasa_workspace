@@ -5,24 +5,57 @@
 {% endblock %}
 
 {% block content %}
-<section class="practice">
-    <div class="practice-header">
-        <h2>Practice</h2>
-        <p>Choose what you want to work on today.</p>
+<section>
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Practice Playground</h2>
+            <p class="small text-secondary mb-0">Pick a fun activity and start practicing.</p>
+        </div>
+        <span class="dash-pill"><i class="bi bi-stars"></i> Kid Friendly Mode</span>
     </div>
-    <div class="practice-grid">
-        <article class="practice-card">
-            <h3>Word</h3>
-            <p>Short word drills to build confidence.</p>
-        </article>
-        <article class="practice-card">
-            <h3>Sentences</h3>
-            <p>Read and respond to guided sentences.</p>
-        </article>
-        <article class="practice-card">
-            <h3>Paragraphs</h3>
-            <p>Longer passages with fluency checks.</p>
-        </article>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <article class="kids-card word h-100">
+                <div class="card-body">
+                    <div class="kids-emoji">📘</div>
+                    <h3 class="h6 mb-1">Word Adventure</h3>
+                    <p class="text-secondary">Play with short words and build confidence one step at a time.</p>
+                    <button class="kids-play-btn" type="button">Play Now</button>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="kids-card sentence h-100">
+                <div class="card-body">
+                    <div class="kids-emoji">📝</div>
+                    <h3 class="h6 mb-1">Sentence Quest</h3>
+                    <p class="text-secondary">Read fun guided sentences and earn stars as you improve.</p>
+                    <button class="kids-play-btn" type="button">Play Now</button>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="kids-card paragraph h-100">
+                <div class="card-body">
+                    <div class="kids-emoji">📚</div>
+                    <h3 class="h6 mb-1">Story Challenge</h3>
+                    <p class="text-secondary">Practice with short stories and boost your fluency score.</p>
+                    <button class="kids-play-btn" type="button">Play Now</button>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="dash-card mt-3">
+        <div class="card-body p-4">
+            <h3 class="h6">Tips for kids</h3>
+            <ul class="mb-0 ps-3 small text-secondary">
+                <li>Take your time and read clearly.</li>
+                <li>Use the mic check before each activity.</li>
+                <li>Try at least one challenge every day.</li>
+            </ul>
+        </div>
     </div>
 </section>
 {% endblock %}

@@ -1,42 +1,125 @@
 {% extends "pabasa_app/base.html" %}
-{% load static %}
-
-{% block page_css %}
-<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}">
-{% endblock %}
 
 {% block content %}
-<section class="hero-banner" id="top">
-    <div class="hero-content">
-        <p class="eyebrow">Platform for Automated Basic Reading and Speech Assessment</p>
-        <h1>Welcome to the most-visited education website in the world</h1>
-        <p>A modern, calm learning hub that helps teachers guide reading practice while students build confidence.</p>
-        <div class="actions">
-            <a class="button-primary" href="{% url 'pabasa_info' %}">See how</a>
-            <a class="button-secondary" href="{% url 'about' %}">Explore</a>
+<section class="py-4 py-md-5">
+    <div class="modern-hero row g-4 align-items-center">
+        <div class="col-lg-7">
+            <span class="modern-chip mb-3">Platform for Automated Basic Reading and Speech Assessment</span>
+            <h1 class="display-6 fw-bold mb-3">A modern reading platform built for classroom clarity and student confidence.</h1>
+            <p class="lead text-secondary">Give learners supportive practice sessions while teachers get fast, structured progress insights.</p>
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <a class="btn btn-primary" href="{% url 'pabasa_info' %}">See How It Works</a>
+                <a class="btn btn-outline-primary" href="{% url 'about' %}">Explore PABASA</a>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="modern-surface card border-0">
+                <div class="card-body p-4">
+                    <h2 class="h5 mb-3">Why teachers choose PABASA</h2>
+                    <ul class="mb-0 ps-3">
+                        <li class="mb-2">Fast reading fluency checks</li>
+                        <li class="mb-2">Simple classroom progress tracking</li>
+                        <li>Student-friendly guided practice</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="hero-media" aria-label="Students learning together"></div>
 </section>
 
-<section class="audience" id="audience">
-    <div class="audience-header">
-        <h2>Solutions by Audience</h2>
-        <p>Tailored experiences for every learner, classroom, and school leader.</p>
+<section class="pb-4 pb-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">Solutions by Audience</h2>
+        <span class="text-secondary small">Built for learners, teachers, and school teams</span>
     </div>
-    <div class="audience-grid">
-        <article class="audience-card">
-            <h3>Teachers</h3>
-            <p>Launch reading checks, track fluency, and get instant summaries with less paperwork.</p>
-        </article>
-        <article class="audience-card">
-            <h3>Students</h3>
-            <p>Practice with guided prompts and feedback that keep reading sessions confident and calm.</p>
-        </article>
-        <article class="audience-card">
-            <h3>Schools</h3>
-            <p>See progress across classes with consistent data and simple reporting tools.</p>
-        </article>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <article class="modern-surface card h-100 border-0">
+                <div class="card-body">
+                    <h3 class="h5">Teachers</h3>
+                    <p class="mb-0">Launch reading checks, track fluency, and get instant summaries with less paperwork.</p>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="modern-surface card h-100 border-0">
+                <div class="card-body">
+                    <h3 class="h5">Students</h3>
+                    <p class="mb-0">Practice with guided prompts and feedback that keep reading sessions confident and calm.</p>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-4">
+            <article class="modern-surface card h-100 border-0">
+                <div class="card-body">
+                    <h3 class="h5">Schools</h3>
+                    <p class="mb-0">See progress across classes with consistent data and simple reporting tools.</p>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="pb-4 pb-md-5">
+    <div class="row g-4 align-items-stretch">
+        <div class="col-lg-8">
+            <div class="modern-surface card border-0 h-100 overflow-hidden">
+                <div class="card-body p-0">
+                    <div id="homeHighlightsCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-indicators mb-2">
+                            <button type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                            <button type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                            <button type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                        </div>
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <div class="p-4 p-md-5" style="min-height: 260px; background: linear-gradient(135deg, #5d0dd0 0%, #6e10ee 100%); color: #fff;">
+                                    <h3 class="h4">Weekly Reading Momentum</h3>
+                                    <p class="mb-3">Teachers can see practice streaks and identify learners who need timely support.</p>
+                                    <span class="badge text-bg-light">Live classroom view</span>
+                                </div>
+                            </div>
+                            <div class="carousel-item">
+                                <div class="p-4 p-md-5" style="min-height: 260px; background: linear-gradient(135deg, #6e10ee 0%, #8a3ffc 100%); color: #fff;">
+                                    <h3 class="h4">Confidence First Learning</h3>
+                                    <p class="mb-3">Students practice in calm, guided steps designed to reduce reading anxiety.</p>
+                                    <span class="badge text-bg-light">Student-friendly flow</span>
+                                </div>
+                            </div>
+                            <div class="carousel-item">
+                                <div class="p-4 p-md-5" style="min-height: 260px; background: linear-gradient(135deg, #8a3ffc 0%, #a56bff 100%); color: #fff;">
+                                    <h3 class="h4">Actionable School Reports</h3>
+                                    <p class="mb-3">School leaders get clear snapshots of literacy progress across classes.</p>
+                                    <span class="badge text-bg-light">Ready-to-share insights</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="modern-surface card border-0 h-100">
+                <div class="card-body p-4 d-flex flex-column">
+                    <span class="modern-chip mb-3">New Section</span>
+                    <h3 class="h5">Ready to start a reading session?</h3>
+                    <p class="text-secondary">Set up a class, invite learners, and begin your first guided assessment in minutes.</p>
+                    <div class="mt-auto d-grid gap-2">
+                        <a class="btn btn-primary" href="{% url 'auth' %}">Open My Account</a>
+                        <a class="btn btn-outline-primary" href="{% url 'pabasa_info' %}">Learn More</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}

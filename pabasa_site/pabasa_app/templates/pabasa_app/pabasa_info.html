@@ -1,35 +1,52 @@
 {% extends "pabasa_app/base.html" %}
-{% load static %}
-
-{% block page_css %}
-<link rel="stylesheet" href="{% static 'pabasa_app/pabasa_info.css' %}">
-{% endblock %}
 
 {% block content %}
-<section class="info-hero">
-    <div class="info-card">
-        <p class="eyebrow">What is PABASA</p>
-        <h1>Program for Automated Basic Reading and Speech Assessment</h1>
-        <p>PABASA helps teachers and learners track fluency with automated reading checks, speech feedback, and clear next steps.</p>
-    </div>
-    <div class="info-card highlight">
-        <h2>Why it matters</h2>
-        <p>Turn assessment into a guided experience so students can practice with confidence while teachers get instant insights.</p>
+<section class="py-4">
+    <div class="modern-hero row g-3">
+        <div class="col-lg-8">
+            <div class="modern-surface card border-0 h-100">
+                <div class="card-body p-4">
+                    <span class="modern-chip mb-3">What is PABASA</span>
+                    <h1 class="h3">Program for Automated Basic Reading and Speech Assessment</h1>
+                    <p class="mb-0">PABASA helps teachers and learners track fluency with automated reading checks, speech feedback, and clear next steps.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="modern-surface card border-0 h-100">
+                <div class="card-body p-4">
+                    <h2 class="h5">Why it matters</h2>
+                    <p class="mb-0">Turn assessment into a guided experience so students can practice with confidence while teachers get instant insights.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
-<section class="info-grid">
-    <article>
-        <h3>Automated checks</h3>
-        <p>Capture reading accuracy and speed with structured passages.</p>
-    </article>
-    <article>
-        <h3>Speech feedback</h3>
-        <p>Provide pronunciation hints and supportive prompts.</p>
-    </article>
-    <article>
-        <h3>Actionable reports</h3>
-        <p>Summaries that highlight strengths and next practice targets.</p>
-    </article>
+<section class="pb-4">
+    <div class="row g-3">
+        <div class="col-md-4"><article class="modern-surface card h-100 border-0"><div class="card-body"><h3 class="h6">Automated checks</h3><p class="mb-0">Capture reading accuracy and speed with structured passages.</p></div></article></div>
+        <div class="col-md-4"><article class="modern-surface card h-100 border-0"><div class="card-body"><h3 class="h6">Speech feedback</h3><p class="mb-0">Provide pronunciation hints and supportive prompts.</p></div></article></div>
+        <div class="col-md-4"><article class="modern-surface card h-100 border-0"><div class="card-body"><h3 class="h6">Actionable reports</h3><p class="mb-0">Summaries that highlight strengths and next practice targets.</p></div></article></div>
+    </div>
+</section>
+
+<section class="pb-4 pb-md-5">
+    <div class="modern-surface card border-0 overflow-hidden">
+        <div class="card-body p-4">
+            <span class="modern-chip mb-3">Deployment Location</span>
+            <h2 class="h5 mb-2">Salawag Elementary School, Dasmariñas, Cavite</h2>
+            <p class="text-secondary mb-3">Current deployment location mapped below for quick reference.</p>
+            <div class="ratio ratio-16x9 rounded-3 overflow-hidden border">
+                <iframe
+                    src="https://maps.google.com/maps?q=Salawag%20Elementary%20School%2C%20Dasmari%C3%B1as%2C%20Cavite&output=embed"
+                    style="border:0;"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    title="Deployment Location Map">
+                </iframe>
+            </div>
+        </div>
+    </div>
 </section>
 {% endblock %}

@@ -27,6 +27,9 @@ def dashboard(request):
 def courses(request):
     return render(request, 'pabasa_app/courses.html')
 
+def students(request):
+    return render(request, 'pabasa_app/students.html')
+
 def calendar(request):
     return render(request, 'pabasa_app/calendar.html')
 

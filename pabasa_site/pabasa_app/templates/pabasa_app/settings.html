@@ -5,8 +5,39 @@
 {% endblock %}
 
 {% block content %}
-<section class="placeholder">
-    <h2>Settings</h2>
-    <p>Content coming soon</p>
+<section>
+    <div class="dash-page-head">
+        <h2 class="h6 mb-1">Settings</h2>
+        <p class="small text-secondary mb-0">Adjust app behavior, accessibility, and dashboard defaults.</p>
+    </div>
+
+    <div class="dash-card">
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small">Theme</label>
+                    <select class="form-select">
+                        <option selected>Purple Accent</option>
+                        <option>Classic Light</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Language</label>
+                    <select class="form-select">
+                        <option selected>English</option>
+                        <option>Filipino</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Default view</label>
+                    <select class="form-select">
+                        <option selected>Dashboard</option>
+                        <option>Calendar</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-sm mt-3" type="button">Save Settings</button>
+        </div>
+    </div>
 </section>
 {% endblock %}

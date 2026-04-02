@@ -5,29 +5,22 @@
 {% endblock %}
 
 {% block content %}
-<section class="notifications">
-    <div class="notifications-card">
-        <h2>Notifications</h2>
-        <p>Control how you receive updates from PABASA.</p>
-        <div class="notification-list">
-            <label class="toggle-row">
-                <span>Assignment reminders</span>
-                <input type="checkbox" checked>
-            </label>
-            <label class="toggle-row">
-                <span>Teacher feedback alerts</span>
-                <input type="checkbox" checked>
-            </label>
-            <label class="toggle-row">
-                <span>Weekly progress summaries</span>
-                <input type="checkbox">
-            </label>
-            <label class="toggle-row">
-                <span>New practice content</span>
-                <input type="checkbox" checked>
-            </label>
+<section>
+    <div class="dash-page-head">
+        <h2 class="h6 mb-1">Notification Preferences</h2>
+        <p class="small text-secondary mb-0">Choose what updates you want to receive from PABASA.</p>
+    </div>
+
+    <div class="dash-card">
+        <div class="card-body p-4">
+            <div class="d-grid gap-3 mb-3">
+                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked id="notify-1"><label class="form-check-label" for="notify-1">Assignment reminders</label></div>
+                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked id="notify-2"><label class="form-check-label" for="notify-2">Teacher feedback alerts</label></div>
+                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="notify-3"><label class="form-check-label" for="notify-3">Weekly progress summaries</label></div>
+                <div class="form-check form-switch"><input class="form-check-input" type="checkbox" checked id="notify-4"><label class="form-check-label" for="notify-4">New practice content</label></div>
+            </div>
+            <button class="btn btn-primary" type="button">Save Preferences</button>
         </div>
-        <button class="button-primary" type="button">Save Preferences</button>
     </div>
 </section>
 {% endblock %}

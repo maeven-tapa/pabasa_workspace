@@ -1,35 +1,20 @@
 {% extends "pabasa_app/base.html" %}
-{% load static %}
-
-{% block page_css %}
-<link rel="stylesheet" href="{% static 'pabasa_app/signup.css' %}">
-{% endblock %}
 
 {% block content %}
-<div class="auth-page">
-    <div class="auth-stack">
-        <section class="auth-hero">
-            <div class="auth-intro">
-                <p class="eyebrow">Access Portal</p>
+<section class="account-stage">
+    <div class="col-12 col-md-9 col-lg-5">
+        <article class="account-card card">
+            <div class="card-body p-4">
+                <span class="modern-chip mb-2">Access Portal</span>
+                <h2 class="h4">Create an Account</h2>
+                <p class="text-secondary">Choose your role to begin the sign up flow.</p>
+                <div class="d-grid gap-2 mb-3">
+                    <a class="btn btn-primary" href="{% url 'teacher_signup' %}">Teacher Sign Up</a>
+                    <a class="btn btn-outline-primary" href="{% url 'student_signup' %}">Student Sign Up</a>
+                </div>
+                <p class="mb-0 small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
             </div>
-        </section>
-
-        <section class="auth-grid">
-            <article class="auth-card reveal">
-                <div class="card-title">
-                    <h2>Create a Account</h2>
-                </div>
-                <p>Select your role to start the signup process.</p>
-                <div class="role-buttons">
-                    <a class="button-primary" href="{% url 'teacher_signup' %}">Teacher Sign Up</a>
-                    <a class="button-secondary" href="{% url 'student_signup' %}">Student Sign Up</a>
-                </div>
-                <p class="auth-switch">
-                    Already have an account?
-                    <a class="text-link" href="{% url 'auth' %}">Login</a>
-                </p>
-            </article>
-        </section>
+        </article>
     </div>
-</div>
+</section>
 {% endblock %}

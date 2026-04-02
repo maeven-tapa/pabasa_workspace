@@ -1,64 +1,200 @@
 {% extends "pabasa_app/base_dashboard.html" %}
 
+{% block extra_head %}
+<style>
+    .profile-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .profile-summary {
+        position: sticky;
+        top: 1rem;
+    }
+
+    .profile-avatar-lg {
+        width: 84px;
+        height: 84px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #e7edff;
+        color: #1d4ed8;
+        font-weight: 700;
+        font-size: 1.4rem;
+    }
+
+    .profile-meta-item {
+        border: 1px solid #e8ecf5;
+        border-radius: 0.75rem;
+        background: #f9fbff;
+        padding: 0.65rem 0.75rem;
+    }
+
+    .profile-meta-label {
+        display: block;
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-bottom: 0.15rem;
+    }
+
+    .profile-meta-value {
+        display: block;
+        color: #1f2937;
+        font-weight: 600;
+        font-size: 0.92rem;
+        overflow-wrap: anywhere;
+    }
+
+    .profile-edit-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.8rem;
+    }
+
+    .profile-edit-grid .full {
+        grid-column: 1 / -1;
+    }
+
+    .profile-section-title {
+        font-size: 0.98rem;
+        margin-bottom: 0.7rem;
+    }
+
+    @media (max-width: 991.98px) {
+        .profile-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .profile-summary {
+            position: static;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .profile-edit-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block header %}
     {% include "pabasa_app/partials/_header.html" with page_title="Profile" page_date="April 2, 2026" %}
 {% endblock %}
 
 {% block content %}
-<section class="profile">
-    <div class="profile-card">
-        <div class="profile-header">
-            <div class="profile-avatar">MT</div>
-            <div>
-                <h2>Maeven Tapa</h2>
-                <p>Student · Grade 10</p>
-            </div>
-            <button class="button-primary" type="button">Edit Profile</button>
+<section>
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Profile</h2>
+            <p class="small text-secondary mb-0">Manage your account information and preferences.</p>
         </div>
-        <div class="profile-grid">
-            <div class="profile-section">
-                <h3>Account Details</h3>
-                <div class="profile-fields">
-                    <label class="profile-field">
-                        <span>Full name</span>
-                        <input type="text" value="Maeven Tapa" disabled>
-                    </label>
-                    <label class="profile-field">
-                        <span>Email</span>
-                        <input type="email" value="maeven.tapa@example.com" disabled>
-                    </label>
-                    <label class="profile-field">
-                        <span>Username</span>
-                        <input type="text" value="maeventapa" disabled>
-                    </label>
-                    <label class="profile-field">
-                        <span>Join code</span>
-                        <input type="text" value="AB12-C3" disabled>
-                    </label>
+        <button class="btn btn-outline-primary btn-sm" type="button">View Activity</button>
+    </div>
+
+    <div class="profile-layout">
+        <div class="dash-card profile-summary">
+            <div class="card-body p-4 d-grid gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="profile-avatar-lg">MT</div>
+                    <div>
+                        <h3 class="h5 mb-1">Maeven Tapa</h3>
+                        <p class="text-secondary mb-0 small">Student · Grade 10</p>
+                    </div>
                 </div>
-            </div>
-            <div class="profile-section">
-                <h3>Preferences</h3>
-                <div class="profile-fields">
-                    <label class="profile-field">
-                        <span>Language</span>
-                        <input type="text" value="English" disabled>
-                    </label>
-                    <label class="profile-field">
-                        <span>Notifications</span>
-                        <input type="text" value="Enabled" disabled>
-                    </label>
-                    <label class="profile-field">
-                        <span>Theme</span>
-                        <input type="text" value="Light" disabled>
-                    </label>
+                <span class="dash-pill">Active Student</span>
+
+                <div class="d-grid gap-2 mt-1">
+                    <div class="profile-meta-item">
+                        <span class="profile-meta-label">Username</span>
+                        <span class="profile-meta-value">maeventapa</span>
+                    </div>
+                    <div class="profile-meta-item">
+                        <span class="profile-meta-label">Learner ID</span>
+                        <span class="profile-meta-value">AB12-C3</span>
+                    </div>
+                    <div class="profile-meta-item">
+                        <span class="profile-meta-label">Email</span>
+                        <span class="profile-meta-value">maeven.tapa@example.com</span>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 mt-1">
+                    <button class="btn btn-outline-secondary" type="button">Change Password</button>
+                    <button class="btn btn-outline-secondary" type="button">Update Email</button>
                 </div>
             </div>
         </div>
-        <div class="profile-actions">
-            <button class="button-primary" type="button">Save Changes</button>
-            <button class="button-ghost" type="button">Change Password</button>
-            <button class="button-ghost" type="button">Update Email</button>
+
+        <div class="dash-card">
+            <div class="card-body p-4 p-lg-4">
+                <form class="d-grid gap-4" action="#" method="post">
+                    <div>
+                        <h3 class="profile-section-title">Account Details</h3>
+                        <div class="profile-edit-grid">
+                            <div>
+                                <label class="form-label small mb-1" for="firstName">First Name</label>
+                                <input class="form-control" id="firstName" name="first_name" type="text" value="Maeven">
+                            </div>
+                            <div>
+                                <label class="form-label small mb-1" for="lastName">Last Name</label>
+                                <input class="form-control" id="lastName" name="last_name" type="text" value="Tapa">
+                            </div>
+                            <div>
+                                <label class="form-label small mb-1" for="email">Email Address</label>
+                                <input class="form-control" id="email" name="email" type="email" value="maeven.tapa@example.com">
+                            </div>
+                            <div>
+                                <label class="form-label small mb-1" for="username">Username</label>
+                                <input class="form-control" id="username" name="username" type="text" value="maeventapa">
+                            </div>
+                            <div class="full">
+                                <label class="form-label small mb-1" for="bio">Bio</label>
+                                <textarea class="form-control" id="bio" name="bio" rows="3">Focused on reading fluency, comprehension, and consistent practice.</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="profile-section-title">Learning Preferences</h3>
+                        <div class="profile-edit-grid">
+                            <div>
+                                <label class="form-label small mb-1" for="language">Preferred Language</label>
+                                <select class="form-select" id="language" name="language">
+                                    <option selected>English</option>
+                                    <option>Filipino</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label small mb-1" for="theme">Theme</label>
+                                <select class="form-select" id="theme" name="theme">
+                                    <option selected>Light</option>
+                                    <option>Dark</option>
+                                    <option>System</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label small mb-1" for="reminder">Reading Reminder</label>
+                                <select class="form-select" id="reminder" name="reminder">
+                                    <option selected>Enabled</option>
+                                    <option>Disabled</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label small mb-1" for="goal">Daily Goal (minutes)</label>
+                                <input class="form-control" id="goal" name="daily_goal" type="number" min="5" max="180" value="30">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 pt-1">
+                        <button class="btn btn-primary" type="submit">Save Changes</button>
+                        <button class="btn btn-outline-secondary" type="reset">Reset</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </section>

@@ -1,37 +1,27 @@
 {% extends "pabasa_app/base.html" %}
-{% load static %}
-
-{% block page_css %}
-<link rel="stylesheet" href="{% static 'pabasa_app/auth.css' %}">
-{% endblock %}
 
 {% block content %}
-<div class="auth-page">
-    <div class="auth-stack">
-        <section class="auth-hero">
-            <div class="auth-intro">
-                <p class="eyebrow">Access Portal</p>
-            </div>
-        </section>
-
-        <section class="auth-grid">
-            <article class="auth-card reveal">
-                <h1>Welcome to PABASA</h1>
-                <p>Log in or <a class="text-link" href="{% url 'signup' %}">create an account</a>.</p>
-                <form class="auth-form">
-                    <label class="form-field">
-                        <span>Email</span>
-                        <input type="email" name="email" placeholder="you@example.com" required>
-                    </label>
-                    <label class="form-field">
-                        <span>Password</span>
-                        <input type="password" name="password" placeholder="Enter your password" required>
-                    </label>
-                    <button class="button-primary" type="submit">Login</button>
+<section class="account-stage">
+    <div class="col-12 col-md-9 col-lg-5">
+        <article class="account-card card">
+            <div class="card-body p-4">
+                <span class="modern-chip mb-2">Access Portal</span>
+                <h1 class="h4 mb-2">Welcome back</h1>
+                <p class="text-secondary">Log in to continue, or <a href="{% url 'signup' %}">create an account</a>.</p>
+                <form action="{% url 'dashboard' %}" method="get" class="d-grid gap-3">
+                    <div>
+                        <label class="form-label">Username or Email</label>
+                        <input class="form-control" type="text" name="login_id" placeholder="Enter username or email" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Password</label>
+                        <input class="form-control" type="password" name="password" placeholder="Enter your password" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Login</button>
                 </form>
-                <a class="text-link forgot-link" href="#">Forgot password?</a>
-            </article>
-        </section>
+                <a class="small d-inline-block mt-3" href="#">Forgot password?</a>
+            </div>
+        </article>
     </div>
-</div>
+</section>
 {% endblock %}

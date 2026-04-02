@@ -1,56 +1,147 @@
 {% extends "pabasa_app/base.html" %}
-{% load static %}
 
-{% block page_css %}
-<link rel="stylesheet" href="{% static 'pabasa_app/about.css' %}">
+{% block extra_head %}
+<style>
+    .team-glass-wrap {
+        background: linear-gradient(135deg, #fbf8ff 0%, #f4ecff 45%, #eee3ff 100%);
+        border: 1px solid #e7d8ff;
+        border-radius: 1.25rem;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow: 0 16px 35px rgba(110, 16, 238, 0.12);
+    }
+
+    .team-member-card {
+        background: rgba(255, 255, 255, 0.52) !important;
+        border: 1px solid rgba(255, 255, 255, 0.72) !important;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    }
+
+    .team-member-card:hover {
+        background: rgba(255, 255, 255, 0.68) !important;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<section class="about-hero">
-    <div class="about-card">
-        <p class="eyebrow">About Us</p>
-        <h1>Building reading confidence, one assessment at a time.</h1>
-        <p>We focus on accessible reading tools that keep students motivated and teachers informed.</p>
-    </div>
-    <div class="about-card accent">
-        <h2>Our Mission</h2>
-        <p>Support every learner with calm, structured assessment flows and clear feedback.</p>
+<section class="py-4">
+    <div class="modern-hero row g-4 align-items-stretch">
+        <div class="col-lg-7">
+            <div class="modern-surface card border-0 h-100">
+                <div class="card-body p-4 p-md-5">
+                    <span class="modern-chip mb-3">About Us</span>
+                    <h1 class="h2 mb-3">Building reading confidence, one assessment at a time.</h1>
+                    <p class="text-secondary mb-3">We design accessible tools that help students improve reading fluency and support teachers with clear progress signals.</p>
+                    <p class="mb-0">Our team combines classroom context, research-driven thinking, and practical product design to keep every reading session focused and encouraging.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card border-0 h-100 text-white" style="background: linear-gradient(160deg, #5d0dd0 0%, #8a3ffc 100%); border-radius: 1rem; box-shadow: 0 12px 30px rgba(110, 16, 238, 0.28);">
+                <div class="card-body p-4">
+                    <p class="text-uppercase small fw-semibold mb-2">Research Focus</p>
+                    <h2 class="h4">Evidence-led literacy support</h2>
+                    <p class="mb-4">Every feature is designed to support measurable reading growth and positive student confidence.</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge text-bg-light">Fluency Tracking</span>
+                        <span class="badge text-bg-light">Speech Feedback</span>
+                        <span class="badge text-bg-light">Teacher Insights</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
-<section class="team-list">
-    <h2>Meet the Team</h2>
-    <div class="team-cards">
-        <article class="team-card">
-            <div class="team-photo" aria-hidden="true"></div>
-            <h3>Leonardo Basco III</h3>
-            <p>Placeholder image</p>
-        </article>
-        <article class="team-card">
-            <div class="team-photo" aria-hidden="true"></div>
-            <h3>Lady Caroline Dorongon</h3>
-            <p>Placeholder image</p>
-        </article>
-        <article class="team-card">
-            <div class="team-photo" aria-hidden="true"></div>
-            <h3>Amiel John Padasay</h3>
-            <p>Placeholder image</p>
-        </article>
-        <article class="team-card">
-            <div class="team-photo" aria-hidden="true"></div>
-            <h3>Dona Palacios</h3>
-            <p>Placeholder image</p>
-        </article>
-        <article class="team-card">
-            <div class="team-photo" aria-hidden="true"></div>
-            <h3>Reyna Marie Santos</h3>
-            <p>Placeholder image</p>
-        </article>
-        <article class="team-card">
-            <div class="team-photo" aria-hidden="true"></div>
-            <h3>Maeven Tapa</h3>
-            <p>Placeholder image</p>
-        </article>
+<section class="pb-4">
+    <div class="team-glass-wrap p-4 p-md-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-3 gap-2">
+            <div>
+                <h2 class="h4 mb-1">Meet the Researchers</h2>
+                <p class="text-secondary mb-0">The people leading PABASA research, design, and classroom impact.</p>
+            </div>
+        </div>
+
+        <div class="row g-3">
+        <div class="col-sm-6 col-xl-4">
+            <article class="modern-surface team-member-card card h-100 border-0">
+                <div class="card-body p-4 d-flex flex-column gap-3 text-center">
+                    <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center mx-auto" style="width: 84px; height: 84px; font-size: 1.35rem; background: linear-gradient(135deg, #5d0dd0 0%, #8a3ffc 100%);">LB</div>
+                    <div>
+                        <h3 class="h6 mb-1">Leonardo Basco III</h3>
+                        <p class="small text-secondary mb-0">Research Analyst</p>
+                    </div>
+                    <p class="small mb-0">Leads reading analytics and learning outcome interpretation across pilot groups.</p>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <article class="modern-surface team-member-card card h-100 border-0">
+                <div class="card-body p-4 d-flex flex-column gap-3 text-center">
+                    <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center mx-auto" style="width: 84px; height: 84px; font-size: 1.35rem; background: linear-gradient(135deg, #5d0dd0 0%, #8a3ffc 100%);">LC</div>
+                    <div>
+                        <h3 class="h6 mb-1">Lady Caroline Dorongon</h3>
+                        <p class="small text-secondary mb-0">Learning Experience Researcher</p>
+                    </div>
+                    <p class="small mb-0">Focuses on learner engagement, classroom flow, and teacher usability feedback.</p>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <article class="modern-surface team-member-card card h-100 border-0">
+                <div class="card-body p-4 d-flex flex-column gap-3 text-center">
+                    <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center mx-auto" style="width: 84px; height: 84px; font-size: 1.35rem; background: linear-gradient(135deg, #5d0dd0 0%, #8a3ffc 100%);">AJ</div>
+                    <div>
+                        <h3 class="h6 mb-1">Amiel John Padasay</h3>
+                        <p class="small text-secondary mb-0">Speech Assessment Researcher</p>
+                    </div>
+                    <p class="small mb-0">Develops quality checks and evaluation patterns for speech-related reading tasks.</p>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <article class="modern-surface team-member-card card h-100 border-0">
+                <div class="card-body p-4 d-flex flex-column gap-3 text-center">
+                    <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center mx-auto" style="width: 84px; height: 84px; font-size: 1.35rem; background: linear-gradient(135deg, #5d0dd0 0%, #8a3ffc 100%);">DP</div>
+                    <div>
+                        <h3 class="h6 mb-1">Dona Palacios</h3>
+                        <p class="small text-secondary mb-0">Literacy Content Strategist</p>
+                    </div>
+                    <p class="small mb-0">Designs structured literacy progression and content sequencing for learners.</p>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <article class="modern-surface team-member-card card h-100 border-0">
+                <div class="card-body p-4 d-flex flex-column gap-3 text-center">
+                    <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center mx-auto" style="width: 84px; height: 84px; font-size: 1.35rem; background: linear-gradient(135deg, #5d0dd0 0%, #8a3ffc 100%);">RM</div>
+                    <div>
+                        <h3 class="h6 mb-1">Reyna Marie Santos</h3>
+                        <p class="small text-secondary mb-0">Feedback Systems Researcher</p>
+                    </div>
+                    <p class="small mb-0">Improves feedback clarity and support cues to keep learners motivated.</p>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <article class="modern-surface team-member-card card h-100 border-0">
+                <div class="card-body p-4 d-flex flex-column gap-3 text-center">
+                    <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center mx-auto" style="width: 84px; height: 84px; font-size: 1.35rem; background: linear-gradient(135deg, #5d0dd0 0%, #8a3ffc 100%);">MT</div>
+                    <div>
+                        <h3 class="h6 mb-1">Maeven Tapa</h3>
+                        <p class="small text-secondary mb-0">Assessment Experience Researcher</p>
+                    </div>
+                    <p class="small mb-0">Shapes student-centered assessment usability and cross-role interaction flow.</p>
+                </div>
+            </article>
+        </div>
+        </div>
     </div>
 </section>
 {% endblock %}

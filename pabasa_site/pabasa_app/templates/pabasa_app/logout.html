@@ -5,8 +5,16 @@
 {% endblock %}
 
 {% block content %}
-<section class="placeholder">
-    <h2>Logout</h2>
-    <p>Content coming soon</p>
+<section>
+    <div class="dash-card" style="max-width: 520px;">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-2">Logout</h2>
+            <p class="text-secondary">Are you sure you want to end your session?</p>
+            <div class="d-flex gap-2">
+                <a class="btn btn-danger btn-sm" href="{% url 'home' %}">Confirm Logout</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'dashboard' %}">Cancel</a>
+            </div>
+        </div>
+    </div>
 </section>
 {% endblock %}

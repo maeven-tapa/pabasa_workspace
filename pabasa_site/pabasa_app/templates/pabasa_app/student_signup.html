@@ -1,93 +1,88 @@
 {% extends "pabasa_app/base.html" %}
-{% load static %}
-
-{% block page_css %}
-<link rel="stylesheet" href="{% static 'pabasa_app/student_signup.css' %}">
-{% endblock %}
 
 {% block content %}
-<div class="auth-page">
-    <div class="auth-stack">
-        <section class="auth-hero">
-            <div class="auth-intro">
-                <p class="eyebrow">Access Portal</p>
-            </div>
-        </section>
-
-        <section class="auth-grid">
-            <article class="auth-card reveal">
-                <div class="card-title">
-                    <h1>Create a Student Account</h1>
-                </div>
-                <p class="auth-switch">
-                    Already have an account?
-                    <a class="text-link" href="{% url 'auth' %}">Login</a>
-                </p>
-                <form class="auth-form" action="{% url 'dashboard' %}" method="get">
-                    <div class="form-row">
-                        <label class="form-field">
-                            <span>First name</span>
-                            <input type="text" name="first_name" placeholder="Enter first name" required>
-                        </label>
-                        <label class="form-field">
-                            <span>Last name</span>
-                            <input type="text" name="last_name" placeholder="Enter last name" required>
-                        </label>
+<section class="account-stage">
+    <div class="col-12 col-lg-8">
+        <article class="account-card card">
+            <div class="card-body p-4 p-md-5">
+                <span class="modern-chip mb-2">Student Account</span>
+                <h1 class="h4">Create a Student Account</h1>
+                <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
+                <form action="{% url 'dashboard' %}" method="get" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">First name</label>
+                        <input class="form-control" type="text" name="first_name" placeholder="Enter first name" required>
                     </div>
-                    <label class="form-field">
-                        <span>Birthday</span>
-                        <div class="form-row form-row--three">
-                            <select name="birth_month" required>
-                                <option value="" selected disabled>Month</option>
-                                <option value="1">January</option>
-                                <option value="2">February</option>
-                                <option value="3">March</option>
-                                <option value="4">April</option>
-                                <option value="5">May</option>
-                                <option value="6">June</option>
-                                <option value="7">July</option>
-                                <option value="8">August</option>
-                                <option value="9">September</option>
-                                <option value="10">October</option>
-                                <option value="11">November</option>
-                                <option value="12">December</option>
-                            </select>
-                            <input type="number" name="birth_day" placeholder="Day" min="1" max="31" required>
-                            <input type="number" name="birth_year" placeholder="Year" min="1900" max="2100" required>
-                        </div>
-                    </label>
-                    <label class="form-field">
-                        <span>Sex</span>
-                        <select name="sex" required>
+                    <div class="col-md-6">
+                        <label class="form-label">Last name</label>
+                        <input class="form-control" type="text" name="last_name" placeholder="Enter last name" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Birth month</label>
+                        <select class="form-select" name="birth_month" required>
+                            <option value="" selected disabled>Month</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Birth day</label>
+                        <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Birth year</label>
+                        <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sex</label>
+                        <select class="form-select" name="sex" required>
                             <option value="" selected disabled>Select</option>
                             <option value="female">Female</option>
                             <option value="male">Male</option>
                             <option value="prefer_not">Prefer not to say</option>
                         </select>
-                    </label>
-                    <label class="form-field">
-                        <span>Username</span>
-                        <input type="text" name="username" placeholder="Choose a username" required>
-                    </label>
-                    <label class="form-field">
-                        <span>Password</span>
-                        <input type="password" name="password" placeholder="Create a password" required>
-                    </label>
-                    <label class="form-field">
-                        <span>Confirm password</span>
-                        <input type="password" name="confirm_password" placeholder="Confirm password" required>
-                    </label>
-                    <label class="form-field">
-                        <span>Join code (optional)</span>
-                        <input type="text" name="join_code" placeholder="Enter join code">
-                    </label>
-                    <div class="form-actions">
-                        <a class="button-ghost" href="{% url 'signup' %}">Back</a>
-                        <button class="button-primary" type="submit">Create Account</button>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Username</label>
+                        <input class="form-control" type="text" name="username" placeholder="Choose a username" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Parent email</label>
+                        <input class="form-control" type="email" name="parent_email" placeholder="parent@example.com" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Parent contact number</label>
+                        <input class="form-control" type="tel" name="parent_contact_number" placeholder="09XXXXXXXXX" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Password</label>
+                        <input class="form-control" type="password" name="password" placeholder="Create a password" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Confirm password</label>
+                        <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Join code (optional)</label>
+                        <input class="form-control" type="text" name="join_code" placeholder="Enter join code">
+                    </div>
+                    <div class="col-12 d-flex justify-content-between">
+                        <a class="btn btn-outline-secondary" href="{% url 'signup' %}">Back</a>
+                        <button class="btn btn-primary" type="submit">Create Account</button>
                     </div>
                 </form>
-            </article>
-        </section>
+            </div>
+        </article>
     </div>
-</div>
+</section>
 {% endblock %}
