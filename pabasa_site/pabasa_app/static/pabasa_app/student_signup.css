@@ -254,9 +254,62 @@ a {
     background: #ffffff;
 }
 
+.form-field select {
+    border: 1px solid var(--outline);
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--ink);
+    background: #ffffff;
+    appearance: none;
+}
+
+
 .form-field input:focus {
     outline: 2px solid var(--accent-soft);
     border-color: var(--accent);
+}
+
+.form-field select:focus {
+    outline: 2px solid var(--accent-soft);
+    border-color: var(--accent);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.form-row input,
+.form-row select {
+    width: 100%;
+}
+
+.form-row--three {
+    display: flex;
+    width: 100%;
+    gap: 0.75rem;
+}
+
+.form-row--three > * {
+    min-width: 0;
+}
+
+.form-row--three > :first-child {
+    flex: 2 1 0;
+}
+
+.form-row--three > :nth-child(2),
+.form-row--three > :nth-child(3) {
+    flex: 1 1 0;
+}
+
+@media (max-width: 520px) {
+    .form-row--three {
+        flex-direction: column;
+    }
 }
 
 .form-actions {
