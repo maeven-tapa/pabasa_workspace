@@ -1,0 +1,885 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block extra_head %}
+<style>
+    .lesson-card-col {
+        cursor: grab;
+    }
+
+    .lesson-card-col.dragging {
+        opacity: 0.55;
+    }
+
+    .drag-handle {
+        color: #7f859a;
+        text-decoration: none;
+        cursor: grab;
+    }
+
+    .drag-handle:hover {
+        color: #4d536a;
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Course Teacher View" page_date="April 3, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Reading Fluency 101</h2>
+            <p class="small text-secondary mb-0">Weekly lesson flow for the selected course.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="dash-pill mb-0">3 Students Enrolled</span>
+            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#studentsModal">
+                <i class="bi bi-people me-1"></i>Students
+            </button>
+            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addLessonModal">
+                <i class="bi bi-plus-lg me-1"></i>Add Lesson
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#courseSettingsModal">
+                <i class="bi bi-gear me-1"></i>Settings
+            </button>
+        </div>
+    </div>
+
+    <div class="dash-card mb-3">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <h3 class="h6 mb-0">Week 1</h3>
+                <span class="dash-pill">3 Lessons</span>
+            </div>
+            <div class="row g-3 lesson-cards-grid">
+                <div class="col-md-6 col-xl-4 lesson-card-col" draggable="true">
+                    <article class="course-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="course-icon"><i class="bi bi-journal-richtext"></i></span>
+                                <button class="btn btn-sm btn-link p-0 drag-handle" type="button" aria-label="Drag lesson card" title="Drag to reorder">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </button>
+                            </div>
+                            <h4 class="h6 mb-1">Lesson 1: Letter Sounds</h4>
+                            <p class="course-meta mb-2">Focus: Vowels and consonant sounds.</p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto gap-2 flex-wrap">
+                                <span class="badge text-bg-success">Published</span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editLessonModal" data-lesson-title="Lesson 1: Letter Sounds" data-lesson-description="Focus: Vowels and consonant sounds." data-lesson-week="week1" data-lesson-icon="bi-journal-richtext">Edit</button>
+                                    <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addItemModal" data-lesson-title="Lesson 1: Letter Sounds">Item</button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#changeStatusModal" data-lesson-title="Lesson 1: Letter Sounds">Change Status</button>
+                                    <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#removeLessonModal" data-lesson-title="Lesson 1: Letter Sounds">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-md-6 col-xl-4 lesson-card-col" draggable="true">
+                    <article class="course-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="course-icon"><i class="bi bi-chat-square-text"></i></span>
+                                <button class="btn btn-sm btn-link p-0 drag-handle" type="button" aria-label="Drag lesson card" title="Drag to reorder">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </button>
+                            </div>
+                            <h4 class="h6 mb-1">Lesson 2: Word Drills</h4>
+                            <p class="course-meta mb-2">Practice reading common sight words.</p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto gap-2 flex-wrap">
+                                <span class="badge text-bg-success">Published</span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editLessonModal" data-lesson-title="Lesson 2: Word Drills" data-lesson-description="Practice reading common sight words." data-lesson-week="week1" data-lesson-icon="bi-chat-square-text">Edit</button>
+                                    <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addItemModal" data-lesson-title="Lesson 2: Word Drills">Item</button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#changeStatusModal" data-lesson-title="Lesson 2: Word Drills">Change Status</button>
+                                    <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#removeLessonModal" data-lesson-title="Lesson 2: Word Drills">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-md-6 col-xl-4 lesson-card-col" draggable="true">
+                    <article class="course-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="course-icon"><i class="bi bi-mic"></i></span>
+                                <button class="btn btn-sm btn-link p-0 drag-handle" type="button" aria-label="Drag lesson card" title="Drag to reorder">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </button>
+                            </div>
+                            <h4 class="h6 mb-1">Lesson 3: Oral Reading</h4>
+                            <p class="course-meta mb-2">Short reading passage with voice check.</p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto gap-2 flex-wrap">
+                                <span class="badge text-bg-warning">Draft</span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editLessonModal" data-lesson-title="Lesson 3: Oral Reading" data-lesson-description="Short reading passage with voice check." data-lesson-week="week1" data-lesson-icon="bi-mic">Edit</button>
+                                    <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addItemModal" data-lesson-title="Lesson 3: Oral Reading">Item</button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#changeStatusModal" data-lesson-title="Lesson 3: Oral Reading">Change Status</button>
+                                    <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#removeLessonModal" data-lesson-title="Lesson 3: Oral Reading">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-card">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                <h3 class="h6 mb-0">Week 2</h3>
+                <span class="dash-pill">2 Lessons</span>
+            </div>
+            <div class="row g-3 lesson-cards-grid">
+                <div class="col-md-6 col-xl-4 lesson-card-col" draggable="true">
+                    <article class="course-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="course-icon"><i class="bi bi-book"></i></span>
+                                <button class="btn btn-sm btn-link p-0 drag-handle" type="button" aria-label="Drag lesson card" title="Drag to reorder">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </button>
+                            </div>
+                            <h4 class="h6 mb-1">Lesson 4: Sentence Reading</h4>
+                            <p class="course-meta mb-2">Blending words to complete simple sentences.</p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto gap-2 flex-wrap">
+                                <span class="badge text-bg-secondary">Planned</span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editLessonModal" data-lesson-title="Lesson 4: Sentence Reading" data-lesson-description="Blending words to complete simple sentences." data-lesson-week="week2" data-lesson-icon="bi-book">Edit</button>
+                                    <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addItemModal" data-lesson-title="Lesson 4: Sentence Reading">Item</button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#changeStatusModal" data-lesson-title="Lesson 4: Sentence Reading">Change Status</button>
+                                    <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#removeLessonModal" data-lesson-title="Lesson 4: Sentence Reading">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-md-6 col-xl-4 lesson-card-col" draggable="true">
+                    <article class="course-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="course-icon"><i class="bi bi-file-earmark-text"></i></span>
+                                <button class="btn btn-sm btn-link p-0 drag-handle" type="button" aria-label="Drag lesson card" title="Drag to reorder">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </button>
+                            </div>
+                            <h4 class="h6 mb-1">Lesson 5: Paragraph Practice</h4>
+                            <p class="course-meta mb-2">Read a short paragraph and answer prompts.</p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto gap-2 flex-wrap">
+                                <span class="badge text-bg-secondary">Planned</span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editLessonModal" data-lesson-title="Lesson 5: Paragraph Practice" data-lesson-description="Read a short paragraph and answer prompts." data-lesson-week="week2" data-lesson-icon="bi-file-earmark-text">Edit</button>
+                                    <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addItemModal" data-lesson-title="Lesson 5: Paragraph Practice">Item</button>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#changeStatusModal" data-lesson-title="Lesson 5: Paragraph Practice">Change Status</button>
+                                    <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#removeLessonModal" data-lesson-title="Lesson 5: Paragraph Practice">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="changeStatusModal" tabindex="-1" aria-labelledby="changeStatusModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="changeStatusModalLabel">Change Lesson Status</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <p class="small text-secondary mb-2">Selected lesson:</p>
+                        <p class="fw-semibold mb-3" id="statusLessonName">Lesson</p>
+                        <label for="lessonStatus" class="form-label">Status</label>
+                        <select id="lessonStatus" class="form-select" name="status">
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                            <option value="archived">Archived</option>
+                        </select>
+
+                        <div class="mt-3 d-none" id="statusDraftPublishDateRow">
+                            <label for="statusDraftPublishDate" class="form-label">Date to Publish</label>
+                            <input id="statusDraftPublishDate" class="form-control" type="date" name="status_draft_publish_date">
+                        </div>
+
+                        <div class="mt-3 d-none" id="archivedOptionsSection">
+                            <label class="form-label mb-2">Archive Options</label>
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="archive_mode" id="archiveUntilDateMode" value="until_date" checked>
+                                <label class="form-check-label" for="archiveUntilDateMode">Archive until</label>
+                            </div>
+                            <div class="mt-2" id="archiveUntilDateRow">
+                                <input id="archiveUntilDate" class="form-control" type="date" name="archive_until_date">
+                            </div>
+
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="radio" name="archive_mode" id="archiveTillCompleteMode" value="till_complete">
+                                <label class="form-check-label" for="archiveTillCompleteMode">Archive till complete</label>
+                            </div>
+
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="radio" name="archive_mode" id="archiveTillIWantMode" value="until_i_want">
+                                <label class="form-check-label" for="archiveTillIWantMode">Archive till I want</label>
+                            </div>
+
+                            <div class="mt-2 d-none" id="archiveTillCompleteRow">
+                                <select id="archiveTillCompleteSelect" class="form-select" name="archive_till_complete">
+                                    <option value="lesson_1">Lesson 1</option>
+                                    <option value="lesson_2">Lesson 2</option>
+                                    <option value="lesson_3">Lesson 3</option>
+                                    <option value="lesson_4">Lesson 4</option>
+                                    <option value="lesson_5">Lesson 5</option>
+                                    <option value="when_previous_finished">When previous lesson is finished</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addLessonModal" tabindex="-1" aria-labelledby="addLessonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="addLessonModalLabel">Add Lesson</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="lessonIcon" class="form-label">Lesson Icon</label>
+                            <select id="lessonIcon" class="form-select" name="lesson_icon" required>
+                                <option value="bi-journal-richtext">Journal</option>
+                                <option value="bi-chat-square-text">Word Drill</option>
+                                <option value="bi-mic">Microphone</option>
+                                <option value="bi-book">Book</option>
+                                <option value="bi-file-earmark-text">Document</option>
+                            </select>
+                            <div class="mt-2 d-flex align-items-center gap-2">
+                                <span class="small text-secondary">Icon Preview:</span>
+                                <span class="course-icon"><i id="lessonIconPreview" class="bi bi-journal-richtext"></i></span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lessonName" class="form-label">Lesson Name</label>
+                            <input id="lessonName" class="form-control" type="text" name="lesson_name" placeholder="Enter lesson name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lessonDescription" class="form-label">Lesson Description</label>
+                            <textarea id="lessonDescription" class="form-control" name="lesson_description" rows="3" placeholder="Enter lesson description" required></textarea>
+                        </div>
+                        <div>
+                            <label for="lessonWeek" class="form-label">Week</label>
+                            <select id="lessonWeek" class="form-select" name="lesson_week" required>
+                                <option value="week1">Week 1</option>
+                                <option value="week2">Week 2</option>
+                                <option value="week3">Week 3</option>
+                                <option value="week4">Week 4</option>
+                            </select>
+                        </div>
+
+                        <div class="mt-3">
+                            <label for="addLessonStatus" class="form-label">Status</label>
+                            <select id="addLessonStatus" class="form-select" name="lesson_status" required>
+                                <option value="published">Published</option>
+                                <option value="draft">Draft</option>
+                            </select>
+                        </div>
+
+                        <div class="mt-3 d-none" id="draftPublishDateRow">
+                            <label for="draftPublishDate" class="form-label">Date to Publish</label>
+                            <input id="draftPublishDate" class="form-control" type="date" name="draft_publish_date">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Lesson</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editLessonModal" tabindex="-1" aria-labelledby="editLessonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="editLessonModalLabel">Edit Lesson</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editLessonIcon" class="form-label">Lesson Icon</label>
+                            <select id="editLessonIcon" class="form-select" name="edit_lesson_icon" required>
+                                <option value="bi-journal-richtext">Journal</option>
+                                <option value="bi-chat-square-text">Word Drill</option>
+                                <option value="bi-mic">Microphone</option>
+                                <option value="bi-book">Book</option>
+                                <option value="bi-file-earmark-text">Document</option>
+                            </select>
+                            <div class="mt-2 d-flex align-items-center gap-2">
+                                <span class="small text-secondary">Icon Preview:</span>
+                                <span class="course-icon"><i id="editLessonIconPreview" class="bi bi-journal-richtext"></i></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editLessonName" class="form-label">Lesson Name</label>
+                            <input id="editLessonName" class="form-control" type="text" name="edit_lesson_name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="editLessonDescription" class="form-label">Description</label>
+                            <textarea id="editLessonDescription" class="form-control" name="edit_lesson_description" rows="3" required></textarea>
+                        </div>
+
+                        <div>
+                            <label for="editLessonWeek" class="form-label">Week</label>
+                            <select id="editLessonWeek" class="form-select" name="edit_lesson_week" required>
+                                <option value="week1">Week 1</option>
+                                <option value="week2">Week 2</option>
+                                <option value="week3">Week 3</option>
+                                <option value="week4">Week 4</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="addItemModalLabel">Item</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <p class="small text-secondary mb-1">Lesson</p>
+                        <p class="fw-semibold mb-3" id="itemLessonName">Lesson</p>
+
+                        <div class="mb-3">
+                            <label for="readingType" class="form-label">Reading Type</label>
+                            <select id="readingType" class="form-select" name="reading_type">
+                                <option value="words">Words</option>
+                                <option value="sentence">Sentence</option>
+                                <option value="paragraphs">Paragraphs</option>
+                            </select>
+                        </div>
+
+                        <div id="wordsSection" data-reading-section="words">
+                            <div class="mb-3">
+                                <label for="targetWord" class="form-label">Target Word</label>
+                                <input id="targetWord" class="form-control" type="text" name="target_word" placeholder="Enter target word">
+                            </div>
+
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Word</th>
+                                            <th style="width: 150px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>bahay</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-outline-primary btn-sm" type="button">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>aklat</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-outline-primary btn-sm" type="button">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="addWordBox" class="form-label">Add Word</label>
+                                <input id="addWordBox" class="form-control" type="text" name="new_word" placeholder="Type a word">
+                            </div>
+
+                            <div class="border rounded p-3 mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableWordTime" name="enable_word_time">
+                                    <label class="form-check-label" for="enableWordTime">Enable time</label>
+                                </div>
+                                <label for="timePerWord" class="form-label mb-1">Time per word (seconds)</label>
+                                <input id="timePerWord" class="form-control" type="number" min="1" name="time_per_word" placeholder="e.g. 5">
+                            </div>
+                        </div>
+
+                        <div id="sentenceSection" data-reading-section="sentence" class="d-none">
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Sentence</th>
+                                            <th style="width: 150px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Si Ana ay nagbabasa ng libro.</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-outline-primary btn-sm" type="button">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="sentenceBox" class="form-label">Add Sentence</label>
+                                <textarea id="sentenceBox" class="form-control" name="new_sentence" rows="3" placeholder="Type sentence here"></textarea>
+                            </div>
+
+                            <div class="border rounded p-3 mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableSentenceTime" name="enable_sentence_time">
+                                    <label class="form-check-label" for="enableSentenceTime">Enable time</label>
+                                </div>
+                                <label for="timePerSentence" class="form-label mb-1">Time for completing sentence (seconds)</label>
+                                <input id="timePerSentence" class="form-control" type="number" min="1" name="time_per_sentence" placeholder="e.g. 15">
+                            </div>
+                        </div>
+
+                        <div id="paragraphsSection" data-reading-section="paragraphs" class="d-none">
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Paragraph</th>
+                                            <th style="width: 150px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Si Lito ay maagang pumasok sa paaralan upang magbasa kasama ang kanyang guro.</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-outline-primary btn-sm" type="button">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="paragraphBox" class="form-label">Add Paragraph</label>
+                                <textarea id="paragraphBox" class="form-control" name="new_paragraph" rows="4" placeholder="Type paragraph here"></textarea>
+                            </div>
+
+                            <div class="border rounded p-3 mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableParagraphTime" name="enable_paragraph_time">
+                                    <label class="form-check-label" for="enableParagraphTime">Enable time</label>
+                                </div>
+                                <label for="timePerParagraph" class="form-label mb-1">Time for completing paragraph (seconds)</label>
+                                <input id="timePerParagraph" class="form-control" type="number" min="1" name="time_per_paragraph" placeholder="e.g. 30">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Item</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="removeLessonModal" tabindex="-1" aria-labelledby="removeLessonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h4 class="modal-title h6 mb-0" id="removeLessonModalLabel">Confirm Remove</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <p class="mb-0">Remove <span class="fw-semibold" id="removeLessonName">this lesson</span>?</p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Yes, Remove</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="studentsModal" tabindex="-1" aria-labelledby="studentsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="studentsModalLabel">Students</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Section</th>
+                                        <th style="width: 130px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Lia Santos</td>
+                                        <td>Grade 5 - A</td>
+                                        <td><button class="btn btn-outline-danger btn-sm" type="button">Remove</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Marco Dela Cruz</td>
+                                        <td>Grade 5 - A</td>
+                                        <td><button class="btn btn-outline-danger btn-sm" type="button">Remove</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Aira Mendoza</td>
+                                        <td>Grade 6 - A</td>
+                                        <td><button class="btn btn-outline-danger btn-sm" type="button">Remove</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="border rounded p-3 bg-light-subtle">
+                            <label for="studentSearch" class="form-label">Add Student</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <input id="studentSearch" class="form-control" style="max-width: 320px;" type="text" list="studentList" placeholder="Search student name">
+                                <datalist id="studentList">
+                                    <option value="Lia Santos"></option>
+                                    <option value="Marco Dela Cruz"></option>
+                                    <option value="Aira Mendoza"></option>
+                                    <option value="Nico Ramos"></option>
+                                    <option value="Trina Velasco"></option>
+                                </datalist>
+                                <button class="btn btn-primary btn-sm" type="button">Add</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="courseSettingsModal" tabindex="-1" aria-labelledby="courseSettingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="courseSettingsModalLabel">Course Settings</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="courseStatus" class="form-label">Course Status</label>
+                            <select id="courseStatus" class="form-select" name="course_status">
+                                <option value="published">Published</option>
+                                <option value="draft">Draft</option>
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-secondary text-start" type="button">Conclude this course</button>
+                            <button class="btn btn-outline-danger text-start" type="button">Delete this course</button>
+                            <button class="btn btn-outline-secondary text-start" type="button">Copy this course</button>
+                            <button class="btn btn-outline-secondary text-start" type="button">Export course records</button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const changeStatusModal = document.getElementById("changeStatusModal");
+        const statusLessonName = document.getElementById("statusLessonName");
+        const lessonStatus = document.getElementById("lessonStatus");
+        const statusDraftPublishDateRow = document.getElementById("statusDraftPublishDateRow");
+        const statusDraftPublishDate = document.getElementById("statusDraftPublishDate");
+        const archivedOptionsSection = document.getElementById("archivedOptionsSection");
+        const archiveUntilDateMode = document.getElementById("archiveUntilDateMode");
+        const archiveTillCompleteMode = document.getElementById("archiveTillCompleteMode");
+        const archiveTillIWantMode = document.getElementById("archiveTillIWantMode");
+        const archiveUntilDateRow = document.getElementById("archiveUntilDateRow");
+        const archiveTillCompleteRow = document.getElementById("archiveTillCompleteRow");
+        const archiveUntilDate = document.getElementById("archiveUntilDate");
+        const archiveTillCompleteSelect = document.getElementById("archiveTillCompleteSelect");
+        const lessonIcon = document.getElementById("lessonIcon");
+        const lessonIconPreview = document.getElementById("lessonIconPreview");
+        const editLessonModal = document.getElementById("editLessonModal");
+        const editLessonIcon = document.getElementById("editLessonIcon");
+        const editLessonIconPreview = document.getElementById("editLessonIconPreview");
+        const editLessonName = document.getElementById("editLessonName");
+        const editLessonDescription = document.getElementById("editLessonDescription");
+        const editLessonWeek = document.getElementById("editLessonWeek");
+        const addLessonStatus = document.getElementById("addLessonStatus");
+        const draftPublishDateRow = document.getElementById("draftPublishDateRow");
+        const draftPublishDate = document.getElementById("draftPublishDate");
+        const addItemModal = document.getElementById("addItemModal");
+        const itemLessonName = document.getElementById("itemLessonName");
+        const readingType = document.getElementById("readingType");
+        const removeLessonModal = document.getElementById("removeLessonModal");
+        const removeLessonName = document.getElementById("removeLessonName");
+        const lessonCardCols = Array.from(document.querySelectorAll(".lesson-card-col"));
+        const lessonCardGrids = Array.from(document.querySelectorAll(".lesson-cards-grid"));
+        let draggingCard = null;
+
+        if (!changeStatusModal || !statusLessonName) {
+            return;
+        }
+
+        function toggleArchiveModeRows() {
+            if (!archiveUntilDateMode || !archiveTillCompleteMode || !archiveUntilDateRow || !archiveTillCompleteRow) {
+                return;
+            }
+
+            const isUntilDate = archiveUntilDateMode.checked;
+            const isTillComplete = archiveTillCompleteMode.checked;
+            archiveUntilDateRow.classList.toggle("d-none", !isUntilDate);
+            archiveTillCompleteRow.classList.toggle("d-none", !isTillComplete);
+
+            if (archiveUntilDate) {
+                archiveUntilDate.required = isUntilDate;
+                if (!isUntilDate) {
+                    archiveUntilDate.value = "";
+                }
+            }
+
+            if (archiveTillCompleteSelect) {
+                archiveTillCompleteSelect.required = isTillComplete;
+            }
+        }
+
+        function toggleStatusDraftPublishDate() {
+            if (!lessonStatus || !statusDraftPublishDateRow || !archivedOptionsSection) {
+                return;
+            }
+
+            const isDraft = lessonStatus.value === "draft";
+            const isArchived = lessonStatus.value === "archived";
+            statusDraftPublishDateRow.classList.toggle("d-none", !isDraft);
+            archivedOptionsSection.classList.toggle("d-none", !isArchived);
+
+            if (statusDraftPublishDate) {
+                statusDraftPublishDate.required = isDraft;
+                if (!isDraft) {
+                    statusDraftPublishDate.value = "";
+                }
+            }
+
+            if (!isArchived) {
+                if (archiveUntilDate) {
+                    archiveUntilDate.required = false;
+                    archiveUntilDate.value = "";
+                }
+                if (archiveTillCompleteSelect) {
+                    archiveTillCompleteSelect.required = false;
+                }
+            } else {
+                toggleArchiveModeRows();
+            }
+        }
+
+        changeStatusModal.addEventListener("show.bs.modal", function (event) {
+            const trigger = event.relatedTarget;
+            const lessonTitle = trigger ? trigger.getAttribute("data-lesson-title") : "Lesson";
+            statusLessonName.textContent = lessonTitle || "Lesson";
+            toggleStatusDraftPublishDate();
+        });
+
+        if (lessonStatus) {
+            lessonStatus.addEventListener("change", toggleStatusDraftPublishDate);
+            toggleStatusDraftPublishDate();
+        }
+
+        if (archiveUntilDateMode) {
+            archiveUntilDateMode.addEventListener("change", toggleArchiveModeRows);
+        }
+
+        if (archiveTillCompleteMode) {
+            archiveTillCompleteMode.addEventListener("change", toggleArchiveModeRows);
+        }
+
+        if (archiveTillIWantMode) {
+            archiveTillIWantMode.addEventListener("change", toggleArchiveModeRows);
+        }
+
+        if (lessonIcon && lessonIconPreview) {
+            lessonIcon.addEventListener("change", function () {
+                lessonIconPreview.className = "bi " + lessonIcon.value;
+            });
+        }
+
+        if (editLessonIcon && editLessonIconPreview) {
+            editLessonIcon.addEventListener("change", function () {
+                editLessonIconPreview.className = "bi " + editLessonIcon.value;
+            });
+        }
+
+        if (editLessonModal && editLessonName && editLessonDescription && editLessonWeek && editLessonIcon && editLessonIconPreview) {
+            editLessonModal.addEventListener("show.bs.modal", function (event) {
+                const trigger = event.relatedTarget;
+
+                const lessonTitle = trigger ? trigger.getAttribute("data-lesson-title") : "";
+                const lessonDescription = trigger ? trigger.getAttribute("data-lesson-description") : "";
+                const lessonWeek = trigger ? trigger.getAttribute("data-lesson-week") : "week1";
+                const lessonIconClass = trigger ? trigger.getAttribute("data-lesson-icon") : "bi-journal-richtext";
+
+                editLessonName.value = lessonTitle || "";
+                editLessonDescription.value = lessonDescription || "";
+                editLessonWeek.value = lessonWeek || "week1";
+                editLessonIcon.value = lessonIconClass || "bi-journal-richtext";
+                editLessonIconPreview.className = "bi " + editLessonIcon.value;
+            });
+        }
+
+        function toggleDraftPublishDate() {
+            if (!addLessonStatus || !draftPublishDateRow) {
+                return;
+            }
+
+            const isDraft = addLessonStatus.value === "draft";
+            draftPublishDateRow.classList.toggle("d-none", !isDraft);
+
+            if (draftPublishDate) {
+                draftPublishDate.required = isDraft;
+                if (!isDraft) {
+                    draftPublishDate.value = "";
+                }
+            }
+        }
+
+        if (addLessonStatus) {
+            addLessonStatus.addEventListener("change", toggleDraftPublishDate);
+            toggleDraftPublishDate();
+        }
+
+        function updateReadingSections(value) {
+            document.querySelectorAll("[data-reading-section]").forEach(function (section) {
+                section.classList.toggle("d-none", section.getAttribute("data-reading-section") !== value);
+            });
+        }
+
+        if (readingType) {
+            readingType.addEventListener("change", function () {
+                updateReadingSections(readingType.value);
+            });
+            updateReadingSections(readingType.value);
+        }
+
+        if (addItemModal && itemLessonName) {
+            addItemModal.addEventListener("show.bs.modal", function (event) {
+                const trigger = event.relatedTarget;
+                const lessonTitle = trigger ? trigger.getAttribute("data-lesson-title") : "Lesson";
+                itemLessonName.textContent = lessonTitle || "Lesson";
+            });
+        }
+
+        if (removeLessonModal && removeLessonName) {
+            removeLessonModal.addEventListener("show.bs.modal", function (event) {
+                const trigger = event.relatedTarget;
+                const lessonTitle = trigger ? trigger.getAttribute("data-lesson-title") : "this lesson";
+                removeLessonName.textContent = lessonTitle || "this lesson";
+            });
+        }
+
+        lessonCardCols.forEach(function (cardCol) {
+            cardCol.addEventListener("dragstart", function (event) {
+                draggingCard = cardCol;
+                cardCol.classList.add("dragging");
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", "lesson-card");
+            });
+
+            cardCol.addEventListener("dragend", function () {
+                cardCol.classList.remove("dragging");
+                draggingCard = null;
+            });
+        });
+
+        lessonCardGrids.forEach(function (grid) {
+            grid.addEventListener("dragover", function (event) {
+                if (!draggingCard) {
+                    return;
+                }
+
+                event.preventDefault();
+                const targetCard = event.target.closest(".lesson-card-col");
+
+                if (!targetCard || targetCard === draggingCard) {
+                    return;
+                }
+
+                const rect = targetCard.getBoundingClientRect();
+                const placeBefore = event.clientX < rect.left + rect.width / 2;
+
+                if (placeBefore) {
+                    grid.insertBefore(draggingCard, targetCard);
+                } else {
+                    grid.insertBefore(draggingCard, targetCard.nextElementSibling);
+                }
+            });
+
+            grid.addEventListener("drop", function (event) {
+                if (!draggingCard) {
+                    return;
+                }
+
+                event.preventDefault();
+                const targetCard = event.target.closest(".lesson-card-col");
+
+                if (!targetCard) {
+                    grid.appendChild(draggingCard);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

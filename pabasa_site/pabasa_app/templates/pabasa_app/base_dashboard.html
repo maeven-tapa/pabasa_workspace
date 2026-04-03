@@ -14,6 +14,7 @@
             --dash-bg: #f7f8fc;
             --dash-border: #e8eaf2;
             --dash-text: #2b2f42;
+            --sidebar-width: 280px;
         }
 
         body.dashboard-body {
@@ -33,6 +34,10 @@
 
         body.sidebar-collapsed .dashboard-sidebar {
             width: 90px;
+        }
+
+        body.sidebar-collapsed {
+            --sidebar-width: 90px;
         }
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-text,
@@ -58,6 +63,66 @@
 
         .dashboard-main {
             min-height: 100vh;
+        }
+
+        .help-panel {
+            position: fixed;
+            top: 92px;
+            left: calc(var(--sidebar-width) + 12px);
+            width: min(320px, calc(100vw - var(--sidebar-width) - 28px));
+            max-height: calc(100vh - 110px);
+            overflow: auto;
+            background: #fff;
+            border: 1px solid var(--dash-border);
+            border-radius: 0.85rem;
+            box-shadow: 0 14px 28px rgba(22, 34, 51, 0.12);
+            z-index: 1040;
+            transform: translateX(-14px);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.22s ease, opacity 0.22s ease;
+        }
+
+        body.help-panel-open .help-panel {
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .help-panel-head {
+            border-bottom: 1px solid var(--dash-border);
+            padding: 0.85rem 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .help-panel-head h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .help-panel-body {
+            padding: 0.85rem 0.95rem 0.95rem;
+        }
+
+        .help-links {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .help-links li {
+            border: 1px solid var(--dash-border);
+            border-radius: 0.6rem;
+            padding: 0.52rem 0.65rem;
+            background: #fbfbff;
+            color: #4a4f64;
+            font-size: 0.91rem;
         }
 
         .dashboard-main a {
@@ -113,6 +178,21 @@
             border-color: #ccb2fb;
             background: var(--dash-primary-soft);
             color: var(--dash-primary-deep);
+        }
+
+        .dashboard-main .btn-primary {
+            background-color: var(--dash-primary);
+            border-color: var(--dash-primary);
+            color: #fff !important;
+        }
+
+        .dashboard-main .btn-primary:hover,
+        .dashboard-main .btn-primary:focus,
+        .dashboard-main .btn-primary:active {
+            background-color: var(--dash-primary-deep) !important;
+            border-color: var(--dash-primary-deep) !important;
+            color: #fff !important;
+            box-shadow: 0 0 0 0.2rem rgba(110, 16, 238, 0.22) !important;
         }
 
         .dash-kpi {
@@ -394,6 +474,13 @@
             .dashboard-content-wrap {
                 padding: 1rem;
             }
+
+            .help-panel {
+                top: 84px;
+                left: 0.75rem;
+                width: calc(100vw - 1.5rem);
+                max-height: calc(100vh - 100px);
+            }
         }
     </style>
     {% block extra_head %}{% endblock %}
@@ -457,10 +544,46 @@
                     <div class="profile-pane-links">
                         <a href="{% url 'profile' %}" class="btn btn-primary">View Profile</a>
                         <a href="{% url 'settings' %}" class="btn btn-outline-secondary">Account Settings</a>
-                        <a href="{% url 'logout' %}" class="btn btn-outline-secondary">Log Out</a>
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#logoutConfirmModal">Log Out</button>
                     </div>
                 </div>
             </div>
+
+            <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-labelledby="logoutConfirmModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 pb-0">
+                            <h5 class="modal-title" id="logoutConfirmModalLabel">Confirm Logout</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body pt-2">
+                            Are you sure you want to end your session?
+                        </div>
+                        <div class="modal-footer border-0 pt-0">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <a class="btn btn-primary" href="{% url 'home' %}">Yes, Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="help-panel" id="helpPanel" aria-label="Help panel" aria-hidden="true">
+                <div class="help-panel-head">
+                    <h2>Help</h2>
+                    <button class="btn btn-sm btn-light border" type="button" data-help-close aria-label="Close help panel">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="help-panel-body">
+                    <ul class="help-links">
+                        <li>How to create a course</li>
+                        <li>How to invite students</li>
+                        <li>How to start reading practice</li>
+                        <li>How to view progress reports</li>
+                        <li>How to manage notifications</li>
+                    </ul>
+                </div>
+            </aside>
 
             {% block header %}
                 {% include "pabasa_app/partials/_header.html" with page_title="Dashboard" page_date="April 2, 2026" %}
@@ -496,6 +619,39 @@
                 const next = !document.body.classList.contains("sidebar-collapsed");
                 setCollapsed(next);
                 window.localStorage.setItem(key, next ? "1" : "0");
+            });
+        })();
+
+        (function () {
+            const helpToggleBtn = document.querySelector("[data-help-toggle]");
+            const helpCloseBtn = document.querySelector("[data-help-close]");
+            const helpPanel = document.getElementById("helpPanel");
+
+            if (!helpToggleBtn || !helpPanel) {
+                return;
+            }
+
+            function setHelpPanel(open) {
+                document.body.classList.toggle("help-panel-open", open);
+                helpPanel.setAttribute("aria-hidden", open ? "false" : "true");
+                helpToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+            }
+
+            helpToggleBtn.addEventListener("click", function () {
+                const next = !document.body.classList.contains("help-panel-open");
+                setHelpPanel(next);
+            });
+
+            if (helpCloseBtn) {
+                helpCloseBtn.addEventListener("click", function () {
+                    setHelpPanel(false);
+                });
+            }
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape" && document.body.classList.contains("help-panel-open")) {
+                    setHelpPanel(false);
+                }
             });
         })();
     </script>

@@ -11,7 +11,7 @@
             <h2 class="h6 mb-1">Courses</h2>
             <p class="small text-secondary mb-0">Manage class spaces and reading modules.</p>
         </div>
-        <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-plus-lg me-1"></i>Add Course</button>
+        <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#createCourseModal"><i class="bi bi-plus-lg me-1"></i>Add Course</button>
     </div>
 
     <div class="row g-3">
@@ -23,7 +23,7 @@
                     <p class="course-meta mb-1">32 students enrolled</p>
                     <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
                         <span class="dash-pill">Active</span>
-                        <button class="btn btn-outline-primary btn-sm">Open</button>
+                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}">Open</a>
                     </div>
                 </div>
             </article>
@@ -36,7 +36,7 @@
                     <p class="course-meta mb-1">24 students enrolled</p>
                     <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
                         <span class="dash-pill">In Progress</span>
-                        <button class="btn btn-outline-primary btn-sm">Open</button>
+                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}">Open</a>
                     </div>
                 </div>
             </article>
@@ -49,7 +49,7 @@
                     <p class="course-meta mb-1">18 students enrolled</p>
                     <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
                         <span class="dash-pill">Upcoming</span>
-                        <button class="btn btn-outline-primary btn-sm">Open</button>
+                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}">Open</a>
                     </div>
                 </div>
             </article>
@@ -60,6 +60,33 @@
         <div class="card-body p-4">
             <h3 class="h6">Course management</h3>
             <p class="text-secondary mb-0">Use this area to assign lessons, monitor submissions, and review reading progress per class.</p>
+        </div>
+    </div>
+
+    <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="createCourseModalLabel">Create Course</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="courseName" class="form-label">Course Name</label>
+                            <input id="courseName" class="form-control" type="text" name="course_name" placeholder="Enter course name" required>
+                        </div>
+                        <div>
+                            <label for="courseBox" class="form-label">Course Box</label>
+                            <textarea id="courseBox" class="form-control" name="course_box" rows="4" placeholder="Type course details"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </section>

@@ -6,6 +6,13 @@ def home(request):
 def auth(request):
     return render(request, 'pabasa_app/auth.html')
 
+def forgot_password(request):
+    return render(request, 'pabasa_app/forgot_password.html')
+
+def forgot_password_otp(request):
+    email = request.GET.get('email', '')
+    return render(request, 'pabasa_app/forgot_password_otp.html', {'email': email})
+
 def signup(request):
     return render(request, 'pabasa_app/signup.html')
 
@@ -27,6 +34,9 @@ def dashboard(request):
 def courses(request):
     return render(request, 'pabasa_app/courses.html')
 
+def course_teacher_view(request):
+    return render(request, 'pabasa_app/course_tecaher_view.html')
+
 def students(request):
     return render(request, 'pabasa_app/students.html')
 
@@ -44,6 +54,3 @@ def profile(request):
 
 def notifications(request):
     return render(request, 'pabasa_app/notifications.html')
-
-def logout(request):
-    return render(request, 'pabasa_app/logout.html')

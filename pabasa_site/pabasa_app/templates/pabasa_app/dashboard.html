@@ -1,5 +1,47 @@
 {% extends "pabasa_app/base_dashboard.html" %}
 
+{% block extra_head %}
+<style>
+    .mini-chart-wrap {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        align-items: end;
+        gap: 0.45rem;
+        height: 170px;
+        padding: 0.7rem 0.4rem 0.2rem;
+        border: 1px solid #eceef6;
+        border-radius: 0.8rem;
+        background: linear-gradient(180deg, #fcfbff 0%, #f7f8ff 100%);
+    }
+
+    .mini-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .mini-col .bar {
+        width: 100%;
+        max-width: 28px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #8a3ffc 0%, #6e10ee 100%);
+        box-shadow: 0 6px 12px rgba(110, 16, 238, 0.2);
+    }
+
+    .mini-col .day {
+        font-size: 0.72rem;
+        color: #7f859a;
+    }
+
+    .mini-col .val {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #4d536a;
+    }
+</style>
+{% endblock %}
+
 {% block header %}
     {% include "pabasa_app/partials/_header.html" with page_title="Dashboard" page_date="April 2, 2026" %}
 {% endblock %}
@@ -47,6 +89,91 @@
         </div>
     </div>
 
+    <div class="row g-3 mb-4">
+        <div class="col-xl-8">
+            <div class="dash-surface p-3 p-md-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 mb-0">Weekly Reading Completion</h2>
+                    <span class="small text-secondary">Target: 20 activities/day</span>
+                </div>
+                <div class="mini-chart-wrap">
+                    <div class="mini-col">
+                        <div class="bar" style="height: 54%;"></div>
+                        <span class="val">11</span>
+                        <span class="day">Mon</span>
+                    </div>
+                    <div class="mini-col">
+                        <div class="bar" style="height: 66%;"></div>
+                        <span class="val">13</span>
+                        <span class="day">Tue</span>
+                    </div>
+                    <div class="mini-col">
+                        <div class="bar" style="height: 72%;"></div>
+                        <span class="val">14</span>
+                        <span class="day">Wed</span>
+                    </div>
+                    <div class="mini-col">
+                        <div class="bar" style="height: 84%;"></div>
+                        <span class="val">17</span>
+                        <span class="day">Thu</span>
+                    </div>
+                    <div class="mini-col">
+                        <div class="bar" style="height: 78%;"></div>
+                        <span class="val">16</span>
+                        <span class="day">Fri</span>
+                    </div>
+                    <div class="mini-col">
+                        <div class="bar" style="height: 42%;"></div>
+                        <span class="val">8</span>
+                        <span class="day">Sat</span>
+                    </div>
+                    <div class="mini-col">
+                        <div class="bar" style="height: 36%;"></div>
+                        <span class="val">7</span>
+                        <span class="day">Sun</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="dash-surface p-3 p-md-4 h-100">
+                <h2 class="h6 mb-3">Reading Focus This Week</h2>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Word Activities</span>
+                        <span>18 done</span>
+                    </div>
+                    <div class="progress" role="progressbar" aria-label="Word activities completed" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: 72%; background-color: #6e10ee;"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Sentence Activities</span>
+                        <span>12 done</span>
+                    </div>
+                    <div class="progress" role="progressbar" aria-label="Sentence activities completed" aria-valuenow="48" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar bg-info" style="width: 48%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Paragraph Activities</span>
+                        <span>9 done</span>
+                    </div>
+                    <div class="progress" role="progressbar" aria-label="Paragraph activities completed" aria-valuenow="36" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar bg-success" style="width: 36%"></div>
+                    </div>
+                </div>
+                <div class="border rounded p-2 bg-light-subtle">
+                    <div class="small text-secondary">Suggested focus</div>
+                    <div class="fw-semibold">Increase sentence drills for Grade 5 - A</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-3">
         <div class="col-xl-8">
             <div class="dash-surface p-3 p-md-4 h-100">
@@ -59,30 +186,30 @@
                         <thead>
                             <tr>
                                 <th>Course</th>
+                                <th>Lesson</th>
                                 <th>Status</th>
-                                <th>Items</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td>Software Design Lec</td>
-                                <td><span class="badge dash-badge">Submitted</span></td>
-                                <td>3 completed</td>
+                                <td>Reading Fluency 101</td>
+                                <td>Lesson 1: Letter Sounds</td>
+                                <td><span class="badge text-bg-success">Done</span></td>
                             </tr>
                             <tr>
-                                <td>Software Design Lab</td>
-                                <td><span class="badge text-bg-warning">Late</span></td>
-                                <td>1 completed</td>
+                                <td>Speech Practice Lab</td>
+                                <td>Lesson 3: Oral Reading</td>
+                                <td><span class="badge text-bg-warning">Not Finished</span></td>
                             </tr>
                             <tr>
-                                <td>Technical Research</td>
-                                <td><span class="badge dash-badge">Submitted</span></td>
-                                <td>2 completed</td>
+                                <td>Comprehension Workshop</td>
+                                <td>Lesson 5: Paragraph Practice</td>
+                                <td><span class="badge text-bg-success">Done</span></td>
                             </tr>
                             <tr>
-                                <td>Reading Fluency</td>
-                                <td><span class="badge dash-badge">Submitted</span></td>
-                                <td>4 completed</td>
+                                <td>Reading Fluency 101</td>
+                                <td>Lesson 2: Word Drills</td>
+                                <td><span class="badge text-bg-warning">Not Finished</span></td>
                             </tr>
                         </tbody>
                     </table>
