@@ -34,8 +34,23 @@ def dashboard(request):
 def courses(request):
     return render(request, 'pabasa_app/courses.html')
 
+def assessment(request):
+    return render(request, 'pabasa_app/assessment.html')
+
+def reading_word_page(request):
+    return render(request, 'pabasa_app/reading_word_page.html')
+
+def reading_sentence_page(request):
+    return render(request, 'pabasa_app/reading_sentence_page.html')
+
+def reading_para_page(request):
+    return render(request, 'pabasa_app/reading_para_page.html')
+
 def course_teacher_view(request):
     return render(request, 'pabasa_app/course_tecaher_view.html')
+
+def course_student_view(request):
+    return render(request, 'pabasa_app/course_student_view.html')
 
 def students(request):
     return render(request, 'pabasa_app/students.html')

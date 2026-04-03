@@ -2,12 +2,34 @@
 
 {% block extra_head %}
 <style>
+    .calendar-grid-table {
+        border-color: #e9edf6;
+    }
+
+    .calendar-grid-table thead th {
+        background: #f8faff;
+        color: #6f7892;
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        border-bottom: 1px solid #e7ebf5;
+        padding: 0.7rem 0.55rem;
+    }
+
     .calendar-grid-table td {
         height: 68px;
         vertical-align: top;
         font-size: 0.9rem;
         font-weight: 500;
         background: #fff;
+        border-color: #edf1f8;
+        padding: 0.55rem;
+        transition: background-color 0.15s ease;
+    }
+
+    .calendar-grid-table tbody td:hover {
+        background: #f7f9ff;
     }
 
     .calendar-grid-table td.is-muted {
@@ -91,6 +113,26 @@
     .calendar-feed-note .btn {
         margin-top: 0.1rem;
     }
+
+    .calendar-layout {
+        align-items: stretch;
+    }
+
+    .calendar-main-col,
+    .calendar-side-col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .calendar-main-col .dash-card,
+    .calendar-side-col .dash-card {
+        flex: 1 1 0;
+    }
+
+    .calendar-main-col .dash-card .card-body,
+    .calendar-side-col .dash-card .card-body {
+        height: 100%;
+    }
 </style>
 {% endblock %}
 
@@ -122,13 +164,13 @@
         </div>
     </div>
 
-    <div class="row g-3">
-        <div class="col-lg-8">
+    <div class="row g-3 calendar-layout">
+        <div class="col-lg-8 calendar-main-col">
             <div class="dash-card">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered align-middle text-center mb-0 calendar-grid-table">
-                            <thead class="table-light">
+                        <table class="table align-middle text-center mb-0 calendar-grid-table">
+                            <thead>
                                 <tr>
                                     <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
                                 </tr>
@@ -146,31 +188,31 @@
             </div>
         </div>
 
-        <div class="col-lg-4">
+        <div class="col-lg-4 calendar-side-col">
             <div class="dash-card mb-3">
                 <div class="card-body">
                     <div class="calendar-card-head">
-                        <h3 class="h6 mb-0">Calendars</h3>
-                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" type="button" aria-label="Add calendar">+</button>
+                        <h3 class="h6 mb-0">Agenda</h3>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" type="button" aria-label="Add agenda item">+</button>
                     </div>
                     <div class="calendar-list-item">
                         <div class="calendar-list-name">
                             <span class="calendar-dot bg-primary"></span>
-                            <span>Logic Circuits and Switching Theory</span>
+                            <span>8:30 AM - Grade 2 Reading Warm-up</span>
                         </div>
                         <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
                     </div>
                     <div class="calendar-list-item">
                         <div class="calendar-list-name">
                             <span class="calendar-dot bg-success"></span>
-                            <span>Software Design Lab</span>
+                            <span>10:00 AM - Oral Reading Practice</span>
                         </div>
                         <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
                     </div>
                     <div class="calendar-list-item">
                         <div class="calendar-list-name">
                             <span class="calendar-dot" style="background:#6e10ee;"></span>
-                            <span>Technical Research</span>
+                            <span>1:30 PM - Parent Progress Update Call</span>
                         </div>
                         <button class="btn btn-light btn-sm py-0 px-2" type="button" aria-label="More options">...</button>
                     </div>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Paragraph Page</title>
+    <style>
+        :root {
+            --accent: #6e10ee;
+            --accent-soft: #efe4ff;
+            --bg: #f5f4fa;
+            --ink: #20233a;
+            --muted: #70778f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at 15% 20%, #fcf9ff 0%, var(--bg) 45%, #f0edf8 100%);
+            color: var(--ink);
+            font-family: "Nunito", "Trebuchet MS", "Segoe UI", sans-serif;
+        }
+
+        .reader-shell {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            padding: 1rem 1.2rem;
+        }
+
+        .top-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .test-meta {
+            font-size: 0.84rem;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .counter {
+            font-size: 0.86rem;
+            color: var(--accent);
+            font-weight: 800;
+            border: 1px solid #d8c7ff;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            padding: 0.28rem 0.7rem;
+        }
+
+        .progress-track {
+            width: 100%;
+            max-width: 560px;
+            height: 10px;
+            border-radius: 999px;
+            background: #ded8ee;
+            overflow: hidden;
+            border: 1px solid #d1c9e8;
+        }
+
+        .progress-row {
+            margin-top: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            position: relative;
+            width: min(620px, 100%);
+        }
+
+        .pause-btn {
+            border: 1px solid #cfb9ff;
+            background: #fff;
+            color: var(--accent);
+            width: 38px;
+            height: 38px;
+            border-radius: 999px;
+            font-size: 0.95rem;
+            font-weight: 900;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(48, 25, 99, 0.12);
+            transition: all 0.2s ease;
+        }
+
+        .pause-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .pause-menu {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(460px, calc(100vw - 2rem));
+            border: 1px solid #dccbff;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 18px 38px rgba(47, 27, 102, 0.24);
+            padding: 1rem;
+            z-index: 20;
+        }
+
+        .pause-menu.d-none {
+            display: none;
+        }
+
+        .pause-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(29, 20, 58, 0.24);
+            z-index: 19;
+        }
+
+        .pause-overlay.d-none {
+            display: none;
+        }
+
+        .pause-menu button {
+            width: 100%;
+            border: 1px solid #cdb3ff;
+            background: #fff;
+            color: #6e10ee;
+            text-align: center;
+            border-radius: 12px;
+            padding: 0.75rem 0.8rem;
+            font-size: 1.03rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 0.55rem;
+        }
+
+        .pause-menu button:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .pause-title {
+            margin: 0;
+            text-align: center;
+            font-size: 1.7rem;
+            font-weight: 900;
+            color: #2e1f56;
+            letter-spacing: 0.03em;
+        }
+
+        .pause-subtitle {
+            margin: 0.25rem 0 0.65rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #7e7894;
+        }
+
+        .progress-fill {
+            width: 10%;
+            height: 100%;
+            background: linear-gradient(90deg, #8b4af8 0%, var(--accent) 100%);
+            transition: width 0.2s ease;
+        }
+
+        .word-stage {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .reading-word {
+            margin: 0;
+            font-size: clamp(1.35rem, 3.6vw, 2.5rem);
+            line-height: 1.35;
+            letter-spacing: 0.01em;
+            font-weight: 800;
+            color: #2d2151;
+            text-shadow: 0 10px 20px rgba(110, 16, 238, 0.1);
+            max-width: min(980px, 90vw);
+        }
+
+        .nav-btn {
+            position: absolute;
+            bottom: 1.25rem;
+            border: 1px solid #cfb9ff;
+            background: #ffffff;
+            color: var(--accent);
+            width: 58px;
+            height: 58px;
+            border-radius: 999px;
+            font-size: 1.35rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(48, 25, 99, 0.12);
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .nav-prev {
+            left: 1.25rem;
+        }
+
+        .nav-next {
+            right: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <main class="reader-shell">
+        <div class="top-info">
+            <div class="test-meta" id="testMeta">Assessment Reader</div>
+            <div class="counter" id="counter">Paragraph 1/10</div>
+        </div>
+
+        <div class="progress-row">
+            <button class="pause-btn" id="pauseBtn" type="button" aria-label="Pause options" aria-expanded="false">||</button>
+            <div class="pause-overlay d-none" id="pauseOverlay"></div>
+            <div class="pause-menu d-none" id="pauseMenu" role="menu" aria-label="Pause menu">
+                <h2 class="pause-title">Paused</h2>
+                <p class="pause-subtitle">Choose what you want to do next</p>
+                <button id="resumeBtn" type="button" role="menuitem">Resume</button>
+                <button id="retryBtn" type="button" role="menuitem">Retry</button>
+                <button id="quitBtn" type="button" role="menuitem">Quit</button>
+            </div>
+            <div class="progress-track" aria-hidden="true">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <section class="word-stage" aria-live="polite" aria-atomic="true">
+            <h1 class="reading-word" id="readingWord">Maagang pumasok si Ana sa paaralan upang magbasa kasama ang kaniyang guro. Tahimik siyang umupo at dahan-dahang binigkas ang bawat salita. Dahil sa araw-araw na praktis, mas naging malinaw at mabilis ang kaniyang pagbasa.</h1>
+        </section>
+
+        <button class="nav-btn nav-prev" id="prevBtn" type="button" aria-label="Previous word">&larr;</button>
+        <button class="nav-btn nav-next" id="nextBtn" type="button" aria-label="Next word">&rarr;</button>
+    </main>
+
+    <script>
+        (function () {
+            const words = [
+                "Maagang pumasok si Ana sa paaralan upang magbasa kasama ang kaniyang guro. Tahimik siyang umupo at dahan-dahang binigkas ang bawat salita. Dahil sa araw-araw na praktis, mas naging malinaw at mabilis ang kaniyang pagbasa.",
+                "Tuwing umaga, naglalaan si Carlo ng sampung minuto para sa reading warm-up. Inuulit niya ang mahihirap na salita hanggang maging pamilyar ang tunog at baybay. Sa tulong nito, tumaas ang kaniyang kumpiyansa sa klase.",
+                "Nagbigay ang guro ng maikling talata tungkol sa kalikasan. Binasa ito ng mga bata nang paisa-isa habang pinapansin ang tamang pagbigkas at paghinto. Naging mas maayos ang daloy ng kanilang pagbabasa.",
+                "Sa reading center, pumili si Lito ng kuwentong may simpleng pangungusap. Tinukoy niya ang mga salitang hindi pa niya kabisado at isinulat sa notebook. Pagkatapos, nagpraktis siya kasama ang kaklase.",
+                "Isinama ni Maya ang kaniyang magulang sa gabi-gabing reading routine. Nagbabasa sila ng isang talata at pinag-uusapan ang kahulugan ng bagong salita. Dahil dito, mas nauunawaan niya ang binabasa.",
+                "Sa oras ng pagsusulit, hinikayat ng guro ang mga bata na huminga nang malalim bago magsimula. Dahan-dahan nilang binasa ang bawat pangungusap para maiwasan ang pagkalito. Nakatulong ito upang tumaas ang kanilang accuracy.",
+                "Matapos ang reading session, nagbigay ng feedback ang guro tungkol sa wastong diin at intonasyon. Ang mga bata ay nag-notes sa mga salitang kailangang balikan. Sa susunod na linggo, kapansin-pansin ang kanilang pag-unlad.",
+                "May simpleng activity kung saan itinutugma ng mga bata ang salita sa larawan. Pagkatapos ng gawain, binasa nila ang maikling talata gamit ang tamang bilis. Naging mas masaya at interaktibo ang aralin.",
+                "Bawat Biyernes, may group reading ang klase upang mapalakas ang teamwork. Pinapakinggan nila ang isa't isa at nagbibigay ng magalang na pagwawasto kapag may maling bigkas. Nakabubuo ito ng mas positibong learning environment.",
+                "Sa pagtatapos ng buwan, sinuri ng guro ang progreso ng bawat mag-aaral. Ipinakita sa kanila ang pagtaas ng kanilang WPM at comprehension score. Dahil dito, mas motivated silang ipagpatuloy ang regular na pagbabasa."
+            ];
+            let currentIndex = 0;
+
+            const readingWord = document.getElementById("readingWord");
+            const counter = document.getElementById("counter");
+            const progressFill = document.getElementById("progressFill");
+            const prevBtn = document.getElementById("prevBtn");
+            const nextBtn = document.getElementById("nextBtn");
+            const testMeta = document.getElementById("testMeta");
+            const pauseBtn = document.getElementById("pauseBtn");
+            const pauseOverlay = document.getElementById("pauseOverlay");
+            const pauseMenu = document.getElementById("pauseMenu");
+            const resumeBtn = document.getElementById("resumeBtn");
+            const retryBtn = document.getElementById("retryBtn");
+            const quitBtn = document.getElementById("quitBtn");
+
+            const params = new URLSearchParams(window.location.search);
+            const testTitle = params.get("test") || "Assessment";
+            const testCode = params.get("code") || "TST-000";
+            testMeta.textContent = testTitle + " - " + testCode;
+
+            function renderWord() {
+                readingWord.textContent = words[currentIndex];
+                counter.textContent = "Paragraph " + (currentIndex + 1) + "/" + words.length;
+                progressFill.style.width = ((currentIndex + 1) / words.length) * 100 + "%";
+                prevBtn.disabled = currentIndex === 0;
+                nextBtn.disabled = currentIndex === words.length - 1;
+            }
+
+            prevBtn.addEventListener("click", function () {
+                if (currentIndex > 0) {
+                    currentIndex -= 1;
+                    renderWord();
+                }
+            });
+
+            nextBtn.addEventListener("click", function () {
+                if (currentIndex < words.length - 1) {
+                    currentIndex += 1;
+                    renderWord();
+                }
+            });
+
+            function closePauseMenu() {
+                pauseMenu.classList.add("d-none");
+                pauseOverlay.classList.add("d-none");
+                pauseBtn.setAttribute("aria-expanded", "false");
+            }
+
+            pauseBtn.addEventListener("click", function () {
+                const isHidden = pauseMenu.classList.contains("d-none");
+                pauseMenu.classList.toggle("d-none", !isHidden);
+                pauseOverlay.classList.toggle("d-none", !isHidden);
+                pauseBtn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+            });
+
+            pauseOverlay.addEventListener("click", closePauseMenu);
+
+            resumeBtn.addEventListener("click", function () {
+                closePauseMenu();
+            });
+
+            retryBtn.addEventListener("click", function () {
+                currentIndex = 0;
+                renderWord();
+                closePauseMenu();
+            });
+
+            quitBtn.addEventListener("click", function () {
+                window.location.href = "/dashboard/assessment/";
+            });
+
+            document.addEventListener("click", function (event) {
+                if (!pauseMenu.contains(event.target) && !pauseBtn.contains(event.target)) {
+                    closePauseMenu();
+                }
+            });
+
+            renderWord();
+        })();
+    </script>
+</body>
+</html>

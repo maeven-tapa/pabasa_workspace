@@ -1,0 +1,959 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block extra_head %}
+<style>
+    .assessment-actions .btn.btn-sm {
+        border-radius: 999px;
+        font-weight: 600;
+        padding: 0.26rem 0.72rem;
+        border-width: 1px;
+    }
+
+    .assessment-actions .btn.btn-primary.btn-sm {
+        background: #6e10ee;
+        border-color: #6e10ee;
+        color: #fff;
+    }
+
+    .assessment-actions .btn.btn-primary.btn-sm:hover {
+        background: #5f0fd0;
+        border-color: #5f0fd0;
+        color: #fff;
+    }
+
+    .assessment-actions .btn.btn-outline-primary.btn-sm {
+        color: #6e10ee;
+        border-color: #cdb3ff;
+        background: #fff;
+    }
+
+    .assessment-actions .btn.btn-outline-primary.btn-sm:hover {
+        color: #5f0fd0;
+        border-color: #b48aff;
+        background: #f6f1ff;
+    }
+
+    .start-assessment-modal .modal-content {
+        border: 1px solid #e9ddff;
+        border-radius: 14px;
+    }
+
+    .start-assessment-modal .start-meta-card {
+        border: 1px solid #ece4ff;
+        background: linear-gradient(180deg, #fbf9ff 0%, #ffffff 100%);
+        border-radius: 10px;
+        padding: 0.7rem 0.8rem;
+    }
+
+    .response-modal .modal-content {
+        border: 1px solid #e8dcff;
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .response-modal .modal-header {
+        background: linear-gradient(180deg, #faf7ff 0%, #ffffff 100%);
+        border-bottom: 1px solid #ece4ff;
+    }
+
+    .response-modal .response-tools {
+        border: 1px solid #ece4ff;
+        border-radius: 12px;
+        background: #fcfaff;
+        padding: 0.7rem;
+    }
+
+    .response-modal .input-group-text {
+        border-color: #d8c7ff;
+        color: #6e10ee;
+        background: #f7f2ff;
+    }
+
+    .response-modal .form-control,
+    .response-modal .form-select {
+        border-color: #d8c7ff;
+    }
+
+    .response-modal .form-control:focus,
+    .response-modal .form-select:focus {
+        border-color: #b48aff;
+        box-shadow: 0 0 0 0.2rem rgba(110, 16, 238, 0.15);
+    }
+
+    .response-modal .table thead th {
+        background: #f7f2ff;
+        color: #6e10ee;
+        border-bottom: 1px solid #e5d7ff;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .response-modal .table tbody td {
+        border-color: #efe6ff;
+        background: #fff;
+    }
+
+    .response-modal .table tbody tr:hover td {
+        background: #fbf8ff;
+    }
+
+    .response-modal .score-btn {
+        color: #6e10ee;
+        border-color: #cdb3ff;
+        background: #fff;
+        font-weight: 700;
+        min-width: 52px;
+    }
+
+    .response-modal .score-btn:hover {
+        color: #5f0fd0;
+        border-color: #b48aff;
+        background: #f6f1ff;
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Assessment" page_date="April 4, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="h6 mb-1">Assessment</h2>
+            <p class="small text-secondary mb-0">Manage tests and monitor assessment activity.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#createTestModal"><i class="bi bi-plus-lg me-1"></i>Add Test</button>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6 col-xl-4">
+            <article class="course-card h-100">
+                <div class="card-body">
+                    <span class="course-icon"><i class="bi bi-journal-check"></i></span>
+                    <h3 class="h6 mb-1">Fluency Baseline Test</h3>
+                    <p class="course-meta mb-2">Student takers assigned for this test.</p>
+                    <p class="small text-secondary mb-2">Date Created: Apr 1, 2026 | Last Edited: Apr 4, 2026</p>
+                    <div class="d-flex flex-column gap-2 mt-auto">
+                        <div class="d-flex gap-1 flex-wrap">
+                            <span class="dash-pill">Code: TST-101</span>
+                            <span class="dash-pill">32 Student Response</span>
+                        </div>
+                        <div class="d-flex gap-1 flex-wrap assessment-actions">
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editTestModal" data-test-title="Fluency Baseline Test" data-test-description="Student takers assigned for this test." data-test-icon="bi-journal-check" data-section-only="false">Edit</button>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addItemModal" data-lesson-title="Fluency Baseline Test">Item</button>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#viewResponseModal" data-test-title="Fluency Baseline Test">View Response</button>
+                            <a class="btn btn-primary btn-sm" href="{% url 'reading_word_page' %}?test=Fluency%20Baseline%20Test&code=TST-101">Start</a>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <article class="course-card h-100">
+                <div class="card-body">
+                    <span class="course-icon"><i class="bi bi-clipboard2-pulse"></i></span>
+                    <h3 class="h6 mb-1">Midterm Reading Test</h3>
+                    <p class="course-meta mb-2">Student takers assigned for this test.</p>
+                    <p class="small text-secondary mb-2">Date Created: Mar 28, 2026 | Last Edited: Apr 3, 2026</p>
+                    <div class="d-flex flex-column gap-2 mt-auto">
+                        <div class="d-flex gap-1 flex-wrap">
+                            <span class="dash-pill">Code: TST-204</span>
+                            <span class="dash-pill">24 Student Response</span>
+                        </div>
+                        <div class="d-flex gap-1 flex-wrap assessment-actions">
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editTestModal" data-test-title="Midterm Reading Test" data-test-description="Student takers assigned for this test." data-test-icon="bi-clipboard2-pulse" data-section-only="true" data-test-section="grade5b">Edit</button>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addItemModal" data-lesson-title="Midterm Reading Test">Item</button>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#viewResponseModal" data-test-title="Midterm Reading Test">View Response</button>
+                            <a class="btn btn-primary btn-sm" href="{% url 'reading_word_page' %}?test=Midterm%20Reading%20Test&code=TST-204">Start</a>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <article class="course-card h-100">
+                <div class="card-body">
+                    <span class="course-icon"><i class="bi bi-ui-checks-grid"></i></span>
+                    <h3 class="h6 mb-1">Comprehension Final Test</h3>
+                    <p class="course-meta mb-2">Student takers assigned for this test.</p>
+                    <p class="small text-secondary mb-2">Date Created: Mar 25, 2026 | Last Edited: Apr 2, 2026</p>
+                    <div class="d-flex flex-column gap-2 mt-auto">
+                        <div class="d-flex gap-1 flex-wrap">
+                            <span class="dash-pill">Code: TST-309</span>
+                            <span class="dash-pill">18 Student Response</span>
+                        </div>
+                        <div class="d-flex gap-1 flex-wrap assessment-actions">
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#editTestModal" data-test-title="Comprehension Final Test" data-test-description="Student takers assigned for this test." data-test-icon="bi-ui-checks-grid" data-section-only="true" data-test-section="grade6a">Edit</button>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addItemModal" data-lesson-title="Comprehension Final Test">Item</button>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#viewResponseModal" data-test-title="Comprehension Final Test">View Response</button>
+                            <a class="btn btn-primary btn-sm" href="{% url 'reading_word_page' %}?test=Comprehension%20Final%20Test&code=TST-309">Start</a>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="dash-card mt-3">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="h6 mb-0">Recent Activity</h3>
+                <a href="#" class="small">View all</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Test</th>
+                            <th>Name</th>
+                            <th>Section</th>
+                            <th>Date/Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Fluency Baseline Test</td>
+                            <td>Lia Santos</td>
+                            <td>Grade 5 - A</td>
+                            <td>Apr 4, 2026 - 8:30 AM</td>
+                        </tr>
+                        <tr>
+                            <td>Midterm Reading Test</td>
+                            <td>Marco Dela Cruz</td>
+                            <td>Grade 5 - B</td>
+                            <td>Apr 4, 2026 - 9:45 AM</td>
+                        </tr>
+                        <tr>
+                            <td>Comprehension Final Test</td>
+                            <td>Aira Mendoza</td>
+                            <td>Grade 6 - A</td>
+                            <td>Apr 4, 2026 - 10:20 AM</td>
+                        </tr>
+                        <tr>
+                            <td>Fluency Baseline Test</td>
+                            <td>Trina Velasco</td>
+                            <td>Grade 6 - A</td>
+                            <td>Apr 4, 2026 - 1:15 PM</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="createTestModal" tabindex="-1" aria-labelledby="createTestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="createTestModalLabel">Create Test</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="testName" class="form-label">Test Name</label>
+                            <input id="testName" class="form-control" type="text" name="test_name" placeholder="Enter test name" required>
+                        </div>
+                        <div>
+                            <label for="testBox" class="form-label">Test Details</label>
+                            <textarea id="testBox" class="form-control" name="test_box" rows="4" placeholder="Type test details"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editTestModal" tabindex="-1" aria-labelledby="editTestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="editTestModalLabel">Edit Test</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="editTestIcon" class="form-label">Icon</label>
+                            <select id="editTestIcon" class="form-select" name="edit_test_icon" required>
+                                <option value="bi-journal-check">Journal Check</option>
+                                <option value="bi-clipboard2-pulse">Clipboard Pulse</option>
+                                <option value="bi-ui-checks-grid">Checks Grid</option>
+                                <option value="bi-patch-check">Patch Check</option>
+                            </select>
+                            <div class="mt-2 d-flex align-items-center gap-2">
+                                <span class="small text-secondary">Icon Preview:</span>
+                                <span class="course-icon"><i id="editTestIconPreview" class="bi bi-journal-check"></i></span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editTestTitle" class="form-label">Title</label>
+                            <input id="editTestTitle" class="form-control" type="text" name="edit_test_title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editTestDescription" class="form-label">Description</label>
+                            <textarea id="editTestDescription" class="form-control" name="edit_test_description" rows="3" required></textarea>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="enableTargetReadingTime" name="enable_target_reading_time">
+                            <label class="form-check-label" for="enableTargetReadingTime">Target Reading Time</label>
+                        </div>
+                        <hr class="my-2">
+                        <div id="targetReadingTimeRow" class="d-none mb-3">
+                            <label for="targetReadingTime" class="form-label">Target Time (minutes)</label>
+                            <input id="targetReadingTime" class="form-control" type="number" min="1" name="target_reading_time" placeholder="e.g. 12">
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="editSectionOnly" name="section_only">
+                            <label class="form-check-label" for="editSectionOnly">Only one section can take this test</label>
+                        </div>
+                        <div id="editSectionOnlyRow" class="d-none">
+                            <label for="editAllowedSection" class="form-label">Allowed Section</label>
+                            <select id="editAllowedSection" class="form-select" name="allowed_section">
+                                <option value="grade5a">Grade 5 - A</option>
+                                <option value="grade5b">Grade 5 - B</option>
+                                <option value="grade6a">Grade 6 - A</option>
+                            </select>
+                        </div>
+
+                        <hr>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="sendParentEmail" name="send_parent_email">
+                            <label class="form-check-label" for="sendParentEmail">Send student data to parent email</label>
+                        </div>
+
+                        <div class="mb-2 d-none" id="parentEmailRow">
+                            <label for="parentEmail" class="form-label">Parent Email</label>
+                            <input id="parentEmail" class="form-control" type="email" name="parent_email" placeholder="parent@example.com">
+                        </div>
+
+                        <hr>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="enableAssessmentAvailability" name="enable_assessment_availability">
+                            <label class="form-check-label" for="enableAssessmentAvailability">Assessment Availability</label>
+                        </div>
+                        <p class="small text-secondary mb-2">Set when students can answer this assessment.</p>
+                        <div class="row g-2 d-none" id="scheduleSectionRow">
+                            <div class="col-6">
+                                <label for="availabilityStartDate" class="form-label">Start Date</label>
+                                <input id="availabilityStartDate" class="form-control" type="date" name="availability_start_date">
+                            </div>
+                            <div class="col-6">
+                                <label for="availabilityStartTime" class="form-label">Start Time</label>
+                                <input id="availabilityStartTime" class="form-control" type="time" name="availability_start_time">
+                            </div>
+                            <div class="col-6">
+                                <label for="availabilityEndDate" class="form-label">End Date</label>
+                                <input id="availabilityEndDate" class="form-control" type="date" name="availability_end_date">
+                            </div>
+                            <div class="col-6">
+                                <label for="availabilityEndTime" class="form-label">End Time</label>
+                                <input id="availabilityEndTime" class="form-control" type="time" name="availability_end_time">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="addItemModalLabel">Item</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <p class="small text-secondary mb-1">Assessment</p>
+                        <p class="fw-semibold mb-3" id="itemLessonName">Assessment</p>
+
+                        <div class="mb-3">
+                            <label for="readingType" class="form-label">Reading Type</label>
+                            <select id="readingType" class="form-select" name="reading_type">
+                                <option value="words">Words</option>
+                                <option value="sentence">Sentence</option>
+                                <option value="paragraphs">Paragraphs</option>
+                            </select>
+                        </div>
+
+                        <div id="wordsSection" data-reading-section="words">
+                            <div class="mb-3">
+                                <hr class="my-2">
+                                <input id="wordSearch" class="form-control" type="text" name="word_search" placeholder="Search word">
+                            </div>
+
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Word</th>
+                                            <th style="width: 150px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>bahay</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-outline-primary btn-sm" type="button">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>aklat</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-outline-primary btn-sm" type="button">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="addWordBox" class="form-label">Add Word</label>
+                                <div class="d-flex gap-2">
+                                    <input id="addWordBox" class="form-control" type="text" name="new_word" placeholder="Type a word">
+                                    <button class="btn btn-primary btn-sm" type="button">Add</button>
+                                </div>
+                            </div>
+
+                            <div class="border rounded p-3 mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableWordTime" name="enable_word_time">
+                                    <label class="form-check-label" for="enableWordTime">Enable time</label>
+                                </div>
+                                <label for="timePerWord" class="form-label mb-1">Time per word (seconds)</label>
+                                <input id="timePerWord" class="form-control" type="number" min="1" name="time_per_word" placeholder="e.g. 5">
+                            </div>
+                        </div>
+
+                        <div id="sentenceSection" data-reading-section="sentence" class="d-none">
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Sentence</th>
+                                            <th style="width: 150px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Si Ana ay nagbabasa ng libro.</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-outline-primary btn-sm" type="button">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="sentenceBox" class="form-label">Add Sentence</label>
+                                <div class="d-flex gap-2 align-items-start">
+                                    <textarea id="sentenceBox" class="form-control" name="new_sentence" rows="3" placeholder="Type sentence here"></textarea>
+                                    <button class="btn btn-primary btn-sm" type="button">Add</button>
+                                </div>
+                            </div>
+
+                            <div class="border rounded p-3 mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableSentenceTime" name="enable_sentence_time">
+                                    <label class="form-check-label" for="enableSentenceTime">Enable time</label>
+                                </div>
+                                <label for="timePerSentence" class="form-label mb-1">Time for completing sentence (seconds)</label>
+                                <input id="timePerSentence" class="form-control" type="number" min="1" name="time_per_sentence" placeholder="e.g. 15">
+                            </div>
+                        </div>
+
+                        <div id="paragraphsSection" data-reading-section="paragraphs" class="d-none">
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Paragraph</th>
+                                            <th style="width: 150px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Si Lito ay maagang pumasok sa paaralan upang magbasa kasama ang kanyang guro.</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-outline-primary btn-sm" type="button">Edit</button>
+                                                    <button class="btn btn-outline-danger btn-sm" type="button">Delete</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="paragraphBox" class="form-label">Add Paragraph</label>
+                                <div class="d-flex gap-2 align-items-start">
+                                    <textarea id="paragraphBox" class="form-control" name="new_paragraph" rows="4" placeholder="Type paragraph here"></textarea>
+                                    <button class="btn btn-primary btn-sm" type="button">Add</button>
+                                </div>
+                            </div>
+
+                            <div class="border rounded p-3 mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableParagraphTime" name="enable_paragraph_time">
+                                    <label class="form-check-label" for="enableParagraphTime">Enable time</label>
+                                </div>
+                                <label for="timePerParagraph" class="form-label mb-1">Time for completing paragraph (seconds)</label>
+                                <input id="timePerParagraph" class="form-control" type="number" min="1" name="time_per_paragraph" placeholder="e.g. 30">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Item</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade response-modal" id="viewResponseModal" tabindex="-1" aria-labelledby="viewResponseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="viewResponseModalLabel">View Response</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-secondary mb-2">Test</p>
+                    <p class="fw-semibold mb-3" id="responseTestName">Assessment</p>
+
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-3 response-tools">
+                        <div class="input-group input-group-sm" style="max-width: 300px;">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" placeholder="Search student..." aria-label="Search response">
+                        </div>
+                        <select class="form-select form-select-sm" style="max-width: 190px;" aria-label="Filter section">
+                            <option selected>All Sections</option>
+                            <option>Grade 5 - A</option>
+                            <option>Grade 5 - B</option>
+                            <option>Grade 6 - A</option>
+                        </select>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Section</th>
+                                    <th>Proficiency Score</th>
+                                    <th>Date/Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Lia Santos</td>
+                                    <td>Grade 5 - A</td>
+                                    <td>
+                                        <button class="btn btn-outline-primary btn-sm score-btn" type="button" data-bs-toggle="modal" data-bs-target="#responseSummaryModal" data-student-name="Lia Santos" data-accuracy="92%" data-time-read="11m 20s" data-words-practice="aklat, maaga, guro" data-wpm="96" data-read-words="138" data-total-words="150">92</button>
+                                    </td>
+                                    <td>Apr 4, 2026 - 8:30 AM</td>
+                                </tr>
+                                <tr>
+                                    <td>Marco Dela Cruz</td>
+                                    <td>Grade 5 - A</td>
+                                    <td>
+                                        <button class="btn btn-outline-primary btn-sm score-btn" type="button" data-bs-toggle="modal" data-bs-target="#responseSummaryModal" data-student-name="Marco Dela Cruz" data-accuracy="88%" data-time-read="12m 05s" data-words-practice="pangarap, ulap" data-wpm="90" data-read-words="132" data-total-words="150">88</button>
+                                    </td>
+                                    <td>Apr 4, 2026 - 9:05 AM</td>
+                                </tr>
+                                <tr>
+                                    <td>Aira Mendoza</td>
+                                    <td>Grade 6 - A</td>
+                                    <td>
+                                        <button class="btn btn-outline-primary btn-sm score-btn" type="button" data-bs-toggle="modal" data-bs-target="#responseSummaryModal" data-student-name="Aira Mendoza" data-accuracy="85%" data-time-read="13m 11s" data-words-practice="paaralan, pangungusap" data-wpm="84" data-read-words="128" data-total-words="150">85</button>
+                                    </td>
+                                    <td>Apr 4, 2026 - 10:12 AM</td>
+                                </tr>
+                                <tr>
+                                    <td>Nico Ramos</td>
+                                    <td>Grade 5 - B</td>
+                                    <td>
+                                        <button class="btn btn-outline-primary btn-sm score-btn" type="button" data-bs-toggle="modal" data-bs-target="#responseSummaryModal" data-student-name="Nico Ramos" data-accuracy="90%" data-time-read="10m 58s" data-words-practice="talata" data-wpm="94" data-read-words="135" data-total-words="150">90</button>
+                                    </td>
+                                    <td>Apr 4, 2026 - 1:20 PM</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="responseSummaryModal" tabindex="-1" aria-labelledby="responseSummaryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="responseSummaryModalLabel">Response Summary</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-secondary mb-1">Student</p>
+                    <p class="fw-semibold mb-3" id="summaryStudentName">Student</p>
+                    <div class="row g-2">
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="border rounded p-2 h-100">
+                                <p class="small text-secondary mb-1">Accuracy Percentage</p>
+                                <p class="fw-semibold mb-0" id="summaryAccuracy">-</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="border rounded p-2 h-100">
+                                <p class="small text-secondary mb-1">Time Read</p>
+                                <p class="fw-semibold mb-0" id="summaryTimeRead">-</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="border rounded p-2 h-100">
+                                <p class="small text-secondary mb-1">WPM</p>
+                                <p class="fw-semibold mb-0" id="summaryWpm">-</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-lg-6">
+                            <div class="border rounded p-2 h-100">
+                                <p class="small text-secondary mb-1">Words to Practice</p>
+                                <p class="fw-semibold mb-0" id="summaryWordsToPractice">-</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-lg-6">
+                            <div class="border rounded p-2 h-100">
+                                <p class="small text-secondary mb-1">Score (Read Words / Total Words)</p>
+                                <p class="fw-semibold mb-0" id="summaryReadOverTotal">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade start-assessment-modal" id="startAssessmentModal" tabindex="-1" aria-labelledby="startAssessmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h4 class="modal-title h6 mb-0" id="startAssessmentModalLabel">Start Assessment</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <p class="small text-secondary mb-1">Selected Test</p>
+                    <p class="fw-semibold mb-2" id="startAssessmentName">Assessment</p>
+                    <div class="start-meta-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small text-secondary">Test Code</span>
+                            <span class="dash-pill" id="startAssessmentCode">TST-000</span>
+                        </div>
+                    </div>
+                    <p class="small text-secondary mb-0">This will open the assessment for student attempts based on your availability settings.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Confirm Start</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const addItemModal = document.getElementById("addItemModal");
+        const itemLessonName = document.getElementById("itemLessonName");
+        const readingType = document.getElementById("readingType");
+        const viewResponseModal = document.getElementById("viewResponseModal");
+        const responseTestName = document.getElementById("responseTestName");
+        const responseSummaryModal = document.getElementById("responseSummaryModal");
+        const startAssessmentModal = document.getElementById("startAssessmentModal");
+        const startAssessmentName = document.getElementById("startAssessmentName");
+        const startAssessmentCode = document.getElementById("startAssessmentCode");
+        const summaryStudentName = document.getElementById("summaryStudentName");
+        const summaryAccuracy = document.getElementById("summaryAccuracy");
+        const summaryTimeRead = document.getElementById("summaryTimeRead");
+        const summaryWordsToPractice = document.getElementById("summaryWordsToPractice");
+        const summaryWpm = document.getElementById("summaryWpm");
+        const summaryReadOverTotal = document.getElementById("summaryReadOverTotal");
+        const editTestModal = document.getElementById("editTestModal");
+        const editTestIcon = document.getElementById("editTestIcon");
+        const editTestIconPreview = document.getElementById("editTestIconPreview");
+        const editTestTitle = document.getElementById("editTestTitle");
+        const editTestDescription = document.getElementById("editTestDescription");
+        const enableTargetReadingTime = document.getElementById("enableTargetReadingTime");
+        const targetReadingTimeRow = document.getElementById("targetReadingTimeRow");
+        const targetReadingTime = document.getElementById("targetReadingTime");
+        const editSectionOnly = document.getElementById("editSectionOnly");
+        const editSectionOnlyRow = document.getElementById("editSectionOnlyRow");
+        const editAllowedSection = document.getElementById("editAllowedSection");
+        const sendParentEmail = document.getElementById("sendParentEmail");
+        const parentEmailRow = document.getElementById("parentEmailRow");
+        const parentEmail = document.getElementById("parentEmail");
+        const enableAssessmentAvailability = document.getElementById("enableAssessmentAvailability");
+        const scheduleSectionRow = document.getElementById("scheduleSectionRow");
+        const availabilityStartDate = document.getElementById("availabilityStartDate");
+        const availabilityStartTime = document.getElementById("availabilityStartTime");
+        const availabilityEndDate = document.getElementById("availabilityEndDate");
+        const availabilityEndTime = document.getElementById("availabilityEndTime");
+
+        function toggleSectionOnlyRow() {
+            if (!editSectionOnly || !editSectionOnlyRow || !editAllowedSection) {
+                return;
+            }
+
+            const isChecked = editSectionOnly.checked;
+            editSectionOnlyRow.classList.toggle("d-none", !isChecked);
+            editAllowedSection.required = isChecked;
+            if (!isChecked) {
+                editAllowedSection.value = "grade5a";
+            }
+        }
+
+        if (editSectionOnly) {
+            editSectionOnly.addEventListener("change", toggleSectionOnlyRow);
+        }
+
+        function toggleTargetReadingTimeRow() {
+            if (!enableTargetReadingTime || !targetReadingTimeRow || !targetReadingTime) {
+                return;
+            }
+
+            const isEnabled = enableTargetReadingTime.checked;
+            targetReadingTimeRow.classList.toggle("d-none", !isEnabled);
+            targetReadingTime.required = isEnabled;
+
+            if (!isEnabled) {
+                targetReadingTime.value = "";
+            }
+        }
+
+        if (enableTargetReadingTime) {
+            enableTargetReadingTime.addEventListener("change", toggleTargetReadingTimeRow);
+        }
+
+        function toggleParentEmailRows() {
+            if (!sendParentEmail || !parentEmailRow || !parentEmail) {
+                return;
+            }
+
+            const isParentEmailEnabled = sendParentEmail.checked;
+            parentEmailRow.classList.toggle("d-none", !isParentEmailEnabled);
+            parentEmail.required = isParentEmailEnabled;
+
+            if (!isParentEmailEnabled) {
+                parentEmail.value = "";
+            }
+        }
+
+        if (sendParentEmail) {
+            sendParentEmail.addEventListener("change", toggleParentEmailRows);
+        }
+
+        function toggleAvailabilitySection() {
+            if (!enableAssessmentAvailability || !scheduleSectionRow) {
+                return;
+            }
+
+            const isEnabled = enableAssessmentAvailability.checked;
+            scheduleSectionRow.classList.toggle("d-none", !isEnabled);
+
+            [availabilityStartDate, availabilityStartTime, availabilityEndDate, availabilityEndTime].forEach(function (field) {
+                if (!field) {
+                    return;
+                }
+
+                field.required = isEnabled;
+                if (!isEnabled) {
+                    field.value = "";
+                }
+            });
+        }
+
+        if (enableAssessmentAvailability) {
+            enableAssessmentAvailability.addEventListener("change", toggleAvailabilitySection);
+        }
+
+        function updateReadingSections(value) {
+            document.querySelectorAll("[data-reading-section]").forEach(function (section) {
+                section.classList.toggle("d-none", section.getAttribute("data-reading-section") !== value);
+            });
+        }
+
+        if (readingType) {
+            readingType.addEventListener("change", function () {
+                updateReadingSections(readingType.value);
+            });
+            updateReadingSections(readingType.value);
+        }
+
+        if (addItemModal && itemLessonName) {
+            addItemModal.addEventListener("show.bs.modal", function (event) {
+                const trigger = event.relatedTarget;
+                const lessonTitle = trigger ? trigger.getAttribute("data-lesson-title") : "Assessment";
+                itemLessonName.textContent = lessonTitle || "Assessment";
+            });
+        }
+
+        if (viewResponseModal && responseTestName) {
+            viewResponseModal.addEventListener("show.bs.modal", function (event) {
+                const trigger = event.relatedTarget;
+                const testTitle = trigger ? trigger.getAttribute("data-test-title") : "Assessment";
+                responseTestName.textContent = testTitle || "Assessment";
+            });
+        }
+
+        if (responseSummaryModal) {
+            responseSummaryModal.addEventListener("show.bs.modal", function (event) {
+                const trigger = event.relatedTarget;
+                const studentName = trigger ? trigger.getAttribute("data-student-name") : "Student";
+                const accuracy = trigger ? trigger.getAttribute("data-accuracy") : "-";
+                const timeRead = trigger ? trigger.getAttribute("data-time-read") : "-";
+                const wordsToPractice = trigger ? trigger.getAttribute("data-words-practice") : "-";
+                const wpm = trigger ? trigger.getAttribute("data-wpm") : "-";
+                const readWords = trigger ? trigger.getAttribute("data-read-words") : "-";
+                const totalWords = trigger ? trigger.getAttribute("data-total-words") : "-";
+
+                if (summaryStudentName) {
+                    summaryStudentName.textContent = studentName || "Student";
+                }
+
+                if (summaryAccuracy) {
+                    summaryAccuracy.textContent = accuracy || "-";
+                }
+
+                if (summaryTimeRead) {
+                    summaryTimeRead.textContent = timeRead || "-";
+                }
+
+                if (summaryWordsToPractice) {
+                    summaryWordsToPractice.textContent = wordsToPractice || "-";
+                }
+
+                if (summaryWpm) {
+                    summaryWpm.textContent = wpm || "-";
+                }
+
+                if (summaryReadOverTotal) {
+                    summaryReadOverTotal.textContent = (readWords || "-") + " / " + (totalWords || "-");
+                }
+            });
+        }
+
+        if (startAssessmentModal) {
+            startAssessmentModal.addEventListener("show.bs.modal", function (event) {
+                const trigger = event.relatedTarget;
+                const testTitle = trigger ? trigger.getAttribute("data-test-title") : "Assessment";
+                const testCode = trigger ? trigger.getAttribute("data-test-code") : "TST-000";
+
+                if (startAssessmentName) {
+                    startAssessmentName.textContent = testTitle || "Assessment";
+                }
+
+                if (startAssessmentCode) {
+                    startAssessmentCode.textContent = testCode || "TST-000";
+                }
+            });
+        }
+
+        if (editTestIcon && editTestIconPreview) {
+            editTestIcon.addEventListener("change", function () {
+                editTestIconPreview.className = "bi " + editTestIcon.value;
+            });
+        }
+
+        if (editTestModal) {
+            editTestModal.addEventListener("show.bs.modal", function (event) {
+                const trigger = event.relatedTarget;
+                const testTitle = trigger ? trigger.getAttribute("data-test-title") : "";
+                const testDescription = trigger ? trigger.getAttribute("data-test-description") : "";
+                const testIcon = trigger ? trigger.getAttribute("data-test-icon") : "bi-journal-check";
+                const sectionOnly = trigger ? trigger.getAttribute("data-section-only") : "false";
+                const testSection = trigger ? trigger.getAttribute("data-test-section") : "grade5a";
+
+                if (editTestTitle) {
+                    editTestTitle.value = testTitle || "";
+                }
+
+                if (editTestDescription) {
+                    editTestDescription.value = testDescription || "";
+                }
+
+                if (editTestIcon) {
+                    editTestIcon.value = testIcon || "bi-journal-check";
+                }
+
+                if (editTestIconPreview) {
+                    editTestIconPreview.className = "bi " + (testIcon || "bi-journal-check");
+                }
+
+                if (editSectionOnly) {
+                    editSectionOnly.checked = sectionOnly === "true";
+                }
+
+                if (enableTargetReadingTime) {
+                    enableTargetReadingTime.checked = false;
+                }
+
+                if (editAllowedSection) {
+                    editAllowedSection.value = testSection || "grade5a";
+                }
+
+                if (sendParentEmail) {
+                    sendParentEmail.checked = false;
+                }
+
+                if (enableAssessmentAvailability) {
+                    enableAssessmentAvailability.checked = false;
+                }
+
+                toggleParentEmailRows();
+                toggleAvailabilitySection();
+                toggleTargetReadingTimeRow();
+
+                toggleSectionOnlyRow();
+            });
+        }
+
+        toggleSectionOnlyRow();
+        toggleParentEmailRows();
+        toggleAvailabilitySection();
+        toggleTargetReadingTimeRow();
+    });
+</script>
+{% endblock %}
