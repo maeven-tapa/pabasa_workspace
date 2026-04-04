@@ -1,0 +1,269 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    .student-profile-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.38rem 0.72rem;
+        border: 1px solid #d8c7ff;
+        border-radius: 999px;
+        background: #f7f1ff;
+        color: #6e10ee;
+        font-weight: 600;
+        font-size: 0.78rem;
+    }
+
+    .student-identity {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+    }
+
+    .student-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: 2px solid #e2d2ff;
+        object-fit: cover;
+        box-shadow: 0 8px 16px rgba(110, 16, 238, 0.16);
+        background: #f7f1ff;
+    }
+
+    .student-metric {
+        border: 1px solid #ece8ff;
+        border-radius: 12px;
+        background: linear-gradient(180deg, #faf8ff 0%, #ffffff 100%);
+        padding: 0.8rem;
+    }
+
+    .student-metric .label {
+        display: block;
+        color: #7b8398;
+        font-size: 0.74rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .student-metric .value {
+        color: #2a2d39;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .progress-history-table thead th {
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #6f7892;
+        background: #f8faff;
+    }
+
+    .weak-word {
+        display: inline-flex;
+        align-items: center;
+        margin: 0 0.35rem 0.45rem 0;
+        padding: 0.28rem 0.62rem;
+        border-radius: 999px;
+        border: 1px solid #ffd4d9;
+        background: #fff6f7;
+        color: #bf2341;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .strength-item {
+        border: 1px solid #d7f0e2;
+        background: #f3fbf7;
+        color: #126b45;
+        border-radius: 10px;
+        padding: 0.55rem 0.65rem;
+        font-size: 0.84rem;
+        font-weight: 600;
+    }
+
+    .attendance-track {
+        height: 8px;
+        border-radius: 999px;
+        background: #eceff6;
+        overflow: hidden;
+    }
+
+    .attendance-track > span {
+        display: block;
+        height: 100%;
+        width: 92%;
+        background: linear-gradient(90deg, #7e36f4 0%, #6e10ee 100%);
+    }
+    </style>
+{% endblock %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Student Profile" page_date="April 4, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <p class="small text-secondary mb-1">Review learner performance, attendance trends, and intervention notes in one view.</p>
+            <p class="small mb-0"><strong>Note:</strong> Use this profile before assigning the next reading tasks.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary btn-sm" href="#" role="button"><i class="bi bi-file-earmark-bar-graph me-1"></i>View Report</a>
+            <a class="btn btn-primary btn-sm" href="#" role="button"><i class="bi bi-chat-left-text me-1"></i>Message Parent</a>
+        </div>
+    </div>
+
+    <div class="dash-card mb-3">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
+                <div class="student-identity">
+                    <img class="student-avatar" src="{% static 'pabasa_app/student-avatar.svg' %}" alt="Lia Santos profile picture">
+                    <div>
+                        <h2 class="h5 mb-1">Lia Santos</h2>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="student-profile-chip"><i class="bi bi-person-badge"></i> STU-1023</span>
+                            <span class="student-profile-chip"><i class="bi bi-bookmark"></i> Grade 2 - A</span>
+                            <span class="student-profile-chip"><i class="bi bi-check-circle"></i> Enrolled</span>
+                        </div>
+                    </div>
+                </div>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'students' %}"><i class="bi bi-arrow-left me-1"></i>Back to Students</a>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="student-metric">
+                        <span class="label">Reading Accuracy</span>
+                        <span class="value">91%</span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="student-metric">
+                        <span class="label">Avg. WPM</span>
+                        <span class="value">67</span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="student-metric">
+                        <span class="label">Completed Lessons</span>
+                        <span class="value">18 / 22</span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="student-metric">
+                        <span class="label">Student Days Logged In</span>
+                        <span class="value">23 days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="dash-card mb-3">
+                <div class="card-body p-3 p-md-4">
+                    <h3 class="h6 mb-3">Progress History</h3>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0 progress-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Activity</th>
+                                    <th>Accuracy</th>
+                                    <th>WPM</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Apr 3, 2026</td>
+                                    <td>Word Drill - Set B</td>
+                                    <td>93%</td>
+                                    <td>69</td>
+                                    <td><span class="badge text-bg-success">Passed</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Apr 1, 2026</td>
+                                    <td>Sentence Reading - Week 2</td>
+                                    <td>89%</td>
+                                    <td>64</td>
+                                    <td><span class="badge text-bg-warning">Needs Practice</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Mar 29, 2026</td>
+                                    <td>Paragraph Practice - Set A</td>
+                                    <td>90%</td>
+                                    <td>66</td>
+                                    <td><span class="badge text-bg-success">Passed</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-card">
+                <div class="card-body p-3 p-md-4">
+                    <h3 class="h6 mb-3">Teacher Notes</h3>
+                    <div class="border rounded p-3 mb-2">
+                        <div class="small text-secondary mb-1">Apr 3, 2026</div>
+                        <p class="mb-0 small">Shows improved pacing when prompted to pause at punctuation marks.</p>
+                    </div>
+                    <div class="border rounded p-3 mb-2">
+                        <div class="small text-secondary mb-1">Apr 1, 2026</div>
+                        <p class="mb-0 small">Needs extra repetition for blends with <strong>bl</strong>, <strong>tr</strong>, and <strong>cl</strong>.</p>
+                    </div>
+                    <textarea class="form-control form-control-sm" rows="3" placeholder="Add note..."></textarea>
+                    <div class="mt-2 d-flex justify-content-end">
+                        <button class="btn btn-outline-primary btn-sm" type="button">Save Note</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="dash-card mb-3">
+                <div class="card-body p-3">
+                    <h3 class="h6 mb-3">Strengths</h3>
+                    <div class="d-grid gap-2">
+                        <div class="strength-item">Consistent vowel recognition</div>
+                        <div class="strength-item">Strong comprehension in short passages</div>
+                        <div class="strength-item">Good self-correction behavior</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-card mb-3">
+                <div class="card-body p-3">
+                    <h3 class="h6 mb-3">Weak Words</h3>
+                    <div>
+                        <span class="weak-word">through</span>
+                        <span class="weak-word">brought</span>
+                        <span class="weak-word">climb</span>
+                        <span class="weak-word">could</span>
+                        <span class="weak-word">enough</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-card">
+                <div class="card-body p-3">
+                    <h3 class="h6 mb-3">Student Days Logged In</h3>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-secondary">Days Active</span>
+                        <strong>23 / 25</strong>
+                    </div>
+                    <div class="attendance-track mb-3" role="img" aria-label="Student days logged in">
+                        <span></span>
+                    </div>
+                    <div class="small text-secondary">Last login: Apr 4, 2026</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

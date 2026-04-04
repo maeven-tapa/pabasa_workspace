@@ -38,6 +38,7 @@
 
     .students-table .btn.btn-outline-secondary.btn-sm,
     .students-table .btn.btn-outline-primary.btn-sm,
+    .students-table .btn.btn-outline-warning.btn-sm,
     .students-table .btn.btn-outline-danger.btn-sm {
         color: #6e10ee;
         border-color: #cdb3ff;
@@ -46,6 +47,7 @@
 
     .students-table .btn.btn-outline-secondary.btn-sm:hover,
     .students-table .btn.btn-outline-primary.btn-sm:hover,
+    .students-table .btn.btn-outline-warning.btn-sm:hover,
     .students-table .btn.btn-outline-danger.btn-sm:hover {
         color: #5f0fd0;
         border-color: #b48aff;
@@ -125,12 +127,12 @@
 <section>
     <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
-            <h2 class="h6 mb-1">Student Directory</h2>
-            <p class="small text-secondary mb-0">Manage learner details, reading performance, and class status.</p>
+            <p class="small text-secondary mb-1">Manage learner details, reading performance, and class status.</p>
+            <p class="small mb-0"><strong>Note:</strong> Keep student sections and status updated before generating reports.</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-outline-secondary btn-sm" type="button"><i class="bi bi-download me-1"></i>Export</button>
-            <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-person-plus me-1"></i>Add Student</button>
+            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus me-1"></i>Add Student</button>
         </div>
     </div>
 
@@ -170,8 +172,23 @@
                                     <td><span class="badge text-bg-success">Enrolled</span></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1">
-                                            <button class="btn btn-outline-secondary btn-sm" type="button">Edit</button>
-                                            <button class="btn btn-outline-primary btn-sm" type="button">View</button>
+                                            <button
+                                                class="btn btn-outline-secondary btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#assignSectionModal"
+                                                data-student-name="Lia Santos"
+                                                data-current-section="Grade 2 - A"
+                                            >Edit Section</button>
+                                            <button
+                                                class="btn btn-outline-warning btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#changeStatusModal"
+                                                data-student-name="Lia Santos"
+                                                data-current-status="Enrolled"
+                                            >Change Status</button>
+                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
                                             <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
                                         </div>
                                     </td>
@@ -185,8 +202,23 @@
                                     <td><span class="badge text-bg-success">Enrolled</span></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1">
-                                            <button class="btn btn-outline-secondary btn-sm" type="button">Edit</button>
-                                            <button class="btn btn-outline-primary btn-sm" type="button">View</button>
+                                            <button
+                                                class="btn btn-outline-secondary btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#assignSectionModal"
+                                                data-student-name="Marco Dela Cruz"
+                                                data-current-section="Grade 2 - A"
+                                            >Edit Section</button>
+                                            <button
+                                                class="btn btn-outline-warning btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#changeStatusModal"
+                                                data-student-name="Marco Dela Cruz"
+                                                data-current-status="Enrolled"
+                                            >Change Status</button>
+                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
                                             <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
                                         </div>
                                     </td>
@@ -200,8 +232,23 @@
                                     <td><span class="badge text-bg-warning">Dropped</span></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1">
-                                            <button class="btn btn-outline-secondary btn-sm" type="button">Edit</button>
-                                            <button class="btn btn-outline-primary btn-sm" type="button">View</button>
+                                            <button
+                                                class="btn btn-outline-secondary btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#assignSectionModal"
+                                                data-student-name="Aira Mendoza"
+                                                data-current-section="Grade 2 - C"
+                                            >Edit Section</button>
+                                            <button
+                                                class="btn btn-outline-warning btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#changeStatusModal"
+                                                data-student-name="Aira Mendoza"
+                                                data-current-status="Dropped"
+                                            >Change Status</button>
+                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
                                             <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
                                         </div>
                                     </td>
@@ -215,8 +262,23 @@
                                     <td><span class="badge text-bg-success">Enrolled</span></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1">
-                                            <button class="btn btn-outline-secondary btn-sm" type="button">Edit</button>
-                                            <button class="btn btn-outline-primary btn-sm" type="button">View</button>
+                                            <button
+                                                class="btn btn-outline-secondary btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#assignSectionModal"
+                                                data-student-name="Nico Ramos"
+                                                data-current-section="Grade 2 - B"
+                                            >Edit Section</button>
+                                            <button
+                                                class="btn btn-outline-warning btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#changeStatusModal"
+                                                data-student-name="Nico Ramos"
+                                                data-current-status="Enrolled"
+                                            >Change Status</button>
+                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
                                             <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
                                         </div>
                                     </td>
@@ -230,8 +292,23 @@
                                     <td><span class="badge text-bg-success">Enrolled</span></td>
                                     <td>
                                         <div class="d-flex flex-wrap gap-1">
-                                            <button class="btn btn-outline-secondary btn-sm" type="button">Edit</button>
-                                            <button class="btn btn-outline-primary btn-sm" type="button">View</button>
+                                            <button
+                                                class="btn btn-outline-secondary btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#assignSectionModal"
+                                                data-student-name="Trina Velasco"
+                                                data-current-section="Grade 2 - C"
+                                            >Edit Section</button>
+                                            <button
+                                                class="btn btn-outline-warning btn-sm"
+                                                type="button"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#changeStatusModal"
+                                                data-student-name="Trina Velasco"
+                                                data-current-status="Enrolled"
+                                            >Change Status</button>
+                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
                                             <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
                                         </div>
                                     </td>
@@ -314,7 +391,7 @@
                 <div class="card-body p-3">
                     <h3 class="h6 mb-3">Quick Actions</h3>
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary btn-sm" type="button">Add New Student</button>
+                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addStudentModal">Add New Student</button>
                         <button class="btn btn-outline-primary btn-sm" type="button">Send Parent Update</button>
                         <button class="btn btn-outline-primary btn-sm" type="button">Generate Progress Report</button>
                     </div>
@@ -322,5 +399,198 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="addStudentModalLabel">Add Student</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="alert alert-light border mb-3 small" role="alert">
+                            <strong>Teacher Only:</strong> Only teachers can add students and assign their initial section.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="addStudentFullName" class="form-label">Student Name</label>
+                            <input id="addStudentFullName" class="form-control" type="text" list="studentNameList" placeholder="Select or type student name" required>
+                            <datalist id="studentNameList">
+                                <option value="Lia Santos"></option>
+                                <option value="Marco Dela Cruz"></option>
+                                <option value="Aira Mendoza"></option>
+                                <option value="Nico Ramos"></option>
+                                <option value="Trina Velasco"></option>
+                            </datalist>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="addStudentSection" class="form-label">Assign Section</label>
+                            <select id="addStudentSection" class="form-select" required>
+                                <option value="" selected disabled>Select section</option>
+                                <option value="Grade 2 - A">Grade 2 - A</option>
+                                <option value="Grade 2 - B">Grade 2 - B</option>
+                                <option value="Grade 2 - C">Grade 2 - C</option>
+                                <option value="Grade 2 - D">Grade 2 - D</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="addStudentStatus" class="form-label">Status</label>
+                            <select id="addStudentStatus" class="form-select" required>
+                                <option value="Enrolled" selected>Enrolled</option>
+                                <option value="Dropped">Dropped</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Student</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="changeStatusModal" tabindex="-1" aria-labelledby="changeStatusModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="changeStatusModalLabel">Change Student Status</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="alert alert-light border mb-3 small" role="alert">
+                            <strong>Teacher Only:</strong> Status updates should be changed only by the assigned class teacher.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="changeStatusStudentName" class="form-label">Student</label>
+                            <input id="changeStatusStudentName" type="text" class="form-control" value="" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="changeStatusCurrent" class="form-label">Current Status</label>
+                            <input id="changeStatusCurrent" type="text" class="form-control" value="" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="changeStatusNew" class="form-label">New Status</label>
+                            <select id="changeStatusNew" class="form-select" required>
+                                <option value="" selected disabled>Select new status</option>
+                                <option value="Enrolled">Enrolled</option>
+                                <option value="Dropped">Dropped</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="changeStatusReason" class="form-label">Reason (Optional)</label>
+                            <textarea id="changeStatusReason" class="form-control" rows="3" placeholder="Example: temporary leave, transfer request, or re-enrollment"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Status</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="assignSectionModal" tabindex="-1" aria-labelledby="assignSectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title h6 mb-0" id="assignSectionModalLabel">Assign Section</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body">
+                        <div class="alert alert-light border mb-3 small" role="alert">
+                            <strong>Teacher Only:</strong> Section assignment and changes should be handled by the class teacher.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="assignSectionStudentName" class="form-label">Student</label>
+                            <input id="assignSectionStudentName" type="text" class="form-control" value="" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="assignSectionCurrentSection" class="form-label">Current Section</label>
+                            <input id="assignSectionCurrentSection" type="text" class="form-control" value="" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="assignSectionNewSection" class="form-label">New Section</label>
+                            <select id="assignSectionNewSection" class="form-select" name="new_section" required>
+                                <option value="" selected disabled>Select new section</option>
+                                <option value="Grade 2 - A">Grade 2 - A</option>
+                                <option value="Grade 2 - B">Grade 2 - B</option>
+                                <option value="Grade 2 - C">Grade 2 - C</option>
+                                <option value="Grade 2 - D">Grade 2 - D</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="assignSectionReason" class="form-label">Reason (Optional)</label>
+                            <textarea id="assignSectionReason" class="form-control" rows="3" placeholder="Example: Moved based on reading assessment group"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Section</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </section>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const assignSectionModal = document.getElementById("assignSectionModal");
+        const studentNameInput = document.getElementById("assignSectionStudentName");
+        const currentSectionInput = document.getElementById("assignSectionCurrentSection");
+        const changeStatusModal = document.getElementById("changeStatusModal");
+        const changeStatusStudentName = document.getElementById("changeStatusStudentName");
+        const changeStatusCurrent = document.getElementById("changeStatusCurrent");
+
+        if (!assignSectionModal || !studentNameInput || !currentSectionInput) {
+            return;
+        }
+
+        assignSectionModal.addEventListener("show.bs.modal", function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) {
+                return;
+            }
+
+            const studentName = trigger.getAttribute("data-student-name") || "";
+            const currentSection = trigger.getAttribute("data-current-section") || "";
+
+            studentNameInput.value = studentName;
+            currentSectionInput.value = currentSection;
+        });
+
+        if (!changeStatusModal || !changeStatusStudentName || !changeStatusCurrent) {
+            return;
+        }
+
+        changeStatusModal.addEventListener("show.bs.modal", function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) {
+                return;
+            }
+
+            const studentName = trigger.getAttribute("data-student-name") || "";
+            const currentStatus = trigger.getAttribute("data-current-status") || "";
+
+            changeStatusStudentName.value = studentName;
+            changeStatusCurrent.value = currentStatus;
+        });
+    });
+</script>
 {% endblock %}

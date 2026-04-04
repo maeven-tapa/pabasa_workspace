@@ -55,6 +55,9 @@ def course_student_view(request):
 def students(request):
     return render(request, 'pabasa_app/students.html')
 
+def student_detail(request):
+    return render(request, 'pabasa_app/student_detail.html')
+
 def calendar(request):
     return render(request, 'pabasa_app/calendar.html')
 
