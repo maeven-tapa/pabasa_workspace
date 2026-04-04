@@ -1,0 +1,289 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+
+{% block extra_head %}
+<style>
+    .teacher-mini-chart {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        align-items: end;
+        gap: 0.45rem;
+        height: 175px;
+        padding: 0.7rem 0.4rem 0.2rem;
+        border: 1px solid #eceef6;
+        border-radius: 0.8rem;
+        background: linear-gradient(180deg, #fcfbff 0%, #f7f8ff 100%);
+    }
+
+    .teacher-mini-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .teacher-mini-col .bar {
+        width: 100%;
+        max-width: 28px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #8a3ffc 0%, #6e10ee 100%);
+        box-shadow: 0 6px 12px rgba(110, 16, 238, 0.2);
+    }
+
+    .teacher-mini-col .day,
+    .teacher-mini-col .val {
+        font-size: 0.72rem;
+        color: #667085;
+    }
+
+    .teacher-mini-col .val {
+        font-weight: 600;
+        color: #4d536a;
+    }
+
+    .rank-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        background: #f3ebff;
+        color: #6e10ee;
+        font-weight: 700;
+        font-size: 0.8rem;
+    }
+
+    .ranking-list {
+        max-height: 260px;
+        overflow: auto;
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Teacher Dashboard" page_date="April 5, 2026" %}
+{% endblock %}
+
+{% block content %}
+<section class="mb-4">
+    <div class="dash-surface p-3 p-md-4 mb-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h2 class="h6 mb-1">Good morning, Teacher!</h2>
+                <p class="small text-secondary mb-0">Class performance snapshot and student progress for this week.</p>
+            </div>
+            <span class="badge dash-badge">Teacher View</span>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="dash-surface dash-kpi p-3 h-100">
+                <p class="text-secondary small mb-2">Total Students</p>
+                <h3 class="h4 mb-1">124</h3>
+                <small class="text-success"><i class="bi bi-arrow-up-right"></i> +8 this month</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="dash-surface dash-kpi p-3 h-100">
+                <p class="text-secondary small mb-2">Total Course</p>
+                <h3 class="h4 mb-1">9</h3>
+                <small class="text-secondary"><i class="bi bi-book"></i> 2 new this semester</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="dash-surface dash-kpi p-3 h-100">
+                <p class="text-secondary small mb-2">Lessons Done Today</p>
+                <h3 class="h4 mb-1">76</h3>
+                <small class="text-success"><i class="bi bi-check-circle"></i> Across all students</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="dash-surface dash-kpi p-3 h-100">
+                <p class="text-secondary small mb-2">Active Student Now</p>
+                <h3 class="h4 mb-1">31</h3>
+                <small class="text-primary"><i class="bi bi-broadcast"></i> Live in sessions</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-xl-8">
+            <div class="dash-surface p-3 p-md-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 mb-0">Weekly Reading Completion</h2>
+                    <span class="small text-secondary">Target: 20 lessons/day</span>
+                </div>
+                <div class="teacher-mini-chart">
+                    <div class="teacher-mini-col"><div class="bar" style="height: 58%;"></div><span class="val">14</span><span class="day">Mon</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 68%;"></div><span class="val">17</span><span class="day">Tue</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 73%;"></div><span class="val">18</span><span class="day">Wed</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 86%;"></div><span class="val">21</span><span class="day">Thu</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 80%;"></div><span class="val">19</span><span class="day">Fri</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 49%;"></div><span class="val">12</span><span class="day">Sat</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 42%;"></div><span class="val">10</span><span class="day">Sun</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="dash-surface p-3 p-md-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 mb-0">Week Student Active</h2>
+                    <span class="small text-secondary">By day</span>
+                </div>
+                <div class="teacher-mini-chart">
+                    <div class="teacher-mini-col"><div class="bar" style="height: 65%;"></div><span class="val">29</span><span class="day">Mon</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 72%;"></div><span class="val">32</span><span class="day">Tue</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 75%;"></div><span class="val">33</span><span class="day">Wed</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 78%;"></div><span class="val">35</span><span class="day">Thu</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 82%;"></div><span class="val">37</span><span class="day">Fri</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 55%;"></div><span class="val">25</span><span class="day">Sat</span></div>
+                    <div class="teacher-mini-col"><div class="bar" style="height: 50%;"></div><span class="val">23</span><span class="day">Sun</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-xl-4">
+            <div class="dash-surface p-3 p-md-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+                    <h2 class="h6 mb-0">Student Ranking</h2>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{% url 'students' %}" class="small">View all</a>
+                        <select id="rankingSort" class="form-select form-select-sm" aria-label="Sort student ranking">
+                            <option value="desc" selected>High to Low</option>
+                            <option value="asc">Low to High</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 ranking-list" id="rankingList">
+                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="98">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rank-chip">1</span>
+                            <span class="fw-semibold">Luna Dela Cruz</span>
+                        </div>
+                        <span class="small text-secondary">98%</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="95">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rank-chip">2</span>
+                            <span class="fw-semibold">Marco Reyes</span>
+                        </div>
+                        <span class="small text-secondary">95%</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="92">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rank-chip">3</span>
+                            <span class="fw-semibold">Sofia Martinez</span>
+                        </div>
+                        <span class="small text-secondary">92%</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="90">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rank-chip">4</span>
+                            <span class="fw-semibold">Ethan Villanueva</span>
+                        </div>
+                        <span class="small text-secondary">90%</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="88">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rank-chip">5</span>
+                            <span class="fw-semibold">Alyssa Ramos</span>
+                        </div>
+                        <span class="small text-secondary">88%</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="85">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="rank-chip">6</span>
+                            <span class="fw-semibold">Noah Santos</span>
+                        </div>
+                        <span class="small text-secondary">85%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8">
+            <div class="dash-surface p-3 p-md-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h6 mb-0">Recent Student Activities</h2>
+                    <a href="#" class="small">View all</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Course</th>
+                                <th>Activity</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Luna Dela Cruz</td>
+                                <td>Reading Fluency 101</td>
+                                <td>Completed Lesson 6</td>
+                                <td>2 mins ago</td>
+                            </tr>
+                            <tr>
+                                <td>Marco Reyes</td>
+                                <td>Speech Practice Lab</td>
+                                <td>Submitted Oral Reading</td>
+                                <td>9 mins ago</td>
+                            </tr>
+                            <tr>
+                                <td>Sofia Martinez</td>
+                                <td>Comprehension Workshop</td>
+                                <td>Started Paragraph Drill</td>
+                                <td>14 mins ago</td>
+                            </tr>
+                            <tr>
+                                <td>Ethan Villanueva</td>
+                                <td>Reading Fluency 101</td>
+                                <td>Finished Word Practice</td>
+                                <td>19 mins ago</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    (function () {
+        const sortSelect = document.getElementById("rankingSort");
+        const rankingList = document.getElementById("rankingList");
+
+        if (!sortSelect || !rankingList) {
+            return;
+        }
+
+        function rerank(order) {
+            const items = Array.from(rankingList.querySelectorAll("[data-score]"));
+            items.sort(function (a, b) {
+                const aScore = Number(a.getAttribute("data-score"));
+                const bScore = Number(b.getAttribute("data-score"));
+                return order === "asc" ? aScore - bScore : bScore - aScore;
+            });
+
+            items.forEach(function (item, index) {
+                const chip = item.querySelector(".rank-chip");
+                if (chip) {
+                    chip.textContent = String(index + 1);
+                }
+                rankingList.appendChild(item);
+            });
+        }
+
+        sortSelect.addEventListener("change", function () {
+            rerank(sortSelect.value);
+        });
+    })();
+</script>
+{% endblock %}

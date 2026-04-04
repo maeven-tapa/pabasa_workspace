@@ -29,7 +29,10 @@ def student_signup(request):
     return render(request, 'pabasa_app/student_signup.html')
 
 def dashboard(request):
-    return render(request, 'pabasa_app/dashboard.html')
+    return render(request, 'pabasa_app/dashboard.html', {'nav_role': 'student'})
+
+def dashboard_teacher(request):
+    return render(request, 'pabasa_app/dashboard_teacher.html', {'nav_role': 'teacher'})
 
 def courses(request):
     return render(request, 'pabasa_app/courses.html')

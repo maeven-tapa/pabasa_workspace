@@ -1,7 +1,7 @@
 <div class="d-flex flex-column h-100 p-3 p-xl-4">
     <div class="mb-2">
         <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
-            <a class="d-flex align-items-center gap-2 text-decoration-none text-reset" href="{% url 'dashboard' %}" aria-label="Go to dashboard">
+            <a class="d-flex align-items-center gap-2 text-decoration-none text-reset" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
                 <span class="dash-brand-mark">
                     <i class="bi bi-journal-check"></i>
                 </span>
@@ -17,11 +17,17 @@
     <hr class="my-1">
 
     <nav class="nav nav-pills flex-column gap-1 mb-4">
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'dashboard' %}" data-nav-tooltip title="Dashboard"><i class="bi bi-grid"></i><span class="sidebar-text">Dashboard</span></a>
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" data-nav-tooltip title="Dashboard"><i class="bi bi-grid"></i><span class="sidebar-text">Dashboard</span></a>
+        {% if nav_role != 'student' %}
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'assessment' %}" data-nav-tooltip title="Assessment"><i class="bi bi-clipboard-check"></i><span class="sidebar-text">Assessment</span></a>
+        {% endif %}
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Courses"><i class="bi bi-book"></i><span class="sidebar-text">Courses</span></a>
+        {% if nav_role != 'teacher' %}
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'practice' %}" data-nav-tooltip title="Practice"><i class="bi bi-mic"></i><span class="sidebar-text">Practice</span></a>
+        {% endif %}
+        {% if nav_role != 'student' %}
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="Students"><i class="bi bi-people"></i><span class="sidebar-text">Students</span></a>
+        {% endif %}
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'calendar' %}" data-nav-tooltip title="Calendar"><i class="bi bi-calendar3"></i><span class="sidebar-text">Calendar</span></a>
     </nav>
 
