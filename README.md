@@ -2,7 +2,7 @@
 ![BET-COET](https://img.shields.io/badge/BET--COET-green?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
-
+HATDOG
 # 📖 P.A.B.A.S.A
 Platform for Automated Basic Reading and Speech Assessment
 
