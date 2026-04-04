@@ -1,4 +1,5 @@
 {% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
 
 {% block header %}
     {% include "pabasa_app/partials/_header.html" with page_title="Course Student View" page_date="April 3, 2026" %}
@@ -262,16 +263,5 @@
     </div>
 </section>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const lessonIcon = document.getElementById("lessonIcon");
-        const lessonIconPreview = document.getElementById("lessonIconPreview");
-
-        if (lessonIcon && lessonIconPreview) {
-            lessonIcon.addEventListener("change", function () {
-                lessonIconPreview.className = "bi " + lessonIcon.value;
-            });
-        }
-    });
-</script>
+<script src="{% static 'pabasa_app/js/course_student_view.js' %}"></script>
 {% endblock %}
