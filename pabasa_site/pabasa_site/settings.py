@@ -28,6 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'tupcpabasa.app',
     'www.tupcpabasa.app',
+    'pabasa-workspace.onrender.com',
 ]
 
 
