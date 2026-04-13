@@ -23,7 +23,10 @@ body {
     min-height: 100vh;
     font-family: "Sora", "Segoe UI", sans-serif;
     color: var(--ink);
-    background: radial-gradient(circle at top left, #ffffff 0%, var(--bg) 45%, #edf2f4 100%);
+    background: 
+        linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.25) 100%),
+        radial-gradient(ellipse at 50% 50%, rgba(31, 111, 139, 0.15) 0%, transparent 80%),
+        url("../images/read.jpg") no-repeat center / cover fixed;
 }
 
 body::before {

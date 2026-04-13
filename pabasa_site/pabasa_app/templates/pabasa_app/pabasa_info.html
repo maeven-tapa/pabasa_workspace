@@ -1,37 +1,593 @@
-{% extends "pabasa_app/base.html" %}
+﻿{% extends "pabasa_app/base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: linear-gradient(135deg, #f5f7fb 0%, #eff1f6 50%, #e8e0ff 100%) !important;
+        background-attachment: fixed !important;
+    }
+
+    body::before {
+        display: none !important;
+    }
+
+    /* Glowing border animation for cards */
+    @keyframes borderGlow {
+        0%, 100% {
+            box-shadow: 0 0 10px rgba(196, 130, 255, 0.4), 0 0 20px rgba(196, 130, 255, 0.2);
+        }
+        50% {
+            box-shadow: 0 0 20px rgba(196, 130, 255, 0.7), 0 0 30px rgba(196, 130, 255, 0.4), inset 0 0 10px rgba(196, 130, 255, 0.2);
+        }
+    }
+
+    /* Fade-in animation for scroll effects */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }yes
+    }
+
+    .fade-in-section {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    .fade-in-section.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .modern-surface, .card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modern-surface:hover, .card:hover {
+        border-color: rgba(31, 111, 139, 0.3) !important;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    /* Enhanced header styling */
+    h1, h2 {
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        position: relative;
+        padding-bottom: 1rem;
+    }
+
+    h1::after, h2::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 80px;
+        height: 5px;
+        background: #6e10ee;
+        border-radius: 3px;
+        animation: slideIn 0.8s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            width: 0;
+            opacity: 0;
+        }
+        to {
+            width: 80px;
+            opacity: 1;
+        }
+    }
+
+    .modern-chip {
+        background: #f3f0ff;
+        border: 1px solid #e7d8ff;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        color: #6e10ee;
+    }
+
+    .hero-centered {
+        text-align: left;
+        max-width: 100%;
+        margin: 0;
+        padding: 3rem 2rem;
+        width: 100%;
+    }
+
+    .hero-centered h1 {
+        font-size: clamp(2rem, 5vw, 3rem);
+        color: white;
+        margin-bottom: 1.5rem;
+        margin-left: -2rem;
+        margin-right: -2rem;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.4)), url('{% static "pabasa_app/images/REEAD.jpg" %}');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        padding: 5rem 2rem;
+        border-radius: 1rem;
+        text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        font-weight: 900;
+        width: calc(100% + 4rem);
+        text-align: center;
+    }
+
+    .hero-centered h1::after {
+        display: none;
+    }
+
+    .hero-centered .subheading {
+        font-size: 1.1rem;
+        color: #4b5563;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-cta {
+        display: inline-block;
+        background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+        color: white;
+        padding: 0.875rem 2rem;
+        border-radius: 999px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
+        transition: all 0.3s ease;
+        margin-bottom: 3rem;
+        font-size: 1rem;
+    }
+
+    .hero-cta:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px rgba(99, 102, 241, 0.4);
+    }
+
+    .feature-banner {
+        background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        margin: 1.5rem 0 2rem 0;
+        color: white;
+        box-shadow: 0 16px 32px rgba(99, 102, 241, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .feature-banner h3 {
+        color: white;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .feature-banner p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .banner-highlight {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 3rem;
+        margin-top: 3rem;
+        max-width: 1100px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .feature-card {
+        background: transparent;
+        border: none;
+        padding: 2rem;
+        border-radius: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        align-items: center;
+        text-align: center;
+    }
+
+    .feature-card:hover {
+        border: none;
+        box-shadow: none;
+        transform: translateY(-8px);
+    }
+
+    .feature-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100px;
+        height: 100px;
+        background: #3b82f6;
+        color: white;
+        font-weight: 900;
+        font-size: 1.5rem;
+        border-radius: 50%;
+        margin-bottom: 0;
+        flex-shrink: 0;
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .feature-card:nth-child(1) .feature-badge {
+        background: #3b82f6;
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+    }
+
+    .feature-card:nth-child(2) .feature-badge {
+        background: linear-gradient(135deg, #3b82f6 0%, #7c5cdf 100%);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .feature-card:nth-child(3) .feature-badge {
+        background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .feature-card:nth-child(4) .feature-badge {
+        background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .feature-card:hover .feature-badge {
+        transform: scale(1.1);
+    }
+
+    .features-header {
+        text-align: left;
+        margin-bottom: 0;
+        margin-top: 3rem;
+        cursor: pointer;
+        user-select: none;
+        background: white;
+        padding: 2rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .features-header:hover {
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
+        border-color: #3b82f6;
+    }
+
+    .features-header-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .features-header h2 {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: #1f2937;
+        margin: 0;
+        position: relative;
+        padding-bottom: 0;
+    }
+
+    .features-header h2::after {
+        display: none;
+    }
+
+    .features-toggle-icon {
+        font-size: 1.5rem;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-top: 0;
+        color: #3b82f6;
+        flex-shrink: 0;
+    }
+
+    .features-header.collapsed .features-toggle-icon {
+        transform: rotate(180deg);
+    }
+
+    .features-header p {
+        color: #6b7280;
+        max-width: 100%;
+        margin: 0.75rem 0 0 0;
+        line-height: 1.5;
+        opacity: 1;
+        transition: opacity 0.3s ease, height 0.3s ease;
+        height: auto;
+        font-size: 0.95rem;
+    }
+
+    .features-header.collapsed p {
+        opacity: 0;
+        height: 0;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 3rem;
+        margin-top: 0;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+        padding: 0 2rem;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                    opacity 0.3s ease, 
+                    margin-top 0.3s ease;
+        opacity: 0;
+    }
+
+    .features-grid.collapsed {
+        max-height: 0;
+        opacity: 0;
+        margin-top: 0;
+    }
+
+    .features-grid:not(.collapsed) {
+        max-height: 2000px;
+        opacity: 1;
+        margin-top: 3rem;
+    }
+
+    .feature-card h3 {
+        color: #1f2937;
+        font-weight: 900;
+        margin: 0 0 0.75rem 0;
+        font-size: 1.4rem;
+        letter-spacing: -0.3px;
+    }
+
+    .feature-card h3::before {
+        display: none !important;
+    }
+
+    .feature-card p {
+        color: #6b7280;
+        line-height: 1.6;
+        margin: 0;
+        font-size: 0.95rem;
+    }
+
+    @media (max-width: 768px) {
+        .features-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+    }
+
+    /* FAQ Section Styles */
+    .faq-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .faq-header h2 {
+        font-size: 2rem;
+        font-weight: 900;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        position: relative;
+        display: inline-block;
+        padding-bottom: 0.75rem;
+    }
+
+    .faq-header h2::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 5px;
+        background: #6e10ee;
+        border-radius: 3px;
+    }
+
+    .faq-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .faq-item {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .faq-item:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        border-color: #6e10ee;
+    }
+
+    .faq-question {
+        background: white;
+        border: none;
+        padding: 1.5rem;
+        text-align: left;
+        width: 100%;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .faq-question:hover {
+        background: #f9fafb;
+    }
+
+    .faq-question.active {
+        background: linear-gradient(135deg, #f3f0ff 0%, #faf5ff 100%);
+        color: #6e10ee;
+    }
+
+    .faq-toggle-icon {
+        flex-shrink: 0;
+        font-size: 1.5rem;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        color: #6e10ee;
+    }
+
+    .faq-question.active .faq-toggle-icon {
+        transform: rotate(180deg);
+    }
+
+    .faq-answer {
+        display: none;
+        background: #f9fafb;
+        padding: 0 1.5rem 1.5rem 1.5rem;
+        color: #6b7280;
+        line-height: 1.6;
+        font-size: 0.95rem;
+        border-top: 1px solid #e5e7eb;
+        animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .faq-answer.active {
+        display: block;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            max-height: 0;
+        }
+        to {
+            opacity: 1;
+            max-height: 500px;
+        }
+    }
+
+    /* Testimonial Section Styles */
+    .testimonial-container {
+        background: #d1d5db;
+        padding: 3rem 2rem;
+        border-radius: 12px;
+        position: relative;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        margin: 3rem 0;
+    }
+
+    .testimonial-content {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    .testimonial-quote {
+        font-size: 1.3rem;
+        line-height: 1.8;
+        color: #1f2937;
+        font-style: italic;
+        font-weight: 500;
+        margin: 2rem 0 1.5rem 0;
+        position: relative;
+    }
+
+    .testimonial-author {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .testimonial-author-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+        background: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .testimonial-author-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .testimonial-author-info {
+        text-align: right;
+    }
+
+    .testimonial-author-first {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #000000;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .testimonial-author-last {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #000000;
+        margin: 0;
+        line-height: 1.2;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<section class="py-4">
-    <div class="modern-hero row g-3">
-        <div class="col-lg-8">
-            <div class="modern-surface card border-0 h-100">
-                <div class="card-body p-4">
-                    <span class="modern-chip mb-3">What is PABASA</span>
-                    <h1 class="h3">Program for Automated Basic Reading and Speech Assessment</h1>
-                    <p class="mb-0">PABASA helps teachers and learners track fluency with automated reading checks, speech feedback, and clear next steps.</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="modern-surface card border-0 h-100">
-                <div class="card-body p-4">
-                    <h2 class="h5">Why it matters</h2>
-                    <p class="mb-0">Turn assessment into a guided experience so students can practice with confidence while teachers get instant insights.</p>
-                </div>
+<section class="fade-in-section">
+    <div class="hero-centered">
+        <h1>Give Every Student a Voice in Literacy</h1>
+    </div>
+</section>
+
+
+<section class="pb-4 fade-in-section">
+    <div class="modern-surface card border-0">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-3">Watch PABASA in Action</h2>
+            <p class="text-secondary mb-3">See how the system works and how it helps students improve their reading skills.</p>
+
+            <div class="ratio ratio-16x9 rounded-3 overflow-hidden border">
+                <iframe
+                    src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+                    title="PABASA Demo Video"
+                    allowfullscreen>
+                </iframe>
             </div>
         </div>
     </div>
 </section>
 
-<section class="pb-4">
-    <div class="row g-3">
-        <div class="col-md-4"><article class="modern-surface card h-100 border-0"><div class="card-body"><h3 class="h6">Automated checks</h3><p class="mb-0">Capture reading accuracy and speed with structured passages.</p></div></article></div>
-        <div class="col-md-4"><article class="modern-surface card h-100 border-0"><div class="card-body"><h3 class="h6">Speech feedback</h3><p class="mb-0">Provide pronunciation hints and supportive prompts.</p></div></article></div>
-        <div class="col-md-4"><article class="modern-surface card h-100 border-0"><div class="card-body"><h3 class="h6">Actionable reports</h3><p class="mb-0">Summaries that highlight strengths and next practice targets.</p></div></article></div>
-    </div>
-</section>
-
-<section class="pb-4 pb-md-5">
+<section class="pb-4 pb-md-5 fade-in-section">
     <div class="modern-surface card border-0 overflow-hidden">
         <div class="card-body p-4">
             <span class="modern-chip mb-3">Deployment Location</span>
@@ -49,4 +605,151 @@
         </div>
     </div>
 </section>
+
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="testimonial-container">
+        <div class="testimonial-content">
+            <p class="testimonial-quote">"At first, I felt shy about reading out loud because I made mistakes. Now, <strong>PABASA</strong> helps me practice, and I'm not afraid to read in front of my classmates anymore."</p>
+            <div class="testimonial-author">
+                <div class="testimonial-author-info">
+                    <p class="testimonial-author-first">Isla</p>
+                    <p class="testimonial-author-last">Faye</p>
+                </div>
+                <div class="testimonial-author-image">
+                    <img src="{% static 'pabasa_app/images/isla.jpg' %}" alt="Isla Faye">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="faq-header">
+        <h2>Do you have any questions?</h2>
+        <p class="text-secondary" style="font-size: 1.1rem;">Find answers to commonly asked questions below.</p>
+    </div>
+
+    <div class="faq-container">
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFAQ(this)">
+                <span>How do I create an account on PABASA?</span>
+                <span class="faq-toggle-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+                To create an account on PABASA, visit the signup page and select whether you're a teacher or student. Fill in your required information, including your email address and password. If you're a student, you may need a class code from your teacher to join a class. Once completed, you'll have immediate access to PABASA.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFAQ(this)">
+                <span>Can I reset my password if I forget it?</span>
+                <span class="faq-toggle-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+                Yes, you can reset your password. On the login page, click the "Forgot Password?" link. Enter your registered email address, and we'll send you instructions to reset your password. Follow the link in the email and create a new password. If you don't receive the email, check your spam folder or contact our support team.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFAQ(this)">
+                <span>How do I start a reading session?</span>
+                <span class="faq-toggle-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+                To start a reading session, log in to your PABASA account. If you're a teacher, navigate to the Courses section and select a course, then click "Start Reading Session." If you're a student, go to your dashboard and find the reading session assigned by your teacher. Click on it to begin reading the passage and follow the prompts.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFAQ(this)">
+                <span>Can I use PABASA on a phone or tablet?</span>
+                <span class="faq-toggle-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+                Yes, PABASA is designed to work on phones, tablets, and desktop computers. Simply access PABASA through your device's web browser. For the best experience with oral reading assessments, we recommend using a device with a good microphone. The interface adapts to different screen sizes for easy navigation.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFAQ(this)">
+                <span>How does PABASA track my progress?</span>
+                <span class="faq-toggle-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+                PABASA automatically tracks your reading progress with each session you complete. The system records metrics like reading speed, accuracy, and fluency. Your progress dashboard shows improvement over time with detailed charts and summaries. Teachers can view your progress reports to identify areas where you're excelling and areas that need more practice.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFAQ(this)">
+                <span>What should I do if I encounter a problem in the system?</span>
+                <span class="faq-toggle-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+                If you encounter a problem, first try refreshing the page or clearing your browser's cache. Make sure you're using a supported browser and that your internet connection is stable. If the issue persists, take note of what happened and contact our support team with detailed information about the problem. 
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFAQ(this)">
+                <span>Who can I contact for help or support?</span>
+                <span class="faq-toggle-icon">▼</span>
+            </button>
+            <div class="faq-answer">
+                You can reach our support team through the Help section in your PABASA account. There, you'll find contact information for different types of support, including technical assistance and account-related questions. You can also visit our About page to find contact information for specific team members who can assist with your inquiry.
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Fade-in on scroll functionality
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -100px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    // Observe all fade-in sections
+    document.querySelectorAll('.fade-in-section').forEach(section => {
+        observer.observe(section);
+    });
+
+    // Features dropdown toggle
+    const featuresHeader = document.getElementById('featuresHeader');
+    const featuresGrid = document.getElementById('featuresGrid');
+
+    if (featuresHeader) {
+        featuresHeader.addEventListener('click', function() {
+            featuresHeader.classList.toggle('collapsed');
+            featuresGrid.classList.toggle('collapsed');
+        });
+    }
+
+    // FAQ Toggle Function
+    function toggleFAQ(button) {
+        const faqItem = button.parentElement;
+        const answer = faqItem.querySelector('.faq-answer');
+        
+        // Close all other open FAQs
+        document.querySelectorAll('.faq-item').forEach(item => {
+            if (item !== faqItem) {
+                item.querySelector('.faq-question').classList.remove('active');
+                item.querySelector('.faq-answer').classList.remove('active');
+            }
+        });
+
+        // Toggle current FAQ
+        button.classList.toggle('active');
+        answer.classList.toggle('active');
+    }
+</script>
 {% endblock %}

@@ -29,6 +29,8 @@ ALLOWED_HOSTS = [
     'tupcpabasa.app',
     'www.tupcpabasa.app',
     'pabasa-workspace.onrender.com',
+    '127.0.0.1',
+    'localhost'
 ]
 
 

@@ -23,16 +23,17 @@ body {
     min-height: 100vh;
     font-family: "Sora", "Segoe UI", sans-serif;
     color: var(--ink);
-    background: radial-gradient(circle at top left, #ffffff 0%, var(--bg) 45%, #edf2f4 100%);
+    background: linear-gradient(180deg, #fafbfc 0%, #f5f7fa 50%, #f0f3f7 100%);
+    background-attachment: fixed;
 }
 
 body::before {
     content: "";
     position: fixed;
     inset: 0;
-    background-image: linear-gradient(transparent 95%, rgba(27, 26, 23, 0.03) 100%),
-        linear-gradient(90deg, transparent 95%, rgba(27, 26, 23, 0.03) 100%);
-    background-size: 48px 48px;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(110, 16, 238, 0.03) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(110, 16, 238, 0.02) 0%, transparent 40%);
     pointer-events: none;
     z-index: -1;
 }

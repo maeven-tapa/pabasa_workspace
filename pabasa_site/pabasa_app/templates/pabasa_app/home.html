@@ -1,66 +1,698 @@
 {% extends "pabasa_app/base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: #fafbfc !important;
+        background-attachment: fixed !important;
+    }
+
+
+
+
+    .flip-card {
+        cursor: default;
+        height: 380px;
+        width: 100%;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+
+    .flip-card-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    .flip-card-front, .flip-card-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        top: 0;
+        left: 0;
+        border-radius: 0.75rem;
+    }
+
+    .flip-card-front {
+        background-color: white;
+        color: black;
+        position: relative;
+    }
+
+    .flip-card-front img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .flip-card-back {
+        display: none;
+    }
+
+    .flip-card-back ul {
+        margin: 0;
+        padding-left: 1.5rem;
+        font-size: 0.9rem;
+    }
+
+    .flip-card-back li {
+        margin-bottom: 0.8rem;
+        line-height: 1.4;
+    }
+
+    .flip-card-back li:last-child {
+        margin-bottom: 0;
+    }
+
+    .flip-card-back h3 {
+        margin-bottom: 1rem;
+        font-size: 1rem;
+    }
+
+    .carousel-testimonial {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        min-height: 260px;
+    }
+
+    .carousel-testimonial-image {
+        flex-shrink: 0;
+    }
+
+    .carousel-testimonial-image img {
+        width: 140px;
+        height: 140px;
+        border-radius: 1rem;
+        object-fit: cover;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .carousel-testimonial-content {
+        flex-grow: 1;
+    }
+
+    .carousel-testimonial-quote {
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        color: #fff;
+        font-style: italic;
+        text-align: justify;
+    }
+
+    .carousel-testimonial-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #fff;
+    }
+
+    @media (max-width: 576px) {
+        .carousel-testimonial {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .carousel-testimonial-image img {
+            width: 100px;
+            height: 100px;
+        }
+
+        .carousel-testimonial-quote {
+            font-size: 0.9rem;
+            text-align: justify;
+        }
+    }
+
+    /* Fade-in animation for scroll effects */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in-section {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    .fade-in-section.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .section-container-hero {
+        background: linear-gradient(180deg, rgba(250, 251, 252, 1) 0%, rgba(240, 246, 250, 1) 100%);
+        padding: 2rem 2rem;
+        margin: 0 calc(-50vw + 50%);
+        width: 100vw;
+        border: none;
+    }
+
+    .hero-image-section {
+        width: 100%;
+        height: 400px;
+        overflow: hidden;
+        border-radius: 0.75rem;
+        margin-bottom: 2rem;
+        position: relative;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-image-section img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: filter 1s ease;
+    }
+
+    .hero-image-section img.blurred {
+        filter: blur(8px);
+    }
+
+    .hero-quote {
+        position: absolute;
+        bottom: 2rem;
+        left: 2rem;
+        max-width: 300px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    .hero-quote.reveal {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .hero-quote-text {
+        font-size: 1.1rem;
+        font-style: italic;
+        color: #ffffff;
+        margin: 0;
+        line-height: 1.6;
+        font-weight: 600;
+        text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .hero-quote-author {
+        font-size: 0.9rem;
+        color: #ffffff;
+        margin-top: 0.75rem;
+        margin-bottom: 0;
+        font-weight: 600;
+        text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    @media (max-width: 768px) {
+        .hero-image-section {
+            height: 300px;
+        }
+
+        .hero-quote {
+            bottom: 1.5rem;
+            left: 1.5rem;
+            max-width: 250px;
+        }
+
+        .hero-quote-text {
+            font-size: 0.95rem;
+        }
+    }
+
+    .modern-surface, .card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modern-surface:hover, .card:hover {
+        border-color: rgba(31, 111, 139, 0.3) !important;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    /* Enhanced header styling */
+    .modern-hero h1 {
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        position: relative;
+        padding-bottom: 1rem;
+    }
+
+    .modern-hero h1::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 80px;
+        height: 5px;
+        background: #6e10ee;
+        border-radius: 3px;
+        animation: slideIn 0.8s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            width: 0;
+            opacity: 0;
+        }
+        to {
+            width: 80px;
+            opacity: 1;
+        }
+    }
+
+    .modern-chip {
+        background: #f3f0ff;
+        border: 1px solid #e7d8ff;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        color: #6e10ee;
+    }
+
+    /* Newspaper-style hero section */
+    .modern-hero {
+        background: white;
+        padding: 3rem;
+        border: 1px solid #d1d5db;
+        position: relative;
+        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .modern-hero .col-lg-7 {
+        border-right: 1px solid #d1d5db;
+        padding-right: 2.5rem;
+    }
+
+    .modern-hero span.modern-chip {
+        background: #f3f0ff;
+        border: 1px solid #e7d8ff;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        color: #6e10ee;
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        display: inline-block;
+    }
+
+    .modern-hero h1 {
+        font-weight: 900;
+        letter-spacing: -1px;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        position: relative;
+        padding-bottom: 0;
+        line-height: 1.2;
+        font-size: 3rem;
+    }
+
+    .modern-hero h1::after {
+        content: '';
+        position: absolute;
+        bottom: -1rem;
+        left: 0;
+        width: 60px;
+        height: 3px;
+        background: #1f2937;
+        border-radius: 0;
+        animation: slideIn 0.8s ease-out;
+    }
+
+    .modern-hero .lead {
+        font-size: 1.1rem;
+        color: #4b5563;
+        font-weight: 500;
+        margin-top: 2rem;
+    }
+
+    .modern-hero .col-lg-5 {
+        padding-left: 2.5rem;
+    }
+
+    @media (max-width: 992px) {
+        .modern-hero .col-lg-7 {
+            border-right: none !important;
+            padding-right: 0 !important;
+            padding-bottom: 2rem;
+        }
+
+        .modern-hero .col-lg-5 {
+            padding-left: 0 !important;
+        }
+
+        .modern-hero {
+            padding: 2rem;
+        }
+
+        .modern-hero h1 {
+            font-size: 2rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .modern-hero {
+            padding: 1.5rem;
+        }
+
+        .modern-hero h1 {
+            font-size: 1.5rem;
+        }
+
+        .modern-hero .lead {
+            font-size: 0.95rem;
+        }
+
+        .flip-card {
+            height: 320px;
+        }
+    }
+
+    .flip-card {
+        border: 1px solid #d1d5db;
+        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.06);
+        position: relative;
+    }
+
+    /* Carousel arrow positioning */
+    #homeHighlightsCarousel {
+        position: relative;
+    }
+
+    #homeHighlightsCarousel .carousel-control-prev,
+    #homeHighlightsCarousel .carousel-control-next {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: auto;
+        height: auto;
+        background: none;
+        border: none;
+        padding: 1rem;
+        z-index: 10;
+    }
+
+    #homeHighlightsCarousel .carousel-control-prev {
+        left: 0;
+    }
+
+    #homeHighlightsCarousel .carousel-control-next {
+        right: 0;
+    }
+
+    #homeHighlightsCarousel .carousel-control-prev-icon,
+    #homeHighlightsCarousel .carousel-control-next-icon {
+        width: 2rem;
+        height: 2rem;
+        filter: invert(1) brightness(1.2);
+    }
+
+    /* Section Headers Styling */
+    section.pb-4 h2,
+    section.pb-md-5 h2 {
+        font-size: 2rem;
+        font-weight: 900;
+        color: #1f2937;
+        letter-spacing: -0.5px;
+        position: relative;
+        display: inline-block;
+        padding-bottom: 0.75rem;
+    }
+
+    section.pb-4 h2::after,
+    section.pb-md-5 h2::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, #3b82f6 0%, #a855f7 100%);
+        border-radius: 2px;
+    }
+
+    /* Split Layout for Solutions and Features */
+    .split-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 1.5rem;
+        padding: 1rem 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .split-item:hover {
+        transform: translateY(-4px);
+    }
+
+    .split-icon {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .split-icon img {
+        width: 250px;
+        height: auto;
+        display: block;
+    }
+
+    .split-item:hover .split-icon {
+        transform: scale(1.1);
+    }
+
+    .split-content {
+        flex-grow: 1;
+        width: 100%;
+    }
+
+    .split-content h3 {
+        margin: 0 0 0.75rem 0;
+        font-size: 1.2rem;
+        color: #1f2937;
+        font-weight: 700;
+    }
+
+    .split-content h3::before {
+        display: none !important;
+    }
+
+    .split-content p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #6b7280;
+        line-height: 1.6;
+    }
+
+    .split-items-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+
+    /* Section Container Styles */
+    .section-container {
+        padding: 4rem 2rem;
+        margin: 0 calc(-50vw + 50%);
+        width: 100vw;
+    }
+
+    .section-container-1 {
+        background: linear-gradient(180deg, rgba(240, 246, 250, 1) 0%, rgba(242, 244, 250, 1) 100%);
+    }
+
+    .section-container-2 {
+        background: linear-gradient(180deg, rgba(246, 242, 248, 1) 0%, rgba(252, 248, 244, 1) 100%);
+    }
+
+    .section-container-3 {
+        background: linear-gradient(180deg, rgba(254, 250, 246, 1) 0%, rgba(240, 230, 220, 1) 100%);
+    }
+
+    .section-container-4 {
+        background: linear-gradient(180deg, rgba(60, 60, 60, 1) 0%, rgba(25, 25, 25, 1) 100%);
+    }
+
+    .section-wrapper {
+        padding: 0 1.5rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+        .split-item {
+            padding: 1.5rem;
+            gap: 1.25rem;
+        }
+
+        .split-icon {
+            width: 80px;
+            height: 80px;
+            font-size: 2.5rem;
+        }
+
+        .split-content h3 {
+            font-size: 1.1rem;
+        }
+
+        .split-content p {
+            font-size: 0.85rem;
+        }
+
+        .split-items-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+    }
+</style>
+
+{% endblock %}
 
 {% block content %}
-<section class="py-4 py-md-5">
+
+<div class="hero-image-section">
+    <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="Student reading" class="img-fluid" id="heroImage">
+    <div class="hero-quote" id="heroQuote">
+        <p class="hero-quote-text">"Reading opens doors to new worlds and endless possibilities for every child."</p>
+        <p class="hero-quote-author">— PABASA</p>
+    </div>
+</div>
+
+<section class="fade-in-section section-container section-container-1">
+    <div class="section-wrapper">
     <div class="modern-hero row g-4 align-items-center">
         <div class="col-lg-7">
-            <span class="modern-chip mb-3">Platform for Automated Basic Reading and Speech Assessment</span>
-            <h1 class="display-6 fw-bold mb-3">A modern reading platform built for classroom clarity and student confidence.</h1>
-            <p class="lead text-secondary">Give learners supportive practice sessions while teachers get fast, structured progress insights.</p>
+            <span class="modern-chip mb-3">Small Steps, Big Readers!</span>
+            <h1 class="display-6 fw-bold mb-3">PABASA checks reading skills and shows teachers progress at a glance.</h1>
+            <p class="lead text-secondary">See every little step your students take in reading.</p>
             <div class="d-flex flex-wrap gap-2 mt-4">
                 <a class="btn btn-primary" href="{% url 'pabasa_info' %}">See How It Works</a>
                 <a class="btn btn-outline-primary" href="{% url 'about' %}">Explore PABASA</a>
             </div>
         </div>
         <div class="col-lg-5">
-            <div class="modern-surface card border-0">
-                <div class="card-body p-4">
-                    <h2 class="h5 mb-3">Why teachers choose PABASA</h2>
-                    <ul class="mb-0 ps-3">
-                        <li class="mb-2">Fast reading fluency checks</li>
-                        <li class="mb-2">Simple classroom progress tracking</li>
-                        <li>Student-friendly guided practice</li>
-                    </ul>
+            <div class="modern-surface card border-0 flip-card" id="teachersFlipCard">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front overflow-hidden">
+                        <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Why teachers choose PABASA" class="img-fluid w-100 h-100" style="object-fit: cover; display: block;">
+                    </div>
+                    <div class="flip-card-back">
+                        <div class="text-center w-100">
+                            <h3 class="h5 mb-4">Why teachers choose PABASA</h3>
+                            <div class="d-grid gap-3" style="grid-template-columns: 1fr;">
+                                <div style="background: rgba(93, 13, 208, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #6e10ee;">
+                                    <p class="mb-0"><strong>Check Reading Fast</strong><br><small style="color: #666;">See how each student is doing in just a few minutes.</small></p>
+                                </div>
+                                <div style="background: rgba(93, 13, 208, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #6e10ee;">
+                                    <p class="mb-0"><strong>Spot Growth Instantly</strong><br><small style="color: #666;">Know who's improving and who needs a little extra help.</small></p>
+                                </div>
+                                <div style="background: rgba(93, 13, 208, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #6e10ee;">
+                                    <p class="mb-0"><strong>Reports Without the Paperwork</strong><br><small style="color: #666;">Clear insights, ready when you are.</small></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+    </div>
 </section>
 
-<section class="pb-4 pb-md-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h4 mb-0">Solutions by Audience</h2>
+<section class="fade-in-section section-container section-container-2">
+    <div class="section-wrapper">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0">Designed for Every User</h2>
         <span class="text-secondary small">Built for learners, teachers, and school teams</span>
     </div>
-    <div class="row g-3">
-        <div class="col-md-4">
-            <article class="modern-surface card h-100 border-0">
-                <div class="card-body">
-                    <h3 class="h5">Teachers</h3>
-                    <p class="mb-0">Launch reading checks, track fluency, and get instant summaries with less paperwork.</p>
-                </div>
-            </article>
+    <div class="split-items-grid">
+        <div class="split-item">
+            <div class="split-icon">
+                <img src="{% static 'pabasa_app/images/teachers.png' %}" alt="Teachers">
+            </div>
+            <div class="split-content">
+                <h3>Teachers</h3>
+                <p>Launch reading checks, track fluency, and get instant summaries with less paperwork.</p>
+            </div>
         </div>
-        <div class="col-md-4">
-            <article class="modern-surface card h-100 border-0">
-                <div class="card-body">
-                    <h3 class="h5">Students</h3>
-                    <p class="mb-0">Practice with guided prompts and feedback that keep reading sessions confident and calm.</p>
-                </div>
-            </article>
+        <div class="split-item">
+            <div class="split-icon">
+                <img src="{% static 'pabasa_app/images/students.png' %}" alt="Students">
+            </div>
+            <div class="split-content">
+                <h3>Students</h3>
+                <p>Practice with guided prompts and feedback that keep reading sessions confident and calm.</p>
+            </div>
         </div>
-        <div class="col-md-4">
-            <article class="modern-surface card h-100 border-0">
-                <div class="card-body">
-                    <h3 class="h5">Schools</h3>
-                    <p class="mb-0">See progress across classes with consistent data and simple reporting tools.</p>
-                </div>
-            </article>
+        <div class="split-item">
+            <div class="split-icon">
+                <img src="{% static 'pabasa_app/images/schools.png' %}" alt="Schools">
+            </div>
+            <div class="split-content">
+                <h3>Schools</h3>
+                <p>See progress across classes with consistent data and simple reporting tools.</p>
+            </div>
         </div>
+    </div>
     </div>
 </section>
 
-<section class="pb-4 pb-md-5">
+<section class="fade-in-section section-container section-container-3">
+    <div class="section-wrapper">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h4 mb-0">Key Features</h2>
+        <span class="text-secondary small">Everything you need for reading success</span>
+    </div>
+    <div class="split-items-grid">
+        <div class="split-item">
+            <div class="split-icon">
+                <img src="{% static 'pabasa_app/images/oral_read.png' %}" alt="Oral Reading">
+            </div>
+            <div class="split-content">
+                <h3>Oral Reading</h3>
+                <p>Allows students to practice reading aloud as part of guided reading activities, helping them engage with the material and develop their reading skills.</p>
+            </div>
+        </div>
+        <div class="split-item">
+            <div class="split-icon">
+                <img src="{% static 'pabasa_app/images/reports.png' %}" alt="Automated Reports">
+            </div>
+            <div class="split-content">
+                <h3>Automated Reports</h3>
+                <p>Get easy-to-read feedback that shows what you did well and what to practice next.</p>
+            </div>
+        </div>
+        <div class="split-item">
+            <div class="split-icon">
+                <img src="{% static 'pabasa_app/images/dual_lang.png' %}" alt="Dual Language Support">
+            </div>
+            <div class="split-content">
+                <h3>Dual Language Support</h3>
+                <p>Take assessments in Filipino and English so you can grow your reading skills in both languages.</p>
+            </div>
+        </div>
+    </div>
+    </div>
+</section>
+
+<section class="fade-in-section section-container section-container-4">
+    <div class="section-wrapper">
     <div class="row g-4 align-items-stretch">
         <div class="col-lg-8">
             <div class="modern-surface card border-0 h-100 overflow-hidden">
@@ -73,24 +705,45 @@
                         </div>
                         <div class="carousel-inner">
                             <div class="carousel-item active">
-                                <div class="p-4 p-md-5" style="min-height: 260px; background: linear-gradient(135deg, #5d0dd0 0%, #6e10ee 100%); color: #fff;">
-                                    <h3 class="h4">Weekly Reading Momentum</h3>
-                                    <p class="mb-3">Teachers can see practice streaks and identify learners who need timely support.</p>
-                                    <span class="badge text-bg-light">Live classroom view</span>
+                                <div class="p-4 p-md-5" style="background: linear-gradient(135deg, #5d0dd0 0%, #6e10ee 100%);">
+                                    <p style="color: #fff; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; opacity: 0.95;">What Teachers Say About PABASA</p>
+                                    <div class="carousel-testimonial">
+                                        <div class="carousel-testimonial-image">
+                                            <img src="{% static 'pabasa_app/images/teacher%201.jpg' %}" alt="Teacher 1">
+                                        </div>
+                                        <div class="carousel-testimonial-content">
+                                            <p class="carousel-testimonial-quote">"PABASA has completely changed how I assess my students' reading. What used to take me hours now takes minutes, and I get much more detailed insights into each student's strengths and areas to work on."</p>
+                                            <p class="carousel-testimonial-name">— Ma. Teresa Ramos</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="carousel-item">
-                                <div class="p-4 p-md-5" style="min-height: 260px; background: linear-gradient(135deg, #6e10ee 0%, #8a3ffc 100%); color: #fff;">
-                                    <h3 class="h4">Confidence First Learning</h3>
-                                    <p class="mb-3">Students practice in calm, guided steps designed to reduce reading anxiety.</p>
-                                    <span class="badge text-bg-light">Student-friendly flow</span>
+                                <div class="p-4 p-md-5" style="background: linear-gradient(135deg, #6e10ee 0%, #8a3ffc 100%);">
+                                    <p style="color: #fff; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; opacity: 0.95;">What Teachers Say About PABASA</p>
+                                    <div class="carousel-testimonial">
+                                        <div class="carousel-testimonial-image">
+                                            <img src="{% static 'pabasa_app/images/teacher%202.jpg' %}" alt="Teacher 2">
+                                        </div>
+                                        <div class="carousel-testimonial-content">
+                                            <p class="carousel-testimonial-quote">"My students feel less anxious about reading assessments now. The platform gives them instant feedback in a supportive way, which has boosted their confidence and engagement significantly."</p>
+                                            <p class="carousel-testimonial-name">— Juan Crisostomo</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="carousel-item">
-                                <div class="p-4 p-md-5" style="min-height: 260px; background: linear-gradient(135deg, #8a3ffc 0%, #a56bff 100%); color: #fff;">
-                                    <h3 class="h4">Actionable School Reports</h3>
-                                    <p class="mb-3">School leaders get clear snapshots of literacy progress across classes.</p>
-                                    <span class="badge text-bg-light">Ready-to-share insights</span>
+                                <div class="p-4 p-md-5" style="background: linear-gradient(135deg, #8a3ffc 0%, #a56bff 100%);">
+                                    <p style="color: #fff; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; opacity: 0.95;">What Teachers Say About PABASA</p>
+                                    <div class="carousel-testimonial">
+                                        <div class="carousel-testimonial-image">
+                                            <img src="{% static 'pabasa_app/images/teacher%203.jpg' %}" alt="Teacher 3">
+                                        </div>
+                                        <div class="carousel-testimonial-content">
+                                            <p class="carousel-testimonial-quote">"The reports are so actionable. I can see exactly which students need intervention and share progress with parents in a way they can easily understand. It's made conferences so much more productive."</p>
+                                            <p class="carousel-testimonial-name">— Angelo Mercado</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -113,7 +766,12 @@
                     <span class="modern-chip mb-3">New Section</span>
                     <h3 class="h5">Ready to start a reading session?</h3>
                     <p class="text-secondary">Set up a class, invite learners, and begin your first guided assessment in minutes.</p>
-                    <div class="mt-auto d-grid gap-2">
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 0; margin-top: auto; margin-bottom: 1rem;">
+                        <span style="font-weight: 700; color: #1f6f8b; font-size: 0.9rem;">✓ Completely Free</span>
+                        <span style="font-weight: 700; color: #1f6f8b; font-size: 0.9rem;">✓ Always Available</span>
+                        <span style="font-weight: 700; color: #1f6f8b; font-size: 0.9rem;">✓ Easy to Start</span>
+                    </div>
+                    <div class="d-grid gap-2">
                         <a class="btn btn-primary" href="{% url 'auth' %}">Open My Account</a>
                         <a class="btn btn-outline-primary" href="{% url 'pabasa_info' %}">Learn More</a>
                     </div>
@@ -121,5 +779,44 @@
             </div>
         </div>
     </div>
+    </div>
 </section>
+
+<script>
+    // Fade-in on scroll functionality
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -100px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    // Observe all fade-in sections
+    document.querySelectorAll('.fade-in-section').forEach(section => {
+        observer.observe(section);
+    });
+
+    // Hero image blur and quote reveal animation
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const heroImage = document.getElementById('heroImage');
+            const heroQuote = document.getElementById('heroQuote');
+            
+            // Blur the image
+            heroImage.classList.add('blurred');
+            
+            // Reveal the quote after a slight delay
+            setTimeout(function() {
+                heroQuote.classList.add('reveal');
+            }, 200);
+        }, 3000); // Trigger after 3 seconds
+    });
+</script>
 {% endblock %}

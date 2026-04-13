@@ -1,8 +1,32 @@
 {% extends "pabasa_app/base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    body {
+        background:
+            linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.25) 100%),
+            radial-gradient(ellipse at 50% 50%, rgba(31, 111, 139, 0.15) 0%, transparent 80%),
+            url("{% static 'pabasa_app/images/read.jpg' %}") no-repeat center center fixed;
+        background-size: cover;
+    }
+
+    .account-card {
+        background: rgba(255, 255, 255, 0.75) !important;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    .account-card .text-secondary {
+        color: #000000 !important;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <section class="account-stage">
-    <div class="col-12 col-lg-8">
+    <div class="row g-4 align-items-center">
+    <div class="col-12 col-lg-8 col-xl-6 mx-auto">
         <article class="account-card card">
             <div class="card-body p-4 p-md-5">
                 <span class="modern-chip mb-2">Student Account</span>
