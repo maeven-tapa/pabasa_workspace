@@ -1,1 +1,1 @@
-gunicorn pabasa_site.wsgi:application --chdir pabasa_site
+web: gunicorn pabasa_site.wsgi:application --chdir pabasa_site
