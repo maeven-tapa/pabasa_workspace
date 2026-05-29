@@ -1,6 +1,8 @@
 ﻿{% extends "pabasa_app/base.html" %}
 {% load static %}
 
+{% block page_title %}Discover PABASA{% endblock %}
+
 {% block extra_head %}
 <style>
     body {
@@ -31,7 +33,7 @@
         to {
             opacity: 1;
             transform: translateY(0);
-        }yes
+        }
     }
 
     .fade-in-section {
@@ -384,14 +386,14 @@
     /* FAQ Section Styles */
     .faq-header {
         text-align: center;
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
     }
 
     .faq-header h2 {
-        font-size: 2rem;
+        font-size: 2.2rem;
         font-weight: 900;
         color: #1f2937;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
         position: relative;
         display: inline-block;
         padding-bottom: 0.75rem;
@@ -404,33 +406,77 @@
         left: 0;
         width: 100%;
         height: 5px;
-        background: #6e10ee;
+        background: linear-gradient(90deg, #6e10ee, #1f6f8b);
         border-radius: 3px;
     }
 
+    .faq-category-filters {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 2.5rem;
+    }
+
+    .faq-filter-btn {
+        background: white;
+        border: 1.5px solid #e5e7eb;
+        padding: 0.65rem 1.25rem;
+        border-radius: 0.75rem;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #6b7280;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .faq-filter-btn:hover {
+        border-color: #6e10ee;
+        color: #6e10ee;
+        box-shadow: 0 4px 12px rgba(110, 16, 238, 0.1);
+    }
+
+    .faq-filter-btn.active {
+        background: linear-gradient(135deg, #6e10ee, #a855f7);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 6px 20px rgba(110, 16, 238, 0.3);
+    }
+
     .faq-container {
-        max-width: 800px;
+        max-width: 850px;
         margin: 0 auto;
+    }
+
+    .faq-items-wrapper {
+        display: block;
+    }
+
+    .faq-items-wrapper.hidden {
+        display: none;
     }
 
     .faq-item {
         background: white;
         border: 1px solid #e5e7eb;
         border-radius: 0.75rem;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
         overflow: hidden;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .faq-item:hover {
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-        border-color: #6e10ee;
+        box-shadow: 0 6px 16px rgba(110, 16, 238, 0.1);
+        border-color: rgba(110, 16, 238, 0.2);
     }
 
     .faq-question {
-        background: white;
+        background: transparent;
         border: none;
-        padding: 1.5rem;
+        padding: 1.2rem 1.5rem;
         text-align: left;
         width: 100%;
         cursor: pointer;
@@ -439,13 +485,14 @@
         align-items: center;
         gap: 1rem;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-size: 1.1rem;
+        font-size: 0.95rem;
         font-weight: 600;
         color: #1f2937;
     }
 
     .faq-question:hover {
-        background: #f9fafb;
+        background: #f3f0ff;
+        color: #6e10ee;
     }
 
     .faq-question.active {
@@ -455,7 +502,7 @@
 
     .faq-toggle-icon {
         flex-shrink: 0;
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         color: #6e10ee;
     }
@@ -467,10 +514,10 @@
     .faq-answer {
         display: none;
         background: #f9fafb;
-        padding: 0 1.5rem 1.5rem 1.5rem;
+        padding: 0 1.5rem 1.2rem 1.5rem;
         color: #6b7280;
         line-height: 1.6;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         border-top: 1px solid #e5e7eb;
         animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -559,41 +606,972 @@
         margin: 0;
         line-height: 1.2;
     }
+
+    /* Modern product-page redesign */
+    :root {
+        --info-ink: #101828;
+        --info-muted: #667085;
+        --info-line: #e4e7ec;
+        --info-panel: #ffffff;
+        --info-soft: #f6f8fb;
+        --info-accent: #155e75;
+        --info-violet: #5d0dd0;
+    }
+
+    body {
+        background: #f6f8fb !important;
+        color: var(--info-ink);
+    }
+
+    h1,
+    h2 {
+        letter-spacing: 0;
+        color: var(--info-ink);
+    }
+
+    h1::after,
+    h2::after,
+    .faq-header h2::after {
+        background: linear-gradient(90deg, var(--info-accent), var(--info-violet));
+        height: 3px;
+        border-radius: 999px;
+    }
+
+    .modern-chip {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        background: rgba(21, 94, 117, 0.08);
+        border: 1px solid rgba(21, 94, 117, 0.16);
+        border-radius: 999px;
+        color: var(--info-accent);
+        padding: 0.45rem 0.8rem;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .info-shell {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 1rem 4rem;
+    }
+
+    .info-hero-modern {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 420px;
+        gap: 2rem;
+        align-items: stretch;
+        margin: 2rem 0 2.5rem;
+    }
+
+    .info-hero-copy,
+    .info-hero-media,
+    .info-panel-card,
+    .testimonial-container,
+    .faq-item {
+        background: var(--info-panel);
+        border: 1px solid var(--info-line);
+        border-radius: 1rem;
+        box-shadow: 0 16px 45px rgba(16, 24, 40, 0.07);
+    }
+
+    .info-hero-copy {
+        padding: clamp(2rem, 5vw, 4rem);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .info-hero-copy::after {
+        content: '';
+        position: absolute;
+        right: -90px;
+        bottom: -100px;
+        width: 240px;
+        height: 240px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(21, 94, 117, 0.12), transparent 68%);
+        pointer-events: none;
+    }
+
+    .info-hero-copy h1 {
+        max-width: 760px;
+        margin: 1rem 0;
+        padding: 0;
+        font-size: clamp(2rem, 4.5vw, 4rem);
+        line-height: 1.03;
+        font-weight: 900;
+    }
+
+    .info-hero-copy h1::after {
+        display: none;
+    }
+
+    .info-hero-copy p {
+        max-width: 680px;
+        color: var(--info-muted);
+        font-size: 1.02rem;
+        line-height: 1.75;
+        margin: 0;
+    }
+
+    .info-hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.8rem;
+        margin-top: 2rem;
+    }
+
+    .info-hero-stats div {
+        background: var(--info-soft);
+        border: 1px solid var(--info-line);
+        border-radius: 0.85rem;
+        padding: 0.95rem;
+    }
+
+    .info-hero-stats strong {
+        display: block;
+        color: var(--info-ink);
+        font-size: 1.3rem;
+        line-height: 1;
+        margin-bottom: 0.35rem;
+    }
+
+    .info-hero-stats span {
+        display: block;
+        color: var(--info-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .info-hero-media {
+        min-height: 440px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .info-hero-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        filter: saturate(0.94) contrast(1.03);
+    }
+
+    .info-hero-media::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 45%, rgba(16, 24, 40, 0.38));
+        pointer-events: none;
+    }
+
+    .info-section-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 1.25rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .info-panel-card {
+        overflow: hidden;
+    }
+
+    .info-panel-card .card-body {
+        padding: 1.5rem !important;
+    }
+
+    .info-panel-card h2 {
+        font-size: 1.2rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .info-panel-card p {
+        color: var(--info-muted) !important;
+        line-height: 1.65;
+    }
+
+    .info-panel-card .ratio {
+        border: 1px solid var(--info-line) !important;
+        border-radius: 0.85rem !important;
+        background: #eef2f6;
+    }
+
+    .info-hero-product {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.42fr);
+        gap: 1.25rem;
+        align-items: stretch;
+        margin: 2rem 0 3rem;
+        border-bottom: 1px solid var(--info-line);
+        padding-bottom: 2.5rem;
+    }
+
+    .info-hero-product-copy {
+        max-width: 980px;
+    }
+
+    .info-hero-product-copy h1 {
+        color: var(--info-ink);
+        font-size: clamp(2rem, 4.2vw, 3.65rem);
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.04;
+        margin: 1rem 0;
+        max-width: 860px;
+        padding: 0;
+    }
+
+    .info-hero-product-copy h1::after {
+        display: none;
+    }
+
+    .info-hero-product-copy p {
+        color: var(--info-muted);
+        font-size: 1.02rem;
+        line-height: 1.75;
+        margin: 0;
+        max-width: 760px;
+    }
+
+    .info-hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.75rem;
+    }
+
+    .info-proof-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-top: 2rem;
+        max-width: 760px;
+    }
+
+    .info-proof-grid div {
+        background: var(--info-soft);
+        border: 1px solid var(--info-line);
+        border-radius: 0.85rem;
+        padding: 0.95rem;
+    }
+
+    .info-proof-grid strong {
+        display: block;
+        color: var(--info-ink);
+        font-size: 1.25rem;
+        line-height: 1;
+        margin-bottom: 0.35rem;
+    }
+
+    .info-proof-grid span {
+        display: block;
+        color: var(--info-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .info-overview-visual {
+        min-height: 360px;
+        border: 1px solid var(--info-line);
+        border-radius: 1rem;
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 16px 40px rgba(16, 24, 40, 0.075);
+    }
+
+    .info-overview-visual img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        filter: saturate(0.92) contrast(1.04);
+    }
+
+    .info-overview-visual::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(180deg, transparent 45%, rgba(15, 23, 42, 0.48)),
+            linear-gradient(90deg, rgba(15, 23, 42, 0.22), transparent 45%);
+        pointer-events: none;
+    }
+
+    .info-overview-caption {
+        position: absolute;
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+        z-index: 1;
+        color: #ffffff;
+    }
+
+    .info-overview-caption strong {
+        display: block;
+        font-size: 0.95rem;
+        font-weight: 900;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-overview-caption span {
+        color: #dbeafe;
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .info-open-grid {
+        display: grid;
+        gap: 2.75rem;
+        margin-bottom: 2.75rem;
+    }
+
+    .info-open-section h2,
+    .info-cta h2 {
+        font-size: clamp(1.45rem, 2.5vw, 2rem);
+        margin: 0.85rem 0 0.7rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .info-open-section p,
+    .info-cta p {
+        color: var(--info-muted) !important;
+        line-height: 1.65;
+        margin: 0 0 1rem;
+    }
+
+    .info-media-frame {
+        overflow: hidden;
+        border: 1px solid var(--info-line);
+        border-radius: 1rem;
+        background: #eef2f6;
+        box-shadow: 0 16px 40px rgba(16, 24, 40, 0.075);
+    }
+
+    .demo-preview {
+        position: relative;
+        min-height: 100%;
+        background:
+            linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(30, 41, 59, 0.42)),
+            url('{% static "pabasa_app/images/REEAD.jpg" %}');
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        align-items: flex-end;
+        padding: 1.35rem;
+        color: #ffffff;
+    }
+
+    .demo-preview-play {
+        width: 3.2rem;
+        height: 3.2rem;
+        border-radius: 50%;
+        background: #ffffff;
+        color: var(--info-ink);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        font-weight: 900;
+        margin-bottom: 1rem;
+        box-shadow: 0 14px 32px rgba(16, 24, 40, 0.22);
+    }
+
+    .demo-preview h3 {
+        color: #ffffff;
+        font-size: 1.1rem;
+        font-weight: 900;
+        margin: 0 0 0.35rem;
+    }
+
+    .demo-preview p {
+        color: #e2e8f0 !important;
+        margin: 0;
+        max-width: 520px;
+    }
+
+    .info-cta {
+        background:
+            linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96));
+        border-radius: 1rem;
+        color: #ffffff;
+        margin: 0 0 2.75rem;
+        padding: clamp(1.5rem, 4vw, 2.5rem);
+        display: flex;
+        justify-content: space-between;
+        gap: 1.5rem;
+        align-items: center;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .info-cta h2 {
+        color: #ffffff;
+    }
+
+    .info-cta h2::after {
+        background: #0e7490;
+    }
+
+    .info-cta p {
+        color: #cbd5e1 !important;
+        max-width: 650px;
+        margin-bottom: 0;
+    }
+
+    .info-cta-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .reading-levels {
+        margin: 0 0 2.5rem;
+    }
+
+    .reading-levels-header {
+        max-width: 720px;
+        margin-bottom: 1.5rem;
+    }
+
+    .reading-levels-header h2 {
+        font-size: clamp(1.5rem, 2.7vw, 2.1rem);
+        margin: 0 0 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .reading-levels-header p {
+        color: var(--info-muted);
+        line-height: 1.65;
+        margin: 0;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .reading-levels-timeline {
+        position: relative;
+        padding: 2rem 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3rem 4rem;
+    }
+
+    .reading-levels-timeline::before {
+        display: none;
+    }
+
+    .reading-levels-timeline::after {
+        display: none;
+    }
+
+    .timeline-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        padding: 0;
+        margin: 0;
+        animation: fadeIn 0.6s ease-out both;
+    }
+
+    .timeline-item:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .timeline-item:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .timeline-item:nth-child(3) {
+        animation-delay: 0.3s;
+        grid-column: 1 / -1;
+        width: 50%;
+    }
+
+    .timeline-marker {
+        position: relative;
+        width: 110px;
+        height: 110px;
+        min-width: 110px;
+        background: linear-gradient(135deg, var(--info-accent), var(--info-violet));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 1.9rem;
+        color: white;
+        box-shadow: 0 8px 28px rgba(21, 94, 117, 0.25);
+        flex-shrink: 0;
+        z-index: 2;
+        transition: all 0.3s ease;
+        border-radius: 50px 0 50px 50px;
+    }
+
+    .timeline-marker::after {
+        display: none;
+    }
+
+    .timeline-item:hover .timeline-marker {
+        transform: none;
+        box-shadow: 0 8px 28px rgba(21, 94, 117, 0.25);
+    }
+
+    .timeline-content {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 0;
+        box-shadow: none;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: visible;
+    }
+
+    .timeline-content::after {
+        display: none;
+    }
+
+    .timeline-content::before {
+        display: none;
+    }
+
+    .timeline-item:hover .timeline-content {
+        transform: none;
+        box-shadow: none;
+        border-color: transparent;
+    }
+
+    .timeline-content span {
+        color: var(--info-accent);
+        font-size: 0.75rem;
+        font-weight: 850;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 0.25rem;
+        position: relative;
+        z-index: 2;
+    }
+
+    .timeline-content h3 {
+        color: #1f2937;
+        font-size: 1.1rem;
+        font-weight: 900;
+        margin: 0 0 0.5rem 0;
+        letter-spacing: -0.3px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .timeline-content p {
+        color: #6b7280;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 0;
+        position: relative;
+        z-index: 2;
+    }
+
+    .timeline-meta {
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .reading-levels-timeline {
+            grid-template-columns: 1fr;
+            gap: 2.5rem 1.5rem;
+        }
+
+        .timeline-item {
+            gap: 1.5rem;
+        }
+
+        .timeline-item:nth-child(3) {
+            grid-column: 1;
+            width: 100%;
+        }
+
+        .timeline-marker {
+            width: 80px;
+            height: 80px;
+            font-size: 1.5rem;
+        }
+
+        .timeline-content h3 {
+            font-size: 1rem;
+        }
+
+        .timeline-content p {
+            font-size: 0.9rem;
+        }
+    }
+
+    .testimonial-container {
+        background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 252, 0.98));
+        padding: 0;
+        margin: 0 0 2.5rem;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .testimonial-container::before {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 8px;
+        background: linear-gradient(180deg, var(--info-accent), var(--info-violet));
+    }
+
+    .testimonial-container::after {
+        content: '';
+        position: absolute;
+        right: -80px;
+        top: -100px;
+        width: 260px;
+        height: 260px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(21, 94, 117, 0.12), transparent 68%);
+        pointer-events: none;
+    }
+
+    .testimonial-content {
+        max-width: none;
+        min-height: 290px;
+        padding: clamp(1.5rem, 4vw, 3rem);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+        gap: clamp(1.5rem, 4vw, 3rem);
+        align-items: center;
+        text-align: left;
+        position: relative;
+        z-index: 1;
+    }
+
+    .testimonial-copy {
+        max-width: 760px;
+    }
+
+    .testimonial-kicker {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        margin-bottom: 1.1rem;
+        border: 1px solid rgba(21, 94, 117, 0.18);
+        border-radius: 999px;
+        background: rgba(21, 94, 117, 0.08);
+        color: var(--info-accent);
+        padding: 0.45rem 0.8rem;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .testimonial-mark {
+        color: var(--info-accent);
+        font-size: clamp(3rem, 8vw, 5.25rem);
+        font-weight: 900;
+        line-height: 0.8;
+        margin-bottom: 0.3rem;
+        opacity: 0.22;
+    }
+
+    .testimonial-quote {
+        color: var(--info-ink);
+        font-size: clamp(1.05rem, 2.2vw, 1.45rem);
+        line-height: 1.75;
+        font-style: normal;
+        text-align: left;
+        margin: 0;
+        max-width: 720px;
+    }
+
+    .testimonial-author {
+        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        background: var(--info-soft);
+        border: 1px solid var(--info-line);
+        border-radius: 1rem;
+        padding: 1rem;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    }
+
+    .testimonial-author-info {
+        text-align: center;
+    }
+
+    .testimonial-author-image {
+        width: min(100%, 220px);
+        aspect-ratio: 1 / 1;
+        height: auto;
+        border-radius: 0.85rem;
+        border: 1px solid var(--info-line);
+        box-shadow: 0 16px 34px rgba(16, 24, 40, 0.14);
+    }
+
+    .testimonial-author-name {
+        color: var(--info-ink);
+        font-size: 1.15rem;
+        font-weight: 900;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .testimonial-author-role {
+        color: var(--info-muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+        margin: 0.3rem 0 0;
+        line-height: 1.4;
+    }
+
+    .testimonial-author-first,
+    .testimonial-author-last {
+        color: var(--info-ink);
+    }
+
+    .faq-header {
+        text-align: center;
+        max-width: 760px;
+        margin: 0 auto 2rem;
+    }
+
+    .faq-header h2 {
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+        display: inline-block;
+    }
+
+    .faq-header p {
+        color: var(--info-muted) !important;
+    }
+
+    .faq-container {
+        max-width: 980px;
+        margin: 0;
+    }
+
+    .faq-item {
+        margin-bottom: 0.85rem;
+        box-shadow: none;
+    }
+
+    .faq-item:hover {
+        border-color: rgba(21, 94, 117, 0.28);
+        box-shadow: 0 12px 32px rgba(16, 24, 40, 0.06);
+    }
+
+    .faq-question {
+        background: transparent;
+        padding: 1.25rem 1.35rem;
+        font-size: 1rem;
+    }
+
+    .faq-question:hover,
+    .faq-question.active {
+        background: #f8fafc;
+        color: var(--info-accent);
+    }
+
+    .faq-toggle-icon {
+        color: var(--info-accent);
+        font-size: 1rem;
+    }
+
+    .faq-answer {
+        background: #ffffff;
+        color: var(--info-muted);
+        padding: 0 1.35rem 1.25rem;
+    }
+
+    @media (max-width: 992px) {
+        .info-hero-product,
+        .info-hero-modern,
+        .info-section-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .info-overview-visual,
+        .info-hero-media {
+            min-height: 300px;
+        }
+
+        .info-proof-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .reading-levels-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .info-cta {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .testimonial-content {
+            grid-template-columns: 1fr;
+        }
+
+        .testimonial-author {
+            align-items: flex-start;
+            flex-direction: row;
+            justify-content: flex-start;
+        }
+
+        .testimonial-author-info {
+            text-align: left;
+        }
+
+        .testimonial-author-image {
+            width: 88px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .info-shell {
+            padding-inline: 0.75rem;
+        }
+
+        .info-hero-copy {
+            padding: 1.4rem;
+        }
+
+        .info-hero-product-copy {
+            padding: 1.4rem;
+        }
+
+        .info-hero-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .info-proof-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .testimonial-content {
+            padding: 1.25rem;
+        }
+
+        .testimonial-author {
+            align-items: center;
+        }
+
+        .testimonial-author-image {
+            width: 72px;
+            border-radius: 0.75rem;
+        }
+    }
+
+    .faq-filter-btn:hover {
+        border-color: var(--info-accent);
+        color: var(--info-accent);
+        box-shadow: 0 4px 12px rgba(21, 94, 117, 0.12);
+    }
+
+    .faq-filter-btn.active {
+        background: linear-gradient(135deg, var(--info-accent), #0f172a);
+        border-color: transparent;
+        color: #ffffff;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+    }
+
+    .faq-question:hover,
+    .faq-question.active {
+        background: #f8fafc;
+        color: var(--info-accent);
+    }
+
+    .faq-toggle-icon {
+        color: var(--info-accent);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="fade-in-section">
-    <div class="hero-centered">
-        <h1>Give Every Student a Voice in Literacy</h1>
+    <div class="info-hero-product">
+        <div class="info-hero-product-copy">
+            <span class="modern-chip">Inside PABASA</span>
+            <h1>A closer look at the reading workflow behind the platform.</h1>
+            <p>This page walks through the parts of PABASA that matter in practice: the demo experience, the school deployment context, reading levels, learner impact, and common setup questions.</p>
+            <div class="info-hero-actions">
+                <a class="btn btn-primary" href="#pabasa-demo">View Product Demo</a>
+                <a class="btn btn-outline-primary" href="{% url 'auth' %}">Open My Account</a>
+            </div>
+            <div class="info-proof-grid">
+                <div>
+                    <strong>Demo</strong>
+                    <span>Preview the assessment experience</span>
+                </div>
+                <div>
+                    <strong>Site</strong>
+                    <span>See the current school deployment</span>
+                </div>
+                <div>
+                    <strong>FAQ</strong>
+                    <span>Review setup and support details</span>
+                </div>
+            </div>
+        </div>
+        <div class="info-overview-visual">
+            <img src="{% static 'pabasa_app/images/REEAD.jpg' %}" alt="Learner reading with PABASA">
+            <div class="info-overview-caption">
+                <strong>Reading practice in context</strong>
+                <span>Designed around real classroom assessment and learner confidence.</span>
+            </div>
+        </div>
     </div>
 </section>
 
+<section id="pabasa-demo" class="pb-4 pb-md-5 fade-in-section">
+    <div class="info-open-grid">
+        <div class="info-open-section">
+            <span class="modern-chip mb-3">Product Demo</span>
+            <h2>Watch PABASA in Action</h2>
+            <p class="text-secondary">See how a reading session can move from learner activity to teacher review in a focused classroom workflow.</p>
 
-<section class="pb-4 fade-in-section">
-    <div class="modern-surface card border-0">
-        <div class="card-body p-4">
-            <h2 class="h5 mb-3">Watch PABASA in Action</h2>
-            <p class="text-secondary mb-3">See how the system works and how it helps students improve their reading skills.</p>
-
-            <div class="ratio ratio-16x9 rounded-3 overflow-hidden border">
-                <iframe
-                    src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
-                    title="PABASA Demo Video"
-                    allowfullscreen>
-                </iframe>
+            <div class="ratio ratio-16x9 info-media-frame">
+                <div class="demo-preview">
+                    <div>
+                        <div class="demo-preview-play"><i class="bi bi-play-fill"></i></div>
+                        <h3>Product walkthrough</h3>
+                        <p>A focused look at setup, learner reading, and teacher review in one assessment flow.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <section class="pb-4 pb-md-5 fade-in-section">
-    <div class="modern-surface card border-0 overflow-hidden">
-        <div class="card-body p-4">
+    <div class="info-open-grid">
+        <div class="info-open-section">
             <span class="modern-chip mb-3">Deployment Location</span>
-            <h2 class="h5 mb-2">Salawag Elementary School, Dasmariñas, Cavite</h2>
-            <p class="text-secondary mb-3">Current deployment location mapped below for quick reference.</p>
-            <div class="ratio ratio-16x9 rounded-3 overflow-hidden border">
+            <h2>Salawag Elementary School</h2>
+            <p class="text-secondary">Current deployment location in Dasmarinas, Cavite, shown for classroom context and project grounding.</p>
+            <div class="ratio ratio-16x9 info-media-frame">
                 <iframe
                     src="https://maps.google.com/maps?q=Salawag%20Elementary%20School%2C%20Dasmari%C3%B1as%2C%20Cavite&output=embed"
                     style="border:0;"
@@ -607,16 +1585,35 @@
 </section>
 
 <section class="pb-4 pb-md-5 fade-in-section">
-    <div class="testimonial-container">
-        <div class="testimonial-content">
-            <p class="testimonial-quote">"At first, I felt shy about reading out loud because I made mistakes. Now, <strong>PABASA</strong> helps me practice, and I'm not afraid to read in front of my classmates anymore."</p>
-            <div class="testimonial-author">
-                <div class="testimonial-author-info">
-                    <p class="testimonial-author-first">Isla</p>
-                    <p class="testimonial-author-last">Faye</p>
+    <div class="reading-levels">
+        <div class="reading-levels-header">
+            <span class="modern-chip mb-3">Reading Levels</span>
+            <h2>Practice That Scales With the Learner</h2>
+            <p>PABASA supports reading activities from basic recognition to longer passages, helping teachers match each assessment to the learner's current skill level.</p>
+        </div>
+
+        <div class="reading-levels-timeline">
+            <div class="timeline-item">
+                <div class="timeline-marker">01</div>
+                <div class="timeline-content">
+                    <h3>Word Reading</h3>
+                    <p>Short tasks for checking recognition, pronunciation, and confidence with individual words.</p>
                 </div>
-                <div class="testimonial-author-image">
-                    <img src="{% static 'pabasa_app/images/ISLA.jpg' %}" alt="Isla Faye">
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-marker">02</div>
+                <div class="timeline-content">
+                    <h3>Sentence Reading</h3>
+                    <p>Guided reading checks that help learners practice phrasing, pacing, and complete thoughts.</p>
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-marker">03</div>
+                <div class="timeline-content">
+                    <h3>Paragraph Reading</h3>
+                    <p>Longer passages for observing sustained reading, expression, and comprehension readiness.</p>
                 </div>
             </div>
         </div>
@@ -624,79 +1621,231 @@
 </section>
 
 <section class="pb-4 pb-md-5 fade-in-section">
+    <div class="testimonial-container">
+        <div class="testimonial-content">
+            <div class="testimonial-copy">
+                <span class="testimonial-kicker">Student Story</span>
+                <div class="testimonial-mark">"</div>
+                <p class="testimonial-quote">At first, I felt shy about reading out loud because I made mistakes. Now, <strong>PABASA</strong> helps me practice, and I'm not afraid to read in front of my classmates anymore.</p>
+            </div>
+            <div class="testimonial-author">
+                <div class="testimonial-author-image">
+                    <img src="{% static 'pabasa_app/images/ISLA.jpg' %}" alt="Isla Faye">
+                </div>
+                <div class="testimonial-author-info">
+                    <p class="testimonial-author-name">Isla Faye</p>
+                    <p class="testimonial-author-role">PABASA learner</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="info-cta">
+        <div>
+            <span class="modern-chip mb-3">Classroom Workflow</span>
+            <h2>Ready to turn reading checks into usable progress data?</h2>
+            <p>PABASA gives teachers a focused way to run oral reading activities, support learners, and review results without adding more paperwork.</p>
+        </div>
+        <div class="info-cta-actions">
+            <a class="btn btn-light" href="{% url 'auth' %}">Open My Account</a>
+            <a class="btn btn-outline-light" href="{% url 'about' %}">Meet the Team</a>
+        </div>
+    </div>
+</section>
+
+<section class="pb-4 pb-md-5 fade-in-section">
     <div class="faq-header">
-        <h2>Do you have any questions?</h2>
-        <p class="text-secondary" style="font-size: 1.1rem;">Find answers to commonly asked questions below.</p>
+        <h2>Frequently Asked Questions</h2>
+    </div>
+
+    <div class="faq-category-filters">
+        <button class="faq-filter-btn active" onclick="filterFAQCategory(this, 'account')">
+    
+            <span>Account & Setup</span>
+        </button>
+        <button class="faq-filter-btn" onclick="filterFAQCategory(this, 'getting-started')">
+            <span>Getting Started</span>
+        </button>
+        <button class="faq-filter-btn" onclick="filterFAQCategory(this, 'progress')">
+            <span>Progress</span>
+        </button>
+        <button class="faq-filter-btn" onclick="filterFAQCategory(this, 'support')">
+            <span>Support</span>
+        </button>
     </div>
 
     <div class="faq-container">
-        <div class="faq-item">
-            <button class="faq-question" onclick="toggleFAQ(this)">
-                <span>How do I create an account on PABASA?</span>
-                <span class="faq-toggle-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-                To create an account on PABASA, visit the signup page and select whether you're a teacher or student. Fill in your required information, including your email address and password. If you're a student, you may need a class code from your teacher to join a class. Once completed, you'll have immediate access to PABASA.
+        <!-- Account & Setup Category -->
+        <div class="faq-items-wrapper" data-category="account">
+            <div class="faq-item" data-category="account">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>How do I create an account on PABASA?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    To create an account on PABASA, visit the signup page and select whether you're a teacher or student. Fill in your required information, including your email address and password. If you're a student, you may need a class code from your teacher to join a class. Once completed, you'll have immediate access to PABASA.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="account">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>Can I reset my password if I forget it?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    Yes, you can reset your password. On the login page, click the "Forgot Password?" link. Enter your registered email address, and we'll send you instructions to reset your password. Follow the link in the email and create a new password. If you don't receive the email, check your spam folder or contact our support team.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="account">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>How do I change my profile information?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    You can update your profile information by going to your account Settings. Click on your profile icon or avatar, select "Settings," and then choose "Edit Profile." You can update your name, email, profile picture, and other personal details. Remember to save your changes before leaving the page.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="account">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>Can I change my email address?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    Yes, you can change your email address in your account Settings. Go to Settings, find the "Email Address" section, and enter your new email. You'll receive a verification email at your new address. Click the verification link to confirm the change. Your new email will then be associated with your PABASA account.
+                </div>
             </div>
         </div>
 
-        <div class="faq-item">
-            <button class="faq-question" onclick="toggleFAQ(this)">
-                <span>Can I reset my password if I forget it?</span>
-                <span class="faq-toggle-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-                Yes, you can reset your password. On the login page, click the "Forgot Password?" link. Enter your registered email address, and we'll send you instructions to reset your password. Follow the link in the email and create a new password. If you don't receive the email, check your spam folder or contact our support team.
+        <!-- Getting Started Category -->
+        <div class="faq-items-wrapper" data-category="getting-started">
+            <div class="faq-item" data-category="getting-started">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>How do I start a reading session?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    To start a reading session, log in to your PABASA account. If you're a teacher, navigate to the Courses section and select a course, then click "Start Reading Session." If you're a student, go to your dashboard and find the reading session assigned by your teacher. Click on it to begin reading the passage and follow the prompts.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="getting-started">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>Can I use PABASA on a phone or tablet?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    Yes, PABASA is designed to work on phones, tablets, and desktop computers. Simply access PABASA through your device's web browser. For the best experience with oral reading assessments, we recommend using a device with a good microphone. The interface adapts to different screen sizes for easy navigation.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="getting-started">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>What's the difference between word, sentence, and paragraph reading?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    PABASA offers three different reading levels to help you practice progressively: Word level focuses on individual word recognition and pronunciation. Sentence level helps you read and understand complete thoughts. Paragraph level challenges you with longer, more complex passages. You can choose your level based on your current skill and comfort level.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="getting-started">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>How do I join a class if I'm a student?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    To join a class, ask your teacher for the class code. Log into PABASA, go to "My Classes," and click "Join a Class." Enter the code your teacher provided and click "Join." You'll immediately have access to all course materials and assignments from your teacher.
+                </div>
             </div>
         </div>
 
-        <div class="faq-item">
-            <button class="faq-question" onclick="toggleFAQ(this)">
-                <span>How do I start a reading session?</span>
-                <span class="faq-toggle-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-                To start a reading session, log in to your PABASA account. If you're a teacher, navigate to the Courses section and select a course, then click "Start Reading Session." If you're a student, go to your dashboard and find the reading session assigned by your teacher. Click on it to begin reading the passage and follow the prompts.
+        <!-- Progress & Performance Category -->
+        <div class="faq-items-wrapper" data-category="progress">
+            <div class="faq-item" data-category="progress">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>How does PABASA track my progress?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    PABASA automatically tracks your reading progress with each session you complete. The system records metrics like reading speed, accuracy, and fluency. Your progress dashboard shows improvement over time with detailed charts and summaries. Teachers can view your progress reports to identify areas where you're excelling and areas that need more practice.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="progress">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>What do the reading metrics mean?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    Reading metrics include: Words Per Minute (WPM) - your reading speed; Accuracy - the percentage of words read correctly; Fluency - how naturally and smoothly you read; and Comprehension - your understanding of the material. Each metric helps identify your strengths and areas for improvement.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="progress">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>Can I download or export my progress reports?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    Yes, you can download your progress reports. Go to your Progress Dashboard, select the time period you'd like to review, and click "Download Report." Reports can be downloaded as PDF or Excel files for easy sharing with teachers, parents, or for your personal records.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="progress">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>How often should I complete reading sessions?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    The frequency of reading sessions depends on your teacher's assignments and your learning goals. Most students benefit from regular daily or weekly sessions. Consistent practice is key to improving reading skills. Your teacher will guide you on the recommended frequency for your class.
+                </div>
             </div>
         </div>
 
-        <div class="faq-item">
-            <button class="faq-question" onclick="toggleFAQ(this)">
-                <span>Can I use PABASA on a phone or tablet?</span>
-                <span class="faq-toggle-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-                Yes, PABASA is designed to work on phones, tablets, and desktop computers. Simply access PABASA through your device's web browser. For the best experience with oral reading assessments, we recommend using a device with a good microphone. The interface adapts to different screen sizes for easy navigation.
+        <!-- Support & Troubleshooting Category -->
+        <div class="faq-items-wrapper" data-category="support">
+            <div class="faq-item" data-category="support">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>What should I do if I encounter a problem in the system?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    If you encounter a problem, first try refreshing the page or clearing your browser's cache. Make sure you're using a supported browser and that your internet connection is stable. If the issue persists, take note of what happened and contact our support team with detailed information about the problem.
+                </div>
             </div>
-        </div>
 
-        <div class="faq-item">
-            <button class="faq-question" onclick="toggleFAQ(this)">
-                <span>How does PABASA track my progress?</span>
-                <span class="faq-toggle-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-                PABASA automatically tracks your reading progress with each session you complete. The system records metrics like reading speed, accuracy, and fluency. Your progress dashboard shows improvement over time with detailed charts and summaries. Teachers can view your progress reports to identify areas where you're excelling and areas that need more practice.
+            <div class="faq-item" data-category="support">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>Who can I contact for help or support?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    You can reach our support team through the Help section in your PABASA account. There, you'll find contact information for different types of support, including technical assistance and account-related questions. You can also visit our About page to find contact information for specific team members who can assist with your inquiry.
+                </div>
             </div>
-        </div>
 
-        <div class="faq-item">
-            <button class="faq-question" onclick="toggleFAQ(this)">
-                <span>What should I do if I encounter a problem in the system?</span>
-                <span class="faq-toggle-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-                If you encounter a problem, first try refreshing the page or clearing your browser's cache. Make sure you're using a supported browser and that your internet connection is stable. If the issue persists, take note of what happened and contact our support team with detailed information about the problem. 
+            <div class="faq-item" data-category="support">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>Why can't I access my account?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    If you can't access your account, ensure you're using the correct email and password. If you've forgotten your password, use the "Forgot Password?" link to reset it. If you're still unable to log in, try clearing your browser cache or using a different browser. If the problem continues, contact our support team for assistance.
+                </div>
             </div>
-        </div>
 
-        <div class="faq-item">
-            <button class="faq-question" onclick="toggleFAQ(this)">
-                <span>Who can I contact for help or support?</span>
-                <span class="faq-toggle-icon">▼</span>
-            </button>
-            <div class="faq-answer">
-                You can reach our support team through the Help section in your PABASA account. There, you'll find contact information for different types of support, including technical assistance and account-related questions. You can also visit our About page to find contact information for specific team members who can assist with your inquiry.
+            <div class="faq-item" data-category="support">
+                <button class="faq-question" onclick="toggleFAQ(event)">
+                    <span>How can I provide feedback about PABASA?</span>
+                    <span class="faq-toggle-icon">▼</span>
+                </button>
+                <div class="faq-answer">
+                    We'd love to hear your feedback! You can provide suggestions and report issues through the Feedback section in your account menu. Select "Send Feedback" and describe your comments or concerns. Your feedback helps us improve PABASA and make it a better learning platform for everyone.
+                </div>
             </div>
         </div>
     </div>
@@ -734,14 +1883,42 @@
         });
     }
 
+    // FAQ Filter Function
+    function filterFAQCategory(button, category) {
+        // Remove active class from all buttons
+        document.querySelectorAll('.faq-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Add active class to clicked button
+        button.classList.add('active');
+
+        // Show/hide faq-items-wrapper based on category
+        document.querySelectorAll('.faq-items-wrapper').forEach(wrapper => {
+            if (wrapper.getAttribute('data-category') === category) {
+                wrapper.classList.remove('hidden');
+                wrapper.style.display = 'block';
+                wrapper.style.animation = 'none';
+                setTimeout(() => {
+                    wrapper.style.animation = 'slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                }, 10);
+            } else {
+                wrapper.classList.add('hidden');
+                wrapper.style.display = 'none';
+            }
+        });
+    }
+
     // FAQ Toggle Function
-    function toggleFAQ(button) {
+    function toggleFAQ(event) {
+        event.stopPropagation();
+        const button = event.currentTarget;
         const faqItem = button.parentElement;
         const answer = faqItem.querySelector('.faq-answer');
         
         // Close all other open FAQs
         document.querySelectorAll('.faq-item').forEach(item => {
-            if (item !== faqItem) {
+            if (item !== faqItem && !item.classList.contains('hidden')) {
                 item.querySelector('.faq-question').classList.remove('active');
                 item.querySelector('.faq-answer').classList.remove('active');
             }
@@ -751,5 +1928,17 @@
         button.classList.toggle('active');
         answer.classList.toggle('active');
     }
+
+    // Initialize FAQ filter on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hide all except account category
+        document.querySelectorAll('.faq-items-wrapper').forEach(wrapper => {
+            if (wrapper.getAttribute('data-category') !== 'account') {
+                wrapper.classList.add('hidden');
+                wrapper.style.display = 'none';
+            }
+        });
+    });
+
 </script>
 {% endblock %}

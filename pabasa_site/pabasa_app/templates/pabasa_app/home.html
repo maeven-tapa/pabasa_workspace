@@ -76,7 +76,7 @@
         display: flex;
         align-items: center;
         gap: 2rem;
-        min-height: 260px;
+        min-height: 300px;
     }
 
     .carousel-testimonial-image {
@@ -84,11 +84,12 @@
     }
 
     .carousel-testimonial-image img {
-        width: 140px;
-        height: 140px;
-        border-radius: 1rem;
+        width: 150px;
+        height: 180px;
+        border-radius: 0.75rem;
         object-fit: cover;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
     }
 
     .carousel-testimonial-content {
@@ -96,35 +97,140 @@
     }
 
     .carousel-testimonial-quote {
-        font-size: 1rem;
-        line-height: 1.6;
+        font-size: 1.08rem;
+        line-height: 1.75;
         margin-bottom: 1rem;
-        color: #fff;
-        font-style: italic;
+        color: #1f2937;
+        font-style: normal;
         text-align: justify;
     }
 
     .carousel-testimonial-name {
-        font-weight: 600;
+        font-weight: 800;
         font-size: 0.95rem;
-        color: #fff;
+        color: #111827;
+    }
+
+    .testimonial-panel,
+    .start-panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+    }
+
+    .testimonial-slide {
+        min-height: 380px;
+        padding: 2rem 3.5rem;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+    }
+
+    .testimonial-slide::before {
+        display: none;
+    }
+
+    .testimonial-label {
+        color: #5d0dd0;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        margin-bottom: 1.5rem;
+        text-transform: uppercase;
+    }
+
+    .start-panel .card-body {
+        padding: 2rem !important;
+    }
+
+    .start-panel {
+        background: #ffffff !important;
+        border-color: #e5e7eb !important;
+        color: #111827;
+    }
+
+    .start-panel-kicker {
+        color: #5d0dd0;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .start-panel h3 {
+        color: #111827;
+        font-size: 1.45rem;
+        font-weight: 850;
+        line-height: 1.2;
+        margin: 1rem 0;
+    }
+
+    .start-panel p {
+        color: #64748b;
+        line-height: 1.65;
+    }
+
+    .start-checklist {
+        display: grid;
+        gap: 0.85rem;
+        margin: 1.5rem 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .start-checklist li {
+        color: #334155;
+        display: flex;
+        gap: 0.65rem;
+        align-items: center;
+        font-size: 0.92rem;
+        font-weight: 700;
+    }
+
+    .start-checklist li::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #5d0dd0;
+        flex: 0 0 auto;
+    }
+
+    .start-panel .btn-outline-primary {
+        color: #5d0dd0;
+        border-color: #ddd6fe;
+    }
+
+    .start-panel .btn-outline-primary:hover {
+        background: #f5f3ff;
+        border-color: #c4b5fd;
+        color: #4c0db8;
     }
 
     @media (max-width: 576px) {
         .carousel-testimonial {
             flex-direction: column;
-            text-align: center;
-            gap: 1rem;
+            align-items: flex-start;
+            gap: 1.25rem;
         }
 
         .carousel-testimonial-image img {
-            width: 100px;
-            height: 100px;
+            width: 120px;
+            height: 145px;
         }
 
         .carousel-testimonial-quote {
             font-size: 0.9rem;
             text-align: justify;
+        }
+
+        .testimonial-slide {
+            padding: 1.5rem;
+            padding-bottom: 5rem;
         }
     }
 
@@ -179,10 +285,6 @@
         transition: filter 1s ease;
     }
 
-    .hero-image-section img.blurred {
-        filter: blur(8px);
-    }
-
     .hero-quote {
         position: absolute;
         bottom: 2rem;
@@ -235,12 +337,15 @@
 
     .modern-surface, .card {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255, 255, 255, 0.8) !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px);
     }
 
     .modern-surface:hover, .card:hover {
-        border-color: rgba(31, 111, 139, 0.3) !important;
-        transform: translateY(-4px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important;
+        border-color: #6e10ee !important;
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(110, 16, 238, 0.15) !important;
     }
 
     /* Enhanced header styling */
@@ -277,25 +382,30 @@
     }
 
     .modern-chip {
-        background: #f3f0ff;
-        border: 1px solid #e7d8ff;
-        font-weight: 600;
+        background: linear-gradient(135deg, #f3f0ff 0%, #ede9fe 100%);
+        border: 1px solid #ddd6fe;
+        font-weight: 700;
         letter-spacing: 0.5px;
         color: #6e10ee;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        box-shadow: 0 2px 8px rgba(110, 16, 238, 0.1);
     }
 
     /* Newspaper-style hero section */
     .modern-hero {
-        background: white;
-        padding: 3rem;
-        border: 1px solid #d1d5db;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(243, 240, 255, 0.6) 100%);
+        padding: 4rem;
+        border: 1px solid rgba(255, 255, 255, 0.8);
         position: relative;
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 8px 32px rgba(110, 16, 238, 0.08);
+        border-radius: 1.5rem;
+        backdrop-filter: blur(10px);
     }
 
     .modern-hero .col-lg-7 {
-        border-right: 1px solid #d1d5db;
-        padding-right: 2.5rem;
+        border-right: 2px solid rgba(110, 16, 238, 0.1);
+        padding-right: 3rem;
     }
 
     .modern-hero span.modern-chip {
@@ -318,6 +428,10 @@
         padding-bottom: 0;
         line-height: 1.2;
         font-size: 3rem;
+        background: linear-gradient(135deg, #1f2937 0%, #6e10ee 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .modern-hero h1::after {
@@ -382,42 +496,103 @@
     }
 
     .flip-card {
-        border: 1px solid #d1d5db;
-        box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 8px 32px rgba(110, 16, 238, 0.1);
         position: relative;
+        border-radius: 0;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
     }
 
     /* Carousel arrow positioning */
     #homeHighlightsCarousel {
         position: relative;
+        --carousel-nav-size: 2.35rem;
+        --carousel-nav-gap: 0.55rem;
+        --carousel-nav-pad: 0.45rem;
+        --carousel-nav-right: 1.1rem;
+        --carousel-nav-bottom: -1.25rem;
+    }
+
+    #homeHighlightsCarousel::after {
+        content: '';
+        position: absolute;
+        right: var(--carousel-nav-right);
+        bottom: var(--carousel-nav-bottom);
+        width: calc((var(--carousel-nav-size) * 2) + var(--carousel-nav-gap) + (var(--carousel-nav-pad) * 2));
+        height: calc(var(--carousel-nav-size) + (var(--carousel-nav-pad) * 2));
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.84);
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+        backdrop-filter: blur(12px);
+        pointer-events: none;
+        z-index: 9;
     }
 
     #homeHighlightsCarousel .carousel-control-prev,
     #homeHighlightsCarousel .carousel-control-next {
         position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        width: auto;
-        height: auto;
-        background: none;
-        border: none;
-        padding: 1rem;
+        top: auto;
+        bottom: calc(var(--carousel-nav-bottom) + var(--carousel-nav-pad));
+        width: var(--carousel-nav-size);
+        height: var(--carousel-nav-size);
+        border-radius: 50%;
+        background: #0f172a;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        padding: 0;
+        opacity: 1;
         z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     #homeHighlightsCarousel .carousel-control-prev {
-        left: 0;
+        left: auto;
+        right: calc(var(--carousel-nav-right) + var(--carousel-nav-pad) + var(--carousel-nav-size) + var(--carousel-nav-gap));
     }
 
     #homeHighlightsCarousel .carousel-control-next {
-        right: 0;
+        right: calc(var(--carousel-nav-right) + var(--carousel-nav-pad));
+    }
+
+    #homeHighlightsCarousel .carousel-control-prev:hover,
+    #homeHighlightsCarousel .carousel-control-next:hover,
+    #homeHighlightsCarousel .carousel-control-prev:focus-visible,
+    #homeHighlightsCarousel .carousel-control-next:focus-visible {
+        background: #5d0dd0;
+        box-shadow: 0 10px 22px rgba(93, 13, 208, 0.26);
+        transform: translateY(-2px);
     }
 
     #homeHighlightsCarousel .carousel-control-prev-icon,
     #homeHighlightsCarousel .carousel-control-next-icon {
-        width: 2rem;
-        height: 2rem;
-        filter: invert(1) brightness(1.2);
+        width: 0.95rem;
+        height: 0.95rem;
+        background-size: 100%;
+        background-color: transparent;
+        box-shadow: none;
+        filter: none;
+    }
+
+    #homeHighlightsCarousel .carousel-indicators {
+        margin-bottom: 1rem;
+    }
+
+    #homeHighlightsCarousel .carousel-indicators [data-bs-target] {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #94a3b8;
+        opacity: 0.45;
+    }
+
+    #homeHighlightsCarousel .carousel-indicators .active {
+        background-color: #5d0dd0;
+        opacity: 1;
     }
 
     /* Section Headers Styling */
@@ -444,66 +619,222 @@
         border-radius: 2px;
     }
 
-    /* Split Layout for Solutions and Features */
-    .split-item {
+    .section-kicker {
+        color: #5d0dd0;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        margin-bottom: 0.65rem;
+        text-transform: uppercase;
+    }
+
+    .section-intro {
+        max-width: 640px;
+        margin: 0 auto;
+        color: #64748b;
+        font-size: 0.98rem;
+        line-height: 1.65;
+    }
+
+    .section-container-2 h2,
+    .section-container-3 h2 {
+        color: #111827;
+        font-size: 2rem;
+        font-weight: 850;
+        letter-spacing: 0;
+    }
+
+    .audience-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .audience-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1.35rem;
+        min-height: 260px;
         display: flex;
         flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .audience-card:hover,
+    .feature-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(110, 16, 238, 0.24);
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
+    }
+
+    .audience-visual {
+        width: 100%;
+        height: 120px;
+        border-radius: 0.65rem;
+        background: #f8fafc;
+        display: flex;
         align-items: center;
-        text-align: center;
-        gap: 1.5rem;
-        padding: 1rem 0;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        justify-content: center;
+        overflow: hidden;
+        margin-bottom: 1.25rem;
+        border: 1px solid #edf0f5;
     }
 
-    .split-item:hover {
-        transform: translateY(-4px);
+    .audience-visual img {
+        width: 150px;
+        max-height: 105px;
+        object-fit: contain;
+        display: block;
+        filter: saturate(0.9);
     }
 
-    .split-icon {
-        flex-shrink: 0;
+    .audience-card h3,
+    .feature-card h3 {
+        margin: 0 0 0.55rem;
+        color: #111827;
+        font-size: 1.05rem;
+        font-weight: 800;
+    }
+
+    .audience-card p,
+    .feature-card p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+
+    .audience-meta {
+        margin-top: 1.25rem;
+        color: #5d0dd0;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .features-layout,
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .features-layout .feature-grid {
+        display: contents;
+    }
+
+    .feature-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1.35rem;
+        min-height: 260px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .feature-icon {
+        width: 100%;
+        height: 120px;
+        border-radius: 0.65rem;
+        background: #f8fafc;
+        border: 1px solid #edf0f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        margin-bottom: 1.25rem;
+    }
+
+    .feature-icon img {
+        width: 150px;
+        max-height: 105px;
+        object-fit: contain;
+        display: block;
+        filter: saturate(0.9);
+    }
+
+    .feature-meta {
+        margin-top: 1.25rem;
+        color: #5d0dd0;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    @media (max-width: 992px) {
+        .audience-grid,
+        .features-layout,
+        .feature-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .audience-card,
+        .feature-card {
+            min-height: auto;
+        }
+    }
+
+    /* Carousel controls */
+    .carousel-controls {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        left: 1rem;
+        right: auto;
+        display: flex;
+        justify-content: flex-start;
+        pointer-events: none;
+        padding: 0;
+    }
+
+    .carousel-btn {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1.5px solid rgba(255, 255, 255, 0.6);
+        color: #6e10ee;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 1.1rem;
+        font-weight: 300;
+        pointer-events: all;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
-    .split-icon img {
-        width: 250px;
-        height: auto;
-        display: block;
+    .carousel-btn:hover {
+        background: rgba(255, 255, 255, 1);
+        border-color: rgba(110, 16, 238, 0.3);
+        color: #6e10ee;
+        transform: scale(1.08) translateX(2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
-    .split-item:hover .split-icon {
-        transform: scale(1.1);
+    .carousel-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        pointer-events: none;
     }
 
-    .split-content {
-        flex-grow: 1;
-        width: 100%;
-    }
-
-    .split-content h3 {
-        margin: 0 0 0.75rem 0;
-        font-size: 1.2rem;
-        color: #1f2937;
-        font-weight: 700;
-    }
-
-    .split-content h3::before {
-        display: none !important;
-    }
-
-    .split-content p {
-        margin: 0;
-        font-size: 0.9rem;
-        color: #6b7280;
-        line-height: 1.6;
-    }
-
-    .split-items-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 2rem;
+    /* Hide carousel buttons on mobile */
+    @media (max-width: 992px) {
+        .carousel-controls {
+            display: flex;
+        }
     }
 
     /* Section Container Styles */
@@ -514,19 +845,19 @@
     }
 
     .section-container-1 {
-        background: linear-gradient(180deg, rgba(240, 246, 250, 1) 0%, rgba(242, 244, 250, 1) 100%);
+        background: linear-gradient(180deg, rgba(240, 246, 250, 1) 0%, rgba(255, 255, 255, 1) 100%);
     }
 
     .section-container-2 {
-        background: linear-gradient(180deg, rgba(246, 242, 248, 1) 0%, rgba(252, 248, 244, 1) 100%);
+        background: #f8fafc;
     }
 
     .section-container-3 {
-        background: linear-gradient(180deg, rgba(254, 250, 246, 1) 0%, rgba(240, 230, 220, 1) 100%);
+        background: #ffffff;
     }
 
     .section-container-4 {
-        background: linear-gradient(180deg, rgba(60, 60, 60, 1) 0%, rgba(25, 25, 25, 1) 100%);
+        background: #f8fafc;
     }
 
     .section-wrapper {
@@ -535,31 +866,752 @@
         margin: 0 auto;
     }
 
+    /* Cohesive modern/futuristic pass */
+    :root {
+        --pabasa-ink: #0f172a;
+        --pabasa-muted: #64748b;
+        --pabasa-line: rgba(148, 163, 184, 0.22);
+        --pabasa-violet: #5d0dd0;
+        --pabasa-cyan: #0e7490;
+        --pabasa-panel: rgba(255, 255, 255, 0.88);
+    }
+
+    body {
+        background: #f6f8fb !important;
+        background-size: auto !important;
+        color: var(--pabasa-ink);
+    }
+
+    .hero-image-section {
+        height: min(48vh, 430px);
+        border-radius: 0 0 1.5rem 1.5rem;
+        max-width: none;
+        width: 100vw;
+        margin: 0 calc(-50vw + 50%) 0;
+        box-shadow: inset 0 -120px 140px rgba(15, 23, 42, 0.46);
+    }
+
+    .hero-image-section::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(90deg, rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.08) 58%),
+            linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.36));
+        pointer-events: none;
+    }
+
+    .hero-image-section img {
+        filter: saturate(0.9) contrast(1.04);
+    }
+
+    .hero-quote {
+        z-index: 2;
+        max-width: 430px;
+    }
+
+    .hero-quote-text {
+        font-size: 1rem;
+        font-style: normal;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+
+    .section-container {
+        padding: 5rem 2rem;
+        background: transparent;
+    }
+
+    .section-container-1,
+    .section-container-2,
+    .section-container-3,
+    .section-container-4 {
+        background: transparent;
+    }
+
+    .modern-hero {
+        background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(246, 250, 252, 0.76)),
+            linear-gradient(90deg, rgba(93, 13, 208, 0.10), rgba(14, 116, 144, 0.08));
+        border: 1px solid var(--pabasa-line);
+        border-radius: 1rem;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.11);
+        overflow: hidden;
+    }
+
+    .modern-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(90deg, rgba(93, 13, 208, 0.11), transparent 22%),
+            linear-gradient(180deg, transparent, rgba(14, 116, 144, 0.07));
+        pointer-events: none;
+    }
+
+    .modern-hero > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    .modern-chip,
+    .section-kicker,
+    .testimonial-label,
+    .start-panel-kicker {
+        color: var(--pabasa-cyan);
+        letter-spacing: 0.14em;
+    }
+
+    .modern-hero span.modern-chip {
+        background: rgba(14, 116, 144, 0.08);
+        border: 1px solid rgba(14, 116, 144, 0.18);
+        color: var(--pabasa-cyan);
+        border-radius: 999px;
+        box-shadow: none;
+    }
+
+    .modern-hero h1 {
+        background: none;
+        -webkit-text-fill-color: initial;
+        color: var(--pabasa-ink);
+        font-size: clamp(1.8rem, 3.2vw, 2.85rem);
+        letter-spacing: 0;
+        line-height: 1.12;
+    }
+
+    .modern-hero h1::after {
+        background: linear-gradient(90deg, var(--pabasa-cyan), var(--pabasa-violet));
+        height: 4px;
+        border-radius: 999px;
+    }
+
+    .modern-hero .lead {
+        color: #475569 !important;
+        font-size: 0.98rem;
+        max-width: 560px;
+    }
+
+    .modern-surface,
+    .card,
+    .audience-card,
+    .feature-card,
+    .testimonial-panel,
+    .start-panel {
+        background: var(--pabasa-panel) !important;
+        border: 1px solid var(--pabasa-line) !important;
+        border-radius: 0.9rem;
+        box-shadow: 0 18px 55px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(18px);
+    }
+
+    .modern-surface:hover,
+    .card:hover,
+    .audience-card:hover,
+    .feature-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(14, 116, 144, 0.32) !important;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12) !important;
+    }
+
+    .audience-grid,
+    .features-layout,
+    .feature-grid {
+        gap: 1.15rem;
+    }
+
+    .audience-card,
+    .feature-card {
+        min-height: 285px;
+        padding: 1.45rem;
+    }
+
+    .audience-visual,
+    .feature-icon {
+        background:
+            linear-gradient(rgba(14, 116, 144, 0.06) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(14, 116, 144, 0.06) 1px, transparent 1px),
+            #f8fbff;
+        background-size: 18px 18px;
+        border-color: rgba(14, 116, 144, 0.12);
+    }
+
+    .audience-meta,
+    .feature-meta {
+        color: var(--pabasa-cyan);
+    }
+
+    .testimonial-slide {
+        background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.8));
+    }
+
+    .carousel-testimonial-quote {
+        color: #1e293b;
+        font-size: 1.04rem;
+    }
+
+    .start-panel .card-body {
+        min-height: 380px;
+    }
+
+    .start-checklist li::before {
+        background: var(--pabasa-cyan);
+        box-shadow: 0 0 0 5px rgba(14, 116, 144, 0.1);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #0e7490, #5d0dd0);
+        border: 0;
+        box-shadow: 0 12px 28px rgba(14, 116, 144, 0.2);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 34px rgba(93, 13, 208, 0.22);
+    }
+
+    .btn-outline-primary {
+        color: var(--pabasa-cyan);
+        border-color: rgba(14, 116, 144, 0.28);
+    }
+
+    .btn-outline-primary:hover {
+        background: rgba(14, 116, 144, 0.08);
+        border-color: rgba(14, 116, 144, 0.45);
+        color: #075985;
+    }
+
     @media (max-width: 768px) {
-        .split-item {
+        .section-container {
+            padding: 3.5rem 1rem;
+        }
+
+        .hero-image-section {
+            height: 320px;
+            border-radius: 0 0 1rem 1rem;
+        }
+
+        .modern-hero {
             padding: 1.5rem;
-            gap: 1.25rem;
-        }
-
-        .split-icon {
-            width: 80px;
-            height: 80px;
-            font-size: 2.5rem;
-        }
-
-        .split-content h3 {
-            font-size: 1.1rem;
-        }
-
-        .split-content p {
-            font-size: 0.85rem;
-        }
-
-        .split-items-grid {
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
         }
     }
+
+    /* Final product-polish layer */
+    body {
+        background: linear-gradient(180deg, #f7f9fc 0%, #eef3f7 52%, #f8fafc 100%) !important;
+    }
+
+    .section-wrapper {
+        max-width: 1180px;
+    }
+
+    .hero-image-section {
+        height: 360px;
+        border-radius: 0;
+        margin-bottom: -3.5rem;
+    }
+
+    .hero-quote {
+        bottom: 5.75rem;
+    }
+
+    .section-container-1 {
+        padding-top: 0;
+    }
+
+    .modern-hero {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 3rem;
+        border-radius: 1.1rem;
+        background:
+            linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.9)),
+            radial-gradient(circle at 88% 12%, rgba(14, 116, 144, 0.12), transparent 28%);
+        box-shadow: 0 22px 70px rgba(15, 23, 42, 0.12);
+    }
+
+    .modern-hero .col-lg-7 {
+        border-right-color: rgba(15, 23, 42, 0.08);
+    }
+
+    .modern-hero h1 {
+        max-width: 720px;
+        margin-bottom: 1rem;
+    }
+
+    .modern-hero h1::after {
+        bottom: -0.7rem;
+        width: 72px;
+    }
+
+    .modern-hero .lead {
+        margin-top: 1.75rem;
+    }
+
+    .hero-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-top: 2rem;
+        max-width: 620px;
+    }
+
+    .hero-metrics div {
+        padding: 0.9rem;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 0.8rem;
+        background: rgba(255, 255, 255, 0.7);
+    }
+
+    .hero-metrics strong {
+        display: block;
+        color: #0f172a;
+        font-size: 1.35rem;
+        line-height: 1;
+        margin-bottom: 0.35rem;
+    }
+
+    .hero-metrics span {
+        color: #64748b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .flip-card {
+        height: 420px;
+        border-radius: 1rem;
+    }
+
+    .flip-card-front img {
+        filter: saturate(0.92) contrast(1.04);
+    }
+
+    .section-container {
+        padding-top: 4.5rem;
+        padding-bottom: 4.5rem;
+    }
+
+    .section-kicker {
+        margin-bottom: 0.75rem;
+        color: #0e7490;
+    }
+
+    .section-container-2 h2,
+    .section-container-3 h2 {
+        font-size: clamp(1.6rem, 2.6vw, 2.15rem);
+        margin-bottom: 0.65rem !important;
+    }
+
+    .section-intro {
+        max-width: 700px;
+    }
+
+    .workflow-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+        gap: 1rem;
+        margin-top: 2.35rem;
+        align-items: stretch;
+    }
+
+    .workflow-steps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .workflow-card,
+    .workflow-summary {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 1rem;
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.075);
+    }
+
+    .workflow-card {
+        min-height: 250px;
+        padding: 1.35rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .workflow-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(14, 116, 144, 0.32);
+        box-shadow: 0 18px 46px rgba(15, 23, 42, 0.11);
+    }
+
+    .workflow-step-number {
+        width: 2.35rem;
+        height: 2.35rem;
+        border-radius: 0.7rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #0f172a;
+        color: #ffffff;
+        font-size: 0.86rem;
+        font-weight: 850;
+        margin-bottom: 1.25rem;
+    }
+
+    .workflow-card h3,
+    .workflow-summary h3 {
+        margin: 0 0 0.65rem;
+        color: #0f172a;
+        font-size: 1.06rem;
+        font-weight: 850;
+        line-height: 1.3;
+    }
+
+    .workflow-card p,
+    .workflow-summary p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.92rem;
+        line-height: 1.65;
+    }
+
+    .workflow-meta {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        color: #0e7490;
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .workflow-summary {
+        padding: 1.35rem;
+        background:
+            linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.94));
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .workflow-summary::after {
+        content: '';
+        position: absolute;
+        inset: auto -40px -80px auto;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(14, 116, 144, 0.28), transparent 68%);
+        pointer-events: none;
+    }
+
+    .workflow-summary h3,
+    .workflow-summary p,
+    .workflow-summary-list {
+        position: relative;
+        z-index: 1;
+    }
+
+    .workflow-summary h3 {
+        color: #ffffff;
+    }
+
+    .workflow-summary p {
+        color: #cbd5e1;
+    }
+
+    .workflow-summary-list {
+        display: grid;
+        gap: 0.75rem;
+        margin: 1.5rem 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .workflow-summary-list li {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        border-top: 1px solid rgba(226, 232, 240, 0.16);
+        padding-top: 0.75rem;
+        color: #e2e8f0;
+        font-size: 0.84rem;
+        font-weight: 750;
+    }
+
+    .workflow-summary-list span {
+        color: #94a3b8;
+        font-weight: 700;
+    }
+
+    .audience-grid,
+    .features-layout {
+        margin-top: 2.35rem;
+    }
+
+    .audience-card,
+    .feature-card,
+    .testimonial-panel,
+    .start-panel {
+        border-radius: 1rem;
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.075);
+    }
+
+    .audience-card,
+    .feature-card {
+        padding: 1.25rem;
+        min-height: 300px;
+    }
+
+    .audience-visual,
+    .feature-icon {
+        height: 132px;
+        border-radius: 0.85rem;
+        background: linear-gradient(135deg, #f8fafc, #eef6f8);
+    }
+
+    .audience-visual img,
+    .feature-icon img {
+        transform: scale(0.94);
+    }
+
+    .audience-card h3,
+    .feature-card h3 {
+        font-size: 1.08rem;
+    }
+
+    .audience-meta,
+    .feature-meta {
+        border-top: 1px solid rgba(148, 163, 184, 0.2);
+        padding-top: 1rem;
+    }
+
+    .section-container-4 {
+        padding-top: 3.5rem;
+    }
+
+    /* Turning Pages Together Section */
+    .turning-pages-title {
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+        font-weight: 900;
+        color: #0e7490;
+        margin-bottom: 0.5rem;
+        letter-spacing: -1px;
+    }
+
+    .turning-pages-subtitle {
+        font-size: clamp(1.3rem, 3vw, 2rem);
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 3rem;
+        letter-spacing: -0.5px;
+    }
+
+    .turning-pages-container {
+        position: relative;
+        width: 100vw;
+        margin: 0 calc(-50vw + 50%);
+        display: flex;
+        align-items: center;
+        padding: 0 0.5rem;
+        gap: 0;
+    }
+
+    .turning-pages-slider {
+        flex: 1;
+        overflow: visible;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+        padding: 0;
+    }
+
+    .turning-pages-grid {
+        display: flex;
+        gap: 1.5rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        width: 100%;
+        flex: 1 1 auto;
+    }
+
+    .turning-pages-grid::-webkit-scrollbar {
+        display: none;
+    }
+
+    .turning-pages-image {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        flex-shrink: 0;
+        overflow: hidden;
+        border-radius: 0;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .turning-pages-image:hover {
+        transform: scale(1.02);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+    }
+
+    .turning-pages-image img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .turning-pages-arrow {
+        flex-shrink: 0;
+        width: 48px;
+        height: 48px;
+        background: white;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+        color: #0e7490;
+        font-size: 1.2rem;
+        padding: 0;
+    }
+
+    .turning-pages-arrow:hover {
+        background: #f0f0f0;
+        transform: scale(1.08);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 992px) {
+        .turning-pages-image {
+            width: 240px;
+            height: 240px;
+        }
+
+        .turning-pages-slider {
+            padding: 0.85rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .turning-pages-image {
+            width: 200px;
+            height: 200px;
+        }
+
+        .turning-pages-arrow {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+
+        .turning-pages-slider {
+            padding: 0.75rem;
+        }
+
+        .turning-pages-container {
+            gap: 1rem;
+        }
+    }
+
+    .testimonial-slide {
+        min-height: 390px;
+        padding: 2.4rem 4rem;
+    }
+
+    .carousel-testimonial-image img {
+        width: 165px;
+        height: 200px;
+        border-radius: 0.9rem;
+    }
+
+    .start-panel .card-body {
+        justify-content: space-between;
+    }
+
+    .start-panel h3 {
+        font-size: 1.55rem;
+    }
+
+    .btn {
+        border-radius: 0.7rem;
+        font-weight: 750;
+        padding: 0.72rem 1.05rem;
+    }
+
+    @media (max-width: 992px) {
+        .hero-image-section {
+            height: 300px;
+            margin-bottom: -2rem;
+        }
+
+        .modern-hero {
+            padding: 2rem;
+        }
+
+        .hero-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .workflow-layout,
+        .workflow-steps {
+            grid-template-columns: 1fr;
+        }
+
+        .flip-card {
+            height: 340px;
+        }
+
+        .testimonial-slide {
+            padding: 2rem;
+            padding-bottom: 5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .hero-image-section {
+            height: 250px;
+        }
+
+        .hero-quote {
+            bottom: 4rem;
+            left: 1rem;
+            right: 1rem;
+        }
+
+        .modern-hero {
+            padding: 1.25rem;
+        }
+
+        .carousel-testimonial-image img {
+            width: 100%;
+            max-width: 220px;
+            height: 180px;
+        }
+
+        #homeHighlightsCarousel {
+            --carousel-nav-right: 0.85rem;
+            --carousel-nav-bottom: -1rem;
+        }
+    }
+
+
+
 </style>
 
 {% endblock %}
@@ -570,7 +1622,7 @@
     <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="Student reading" class="img-fluid" id="heroImage">
     <div class="hero-quote" id="heroQuote">
         <p class="hero-quote-text">"Reading opens doors to new worlds and endless possibilities for every child."</p>
-        <p class="hero-quote-author">— PABASA</p>
+        <p class="hero-quote-author">- PABASA</p>
     </div>
 </div>
 
@@ -578,12 +1630,26 @@
     <div class="section-wrapper">
     <div class="modern-hero row g-4 align-items-center">
         <div class="col-lg-7">
-            <span class="modern-chip mb-3">Small Steps, Big Readers!</span>
-            <h1 class="display-6 fw-bold mb-3">PABASA checks reading skills and shows teachers progress at a glance.</h1>
-            <p class="lead text-secondary">See every little step your students take in reading.</p>
+            <span class="modern-chip mb-3">Reading Intelligence Platform</span>
+            <h1 class="display-6 fw-bold mb-3">Turn reading assessments into clear, usable progress data.</h1>
+            <p class="lead text-secondary">PABASA helps teachers run oral reading checks, review learner progress, and make better instructional decisions from one focused workspace.</p>
             <div class="d-flex flex-wrap gap-2 mt-4">
                 <a class="btn btn-primary" href="{% url 'pabasa_info' %}">See How It Works</a>
                 <a class="btn btn-outline-primary" href="{% url 'about' %}">Explore PABASA</a>
+            </div>
+            <div class="hero-metrics">
+                <div>
+                    <strong>3</strong>
+                    <span>User roles supported</span>
+                </div>
+                <div>
+                    <strong>2</strong>
+                    <span>Reading languages</span>
+                </div>
+                <div>
+                    <strong>1</strong>
+                    <span>Focused progress view</span>
+                </div>
             </div>
         </div>
         <div class="col-lg-5">
@@ -615,79 +1681,196 @@
     </div>
 </section>
 
+<section class="fade-in-section section-container">
+    <div class="section-wrapper">
+        <div class="text-center">
+            <div class="section-kicker">Assessment Flow</div>
+            <h2 class="h4 mb-2">How PABASA Works</h2>
+            <p class="section-intro">A simple workflow for running reading checks, collecting performance signals, and turning results into next steps.</p>
+        </div>
+
+        <div class="workflow-layout">
+            <div class="workflow-steps">
+                <article class="workflow-card">
+                    <div>
+                        <span class="workflow-step-number">01</span>
+                        <h3>Set up the reading task</h3>
+                        <p>Teachers prepare a class activity and choose the reading level or language that matches the learners.</p>
+                    </div>
+                    <div class="workflow-meta">Teacher setup</div>
+                </article>
+
+                <article class="workflow-card">
+                    <div>
+                        <span class="workflow-step-number">02</span>
+                        <h3>Learners read aloud</h3>
+                        <p>Students complete guided oral reading sessions in a focused interface that keeps the activity clear.</p>
+                    </div>
+                    <div class="workflow-meta">Reading session</div>
+                </article>
+
+                <article class="workflow-card">
+                    <div>
+                        <span class="workflow-step-number">03</span>
+                        <h3>Review progress data</h3>
+                        <p>Teachers use summaries to identify strengths, needs, and follow-up practice for each learner.</p>
+                    </div>
+                    <div class="workflow-meta">Instructional insight</div>
+                </article>
+            </div>
+
+            <aside class="workflow-summary">
+                <div>
+                    <h3>Built for practical classroom use</h3>
+                    <p>The workflow stays focused on what teachers need most: quick setup, readable output, and clear next actions.</p>
+                </div>
+                <ul class="workflow-summary-list">
+                    <li>Reading levels <span>Word to paragraph</span></li>
+                    <li>Languages <span>Filipino and English</span></li>
+                    <li>Output <span>Progress summaries</span></li>
+                </ul>
+            </aside>
+        </div>
+    </div>
+</section>
+
 <section class="fade-in-section section-container section-container-2">
     <div class="section-wrapper">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h4 mb-0">Designed for Every User</h2>
-        <span class="text-secondary small">Built for learners, teachers, and school teams</span>
+    <div class="text-center">
+        <div class="section-kicker">Who It Supports</div>
+        <h2 class="h4 mb-2">Designed for Every User</h2>
+        <p class="section-intro">A focused workspace for reading practice, assessment, and reporting across the people who guide student progress.</p>
     </div>
-    <div class="split-items-grid">
-        <div class="split-item">
-            <div class="split-icon">
-                <img src="{% static 'pabasa_app/images/teachers.png' %}" alt="Teachers">
-            </div>
-            <div class="split-content">
-                <h3>Teachers</h3>
-                <p>Launch reading checks, track fluency, and get instant summaries with less paperwork.</p>
-            </div>
-        </div>
-        <div class="split-item">
-            <div class="split-icon">
-                <img src="{% static 'pabasa_app/images/students.png' %}" alt="Students">
-            </div>
-            <div class="split-content">
-                <h3>Students</h3>
-                <p>Practice with guided prompts and feedback that keep reading sessions confident and calm.</p>
-            </div>
-        </div>
-        <div class="split-item">
-            <div class="split-icon">
-                <img src="{% static 'pabasa_app/images/schools.png' %}" alt="Schools">
-            </div>
-            <div class="split-content">
-                <h3>Schools</h3>
-                <p>See progress across classes with consistent data and simple reporting tools.</p>
-            </div>
-        </div>
+    <div class="audience-grid">
+            <article class="audience-card">
+                <div>
+                <div class="audience-visual">
+                    <img src="{% static 'pabasa_app/images/teachers.png' %}" alt="Teachers">
+                </div>
+                    <h3>Teachers</h3>
+                    <p>Launch reading checks, track fluency, and get instant summaries with less paperwork.</p>
+                </div>
+                <div class="audience-meta">Assessment Control</div>
+            </article>
+            <article class="audience-card">
+                <div>
+                <div class="audience-visual">
+                    <img src="{% static 'pabasa_app/images/students.png' %}" alt="Students">
+                </div>
+                    <h3>Students</h3>
+                    <p>Practice with guided prompts and feedback that keep reading sessions confident and calm.</p>
+                </div>
+                <div class="audience-meta">Guided Practice</div>
+            </article>
+            <article class="audience-card">
+                <div>
+                <div class="audience-visual">
+                    <img src="{% static 'pabasa_app/images/schools.png' %}" alt="Schools">
+                </div>
+                    <h3>Schools</h3>
+                    <p>See progress across classes with consistent data and simple reporting tools.</p>
+                </div>
+                <div class="audience-meta">Progress Visibility</div>
+            </article>
     </div>
     </div>
 </section>
 
 <section class="fade-in-section section-container section-container-3">
     <div class="section-wrapper">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h4 mb-0">Key Features</h2>
-        <span class="text-secondary small">Everything you need for reading success</span>
+    <div class="text-center">
+        <div class="section-kicker">Platform Tools</div>
+        <h2 class="h4 mb-2">Key Features</h2>
+        <p class="section-intro">Practical tools for reading sessions, feedback, and language support without making the experience feel noisy.</p>
     </div>
-    <div class="split-items-grid">
-        <div class="split-item">
-            <div class="split-icon">
-                <img src="{% static 'pabasa_app/images/oral_read.png' %}" alt="Oral Reading">
-            </div>
-            <div class="split-content">
-                <h3>Oral Reading</h3>
-                <p>Allows students to practice reading aloud as part of guided reading activities, helping them engage with the material and develop their reading skills.</p>
-            </div>
-        </div>
-        <div class="split-item">
-            <div class="split-icon">
-                <img src="{% static 'pabasa_app/images/reports.png' %}" alt="Automated Reports">
-            </div>
-            <div class="split-content">
-                <h3>Automated Reports</h3>
-                <p>Get easy-to-read feedback that shows what you did well and what to practice next.</p>
-            </div>
-        </div>
-        <div class="split-item">
-            <div class="split-icon">
-                <img src="{% static 'pabasa_app/images/dual_lang.png' %}" alt="Dual Language Support">
-            </div>
-            <div class="split-content">
-                <h3>Dual Language Support</h3>
-                <p>Take assessments in Filipino and English so you can grow your reading skills in both languages.</p>
-            </div>
+    <div class="features-layout">
+        <div class="feature-grid">
+            <article class="feature-card">
+                <div>
+                <div class="feature-icon">
+                    <img src="{% static 'pabasa_app/images/oral_read.png' %}" alt="Oral Reading">
+                </div>
+                    <h3>Oral Reading</h3>
+                    <p>Students read aloud through guided activities that support fluency, accuracy, and confidence.</p>
+                </div>
+                <div class="feature-meta">Reading Practice</div>
+            </article>
+            <article class="feature-card">
+                <div>
+                <div class="feature-icon">
+                    <img src="{% static 'pabasa_app/images/reports.png' %}" alt="Automated Reports">
+                </div>
+                    <h3>Automated Reports</h3>
+                    <p>Clear summaries help teachers see strengths, needs, and next practice areas quickly.</p>
+                </div>
+                <div class="feature-meta">Progress Review</div>
+            </article>
+            <article class="feature-card">
+                <div>
+                <div class="feature-icon">
+                    <img src="{% static 'pabasa_app/images/dual_lang.png' %}" alt="Dual Language Support">
+                </div>
+                    <h3>Dual Language Support</h3>
+                    <p>Reading tasks can support Filipino and English so learners can build skill in both languages.</p>
+                </div>
+                <div class="feature-meta">Language Support</div>
+            </article>
         </div>
     </div>
+    </div>
+</section>
+
+<section class="fade-in-section section-container">
+    <div class="text-center">
+        <h2 class="turning-pages-title">#TurningPagesTogether</h2>
+        <p class="turning-pages-subtitle">Reading Forward with PABASA</p>
+    </div>
+    <div class="turning-pages-container" style="max-width:none; width:100vw; margin:0 calc(-50vw + 50%);">
+        <div style="position:relative; width:100%; display:flex; align-items:center;">
+            <button class="turning-pages-arrow" id="sliderLeftBtn" aria-label="Scroll left" style="position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:2;">
+                <span>‹</span>
+            </button>
+            <div class="turning-pages-slider" style="border-radius:0; box-shadow:none; background:transparent; padding:0; max-width:none; width:100%; display:flex;">
+                <div class="turning-pages-grid" id="turningPagesGrid" style="transition: transform 0.5s cubic-bezier(.4,1.3,.5,1); will-change: transform;">
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teacher%201.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teacher%202.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teacher%203.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teacher%201.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teacher%202.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teacher%203.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="Students reading">
+                    </div>
+                    <div class="turning-pages-image">
+                        <img src="{% static 'pabasa_app/images/teacher%201.jpg' %}" alt="Students reading">
+                    </div>
+                </div>
+            </div>
+            <button class="turning-pages-arrow" id="sliderRightBtn" aria-label="Scroll right" style="position:absolute; right:0; top:50%; transform:translateY(-50%); z-index:2;">
+                <span>›</span>
+            </button>
+        </div>
     </div>
 </section>
 
@@ -695,7 +1878,7 @@
     <div class="section-wrapper">
     <div class="row g-4 align-items-stretch">
         <div class="col-lg-8">
-            <div class="modern-surface card border-0 h-100 overflow-hidden">
+            <div class="testimonial-panel h-100">
                 <div class="card-body p-0">
                     <div id="homeHighlightsCarousel" class="carousel slide" data-bs-ride="carousel">
                         <div class="carousel-indicators mb-2">
@@ -705,43 +1888,43 @@
                         </div>
                         <div class="carousel-inner">
                             <div class="carousel-item active">
-                                <div class="p-4 p-md-5" style="background: linear-gradient(135deg, #5d0dd0 0%, #6e10ee 100%);">
-                                    <p style="color: #fff; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; opacity: 0.95;">What Teachers Say About PABASA</p>
+                                <div class="testimonial-slide">
+                                    <p class="testimonial-label">Built for learners, trusted by educators</p>
                                     <div class="carousel-testimonial">
                                         <div class="carousel-testimonial-image">
                                             <img src="{% static 'pabasa_app/images/teacher%201.jpg' %}" alt="Teacher 1">
                                         </div>
                                         <div class="carousel-testimonial-content">
                                             <p class="carousel-testimonial-quote">"PABASA has completely changed how I assess my students' reading. What used to take me hours now takes minutes, and I get much more detailed insights into each student's strengths and areas to work on."</p>
-                                            <p class="carousel-testimonial-name">— Ma. Teresa Ramos</p>
+                                            <p class="carousel-testimonial-name">- Ma. Teresa Ramos</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="carousel-item">
-                                <div class="p-4 p-md-5" style="background: linear-gradient(135deg, #6e10ee 0%, #8a3ffc 100%);">
-                                    <p style="color: #fff; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; opacity: 0.95;">What Teachers Say About PABASA</p>
+                                <div class="testimonial-slide">
+                                    <p class="testimonial-label">Built for learners, trusted by educators</p>
                                     <div class="carousel-testimonial">
                                         <div class="carousel-testimonial-image">
                                             <img src="{% static 'pabasa_app/images/teacher%202.jpg' %}" alt="Teacher 2">
                                         </div>
                                         <div class="carousel-testimonial-content">
                                             <p class="carousel-testimonial-quote">"My students feel less anxious about reading assessments now. The platform gives them instant feedback in a supportive way, which has boosted their confidence and engagement significantly."</p>
-                                            <p class="carousel-testimonial-name">— Juan Crisostomo</p>
+                                            <p class="carousel-testimonial-name">- Juan Crisostomo</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="carousel-item">
-                                <div class="p-4 p-md-5" style="background: linear-gradient(135deg, #8a3ffc 0%, #a56bff 100%);">
-                                    <p style="color: #fff; font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; opacity: 0.95;">What Teachers Say About PABASA</p>
+                                <div class="testimonial-slide">
+                                    <p class="testimonial-label">Built for learners, trusted by educators</p>
                                     <div class="carousel-testimonial">
                                         <div class="carousel-testimonial-image">
                                             <img src="{% static 'pabasa_app/images/teacher%203.jpg' %}" alt="Teacher 3">
                                         </div>
                                         <div class="carousel-testimonial-content">
                                             <p class="carousel-testimonial-quote">"The reports are so actionable. I can see exactly which students need intervention and share progress with parents in a way they can easily understand. It's made conferences so much more productive."</p>
-                                            <p class="carousel-testimonial-name">— Angelo Mercado</p>
+                                            <p class="carousel-testimonial-name">- Angelo Mercado</p>
                                         </div>
                                     </div>
                                 </div>
@@ -761,16 +1944,16 @@
         </div>
 
         <div class="col-lg-4">
-            <div class="modern-surface card border-0 h-100">
+            <div class="start-panel card border-0 h-100">
                 <div class="card-body p-4 d-flex flex-column">
-                    <span class="modern-chip mb-3">New Section</span>
-                    <h3 class="h5">Ready to start a reading session?</h3>
-                    <p class="text-secondary">Set up a class, invite learners, and begin your first guided assessment in minutes.</p>
-                    <div style="display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 0; margin-top: auto; margin-bottom: 1rem;">
-                        <span style="font-weight: 700; color: #1f6f8b; font-size: 0.9rem;">✓ Completely Free</span>
-                        <span style="font-weight: 700; color: #1f6f8b; font-size: 0.9rem;">✓ Always Available</span>
-                        <span style="font-weight: 700; color: #1f6f8b; font-size: 0.9rem;">✓ Easy to Start</span>
-                    </div>
+                    <span class="start-panel-kicker">Start Reading Checks</span>
+                    <h3>Ready to run your first session?</h3>
+                    <p>Set up a class, invite learners, and begin a guided reading assessment in minutes.</p>
+                    <ul class="start-checklist">
+                        <li>Free for classroom use</li>
+                        <li>Available whenever learners are ready</li>
+                        <li>Simple setup for teachers and students</li>
+                    </ul>
                     <div class="d-grid gap-2">
                         <a class="btn btn-primary" href="{% url 'auth' %}">Open My Account</a>
                         <a class="btn btn-outline-primary" href="{% url 'pabasa_info' %}">Learn More</a>
@@ -803,20 +1986,31 @@
         observer.observe(section);
     });
 
-    // Hero image blur and quote reveal animation
+    // Hero quote reveal animation
     window.addEventListener('load', function() {
         setTimeout(function() {
-            const heroImage = document.getElementById('heroImage');
             const heroQuote = document.getElementById('heroQuote');
-            
-            // Blur the image
-            heroImage.classList.add('blurred');
-            
-            // Reveal the quote after a slight delay
-            setTimeout(function() {
+
+            if (heroQuote) {
                 heroQuote.classList.add('reveal');
-            }, 200);
-        }, 3000); // Trigger after 3 seconds
+            }
+        }, 500);
     });
+
+    // Turning Pages horizontal scroll arrows
+    const sliderGrid = document.getElementById('turningPagesGrid');
+    const sliderLeftBtn = document.getElementById('sliderLeftBtn');
+    const sliderRightBtn = document.getElementById('sliderRightBtn');
+    const scrollAmount = 320; // px, roughly one image plus gap
+
+    if (sliderLeftBtn && sliderRightBtn && sliderGrid) {
+        sliderLeftBtn.addEventListener('click', () => {
+            sliderGrid.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        });
+        sliderRightBtn.addEventListener('click', () => {
+            sliderGrid.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        });
+    }
+
 </script>
 {% endblock %}

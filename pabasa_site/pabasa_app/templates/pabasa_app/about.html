@@ -1,6 +1,8 @@
 {% extends "pabasa_app/base.html" %}
 {% load static %}
 
+{% block page_title %}Powered by PABASA{% endblock %}
+
 {% block extra_head %}
 <style>
     .team-glass-wrap {
@@ -12,98 +14,344 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
+    .team-container {
+        display: grid;
+        grid-template-columns: repeat(3, 200px);
+        gap: 1rem;
+        justify-content: center;
+        justify-items: center;
+        position: relative;
+        width: 100%;
+        overflow: visible;
+        padding: 1rem 1rem 2rem;
+        max-width: 760px;
+        margin: 0 auto;
+    }
+
     .team-member-card {
-        background: transparent !important;
-        border: none !important;
+        background: white !important;
+        border: 1px solid #e5e7eb !important;
         cursor: pointer;
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: visible !important;
-        border-radius: 50% !important;
+        border-radius: 1.25rem !important;
         padding: 0 !important;
-        transform: scale(1);
+        width: 200px;
+        height: 320px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        z-index: 1;
     }
 
     .team-member-card::before {
-        content: '';
+        content: attr(data-number);
         position: absolute;
-        width: 220px;
-        height: 220px;
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.7), rgba(168, 85, 247, 0.6));
-        opacity: 0;
-        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 2;
-        backdrop-filter: blur(0px);
+        top: 0.75rem;
+        left: 0.75rem;
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #6e10ee, #a855f7);
         border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: white;
+        z-index: 10;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 8px rgba(110, 16, 238, 0.3);
     }
 
-    .team-member-card:hover::before {
-        opacity: 0.4;
-        backdrop-filter: blur(8px);
+    .team-member-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 1rem;
+        position: absolute;
+        top: 0;
+        left: 0;
     }
 
     .team-member-card:hover {
-        filter: drop-shadow(0 12px 28px rgba(31, 111, 139, 0.2)) !important;
+        transform: scale(1.05);
+        box-shadow: 0 0 30px rgba(31, 111, 139, 0.4), 0 0 60px rgba(110, 16, 238, 0.2);
+    }
+
+    .team-member-card:hover img {
+        filter: brightness(0.95);
+    }
+
+    .team-member-card.active {
+        z-index: 101;
+    }
+
+    .team-member-initial-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: auto;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.4), transparent);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: flex-start;
+        padding: 1.5rem 1.2rem;
+        z-index: 3;
+        border-radius: 0 0 1rem 1rem;
+        transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .team-member-card.active .team-member-initial-overlay {
+        opacity: 0;
+        pointer-events: none;
     }
 
     .team-member-overlay {
-        position: absolute;
-        width: 220px;
-        height: 220px;
-        top: 0;
+        position: fixed;
         left: 50%;
-        transform: translateX(-50%);
-        z-index: 3;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(480px, calc(100vw - 2rem));
+        height: auto;
+        max-height: calc(100vh - 2rem);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(249, 245, 255, 0.98) 100%);
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        padding: 1.5rem;
+        padding: 0;
         opacity: 0;
-        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border-radius: 50%;
+        transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        overflow: visible;
+        border: 1.5px solid rgba(206, 188, 253, 0.8);
+        border-radius: 1.75rem;
+        box-shadow: 
+            0 20px 40px rgba(110, 16, 238, 0.2),
+            0 0 80px rgba(31, 111, 139, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        z-index: 10000;
+        pointer-events: none;
+        backdrop-filter: blur(6px);
     }
 
-    .team-member-card:hover .team-member-overlay {
+    .team-member-overlay::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #6e10ee, #1f6f8b);
+        border-radius: 1.75rem 1.75rem 0 0;
+    }
+
+    .team-member-overlay.active {
         opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, -50%);
+    }
+
+    .team-member-overlay-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0);
+        backdrop-filter: blur(0px);
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 9998;
+        pointer-events: none;
+    }
+
+    .team-member-overlay.active ~ .team-member-overlay-backdrop,
+    .team-member-card.active ~ .team-member-overlay-backdrop {
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .team-member-overlay-content-wrapper {
+        padding: 2rem;
+        width: 100%;
+        height: auto;
+        max-height: calc(100vh - 2rem);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow-y: auto;
+    }
+
+    .team-member-overlay-content-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .team-member-overlay-content-wrapper::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .team-member-overlay-content-wrapper::-webkit-scrollbar-thumb {
+        background: #ddd6fe;
+        border-radius: 3px;
+    }
+
+    .team-member-overlay-content-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #c4b5fd;
     }
 
     .team-member-overlay-text {
-        text-align: center;
+        text-align: left;
+        color: #1f2937;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        gap: 0.5rem;
+        max-height: 100%;
+    }
+
+    .team-member-overlay.active .team-member-overlay-text {
+        text-align: left;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .team-member-name {
+        font-size: 0.95rem;
+        font-weight: 800;
+        margin-bottom: 0.2rem;
         color: white;
+        line-height: 1.1;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .team-member-overlay.active .team-member-name {
+        font-size: 1.4rem;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+        text-shadow: none;
     }
 
     .team-member-role-hover {
-        font-size: 0.9rem;
+        font-size: 0.7rem;
         font-weight: 700;
-        margin-bottom: 1.5rem;
-        letter-spacing: 0.5px;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        margin-bottom: 0;
+        letter-spacing: 0.8px;
+        color: #e5e5e5;
+        text-transform: uppercase;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     }
 
-    .team-member-btn {
-        background: white;
-        color: #1f6f8b;
-        border: none;
-        padding: 0.5rem 1.25rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
+    .team-member-overlay.active .team-member-role-hover {
         font-size: 0.85rem;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        color: #6e10ee;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        text-shadow: none;
     }
 
-    .team-member-btn:hover {
-        background: #f0f9fb;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.2);
+    .team-member-bio {
+        display: block;
+        font-size: 0.85rem;
+        color: #6b7280;
+        text-align: center;
+        line-height: 1.4;
+        padding: 0;
+        font-weight: 500;
+    }
+
+    .team-member-overlay.active .team-member-bio {
+        display: block;
+    }
+
+    .team-member-email {
+        font-size: 0.8rem;
+        color: #6b7280;
+        word-break: break-word;
+        line-height: 1.2;
+        margin: 0;
+        transition: color 0.3s ease;
+    }
+
+    .team-member-overlay.active .team-member-email {
+        font-size: 0.8rem;
+        color: #6b7280;
+    }
+
+    .team-member-email a {
+        color: #6e10ee;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+
+    .team-member-email a:hover {
+        color: #5b0fd6;
+        text-decoration: underline;
+    }
+
+    .team-member-skills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        justify-content: center;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .team-member-overlay.active .team-member-skills {
+        display: flex;
+    }
+
+    .team-member-skill-badge {
+        background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+        border: 1.5px solid #ddd6fe;
+        color: #6e10ee;
+        padding: 0.5rem 1.1rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        white-space: nowrap;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 2px 8px rgba(110, 16, 238, 0.08);
+    }
+
+    .team-member-skill-badge:hover {
+        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+        border-color: #c4b5fd;
+        transform: translateY(-3px);
+        box-shadow: 0 4px 16px rgba(110, 16, 238, 0.15);
+    }
+
+    .team-member-message {
+        display: block;
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 0.75rem;
+        line-height: 1.5;
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.5);
+        border-left: 3px solid #6e10ee;
+        border-radius: 0.5rem;
+    }
+
+    .team-member-overlay.active .team-member-message {
+        display: block;
     }
 
     .team-member-modal-overlay {
-        display: none;
+        display: none !important;
         position: fixed;
         top: 0;
         left: 0;
@@ -116,7 +364,7 @@
     }
 
     .team-member-modal-overlay.active {
-        display: flex;
+        display: flex !important;
     }
 
     .team-member-modal-content {
@@ -183,128 +431,123 @@
     }
 
     @media (max-width: 768px) {
-        .team-member-modal-content {
-            padding: 1.5rem;
-            border-radius: 1rem;
-            max-width: 95vw;
+        .team-container {
+            grid-template-columns: repeat(2, 200px);
+            gap: 1rem;
+            padding: 1rem;
         }
 
-        .team-member-modal-close {
-            width: 36px;
-            height: 36px;
-            font-size: 1.2rem;
-            top: 1rem;
-            right: 1rem;
+        .team-member-card {
+            width: 200px;
+            height: 320px;
         }
 
-        .team-member-modal-image {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 0.75rem;
+        .team-member-overlay {
+            width: min(480px, calc(100vw - 2rem));
+            height: auto;
+            border-radius: 1.75rem;
+            transform: translate(-50%, -50%);
         }
 
-        .team-member-modal-title {
-            font-size: 1.1rem;
-            margin-bottom: 0.25rem;
+        .team-member-overlay::before {
+            height: 4px;
+            border-radius: 1.75rem 1.75rem 0 0;
         }
 
-        .team-member-modal-role {
+        .team-member-overlay-content-wrapper {
+            padding: 2rem;
+        }
+
+        .team-member-name {
+            font-size: 0.9rem;
+        }
+
+        .team-member-overlay.active .team-member-name {
+            font-size: 1.4rem;
+        }
+
+        .team-member-role-hover {
+            font-size: 0.65rem;
+        }
+
+        .team-member-overlay.active .team-member-role-hover {
             font-size: 0.85rem;
-            margin-bottom: 1rem;
         }
 
-        .team-member-modal-message {
+        .team-member-bio {
             font-size: 0.85rem;
+        }
+
+        .team-member-email {
+            font-size: 0.8rem;
+        }
+
+        .team-member-skill-badge {
+            padding: 0.5rem 1.1rem;
+            font-size: 0.75rem;
+        }
+
+        .team-member-message {
+            font-size: 0.85rem;
+            padding: 1rem;
         }
     }
 
     @media (max-width: 576px) {
-        .team-member-modal-content {
-            padding: 1.25rem;
-            border-radius: 0.875rem;
-            max-width: 100%;
-            max-height: 95vh;
+        .team-container {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem 1rem;
         }
 
-        .team-member-modal-close {
-            width: 32px;
-            height: 32px;
-            font-size: 1.1rem;
-            top: 0.75rem;
-            right: 0.75rem;
-        }
-
-        .team-member-modal-image {
-            width: 70px;
-            height: 70px;
-            margin-bottom: 0.5rem;
-        }
-
-        .team-member-modal-title {
-            font-size: 1rem;
-            margin-bottom: 0.2rem;
-        }
-
-        .team-member-modal-role {
-            font-size: 0.8rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .team-member-modal-message {
-            font-size: 0.8rem;
-        }
-    }
-
-    .row.g-5 {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .row.g-5 > .col-4 {
-        flex: 0 0 calc(33.333% - 1rem);
-        width: calc(33.333% - 1rem);
-    }
-
-    @media (max-width: 768px) {
-        .team-member-card img {
-            width: 160px !important;
-            height: 160px !important;
-        }
-
-        .team-member-card::before {
-            width: 160px !important;
-            height: 160px !important;
+        .team-member-card {
+            width: 200px;
+            height: 320px;
         }
 
         .team-member-overlay {
-            width: 160px !important;
-            height: 160px !important;
+            width: min(480px, calc(100vw - 2rem));
+            height: auto;
+            border-radius: 1.75rem;
+            transform: translate(-50%, -50%);
         }
 
-        .row.g-5 {
-            gap: 1rem !important;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .team-member-card img {
-            width: 130px !important;
-            height: 130px !important;
+        .team-member-overlay::before {
+            height: 4px;
         }
 
-        .team-member-card::before {
-            width: 130px !important;
-            height: 130px !important;
+        .team-member-overlay-content-wrapper {
+            padding: 2rem;
         }
 
-        .team-member-overlay {
-            width: 130px !important;
-            height: 130px !important;
+        .team-member-name {
+            font-size: 0.9rem;
         }
 
-        .row.g-5 {
-            gap: 0.5rem !important;
+        .team-member-overlay.active .team-member-name {
+            font-size: 1.4rem;
+        }
+
+        .team-member-role-hover {
+            font-size: 0.65rem;
+        }
+
+        .team-member-bio {
+            font-size: 0.85rem;
+        }
+
+        .team-member-email {
+            font-size: 0.8rem;
+        }
+
+        .team-member-skill-badge {
+            padding: 0.5rem 1.1rem;
+            font-size: 0.75rem;
+        }
+
+        .team-member-message {
+            font-size: 0.85rem;
+            padding: 1rem;
         }
     }
 
@@ -316,6 +559,7 @@
     html, body {
         background: linear-gradient(135deg, #f5f7fb 0%, #eff1f6 50%, #e8e0ff 100%) !important;
         background-attachment: fixed !important;
+        overflow-x: hidden;
     }
 
     body::after {
@@ -393,7 +637,248 @@
         border: 1px solid #e5e7eb;
         font-weight: 600;
         letter-spacing: 0.5px;
-        color: #6e10ee;
+        color: #155e75;
+    }
+
+    .team-member-card::before {
+        background: linear-gradient(135deg, #155e75, #0f172a);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.24);
+    }
+
+    .team-member-card:hover {
+        box-shadow: 0 0 30px rgba(21, 94, 117, 0.28), 0 0 60px rgba(15, 23, 42, 0.12);
+    }
+
+    .team-member-overlay {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+        border-color: rgba(148, 163, 184, 0.36);
+        box-shadow:
+            0 20px 44px rgba(15, 23, 42, 0.2),
+            0 0 70px rgba(21, 94, 117, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .team-member-overlay::before {
+        background: linear-gradient(90deg, #155e75, #0f172a);
+    }
+
+    .team-member-overlay.active .team-member-role-hover,
+    .team-member-email a,
+    .team-member-modal-message a {
+        color: #155e75 !important;
+    }
+
+    .team-member-email a:hover,
+    .team-member-modal-message a:hover {
+        color: #0f172a !important;
+    }
+
+    .team-member-skill-badge {
+        background: #eef6f8;
+        border-color: rgba(21, 94, 117, 0.18);
+        color: #155e75;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .team-member-skill-badge:hover {
+        background: #e2eef2;
+        border-color: rgba(21, 94, 117, 0.32);
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+    }
+
+    .team-member-message {
+        border-left-color: #155e75;
+    }
+
+    .team-member-overlay-content-wrapper::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+    }
+
+    .team-member-overlay-content-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    .about-section-header {
+        max-width: 760px;
+        margin-bottom: 1.5rem;
+    }
+
+    .about-section-header h2 {
+        color: #0f172a;
+        font-weight: 850;
+        letter-spacing: 0;
+        margin-bottom: 0.6rem;
+    }
+
+    .about-section-header p {
+        color: #64748b;
+        line-height: 1.65;
+        margin: 0;
+    }
+
+    .about-insight-grid,
+    .principles-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .about-insight-card,
+    .principle-card,
+    .project-timeline,
+    .project-support {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        border-radius: 1rem;
+        box-shadow: 0 14px 38px rgba(15, 23, 42, 0.075);
+    }
+
+    .about-insight-card,
+    .principle-card {
+        min-height: 215px;
+        padding: 1.35rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .about-insight-card span,
+    .principle-card span,
+    .timeline-step span {
+        color: #155e75;
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .about-insight-card h3,
+    .principle-card h3 {
+        color: #0f172a;
+        font-size: 1.08rem;
+        font-weight: 850;
+        margin: 0.95rem 0 0.6rem;
+    }
+
+    .about-insight-card p,
+    .principle-card p,
+    .timeline-step p,
+    .project-support p {
+        color: #64748b;
+        line-height: 1.62;
+        margin: 0;
+        font-size: 0.92rem;
+    }
+
+    .about-meta {
+        border-top: 1px solid rgba(148, 163, 184, 0.22);
+        color: #155e75;
+        font-size: 0.72rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+        text-transform: uppercase;
+    }
+
+    .project-context-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr);
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .project-timeline {
+        padding: 1.35rem;
+        display: grid;
+        gap: 1rem;
+    }
+
+    .timeline-step {
+        display: grid;
+        grid-template-columns: 3rem minmax(0, 1fr);
+        gap: 1rem;
+        align-items: start;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        padding-bottom: 1rem;
+    }
+
+    .timeline-step:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .timeline-index {
+        width: 2.35rem;
+        height: 2.35rem;
+        border-radius: 0.75rem;
+        background: #0f172a;
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 850;
+        font-size: 0.85rem;
+    }
+
+    .timeline-step h3,
+    .project-support h3 {
+        color: #0f172a;
+        font-size: 1rem;
+        font-weight: 850;
+        margin: 0.2rem 0 0.4rem;
+    }
+
+    .project-support {
+        padding: 1.35rem;
+        background:
+            linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96));
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .project-support h3 {
+        color: #ffffff;
+        font-size: 1.25rem;
+    }
+
+    .project-support p {
+        color: #cbd5e1;
+    }
+
+    .support-list {
+        display: grid;
+        gap: 0.75rem;
+        list-style: none;
+        margin: 1.5rem 0 0;
+        padding: 0;
+    }
+
+    .support-list li {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        border-top: 1px solid rgba(226, 232, 240, 0.16);
+        color: #e2e8f0;
+        font-size: 0.84rem;
+        font-weight: 750;
+        padding-top: 0.75rem;
+    }
+
+    .support-list span {
+        color: #94a3b8;
+        font-weight: 700;
+        text-align: right;
+    }
+
+    @media (max-width: 992px) {
+        .about-insight-grid,
+        .principles-grid,
+        .project-context-layout {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {% endblock %}
@@ -403,9 +888,9 @@
     <div class="modern-hero row g-4 align-items-stretch">
         <div class="col-lg-7">
             <span class="modern-chip mb-3" style="display: inline-block;">About PABASA</span>
-                    <h1 class="h2 mb-3">Supporting Students. Guiding Teachers. Building Confidence.</h1>
-                    <p class="text-secondary mb-3" style="text-align: justify;">At PABASA, we help students strengthen their reading skills while building confidence with each session. Our platform is designed to make practice enjoyable and effective, ensuring learners feel supported every step of the way. For teachers, PABASA provides clear insights into each student's progress, enabling them to give targeted guidance where it's needed most.</p>
-            <p class="mb-0" style="text-align: justify;">Our team combines classroom experience, research, and hands-on design to make reading practice simple, helpful, and encouraging for every learner.</p>
+                    <h1 class="h2 mb-3">A research-built reading platform shaped by classroom needs.</h1>
+                    <p class="text-secondary mb-3" style="text-align: justify;">PABASA began as a  research effort focused on one practical problem: helping reading assessment become easier to run, easier to review, and more useful for classroom decisions.</p>
+            <p class="mb-0" style="text-align: justify;">This page highlights the project context, design principles, development path, and the people responsible for turning the idea into a working web application.</p>
         </div>
         <div class="col-lg-5">
             <div class="card border-0 h-100 overflow-hidden" style="border-radius: 1rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
@@ -415,31 +900,177 @@
     </div>
 </section>
 
-<section class="pb-4 fade-in-section">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-3 gap-2">
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="about-section-header">
+        <span class="modern-chip mb-3">Project Origin</span>
+        <h2 class="h4">Why the Project Was Built</h2>
+        <p>PABASA was designed around the gap between classroom reading practice and the time teachers need to interpret progress. The team focused on building a workflow that respects both learners and educators.</p>
+    </div>
+
+    <div class="about-insight-grid">
+        <article class="about-insight-card">
             <div>
-                <h2 class="h4 mb-1">Meet the Team</h2>
-                <p class="text-secondary mb-0">The researchers and developers working behind PABASA to support reading and learning.</p>
+                <span>Problem</span>
+                <h3>Reading checks take time</h3>
+                <p>Manual oral reading assessment can be difficult to repeat consistently across learners, especially when teachers also need to document progress.</p>
+            </div>
+            <div class="about-meta">Classroom constraint</div>
+        </article>
+
+        <article class="about-insight-card">
+            <div>
+                <span>Approach</span>
+                <h3>Make the workflow focused</h3>
+                <p>The project keeps the experience centered on reading levels, guided tasks, and summaries that help teachers decide what comes next.</p>
+            </div>
+            <div class="about-meta">Product direction</div>
+        </article>
+
+        <article class="about-insight-card">
+            <div>
+                <span>Outcome</span>
+                <h3>Support better follow-up</h3>
+                <p>The goal is not to replace teacher judgment, but to give educators a clearer starting point for feedback, practice, and intervention.</p>
+            </div>
+            <div class="about-meta">Instructional support</div>
+        </article>
+    </div>
+</section>
+
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="about-section-header">
+        <span class="modern-chip mb-3">Build Principles</span>
+        <h2 class="h4">How the Team Made Design Decisions</h2>
+        <p>These principles guided the product and research work, keeping the project practical instead of adding features for their own sake.</p>
+    </div>
+
+    <div class="principles-grid">
+        <article class="principle-card">
+            <div>
+                <span>Clarity</span>
+                <h3>Keep reading tasks understandable</h3>
+                <p>Learners should know what to read, what level they are practicing, and what the session is asking from them.</p>
+            </div>
+            <div class="about-meta">Learner experience</div>
+        </article>
+
+        <article class="principle-card">
+            <div>
+                <span>Usefulness</span>
+                <h3>Make results easier to act on</h3>
+                <p>Progress information should help teachers identify patterns and next steps without creating more paperwork.</p>
+            </div>
+            <div class="about-meta">Teacher workflow</div>
+        </article>
+
+        <article class="principle-card">
+            <div>
+                <span>Confidence</span>
+                <h3>Support practice without pressure</h3>
+                <p>The assessment experience should encourage repeated reading practice while still producing useful observations.</p>
+            </div>
+            <div class="about-meta">Student support</div>
+        </article>
+    </div>
+</section>
+
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="about-section-header">
+        <span class="modern-chip mb-3">Project Context</span>
+        <h2 class="h4">From Research to Deployment</h2>
+        <p>The project moved through research, interface planning, implementation, and classroom-oriented validation.</p>
+    </div>
+
+    <div class="project-context-layout">
+        <div class="project-timeline">
+            <div class="timeline-step">
+                <div class="timeline-index">01</div>
+                <div>
+                    <span>Research</span>
+                    <h3>Understand the assessment problem</h3>
+                    <p>The team studied reading assessment needs and defined where a web-based workflow could help.</p>
+                </div>
+            </div>
+
+            <div class="timeline-step">
+                <div class="timeline-index">02</div>
+                <div>
+                    <span>Design</span>
+                    <h3>Shape the user experience</h3>
+                    <p>Interfaces were organized around teacher setup, learner reading, feedback, and progress review.</p>
+                </div>
+            </div>
+
+            <div class="timeline-step">
+                <div class="timeline-index">03</div>
+                <div>
+                    <span>Development</span>
+                    <h3>Build the web application</h3>
+                    <p>The team implemented the platform as a working system for classroom reading workflows.</p>
+                </div>
+            </div>
+
+            <div class="timeline-step">
+                <div class="timeline-index">04</div>
+                <div>
+                    <span>Deployment</span>
+                    <h3>Ground the project in school context</h3>
+                    <p>PABASA is presented with Salawag Elementary School as the current deployment context.</p>
+                </div>
             </div>
         </div>
 
-    <div class="row g-5">
-    <div class="col-4 col-lg-4 d-flex justify-content-center">
-        <article class="team-member-card" data-member="basco" style="width: fit-content;">
-            <div class="d-flex flex-column justify-content-center align-items-center text-center" style="gap: 1.5rem;">
-                <img src="{% static 'pabasa_app/images/basco.png' %}" 
-                     alt="Leonardo Basco III" 
-                     class="rounded-circle" 
-                     style="width: 220px; height: 220px; object-fit: cover;">
-                <h3 class="h5 mb-0" style="color: #1f2937; font-weight: 600; font-size: 1.1rem;">Leonardo Basco III</h3>
+        <aside class="project-support">
+            <div>
+                <h3>Project Support</h3>
+                <p>Our mission is to empower students and teachers with intelligent reading assessment tools that provide real-time feedback, actionable insights, and personalized learning pathways to build confidence and improve reading proficiency.</p>
             </div>
-            <div class="team-member-overlay">
+            <ul class="support-list">
+                <li>Program <span>Bachelor of Engineering Technology Major in Computer Engineering Technology</span></li>
+                <li>Focus <span>Reading assessment</span></li>
+                <li>Deployment <span>Salawag Elementary School</span></li>
+            </ul>
+        </aside>
+    </div>
+</section>
+
+<section class="pb-4 fade-in-section">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-3 gap-2">
+            <div>
+                <h2 class="h4 mb-1">Development Team</h2>
+                <p class="text-secondary mb-0">BET-CPET 2026 - the researchers and developers working behind PABASA to support reading and learning.</p>
+            </div>
+        </div>
+
+    <div class="team-container">
+    <article class="team-member-card" data-member="basco" data-number="01">
+        <img src="{% static 'pabasa_app/images/basco.png' %}" 
+             alt="Leonardo Basco III">
+        <div class="team-member-initial-overlay">
+            <div class="team-member-overlay-text">
+                <h3 class="team-member-name">Leonardo Basco III</h3>
+                <p class="team-member-role-hover">Research Analyst</p>
+            </div>
+        </div>
+        <div class="team-member-overlay">
+            <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <p class="team-member-role-hover mb-0">Research Analyst</p>
+                    <h3 class="team-member-name">Leonardo Basco III</h3>
+                    <p class="team-member-role-hover">Research Analyst</p>
+                    <p class="team-member-bio">Leads reading analytics and learning outcome interpretation</p>
+                    <p class="team-member-email"><a href="mailto:leonardoiii.basco@gsfe.tupcavite.edu.ph">leonardoiii.basco@gsfe.tupcavite.edu.ph</a></p>
+                    <div class="team-member-skills">
+                        <span class="team-member-skill-badge">Data Analysis</span>
+                        <span class="team-member-skill-badge">Research</span>
+                        <span class="team-member-skill-badge">Analytics</span>
+                        <span class="team-member-skill-badge">Statistics</span>
+                    </div>
+                    <p class="team-member-message">We believe every student's data tells a story of growth. Through careful analysis of reading patterns, we help teachers see exactly how students are improving—not just in speed, but in confidence. Your progress matters, and we're here to measure it fairly.</p>
                 </div>
             </div>
-        </article>
-    </div>
+        </div>
+        <div class="team-member-overlay-backdrop"></div>
+    </article>
 
     <!-- Modal for Basco -->
     <div class="team-member-modal-overlay" id="modal-basco">
@@ -459,22 +1090,34 @@
     </div>
 
     <!-- Card 2 -->
-    <div class="col-4 col-lg-4 d-flex justify-content-center">
-        <article class="team-member-card" data-member="dorongon" style="width: fit-content;">
-            <div class="d-flex flex-column justify-content-center align-items-center text-center" style="gap: 1.5rem;">
-                <img src="{% static 'pabasa_app/images/dorongon.jpg' %}" 
-                     alt="Lady Caroline Dorongon" 
-                     class="rounded-circle" 
-                     style="width: 220px; height: 220px; object-fit: cover;">
-                <h3 class="h5 mb-0" style="color: #1f2937; font-weight: 600; font-size: 1.1rem;">Lady Caroline Dorongon</h3>
+    <article class="team-member-card" data-member="dorongon" data-number="02">
+        <img src="{% static 'pabasa_app/images/dorongon.jpg' %}" 
+             alt="Lady Caroline Dorongon">
+        <div class="team-member-initial-overlay">
+            <div class="team-member-overlay-text">
+                <h3 class="team-member-name">Lady Caroline Dorongon</h3>
+                <p class="team-member-role-hover">Learning Experience Researcher</p>
             </div>
-            <div class="team-member-overlay">
+        </div>
+        <div class="team-member-overlay">
+            <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <p class="team-member-role-hover mb-0">Learning Experience Researcher</p>
+                    <h3 class="team-member-name">Lady Caroline Dorongon</h3>
+                    <p class="team-member-role-hover">Learning Experience Researcher</p>
+                    <p class="team-member-bio">Designs engaging user interfaces and learning pathways</p>
+                    <p class="team-member-email"><a href="mailto:ladycaroline.dorongon@gsfe.tupcavite.edu.ph">ladycaroline.dorongon@gsfe.tupcavite.edu.ph</a></p>
+                    <div class="team-member-skills">
+                        <span class="team-member-skill-badge">UX Research</span>
+                        <span class="team-member-skill-badge">Engagement</span>
+                        <span class="team-member-skill-badge">Usability</span>
+                        <span class="team-member-skill-badge">Feedback</span>
+                    </div>
+                    <p class="team-member-message">Learning should feel natural and engaging—not stressful. We've designed every interaction in PABASA to keep you motivated and help you see yourself improving. When you enjoy reading, you read more. That's our mission for you.</p>
                 </div>
             </div>
-        </article>
-    </div>
+        </div>
+        <div class="team-member-overlay-backdrop"></div>
+    </article>
 
     <!-- Modal for Dorongon -->
     <div class="team-member-modal-overlay" id="modal-dorongon">
@@ -494,22 +1137,34 @@
     </div>
 
     <!-- Card 3 -->
-    <div class="col-4 col-lg-4 d-flex justify-content-center">
-        <article class="team-member-card" data-member="padasay" style="width: fit-content;">
-            <div class="d-flex flex-column justify-content-center align-items-center text-center" style="gap: 1.5rem;">
-                <img src="{% static 'pabasa_app/images/padasay.jpg' %}" 
-                     alt="Amiel John Padasay" 
-                     class="rounded-circle" 
-                     style="width: 220px; height: 220px; object-fit: cover;">
-                <h3 class="h5 mb-0" style="color: #1f2937; font-weight: 600; font-size: 1.1rem;">Amiel John Padasay</h3>
+    <article class="team-member-card" data-member="padasay" data-number="03">
+        <img src="{% static 'pabasa_app/images/padasay.jpg' %}" 
+             alt="Amiel John Padasay">
+        <div class="team-member-initial-overlay">
+            <div class="team-member-overlay-text">
+                <h3 class="team-member-name">Amiel John Padasay</h3>
+                <p class="team-member-role-hover">Speech Assessment Researcher</p>
             </div>
-            <div class="team-member-overlay">
+        </div>
+        <div class="team-member-overlay">
+            <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <p class="team-member-role-hover mb-0">Speech Assessment Researcher</p>
+                    <h3 class="team-member-name">Amiel John Padasay</h3>
+                    <p class="team-member-role-hover">Speech Assessment Researcher</p>
+                    <p class="team-member-bio">Specializes in phonetic analysis and vocal reading assessment</p>
+                    <p class="team-member-email"><a href="mailto:amieljohn.padasay@gsfe.tupcavite.edu.ph">amieljohn.padasay@gsfe.tupcavite.edu.ph</a></p>
+                    <div class="team-member-skills">
+                        <span class="team-member-skill-badge">Speech Processing</span>
+                        <span class="team-member-skill-badge">Assessment</span>
+                        <span class="team-member-skill-badge">Audio Analysis</span>
+                        <span class="team-member-skill-badge">Quality Assurance</span>
+                    </div>
+                    <p class="team-member-message">Your voice matters! When you read aloud in PABASA, we're not just listening—we're learning about your fluency, your confidence, and how we can help you become an even stronger reader. We celebrate every attempt and every improvement you make.</p>
                 </div>
             </div>
-        </article>
-    </div>
+        </div>
+        <div class="team-member-overlay-backdrop"></div>
+    </article>
 
     <!-- Modal for Padasay -->
     <div class="team-member-modal-overlay" id="modal-padasay">
@@ -529,22 +1184,34 @@
     </div>
 
     <!-- Card 4 -->
-    <div class="col-4 col-lg-4 d-flex justify-content-center">
-        <article class="team-member-card" data-member="palacios" style="width: fit-content;">
-            <div class="d-flex flex-column justify-content-center align-items-center text-center" style="gap: 1.5rem;">
-                <img src="{% static 'pabasa_app/images/palacios.jpg' %}" 
-                     alt="Dona Palacios" 
-                     class="rounded-circle" 
-                     style="width: 220px; height: 220px; object-fit: cover;">
-                <h3 class="h5 mb-0" style="color: #1f2937; font-weight: 600; font-size: 1.1rem;">Dona Palacios</h3>
+    <article class="team-member-card" data-member="palacios" data-number="04">
+        <img src="{% static 'pabasa_app/images/palacios.jpg' %}" 
+             alt="Dona Palacios">
+        <div class="team-member-initial-overlay">
+            <div class="team-member-overlay-text">
+                <h3 class="team-member-name">Dona Palacios</h3>
+                <p class="team-member-role-hover">Literacy Content Strategist</p>
             </div>
-            <div class="team-member-overlay">
+        </div>
+        <div class="team-member-overlay">
+            <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <p class="team-member-role-hover mb-0">Literacy Content Strategist</p>
+                    <h3 class="team-member-name">Dona Palacios</h3>
+                    <p class="team-member-role-hover">Literacy Content Strategist</p>
+                    <p class="team-member-bio">Curates reading materials and curriculum progression strategies</p>
+                    <p class="team-member-email"><a href="mailto:donaflor.palacios@gsfe.tupcavite.edu.ph">donaflor.palacios@gsfe.tupcavite.edu.ph</a></p>
+                    <div class="team-member-skills">
+                        <span class="team-member-skill-badge">Content Design</span>
+                        <span class="team-member-skill-badge">Literacy</span>
+                        <span class="team-member-skill-badge">Curriculum</span>
+                        <span class="team-member-skill-badge">Sequencing</span>
+                    </div>
+                    <p class="team-member-message">We hope students take away confidence and enjoyment in reading from using our system. By practicing with words that match their level, they can improve their fluency, accuracy, and ability to recognize and pronounce words correctly.</p>
                 </div>
             </div>
-        </article>
-    </div>
+        </div>
+        <div class="team-member-overlay-backdrop"></div>
+    </article>
 
     <!-- Modal for Palacios -->
     <div class="team-member-modal-overlay" id="modal-palacios">
@@ -564,22 +1231,34 @@
     </div>
 
     <!-- Card 5 -->
-    <div class="col-4 col-lg-4 d-flex justify-content-center">
-        <article class="team-member-card" data-member="santos" style="width: fit-content;">
-            <div class="d-flex flex-column justify-content-center align-items-center text-center" style="gap: 1.5rem;">
-                <img src="{% static 'pabasa_app/images/santos.jpg' %}" 
-                     alt="Reyna Marie Santos" 
-                     class="rounded-circle" 
-                     style="width: 220px; height: 220px; object-fit: cover;">
-                <h3 class="h5 mb-0" style="color: #1f2937; font-weight: 600; font-size: 1.1rem;">Reyna Marie Santos</h3>
+    <article class="team-member-card" data-member="santos" data-number="05">
+        <img src="{% static 'pabasa_app/images/santos.jpg' %}" 
+             alt="Reyna Marie Santos">
+        <div class="team-member-initial-overlay">
+            <div class="team-member-overlay-text">
+                <h3 class="team-member-name">Reyna Marie Santos</h3>
+                <p class="team-member-role-hover">Feedback Systems Researcher</p>
             </div>
-            <div class="team-member-overlay">
+        </div>
+        <div class="team-member-overlay">
+            <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <p class="team-member-role-hover mb-0">Feedback Systems Researcher</p>
+                    <h3 class="team-member-name">Reyna Marie Santos</h3>
+                    <p class="team-member-role-hover">Feedback Systems Researcher</p>
+                    <p class="team-member-bio">Creates constructive feedback mechanisms and motivational systems</p>
+                    <p class="team-member-email"><a href="mailto:reynamarie.santos@gsfe.tupcavite.edu.ph">reynamarie.santos@gsfe.tupcavite.edu.ph</a></p>
+                    <div class="team-member-skills">
+                        <span class="team-member-skill-badge">System Design</span>
+                        <span class="team-member-skill-badge">Feedback Loop</span>
+                        <span class="team-member-skill-badge">Psychology</span>
+                        <span class="team-member-skill-badge">User Support</span>
+                    </div>
+                    <p class="team-member-message">You will receive clear, honest feedback that helps you understand what you're doing well and where you can improve. We know that constructive feedback builds confidence. We're here to support you and help you see that every mistake is a stepping stone.</p>
                 </div>
             </div>
-        </article>
-    </div>
+        </div>
+        <div class="team-member-overlay-backdrop"></div>
+    </article>
 
     <!-- Modal for Santos -->
     <div class="team-member-modal-overlay" id="modal-santos">
@@ -599,22 +1278,34 @@
     </div>
 
     <!-- Card 6 -->
-    <div class="col-4 col-lg-4 d-flex justify-content-center">
-        <article class="team-member-card" data-member="tapa" style="width: fit-content;">
-            <div class="d-flex flex-column justify-content-center align-items-center text-center" style="gap: 1.5rem;">
-                <img src="{% static 'pabasa_app/images/tapa.jpg' %}" 
-                     alt="Maeven Tapa" 
-                     class="rounded-circle" 
-                     style="width: 220px; height: 220px; object-fit: cover;">
-                <h3 class="h5 mb-0" style="color: #1f2937; font-weight: 600; font-size: 1.1rem;">Maeven Tapa</h3>
+    <article class="team-member-card" data-member="tapa" data-number="06">
+        <img src="{% static 'pabasa_app/images/tapa.jpg' %}" 
+             alt="Maeven Tapa">
+        <div class="team-member-initial-overlay">
+            <div class="team-member-overlay-text">
+                <h3 class="team-member-name">Maeven Tapa</h3>
+                <p class="team-member-role-hover">Assessment Experience Researcher</p>
             </div>
-            <div class="team-member-overlay">
+        </div>
+        <div class="team-member-overlay">
+            <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <p class="team-member-role-hover mb-0">Assessment Experience Researcher</p>
+                    <h3 class="team-member-name">Maeven Tapa</h3>
+                    <p class="team-member-role-hover">Assessment Experience Researcher</p>
+                    <p class="team-member-bio">Develops student-centered assessment experiences and interfaces</p>
+                    <p class="team-member-email"><a href="mailto:maeven.tapa@gsfe.tupcavite.edu.ph">maeven.tapa@gsfe.tupcavite.edu.ph</a></p>
+                    <div class="team-member-skills">
+                        <span class="team-member-skill-badge">Assessment Design</span>
+                        <span class="team-member-skill-badge">UX/UI</span>
+                        <span class="team-member-skill-badge">Testing</span>
+                        <span class="team-member-skill-badge">Usability Study</span>
+                    </div>
+                    <p class="team-member-message">Assessments don't have to be scary! With PABASA, you'll experience testing as a natural part of learning. We've designed each assessment to be clear, fair, and supportive—showing you exactly what you know and your progress toward becoming a confident reader.</p>
                 </div>
             </div>
-        </article>
-    </div>
+        </div>
+        <div class="team-member-overlay-backdrop"></div>
+    </article>
 
     <!-- Modal for Tapa -->
     <div class="team-member-modal-overlay" id="modal-tapa">
@@ -632,19 +1323,52 @@
             </div>
         </div>
     </div>
+    </div>
 </section>
 
 <script>
-    // Open modal when clicking on a team member card
+    // Handle click to show/hide expanded card (toggle)
     document.querySelectorAll('.team-member-card').forEach(card => {
         card.addEventListener('click', function(e) {
-            e.preventDefault();
-            const memberId = this.getAttribute('data-member');
-            const modal = document.getElementById('modal-' + memberId);
-            if (modal) {
-                modal.classList.add('active');
+            e.stopPropagation();
+            
+            const isAlreadyActive = this.classList.contains('active');
+            
+            // Remove active class from all cards
+            document.querySelectorAll('.team-member-card').forEach(c => {
+                c.classList.remove('active');
+                c.querySelector('.team-member-overlay').classList.remove('active');
+            });
+            
+            // If the clicked card wasn't active, make it active (toggle behavior)
+            if (!isAlreadyActive) {
+                this.classList.add('active');
+                this.querySelector('.team-member-overlay').classList.add('active');
             }
         });
+    });
+
+    // Handle Escape key to close overlay
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.team-member-card').forEach(card => {
+                card.classList.remove('active');
+                card.querySelector('.team-member-overlay').classList.remove('active');
+            });
+        }
+    });
+
+    // Close overlay when clicking outside
+    document.addEventListener('click', function(e) {
+        // Don't close if clicking on card, overlay, or modal
+        if (!e.target.closest('.team-member-card') && 
+            !e.target.closest('.team-member-overlay') &&
+            !e.target.closest('.team-member-modal-overlay')) {
+            document.querySelectorAll('.team-member-card').forEach(card => {
+                card.classList.remove('active');
+                card.querySelector('.team-member-overlay').classList.remove('active');
+            });
+        }
     });
 
     // Close modal function
