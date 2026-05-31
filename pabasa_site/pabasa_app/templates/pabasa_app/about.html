@@ -633,15 +633,15 @@
     }
 
     .modern-chip {
-        background: white;
-        border: 1px solid #e5e7eb;
+        background: #fff7ed;
+        border: 1px solid rgba(245, 158, 11, 0.24);
         font-weight: 600;
         letter-spacing: 0.5px;
-        color: #155e75;
+        color: #92400e;
     }
 
     .team-member-card::before {
-        background: linear-gradient(135deg, #155e75, #0f172a);
+        background: linear-gradient(135deg, #155e75, #f59e0b);
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.24);
     }
 
@@ -723,47 +723,81 @@
         gap: 1rem;
     }
 
-    /* Principles List Styles */
-    .principles-list {
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
+    /* Principles Board Styles */
+    .principles-board {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
+        gap: clamp(2rem, 5vw, 4rem);
         margin-top: 2rem;
+        align-items: start;
+    }
+
+    .principles-board-intro {
+        position: sticky;
+        top: 6rem;
+        border-left: 4px solid #f59e0b;
+        padding-left: 1.25rem;
+    }
+
+    .principles-board-intro span {
+        color: #155e75;
+        display: block;
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.12em;
+        margin-bottom: 0.8rem;
+        text-transform: uppercase;
+    }
+
+    .principles-board-intro h2 {
+        color: #0f172a;
+        font-size: clamp(1.55rem, 3vw, 2.25rem);
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.08;
+        margin: 0 0 1rem;
+    }
+
+    .principles-board-intro p {
+        color: #64748b;
+        line-height: 1.7;
+        margin: 0;
+    }
+
+    .principles-list {
+        border-top: 1px solid rgba(148, 163, 184, 0.28);
     }
 
     .principle-item {
-        display: flex;
-        gap: 2rem;
-        align-items: flex-start;
-        padding: 1.5rem;
-        background: white;
-        border-radius: 1rem;
-        border-left: 4px solid #155e75;
-        box-shadow: 0 2px 8px rgba(21, 94, 117, 0.05);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: grid;
+        grid-template-columns: 4.5rem minmax(0, 1fr);
+        gap: 1.4rem;
+        align-items: start;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+        padding: 1.55rem 0;
+        transition: border-color 0.25s ease, transform 0.25s ease;
     }
 
     .principle-item:hover {
-        box-shadow: 0 6px 20px rgba(21, 94, 117, 0.1);
-        transform: translateX(4px);
+        border-bottom-color: rgba(21, 94, 117, 0.55);
+        transform: translateX(0.35rem);
     }
 
     .principle-number {
-        font-size: 3rem;
+        color: #b45309;
+        font-size: 0.86rem;
         font-weight: 900;
-        color: #155e75;
+        letter-spacing: 0.1em;
         line-height: 1;
-        min-width: 80px;
-        text-align: center;
-        opacity: 0.6;
+        padding-top: 0.35rem;
     }
 
     .principle-content {
-        flex: 1;
+        min-width: 0;
     }
 
     .principle-label {
-        color: #155e75;
+        color: #b45309;
         font-size: 0.8rem;
         font-weight: 800;
         letter-spacing: 0.1em;
@@ -774,9 +808,9 @@
 
     .principle-content h3 {
         color: #0f172a;
-        font-size: 1.2rem;
+        font-size: 1.22rem;
         font-weight: 850;
-        margin: 0 0 0.8rem 0;
+        margin: 0 0 0.6rem 0;
         line-height: 1.3;
     }
 
@@ -979,6 +1013,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
     }
 
     .card-image-wrapper img {
@@ -990,6 +1025,58 @@
 
     .insight-card-image:hover .card-image-wrapper img {
         transform: scale(1.05);
+    }
+
+    .card-image-wrapper::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.58));
+        opacity: 0;
+        transition: opacity 0.25s ease;
+        pointer-events: none;
+    }
+
+    .insight-read-more {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -42%);
+        z-index: 2;
+        border: 0;
+        border-radius: 999px;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 0.82rem;
+        font-weight: 850;
+        letter-spacing: 0.06em;
+        line-height: 1;
+        padding: 0.9rem 1.2rem;
+        text-transform: uppercase;
+        opacity: 0;
+        pointer-events: none;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.22);
+        transition: opacity 0.25s ease, transform 0.25s ease, background 0.25s ease;
+    }
+
+    .insight-read-more:hover,
+    .insight-read-more:focus-visible {
+        background: #eef6f8;
+        outline: 3px solid rgba(255, 255, 255, 0.75);
+        outline-offset: 3px;
+    }
+
+    .insight-card-image:hover .card-image-wrapper::after,
+    .insight-card-image:focus-within .card-image-wrapper::after,
+    .insight-card-image:hover .insight-read-more,
+    .insight-card-image:focus-within .insight-read-more {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .insight-card-image:hover .insight-read-more,
+    .insight-card-image:focus-within .insight-read-more {
+        transform: translate(-50%, -50%);
     }
 
     .card-body {
@@ -1036,6 +1123,270 @@
         margin-top: auto;
     }
 
+    .article-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 10020;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        background: rgba(15, 23, 42, 0.62);
+        backdrop-filter: blur(5px);
+    }
+
+    .article-modal-backdrop.active {
+        display: flex;
+    }
+
+    .article-modal {
+        width: min(920px, 100%);
+        max-height: min(88vh, 860px);
+        overflow-y: auto;
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        border-radius: 1.25rem;
+        box-shadow: 0 26px 80px rgba(15, 23, 42, 0.32);
+        position: relative;
+    }
+
+    .article-modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        z-index: 2;
+        width: 2.6rem;
+        height: 2.6rem;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.92);
+        color: #0f172a;
+        font-size: 1.45rem;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .article-modal-close:hover,
+    .article-modal-close:focus-visible {
+        background: #e2eef2;
+        transform: scale(1.04);
+        outline: 3px solid rgba(21, 94, 117, 0.16);
+        outline-offset: 2px;
+    }
+
+    .article-modal-header {
+        background: #f8fafc;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(260px, 0.72fr);
+        gap: clamp(1.25rem, 4vw, 2.5rem);
+        padding: clamp(1.5rem, 4vw, 3rem);
+        position: relative;
+    }
+
+    .article-modal-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #155e75, #0f172a);
+    }
+
+    .article-header-copy {
+        align-self: center;
+        max-width: 620px;
+    }
+
+    .article-hero-image {
+        align-self: stretch;
+        min-height: 300px;
+        overflow: hidden;
+        border-radius: 0.9rem;
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+        position: relative;
+    }
+
+    .article-hero-image img {
+        width: 100%;
+        height: 100%;
+        min-height: 300px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .article-hero-caption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to top, rgba(15, 23, 42, 0.78), transparent);
+        color: #ffffff;
+        font-size: 0.78rem;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        padding: 3.5rem 1rem 0.95rem;
+    }
+
+    .article-content {
+        padding: 2.4rem clamp(1.25rem, 5vw, 4rem) 3rem;
+    }
+
+    .article-kicker {
+        color: #155e75;
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(21, 94, 117, 0.18);
+        border-radius: 999px;
+        background: #ffffff;
+        font-size: 0.76rem;
+        font-weight: 850;
+        letter-spacing: 0.12em;
+        margin-bottom: 1rem;
+        padding: 0.42rem 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .article-modal-header h2 {
+        color: #0f172a;
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.02;
+        margin: 0 0 1rem;
+    }
+
+    .article-deck {
+        color: #475569;
+        font-size: 1.06rem;
+        line-height: 1.7;
+        margin: 0 0 1.4rem;
+        max-width: 680px;
+    }
+
+    .article-meta {
+        border-top: 1px solid rgba(148, 163, 184, 0.28);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem 1.25rem;
+        margin-top: 1.3rem;
+        padding-top: 1.1rem;
+    }
+
+    .article-meta-item {
+        color: #64748b;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 0.86rem;
+        font-weight: 750;
+    }
+
+    .article-author-mark {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        background: #e2eef2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 2px solid #ffffff;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+        flex: 0 0 auto;
+    }
+
+    .article-author-mark img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .article-author-link {
+        color: #0f172a;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .article-author-link:hover,
+    .article-author-link:focus-visible {
+        color: #155e75;
+        text-decoration: underline;
+    }
+
+    .article-content h3 {
+        color: #0f172a;
+        font-size: 1.15rem;
+        font-weight: 850;
+        margin: 1.8rem 0 0.75rem;
+    }
+
+    .article-content p {
+        color: #334155;
+        font-size: 1.02rem;
+        line-height: 1.86;
+        margin: 0 0 1.12rem;
+        text-align: justify;
+    }
+
+    .article-body {
+        max-width: 720px;
+        margin: 0 auto;
+    }
+
+    .article-body p {
+        text-indent: 2rem;
+    }
+
+    .article-references {
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 0.9rem;
+        margin: 2.4rem auto 0;
+        max-width: 720px;
+        padding: 1.25rem;
+    }
+
+    .article-references h3 {
+        color: #0f172a;
+        font-size: 1rem;
+        margin: 0 0 0.9rem;
+    }
+
+    .article-references p {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 0.7rem;
+        color: #475569;
+        font-size: 0.92rem;
+        line-height: 1.55;
+        margin: 0 0 0.75rem;
+        padding: 0.85rem 1rem;
+        text-align: left;
+    }
+
+    .article-references p:last-child {
+        margin-bottom: 0;
+    }
+
+    .article-references a {
+        color: #155e75;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .article-references a:hover,
+    .article-references a:focus-visible {
+        color: #0f172a;
+        text-decoration: underline;
+    }
+
     @media (max-width: 992px) {
         .about-insight-grid,
         .principles-grid,
@@ -1045,13 +1396,22 @@
         .insight-cards-with-images {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-        .principle-item {
+        .article-modal-header {
+            grid-template-columns: 1fr;
+        }
+        .article-hero-image,
+        .article-hero-image img {
+            min-height: 240px;
+        }
+        .principles-board {
+            grid-template-columns: 1fr;
             gap: 1.5rem;
-            padding: 1.2rem;
+        }
+        .principles-board-intro {
+            position: static;
         }
         .principle-number {
-            font-size: 2.5rem;
-            min-width: 60px;
+            min-width: 0;
         }
     }
 
@@ -1062,16 +1422,463 @@
         .card-image-wrapper {
             height: 180px;
         }
+        .article-modal-backdrop {
+            padding: 0.75rem;
+        }
+        .article-modal-header {
+            padding: 1.5rem;
+        }
+        .article-content {
+            padding: 1.6rem 1.25rem 2rem;
+        }
+        .article-modal-header h2 {
+            font-size: 2rem;
+        }
+        .article-content p {
+            font-size: 0.96rem;
+            line-height: 1.74;
+        }
+        .article-body p {
+            text-indent: 1.5rem;
+        }
+        .article-hero-image,
+        .article-hero-image img {
+            min-height: 200px;
+        }
         .principle-item {
-            flex-direction: column;
+            grid-template-columns: 3rem minmax(0, 1fr);
             gap: 1rem;
         }
         .principle-number {
-            font-size: 2rem;
-            min-width: auto;
             text-align: left;
         }
         }
+    }
+    /* 60-30-10 color pass: 60% soft neutral, 30% teal/slate, 10% amber. */
+    :root {
+        --about-60: #f7f9f6;
+        --about-60-alt: #edf4f2;
+        --about-panel: #ffffff;
+        --about-30: #164e63;
+        --about-30-deep: #0f172a;
+        --about-10: #d97706;
+        --about-10-soft: #fff4df;
+        --about-line: rgba(22, 78, 99, 0.16);
+    }
+
+    body {
+        background: linear-gradient(180deg, var(--about-60) 0%, var(--about-60-alt) 56%, #fbfcfa 100%) !important;
+        overflow-x: hidden;
+    }
+
+    .team-glass-wrap,
+    .team-member-card,
+    .team-member-overlay,
+    .article-card,
+    .article-modal-content,
+    .about-card,
+    .team-list {
+        background: var(--about-panel) !important;
+        border-color: var(--about-line) !important;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07) !important;
+    }
+
+    .team-member-card::before,
+    .article-card-index,
+    .team-member-modal-role,
+    .article-modal-accent {
+        background: linear-gradient(135deg, var(--about-30), var(--about-10)) !important;
+        color: #ffffff !important;
+    }
+
+    .team-member-card:hover {
+        box-shadow: 0 18px 38px rgba(22, 78, 99, 0.14), 0 0 42px rgba(217, 119, 6, 0.12) !important;
+    }
+
+    .team-member-overlay::before,
+    .article-modal-content::before,
+    h1::after,
+    h2::after {
+        background: linear-gradient(90deg, var(--about-30), var(--about-10)) !important;
+    }
+
+    .modern-hero h1,
+    .modern-hero h2,
+    .about-section-header h2,
+    .principles-board-intro h2,
+    .principle-content h3,
+    .about-insight-card h3,
+    .principle-card h3,
+    .project-support h3,
+    .timeline-step h3,
+    .card-body h3,
+    .team-member-name,
+    .team-member-modal-title,
+    .article-card-title,
+    .article-modal-title {
+        color: var(--about-30-deep) !important;
+    }
+
+    .team-member-role-hover,
+    .team-member-email a,
+    .team-member-modal-message a,
+    .article-card-link,
+    .article-modal-kicker,
+    .team-member-skill-badge {
+        color: var(--about-30) !important;
+    }
+
+    .team-member-skill-badge,
+    .modern-chip,
+    .article-card-tag {
+        background: var(--about-10-soft) !important;
+        border-color: rgba(217, 119, 6, 0.28) !important;
+        color: #8a4b05 !important;
+    }
+
+    .team-member-overlay-content-wrapper::-webkit-scrollbar-thumb {
+        background: var(--about-30) !important;
+    }
+
+    .team-member-modal-close,
+    .article-modal-close {
+        color: var(--about-30-deep) !important;
+    }
+
+    .team-member-modal-close:hover,
+    .article-modal-close:hover {
+        background: var(--about-60-alt) !important;
+        outline-color: rgba(22, 78, 99, 0.16) !important;
+    }
+
+    .team-member-card::before {
+        background: #164e63 !important;
+        border: 2px solid #d97706 !important;
+        color: #ffffff !important;
+        box-shadow:
+            0 0 0 2px #fff4df,
+            0 6px 16px rgba(22, 78, 99, 0.22) !important;
+    }
+
+    .team-member-overlay {
+        background: #ffffff !important;
+        border: 1px solid var(--about-line) !important;
+        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .team-member-overlay::before {
+        background: var(--about-30) !important;
+    }
+
+    .team-member-overlay-backdrop,
+    .team-member-overlay.active ~ .team-member-overlay-backdrop,
+    .team-member-card.active ~ .team-member-overlay-backdrop {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .team-member-message {
+        background: #f8fafc !important;
+        border-left-color: var(--about-30) !important;
+    }
+
+    .team-member-initial-overlay .team-member-name,
+    .team-member-initial-overlay .team-member-role-hover {
+        color: #ffffff !important;
+    }
+
+    .development-team-section {
+        padding-top: 0.75rem;
+    }
+
+    .development-team-header {
+        max-width: 920px;
+        margin-inline: auto;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(22, 78, 99, 0.16);
+    }
+
+    .development-team-header > div {
+        width: 100%;
+    }
+
+    .development-team-header h2 {
+        color: var(--about-30-deep);
+        font-weight: 900;
+        letter-spacing: 0;
+    }
+
+    .development-team-header p {
+        max-width: 720px;
+        line-height: 1.6;
+    }
+
+    .insight-card-image {
+        border-color: var(--about-line) !important;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07) !important;
+    }
+
+    .insight-card-image:hover {
+        border-color: rgba(22, 78, 99, 0.34) !important;
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12) !important;
+    }
+
+    .card-image-wrapper {
+        background: linear-gradient(135deg, var(--about-60-alt), #f8fafc) !important;
+    }
+
+    .card-image-wrapper::after {
+        background: linear-gradient(180deg, rgba(22, 78, 99, 0.08), rgba(15, 23, 42, 0.64)) !important;
+    }
+
+    .card-label {
+        color: var(--about-10) !important;
+    }
+
+    .card-body h3 {
+        color: var(--about-30-deep) !important;
+    }
+
+    .card-meta {
+        color: var(--about-30) !important;
+        border-top-color: rgba(22, 78, 99, 0.16) !important;
+    }
+
+    .article-modal {
+        border-color: var(--about-line) !important;
+        box-shadow: 0 26px 80px rgba(15, 23, 42, 0.28) !important;
+    }
+
+    .article-modal-backdrop {
+        background: rgba(15, 23, 42, 0.68) !important;
+    }
+
+    .article-modal-header {
+        background: linear-gradient(135deg, var(--about-60) 0%, var(--about-60-alt) 100%) !important;
+        border-bottom-color: var(--about-line) !important;
+    }
+
+    .article-modal-header::before {
+        background: linear-gradient(90deg, var(--about-30), var(--about-10)) !important;
+    }
+
+    .article-kicker {
+        background: var(--about-10-soft) !important;
+        border-color: rgba(217, 119, 6, 0.28) !important;
+        color: #8a4b05 !important;
+    }
+
+    .article-modal-header h2,
+    .article-content h3,
+    .article-references h3 {
+        color: var(--about-30-deep) !important;
+    }
+
+    .article-meta {
+        border-top-color: rgba(22, 78, 99, 0.18) !important;
+    }
+
+    .article-meta-item,
+    .article-deck {
+        color: #5f6f76 !important;
+    }
+
+    .article-author-mark {
+        background: var(--about-10-soft) !important;
+        border-color: #ffffff !important;
+        box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.22) !important;
+    }
+
+    .article-author-link,
+    .article-references a {
+        color: var(--about-30) !important;
+    }
+
+    .article-author-link:hover,
+    .article-author-link:focus-visible,
+    .article-references a:hover,
+    .article-references a:focus-visible {
+        color: var(--about-10) !important;
+    }
+
+    .article-modal-close {
+        background: var(--about-10-soft) !important;
+        color: var(--about-30-deep) !important;
+        border: 1px solid rgba(217, 119, 6, 0.24) !important;
+    }
+
+    .article-modal-close:hover,
+    .article-modal-close:focus-visible {
+        background: var(--about-30) !important;
+        color: #ffffff !important;
+        outline-color: rgba(217, 119, 6, 0.3) !important;
+    }
+
+    .article-references {
+        background: var(--about-60-alt) !important;
+        border-color: var(--about-line) !important;
+    }
+
+    .article-references p {
+        border-color: rgba(22, 78, 99, 0.14) !important;
+    }
+
+    .development-team-section .team-container {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 1.25rem !important;
+        max-width: 920px !important;
+        padding: 1.25rem 0 0 !important;
+        align-items: stretch;
+    }
+
+    .development-team-section .team-member-card {
+        width: 100% !important;
+        height: 340px !important;
+        max-width: none !important;
+        overflow: hidden !important;
+        border-radius: 1rem !important;
+        border-color: rgba(22, 78, 99, 0.18) !important;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09) !important;
+        transform: none;
+    }
+
+    .development-team-section .team-member-card.active {
+        overflow: visible !important;
+        z-index: 10001;
+    }
+
+    .development-team-section .team-member-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(22, 78, 99, 0.34) !important;
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.13) !important;
+    }
+
+    .development-team-section .team-member-card img {
+        border-radius: 0 !important;
+    }
+
+    .development-team-section .team-member-initial-overlay {
+        padding: 4rem 1rem 1rem;
+        background: linear-gradient(to top, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.42), transparent);
+        border-radius: 0 !important;
+    }
+
+    .development-team-section .team-member-name {
+        font-size: 1rem;
+        line-height: 1.16;
+    }
+
+    .development-team-section .team-member-role-hover {
+        font-size: 0.68rem;
+        line-height: 1.35;
+    }
+
+    .development-team-section .team-member-card::before {
+        top: 0.9rem;
+        left: 0.9rem;
+        width: 2.35rem;
+        height: 2.35rem;
+        font-size: 0.82rem;
+    }
+
+    .development-team-section .team-member-overlay {
+        width: min(640px, calc(100vw - 2rem));
+        max-height: min(720px, calc(100vh - 2rem));
+        border-radius: 1rem;
+    }
+
+    .development-team-section .team-member-overlay::before {
+        border-radius: 1rem 1rem 0 0;
+    }
+
+    .development-team-section .team-member-overlay-content-wrapper {
+        padding: 1.5rem;
+    }
+
+    .development-team-section .team-member-overlay.active .team-member-name {
+        font-size: clamp(1.2rem, 3vw, 1.45rem);
+        line-height: 1.15;
+    }
+
+    .development-team-section .team-member-overlay.active .team-member-role-hover {
+        color: var(--about-30) !important;
+        font-size: 0.78rem;
+        line-height: 1.35;
+    }
+
+    .development-team-section .team-member-bio {
+        text-align: left;
+        color: #475569;
+        line-height: 1.55;
+    }
+
+    .development-team-section .team-member-skills {
+        justify-content: flex-start;
+    }
+
+    .development-team-section .team-member-message {
+        text-align: left;
+        line-height: 1.65;
+    }
+
+    .team-container,
+    .modern-hero,
+    .project-context-layout,
+    .insight-cards-with-images,
+    .principles-board {
+        min-width: 0;
+    }
+
+    .team-member-card,
+    .team-member-overlay,
+    .article-modal {
+        min-width: 0;
+    }
+
+    @media (max-width: 768px) {
+        .development-team-section .team-container {
+            grid-template-columns: repeat(2, minmax(160px, 1fr)) !important;
+            max-width: 560px !important;
+        }
+
+        .development-team-section .team-member-card {
+            height: 320px !important;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .development-team-section .team-container {
+            grid-template-columns: 1fr !important;
+            max-width: 280px !important;
+        }
+
+        .project-context-layout,
+        .insight-cards-with-images,
+        .principles-board,
+        .timeline-step {
+            grid-template-columns: 1fr !important;
+        }
+
+        .principle-item {
+            grid-template-columns: 2.5rem minmax(0, 1fr) !important;
+        }
+    }
+
+    /* Keep the refined team grid, but use the previous compact pop-up shape. */
+    .development-team-section .team-member-overlay {
+        width: min(480px, calc(100vw - 2rem)) !important;
+        max-height: calc(100vh - 2rem) !important;
+        border-radius: 1.75rem !important;
+    }
+
+    .development-team-section .team-member-overlay::before {
+        border-radius: 1.75rem 1.75rem 0 0 !important;
+    }
+
+    .development-team-section .team-member-overlay-content-wrapper {
+        padding: 2rem !important;
     }
 </style>
 {% endblock %}
@@ -1082,7 +1889,7 @@
         <div class="col-lg-7">
             <span class="modern-chip mb-3" style="display: inline-block;">About PABASA</span>
                     <h1 class="h2 mb-3">A research-built reading platform shaped by classroom needs.</h1>
-                    <p class="text-secondary mb-3" style="text-align: justify;">PABASA began as a  research effort focused on one practical problem: helping reading assessment become easier to run, easier to review, and more useful for classroom decisions.</p>
+                    <p class="text-secondary mb-3" style="text-align: justify;">PABASA began as a research effort focused on one practical problem: helping reading assessment become easier to run, easier to review, and more useful for classroom decisions.</p>
             <p class="mb-0" style="text-align: justify;">This page highlights the project context, design principles, development path, and the people responsible for turning the idea into a working web application.</p>
         </div>
         <div class="col-lg-5">
@@ -1104,6 +1911,7 @@
         <article class="insight-card-image">
             <div class="card-image-wrapper">
                 <img src="{% static 'pabasa_app/images/school_paper.jpg' %}" alt="School Paper" />
+                <button type="button" class="insight-read-more" data-article-open="readingChecksArticleModal">Read More</button>
             </div>
             <div class="card-body">
                 <span class="card-label">Problem</span>
@@ -1116,11 +1924,12 @@
         <article class="insight-card-image">
             <div class="card-image-wrapper">
                 <img src="{% static 'pabasa_app/images/class_management.jpg' %}" alt="Class Management" />
+                <button type="button" class="insight-read-more" data-article-open="workflowArticleModal">Read More</button>
             </div>
             <div class="card-body">
                 <span class="card-label">Approach</span>
                 <h3>Make the workflow focused</h3>
-                <p>The project keeps the experience centered on reading levels, guided tasks, and summaries that help teachers decide what comes next.</p>
+                <p>The project keeps the experience centered on reading levels and summaries that help teachers decide what comes next.</p>
                 <div class="card-meta">Product direction</div>
             </div>
         </article>
@@ -1128,6 +1937,7 @@
         <article class="insight-card-image">
             <div class="card-image-wrapper">
                 <img src="{% static 'pabasa_app/images/lit_tool.jpg' %}" alt="Literacy Tool" />
+                <button type="button" class="insight-read-more" data-article-open="followUpArticleModal">Read More</button>
             </div>
             <div class="card-body">
                 <span class="card-label">Outcome</span>
@@ -1139,41 +1949,193 @@
     </div>
 </section>
 
+<div class="article-modal-backdrop" id="readingChecksArticleModal" aria-hidden="true">
+    <article class="article-modal" role="dialog" aria-modal="true" aria-labelledby="readingChecksArticleTitle">
+        <button type="button" class="article-modal-close" data-article-close aria-label="Close article">&times;</button>
+        <header class="article-modal-header">
+            <div class="article-header-copy">
+                <span class="article-kicker">Article by PABASA</span>
+                <h2 id="readingChecksArticleTitle">Reading Checks Take Time</h2>
+                <p class="article-deck">Why PABASA was built to support faster, more structured, and more useful reading assessment workflows for teachers.</p>
+                <div class="article-meta" aria-label="Article details">
+                    <span class="article-meta-item">
+                        <span class="article-author-mark">
+                            <img src="{% static 'pabasa_app/images/palacios.jpg' %}" alt="Dona Palacios">
+                        </span>
+                        <a class="article-author-link" href="#development-team-palacios" data-palacios-link>Dona Palacios</a>
+                    </span>
+                    <span class="article-meta-item">PABASA Research Notes</span>
+                    <span class="article-meta-item">5 min read</span>
+                </div>
+            </div>
+            <figure class="article-hero-image">
+                <img src="{% static 'pabasa_app/images/school_paper.jpg' %}" alt="Reading assessment materials on paper">
+                <figcaption class="article-hero-caption">Classroom reading checks require careful observation, documentation, and follow-up.</figcaption>
+            </figure>
+        </header>
+
+        <div class="article-content">
+            <div class="article-body">
+                <p>Reading is one of the most important skills teachers assess, as it forms the foundation for learning across all subjects. Effective and efficient methods for evaluating students are more crucial than ever, particularly given the increasing emphasis on literacy. To accurately monitor and evaluate a student's reading ability, teachers must do more than simply determine whether a student can read words correctly. They must observe reading fluency, identify pronunciation and decoding errors, assess comprehension and vocabulary skills, and provide meaningful feedback. In addition, teachers often document observations and analyze assessment results to identify learning gaps and determine appropriate instructional interventions. As a result, reading assessments require significant time and attention (Davis, 2024).</p>
+
+                <p>During the researcher's data-gathering process, it was revealed that schools often conduct reading assessments manually, requiring teachers to evaluate students individually to ensure accuracy and reliability. However, manual assessment is inherently time-consuming because teachers must check, evaluate, and compare student performance, which becomes increasingly difficult to manage in large classrooms (Norova &amp; Asrorov, 2021). While traditional assessment methods allow teachers to handle multiple learners within limited time, they still involve substantial effort in scoring and documentation, contributing to longer evaluation periods (Davis, 2024).</p>
+
+                <p>The assessment process becomes even more demanding when teachers conduct progress monitoring, record student performance, and interpret results to guide instructional decisions. Beyond simple scoring, teachers must analyze student strengths and weaknesses to ensure accurate evaluation of reading development (Norova &amp; Asrorov, 2021). These responsibilities increase workload and limit the number of students that can be assessed within a given time frame (Davis, 2024).</p>
+
+                <p>Unlike automated systems, reading evaluations are typically conducted manually, requiring teachers to listen, observe, and document performance for each student. This repetitive process makes reading checks particularly time-intensive in classrooms with large class sizes. In addition, alternative or performance-based assessments require even more detailed judgment and structured criteria, further increasing the time needed for evaluation (Norova &amp; Asrorov, 2021). As teachers balance multiple responsibilities such as lesson planning and classroom management, reading assessment becomes even more demanding, especially when supporting learners who require additional guidance (Extramarks, 2025).</p>
+
+                <p>That is why, in PABASA, we aim to address the time-intensive nature of reading checks by supporting a more efficient and structured assessment process for teachers. Our solution allows teachers to evaluate up to 10 students more quickly without sacrificing accuracy, using tools that track fluency and decoding in real time. By automating data recording and providing instant insights, PABASA helps teachers identify learning gaps, monitor student progress, and plan interventions more effectively - saving valuable classroom time while maintaining high-quality assessments.</p>
+            </div>
+
+            <section class="article-references" aria-labelledby="readingChecksReferences">
+                <h3 id="readingChecksReferences">References</h3>
+                <p><a href="https://literacylightbulb.com/how-to-conduct-effective-reading-assessments/" target="_blank" rel="noopener noreferrer">Davis, C. (2024, June 18). How to Conduct Effective Reading Assessments. Literacy Lightbulb.</a></p>
+                <p><a href="https://www.extramarks.com/blogs/teachers/assessment-challenges/" target="_blank" rel="noopener noreferrer">Extramarks. (2025). Challenges faced during manual student assessments in schools. Extramarks Assessment Centre Blog.</a></p>
+                <p><a href="https://papers.econferenceglobe.com/index.php/ecg/article/view/250" target="_blank" rel="noopener noreferrer">Mekhri Bakhtiyorovna NOROVA, &amp; Asrorov Haydarali. (2021). ADVANTAGES AND DISADVANTAGES OF TRADITIONAL AND ALTERNATIVE WAYS OF ASSESSMENT. E-Conference Globe, 195-200.</a></p>
+            </section>
+        </div>
+    </article>
+</div>
+
+<div class="article-modal-backdrop" id="workflowArticleModal" aria-hidden="true">
+    <article class="article-modal" role="dialog" aria-modal="true" aria-labelledby="workflowArticleTitle">
+        <button type="button" class="article-modal-close" data-article-close aria-label="Close article">&times;</button>
+        <header class="article-modal-header">
+            <div class="article-header-copy">
+                <span class="article-kicker">Article by PABASA</span>
+                <h2 id="workflowArticleTitle">Make the Workflow Focused</h2>
+                <p class="article-deck">How structured reading levels and consistent assessment steps help teachers make clearer instructional decisions.</p>
+                <div class="article-meta" aria-label="Article details">
+                    <span class="article-meta-item">
+                        <span class="article-author-mark">
+                            <img src="{% static 'pabasa_app/images/palacios.jpg' %}" alt="Dona Palacios">
+                        </span>
+                        <a class="article-author-link" href="#development-team-palacios" data-palacios-link>Dona Palacios</a>
+                    </span>
+                    <span class="article-meta-item">PABASA Research Notes</span>
+                    <span class="article-meta-item">6 min read</span>
+                </div>
+            </div>
+            <figure class="article-hero-image">
+                <img src="{% static 'pabasa_app/images/class_management.jpg' %}" alt="Teacher managing classroom reading assessment">
+                <figcaption class="article-hero-caption">A focused workflow helps teachers assess reading skills with clearer steps and more consistent results.</figcaption>
+            </figure>
+        </header>
+
+        <div class="article-content">
+            <div class="article-body">
+                <p>Reading assessment is often manual and fragmented, requiring teachers to evaluate multiple skills such as fluency, decoding, and comprehension within a single evaluation process (National Reading Panel, 2000; Snow, 2002). Because reading is a multi-component skill, assessment places a high cognitive and interpretive demand on teachers, as they must analyze performance and provide feedback simultaneously (Brookhart, 2013). This makes reading checks both time-intensive and mentally demanding, especially in classrooms with large student populations where individual assessment time is limited (OECD, 2013; Black &amp; Wiliam, 1998).</p>
+
+                <p>To improve effectiveness, reading assessment should be built around structured reading levels that reflect students' developmental stages. Research shows that learners progress more effectively when instruction and assessment are aligned with their current skill level rather than delivered through a one-size-fits-all approach (Snow, 2002; National Reading Panel, 2000). Level-based progression ensures that assessment is purposeful and supports gradual skill development instead of random or inconsistent evaluation.</p>
+
+                <p>A structured workflow further strengthens the assessment process by reducing decision fatigue and standardizing evaluation steps. When teachers follow a clear sequence of procedures, it improves scoring consistency and reduces variability in judgment. This aligns with research on formative assessment, which emphasizes that structured systems enhance reliability and teacher effectiveness in classroom evaluation (Stiggins, 2005; Brookhart, 2013).</p>
+
+                <p>In addition, structured assessment processes improve fairness and reliability in student evaluation. Manual grading can vary due to subjective interpretation, but standardized procedures help ensure more consistent results across different students and classroom conditions (Harlen, 2007). This consistency is essential for accurate tracking of reading development over time.</p>
+
+                <p>To address these challenges, PABASA introduces a more focused, structured, and decision-driven assessment process for teachers. By organizing evaluation around reading levels, the system reduces fragmentation in manual assessment and standardizes how student performance is measured. This workflow minimizes teacher cognitive load while improving consistency and fairness. More importantly, it converts assessment results into clear, actionable summaries that support instructional decisions, enabling teachers to quickly identify student progress and determine appropriate next steps in learning.</p>
+            </div>
+
+            <section class="article-references" aria-labelledby="workflowReferences">
+                <h3 id="workflowReferences">References</h3>
+                <p><a href="https://doi.org/10.1080/0969595980050102" target="_blank" rel="noopener noreferrer">Black, P., &amp; Wiliam, D. (1998). Assessment and Classroom Learning. Assessment in Education: Principles, Policy &amp; Practice, 5(1), 7-74.</a></p>
+                <p><a href="https://www.ascd.org/books/how-to-create-and-use-rubrics-for-formative-assessment-and-grading?variant=112001" target="_blank" rel="noopener noreferrer">Brookhart, S. (2013). How to Create and Use Rubrics for Formative Assessment and Grading. ASCD.</a></p>
+                <p><a href="https://doi.org/10.4135/9781446214695" target="_blank" rel="noopener noreferrer">Harlen, W. (2007). Assessment of Learning Assessment of learning. Assessment of Learning.</a></p>
+                <p><a href="https://doi.org/10.1215/00031283-2322610" target="_blank" rel="noopener noreferrer">National Reading Panel. (2000). Teaching Children to Read: An Evidence-Based Assessment of the Scientific Research Literature on Reading and its Implications for Reading Instruction. American Speech, 88(1).</a></p>
+                <p><a href="https://www.researchgate.net/publication/247341362_Reading_for_Understanding_Toward_an_RD_Program_in_Reading_Comprehension" target="_blank" rel="noopener noreferrer">Snow, C. E. (2002, January 1). Reading for Understanding:: Toward an R&amp;D Program in Reading Comprehension.</a></p>
+                <p><a href="https://doi.org/10.1177/003172170508700414" target="_blank" rel="noopener noreferrer">Stiggins, R. (2005). From Formative Assessment to Assessment for Learning: A Path to Success in Standards-Based Schools. Phi Delta Kappan, 87(4), 324-328.</a></p>
+                <p><a href="https://nces.ed.gov/surveys/talis/talis2013/index.asp" target="_blank" rel="noopener noreferrer">Teaching and Learning International Survey (TALIS) - Welcome to the TALIS 2013 Results. (2026). Ed.gov; National Center for Education Statistics.</a></p>
+            </section>
+        </div>
+    </article>
+</div>
+
+<div class="article-modal-backdrop" id="followUpArticleModal" aria-hidden="true">
+    <article class="article-modal" role="dialog" aria-modal="true" aria-labelledby="followUpArticleTitle">
+        <button type="button" class="article-modal-close" data-article-close aria-label="Close article">&times;</button>
+        <header class="article-modal-header">
+            <div class="article-header-copy">
+                <span class="article-kicker">Article by PABASA</span>
+                <h2 id="followUpArticleTitle">Support Better Follow-Up</h2>
+                <p class="article-deck">How meaningful insights, timely feedback, and progress monitoring help teachers guide learners after assessment.</p>
+                <div class="article-meta" aria-label="Article details">
+                    <span class="article-meta-item">
+                        <span class="article-author-mark">
+                            <img src="{% static 'pabasa_app/images/palacios.jpg' %}" alt="Dona Palacios">
+                        </span>
+                        <a class="article-author-link" href="#development-team-palacios" data-palacios-link>Dona Palacios</a>
+                    </span>
+                    <span class="article-meta-item">PABASA Research Notes</span>
+                    <span class="article-meta-item">6 min read</span>
+                </div>
+            </div>
+            <figure class="article-hero-image">
+                <img src="{% static 'pabasa_app/images/lit_tool.jpg' %}" alt="Literacy tool used for student follow-up">
+                <figcaption class="article-hero-caption">Assessment insights become more useful when they guide feedback, practice, and intervention.</figcaption>
+            </figure>
+        </header>
+
+        <div class="article-content">
+            <div class="article-body">
+                <p>Effective learning does not end when an assessment is completed. Research has consistently shown that feedback has a significant positive impact on student achievement, making follow-up an essential part of the learning process (Wisniewski, Zierer, &amp; Hattie, 2020). One of the most valuable outcomes of our system is its ability to support better follow-up by providing educators with meaningful insights into student performance. Rather than replacing teacher expertise and judgment, the system serves as a tool that helps teachers make more informed decisions about how to support their learners.</p>
+
+                <p>By analyzing assessment results, the system can highlight patterns that may otherwise be difficult to identify, especially in larger classes. Teachers can quickly determine which students may need additional guidance, reinforcement, or intervention. Educational analytics research suggests that performance monitoring can help identify at-risk learners early, allowing educators to provide timely support before academic difficulties become more serious (Aulck et al., 2020).</p>
+
+                <p>The information generated by the system also enables more personalized feedback. Instead of relying solely on general comments, teachers can tailor their recommendations based on a student's individual strengths and areas for improvement. This personalized approach helps learners better understand their progress and focus on specific skills that need development. The importance of timely feedback is further supported by a Philippine study, which found that technology-based assessments providing prompt feedback improved the performance of struggling Grade 10 mathematics students and positively influenced their learning experience (Avenir et al., 2025).</p>
+
+                <p>In addition, the system supports targeted practice and remediation. Educators can use the insights provided to recommend appropriate activities, review materials, or learning strategies that align with each student's needs. Research has shown that assessment data can be used to guide remediation efforts and targeted interventions, helping address learning gaps and improve student achievement (Avenir et al., 2025).</p>
+
+                <p>Another important benefit is the ability to monitor progress over time. By comparing assessment results across multiple periods, teachers can evaluate whether interventions are working and make adjustments when necessary. This creates a continuous cycle of assessment, feedback, intervention, and improvement.</p>
+
+                <p>Ultimately, the goal is to empower educators with actionable information that strengthens teaching and learning. By providing a clearer starting point for feedback, practice, and intervention, the system helps ensure that every student receives the support needed to achieve academic success.</p>
+            </div>
+
+            <section class="article-references" aria-labelledby="followUpReferences">
+                <h3 id="followUpReferences">References</h3>
+                <p><a href="https://doi.org/10.48550/arxiv.1606.06364" target="_blank" rel="noopener noreferrer">Aulck, L., Velagapudi, N., Blumenstock, J., &amp; West, J. (2016). Predicting Student Dropout in Higher Education.</a></p>
+                <p><a href="https://ejournals.ph/article.php?id=31985" target="_blank" rel="noopener noreferrer">Avenir, C., Gumban, R., Lego, K. M., Ledylee Luceño, &amp; Luna, M. (2025). Timely Feedback through Technology-Based Assessment: Its Effectiveness on Student Performance in Algebraic Expressions. Psychology and Education: A Multidisciplinary Journal, 47(6), 1-1.</a></p>
+                <p><a href="https://doi.org/10.3389/fpsyg.2019.03087" target="_blank" rel="noopener noreferrer">Wisniewski, B., Zierer, K., &amp; Hattie, J. (2020). The Power of Feedback revisited: a meta-analysis of Educational Feedback Research. Frontiers in Psychology, 10(3087).</a></p>
+            </section>
+        </div>
+    </article>
+</div>
+
 <section class="pb-4 pb-md-5 fade-in-section">
-    <div class="about-section-header">
-        <span class="modern-chip mb-3">Build Principles</span>
-        <h2 class="h4">How the Team Made Design Decisions</h2>
-        <p>These principles guided the product and research work, keeping the project practical instead of adding features for their own sake.</p>
-    </div>
+    <div class="principles-board">
+        <aside class="principles-board-intro">
+            <span>Build Principles</span>
+            <h2 class="h4">How the Team Made Design Decisions</h2>
+            <p>These principles guided the product and research work, keeping the project practical instead of adding features for their own sake.</p>
+        </aside>
 
-    <div class="principles-list">
-        <div class="principle-item">
-            <div class="principle-number">01</div>
-            <div class="principle-content">
-                <span class="principle-label">Clarity</span>
-                <h3>Keep reading tasks understandable</h3>
-                <p>Learners should know what to read, what level they are practicing, and what the session is asking from them.</p>
-                <div class="principle-meta">Learner experience</div>
+        <div class="principles-list">
+            <div class="principle-item">
+                <div class="principle-number">01</div>
+                <div class="principle-content">
+                    <span class="principle-label">Clarity</span>
+                    <h3>Keep reading tasks understandable</h3>
+                    <p>Learners should know what to read, what level they are practicing, and what the session is asking from them.</p>
+                    <div class="principle-meta">Learner experience</div>
+                </div>
             </div>
-        </div>
 
-        <div class="principle-item">
-            <div class="principle-number">02</div>
-            <div class="principle-content">
-                <span class="principle-label">Usefulness</span>
-                <h3>Make results easier to act on</h3>
-                <p>Progress information should help teachers identify patterns and next steps without creating more paperwork.</p>
-                <div class="principle-meta">Teacher workflow</div>
+            <div class="principle-item">
+                <div class="principle-number">02</div>
+                <div class="principle-content">
+                    <span class="principle-label">Usefulness</span>
+                    <h3>Make results easier to act on</h3>
+                    <p>Progress information should help teachers identify patterns and next steps without creating more paperwork.</p>
+                    <div class="principle-meta">Teacher workflow</div>
+                </div>
             </div>
-        </div>
 
-        <div class="principle-item">
-            <div class="principle-number">03</div>
-            <div class="principle-content">
-                <span class="principle-label">Confidence</span>
-                <h3>Support practice without pressure</h3>
-                <p>The assessment experience should encourage repeated reading practice while still producing useful observations.</p>
-                <div class="principle-meta">Student support</div>
+            <div class="principle-item">
+                <div class="principle-number">03</div>
+                <div class="principle-content">
+                    <span class="principle-label">Confidence</span>
+                    <h3>Support practice without pressure</h3>
+                    <p>The assessment experience should encourage repeated reading practice while still producing useful observations.</p>
+                    <div class="principle-meta">Student support</div>
+                </div>
             </div>
         </div>
     </div>
@@ -1239,9 +2201,10 @@
     </div>
 </section>
 
-<section class="pb-4 fade-in-section">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-3 gap-2">
-            <div>
+<section class="development-team-section pb-4 fade-in-section">
+            <div class="about-section-header">
+                <span class="modern-chip mb-3">Project Team</span>
+        
                 <h2 class="h4 mb-1">Development Team</h2>
                 <p class="text-secondary mb-0">BET-CPET 2026 - the researchers and developers working behind PABASA to support reading and learning.</p>
             </div>
@@ -1260,7 +2223,7 @@
         <div class="team-member-overlay">
             <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <h3 class="team-member-name">Leonardo Basco III</h3>
+                    <h3 class="team-member-name">Leonardo III L. Basco</h3>
                     <p class="team-member-role-hover">Research Analyst</p>
                     <p class="team-member-bio">Leads reading analytics and learning outcome interpretation</p>
                     <p class="team-member-email"><a href="mailto:leonardoiii.basco@gsfe.tupcavite.edu.ph">leonardoiii.basco@gsfe.tupcavite.edu.ph</a></p>
@@ -1289,7 +2252,7 @@
                 <p>We believe every student's data tells a story of growth. Through careful analysis of reading patterns, we help teachers see exactly how students are improving—not just in speed, but in confidence. Your progress matters, and we're here to measure it fairly.</p>
                 <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e5e7eb;">
                 <p style="margin-bottom: 0.5rem;"><strong>Email:</strong></p>
-                <p style="color: #6b7280; font-size: 0.95rem; margin: 0.5rem;"><a href="mailto:leonardoiii.basco@gsfe.tupcavite.edu.ph" style="color: #6e10ee; text-decoration: none;">leonardoiii.basco@gsfe.tupcavite.edu.ph</a></p>
+                <p style="color: #6b7280; font-size: 0.95rem; margin: 0.5rem;"><a href="mailto:leonardoiii.basco@gsfe.tupcavite.edu.ph" style="color: #164e63; text-decoration: none;">leonardoiii.basco@gsfe.tupcavite.edu.ph</a></p>
             </div>
         </div>
     </div>
@@ -1307,7 +2270,7 @@
         <div class="team-member-overlay">
             <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <h3 class="team-member-name">Lady Caroline Dorongon</h3>
+                    <h3 class="team-member-name">Lady Caroline I. Dorongon</h3>
                     <p class="team-member-role-hover">Learning Experience Researcher</p>
                     <p class="team-member-bio">Designs engaging user interfaces and learning pathways</p>
                     <p class="team-member-email"><a href="mailto:ladycaroline.dorongon@gsfe.tupcavite.edu.ph">ladycaroline.dorongon@gsfe.tupcavite.edu.ph</a></p>
@@ -1336,7 +2299,7 @@
                 <p>Learning should feel natural and engaging—not stressful. We've designed every interaction in PABASA to keep you motivated and help you see yourself improving. When you enjoy reading, you read more. And when you read more, you become a better reader. That's our mission for you.</p>
                 <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e5e7eb;">
                 <p style="margin-bottom: 0.5rem;"><strong>Email:</strong></p>
-                <p style="color: #6b7280; font-size: 0.95rem; margin: 0.5rem;"><a href="mailto:ladycaroline.dorongon@gsfe.tupcavite.edu.ph" style="color: #6e10ee; text-decoration: none;">ladycaroline.dorongon@gsfe.tupcavite.edu.ph</a></p>
+                <p style="color: #6b7280; font-size: 0.95rem; margin: 0.5rem;"><a href="mailto:ladycaroline.dorongon@gsfe.tupcavite.edu.ph" style="color: #164e63; text-decoration: none;">ladycaroline.dorongon@gsfe.tupcavite.edu.ph</a></p>
             </div>
         </div>
     </div>
@@ -1354,7 +2317,7 @@
         <div class="team-member-overlay">
             <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <h3 class="team-member-name">Amiel John Padasay</h3>
+                    <h3 class="team-member-name">Amiel John R. Padasay</h3>
                     <p class="team-member-role-hover">Speech Assessment Researcher</p>
                     <p class="team-member-bio">Specializes in phonetic analysis and vocal reading assessment</p>
                     <p class="team-member-email"><a href="mailto:amieljohn.padasay@gsfe.tupcavite.edu.ph">amieljohn.padasay@gsfe.tupcavite.edu.ph</a></p>
@@ -1383,13 +2346,13 @@
                 <p>Your voice matters! When you read aloud in PABASA, we're not just listening—we're learning about your fluency, your confidence, and how we can help you become an even stronger reader. We celebrate every attempt and every improvement you make.</p>
                 <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e5e7eb;">
                 <p style="margin-bottom: 0.5rem;"><strong>Email:</strong></p>
-                <p style="margin-bottom: 1rem;"><a href="mailto:amieljohn.padasay@gsfe.tupcavite.edu.ph" style="color: #6e10ee; text-decoration: none;">amieljohn.padasay@gsfe.tupcavite.edu.ph</a></p>
+                <p style="margin-bottom: 1rem;"><a href="mailto:amieljohn.padasay@gsfe.tupcavite.edu.ph" style="color: #164e63; text-decoration: none;">amieljohn.padasay@gsfe.tupcavite.edu.ph</a></p>
             </div>
         </div>
     </div>
 
     <!-- Card 4 -->
-    <article class="team-member-card" data-member="palacios" data-number="04">
+    <article class="team-member-card" id="development-team-palacios" data-member="palacios" data-number="04">
         <img src="{% static 'pabasa_app/images/palacios.jpg' %}" 
              alt="Dona Palacios">
         <div class="team-member-initial-overlay">
@@ -1401,7 +2364,7 @@
         <div class="team-member-overlay">
             <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <h3 class="team-member-name">Dona Palacios</h3>
+                    <h3 class="team-member-name">Dona Flor Saachi V. Palacios</h3>
                     <p class="team-member-role-hover">Literacy Content Strategist</p>
                     <p class="team-member-bio">Curates reading materials and curriculum progression strategies</p>
                     <p class="team-member-email"><a href="mailto:donaflor.palacios@gsfe.tupcavite.edu.ph">donaflor.palacios@gsfe.tupcavite.edu.ph</a></p>
@@ -1430,7 +2393,7 @@
                 <p>We hope students take away confidence and enjoyment in reading from using our system. By practicing with words that match their level, they can improve their fluency, accuracy, and ability to recognize and pronounce words correctly. More importantly, we want them to see reading as a skill they can master, helping them feel capable and motivated to continue learning and exploring new words.</p>
                 <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e5e7eb;">
                 <p style="margin-bottom: 0.5rem;"><strong>Email:</strong></p>
-                <p style="margin-bottom: 1rem;"><a href="mailto:donaflor.palacios@gsfe.tupcavite.edu.ph" style="color: #6e10ee; text-decoration: none;">donaflor.palacios@gsfe.tupcavite.edu.ph</a></p>
+                <p style="margin-bottom: 1rem;"><a href="mailto:donaflor.palacios@gsfe.tupcavite.edu.ph" style="color: #164e63; text-decoration: none;">donaflor.palacios@gsfe.tupcavite.edu.ph</a></p>
             </div>
         </div>
     </div>
@@ -1448,7 +2411,7 @@
         <div class="team-member-overlay">
             <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <h3 class="team-member-name">Reyna Marie Santos</h3>
+                    <h3 class="team-member-name">Reyna Marie E. Santos</h3>
                     <p class="team-member-role-hover">Feedback Systems Researcher</p>
                     <p class="team-member-bio">Creates constructive feedback mechanisms and motivational systems</p>
                     <p class="team-member-email"><a href="mailto:reynamarie.santos@gsfe.tupcavite.edu.ph">reynamarie.santos@gsfe.tupcavite.edu.ph</a></p>
@@ -1477,7 +2440,7 @@
                 <p>You will receive clear, honest feedback that helps you understand what you're doing well and where you can improve. We know that constructive feedback builds confidence. We're here to support you, celebrate your wins, and help you see that every mistake is just a stepping stone to becoming a better reader.</p>
                 <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e5e7eb;">
                 <p style="margin-bottom: 0.5rem;"><strong>Email:</strong></p>
-                <p style="margin-bottom: 1rem;"><a href="mailto:reynamarie.santos@gsfe.tupcavite.edu.ph" style="color: #6e10ee; text-decoration: none;">reynamarie.santos@gsfe.tupcavite.edu.ph</a></p>
+                <p style="margin-bottom: 1rem;"><a href="mailto:reynamarie.santos@gsfe.tupcavite.edu.ph" style="color: #164e63; text-decoration: none;">reynamarie.santos@gsfe.tupcavite.edu.ph</a></p>
             </div>
         </div>
     </div>
@@ -1495,7 +2458,7 @@
         <div class="team-member-overlay">
             <div class="team-member-overlay-content-wrapper">
                 <div class="team-member-overlay-text">
-                    <h3 class="team-member-name">Maeven Tapa</h3>
+                    <h3 class="team-member-name">Maeven L. Tapa</h3>
                     <p class="team-member-role-hover">Assessment Experience Researcher</p>
                     <p class="team-member-bio">Develops student-centered assessment experiences and interfaces</p>
                     <p class="team-member-email"><a href="mailto:maeven.tapa@gsfe.tupcavite.edu.ph">maeven.tapa@gsfe.tupcavite.edu.ph</a></p>
@@ -1524,7 +2487,7 @@
                 <p>Assessments don't have to be scary! With PABASA, you'll experience testing as a natural part of learning. We've designed each assessment to be clear, fair, and supportive—showing you exactly what you know and helping you see the progress you're making toward becoming a confident, fluent reader.</p>
                 <hr style="margin: 1rem 0; border: none; border-top: 1px solid #e5e7eb;">
                 <p style="margin-bottom: 0.5rem;"><strong>Email:</strong></p>
-                <p style="margin-bottom: 1rem;"><a href="mailto:maeven.tapa@gsfe.tupcavite.edu.ph" style="color: #6e10ee; text-decoration: none;">maeven.tapa@gsfe.tupcavite.edu.ph</a></p>
+                <p style="margin-bottom: 1rem;"><a href="mailto:maeven.tapa@gsfe.tupcavite.edu.ph" style="color: #164e63; text-decoration: none;">maeven.tapa@gsfe.tupcavite.edu.ph</a></p>
             </div>
         </div>
     </div>
@@ -1532,6 +2495,78 @@
 </section>
 
 <script>
+    const articleModals = document.querySelectorAll('.article-modal-backdrop');
+    const articleOpenButtons = document.querySelectorAll('[data-article-open]');
+    const articleCloseButtons = document.querySelectorAll('[data-article-close]');
+
+    function openArticleModal(modalId) {
+        const articleModal = document.getElementById(modalId || 'readingChecksArticleModal');
+
+        if (!articleModal) {
+            return;
+        }
+
+        closeArticleModal();
+        articleModal.classList.add('active');
+        articleModal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+
+        const closeButton = articleModal.querySelector('[data-article-close]');
+        if (closeButton) {
+            closeButton.focus();
+        }
+    }
+
+    function closeArticleModal() {
+        articleModals.forEach(modal => {
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+        });
+        document.body.style.overflow = '';
+    }
+
+    articleOpenButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openArticleModal(this.dataset.articleOpen);
+        });
+    });
+
+    articleCloseButtons.forEach(button => {
+        button.addEventListener('click', closeArticleModal);
+    });
+
+    articleModals.forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeArticleModal();
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-palacios-link]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            const target = document.getElementById('development-team-palacios');
+
+            if (!target) {
+                return;
+            }
+
+            e.preventDefault();
+            closeArticleModal();
+
+            setTimeout(() => {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.classList.add('active');
+                const overlay = target.querySelector('.team-member-overlay');
+                if (overlay) {
+                    overlay.classList.add('active');
+                }
+                history.replaceState(null, '', '#development-team-palacios');
+            }, 120);
+        });
+    });
+
     // Handle click to show/hide expanded card (toggle)
     document.querySelectorAll('.team-member-card').forEach(card => {
         card.addEventListener('click', function(e) {
@@ -1556,6 +2591,7 @@
     // Handle Escape key to close overlay
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
+            closeArticleModal();
             document.querySelectorAll('.team-member-card').forEach(card => {
                 card.classList.remove('active');
                 card.querySelector('.team-member-overlay').classList.remove('active');
