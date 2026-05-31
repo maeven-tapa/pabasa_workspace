@@ -1670,17 +1670,179 @@
         border-right: 0;
     }
 
-    .workflow-step span {
+    .workflow-step-number {
         color: #b45309;
         display: block;
         font-size: 0.76rem;
         font-weight: 900;
         letter-spacing: 0.1em;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.55rem;
+    }
+
+    .workflow-step-icon {
+        align-items: center;
+        background: #eef5f2;
+        border: 1px solid rgba(22, 78, 99, 0.14);
+        border-radius: 0.8rem;
+        color: var(--info-30);
+        display: inline-flex;
+        font-size: 1.15rem;
+        height: 2.65rem;
+        justify-content: center;
+        margin-bottom: 0.8rem;
+        width: 2.65rem;
     }
 
     .workflow-step h3 {
         margin-bottom: 0.45rem;
+    }
+
+    .pabasa-venn-shell {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.82fr) minmax(320px, 1.18fr);
+        gap: clamp(2rem, 5vw, 4rem);
+        align-items: center;
+        padding: clamp(1.2rem, 4vw, 2.5rem) 0;
+    }
+
+    .pabasa-venn-copy {
+        max-width: 620px;
+    }
+
+    .pabasa-venn-copy h2 {
+        margin-bottom: 0.75rem;
+    }
+
+    .pabasa-venn-copy p {
+        color: #64748b;
+        font-size: 0.95rem;
+        line-height: 1.65;
+        margin: 0;
+    }
+
+    .pabasa-venn-points {
+        display: grid;
+        gap: 0.7rem;
+        list-style: none;
+        margin: 1.25rem 0 0;
+        padding: 0;
+    }
+
+    .pabasa-venn-points li {
+        align-items: center;
+        color: #334155;
+        display: flex;
+        font-size: 0.9rem;
+        font-weight: 650;
+        gap: 0.7rem;
+        line-height: 1.45;
+    }
+
+    .pabasa-venn-points li::before {
+        border-radius: 999px;
+        content: '';
+        flex: 0 0 auto;
+        height: 0.65rem;
+        width: 0.65rem;
+    }
+
+    .pabasa-venn-points li:first-child::before {
+        background: var(--info-30);
+    }
+
+    .pabasa-venn-points li:last-child::before {
+        background: var(--info-10);
+    }
+
+    .pabasa-venn {
+        justify-self: center;
+        min-height: 540px;
+        position: relative;
+        width: min(100%, 500px);
+    }
+
+    .pabasa-venn-circle {
+        align-items: center;
+        border-radius: 999px;
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        left: 50%;
+        padding: 2rem;
+        position: absolute;
+        aspect-ratio: 1 / 1;
+        text-align: center;
+        transform: translateX(-50%);
+        width: min(92%, 390px);
+    }
+
+    .pabasa-venn-circle.top {
+        justify-content: flex-start;
+        padding-top: 3.2rem;
+    }
+
+    .pabasa-venn-circle.bottom {
+        justify-content: flex-end;
+        padding-bottom: 3.2rem;
+    }
+
+    .pabasa-venn-circle strong {
+        display: block;
+        font-size: clamp(1.1rem, 2.4vw, 1.45rem);
+        font-weight: 850;
+        margin-bottom: 0.5rem;
+    }
+
+    .pabasa-venn-circle span {
+        display: block;
+        font-size: 0.88rem;
+        line-height: 1.45;
+        max-width: 210px;
+        opacity: 0.92;
+    }
+
+    .pabasa-venn-circle.top {
+        background: rgba(22, 78, 99, 0.9);
+        box-shadow: 0 22px 44px rgba(22, 78, 99, 0.22);
+        top: 0;
+    }
+
+    .pabasa-venn-circle.bottom {
+        background: rgba(217, 119, 6, 0.88);
+        bottom: 0;
+        box-shadow: 0 22px 44px rgba(217, 119, 6, 0.2);
+    }
+
+    .pabasa-venn-center {
+        color: #ffffff;
+        left: 50%;
+        padding: 0;
+        position: absolute;
+        text-align: center;
+        text-shadow: 0 3px 12px rgba(15, 23, 42, 0.4);
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(54%, 190px);
+        z-index: 2;
+    }
+
+    .pabasa-venn-center strong {
+        color: #ffffff;
+        display: block;
+        font-size: clamp(1.1rem, 2.4vw, 1.55rem);
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.25rem;
+    }
+
+    .pabasa-venn-center span {
+        color: rgba(255, 255, 255, 0.9);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 750;
+        line-height: 1.4;
+        text-transform: uppercase;
     }
 
     .audience-split {
@@ -1742,7 +1904,25 @@
         background: #ffffff;
         border: 1px solid rgba(148, 163, 184, 0.28);
         border-radius: 0.8rem;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
         padding: 0.9rem 1rem;
+        text-align: left;
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        width: 100%;
+    }
+
+    .level-preview-tab:hover,
+    .level-preview-tab:focus-visible {
+        border-color: rgba(22, 78, 99, 0.38);
+        box-shadow: 0 12px 24px rgba(22, 78, 99, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .level-preview-tab:focus-visible {
+        outline: 3px solid rgba(217, 119, 6, 0.28);
+        outline-offset: 2px;
     }
 
     .level-preview-tab strong {
@@ -1801,6 +1981,11 @@
         margin-bottom: 1rem;
     }
 
+    .level-preview-task.is-paragraph strong {
+        font-size: clamp(1.05rem, 2.6vw, 1.55rem);
+        line-height: 1.42;
+    }
+
     .level-preview-metrics {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1830,6 +2015,98 @@
         font-weight: 750;
     }
 
+    .teacher-dashboard-preview {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        border-radius: 1rem;
+        box-shadow: 0 14px 38px rgba(15, 23, 42, 0.07);
+        display: grid;
+        grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+        gap: 1.25rem;
+        padding: clamp(1.25rem, 3vw, 2rem);
+    }
+
+    .dashboard-preview-copy h2 {
+        margin-bottom: 0.75rem;
+    }
+
+    .dashboard-preview-copy p {
+        color: #64748b;
+        line-height: 1.65;
+        margin: 0;
+    }
+
+    .dashboard-preview-panel {
+        background: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 0.95rem;
+        overflow: hidden;
+    }
+
+    .dashboard-preview-topbar {
+        align-items: center;
+        background: #ffffff;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        display: flex;
+        justify-content: space-between;
+        padding: 0.85rem 1rem;
+    }
+
+    .dashboard-preview-topbar strong {
+        color: #0f172a;
+        font-size: 0.9rem;
+    }
+
+    .dashboard-preview-topbar span {
+        color: #64748b;
+        font-size: 0.76rem;
+        font-weight: 750;
+    }
+
+    .dashboard-preview-body {
+        display: grid;
+        gap: 0.8rem;
+        padding: 1rem;
+    }
+
+    .dashboard-metric-row {
+        align-items: center;
+        display: grid;
+        gap: 0.8rem;
+        grid-template-columns: 90px minmax(0, 1fr) 44px;
+    }
+
+    .dashboard-metric-row span {
+        color: #64748b;
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
+    .dashboard-bar {
+        background: #e2e8f0;
+        border-radius: 999px;
+        height: 0.6rem;
+        overflow: hidden;
+    }
+
+    .dashboard-bar i {
+        background: linear-gradient(90deg, var(--info-30), var(--info-10));
+        border-radius: inherit;
+        display: block;
+        height: 100%;
+    }
+
+    .dashboard-note {
+        background: #fff4df;
+        border: 1px solid rgba(217, 119, 6, 0.24);
+        border-radius: 0.85rem;
+        color: #8a4b05;
+        font-size: 0.84rem;
+        line-height: 1.5;
+        margin-top: 0.3rem;
+        padding: 0.85rem;
+    }
+
     @media (max-width: 992px) {
         .info-feature-strip {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1846,8 +2123,50 @@
         }
 
         .audience-split,
-        .level-preview-shell {
+        .level-preview-shell,
+        .pabasa-venn-shell,
+        .teacher-dashboard-preview {
             grid-template-columns: 1fr;
+        }
+
+        .pabasa-venn {
+            min-height: 500px;
+        }
+
+        
+    }
+
+    @media (max-width: 576px) {
+        .pabasa-venn {
+            min-height: 440px;
+            width: min(100%, 360px);
+        }
+
+        .pabasa-venn-circle {
+            padding-left: 1.4rem;
+            padding-right: 1.4rem;
+            width: min(94%, 310px);
+        }
+
+        .pabasa-venn-circle.top {
+            padding-top: 2.5rem;
+        }
+
+        .pabasa-venn-circle.bottom {
+            padding-bottom: 2.5rem;
+        }
+
+        .pabasa-venn-circle strong {
+            font-size: 1rem;
+        }
+
+        .pabasa-venn-circle span {
+            font-size: 0.78rem;
+            max-width: 180px;
+        }
+
+        .dashboard-metric-row {
+            grid-template-columns: 76px minmax(0, 1fr) 38px;
         }
     }
 
@@ -2000,19 +2319,19 @@
         <div class="info-hero-product-copy">
             <span class="modern-chip">Inside PABASA</span>
             <h1>A closer look at the reading workflow behind the platform.</h1>
-            <p>This page walks through the parts of PABASA that matter in practice: the demo experience, the school deployment context, reading levels, learner impact, and common setup questions.</p>
+            <p>This page walks through the parts of PABASA that matter in practice: the assessment flow, reading levels, session preparation, demo experience, school context, and common setup questions.</p>
             <div class="info-hero-actions">
                 <a class="btn btn-primary" href="#pabasa-demo">View Product Demo</a>
                 <a class="btn btn-outline-primary" href="{% url 'auth' %}">Open My Account</a>
             </div>
             <div class="info-proof-grid">
                 <div>
-                    <strong>Demo</strong>
-                    <span>Preview the assessment experience</span>
+                    <strong>Flow</strong>
+                    <span>Understand the assessment steps</span>
                 </div>
                 <div>
-                    <strong>Site</strong>
-                    <span>See the current school deployment</span>
+                    <strong>Levels</strong>
+                    <span>Compare word, sentence, and paragraph tasks</span>
                 </div>
                 <div>
                     <strong>FAQ</strong>
@@ -2039,27 +2358,32 @@
         </div>
         <div class="workflow-steps">
             <div class="workflow-step">
-                <span>01</span>
+                <div class="workflow-step-icon"><i class="bi bi-layers"></i></div>
+                <span class="workflow-step-number">01</span>
                 <h3>Choose Level</h3>
                 <p>Select word, sentence, or paragraph reading based on the learner's current skill.</p>
             </div>
             <div class="workflow-step">
-                <span>02</span>
+                <div class="workflow-step-icon"><i class="bi bi-mic"></i></div>
+                <span class="workflow-step-number">02</span>
                 <h3>Read Aloud</h3>
-                <p>The learner completes the reading task in a clear guided session.</p>
+                <p>The learner completes the reading task in a clear, focused session.</p>
             </div>
             <div class="workflow-step">
-                <span>03</span>
+                <div class="workflow-step-icon"><i class="bi bi-record-circle"></i></div>
+                <span class="workflow-step-number">03</span>
                 <h3>Record</h3>
                 <p>The session captures performance details for review and documentation.</p>
             </div>
             <div class="workflow-step">
-                <span>04</span>
+                <div class="workflow-step-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                <span class="workflow-step-number">04</span>
                 <h3>Review</h3>
                 <p>Teachers scan results to see fluency, accuracy, and progress patterns.</p>
             </div>
             <div class="workflow-step">
-                <span>05</span>
+                <div class="workflow-step-icon"><i class="bi bi-arrow-repeat"></i></div>
+                <span class="workflow-step-number">05</span>
                 <h3>Follow Up</h3>
                 <p>Insights help guide practice, feedback, and intervention planning.</p>
             </div>
@@ -2067,19 +2391,82 @@
     </div>
 </section>
 
-<section id="pabasa-demo" class="pb-4 pb-md-5 fade-in-section">
-    <div class="info-open-grid">
-        <div class="info-open-section">
-            <span class="modern-chip mb-3">Product Demo</span>
-            <h2>Watch PABASA in Action</h2>
-            <p class="text-secondary">See how a reading session can move from learner activity to teacher review in a focused classroom workflow.</p>
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="pabasa-venn-shell">
+        <div class="pabasa-venn-copy">
+            <span class="modern-chip mb-3">What Comes Together</span>
+            <h2>Reading practice meets teacher guidance.</h2>
+            <p>PABASA sits at the overlap of learner-centered reading activities and teacher-ready assessment support. One side keeps students practicing aloud with clear tasks, while the other helps teachers turn each session into usable progress information.</p>
+            <ul class="pabasa-venn-points">
+                <li>Clear reading tasks for every learner level.</li>
+                <li>Useful results teachers can act on after each session.</li>
+            </ul>
+        </div>
+        <div class="pabasa-venn" aria-label="PABASA combines learner reading practice and teacher assessment support">
+            <div class="pabasa-venn-circle top">
+                <strong>Learner Reading Practice</strong>
+                <span>Word, sentence, and paragraph activities that build confidence through oral reading.</span>
+            </div>
+            <div class="pabasa-venn-circle bottom">
+                <strong>Teacher Assessment Support</strong>
+                <span>Session structure, performance review, and follow-up cues for classroom decisions.</span>
+            </div>
+            <div class="pabasa-venn-center">
+                <strong>PABASA</strong>
+                <span>reading assessment</span>
+            </div>
+        </div>
+    </div>
+</section>
 
-            <div class="ratio ratio-16x9 info-media-frame">
-                <div class="demo-preview">
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="reading-levels">
+        <div class="reading-levels-header">
+            <span class="modern-chip mb-3">Reading Levels</span>
+            <h2>Practice That Scales With the Learner</h2>
+            <p>PABASA supports reading activities from basic recognition to longer passages, helping teachers match each assessment to the learner's current skill level.</p>
+        </div>
+
+        <div class="level-preview-shell">
+            <div class="level-preview-copy">
+                <h3>Level preview</h3>
+                <p>Each level focuses on a different reading demand, moving from quick recognition to longer, sustained reading.</p>
+                <div class="level-preview-tabs">
+                    <button class="level-preview-tab active" type="button" data-level="word" aria-pressed="true">
+                        <strong>Word Reading</strong>
+                        <span>Recognition, pronunciation, and confidence with individual words.</span>
+                    </button>
+                    <button class="level-preview-tab" type="button" data-level="sentence" aria-pressed="false">
+                        <strong>Sentence Reading</strong>
+                        <span>Phrasing, pacing, and complete thought reading.</span>
+                    </button>
+                    <button class="level-preview-tab" type="button" data-level="paragraph" aria-pressed="false">
+                        <strong>Paragraph Reading</strong>
+                        <span>Sustained reading, expression, and reading readiness.</span>
+                    </button>
+                </div>
+            </div>
+            <div class="level-preview-card" aria-label="Reading level interface preview">
+                <div class="level-preview-topbar">
+                    <span>Sample Task</span>
+                    <span id="levelPreviewLabel">Word Level</span>
+                </div>
+                <div class="level-preview-task">
+                    <strong id="levelPreviewTask">friend</strong>
+                    <p class="text-secondary mb-0" id="levelPreviewInstruction">Read the word aloud when you are ready.</p>
+                </div>
+                <div class="level-preview-metrics">
                     <div>
-                        <div class="demo-preview-play"><i class="bi bi-play-fill"></i></div>
-                        <h3>Product walkthrough</h3>
-                        <p>A focused look at setup, learner reading, and teacher review in one assessment flow.</p>
+                        <strong id="levelPreviewMetricOneValue">92%</strong>
+                        <span id="levelPreviewMetricOneLabel">Accuracy</span>
+                    </div>
+                    <div>
+                        <strong id="levelPreviewMetricTwoValue">Clear</strong>
+                        <span id="levelPreviewMetricTwoLabel">Pronunciation</span>
+                    </div>
+                    <div>
+                        <strong id="levelPreviewMetricThreeValue">Next</strong>
+                        <span id="levelPreviewMetricThreeLabel">Follow-up</span>
                     </div>
                 </div>
             </div>
@@ -2088,19 +2475,34 @@
 </section>
 
 <section class="pb-4 pb-md-5 fade-in-section">
-    <div class="info-open-grid">
-        <div class="info-open-section">
-            <span class="modern-chip mb-3">Deployment Location</span>
-            <h2>Salawag Elementary School</h2>
-            <p class="text-secondary">Current deployment location in Dasmarinas, Cavite, shown for classroom context and project grounding.</p>
-            <div class="ratio ratio-16x9 info-media-frame">
-                <iframe
-                    src="https://maps.google.com/maps?q=Salawag%20Elementary%20School%2C%20Dasmari%C3%B1as%2C%20Cavite&output=embed"
-                    style="border:0;"
-                    loading="lazy"
-                    referrerpolicy="no-referrer-when-downgrade"
-                    title="Deployment Location Map">
-                </iframe>
+    <div class="teacher-dashboard-preview">
+        <div class="dashboard-preview-copy">
+            <span class="modern-chip mb-3">Teacher View</span>
+            <h2>Results that are easier to scan.</h2>
+            <p>After a reading session, teachers can look at key signals quickly instead of sorting through loose notes. The preview keeps attention on accuracy, fluency, and what to do next.</p>
+        </div>
+        <div class="dashboard-preview-panel" aria-label="Teacher dashboard preview">
+            <div class="dashboard-preview-topbar">
+                <strong>Isla Faye</strong>
+                <span>Sentence Reading</span>
+            </div>
+            <div class="dashboard-preview-body">
+                <div class="dashboard-metric-row">
+                    <span>Accuracy</span>
+                    <div class="dashboard-bar"><i style="width: 88%;"></i></div>
+                    <span>88%</span>
+                </div>
+                <div class="dashboard-metric-row">
+                    <span>Fluency</span>
+                    <div class="dashboard-bar"><i style="width: 76%;"></i></div>
+                    <span>76%</span>
+                </div>
+                <div class="dashboard-metric-row">
+                    <span>Pacing</span>
+                    <div class="dashboard-bar"><i style="width: 82%;"></i></div>
+                    <span>82%</span>
+                </div>
+                <div class="dashboard-note">Next step: practice one more sentence set with slower pacing and clearer ending sounds.</div>
             </div>
         </div>
     </div>
@@ -2136,56 +2538,40 @@
     </div>
 </section>
 
-<section class="pb-4 pb-md-5 fade-in-section">
-    <div class="reading-levels">
-        <div class="reading-levels-header">
-            <span class="modern-chip mb-3">Reading Levels</span>
-            <h2>Practice That Scales With the Learner</h2>
-            <p>PABASA supports reading activities from basic recognition to longer passages, helping teachers match each assessment to the learner's current skill level.</p>
-        </div>
+<section id="pabasa-demo" class="pb-4 pb-md-5 fade-in-section">
+    <div class="info-open-grid">
+        <div class="info-open-section">
+            <span class="modern-chip mb-3">Product Demo</span>
+            <h2>Watch PABASA in Action</h2>
+            <p class="text-secondary">See how a reading session can move from learner activity to teacher review in a focused classroom workflow.</p>
 
-        <div class="level-preview-shell">
-            <div class="level-preview-copy">
-                <h3>Level preview</h3>
-                <p>Each level focuses on a different reading demand, moving from quick recognition to longer, sustained reading.</p>
-                <div class="level-preview-tabs">
-                    <div class="level-preview-tab active">
-                        <strong>Word Reading</strong>
-                        <span>Recognition, pronunciation, and confidence with individual words.</span>
-                    </div>
-                    <div class="level-preview-tab">
-                        <strong>Sentence Reading</strong>
-                        <span>Phrasing, pacing, and complete thought reading.</span>
-                    </div>
-                    <div class="level-preview-tab">
-                        <strong>Paragraph Reading</strong>
-                        <span>Sustained reading, expression, and reading readiness.</span>
+            <div class="ratio ratio-16x9 info-media-frame">
+                <div class="demo-preview">
+                    <div>
+                        <div class="demo-preview-play"><i class="bi bi-play-fill"></i></div>
+                        <h3>PABASA walkthrough</h3>
+                        <p>See how PABASA is used in an actual classroom reading workflow.</p>
                     </div>
                 </div>
             </div>
-            <div class="level-preview-card" aria-label="Reading level interface preview">
-                <div class="level-preview-topbar">
-                    <span>Sample Task</span>
-                    <span>Word Level</span>
-                </div>
-                <div class="level-preview-task">
-                    <strong>friend</strong>
-                    <p class="text-secondary mb-0">Read the word aloud when you are ready.</p>
-                </div>
-                <div class="level-preview-metrics">
-                    <div>
-                        <strong>92%</strong>
-                        <span>Accuracy</span>
-                    </div>
-                    <div>
-                        <strong>Clear</strong>
-                        <span>Pronunciation</span>
-                    </div>
-                    <div>
-                        <strong>Next</strong>
-                        <span>Follow-up</span>
-                    </div>
-                </div>
+        </div>
+    </div>
+</section>
+
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="info-open-grid">
+        <div class="info-open-section">
+            <span class="modern-chip mb-3">Deployment Location</span>
+            <h2>Salawag Elementary School</h2>
+            <p class="text-secondary">Current deployment location in Dasmarinas, Cavite, shown for classroom context and project grounding.</p>
+            <div class="ratio ratio-16x9 info-media-frame">
+                <iframe
+                    src="https://maps.google.com/maps?q=Salawag%20Elementary%20School%2C%20Dasmari%C3%B1as%2C%20Cavite&output=embed"
+                    style="border:0;"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    title="Deployment Location Map">
+                </iframe>
             </div>
         </div>
     </div>
@@ -2222,20 +2608,6 @@
                     <p class="testimonial-author-role">PABASA learner</p>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
-
-<section class="pb-4 pb-md-5 fade-in-section">
-    <div class="info-cta">
-        <div>
-            <span class="modern-chip mb-3">Classroom Workflow</span>
-            <h2>Ready to turn reading checks into usable progress data?</h2>
-            <p>PABASA gives teachers a focused way to run oral reading activities, support learners, and review results without adding more paperwork.</p>
-        </div>
-        <div class="info-cta-actions">
-            <a class="btn btn-light" href="{% url 'auth' %}">Open My Account</a>
-            <a class="btn btn-outline-light" href="{% url 'about' %}">Meet the Team</a>
         </div>
     </div>
 </section>
@@ -2436,6 +2808,20 @@
     </div>
 </section>
 
+<section class="pb-4 pb-md-5 fade-in-section">
+    <div class="info-cta">
+        <div>
+            <span class="modern-chip mb-3">Reading Progress</span>
+            <h2>Ready to turn reading checks into usable progress data?</h2>
+            <p>PABASA gives teachers a focused way to run oral reading activities, support learners, and review results without adding more paperwork.</p>
+        </div>
+        <div class="info-cta-actions">
+            <a class="btn btn-light" href="{% url 'auth' %}">Open My Account</a>
+            <a class="btn btn-outline-light" href="{% url 'about' %}">Meet the Team</a>
+        </div>
+    </div>
+</section>
+
 <script>
     // Fade-in on scroll functionality
     const observerOptions = {
@@ -2467,6 +2853,92 @@
             featuresGrid.classList.toggle('collapsed');
         });
     }
+
+    const readingLevelContent = {
+        word: {
+            label: 'Word Level',
+            task: 'friend',
+            instruction: 'Read the word aloud when you are ready.',
+            metrics: [
+                ['92%', 'Accuracy'],
+                ['Clear', 'Pronunciation'],
+                ['Next', 'Follow-up']
+            ]
+        },
+        sentence: {
+            label: 'Sentence Level',
+            task: 'Rapunzel says, "I have a dream!"',
+            instruction: 'Read the sentence aloud with smooth pacing.',
+            metrics: [
+                ['88%', 'Accuracy'],
+                ['Smooth', 'Pacing'],
+                ['Review', 'Expression']
+            ]
+        },
+        paragraph: {
+            label: 'Paragraph Level',
+            task: 'Blair arrives at Princess Charm School and learns that royal grace is more than a crown. She remembers, "There\'s a princess in every girl."',
+            instruction: 'Read the paragraph aloud and keep your voice steady.',
+            metrics: [
+                ['84%', 'Accuracy'],
+                ['Steady', 'Fluency'],
+                ['Good', 'Intonation']
+            ]
+        }
+    };
+
+    const levelPreviewTabs = document.querySelectorAll('.level-preview-tab[data-level]');
+    const levelPreviewLabel = document.getElementById('levelPreviewLabel');
+    const levelPreviewTask = document.getElementById('levelPreviewTask');
+    const levelPreviewInstruction = document.getElementById('levelPreviewInstruction');
+    const levelPreviewMetricTargets = [
+        [
+            document.getElementById('levelPreviewMetricOneValue'),
+            document.getElementById('levelPreviewMetricOneLabel')
+        ],
+        [
+            document.getElementById('levelPreviewMetricTwoValue'),
+            document.getElementById('levelPreviewMetricTwoLabel')
+        ],
+        [
+            document.getElementById('levelPreviewMetricThreeValue'),
+            document.getElementById('levelPreviewMetricThreeLabel')
+        ]
+    ];
+
+    function setReadingLevelPreview(level) {
+        const content = readingLevelContent[level];
+
+        if (!content || !levelPreviewLabel || !levelPreviewTask || !levelPreviewInstruction) {
+            return;
+        }
+
+        levelPreviewTabs.forEach(tab => {
+            const isActive = tab.dataset.level === level;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+
+        levelPreviewLabel.textContent = content.label;
+        levelPreviewTask.parentElement.classList.toggle('is-paragraph', level === 'paragraph');
+        levelPreviewTask.textContent = content.task;
+        levelPreviewInstruction.textContent = content.instruction;
+
+        content.metrics.forEach((metric, index) => {
+            const targets = levelPreviewMetricTargets[index];
+
+            if (targets && targets[0] && targets[1]) {
+                targets[0].textContent = metric[0];
+                targets[1].textContent = metric[1];
+            }
+        });
+    }
+
+    levelPreviewTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            setReadingLevelPreview(tab.dataset.level);
+        });
+    });
 
     // FAQ Filter Function
     function filterFAQCategory(button, category) {
