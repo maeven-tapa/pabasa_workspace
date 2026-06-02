@@ -2,16 +2,16 @@
 
 :root {
     color-scheme: light;
-    --bg: #f6f5f2;
+    --bg: #f7fbfb;
     --surface: #ffffff;
-    --panel: #f0efe9;
-    --ink: #1b1a17;
-    --accent: #1f6f8b;
-    --accent-strong: #155e75;
-    --accent-soft: #d9eef4;
-    --muted: #5f645f;
-    --shadow: 0 24px 50px rgba(27, 26, 23, 0.12);
-    --outline: rgba(27, 26, 23, 0.08);
+    --panel: #fbfaf9;
+    --ink: #272524;
+    --accent: #5aa6a3; /* soft teal */
+    --accent-strong: #3d8f8b; /* deeper teal */
+    --accent-soft: #e6f7f6;
+    --muted: #676b67;
+    --shadow: 0 24px 50px rgba(39, 37, 36, 0.08);
+    --outline: rgba(39, 37, 36, 0.06);
 }
 
 * {
@@ -132,7 +132,7 @@ a {
     cursor: pointer;
     background: var(--accent);
     color: #ffffff;
-    box-shadow: 0 12px 24px rgba(31, 111, 139, 0.25);
+    box-shadow: 0 12px 24px rgba(61, 143, 139, 0.18);
     transition: transform 0.2s ease;
     display: inline-flex;
     align-items: center;
@@ -196,8 +196,8 @@ a {
     width: 100%;
     aspect-ratio: 1 / 1;
     border-radius: 16px;
-    background: linear-gradient(135deg, rgba(31, 111, 139, 0.15), rgba(21, 94, 117, 0.05));
-    border: 1px dashed rgba(21, 94, 117, 0.3);
+    background: linear-gradient(135deg, rgba(90, 166, 163, 0.15), rgba(255, 214, 224, 0.06));
+    border: 1px dashed rgba(61, 143, 139, 0.25);
 }
 
 .team-card h3 {
