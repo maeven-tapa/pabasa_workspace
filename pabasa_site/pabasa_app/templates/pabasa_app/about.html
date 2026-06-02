@@ -52,7 +52,7 @@
         left: 0.75rem;
         width: 32px;
         height: 32px;
-        background: linear-gradient(135deg, #6e10ee, #a855f7);
+        background: linear-gradient(135deg, var(--pabasa-cyan), var(--accent-strong));
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -62,7 +62,7 @@
         color: white;
         z-index: 10;
         letter-spacing: 0.5px;
-        box-shadow: 0 2px 8px rgba(110, 16, 238, 0.3);
+        box-shadow: 0 2px 8px rgba(47, 154, 161, 0.28);
     }
 
     .team-member-card img {
@@ -79,7 +79,7 @@
 
     .team-member-card:hover {
         transform: scale(1.05);
-        box-shadow: 0 0 30px rgba(31, 111, 139, 0.4), 0 0 60px rgba(110, 16, 238, 0.2);
+        box-shadow: 0 0 30px rgba(47, 154, 161, 0.3), 0 0 60px rgba(61, 143, 139, 0.18);
     }
 
     .team-member-card:hover img {
@@ -147,7 +147,7 @@
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, #6e10ee, #1f6f8b);
+        background: linear-gradient(90deg, var(--pabasa-cyan), var(--accent-strong));
         border-radius: 1.75rem 1.75rem 0 0;
     }
 
@@ -254,7 +254,7 @@
 
     .team-member-overlay.active .team-member-role-hover {
         font-size: 0.85rem;
-        color: #6e10ee;
+        color: var(--pabasa-cyan);
         font-weight: 700;
         letter-spacing: 0.8px;
         text-shadow: none;
@@ -289,14 +289,14 @@
     }
 
     .team-member-email a {
-        color: #6e10ee;
+        color: var(--pabasa-cyan);
         text-decoration: none;
         transition: all 0.3s ease;
         font-weight: 600;
     }
 
     .team-member-email a:hover {
-        color: #5b0fd6;
+        color: var(--accent-strong);
         text-decoration: underline;
     }
 
@@ -314,23 +314,23 @@
     }
 
     .team-member-skill-badge {
-        background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
-        border: 1.5px solid #ddd6fe;
-        color: #6e10ee;
+        background: linear-gradient(135deg, #effdfa 0%, #f5fdfd 100%);
+        border: 1.5px solid rgba(61, 143, 139, 0.18);
+        color: var(--accent-strong);
         padding: 0.5rem 1.1rem;
         border-radius: 50px;
         font-size: 0.75rem;
         font-weight: 700;
         white-space: nowrap;
         transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        box-shadow: 0 2px 8px rgba(110, 16, 238, 0.08);
+        box-shadow: 0 2px 8px rgba(47, 154, 161, 0.08);
     }
 
     .team-member-skill-badge:hover {
-        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-        border-color: #c4b5fd;
+        background: linear-gradient(135deg, #f5fdfd 0%, #e7fbf8 100%);
+        border-color: rgba(61, 143, 139, 0.24);
         transform: translateY(-3px);
-        box-shadow: 0 4px 16px rgba(110, 16, 238, 0.15);
+        box-shadow: 0 4px 16px rgba(47, 154, 161, 0.14);
     }
 
     .team-member-message {
@@ -342,7 +342,7 @@
         text-align: center;
         padding: 1rem;
         background: rgba(255, 255, 255, 0.5);
-        border-left: 3px solid #6e10ee;
+        border-left: 3px solid var(--pabasa-cyan);
         border-radius: 0.5rem;
     }
 
@@ -616,7 +616,7 @@
         left: 0;
         width: 80px;
         height: 5px;
-        background: #1f6f8b;
+        background: var(--pabasa-cyan);
         border-radius: 3px;
         animation: slideIn 0.8s ease-out;
     }
@@ -641,7 +641,7 @@
     }
 
     .team-member-card::before {
-        background: linear-gradient(135deg, #155e75, #f59e0b);
+        background: linear-gradient(135deg, var(--accent-strong), #fbbf24);
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.24);
     }
 
@@ -659,13 +659,13 @@
     }
 
     .team-member-overlay::before {
-        background: linear-gradient(90deg, #155e75, #0f172a);
+        background: linear-gradient(90deg, var(--accent-strong), #0f172a);
     }
 
     .team-member-overlay.active .team-member-role-hover,
     .team-member-email a,
     .team-member-modal-message a {
-        color: #155e75 !important;
+        color: var(--accent-strong) !important;
     }
 
     .team-member-email a:hover,
@@ -676,7 +676,7 @@
     .team-member-skill-badge {
         background: #eef6f8;
         border-color: rgba(21, 94, 117, 0.18);
-        color: #155e75;
+        color: var(--accent-strong);
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
     }
 
@@ -1195,7 +1195,7 @@
         left: 0;
         right: 0;
         height: 5px;
-        background: linear-gradient(90deg, #155e75, #0f172a);
+        background: linear-gradient(90deg, var(--accent-strong), #0f172a);
     }
 
     .article-header-copy {
@@ -1453,7 +1453,7 @@
             text-align: left;
         }
         }
-    }
+    
     /* 60-30-10 color pass: 60% soft neutral, 30% teal/slate, 10% amber. */
     :root {
         --about-60: #f7f9f6;

@@ -74,7 +74,7 @@
         left: 0;
         width: 80px;
         height: 5px;
-        background: #6e10ee;
+        background: var(--accent, #5aa6a3);
         border-radius: 3px;
         animation: slideIn 0.8s ease-out;
     }
@@ -91,11 +91,11 @@
     }
 
     .modern-chip {
-        background: #f3f0ff;
-        border: 1px solid #e7d8ff;
+        background: #f7fbf9;
+        border: 1px solid rgba(61,143,139,0.08);
         font-weight: 600;
         letter-spacing: 0.5px;
-        color: #6e10ee;
+        color: var(--accent, #5aa6a3);
     }
 
     .hero-centered {
@@ -138,14 +138,14 @@
 
     .hero-cta {
         display: inline-block;
-        background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+        background: linear-gradient(135deg, var(--pabasa-cyan), var(--pabasa-violet));
         color: white;
         padding: 0.875rem 2rem;
         border-radius: 999px;
         font-weight: 600;
         border: none;
         cursor: pointer;
-        box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
+        box-shadow: 0 12px 24px rgba(46, 168, 229, 0.12);
         transition: all 0.3s ease;
         margin-bottom: 3rem;
         font-size: 1rem;
@@ -157,12 +157,12 @@
     }
 
     .feature-banner {
-        background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+        background: linear-gradient(135deg, var(--pabasa-cyan), var(--pabasa-violet));
         border-radius: 16px;
         padding: 2rem;
         margin: 1.5rem 0 2rem 0;
         color: white;
-        box-shadow: 0 16px 32px rgba(99, 102, 241, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 16px 32px rgba(46, 168, 229, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
         text-align: center;
     }
 
@@ -224,35 +224,35 @@
         justify-content: center;
         width: 100px;
         height: 100px;
-        background: #3b82f6;
+        background: var(--accent, #5aa6a3);
         color: white;
         font-weight: 900;
         font-size: 1.5rem;
         border-radius: 50%;
         margin-bottom: 0;
         flex-shrink: 0;
-        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        box-shadow: 0 8px 20px rgba(61, 143, 139, 0.18);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .feature-card:nth-child(1) .feature-badge {
-        background: #3b82f6;
-        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        background: var(--accent);
+        box-shadow: 0 8px 20px rgba(47, 154, 161, 0.24);
     }
 
     .feature-card:nth-child(2) .feature-badge {
-        background: linear-gradient(135deg, #3b82f6 0%, #7c5cdf 100%);
-        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+        background: linear-gradient(135deg, var(--pabasa-cyan), var(--pabasa-violet));
+        box-shadow: 0 8px 20px rgba(46, 168, 229, 0.12);
     }
 
     .feature-card:nth-child(3) .feature-badge {
-        background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
-        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+        background: linear-gradient(135deg, var(--pabasa-cyan), var(--pabasa-violet));
+        box-shadow: 0 8px 20px rgba(46, 168, 229, 0.12);
     }
 
     .feature-card:nth-child(4) .feature-badge {
-        background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
-        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+        background: linear-gradient(135deg, var(--pabasa-cyan), var(--pabasa-violet));
+        box-shadow: 0 8px 20px rgba(46, 168, 229, 0.12);
     }
 
     .feature-card:hover .feature-badge {
@@ -273,8 +273,8 @@
     }
 
     .features-header:hover {
-        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
-        border-color: #3b82f6;
+        box-shadow: 0 8px 20px rgba(47, 154, 161, 0.14);
+        border-color: var(--pabasa-cyan);
     }
 
     .features-header-wrapper {
@@ -301,7 +301,7 @@
         font-size: 1.5rem;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         margin-top: 0;
-        color: #3b82f6;
+        color: var(--pabasa-cyan);
         flex-shrink: 0;
     }
 
@@ -406,7 +406,7 @@
         left: 0;
         width: 100%;
         height: 5px;
-        background: linear-gradient(90deg, #6e10ee, #1f6f8b);
+        background: linear-gradient(90deg, var(--pabasa-cyan), var(--accent-strong));
         border-radius: 3px;
     }
 
@@ -434,16 +434,16 @@
     }
 
     .faq-filter-btn:hover {
-        border-color: #6e10ee;
-        color: #6e10ee;
-        box-shadow: 0 4px 12px rgba(110, 16, 238, 0.1);
+        border-color: var(--pabasa-cyan);
+        color: var(--pabasa-cyan);
+        box-shadow: 0 4px 12px rgba(47, 154, 161, 0.12);
     }
 
     .faq-filter-btn.active {
-        background: linear-gradient(135deg, #6e10ee, #a855f7);
+        background: linear-gradient(135deg, var(--pabasa-cyan), var(--accent-strong));
         border-color: transparent;
         color: white;
-        box-shadow: 0 6px 20px rgba(110, 16, 238, 0.3);
+        box-shadow: 0 6px 20px rgba(47, 154, 161, 0.22);
     }
 
     .faq-container {
@@ -469,8 +469,8 @@
     }
 
     .faq-item:hover {
-        box-shadow: 0 6px 16px rgba(110, 16, 238, 0.1);
-        border-color: rgba(110, 16, 238, 0.2);
+        box-shadow: 0 6px 16px rgba(47, 154, 161, 0.12);
+        border-color: rgba(47, 154, 161, 0.18);
     }
 
     .faq-question {
@@ -491,20 +491,20 @@
     }
 
     .faq-question:hover {
-        background: #f3f0ff;
-        color: #6e10ee;
+        background: #effdfa;
+        color: var(--pabasa-cyan);
     }
 
     .faq-question.active {
-        background: linear-gradient(135deg, #f3f0ff 0%, #faf5ff 100%);
-        color: #6e10ee;
+        background: linear-gradient(135deg, #effdfa 0%, #f5fdfd 100%);
+        color: var(--pabasa-cyan);
     }
 
     .faq-toggle-icon {
         flex-shrink: 0;
         font-size: 1.2rem;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        color: #6e10ee;
+        color: var(--pabasa-cyan);
     }
 
     .faq-question.active .faq-toggle-icon {
@@ -1020,7 +1020,7 @@
     }
 
     .info-cta h2::after {
-        background: #0e7490;
+        background: var(--pabasa-cyan);
     }
 
     .info-cta p {
