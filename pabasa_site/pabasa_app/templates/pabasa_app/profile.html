@@ -5,65 +5,272 @@
 <style>
     .profile-layout {
         display: grid;
-        grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
-        gap: 1rem;
+        gap: 1.5rem;
+        grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+        align-items: start;
+        max-width: 1180px;
+        margin: 0 auto;
     }
 
     .profile-summary {
+        background:
+            linear-gradient(140deg, rgba(31, 111, 139, 0.12), transparent 42%),
+            linear-gradient(240deg, rgba(247, 231, 207, 0.75), transparent 48%),
+            #fffdf7;
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        overflow: hidden;
         position: sticky;
-        top: 1rem;
+        top: 102px;
+        width: 100%;
+    }
+
+    .profile-summary .card-body {
+        padding: clamp(1.35rem, 3vw, 1.8rem) !important;
     }
 
     .profile-avatar-lg {
-        width: 84px;
+        align-items: center;
+        background: var(--dash-primary-soft);
+        border-radius: 24px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-size: 1.35rem;
+        font-weight: 800;
         height: 84px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        background: #e7edff;
-        color: #1d4ed8;
-        font-weight: 700;
-        font-size: 1.4rem;
+        justify-content: center;
+        width: 84px;
+    }
+
+    .profile-hero-avatar {
+        font-size: 1.55rem;
+        height: 104px;
+        width: 104px;
     }
 
     .profile-meta-item {
-        border: 1px solid #e8ecf5;
-        border-radius: 0.75rem;
-        background: #f9fbff;
-        padding: 0.65rem 0.75rem;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 16px;
+        padding: 0.85rem;
     }
 
-    .profile-meta-label {
+    .profile-meta-label,
+    .reader-snapshot span,
+    .student-detail-list span,
+    .reader-setting-row span {
         display: block;
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-bottom: 0.15rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.22rem;
+        text-transform: uppercase;
     }
 
-    .profile-meta-value {
+    .profile-meta-label,
+    .student-detail-list span,
+    .reader-setting-row span {
+        color: var(--dash-muted);
+    }
+
+    .profile-meta-value,
+    .student-detail-list strong {
+        color: var(--dash-text);
         display: block;
-        color: #1f2937;
-        font-weight: 600;
-        font-size: 0.92rem;
+        font-weight: 700;
         overflow-wrap: anywhere;
+    }
+
+    .profile-action-list {
+        display: grid;
+        gap: 0.55rem;
+    }
+
+    .profile-action-list .btn {
+        border-radius: 14px;
+        font-weight: 700;
+        min-height: 44px;
+    }
+
+    .profile-card-spacing {
+        gap: 1.5rem;
     }
 
     .profile-edit-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.8rem;
+        gap: 1rem;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
     }
 
     .profile-edit-grid .full {
         grid-column: 1 / -1;
     }
 
-    .profile-section-title {
-        font-size: 0.98rem;
-        margin-bottom: 0.7rem;
+    .profile-card-spacing .form-control,
+    .profile-card-spacing .form-select {
+        border-color: rgba(27, 26, 23, 0.09);
+        border-radius: 14px;
+        font-size: 0.95rem;
+        min-height: 46px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
-    @media (max-width: 991.98px) {
+    .profile-card-spacing .form-control:focus,
+    .profile-card-spacing .form-select:focus {
+        border-color: var(--dash-primary);
+        box-shadow: 0 0 0 3px rgba(31, 111, 139, 0.1);
+    }
+
+    .profile-card-spacing .form-label {
+        color: var(--dash-text);
+        font-size: 0.88rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .profile-photo-section {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(217, 238, 244, 0.3));
+        border: 1.5px solid rgba(31, 111, 139, 0.12);
+        border-radius: 18px;
+        padding: 1.25rem;
+    }
+
+    .profile-photo-section .btn {
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        min-height: 44px;
+    }
+
+    .student-reader-panel {
+        background: #fff;
+        border: 1px solid rgba(31, 111, 139, 0.1);
+        border-radius: 22px;
+        box-shadow: var(--dash-shadow);
+        padding: clamp(1.15rem, 2.5vw, 1.5rem);
+    }
+
+    .student-reader-panel h3 {
+        font-size: 1.04rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin: 0;
+    }
+
+    .reader-panel-head {
+        align-items: start;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .reader-snapshot {
+        background: #1b1a17;
+        border-radius: 20px;
+        color: #fffdf7;
+        display: grid;
+        gap: 0.8rem;
+        padding: 1rem;
+    }
+
+    .reader-snapshot-grid,
+    .student-detail-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .reader-snapshot-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .student-detail-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .reader-snapshot-grid div,
+    .student-detail-list div {
+        border-radius: 16px;
+        padding: 0.78rem;
+    }
+
+    .reader-snapshot-grid div {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .reader-snapshot span {
+        color: rgba(255, 253, 247, 0.58);
+    }
+
+    .reader-snapshot strong {
+        color: #fffdf7;
+        display: block;
+        font-size: 1.05rem;
+        overflow-wrap: anywhere;
+    }
+
+    .student-detail-list div,
+    .reader-setting-row {
+        background: #fffdf7;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+    }
+
+    .skill-track,
+    .reader-setting-stack {
+        display: grid;
+        gap: 0.8rem;
+    }
+
+    .skill-row {
+        align-items: center;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: 128px minmax(0, 1fr) auto;
+    }
+
+    .skill-row span {
+        color: var(--dash-muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .skill-meter {
+        background: rgba(31, 111, 139, 0.11);
+        border-radius: 999px;
+        height: 10px;
+        overflow: hidden;
+    }
+
+    .skill-meter i {
+        background: linear-gradient(90deg, var(--dash-primary), var(--dash-olive));
+        border-radius: inherit;
+        display: block;
+        height: 100%;
+    }
+
+    .reader-setting-row {
+        align-items: center;
+        border-radius: 16px;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 0.8rem;
+    }
+
+    .reader-setting-row strong {
+        display: block;
+        font-size: 0.93rem;
+    }
+
+    .reader-setting-row .form-select {
+        border-color: rgba(27, 26, 23, 0.1);
+        border-radius: 12px;
+        font-size: 0.86rem;
+        font-weight: 700;
+        min-width: 150px;
+    }
+
+    @media (max-width: 1120px) {
         .profile-layout {
             grid-template-columns: 1fr;
         }
@@ -73,137 +280,390 @@
         }
     }
 
-    @media (max-width: 575.98px) {
-        .profile-edit-grid {
+    @media (max-width: 720px) {
+        .profile-edit-grid,
+        .reader-snapshot-grid,
+        .student-detail-list,
+        .skill-row,
+        .reader-setting-row {
             grid-template-columns: 1fr;
+        }
+
+        .reader-panel-head {
+            display: grid;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .profile-photo-section .d-flex {
+            align-items: stretch !important;
+            flex-direction: column;
         }
     }
 </style>
 {% endblock %}
 
 {% block header %}
-    {% include "pabasa_app/partials/_header.html" with page_title="Profile" page_date="April 2, 2026" %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Profile" page_date="" %}
 {% endblock %}
 
 {% block content %}
 <section>
-    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-            <p class="small text-secondary mb-1">Manage your account information and preferences.</p>
-            <p class="small mb-0"><strong>Note:</strong> Keep your learner details updated for accurate tracking and reports.</p>
-        </div>
-        <button class="btn btn-outline-primary btn-sm" type="button">View Activity</button>
+    <div class="dash-page-head">
+        <p class="small text-secondary mb-1">{% if nav_role == 'teacher' %}Manage the teacher identity shown across class ownership, material posts, and reports.{% else %}Manage Isla's learner profile, reading support details, and practice preferences.{% endif %}</p>
+        <p class="small mb-0"><strong>Note:</strong> {% if nav_role == 'teacher' %}Teacher details support class ownership, material posts, and progress reports.{% else %}Student details support classroom tracking, guardian coordination, and oral reading reports.{% endif %}</p>
     </div>
 
     <div class="profile-layout">
-        <div class="dash-card profile-summary">
-            <div class="card-body p-4 d-grid gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="profile-avatar-lg">MT</div>
+        <aside class="dash-card profile-summary">
+            <div class="card-body p-4 d-grid gap-4">
+                <div class="text-center d-grid gap-3">
+                    <div class="profile-avatar-lg profile-hero-avatar mx-auto" style="{% if profile_photo_url and nav_role == 'student' %}background-image: url('{{ profile_photo_url }}'); background-size: cover; background-position: center;{% endif %}">{% if not profile_photo_url or nav_role == 'teacher' %}{% if nav_role == 'teacher' %}TR{% else %}IS{% endif %}{% endif %}</div>
                     <div>
-                        <h3 class="h5 mb-1">Maeven Tapa</h3>
-                        <p class="text-secondary mb-0 small">Student · Grade 2</p>
+                        <span class="dash-pill mb-3">{% if nav_role == 'teacher' %}<i class="bi bi-person-workspace"></i> Active Teacher{% else %}<i class="bi bi-person-check"></i> Active Student{% endif %}</span>
+                        <h2 class="h4 fw-bold mb-1">{% if nav_role == 'teacher' %}Teacher Account{% else %}Isla Santos{% endif %}</h2>
+                        <p class="text-secondary mb-0 small">{% if nav_role == 'teacher' %}Reading Coordinator{% else %}Grade 2 - Filipino Oral Reading{% endif %}</p>
                     </div>
                 </div>
-                <span class="dash-pill">Active Student</span>
 
-                <div class="d-grid gap-2 mt-1">
+                <div class="d-grid gap-2">
                     <div class="profile-meta-item">
                         <span class="profile-meta-label">Username</span>
-                        <span class="profile-meta-value">maeventapa</span>
+                        <span class="profile-meta-value">{% if nav_role == 'teacher' %}teacheraccount{% else %}islasantos{% endif %}</span>
                     </div>
                     <div class="profile-meta-item">
-                        <span class="profile-meta-label">Learner ID</span>
-                        <span class="profile-meta-value">AB12-C3</span>
+                        <span class="profile-meta-label">{% if nav_role == 'teacher' %}Teacher ID{% else %}Learner ID{% endif %}</span>
+                        <span class="profile-meta-value">{% if nav_role == 'teacher' %}TCH-2046{% else %}G2-0847{% endif %}</span>
                     </div>
+                    {% if nav_role == 'student' %}
                     <div class="profile-meta-item">
-                        <span class="profile-meta-label">Parent Email</span>
-                        <span class="profile-meta-value">maeven.tapa@example.com</span>
+                        <span class="profile-meta-label">Reading Level</span>
+                        <span class="profile-meta-value">Developing Reader</span>
+                    </div>
+                    {% else %}
+                    <div class="profile-meta-item">
+                        <span class="profile-meta-label">Classes Managed</span>
+                        <span class="profile-meta-value">3 active reading classes</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="profile-action-list">
+                    <button class="btn btn-primary" id="editAccountDetailsBtn" type="button"><i class="bi bi-pencil-square me-1"></i>Edit Profile</button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="d-grid gap-3 profile-card-spacing">
+            <article class="student-reader-panel">
+                <div class="reader-panel-head">
+                    <div>
+                        <h3>Account Details</h3>
+                        <p class="small text-secondary mb-0">{% if nav_role == 'teacher' %}Edit the identity attached to classes and reports.{% else %}Edit Isla's learner and guardian details without crowding the profile card.{% endif %}</p>
+                    </div>
+                    <span class="dash-pill"><i class="bi bi-pencil"></i> Editable</span>
+                </div>
+
+                <form class="d-grid gap-3" action="#" method="post" id="accountDetailsForm">
+                    {% csrf_token %}
+                    <div class="profile-edit-grid">
+                        <div>
+                            <label class="form-label small" for="firstName">First Name</label>
+                            <input class="form-control" id="firstName" name="first_name" type="text" value="{% if nav_role == 'teacher' %}Teacher{% else %}Isla{% endif %}" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="lastName">Last Name</label>
+                            <input class="form-control" id="lastName" name="last_name" type="text" value="{% if nav_role == 'teacher' %}Account{% else %}Santos{% endif %}" data-account-details-field disabled>
+                        </div>
+                        {% if nav_role == 'student' %}
+                        <div>
+                            <label class="form-label small" for="gradeLevel">Grade Level</label>
+                            <input class="form-control" id="gradeLevel" name="grade_level" type="text" value="Grade 2" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="sectionName">Section</label>
+                            <input class="form-control" id="sectionName" name="section_name" type="text" value="Section Masipag" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="guardianName">Guardian</label>
+                            <input class="form-control" id="guardianName" name="guardian_name" type="text" value="Mara Santos" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="guardianContact">Guardian Contact</label>
+                            <input class="form-control" id="guardianContact" name="guardian_contact" type="text" value="0917 482 0847" data-account-details-field disabled>
+                        </div>
+                        {% endif %}
+                        {% if nav_role == 'teacher' %}
+                        <div>
+                            <label class="form-label small" for="teacherRole">Teacher Role</label>
+                            <input class="form-control" id="teacherRole" name="teacher_role" type="text" value="Reading Coordinator" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="department">Department</label>
+                            <input class="form-control" id="department" name="department" type="text" value="Filipino and Literacy" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="schoolName">School</label>
+                            <input class="form-control" id="schoolName" name="school_name" type="text" value="PABASA Demonstration School" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="teacherContact">Contact Number</label>
+                            <input class="form-control" id="teacherContact" name="teacher_contact" type="text" value="0917 204 6026" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="advisoryClass">Advisory Class</label>
+                            <input class="form-control" id="advisoryClass" name="advisory_class" type="text" value="Grade 3 Reading - Section A" data-account-details-field disabled>
+                        </div>
+                        <div>
+                            <label class="form-label small" for="officeHours">Consultation Hours</label>
+                            <input class="form-control" id="officeHours" name="office_hours" type="text" value="Mon-Wed, 3:30 PM - 4:30 PM" data-account-details-field disabled>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if nav_role == 'student' %}
+                    <div class="profile-photo-section">
+                        <label class="form-label small">Profile Photo</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="profile-avatar-lg" id="profileAvatarDisplay" style="flex-shrink: 0; {% if profile_photo_url %}background-image: url('{{ profile_photo_url }}'); background-size: cover; background-position: center;{% endif %}">{% if not profile_photo_url %}IS{% endif %}</div>
+                            <div class="d-grid gap-2" style="flex: 1;">
+                                <input class="form-control" id="profilePhoto" name="profile_photo" type="file" accept="image/*" data-account-details-field disabled>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary" id="uploadPhotoBtn" type="button" data-account-details-field disabled>Upload Photo</button>
+                                    <button class="btn btn-sm btn-outline-danger" id="removePhotoBtn" type="button" data-account-details-field disabled>Remove Photo</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex flex-wrap gap-2 d-none" id="accountDetailsActions">
+                        <button class="btn btn-primary" type="submit">Save Changes</button>
+                        <button class="btn btn-outline-secondary" type="reset">Reset</button>
+                    </div>
+                </form>
+            </article>
+
+            {% if nav_role == 'student' %}
+            <article class="student-reader-panel">
+                <div class="reader-panel-head">
+                    <div>
+                        <h3>Reader Snapshot</h3>
+                        <p class="small text-secondary mb-0">Current classroom-facing reading profile for Isla.</p>
+                    </div>
+                    <span class="dash-pill"><i class="bi bi-book"></i> Developing Reader</span>
+                </div>
+
+                <div class="reader-snapshot">
+                    <div class="reader-snapshot-grid">
+                        <div>
+                            <span>Focus Skill</span>
+                            <strong>Sentence Fluency</strong>
+                        </div>
+                        <div>
+                            <span>Last Check</span>
+                            <strong>May 31, 2026</strong>
+                        </div>
+                        <div>
+                            <span>Next Goal</span>
+                            <strong>Read 3 short paragraphs</strong>
+                        </div>
+                    </div>
+                    <p class="small mb-0">Teacher note: Give Isla extra wait time before correction and use repeated reading for tricky Filipino consonant blends.</p>
+                </div>
+            </article>
+
+            <article class="student-reader-panel">
+                <div class="reader-panel-head">
+                    <div>
+                        <h3>Student Details</h3>
+                        <p class="small text-secondary mb-0">The details teachers need when assigning practice and checking reports.</p>
                     </div>
                 </div>
 
-                <div class="d-grid gap-2 mt-1">
-                    <button class="btn btn-outline-secondary" type="button">Change Password</button>
-                    <button class="btn btn-outline-secondary" type="button">Update Email</button>
+                <div class="student-detail-list">
+                    <div>
+                        <span>Class Code</span>
+                        <strong>Not joined yet</strong>
+                    </div>
+                    <div>
+                        <span>Preferred Language</span>
+                        <strong>Filipino first, English support</strong>
+                    </div>
+                    <div>
+                        <span>Practice Window</span>
+                        <strong>Weekdays after 4:30 PM</strong>
+                    </div>
+                    <div>
+                        <span>Accessibility</span>
+                        <strong>Sound cues enabled</strong>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </article>
 
-        <div class="d-grid gap-3">
-            <div class="dash-card">
-                <div class="card-body p-4 p-lg-4">
-                    <form class="d-grid gap-4" action="#" method="post" id="accountDetailsForm">
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
-                                <h3 class="profile-section-title mb-0">Account Details</h3>
-                                <button class="btn btn-outline-primary btn-sm" id="editAccountDetailsBtn" type="button">Edit</button>
-                            </div>
-                            <div class="profile-edit-grid">
-                                <div>
-                                    <label class="form-label small mb-1" for="firstName">First Name</label>
-                                    <input class="form-control" id="firstName" name="first_name" type="text" value="Maeven" data-account-details-field disabled>
-                                </div>
-                                <div>
-                                    <label class="form-label small mb-1" for="lastName">Last Name</label>
-                                    <input class="form-control" id="lastName" name="last_name" type="text" value="Tapa" data-account-details-field disabled>
-                                </div>
-                                <div class="full">
-                                    <label class="form-label small mb-1" for="bio">Bio</label>
-                                    <textarea class="form-control" id="bio" name="bio" rows="3" data-account-details-field disabled>Focused on reading fluency, comprehension, and consistent practice.</textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex flex-wrap gap-2 pt-1 d-none" id="accountDetailsActions">
-                            <button class="btn btn-primary" type="submit">Save Changes</button>
-                            <button class="btn btn-outline-secondary" type="reset">Reset</button>
-                        </div>
-                    </form>
+            <article class="student-reader-panel">
+                <div class="reader-panel-head">
+                    <div>
+                        <h3>Reading Progress</h3>
+                        <p class="small text-secondary mb-0">A quick view of the skills that should shape practice sessions.</p>
+                    </div>
                 </div>
-            </div>
 
-            <div class="dash-card">
-                <div class="card-body p-4 p-lg-4">
-                    <form class="d-grid gap-3" action="#" method="post">
-                        <div>
-                            <h3 class="profile-section-title mb-2">Learning Preferences</h3>
-                            <div class="profile-edit-grid">
-                                <div>
-                                    <label class="form-label small mb-1" for="language">Preferred Language</label>
-                                    <select class="form-select" id="language" name="language">
-                                        <option selected>English</option>
-                                        <option>Filipino</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="form-label small mb-1" for="theme">Theme</label>
-                                    <select class="form-select" id="theme" name="theme">
-                                        <option selected>Light</option>
-                                        <option>Dark</option>
-                                        <option>System</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="form-label small mb-1" for="reminder">Reading Reminder</label>
-                                    <select class="form-select" id="reminder" name="reminder">
-                                        <option selected>Enabled</option>
-                                        <option>Disabled</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="form-label small mb-1" for="goal">Daily Goal (minutes)</label>
-                                    <input class="form-control" id="goal" name="daily_goal" type="number" min="5" max="180" value="30">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex flex-wrap gap-2 pt-1">
-                            <button class="btn btn-primary" type="submit">Save Preferences</button>
-                            <button class="btn btn-outline-secondary" type="reset">Reset</button>
-                        </div>
-                    </form>
+                <div class="skill-track">
+                    <div class="skill-row">
+                        <span>Word accuracy</span>
+                        <div class="skill-meter" aria-label="Word accuracy 72 percent"><i style="width: 72%;"></i></div>
+                        <strong>72%</strong>
+                    </div>
+                    <div class="skill-row">
+                        <span>Sentence fluency</span>
+                        <div class="skill-meter" aria-label="Sentence fluency 64 percent"><i style="width: 64%;"></i></div>
+                        <strong>64%</strong>
+                    </div>
+                    <div class="skill-row">
+                        <span>Passage stamina</span>
+                        <div class="skill-meter" aria-label="Passage stamina 48 percent"><i style="width: 48%;"></i></div>
+                        <strong>48%</strong>
+                    </div>
                 </div>
-            </div>
+            </article>
+
+            <article class="student-reader-panel">
+                <div class="reader-panel-head">
+                    <div>
+                        <h3>Student Settings</h3>
+                        <p class="small text-secondary mb-0">Reading-specific preferences shown here so this page is useful on its own.</p>
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-check2 me-1"></i>Save</button>
+                </div>
+
+                <div class="reader-setting-stack">
+                    <label class="reader-setting-row" for="profileReaderLanguage">
+                        <span><strong>Practice language</strong><small>Use the language most common in assigned materials.</small></span>
+                        <select class="form-select" id="profileReaderLanguage">
+                            <option selected>Filipino</option>
+                            <option>English</option>
+                        </select>
+                    </label>
+                    <label class="reader-setting-row" for="profileReaderReminder">
+                        <span><strong>Reminder rhythm</strong><small>Keep short daily reading habits visible.</small></span>
+                        <select class="form-select" id="profileReaderReminder">
+                            <option>Daily</option>
+                            <option selected>Weekdays</option>
+                            <option>Off</option>
+                        </select>
+                    </label>
+                    <div class="reader-setting-row">
+                        <span><strong>Sound cues</strong><small>Play start and completion tones during practice.</small></span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="profileReaderSoundCues" checked>
+                            <label class="visually-hidden" for="profileReaderSoundCues">Enable sound cues</label>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            {% else %}
+            <article class="student-reader-panel">
+                <div class="reader-panel-head">
+                    <div>
+                        <h3>Teacher Profile Use</h3>
+                        <p class="small text-secondary mb-0">This profile is used for class ownership, posted materials, and student progress exports.</p>
+                    </div>
+                    <span class="dash-pill"><i class="bi bi-person-workspace"></i> Coordinator</span>
+                </div>
+
+                <div class="student-detail-list">
+                    <div>
+                        <span>Classes Managed</span>
+                        <strong>3 active reading classes</strong>
+                    </div>
+                    <div>
+                        <span>Material Queue</span>
+                        <strong>12 reusable reading inputs</strong>
+                    </div>
+                    <div>
+                        <span>Report Focus</span>
+                        <strong>Reading level movement</strong>
+                    </div>
+                    <div>
+                        <span>Invite Flow</span>
+                        <strong>Class code ownership</strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="student-reader-panel">
+                <div class="reader-panel-head">
+                    <div>
+                        <h3>Class Responsibilities</h3>
+                        <p class="small text-secondary mb-0">Profile details that affect class ownership, invite codes, and reading supervision.</p>
+                    </div>
+                    <span class="dash-pill"><i class="bi bi-people"></i> 70 learners</span>
+                </div>
+
+                <div class="student-detail-list">
+                    <div>
+                        <span>Primary Class</span>
+                        <strong>Grade 3 Reading - Section A</strong>
+                    </div>
+                    <div>
+                        <span>Intervention Group</span>
+                        <strong>Remedial Reading Group</strong>
+                    </div>
+                    <div>
+                        <span>Enrichment Group</span>
+                        <strong>Advanced Fluency Circle</strong>
+                    </div>
+                    <div>
+                        <span>Default Invite Prefix</span>
+                        <strong>PAB</strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="student-reader-panel">
+                <div class="reader-panel-head">
+                    <div>
+                        <h3>Teacher Defaults</h3>
+                        <p class="small text-secondary mb-0">Editable preferences for reports, materials, and classroom reading workflow.</p>
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="button"><i class="bi bi-check2 me-1"></i>Save</button>
+                </div>
+
+                <div class="reader-setting-stack">
+                    <label class="reader-setting-row" for="teacherDefaultLevel">
+                        <span><strong>Default assessment focus</strong><small>Used when creating new reading materials.</small></span>
+                        <select class="form-select" id="teacherDefaultLevel">
+                            <option>Word Reading</option>
+                            <option selected>Sentence Fluency</option>
+                            <option>Paragraph Reading</option>
+                        </select>
+                    </label>
+                    <label class="reader-setting-row" for="teacherDigest">
+                        <span><strong>Progress digest</strong><small>How often reading-level summaries should be prepared.</small></span>
+                        <select class="form-select" id="teacherDigest">
+                            <option>Daily</option>
+                            <option selected>Weekly</option>
+                            <option>Monthly</option>
+                        </select>
+                    </label>
+                    <label class="reader-setting-row" for="materialVisibility">
+                        <span><strong>New material visibility</strong><small>Teacher-created inputs can stay private until ready.</small></span>
+                        <select class="form-select" id="materialVisibility">
+                            <option selected>Draft first</option>
+                            <option>Publish to selected class</option>
+                        </select>
+                    </label>
+                    <div class="reader-setting-row">
+                        <span><strong>Notify on completed assessments</strong><small>Send an alert when a learner finishes a reading check.</small></span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="teacherAssessmentAlerts" checked>
+                            <label class="visually-hidden" for="teacherAssessmentAlerts">Enable completed assessment notifications</label>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            {% endif %}
         </div>
     </div>
 </section>

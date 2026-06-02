@@ -1,44 +1,51 @@
-<div class="d-flex flex-column h-100 p-3 p-xl-4">
-    <div class="mb-2">
-        <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+<div class="sidebar-inner d-flex flex-column h-100 p-3 p-xl-4">
+    <div class="mb-5">
+        <div class="sidebar-brand-row d-flex align-items-center justify-content-between gap-2 mb-3">
             <a class="d-flex align-items-center gap-2 text-decoration-none text-reset" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
                 <span class="dash-brand-mark">
                     <i class="bi bi-journal-check"></i>
                 </span>
-                <div class="fs-5 fw-bold sidebar-text">PABASA</div>
+                <div class="sidebar-text">
+                    <div class="fs-5 fw-bold lh-1">PABASA</div>
+                    <div class="brand-note mt-1">Reading studio</div>
+                </div>
             </a>
-            <button class="btn btn-sm btn-light border d-none d-lg-inline-flex" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
+            <button class="btn btn-sm btn-light sidebar-collapse-btn d-none d-lg-inline-flex" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
                 <i class="bi bi-chevron-left"></i>
             </button>
         </div>
-        <div class="small text-secondary sidebar-subtext">Learning Dashboard</div>
+        <div class="sidebar-role-card">
+            <span class="small sidebar-subtext">{% if nav_role == 'teacher' %}Teacher workspace{% else %}Student workspace{% endif %}</span>
+            <strong class="sidebar-text">{% if nav_role == 'teacher' %}Guide reading progress{% else %}Build fluency daily{% endif %}</strong>
+        </div>
     </div>
 
-    <hr class="my-1">
-
     <nav class="nav nav-pills flex-column gap-1 mb-4">
+        <div class="sidebar-section-label">Main</div>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" data-nav-tooltip title="Dashboard"><i class="bi bi-grid"></i><span class="sidebar-text">Dashboard</span></a>
-        {% if nav_role != 'student' %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'assessment' %}" data-nav-tooltip title="Assessment"><i class="bi bi-clipboard-check"></i><span class="sidebar-text">Assessment</span></a>
-        {% endif %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Courses"><i class="bi bi-book"></i><span class="sidebar-text">Courses</span></a>
-        {% if nav_role != 'teacher' %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'practice' %}" data-nav-tooltip title="Practice"><i class="bi bi-mic"></i><span class="sidebar-text">Practice</span></a>
-        {% endif %}
-        {% if nav_role != 'student' %}
+        {% if nav_role == 'student' %}
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'practice' %}" data-nav-tooltip title="Practice Mode"><i class="bi bi-mic"></i><span class="sidebar-text">Practice Mode</span></a>
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'assessment' %}" data-nav-tooltip title="Reading Assessment"><i class="bi bi-journal-check"></i><span class="sidebar-text">Reading Assessment</span></a>
+        {% else %}
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Materials"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Materials</span></a>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="Students"><i class="bi bi-people"></i><span class="sidebar-text">Students</span></a>
         {% endif %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'calendar' %}" data-nav-tooltip title="Calendar"><i class="bi bi-calendar3"></i><span class="sidebar-text">Calendar</span></a>
     </nav>
 
+    {% if nav_role != 'student' %}
     <div class="d-grid gap-1">
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'profile' %}" data-nav-tooltip title="Profile"><i class="bi bi-person"></i><span class="sidebar-text">Profile</span></a>
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'notifications' %}" data-nav-tooltip title="Notifications"><i class="bi bi-bell"></i><span class="sidebar-text">Notifications</span></a>
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'settings' %}" data-nav-tooltip title="Settings"><i class="bi bi-gear"></i><span class="sidebar-text">Settings</span></a>
+        <div class="sidebar-section-label">Tools</div>
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'profile' %}?role=teacher" data-nav-tooltip title="Profile"><i class="bi bi-person"></i><span class="sidebar-text">Profile</span></a>
         <button class="nav-link dash-link d-flex align-items-center gap-2 border-0 bg-transparent text-start" type="button" data-help-toggle data-nav-tooltip title="Help" aria-expanded="false" aria-controls="helpPanel" aria-label="Open help panel">
             <i class="bi bi-question-circle"></i><span class="sidebar-text">Help</span>
         </button>
     </div>
+    {% else %}
+    <div class="d-grid gap-1">
+        <div class="sidebar-section-label">Account</div>
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'profile' %}?role=student" data-nav-tooltip title="Profile"><i class="bi bi-person"></i><span class="sidebar-text">Profile</span></a>
+    </div>
+    {% endif %}
 
     <div class="mt-auto pt-3 border-top">
         <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#logoutConfirmModal" data-nav-tooltip title="Logout">

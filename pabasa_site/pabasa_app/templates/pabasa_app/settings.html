@@ -1,43 +1,121 @@
 {% extends "pabasa_app/base_dashboard.html" %}
 
+{% block extra_head %}
+<style>
+    .settings-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .settings-card {
+        background: #fff;
+        border: 1px solid var(--dash-border);
+        border-radius: 20px;
+        box-shadow: var(--dash-shadow);
+        padding: 1rem;
+    }
+
+    .settings-card h2 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0 0 0.75rem;
+    }
+
+    @media (max-width: 820px) {
+        .settings-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block header %}
-    {% include "pabasa_app/partials/_header.html" with page_title="Settings" page_date="April 2, 2026" %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Settings" page_date="" %}
 {% endblock %}
 
 {% block content %}
 <section>
     <div class="dash-page-head">
-        <p class="small text-secondary mb-1">Adjust app behavior, accessibility, and dashboard defaults.</p>
-        <p class="small mb-0"><strong>Note:</strong> Save your settings after making changes to keep your preferences applied.</p>
+        <p class="small text-secondary mb-1">{% if nav_role == 'teacher' %}Adjust teacher workspace behavior, material posting defaults, and report preferences.{% else %}Adjust student reading reminders, accessibility, and dashboard preferences.{% endif %}</p>
+        <p class="small mb-0"><strong>Note:</strong> Settings differ by account type so each dashboard stays focused.</p>
     </div>
 
-    <div class="dash-card">
-        <div class="card-body p-4">
+    <div class="settings-grid">
+        <article class="settings-card">
+            <h2>Display</h2>
             <div class="row g-3">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label small">Theme</label>
                     <select class="form-select">
-                        <option selected>Purple Accent</option>
-                        <option>Classic Light</option>
+                        <option selected>Light</option>
+                        <option>System</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label small">Language</label>
                     <select class="form-select">
                         <option selected>English</option>
                         <option>Filipino</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label small">Default view</label>
+            </div>
+        </article>
+
+        {% if nav_role == 'teacher' %}
+        <article class="settings-card">
+            <h2>Teacher Defaults</h2>
+            <div class="d-grid gap-3">
+                <div>
+                    <label class="form-label small">Default landing page</label>
                     <select class="form-select">
-                        <option selected>Dashboard</option>
-                        <option>Calendar</option>
+                        <option selected>Teacher Dashboard</option>
+                        <option>Materials</option>
+                        <option>Students</option>
                     </select>
                 </div>
+                <div>
+                    <label class="form-label small">New material visibility</label>
+                    <select class="form-select">
+                        <option selected>Draft first</option>
+                        <option>Publish to selected class</option>
+                    </select>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="teacherReportDigest" checked>
+                    <label class="form-check-label" for="teacherReportDigest">Send weekly reading-level digest</label>
+                </div>
             </div>
-            <button class="btn btn-primary btn-sm mt-3" type="button">Save Settings</button>
-        </div>
+        </article>
+        {% else %}
+        <article class="settings-card">
+            <h2>Student Defaults</h2>
+            <div class="d-grid gap-3">
+                <div>
+                    <label class="form-label small">Default landing page</label>
+                    <select class="form-select">
+                        <option selected>Student Dashboard</option>
+                        <option>Practice Mode</option>
+                        <option>Reading Assessment</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label small">Reading reminder</label>
+                    <select class="form-select">
+                        <option selected>Daily</option>
+                        <option>Weekdays only</option>
+                        <option>Off</option>
+                    </select>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="studentSound" checked>
+                    <label class="form-check-label" for="studentSound">Enable practice sound cues</label>
+                </div>
+            </div>
+        </article>
+        {% endif %}
     </div>
+
+    <button class="btn btn-primary btn-sm mt-3" type="button">Save Settings</button>
 </section>
 {% endblock %}

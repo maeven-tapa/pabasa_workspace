@@ -2,248 +2,331 @@
 
 {% block extra_head %}
 <style>
-    .mini-chart-wrap {
+    .student-dashboard {
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        align-items: end;
-        gap: 0.45rem;
-        height: 170px;
-        padding: 0.7rem 0.4rem 0.2rem;
-        border: 1px solid #eceef6;
-        border-radius: 0.8rem;
-        background: linear-gradient(180deg, #fcfbff 0%, #f7f8ff 100%);
+        gap: 1.15rem;
     }
 
-    .mini-col {
-        display: flex;
-        flex-direction: column;
+    .student-studio {
+        min-height: 360px;
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 28px;
+        background:
+            linear-gradient(135deg, rgba(31, 111, 139, 0.08), transparent 40%),
+            linear-gradient(245deg, rgba(185, 95, 68, 0.06), transparent 45%),
+            #fffdf7;
+        box-shadow: 0 24px 52px rgba(27, 26, 23, 0.08);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr);
+        gap: 2rem;
+        overflow: visible;
+        padding: clamp(1.5rem, 3vw, 2.5rem);
+        position: relative;
+    }
+
+    .student-studio::before {
+        display: none;
+    }
+
+    .student-studio-copy {
+        align-content: center;
+        display: grid;
+        gap: 1.2rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .student-studio-copy h2 {
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        margin: 0;
+        max-width: 600px;
+    }
+
+    .student-studio-copy p {
+        color: var(--dash-ink-soft);
+        line-height: 1.65;
+        margin: 0;
+        max-width: 560px;
+    }
+
+    .studio-kicker {
         align-items: center;
-        gap: 0.35rem;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-size: 0.76rem;
+        font-weight: 700;
+        gap: 0.5rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
     }
 
-    .mini-col .bar {
-        width: 100%;
-        max-width: 28px;
+    .studio-kicker::before {
+        content: "";
+        width: 34px;
+        height: 2px;
         border-radius: 999px;
-        background: linear-gradient(180deg, #8a3ffc 0%, #6e10ee 100%);
-        box-shadow: 0 6px 12px rgba(110, 16, 238, 0.2);
+        background: var(--dash-primary);
     }
 
-    .mini-col .day {
-        font-size: 0.72rem;
-        color: #7f859a;
+    .join-desk {
+        align-self: center;
+        background: #fff;
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        border-radius: 24px;
+        box-shadow: 0 16px 40px rgba(27, 26, 23, 0.09);
+        display: grid;
+        gap: 1.2rem;
+        padding: 1.5rem;
+        position: relative;
+        z-index: 1;
     }
 
-    .mini-col .val {
-        font-size: 0.72rem;
-        font-weight: 600;
-        color: #4d536a;
+    .join-desk::before {
+        content: "";
+        position: absolute;
+        left: 26px;
+        top: -16px;
+        width: 76px;
+        height: 26px;
+        border-radius: 0 0 14px 14px;
+        background: linear-gradient(135deg, #f7e7cf, #f0dbb8);
+        border: 1px solid rgba(31, 111, 139, 0.08);
+        box-shadow: 0 8px 16px rgba(27, 26, 23, 0.06);
     }
 
-    .dash-recent-status {
-        background: #f3ebff !important;
-        color: #6e10ee !important;
-        border: 1px solid #d8c7ff;
-        font-weight: 600;
+    .join-desk-head {
+        display: grid;
+        gap: 0.35rem;
+        padding-top: 0.5rem;
+    }
+
+    .join-desk-head h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.01em;
+    }
+
+    .class-code-form {
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    .code-input-shell {
+        background: #1b1a17;
+        border-radius: 16px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+        display: grid;
+        gap: 0.65rem;
+        padding: 0.95rem;
+    }
+
+    .code-input-shell label {
+        color: rgba(255, 255, 255, 0.62);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        margin: 0;
+        text-transform: uppercase;
+    }
+
+    .code-input-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.65rem;
+    }
+
+    .code-input-row .form-control {
+        background: #fffdf7;
+        border: 0;
+        border-radius: 12px;
+        color: #1b1a17;
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        min-height: 52px;
+        text-transform: uppercase;
+    }
+
+    .code-input-row .btn {
+        background: linear-gradient(135deg, #f7e7cf, #f0dbb8);
+        border: 0;
+        border-radius: 12px;
+        color: #1b1a17 !important;
+        font-weight: 800;
+        min-height: 52px;
+        padding-inline: 1.25rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 4px 12px rgba(247, 231, 207, 0.3);
+    }
+
+    .code-input-row .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(247, 231, 207, 0.4);
+    }
+
+    .desk-note {
+        align-items: start;
+        background: rgba(31, 111, 139, 0.06);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        border-radius: 14px;
+        color: var(--dash-ink-soft);
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        font-size: 0.92rem;
+    }
+
+    .desk-note i {
+        color: var(--dash-primary);
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+    }
+
+    .reading-shelf {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .shelf-action {
+        background: #ffffff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 22px;
+        color: var(--dash-text);
+        min-height: 150px;
+        overflow: hidden;
+        padding: 1rem;
+        position: relative;
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .shelf-action:hover {
+        color: var(--dash-text);
+        box-shadow: 0 22px 42px rgba(27, 26, 23, 0.12);
+        transform: translateY(-3px);
+    }
+
+    .shelf-action::after {
+        bottom: -36px;
+        color: rgba(31, 111, 139, 0.08);
+        content: attr(data-letter);
+        font-size: 9rem;
+        font-weight: 700;
+        line-height: 1;
+        position: absolute;
+        right: -12px;
+    }
+
+    .shelf-action.practice {
+        background: linear-gradient(135deg, #ffffff, #e7f3f5);
+    }
+
+    .shelf-action.assessment {
+        background: linear-gradient(135deg, #ffffff, #f8ead8);
+    }
+
+    .shelf-icon {
+        align-items: center;
+        background: #1f6f8b;
+        border-radius: 15px;
+        color: #ffffff;
+        display: inline-flex;
+        height: 46px;
+        justify-content: center;
+        margin-bottom: 1rem;
+        width: 46px;
+    }
+
+    @media (max-width: 1000px) {
+        .student-studio {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .join-desk {
+            align-self: auto;
+        }
+    }
+
+    @media (max-width: 980px) {
+        .reading-shelf {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .student-studio {
+            border-radius: 20px;
+            padding: 1.25rem;
+        }
+
+        .code-input-row {
+            grid-template-columns: 1fr;
+        }
+
+        .code-input-row .btn {
+            min-height: 48px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block header %}
-    {% include "pabasa_app/partials/_header.html" with page_title="Dashboard" page_date="April 2, 2026" %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Dashboard" page_date="" %}
 {% endblock %}
 
 {% block content %}
-<section class="mb-4">
-    <div class="dash-surface p-3 p-md-4 mb-3">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div>
-                <h2 class="h6 mb-1">Good morning, Maeven!</h2>
-                <p class="small text-secondary mb-0">Your class and reading activity summary for this week.</p>
-            </div>
-            <span class="badge dash-badge">Live Data</span>
+<section class="student-dashboard">
+    <div class="student-studio">
+        <div class="student-studio-copy">
+            <span class="studio-kicker">Your classroom canvas</span>
+            <h2>Your reading space starts clean.</h2>
+            <p>Once you join a class, this page becomes your home for teacher notes, reading work, and assigned assessments. Until then, the dashboard stays intentionally quiet.</p>
         </div>
+
+        <article class="join-desk">
+            <div class="join-desk-head">
+                <span class="dash-pill"><i class="bi bi-door-open"></i> Join your class</span>
+                <h3>Enter the code from your teacher.</h3>
+                <p class="small text-secondary mb-0">Class cards and reading assignments appear here after the code is accepted.</p>
+            </div>
+
+            <form action="#" method="post" class="class-code-form">
+                {% csrf_token %}
+                <div class="code-input-shell">
+                    <label for="classCode">Class code</label>
+                    <div class="code-input-row">
+                        <input id="classCode" class="form-control" type="text" name="class_code" placeholder="ABCD-123" autocomplete="off" inputmode="text" aria-describedby="classCodeHelp">
+                        <button class="btn" type="submit"><i class="bi bi-plus-lg me-1"></i>Join</button>
+                    </div>
+                </div>
+                <p id="classCodeHelp" class="small text-secondary mb-0">Codes are usually 6-8 characters and are not case-sensitive.</p>
+            </form>
+
+            <div class="desk-note">
+                <i class="bi bi-info-circle"></i>
+                <p class="small mb-0">No class yet. That is expected for a new student account.</p>
+            </div>
+        </article>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
-            <div class="dash-surface dash-kpi p-3 h-100">
-                <p class="text-secondary small mb-2">Total Courses</p>
-                <h3 class="h4 mb-1">8</h3>
-                <small class="text-success"><i class="bi bi-arrow-up-right"></i> +2 this month</small>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="dash-surface dash-kpi p-3 h-100">
-                <p class="text-secondary small mb-2">Total Completed Lessons</p>
-                <h3 class="h4 mb-1">43</h3>
-                <small class="text-success"><i class="bi bi-check-circle"></i> 9 completed this week</small>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="dash-surface dash-kpi p-3 h-100">
-                <p class="text-secondary small mb-2">Average Reading Score</p>
-                <h3 class="h4 mb-1">87%</h3>
-                <small class="text-success"><i class="bi bi-graph-up"></i> +6% progress</small>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="dash-surface dash-kpi p-3 h-100">
-                <p class="text-secondary small mb-2">Practice Streak</p>
-                <h3 class="h4 mb-1">12 days</h3>
-                <small class="text-primary"><i class="bi bi-fire"></i> Keep it going</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-4">
-        <div class="col-xl-8">
-            <div class="dash-surface p-3 p-md-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h6 mb-0">Weekly Reading Completion</h2>
-                    <span class="small text-secondary">Target: 20 activities/day</span>
-                </div>
-                <div class="mini-chart-wrap">
-                    <div class="mini-col">
-                        <div class="bar" style="height: 54%;"></div>
-                        <span class="val">11</span>
-                        <span class="day">Mon</span>
-                    </div>
-                    <div class="mini-col">
-                        <div class="bar" style="height: 66%;"></div>
-                        <span class="val">13</span>
-                        <span class="day">Tue</span>
-                    </div>
-                    <div class="mini-col">
-                        <div class="bar" style="height: 72%;"></div>
-                        <span class="val">14</span>
-                        <span class="day">Wed</span>
-                    </div>
-                    <div class="mini-col">
-                        <div class="bar" style="height: 84%;"></div>
-                        <span class="val">17</span>
-                        <span class="day">Thu</span>
-                    </div>
-                    <div class="mini-col">
-                        <div class="bar" style="height: 78%;"></div>
-                        <span class="val">16</span>
-                        <span class="day">Fri</span>
-                    </div>
-                    <div class="mini-col">
-                        <div class="bar" style="height: 42%;"></div>
-                        <span class="val">8</span>
-                        <span class="day">Sat</span>
-                    </div>
-                    <div class="mini-col">
-                        <div class="bar" style="height: 36%;"></div>
-                        <span class="val">7</span>
-                        <span class="day">Sun</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-4">
-            <div class="dash-surface p-3 p-md-4 h-100">
-                <h2 class="h6 mb-3">Reading Focus This Week</h2>
-                <p class="small text-secondary mb-2">Accurately Read</p>
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between small mb-1">
-                        <span>Words</span>
-                        <span>84 words</span>
-                    </div>
-                    <div class="progress" role="progressbar" aria-label="Words accurately said" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar" style="width: 72%; background-color: #6e10ee;"></div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between small mb-1">
-                        <span>Sentences</span>
-                        <span>56 sentences</span>
-                    </div>
-                    <div class="progress" role="progressbar" aria-label="Sentences accurately said" aria-valuenow="48" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar bg-info" style="width: 48%"></div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between small mb-1">
-                        <span>Paragraphs</span>
-                        <span>31 paragraphs</span>
-                    </div>
-                    <div class="progress" role="progressbar" aria-label="Paragraphs accurately said" aria-valuenow="36" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar bg-success" style="width: 36%"></div>
-                    </div>
-                </div>
-                <div class="border rounded p-2 bg-light-subtle">
-                    <div class="small text-secondary">Suggested focus</div>
-                    <div class="fw-semibold">Increase paragraph drills for Grade 5 - A</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3">
-        <div class="col-xl-8">
-            <div class="dash-surface p-3 p-md-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h6 mb-0">Recent Activity</h2>
-                    <a href="#" class="small">View all</a>
-                </div>
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Course</th>
-                                <th>Lesson</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Reading Fluency 101</td>
-                                <td>Lesson 1: Letter Sounds</td>
-                                <td><span class="badge dash-recent-status">Complete</span></td>
-                            </tr>
-                            <tr>
-                                <td>Speech Practice Lab</td>
-                                <td>Lesson 3: Oral Reading</td>
-                                <td><span class="badge dash-recent-status">64%</span></td>
-                            </tr>
-                            <tr>
-                                <td>Comprehension Workshop</td>
-                                <td>Lesson 5: Paragraph Practice</td>
-                                <td><span class="badge dash-recent-status">82%</span></td>
-                            </tr>
-                            <tr>
-                                <td>Reading Fluency 101</td>
-                                <td>Lesson 2: Word Drills</td>
-                                <td><span class="badge dash-recent-status">Complete</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-4">
-            <div class="dash-surface p-3 p-md-4 h-100">
-                <h2 class="h6 mb-3">Upcoming</h2>
-                <div class="d-grid gap-2">
-                    <div class="border rounded p-2">
-                        <div class="fw-semibold">Writing Workshop</div>
-                        <small class="text-secondary">Tomorrow, 10:00 AM</small>
-                    </div>
-                    <div class="border rounded p-2">
-                        <div class="fw-semibold">Reading Quiz</div>
-                        <small class="text-secondary">Friday, 1:00 PM</small>
-                    </div>
-                    <div class="border rounded p-2">
-                        <div class="fw-semibold">Pronunciation Drill</div>
-                        <small class="text-secondary">Saturday, 9:30 AM</small>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="reading-shelf" style="display: none;">
+        <a class="shelf-action practice" href="{% url 'practice' %}" data-letter="P">
+            <span class="shelf-icon"><i class="bi bi-mic"></i></span>
+            <span class="fw-semibold d-block mb-2">Practice Mode</span>
+            <span class="small text-secondary">Warm up with short reading drills before class work appears.</span>
+        </a>
+        <a class="shelf-action assessment" href="{% url 'assessment' %}" data-letter="R">
+            <span class="shelf-icon"><i class="bi bi-journal-check"></i></span>
+            <span class="fw-semibold d-block mb-2">Reading Assessment</span>
+            <span class="small text-secondary">Open the main reading assessment when your teacher assigns one.</span>
+        </a>
     </div>
 </section>
 {% endblock %}

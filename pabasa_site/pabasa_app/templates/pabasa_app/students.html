@@ -3,133 +3,327 @@
 
 {% block extra_head %}
 <style>
-    .students-table {
-        border-color: #e9edf6;
+    .students-page {
+        display: grid;
+        gap: 1rem;
     }
 
-    .students-table thead th {
-        background: #f8faff;
-        color: #6f7892;
-        font-size: 0.74rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        border-bottom: 1px solid #e7ebf5;
-        padding: 0.72rem 0.75rem;
-        white-space: nowrap;
+    .students-overview {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .students-table tbody td {
-        border-color: #edf1f8;
-        padding: 0.8rem 0.75rem;
+    .student-stat,
+    .students-panel {
         background: #fff;
-        transition: background-color 0.15s ease;
+        border: 1px solid var(--dash-border);
+        border-radius: 20px;
+        box-shadow: var(--dash-shadow);
     }
 
-    .students-table tbody tr:hover td {
-        background: #f7f9ff;
+    .student-stat {
+        display: grid;
+        gap: 0.65rem;
+        min-height: 128px;
+        overflow: hidden;
+        padding: 1rem;
+        position: relative;
     }
 
-    .students-table tbody .badge {
-        background: #f3ebff !important;
-        color: #6e10ee !important;
-        border: 1px solid #d8c7ff;
-        font-weight: 600;
-    }
-
-    .students-table .btn.btn-outline-secondary.btn-sm,
-    .students-table .btn.btn-outline-primary.btn-sm,
-    .students-table .btn.btn-outline-warning.btn-sm,
-    .students-table .btn.btn-outline-danger.btn-sm {
-        color: #6e10ee;
-        border-color: #cdb3ff;
-        background: #fff;
-    }
-
-    .students-table .btn.btn-outline-secondary.btn-sm:hover,
-    .students-table .btn.btn-outline-primary.btn-sm:hover,
-    .students-table .btn.btn-outline-warning.btn-sm:hover,
-    .students-table .btn.btn-outline-danger.btn-sm:hover {
-        color: #5f0fd0;
-        border-color: #b48aff;
-        background: #f6f1ff;
-    }
-
-    .active-chart-wrap {
-        height: 170px;
-        border: 1px solid #ece8ff;
-        border-radius: 10px;
-        background: linear-gradient(180deg, #faf7ff 0%, #ffffff 100%);
-        display: flex;
-        align-items: flex-end;
-        gap: 0.55rem;
-        padding: 0.85rem 0.75rem 0.6rem;
-    }
-
-    .active-chart-col {
-        flex: 1;
-        min-width: 0;
-        text-align: center;
-    }
-
-    .active-chart-bar {
-        width: 100%;
-        border-radius: 8px 8px 4px 4px;
-        background: linear-gradient(180deg, #8a46f8 0%, #6e10ee 100%);
-        box-shadow: 0 6px 12px rgba(110, 16, 238, 0.2);
-    }
-
-    .active-chart-col.is-peak .active-chart-bar {
-        background: linear-gradient(180deg, #a969ff 0%, #7a22f5 100%);
-    }
-
-    .active-chart-value {
-        font-size: 0.7rem;
-        color: #6e10ee;
+    .student-stat::after {
+        bottom: -0.8rem;
+        color: rgba(31, 111, 139, 0.08);
+        content: attr(data-mark);
+        font-size: 4.4rem;
         font-weight: 700;
-        margin-bottom: 0.25rem;
+        line-height: 1;
+        position: absolute;
+        right: -0.25rem;
     }
 
-    .active-chart-label {
-        margin-top: 0.35rem;
-        font-size: 0.7rem;
-        color: #7b8398;
-        letter-spacing: 0.02em;
+    .student-stat span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 700;
+        position: relative;
+        z-index: 1;
+    }
+
+    .student-stat strong {
+        display: block;
+        font-size: 2rem;
+        line-height: 1;
+        position: relative;
+        z-index: 1;
+    }
+
+    .student-stat small {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.76rem;
+        font-weight: 700;
+        line-height: 1.35;
+        position: relative;
+        z-index: 1;
     }
 
     .students-layout {
-        align-items: stretch;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1fr) 320px;
     }
 
-    .students-main-card {
-        height: 100%;
+    .students-panel {
+        padding: 1rem;
     }
 
-    .students-side-col {
+    .student-directory {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .student-card-row {
+        align-items: start;
+        background: #fffdf7;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 18px;
+        display: grid;
+        gap: 0.8rem;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        padding: 0.85rem;
+    }
+
+    .student-avatar {
+        align-items: center;
+        background: var(--dash-primary-soft);
+        border-radius: 14px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-weight: 800;
+        height: 46px;
+        justify-content: center;
+        width: 46px;
+    }
+
+    .student-row-main {
+        display: grid;
+        gap: 0.65rem;
+        min-width: 0;
+    }
+
+    .student-name-line {
+        align-items: center;
         display: flex;
-        flex-direction: column;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        justify-content: space-between;
     }
 
-    .students-side-col .dash-card {
-        flex: 1 1 0;
+    .student-meta {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .students-side-col .dash-card .card-body {
+    .student-meta-box {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(27, 26, 23, 0.07);
+        border-radius: 12px;
+        padding: 0.55rem;
+    }
+
+    .student-meta-box span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.12rem;
+        text-transform: uppercase;
+    }
+
+    .student-meta-box strong {
+        display: block;
+        font-size: 0.84rem;
+        overflow-wrap: anywhere;
+    }
+
+    .student-row-actions {
+        align-self: stretch;
+        display: grid;
+        gap: 0.5rem;
+        justify-items: end;
+    }
+
+    .student-row-actions .btn {
+        border-radius: 12px;
+        font-weight: 700;
+        min-width: 82px;
+    }
+
+    .level-chip {
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 800;
+        padding: 0.28rem 0.58rem;
+        white-space: nowrap;
+    }
+
+    .level-low { background: #fee2e2; color: #991b1b; }
+    .level-developing { background: #ffedd5; color: #9a3412; }
+    .level-transitioning { background: #fef3c7; color: #92400e; }
+    .level-grade { background: #dcfce7; color: #166534; }
+    .level-high { background: #d9eef4; color: #155e75; }
+
+    .reading-band {
+        background: #eef6f8;
+        border-radius: 999px;
+        height: 10px;
+        overflow: hidden;
+    }
+
+    .reading-band span {
+        background: linear-gradient(90deg, var(--dash-warm), var(--dash-primary));
+        display: block;
         height: 100%;
+    }
+
+    .teacher-actions-panel {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .teacher-action-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .teacher-action-btn {
+        align-items: center;
+        background: #fffdf7;
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 16px;
+        color: var(--dash-text);
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        min-height: 76px;
+        padding: 0.8rem;
+        text-align: left;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        width: 100%;
+    }
+
+    .teacher-action-btn:hover {
+        border-color: rgba(31, 111, 139, 0.34);
+        box-shadow: 0 16px 30px rgba(27, 26, 23, 0.09);
+        transform: translateY(-1px);
+    }
+
+    .teacher-action-icon {
+        align-items: center;
+        background: var(--dash-primary-soft);
+        border-radius: 14px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        height: 42px;
+        justify-content: center;
+        width: 42px;
+    }
+
+    .teacher-action-copy strong {
+        display: block;
+        font-size: 0.92rem;
+        margin-bottom: 0.15rem;
+    }
+
+    .teacher-action-copy span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.78rem;
+        line-height: 1.35;
+    }
+
+    .priority-card {
+        background: #1b1a17;
+        border: 0;
+        border-radius: 18px;
+        color: #fffdf7;
+        padding: 1rem;
+    }
+
+    .priority-card p,
+    .priority-card span {
+        color: rgba(255, 253, 247, 0.68);
+    }
+
+    .priority-card strong {
+        color: #fffdf7;
+    }
+
+    .action-preview-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .action-preview-item {
+        background: #fffdf7;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 14px;
+        padding: 0.8rem;
+    }
+
+    .student-empty-state {
+        background: rgba(217, 238, 244, 0.45);
+        border: 1px dashed rgba(31, 111, 139, 0.25);
+        border-radius: 16px;
+        color: var(--dash-muted);
+        display: none;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .student-empty-state.is-visible {
+        display: block;
+    }
+
+    @media (max-width: 1100px) {
+        .students-overview {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .students-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .students-overview,
+        .student-card-row,
+        .teacher-action-btn,
+        .student-meta {
+            grid-template-columns: 1fr;
+        }
+
+        .student-row-actions {
+            justify-items: stretch;
+        }
     }
 </style>
 {% endblock %}
 
 {% block header %}
-    {% include "pabasa_app/partials/_header.html" with page_title="Students" page_date="April 3, 2026" %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Students" page_date="" %}
 {% endblock %}
 
 {% block content %}
-<section>
+<section class="students-page">
     <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
-            <p class="small text-secondary mb-1">Manage learner details, reading performance, and class status.</p>
-            <p class="small mb-0"><strong>Note:</strong> Keep student sections and status updated before generating reports.</p>
+            <p class="small text-secondary mb-1">Review students by class, reading level, and recent activity.</p>
+            <p class="small mb-0"><strong>Note:</strong> Use this page to decide who needs intervention, transition support, or enrichment.</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <button class="btn btn-outline-secondary btn-sm" type="button"><i class="bi bi-download me-1"></i>Export</button>
@@ -137,311 +331,183 @@
         </div>
     </div>
 
-    <div class="row g-3 students-layout">
-        <div class="col-xl-8">
-            <div class="dash-card students-main-card">
-                <div class="card-body p-0">
-                    <div class="p-3 border-bottom d-flex flex-wrap gap-2 align-items-center justify-content-between">
-                        <div class="input-group input-group-sm" style="max-width: 280px;">
-                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
-                            <input type="text" class="form-control" placeholder="Search student..." aria-label="Search student">
-                        </div>
-                        <select class="form-select form-select-sm" style="max-width: 180px;" aria-label="Filter section">
-                            <option selected>All Sections</option>
-                            <option>Grade 2 - A</option>
-                            <option>Grade 2 - B</option>
-                            <option>Grade 2 - C</option>
-                        </select>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0 students-table">
-                            <thead>
-                                <tr>
-                                    <th>Student</th>
-                                    <th>Section</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold">Lia Santos</div>
-                                        <small class="text-secondary">STU-1023</small>
-                                    </td>
-                                    <td>Grade 2 - A</td>
-                                    <td><span class="badge text-bg-success">Enrolled</span></td>
-                                    <td>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <button
-                                                class="btn btn-outline-secondary btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#assignSectionModal"
-                                                data-student-name="Lia Santos"
-                                                data-current-section="Grade 2 - A"
-                                            >Edit Section</button>
-                                            <button
-                                                class="btn btn-outline-warning btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#changeStatusModal"
-                                                data-student-name="Lia Santos"
-                                                data-current-status="Enrolled"
-                                            >Change Status</button>
-                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
-                                            <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold">Marco Dela Cruz</div>
-                                        <small class="text-secondary">STU-1038</small>
-                                    </td>
-                                    <td>Grade 2 - A</td>
-                                    <td><span class="badge text-bg-success">Enrolled</span></td>
-                                    <td>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <button
-                                                class="btn btn-outline-secondary btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#assignSectionModal"
-                                                data-student-name="Marco Dela Cruz"
-                                                data-current-section="Grade 2 - A"
-                                            >Edit Section</button>
-                                            <button
-                                                class="btn btn-outline-warning btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#changeStatusModal"
-                                                data-student-name="Marco Dela Cruz"
-                                                data-current-status="Enrolled"
-                                            >Change Status</button>
-                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
-                                            <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold">Aira Mendoza</div>
-                                        <small class="text-secondary">STU-1091</small>
-                                    </td>
-                                    <td>Grade 2 - C</td>
-                                    <td><span class="badge text-bg-warning">Dropped</span></td>
-                                    <td>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <button
-                                                class="btn btn-outline-secondary btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#assignSectionModal"
-                                                data-student-name="Aira Mendoza"
-                                                data-current-section="Grade 2 - C"
-                                            >Edit Section</button>
-                                            <button
-                                                class="btn btn-outline-warning btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#changeStatusModal"
-                                                data-student-name="Aira Mendoza"
-                                                data-current-status="Dropped"
-                                            >Change Status</button>
-                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
-                                            <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold">Nico Ramos</div>
-                                        <small class="text-secondary">STU-1110</small>
-                                    </td>
-                                    <td>Grade 2 - B</td>
-                                    <td><span class="badge text-bg-success">Enrolled</span></td>
-                                    <td>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <button
-                                                class="btn btn-outline-secondary btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#assignSectionModal"
-                                                data-student-name="Nico Ramos"
-                                                data-current-section="Grade 2 - B"
-                                            >Edit Section</button>
-                                            <button
-                                                class="btn btn-outline-warning btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#changeStatusModal"
-                                                data-student-name="Nico Ramos"
-                                                data-current-status="Enrolled"
-                                            >Change Status</button>
-                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
-                                            <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold">Trina Velasco</div>
-                                        <small class="text-secondary">STU-1128</small>
-                                    </td>
-                                    <td>Grade 2 - C</td>
-                                    <td><span class="badge text-bg-success">Enrolled</span></td>
-                                    <td>
-                                        <div class="d-flex flex-wrap gap-1">
-                                            <button
-                                                class="btn btn-outline-secondary btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#assignSectionModal"
-                                                data-student-name="Trina Velasco"
-                                                data-current-section="Grade 2 - C"
-                                            >Edit Section</button>
-                                            <button
-                                                class="btn btn-outline-warning btn-sm"
-                                                type="button"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#changeStatusModal"
-                                                data-student-name="Trina Velasco"
-                                                data-current-status="Enrolled"
-                                            >Change Status</button>
-                                            <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}" role="button">View</a>
-                                            <button class="btn btn-outline-danger btn-sm" type="button">Remove</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="students-overview">
+        <article class="student-stat" data-mark="S"><span>Total students</span><strong>84</strong><small>Across active reading classes</small></article>
+        <article class="student-stat" data-mark="L"><span>Low Emerging Readers</span><strong>9</strong><small>Needs immediate word-level support</small></article>
+        <article class="student-stat" data-mark="H"><span>High Emerging Readers</span><strong>12</strong><small>Ready for guided sentence work</small></article>
+        <article class="student-stat" data-mark="D"><span>Developing Readers</span><strong>18</strong><small>Building accuracy and pacing</small></article>
+        <article class="student-stat" data-mark="T"><span>Transitioning Readers</span><strong>21</strong><small>Moving toward grade-level fluency</small></article>
+        <article class="student-stat" data-mark="G"><span>Readers at Grade Level</span><strong>34</strong><small>Ready for enrichment passages</small></article>
+    </div>
 
-        <div class="col-xl-4 students-side-col">
-            <div class="dash-card mb-3">
-                <div class="card-body p-3">
-                    <h3 class="h6 mb-3">Class Snapshot</h3>
-                    <div class="d-grid gap-2">
-                        <div class="border rounded p-2 d-flex justify-content-between align-items-center">
-                            <span class="small text-secondary">Total Students</span>
-                            <strong>35</strong>
-                        </div>
-                        <div class="border rounded p-2 d-flex justify-content-between align-items-center">
-                            <span class="small text-secondary">Total Sections</span>
-                            <strong>4</strong>
-                        </div>
-                        <div class="border rounded p-2 d-flex justify-content-between align-items-center">
-                            <span class="small text-secondary">Active Today</span>
-                            <strong>31</strong>
-                        </div>
-                    </div>
+    <div class="students-layout">
+        <article class="students-panel">
+            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+                <div>
+                    <h2 class="h6 mb-1">Student Directory</h2>
+                    <p class="small text-secondary mb-0"><span id="studentResultCount">4</span> students shown by class, reading level, and recent activity.</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <input class="form-control form-control-sm" id="studentSearchInput" type="search" placeholder="Search student" aria-label="Search student">
+                    <select class="form-select form-select-sm" id="readingLevelFilter" aria-label="Filter reading level">
+                        <option selected>All levels</option>
+                        <option>Low Emerging Readers</option>
+                        <option>High Emerging Readers</option>
+                        <option>Developing Readers</option>
+                        <option>Transitioning Readers</option>
+                        <option>Readers at Grade Level</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="dash-card mb-3">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="h6 mb-0">Active Students Per Day</h3>
-                        <span class="small text-secondary">Last 7 days</span>
+            <div class="student-directory">
+                <div class="student-card-row" data-student-name="Luna Dela Cruz" data-reading-level="Readers at Grade Level" data-class-name="Grade 3 Reading - A">
+                    <span class="student-avatar">LD</span>
+                    <div class="student-row-main">
+                        <div class="student-name-line">
+                            <strong>Luna Dela Cruz</strong>
+                            <span class="level-chip level-grade">Readers at Grade Level</span>
+                        </div>
+                        <div class="student-meta">
+                            <div class="student-meta-box"><span>Class</span><strong>Grade 3 Reading - A</strong></div>
+                            <div class="student-meta-box"><span>WPM</span><strong>92</strong></div>
+                            <div class="student-meta-box"><span>Accuracy</span><strong>96%</strong></div>
+                        </div>
+                        <div class="reading-band mt-2"><span style="width: 92%;"></span></div>
                     </div>
-                    <div class="active-chart-wrap" role="img" aria-label="Active students per day for the last 7 days">
-                        <div class="active-chart-col">
-                            <div class="active-chart-value">26</div>
-                            <div class="active-chart-bar" style="height: 62%;"></div>
-                            <div class="active-chart-label">Mon</div>
-                        </div>
-                        <div class="active-chart-col">
-                            <div class="active-chart-value">28</div>
-                            <div class="active-chart-bar" style="height: 68%;"></div>
-                            <div class="active-chart-label">Tue</div>
-                        </div>
-                        <div class="active-chart-col is-peak">
-                            <div class="active-chart-value">31</div>
-                            <div class="active-chart-bar" style="height: 82%;"></div>
-                            <div class="active-chart-label">Wed</div>
-                        </div>
-                        <div class="active-chart-col">
-                            <div class="active-chart-value">29</div>
-                            <div class="active-chart-bar" style="height: 73%;"></div>
-                            <div class="active-chart-label">Thu</div>
-                        </div>
-                        <div class="active-chart-col">
-                            <div class="active-chart-value">30</div>
-                            <div class="active-chart-bar" style="height: 77%;"></div>
-                            <div class="active-chart-label">Fri</div>
-                        </div>
-                        <div class="active-chart-col">
-                            <div class="active-chart-value">24</div>
-                            <div class="active-chart-bar" style="height: 55%;"></div>
-                            <div class="active-chart-label">Sat</div>
-                        </div>
-                        <div class="active-chart-col">
-                            <div class="active-chart-value">22</div>
-                            <div class="active-chart-bar" style="height: 48%;"></div>
-                            <div class="active-chart-label">Sun</div>
-                        </div>
+                    <div class="student-row-actions">
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
+                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
                     </div>
                 </div>
+                <div class="student-card-row" data-student-name="Marco Reyes" data-reading-level="Transitioning Readers" data-class-name="Grade 3 Reading - A">
+                    <span class="student-avatar">MR</span>
+                    <div class="student-row-main">
+                        <div class="student-name-line">
+                            <strong>Marco Reyes</strong>
+                            <span class="level-chip level-transitioning">Transitioning Readers</span>
+                        </div>
+                        <div class="student-meta">
+                            <div class="student-meta-box"><span>Class</span><strong>Grade 3 Reading - A</strong></div>
+                            <div class="student-meta-box"><span>WPM</span><strong>78</strong></div>
+                            <div class="student-meta-box"><span>Accuracy</span><strong>88%</strong></div>
+                        </div>
+                        <div class="reading-band mt-2"><span style="width: 78%;"></span></div>
+                    </div>
+                    <div class="student-row-actions">
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
+                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
+                    </div>
+                </div>
+                <div class="student-card-row" data-student-name="Alyssa Ramos" data-reading-level="Developing Readers" data-class-name="Grade 3 Reading - A">
+                    <span class="student-avatar">AR</span>
+                    <div class="student-row-main">
+                        <div class="student-name-line">
+                            <strong>Alyssa Ramos</strong>
+                            <span class="level-chip level-developing">Developing Readers</span>
+                        </div>
+                        <div class="student-meta">
+                            <div class="student-meta-box"><span>Class</span><strong>Grade 3 Reading - A</strong></div>
+                            <div class="student-meta-box"><span>WPM</span><strong>54</strong></div>
+                            <div class="student-meta-box"><span>Accuracy</span><strong>72%</strong></div>
+                        </div>
+                        <div class="reading-band mt-2"><span style="width: 54%;"></span></div>
+                    </div>
+                    <div class="student-row-actions">
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
+                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
+                    </div>
+                </div>
+                <div class="student-card-row" data-student-name="Noah Santos" data-reading-level="Low Emerging Readers" data-class-name="Remedial Reading Group">
+                    <span class="student-avatar">NS</span>
+                    <div class="student-row-main">
+                        <div class="student-name-line">
+                            <strong>Noah Santos</strong>
+                            <span class="level-chip level-low">Low Emerging Readers</span>
+                        </div>
+                        <div class="student-meta">
+                            <div class="student-meta-box"><span>Class</span><strong>Remedial Reading Group</strong></div>
+                            <div class="student-meta-box"><span>WPM</span><strong>39</strong></div>
+                            <div class="student-meta-box"><span>Accuracy</span><strong>61%</strong></div>
+                        </div>
+                        <div class="reading-band mt-2"><span style="width: 39%;"></span></div>
+                    </div>
+                    <div class="student-row-actions">
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
+                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
+                    </div>
+                </div>
+                <div class="student-empty-state" id="studentEmptyState">
+                    <strong>No students match the current filters.</strong>
+                    <p class="small mb-0 mt-1">Try a different name, class, or reading level.</p>
+                </div>
+            </div>
+        </article>
+
+        <aside class="students-panel teacher-actions-panel">
+            <div>
+                <h2 class="h6 mb-1">Teacher Actions</h2>
+                <p class="small text-secondary mb-0">Quick actions for class records, reports, and parent communication.</p>
             </div>
 
-            <div class="dash-card">
-                <div class="card-body p-3">
-                    <h3 class="h6 mb-3">Quick Actions</h3>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addStudentModal">Add New Student</button>
-                        <button class="btn btn-outline-primary btn-sm" type="button">Send Parent Update</button>
-                        <button class="btn btn-outline-primary btn-sm" type="button">Generate Progress Report</button>
-                    </div>
+            <div class="teacher-action-list">
+                <button class="teacher-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                    <span class="teacher-action-icon"><i class="bi bi-person-plus"></i></span>
+                    <span class="teacher-action-copy">
+                        <strong>Add Student</strong>
+                        <span>Add a learner to one of your reading groups.</span>
+                    </span>
+                    <i class="bi bi-chevron-right text-secondary"></i>
+                </button>
+                <button class="teacher-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">
+                    <span class="teacher-action-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
+                    <span class="teacher-action-copy">
+                        <strong>Progress Report</strong>
+                        <span>Preview reading-level movement and export-ready notes.</span>
+                    </span>
+                    <i class="bi bi-chevron-right text-secondary"></i>
+                </button>
+                <button class="teacher-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">
+                    <span class="teacher-action-icon"><i class="bi bi-send"></i></span>
+                    <span class="teacher-action-copy">
+                        <strong>Parent Update</strong>
+                        <span>Review a parent message before sending it.</span>
+                    </span>
+                    <i class="bi bi-chevron-right text-secondary"></i>
+                </button>
+            </div>
+
+            <div class="priority-card">
+                <h3 class="h6 mb-2">Priority Group</h3>
+                <p class="small text-secondary mb-3">Students marked Low Emerging or High Emerging should receive shorter materials and repeated oral reading.</p>
+                <div class="d-grid gap-2 small">
+                    <div class="d-flex justify-content-between"><span>Low Emerging Readers</span><strong>9</strong></div>
+                    <div class="d-flex justify-content-between"><span>High Emerging Readers</span><strong>12</strong></div>
+                    <div class="d-flex justify-content-between"><span>Developing Readers</span><strong>18</strong></div>
                 </div>
             </div>
-        </div>
+        </aside>
     </div>
 
     <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title h6 mb-0" id="addStudentModalLabel">Add Student</h4>
+                    <h3 class="modal-title h6 mb-0" id="addStudentModalLabel">Add Student</h3>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="#" method="post">
                     <div class="modal-body">
-                        <div class="alert alert-light border mb-3 small" role="alert">
-                            <strong>Teacher Only:</strong> Only teachers can add students and assign their initial section.
-                        </div>
-
                         <div class="mb-3">
-                            <label for="addStudentFullName" class="form-label">Student Name</label>
-                            <input id="addStudentFullName" class="form-control" type="text" list="studentNameList" placeholder="Select or type student name" required>
-                            <datalist id="studentNameList">
-                                <option value="Lia Santos"></option>
-                                <option value="Marco Dela Cruz"></option>
-                                <option value="Aira Mendoza"></option>
-                                <option value="Nico Ramos"></option>
-                                <option value="Trina Velasco"></option>
-                            </datalist>
+                            <label class="form-label" for="studentName">Student Name</label>
+                            <input class="form-control" id="studentName" type="text" placeholder="Type student name">
                         </div>
-
-                        <div class="mb-3">
-                            <label for="addStudentSection" class="form-label">Assign Section</label>
-                            <select id="addStudentSection" class="form-select" required>
-                                <option value="" selected disabled>Select section</option>
-                                <option value="Grade 2 - A">Grade 2 - A</option>
-                                <option value="Grade 2 - B">Grade 2 - B</option>
-                                <option value="Grade 2 - C">Grade 2 - C</option>
-                                <option value="Grade 2 - D">Grade 2 - D</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="addStudentStatus" class="form-label">Status</label>
-                            <select id="addStudentStatus" class="form-select" required>
-                                <option value="Enrolled" selected>Enrolled</option>
-                                <option value="Dropped">Dropped</option>
+                        <div>
+                            <label class="form-label" for="studentClass">Class</label>
+                            <select class="form-select" id="studentClass">
+                                <option selected>Grade 3 Reading - Section A</option>
+                                <option>Remedial Reading Group</option>
+                                <option>Advanced Fluency Circle</option>
                             </select>
                         </div>
                     </div>
@@ -454,101 +520,78 @@
         </div>
     </div>
 
-    <div class="modal fade" id="changeStatusModal" tabindex="-1" aria-labelledby="changeStatusModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+    <div class="modal fade" id="progressReportModal" tabindex="-1" aria-labelledby="progressReportModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title h6 mb-0" id="changeStatusModalLabel">Change Student Status</h4>
+                    <div>
+                        <h3 class="modal-title h6 mb-1" id="progressReportModalLabel">Progress Report Preview</h3>
+                        <p class="small text-secondary mb-0">Grade 3 Reading - Section A</p>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="#" method="post">
-                    <div class="modal-body">
-                        <div class="alert alert-light border mb-3 small" role="alert">
-                            <strong>Teacher Only:</strong> Status updates should be changed only by the assigned class teacher.
+                <div class="modal-body">
+                    <div class="students-overview mb-3">
+                        <article class="student-stat" data-mark="R"><span>Students reviewed</span><strong>28</strong></article>
+                        <article class="student-stat" data-mark="A"><span>Avg. accuracy</span><strong>82%</strong></article>
+                        <article class="student-stat" data-mark="W"><span>Avg. WPM</span><strong>67</strong></article>
+                    </div>
+                    <div class="action-preview-list">
+                        <div class="action-preview-item">
+                            <strong>Needs urgent support</strong>
+                            <p class="small text-secondary mb-0">Noah Santos and 8 other low emerging readers should receive word-level drills and repeated oral reading this week.</p>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="changeStatusStudentName" class="form-label">Student</label>
-                            <input id="changeStatusStudentName" type="text" class="form-control" value="" readonly>
+                        <div class="action-preview-item">
+                            <strong>Ready to transition</strong>
+                            <p class="small text-secondary mb-0">Marco Reyes is approaching grade-level fluency and can move into short paragraph practice.</p>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="changeStatusCurrent" class="form-label">Current Status</label>
-                            <input id="changeStatusCurrent" type="text" class="form-control" value="" readonly>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="changeStatusNew" class="form-label">New Status</label>
-                            <select id="changeStatusNew" class="form-select" required>
-                                <option value="" selected disabled>Select new status</option>
-                                <option value="Enrolled">Enrolled</option>
-                                <option value="Dropped">Dropped</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label for="changeStatusReason" class="form-label">Reason (Optional)</label>
-                            <textarea id="changeStatusReason" class="form-control" rows="3" placeholder="Example: temporary leave, transfer request, or re-enrollment"></textarea>
+                        <div class="action-preview-item">
+                            <strong>Enrichment candidates</strong>
+                            <p class="small text-secondary mb-0">Luna Dela Cruz and other grade-level readers can receive longer passages with comprehension prompts.</p>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Update Status</button>
-                    </div>
-                </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary"><i class="bi bi-download me-1"></i>Export Report</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="assignSectionModal" tabindex="-1" aria-labelledby="assignSectionModalLabel" aria-hidden="true">
+    <div class="modal fade" id="parentUpdateModal" tabindex="-1" aria-labelledby="parentUpdateModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title h6 mb-0" id="assignSectionModalLabel">Assign Section</h4>
+                    <div>
+                        <h3 class="modal-title h6 mb-1" id="parentUpdateModalLabel">Parent Update</h3>
+                        <p class="small text-secondary mb-0">Review message before sending.</p>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="#" method="post">
                     <div class="modal-body">
-                        <div class="alert alert-light border mb-3 small" role="alert">
-                            <strong>Teacher Only:</strong> Section assignment and changes should be handled by the class teacher.
-                        </div>
-
                         <div class="mb-3">
-                            <label for="assignSectionStudentName" class="form-label">Student</label>
-                            <input id="assignSectionStudentName" type="text" class="form-control" value="" readonly>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="assignSectionCurrentSection" class="form-label">Current Section</label>
-                            <input id="assignSectionCurrentSection" type="text" class="form-control" value="" readonly>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="assignSectionNewSection" class="form-label">New Section</label>
-                            <select id="assignSectionNewSection" class="form-select" name="new_section" required>
-                                <option value="" selected disabled>Select new section</option>
-                                <option value="Grade 2 - A">Grade 2 - A</option>
-                                <option value="Grade 2 - B">Grade 2 - B</option>
-                                <option value="Grade 2 - C">Grade 2 - C</option>
-                                <option value="Grade 2 - D">Grade 2 - D</option>
+                            <label class="form-label" for="parentUpdateGroup">Recipient group</label>
+                            <select class="form-select" id="parentUpdateGroup">
+                                <option selected>Priority group guardians</option>
+                                <option>Grade 3 Reading - Section A guardians</option>
+                                <option>All active class guardians</option>
                             </select>
                         </div>
-
                         <div>
-                            <label for="assignSectionReason" class="form-label">Reason (Optional)</label>
-                            <textarea id="assignSectionReason" class="form-control" rows="3" placeholder="Example: Moved based on reading assessment group"></textarea>
+                            <label class="form-label" for="parentUpdateMessage">Message</label>
+                            <textarea class="form-control" id="parentUpdateMessage" rows="5">Good day. This week, we are giving extra short reading practice to learners who need support with accuracy and fluency. Please help your child read aloud for 10 minutes at home and remind them to pause at periods.</textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Section</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Send Update</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </section>
-
-<script src="{% static 'pabasa_app/js/students.js' %}"></script>
+<script src="{% static 'pabasa_app/js/students.js' %}?v=filters-2"></script>
 {% endblock %}

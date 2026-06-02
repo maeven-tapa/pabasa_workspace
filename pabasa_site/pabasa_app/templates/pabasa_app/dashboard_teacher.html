@@ -3,256 +3,656 @@
 
 {% block extra_head %}
 <style>
-    .teacher-mini-chart {
+    .teacher-dashboard {
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        align-items: end;
-        gap: 0.45rem;
-        height: 175px;
-        padding: 0.7rem 0.4rem 0.2rem;
-        border: 1px solid #eceef6;
-        border-radius: 0.8rem;
-        background: linear-gradient(180deg, #fcfbff 0%, #f7f8ff 100%);
+        gap: 1.15rem;
     }
 
-    .teacher-mini-col {
-        display: flex;
-        flex-direction: column;
+    .teacher-hero {
+        background:
+            linear-gradient(135deg, rgba(31, 111, 139, 0.18), transparent 36%),
+            linear-gradient(245deg, rgba(122, 139, 95, 0.14), transparent 42%),
+            #fffdf7;
+        border: 1px solid var(--dash-border);
+        border-radius: 26px;
+        box-shadow: var(--dash-shadow);
+        display: grid;
+        gap: 2rem;
+        grid-template-columns: 1fr minmax(340px, 0.7fr);
+        padding: clamp(1.1rem, 3vw, 2rem);
+        position: relative;
+    }
+
+
+
+    .teacher-hero-copy,
+    .create-class-card {
+        position: relative;
+        z-index: 1;
+    }
+
+    .teacher-hero-copy {
+        align-content: center;
+        display: grid;
+        gap: 1rem;
+    }
+
+    .teacher-hero-copy h2 {
+        font-size: clamp(2rem, 4vw, 3.65rem);
+        font-weight: 700;
+        letter-spacing: 0;
+        line-height: 0.98;
+        margin: 0;
+        max-width: 720px;
+    }
+
+    .teacher-hero-copy p {
+        color: var(--dash-ink-soft);
+        line-height: 1.65;
+        margin: 0;
+        max-width: 660px;
+    }
+
+    .teacher-kicker {
         align-items: center;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-size: 0.76rem;
+        font-weight: 700;
+        gap: 0.5rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .teacher-kicker::before {
+        background: var(--dash-primary);
+        border-radius: 999px;
+        content: "";
+        height: 2px;
+        width: 34px;
+    }
+
+    .teacher-quick-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .teacher-quick-links a {
+        align-items: center;
+        background: #fff;
+        border: 1px solid rgba(31, 111, 139, 0.16);
+        border-radius: 16px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-weight: 700;
+        gap: 0.45rem;
+        min-height: 46px;
+        padding: 0.55rem 0.9rem;
+        text-decoration: none;
+    }
+
+    .teacher-quick-links a.primary {
+        background: var(--dash-primary);
+        color: #fff;
+    }
+
+    .create-class-card {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 24px;
+        box-shadow: 0 24px 48px rgba(27, 26, 23, 0.12);
+        display: grid;
+        gap: 1rem;
+        padding: clamp(1rem, 2vw, 1.35rem);
+        position: relative;
+    }
+
+    .create-class-card::before {
+        border: 1px dashed rgba(31, 111, 139, 0.2);
+        border-radius: 20px;
+        content: "";
+        inset: 12px;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .create-class-form {
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    .teacher-field {
+        display: grid;
         gap: 0.35rem;
     }
 
-    .teacher-mini-col .bar {
-        width: 100%;
-        max-width: 28px;
-        border-radius: 999px;
-        background: linear-gradient(180deg, #8a3ffc 0%, #6e10ee 100%);
-        box-shadow: 0 6px 12px rgba(110, 16, 238, 0.2);
+    .teacher-field label {
+        color: var(--dash-muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin: 0;
+        text-transform: uppercase;
     }
 
-    .teacher-mini-col .day,
-    .teacher-mini-col .val {
-        font-size: 0.72rem;
-        color: #667085;
-    }
-
-    .teacher-mini-col .val {
+    .teacher-field .form-control {
+        border-color: rgba(27, 26, 23, 0.12);
+        border-radius: 14px;
         font-weight: 600;
-        color: #4d536a;
+        min-height: 48px;
     }
 
-    .rank-chip {
-        display: inline-flex;
+    .generated-code {
         align-items: center;
-        justify-content: center;
-        min-width: 28px;
-        height: 28px;
-        border-radius: 999px;
-        background: #f3ebff;
-        color: #6e10ee;
-        font-weight: 700;
-        font-size: 0.8rem;
+        background: #1b1a17;
+        border-radius: 18px;
+        color: #fffdf7;
+        display: grid;
+        gap: 0.45rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 0.85rem;
     }
 
-    .ranking-list {
-        max-height: 260px;
-        overflow: auto;
+    .generated-code span {
+        color: rgba(255, 255, 255, 0.66);
+        display: block;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .generated-code strong {
+        display: block;
+        font-size: 1.25rem;
+        letter-spacing: 0.14em;
+    }
+
+    .teacher-stat-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .teacher-stat-card {
+        background: #fff;
+        border: 1px solid var(--dash-border);
+        border-radius: 20px;
+        box-shadow: var(--dash-shadow);
+        display: grid;
+        gap: 0.35rem;
+        min-height: 126px;
+        padding: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .teacher-stat-card::after {
+        color: rgba(31, 111, 139, 0.08);
+        content: attr(data-mark);
+        font-size: 4.5rem;
+        font-weight: 700;
+        line-height: 1;
+        position: absolute;
+        right: -0.2rem;
+        bottom: -0.8rem;
+    }
+
+    .teacher-stat-card strong {
+        font-size: clamp(1.65rem, 3vw, 2.2rem);
+        line-height: 1;
+        position: relative;
+        z-index: 1;
+    }
+
+    .teacher-stat-card span,
+    .teacher-stat-card small {
+        position: relative;
+        z-index: 1;
+    }
+
+    .teacher-stat-card span {
+        color: var(--dash-muted);
+        font-size: 0.84rem;
+        font-weight: 700;
+    }
+
+    .teacher-board {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(300px, 0.65fr) minmax(0, 1.35fr);
+    }
+
+    .teacher-panel {
+        background: #fff;
+        border: 1px solid var(--dash-border);
+        border-radius: 22px;
+        box-shadow: var(--dash-shadow);
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .teacher-panel-head {
+        align-items: start;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+    }
+
+    .teacher-panel-head h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .class-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .class-card {
+        background: #fffdf7;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 18px;
+        cursor: pointer;
+        display: grid;
+        gap: 0.55rem;
+        padding: 0.85rem;
+        text-align: left;
+        transition: border-color 0.2s ease, transform 0.2s ease;
+        width: 100%;
+    }
+
+    .class-card:hover,
+    .class-card.is-active {
+        border-color: rgba(31, 111, 139, 0.32);
+        transform: translateY(-1px);
+    }
+
+    .class-card-head {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .class-code-pill {
+        background: var(--dash-primary-soft);
+        border-radius: 999px;
+        color: var(--dash-primary-deep);
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        padding: 0.3rem 0.55rem;
+        white-space: nowrap;
+    }
+
+    .class-workspace {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .class-banner {
+        background:
+            linear-gradient(135deg, rgba(31, 111, 139, 0.18), transparent 42%),
+            linear-gradient(245deg, rgba(247, 231, 207, 0.9), transparent 44%),
+            #fffdf7;
+        border: 1px solid var(--dash-border);
+        border-radius: 22px;
+        display: grid;
+        gap: 0.75rem;
+        min-height: 180px;
+        overflow: hidden;
+        padding: 1rem;
+        position: relative;
+    }
+
+    .class-banner::after {
+        bottom: -1rem;
+        color: rgba(31, 111, 139, 0.08);
+        content: attr(data-header);
+        font-size: clamp(4rem, 10vw, 7rem);
+        font-weight: 700;
+        line-height: 1;
+        position: absolute;
+        right: -0.5rem;
+    }
+
+    .class-banner > * {
+        position: relative;
+        z-index: 1;
+    }
+
+    .class-banner h3 {
+        font-size: clamp(1.5rem, 3vw, 2.45rem);
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .class-meta-row,
+    .student-row,
+    .post-row {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .class-meta-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .mini-metric {
+        background: rgba(255, 255, 255, 0.76);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 16px;
+        padding: 0.75rem;
+    }
+
+    .mini-metric strong {
+        display: block;
+        font-size: 1.25rem;
+    }
+
+    .class-detail-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(2, minmax(480px, 1fr));
+    }
+
+    .student-row {
+        grid-template-columns: 1fr;
+    }
+
+    .student-card,
+    .post-card {
+        background: #fff;
+        border: 1px solid var(--dash-border);
+        border-radius: 18px;
+        padding: 0.85rem;
+    }
+
+    .student-card {
+        align-items: center;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .student-card .level-chip {
+        justify-self: start;
+    }
+
+    .student-avatar {
+        align-items: center;
+        background: var(--dash-primary-soft);
+        border-radius: 14px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-weight: 800;
+        height: 42px;
+        justify-content: center;
+        width: 42px;
+    }
+
+    .level-chip {
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 800;
+        padding: 0.28rem 0.55rem;
+        white-space: nowrap;
+    }
+
+    .level-low { background: #fee2e2; color: #991b1b; }
+    .level-developing { background: #ffedd5; color: #9a3412; }
+    .level-transitioning { background: #fef3c7; color: #92400e; }
+    .level-grade { background: #dcfce7; color: #166534; }
+    .level-high { background: #d9eef4; color: #155e75; }
+
+    .post-card {
+        display: grid;
+        gap: 0.55rem;
+        min-height: 96px;
+    }
+
+    .empty-class-note {
+        background: rgba(217, 238, 244, 0.52);
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 16px;
+        color: var(--dash-ink-soft);
+        padding: 0.85rem;
+    }
+
+    @media (max-width: 1400px) {
+        .class-detail-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 1200px) {
+        .teacher-stat-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 1100px) {
+        .teacher-hero,
+        .teacher-board {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .teacher-stat-grid,
+        .class-meta-row,
+        .student-row {
+            grid-template-columns: 1fr;
+        }
+
+        .generated-code {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {% endblock %}
 
 {% block header %}
-    {% include "pabasa_app/partials/_header.html" with page_title="Teacher Dashboard" page_date="April 5, 2026" %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Teacher Dashboard" page_date="" %}
 {% endblock %}
 
 {% block content %}
-<section class="mb-4">
-    <div class="dash-surface p-3 p-md-4 mb-3">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+<section class="teacher-dashboard">
+    <div class="teacher-hero">
+        <div class="teacher-hero-copy">
+            <span class="teacher-kicker">Teacher workspace</span>
+            <h2>Create classes, monitor reading levels, and post reading work.</h2>
+            <p>Use this dashboard to create a class code, manage joined students, prepare materials, and monitor how students move across reading levels.</p>
+            <div class="teacher-quick-links">
+                <a class="primary" href="{% url 'courses' %}"><i class="bi bi-folder2-open"></i> Materials</a>
+                <a href="{% url 'students' %}"><i class="bi bi-people"></i> Student Records</a>
+            </div>
+        </div>
+
+        <article class="create-class-card">
             <div>
-                <h2 class="h6 mb-1">Good morning, Teacher!</h2>
-                <p class="small text-secondary mb-0">Class performance snapshot and student progress for this week.</p>
+                <span class="dash-pill"><i class="bi bi-plus-lg"></i> Create a class</span>
+                <h3 class="h5 fw-bold mt-3 mb-1">Generate an invite code.</h3>
+                <p class="small text-secondary mb-0">Students use the generated code to join this class from their dashboard.</p>
             </div>
-            <span class="badge dash-badge">Teacher View</span>
-        </div>
+
+            <form class="create-class-form" id="createClassForm">
+                <div class="teacher-field">
+                    <label for="classNameInput">Class name / subject</label>
+                    <input class="form-control" id="classNameInput" type="text" value="Grade 3 Reading - Section A" required>
+                </div>
+                <div class="teacher-field">
+                    <label for="classHeaderInput">Header</label>
+                    <input class="form-control" id="classHeaderInput" type="text" value="READ" maxlength="12">
+                </div>
+                <div class="teacher-field">
+                    <label for="classDescriptionInput">Description</label>
+                    <textarea class="form-control" id="classDescriptionInput" rows="3">Daily Filipino reading practice, oral reading checks, and progress monitoring.</textarea>
+                </div>
+                <div class="generated-code" aria-live="polite">
+                    <div>
+                        <span>Generated class code</span>
+                        <strong id="generatedClassCode">PAB-4827</strong>
+                    </div>
+                    <button class="btn btn-light fw-bold" id="regenerateCodeBtn" type="button"><i class="bi bi-arrow-clockwise me-1"></i>New Code</button>
+                </div>
+                <button class="btn btn-primary fw-bold" type="submit"><i class="bi bi-check2-circle me-1"></i>Create Class</button>
+            </form>
+        </article>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
-            <div class="dash-surface dash-kpi p-3 h-100">
-                <p class="text-secondary small mb-2">Total Students</p>
-                <h3 class="h4 mb-1">124</h3>
-                <small class="text-success"><i class="bi bi-arrow-up-right"></i> +8 this month</small>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="dash-surface dash-kpi p-3 h-100">
-                <p class="text-secondary small mb-2">Total Course</p>
-                <h3 class="h4 mb-1">9</h3>
-                <small class="text-secondary"><i class="bi bi-book"></i> 2 new this semester</small>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="dash-surface dash-kpi p-3 h-100">
-                <p class="text-secondary small mb-2">Lessons Done Today</p>
-                <h3 class="h4 mb-1">76</h3>
-                <small class="text-success"><i class="bi bi-check-circle"></i> Across all students</small>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="dash-surface dash-kpi p-3 h-100">
-                <p class="text-secondary small mb-2">Active Student Now</p>
-                <h3 class="h4 mb-1">31</h3>
-                <small class="text-primary"><i class="bi bi-broadcast"></i> Live in sessions</small>
-            </div>
-        </div>
+    <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
+        <article class="teacher-stat-card" data-mark="C">
+            <span>Classes</span>
+            <strong id="classCount">3</strong>
+            <small class="text-secondary">Active class spaces</small>
+        </article>
+        <article class="teacher-stat-card" data-mark="L">
+            <span>Low Emerging Readers</span>
+            <strong>9</strong>
+            <small class="text-danger">Needs urgent support</small>
+        </article>
+        <article class="teacher-stat-card" data-mark="H">
+            <span>High Emerging Readers</span>
+            <strong>12</strong>
+            <small class="text-primary">Building toward grade level</small>
+        </article>
+        <article class="teacher-stat-card" data-mark="D">
+            <span>Developing Readers</span>
+            <strong>18</strong>
+            <small class="text-secondary">Building accuracy</small>
+        </article>
+        <article class="teacher-stat-card" data-mark="T">
+            <span>Transitioning Readers</span>
+            <strong>21</strong>
+            <small class="text-secondary">Approaching target</small>
+        </article>
+        <article class="teacher-stat-card" data-mark="G">
+            <span>Readers at Grade Level</span>
+            <strong>34</strong>
+            <small class="text-success">Meets expectation</small>
+        </article>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-xl-8">
-            <div class="dash-surface p-3 p-md-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h6 mb-0">Weekly Reading Completion</h2>
-                    <span class="small text-secondary">Target: 20 lessons/day</span>
-                </div>
-                <div class="teacher-mini-chart">
-                    <div class="teacher-mini-col"><div class="bar" style="height: 58%;"></div><span class="val">14</span><span class="day">Mon</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 68%;"></div><span class="val">17</span><span class="day">Tue</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 73%;"></div><span class="val">18</span><span class="day">Wed</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 86%;"></div><span class="val">21</span><span class="day">Thu</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 80%;"></div><span class="val">19</span><span class="day">Fri</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 49%;"></div><span class="val">12</span><span class="day">Sat</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 42%;"></div><span class="val">10</span><span class="day">Sun</span></div>
+    <div class="teacher-board">
+        <aside class="teacher-panel">
+            <div class="teacher-panel-head">
+                <div>
+                    <h3>Classes</h3>
+                    <p class="small text-secondary mb-0">Select a class to view students and materials.</p>
                 </div>
             </div>
-        </div>
 
-        <div class="col-xl-4">
-            <div class="dash-surface p-3 p-md-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h6 mb-0">Week Student Active</h2>
-                    <span class="small text-secondary">By day</span>
+            <div class="class-list" id="classList">
+                <button class="class-card is-active" type="button" data-class-name="Grade 3 Reading - Section A" data-subject="Filipino Reading" data-code="PAB-4827" data-header="READ" data-description="Daily Filipino reading practice, oral reading checks, and progress monitoring." data-students="28">
+                    <span class="class-card-head">
+                        <strong>Grade 3 Reading - Section A</strong>
+                        <span class="class-code-pill">PAB-4827</span>
+                    </span>
+                    <span class="small text-secondary">Filipino Reading • 28 students</span>
+                </button>
+                <button class="class-card" type="button" data-class-name="Remedial Reading Group" data-subject="Intervention" data-code="RRG-9154" data-header="HELP" data-description="Small-group intervention for learners who need slower pacing and repeated oral reading." data-students="12">
+                    <span class="class-card-head">
+                        <strong>Remedial Reading Group</strong>
+                        <span class="class-code-pill">RRG-9154</span>
+                    </span>
+                    <span class="small text-secondary">Intervention • 12 students</span>
+                </button>
+                <button class="class-card" type="button" data-class-name="Advanced Fluency Circle" data-subject="Reading Enrichment" data-code="AFC-7302" data-header="FLOW" data-description="Enrichment activities for students ready for longer passages and smoother expression." data-students="10">
+                    <span class="class-card-head">
+                        <strong>Advanced Fluency Circle</strong>
+                        <span class="class-code-pill">AFC-7302</span>
+                    </span>
+                    <span class="small text-secondary">Reading Enrichment • 10 students</span>
+                </button>
+            </div>
+        </aside>
+
+        <section class="class-workspace">
+            <article class="class-banner" id="classBanner" data-header="READ">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <span class="dash-pill"><i class="bi bi-door-open"></i> Class code <strong id="activeClassCode">PAB-4827</strong></span>
+                    <button class="btn btn-sm btn-light border fw-bold" type="button" id="copyClassCodeBtn"><i class="bi bi-copy me-1"></i>Copy Code</button>
                 </div>
-                <div class="teacher-mini-chart">
-                    <div class="teacher-mini-col"><div class="bar" style="height: 65%;"></div><span class="val">29</span><span class="day">Mon</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 72%;"></div><span class="val">32</span><span class="day">Tue</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 75%;"></div><span class="val">33</span><span class="day">Wed</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 78%;"></div><span class="val">35</span><span class="day">Thu</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 82%;"></div><span class="val">37</span><span class="day">Fri</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 55%;"></div><span class="val">25</span><span class="day">Sat</span></div>
-                    <div class="teacher-mini-col"><div class="bar" style="height: 50%;"></div><span class="val">23</span><span class="day">Sun</span></div>
+                <div>
+                    <p class="teacher-kicker mb-2" id="activeClassSubject">Filipino Reading</p>
+                    <h3 id="activeClassName">Grade 3 Reading - Section A</h3>
+                    <p class="text-secondary mb-0" id="activeClassDescription">Daily Filipino reading practice, oral reading checks, and progress monitoring.</p>
+                </div>
+                <div class="class-meta-row">
+                    <div class="mini-metric"><strong id="activeStudentCount">28</strong><span class="small text-secondary">students joined</span></div>
+                    <div class="mini-metric"><strong>4</strong><span class="small text-secondary">assessment materials</span></div>
+                    <div class="mini-metric"><strong>8</strong><span class="small text-secondary">practice materials</span></div>
+                </div>
+            </article>
+
+            <div class="class-detail-grid">
+                <div>
+                    <article class="teacher-panel h-100">
+                        <div class="teacher-panel-head">
+                            <div>
+                                <h3>Students Joined</h3>
+                                <p class="small text-secondary mb-0">Learners currently enrolled through the class code.</p>
+                            </div>
+                            <a class="small fw-bold" href="{% url 'students' %}">View all</a>
+                        </div>
+                        <div class="student-row">
+                            <div class="student-card">
+                                <span class="student-avatar">LD</span>
+                                <div><strong>Luna Dela Cruz</strong><div class="small text-secondary">WPM 92 • 96%</div></div>
+                                <span class="level-chip level-grade">Readers at Grade Level</span>
+                            </div>
+                            <div class="student-card">
+                                <span class="student-avatar">MR</span>
+                                <div><strong>Marco Reyes</strong><div class="small text-secondary">WPM 78 • 88%</div></div>
+                                <span class="level-chip level-transitioning">Transitioning Readers</span>
+                            </div>
+                            <div class="student-card">
+                                <span class="student-avatar">AR</span>
+                                <div><strong>Alyssa Ramos</strong><div class="small text-secondary">WPM 54 • 72%</div></div>
+                                <span class="level-chip level-developing">Developing Readers</span>
+                            </div>
+                            <div class="student-card">
+                                <span class="student-avatar">NS</span>
+                                <div><strong>Noah Santos</strong><div class="small text-secondary">WPM 39 • 61%</div></div>
+                                <span class="level-chip level-low">Low Emerging Readers</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div>
+                    <article class="teacher-panel h-100">
+                        <div class="teacher-panel-head">
+                            <div>
+                                <h3>Material Queue</h3>
+                                <p class="small text-secondary mb-0">Teacher-prepared inputs for practice and assessment.</p>
+                            </div>
+                            <a class="small fw-bold" href="{% url 'courses' %}">Manage</a>
+                        </div>
+                        <div class="post-row">
+                            <div class="post-card">
+                                <div class="d-flex justify-content-between gap-2"><strong>Word List Set A</strong><span class="level-chip level-grade">Practice</span></div>
+                                <p class="small text-secondary mb-0">Short word list prepared for repeated oral reading.</p>
+                            </div>
+                            <div class="post-card">
+                                <div class="d-flex justify-content-between gap-2"><strong>Sentence Fluency Set</strong><span class="level-chip level-transitioning">Assessment</span></div>
+                                <p class="small text-secondary mb-0">Sentence prompts prepared for a reading assessment shell.</p>
+                            </div>
+                            <div class="post-card">
+                                <div class="d-flex justify-content-between gap-2"><strong>Paragraph Passage</strong><span class="level-chip level-developing">Both</span></div>
+                                <p class="small text-secondary mb-0">One passage reusable for practice mode and assessment.</p>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="row g-3">
-        <div class="col-xl-4">
-            <div class="dash-surface p-3 p-md-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
-                    <h2 class="h6 mb-0">Student Ranking</h2>
-                    <div class="d-flex align-items-center gap-2">
-                        <a href="{% url 'students' %}" class="small">View all</a>
-                        <select id="rankingSort" class="form-select form-select-sm" aria-label="Sort student ranking">
-                            <option value="desc" selected>High to Low</option>
-                            <option value="asc">Low to High</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2 ranking-list" id="rankingList">
-                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="98">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="rank-chip">1</span>
-                            <span class="fw-semibold">Luna Dela Cruz</span>
-                        </div>
-                        <span class="small text-secondary">98%</span>
-                    </div>
-                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="95">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="rank-chip">2</span>
-                            <span class="fw-semibold">Marco Reyes</span>
-                        </div>
-                        <span class="small text-secondary">95%</span>
-                    </div>
-                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="92">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="rank-chip">3</span>
-                            <span class="fw-semibold">Sofia Martinez</span>
-                        </div>
-                        <span class="small text-secondary">92%</span>
-                    </div>
-                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="90">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="rank-chip">4</span>
-                            <span class="fw-semibold">Ethan Villanueva</span>
-                        </div>
-                        <span class="small text-secondary">90%</span>
-                    </div>
-                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="88">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="rank-chip">5</span>
-                            <span class="fw-semibold">Alyssa Ramos</span>
-                        </div>
-                        <span class="small text-secondary">88%</span>
-                    </div>
-                    <div class="d-flex align-items-center justify-content-between border rounded p-2" data-score="85">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="rank-chip">6</span>
-                            <span class="fw-semibold">Noah Santos</span>
-                        </div>
-                        <span class="small text-secondary">85%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-8">
-            <div class="dash-surface p-3 p-md-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h6 mb-0">Recent Student Activities</h2>
-                    <a href="#" class="small">View all</a>
-                </div>
-                <div class="table-responsive">
-                    <table class="table align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Student</th>
-                                <th>Course</th>
-                                <th>Activity</th>
-                                <th>Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Luna Dela Cruz</td>
-                                <td>Reading Fluency 101</td>
-                                <td>Completed Lesson 6</td>
-                                <td>2 mins ago</td>
-                            </tr>
-                            <tr>
-                                <td>Marco Reyes</td>
-                                <td>Speech Practice Lab</td>
-                                <td>Submitted Oral Reading</td>
-                                <td>9 mins ago</td>
-                            </tr>
-                            <tr>
-                                <td>Sofia Martinez</td>
-                                <td>Comprehension Workshop</td>
-                                <td>Started Paragraph Drill</td>
-                                <td>14 mins ago</td>
-                            </tr>
-                            <tr>
-                                <td>Ethan Villanueva</td>
-                                <td>Reading Fluency 101</td>
-                                <td>Finished Word Practice</td>
-                                <td>19 mins ago</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+        </section>
     </div>
 </section>
 

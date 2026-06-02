@@ -14,6 +14,10 @@
     const resumeBtn = document.getElementById("resumeBtn");
     const retryBtn = document.getElementById("retryBtn");
     const quitBtn = document.getElementById("quitBtn");
+    const shell = document.querySelector(".reader-shell");
+    const completionCount = document.getElementById("completionCount");
+    const reviewBtn = document.getElementById("reviewBtn");
+    const finishBtn = document.getElementById("finishBtn");
 
     const params = new URLSearchParams(window.location.search);
     const testTitle = params.get("test") || "Assessment";
@@ -25,7 +29,22 @@
         counter.textContent = "Word " + (currentIndex + 1) + "/" + words.length;
         progressFill.style.width = ((currentIndex + 1) / words.length) * 100 + "%";
         prevBtn.disabled = currentIndex === 0;
-        nextBtn.disabled = currentIndex === words.length - 1;
+        nextBtn.disabled = false;
+        nextBtn.textContent = currentIndex === words.length - 1 ? "Finish" : "Next";
+        if (completionCount) {
+            completionCount.textContent = words.length;
+        }
+    }
+
+    function showCompletion() {
+        shell.classList.add("is-complete");
+        closePauseMenu();
+    }
+
+    function restartAssessment() {
+        shell.classList.remove("is-complete");
+        currentIndex = 0;
+        renderWord();
     }
 
     prevBtn.addEventListener("click", function () {
@@ -39,7 +58,10 @@
         if (currentIndex < words.length - 1) {
             currentIndex += 1;
             renderWord();
+            return;
         }
+
+        showCompletion();
     });
 
     function closePauseMenu() {
@@ -62,6 +84,7 @@
     });
 
     retryBtn.addEventListener("click", function () {
+        shell.classList.remove("is-complete");
         currentIndex = 0;
         renderWord();
         closePauseMenu();
@@ -70,6 +93,16 @@
     quitBtn.addEventListener("click", function () {
         window.location.href = "/dashboard/assessment/";
     });
+
+    if (reviewBtn) {
+        reviewBtn.addEventListener("click", restartAssessment);
+    }
+
+    if (finishBtn) {
+        finishBtn.addEventListener("click", function () {
+            window.location.href = "/dashboard/assessment/";
+        });
+    }
 
     document.addEventListener("click", function (event) {
         if (!pauseMenu.contains(event.target) && !pauseBtn.contains(event.target)) {
