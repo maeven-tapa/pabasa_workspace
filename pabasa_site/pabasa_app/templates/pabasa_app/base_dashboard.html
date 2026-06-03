@@ -340,6 +340,24 @@
             color: #fff;
         }
 
+        .dash-link.is-locked {
+            cursor: not-allowed;
+            opacity: 0.48;
+            pointer-events: auto;
+        }
+
+        .dash-link.is-locked:hover {
+            background: transparent;
+            border-color: transparent;
+            box-shadow: none;
+            color: var(--dash-text) !important;
+        }
+
+        .dash-link.is-locked i {
+            background: rgba(95, 100, 95, 0.12);
+            color: var(--dash-muted);
+        }
+
         .dashboard-sidebar .btn-outline-danger {
             background: rgba(255, 255, 255, 0.62);
             border-color: rgba(185, 95, 68, 0.24);

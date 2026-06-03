@@ -17,8 +17,9 @@
         border-radius: 26px;
         box-shadow: var(--dash-shadow);
         display: grid;
-        gap: 2rem;
-        grid-template-columns: 1fr minmax(340px, 0.7fr);
+        gap: 1.5rem;
+        grid-template-columns: minmax(280px, 1fr) minmax(340px, 0.8fr);
+        overflow: hidden;
         padding: clamp(1.1rem, 3vw, 2rem);
         position: relative;
     }
@@ -263,6 +264,7 @@
         text-align: left;
         transition: border-color 0.2s ease, transform 0.2s ease;
         width: 100%;
+        position: relative;
     }
 
     .class-card:hover,
@@ -271,11 +273,39 @@
         transform: translateY(-1px);
     }
 
+    .class-card:hover .class-card-delete {
+        opacity: 1;
+    }
+
     .class-card-head {
         align-items: center;
         display: flex;
         justify-content: space-between;
         gap: 0.75rem;
+    }
+
+    .class-card-delete {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        background: rgba(220, 38, 38, 0.9);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+        font-size: 0.9rem;
+    }
+
+    .class-card-delete:hover {
+        background: rgba(220, 38, 38, 1);
     }
 
     .class-code-pill {
@@ -357,7 +387,7 @@
     .class-detail-grid {
         display: grid;
         gap: 1rem;
-        grid-template-columns: repeat(2, minmax(480px, 1fr));
+        grid-template-columns: 1fr;
     }
 
     .student-row {
@@ -408,20 +438,6 @@
     .level-transitioning { background: #fef3c7; color: #92400e; }
     .level-grade { background: #dcfce7; color: #166534; }
     .level-high { background: #d9eef4; color: #155e75; }
-
-    .post-card {
-        display: grid;
-        gap: 0.55rem;
-        min-height: 96px;
-    }
-
-    .empty-class-note {
-        background: rgba(217, 238, 244, 0.52);
-        border: 1px solid rgba(31, 111, 139, 0.14);
-        border-radius: 16px;
-        color: var(--dash-ink-soft);
-        padding: 0.85rem;
-    }
 
     @media (max-width: 1400px) {
         .class-detail-grid {
@@ -496,7 +512,7 @@
                 <div class="generated-code" aria-live="polite">
                     <div>
                         <span>Generated class code</span>
-                        <strong id="generatedClassCode">PAB-4827</strong>
+                        <strong id="generatedClassCode">PABC-482</strong>
                     </div>
                     <button class="btn btn-light fw-bold" id="regenerateCodeBtn" type="button"><i class="bi bi-arrow-clockwise me-1"></i>New Code</button>
                 </div>
@@ -548,27 +564,30 @@
             </div>
 
             <div class="class-list" id="classList">
-                <button class="class-card is-active" type="button" data-class-name="Grade 3 Reading - Section A" data-subject="Filipino Reading" data-code="PAB-4827" data-header="READ" data-description="Daily Filipino reading practice, oral reading checks, and progress monitoring." data-students="28">
+                <div class="class-card is-active" data-class-name="Grade 3 Reading - Section A" data-subject="Filipino Reading" data-code="PAB-4827" data-header="READ" data-description="Daily Filipino reading practice, oral reading checks, and progress monitoring." data-students="28">
+                    <button class="class-card-delete" type="button" title="Delete class" aria-label="Delete Grade 3 Reading - Section A class"><i class="bi bi-trash"></i></button>
                     <span class="class-card-head">
                         <strong>Grade 3 Reading - Section A</strong>
                         <span class="class-code-pill">PAB-4827</span>
                     </span>
                     <span class="small text-secondary">Filipino Reading • 28 students</span>
-                </button>
-                <button class="class-card" type="button" data-class-name="Remedial Reading Group" data-subject="Intervention" data-code="RRG-9154" data-header="HELP" data-description="Small-group intervention for learners who need slower pacing and repeated oral reading." data-students="12">
+                </div>
+                <div class="class-card" data-class-name="Remedial Reading Group" data-subject="Intervention" data-code="RRG-9154" data-header="HELP" data-description="Small-group intervention for learners who need slower pacing and repeated oral reading." data-students="12">
+                    <button class="class-card-delete" type="button" title="Delete class" aria-label="Delete Remedial Reading Group class"><i class="bi bi-trash"></i></button>
                     <span class="class-card-head">
                         <strong>Remedial Reading Group</strong>
                         <span class="class-code-pill">RRG-9154</span>
                     </span>
                     <span class="small text-secondary">Intervention • 12 students</span>
-                </button>
-                <button class="class-card" type="button" data-class-name="Advanced Fluency Circle" data-subject="Reading Enrichment" data-code="AFC-7302" data-header="FLOW" data-description="Enrichment activities for students ready for longer passages and smoother expression." data-students="10">
+                </div>
+                <div class="class-card" data-class-name="Advanced Fluency Circle" data-subject="Reading Enrichment" data-code="AFC-7302" data-header="FLOW" data-description="Enrichment activities for students ready for longer passages and smoother expression." data-students="10">
+                    <button class="class-card-delete" type="button" title="Delete class" aria-label="Delete Advanced Fluency Circle class"><i class="bi bi-trash"></i></button>
                     <span class="class-card-head">
                         <strong>Advanced Fluency Circle</strong>
                         <span class="class-code-pill">AFC-7302</span>
                     </span>
                     <span class="small text-secondary">Reading Enrichment • 10 students</span>
-                </button>
+                </div>
             </div>
         </aside>
 
@@ -624,37 +643,31 @@
                         </div>
                     </article>
                 </div>
-
-                <div>
-                    <article class="teacher-panel h-100">
-                        <div class="teacher-panel-head">
-                            <div>
-                                <h3>Material Queue</h3>
-                                <p class="small text-secondary mb-0">Teacher-prepared inputs for practice and assessment.</p>
-                            </div>
-                            <a class="small fw-bold" href="{% url 'courses' %}">Manage</a>
-                        </div>
-                        <div class="post-row">
-                            <div class="post-card">
-                                <div class="d-flex justify-content-between gap-2"><strong>Word List Set A</strong><span class="level-chip level-grade">Practice</span></div>
-                                <p class="small text-secondary mb-0">Short word list prepared for repeated oral reading.</p>
-                            </div>
-                            <div class="post-card">
-                                <div class="d-flex justify-content-between gap-2"><strong>Sentence Fluency Set</strong><span class="level-chip level-transitioning">Assessment</span></div>
-                                <p class="small text-secondary mb-0">Sentence prompts prepared for a reading assessment shell.</p>
-                            </div>
-                            <div class="post-card">
-                                <div class="d-flex justify-content-between gap-2"><strong>Paragraph Passage</strong><span class="level-chip level-developing">Both</span></div>
-                                <p class="small text-secondary mb-0">One passage reusable for practice mode and assessment.</p>
-                            </div>
-                        </div>
-                    </article>
-                </div>
             </div>
 
         </section>
     </div>
 </section>
+
+<!-- Delete Class Confirmation Modal -->
+<div class="modal fade" id="deleteClassModal" tabindex="-1" aria-labelledby="deleteClassModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h1 class="modal-title fs-5" id="deleteClassModalLabel">Delete Class?</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteClassNameDisplay">this class</strong>?</p>
+                <p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-2"></i>This action cannot be undone. All class data and student enrollments will be removed.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete Class</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}"></script>
 {% endblock %}

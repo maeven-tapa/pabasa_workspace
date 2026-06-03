@@ -1,5 +1,6 @@
 (function () {
-    const tooltipTargets = document.querySelectorAll("[data-nav-tooltip]");
+    // Initialize tooltips only for elements that don't require class lock
+    const tooltipTargets = document.querySelectorAll("[data-nav-tooltip]:not([data-student-class-required])");
     tooltipTargets.forEach(function (item) {
         new bootstrap.Tooltip(item, {
             placement: "right",
@@ -66,4 +67,94 @@
             setHelpPanel(false);
         }
     });
+})();
+
+(function () {
+    const lockedLinks = document.querySelectorAll("[data-student-class-required]");
+    if (!lockedLinks.length) {
+        return;
+    }
+
+    const classJoinedKey = "pabasaStudentClassJoined";
+
+    function classIsJoined() {
+        return window.localStorage.getItem(classJoinedKey) === "1";
+    }
+
+    function reinitializeTooltips() {
+        // First, dispose all existing tooltips
+        lockedLinks.forEach(function (link) {
+            const existingTooltip = bootstrap.Tooltip.getInstance(link);
+            if (existingTooltip) {
+                existingTooltip.hide();
+                existingTooltip.dispose();
+            }
+        });
+        
+        // Small delay to ensure all disposals are complete, then recreate
+        setTimeout(function() {
+            lockedLinks.forEach(function (link) {
+                new bootstrap.Tooltip(link, {
+                    placement: "right",
+                    trigger: "hover focus",
+                    container: "body"
+                });
+            });
+        }, 15);
+    }
+
+    function updateLockedLinks() {
+        const isJoined = classIsJoined();
+
+        lockedLinks.forEach(function (link) {
+            if (!link.dataset.lockedHref && link.getAttribute("href")) {
+                link.dataset.lockedHref = link.getAttribute("href");
+            }
+
+            link.classList.toggle("is-locked", !isJoined);
+            link.setAttribute("aria-disabled", isJoined ? "false" : "true");
+            
+            // Set the title to the unlocked title if joined, otherwise the locked message
+            const lockedTitle = link.getAttribute("title");
+            const unlockedTitle = link.getAttribute("data-unlocked-title") || lockedTitle;
+            link.setAttribute("title", isJoined ? unlockedTitle : lockedTitle);
+
+            if (isJoined) {
+                link.setAttribute("href", link.dataset.lockedHref);
+                link.removeAttribute("tabindex");
+            } else {
+                link.removeAttribute("href");
+                link.setAttribute("tabindex", "-1");
+            }
+        });
+
+        // Reinitialize tooltips after title is updated
+        reinitializeTooltips();
+    }
+
+    // Store locked title and unlocked title from data attributes
+    lockedLinks.forEach(function (link) {
+        link.dataset.lockedTitle = link.getAttribute("title");
+        link.dataset.unlockedTitle = link.getAttribute("data-unlocked-title");
+
+        link.addEventListener("click", function (event) {
+            if (classIsJoined()) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+        }, true);
+    });
+
+    updateLockedLinks();
+
+    window.addEventListener("storage", function (event) {
+        if (event.key === classJoinedKey) {
+            updateLockedLinks();
+        }
+    });
+
+    window.addEventListener("pabasa:student-class-updated", updateLockedLinks);
 })();

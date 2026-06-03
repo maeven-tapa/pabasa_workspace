@@ -60,6 +60,40 @@ function initStudentsPage() {
 
     filterStudents();
 
+    // Parent Update Modal - Student Selection Logic
+    (function() {
+        const parentUpdateGroupType = document.getElementById("parentUpdateGroupType");
+        const studentListSection = document.getElementById("studentListSection");
+        
+        if (!parentUpdateGroupType || !studentListSection) {
+            console.warn("Parent update modal elements not found");
+            return;
+        }
+
+        function showHideStudents() {
+            console.log("Current value:", parentUpdateGroupType.value);
+            if (parentUpdateGroupType.value === "custom") {
+                studentListSection.style.display = "block";
+                console.log("Showing students");
+            } else {
+                studentListSection.style.display = "none";
+                console.log("Hiding students");
+            }
+        }
+
+        // Change event listener
+        parentUpdateGroupType.addEventListener("change", showHideStudents);
+
+        // Also trigger on modal open
+        const modal = document.getElementById("parentUpdateModal");
+        if (modal) {
+            modal.addEventListener("show.bs.modal", showHideStudents);
+        }
+
+        // Initial state
+        showHideStudents();
+    })();
+
     if (!assignSectionModal || !studentNameInput || !currentSectionInput) {
         return;
     }

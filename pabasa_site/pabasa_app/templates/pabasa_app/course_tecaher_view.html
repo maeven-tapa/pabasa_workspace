@@ -3,12 +3,6 @@
 
 {% block extra_head %}
 <style>
-    .materials-editor {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
-    }
-
     .material-panel {
         background: #fff;
         border: 1px solid var(--dash-border);
@@ -17,41 +11,74 @@
         padding: 1rem;
     }
 
-    .material-type-list {
+    .material-item-display {
         display: grid;
         gap: 0.75rem;
-    }
-
-    .material-type {
-        background: #fffdf7;
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 18px;
-        display: grid;
-        gap: 0.35rem;
+        border-radius: 12px;
         padding: 0.85rem;
+        background: #fffdf7;
+        max-height: 500px;
+        overflow-y: auto;
     }
 
-    .material-form-grid {
+    .material-item-card {
         display: grid;
-        gap: 0.85rem;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        padding: 0.65rem;
     }
 
-    .material-form-grid .full {
-        grid-column: 1 / -1;
-    }
-
-    .material-chip-row {
+    .material-item-card strong {
         display: flex;
-        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .item-badge {
+        background: var(--dash-primary-soft);
+        color: var(--dash-primary-deep);
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.2rem 0.4rem;
+    }
+
+    .empty-state {
+        color: var(--dash-muted);
+        text-align: center;
+        padding: 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .material-item-card.hidden {
+        display: none;
+    }
+
+    .material-item-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .material-item-card:hover {
+        border-color: var(--dash-primary);
+        background: rgba(31, 111, 139, 0.02);
+        box-shadow: 0 2px 8px rgba(31, 111, 139, 0.1);
+    }
+
+    .material-content-list {
+        display: grid;
         gap: 0.5rem;
     }
 
-    @media (max-width: 900px) {
-        .materials-editor,
-        .material-form-grid {
-            grid-template-columns: 1fr;
-        }
+    .material-content-item {
+        background: #fffdf7;
+        border-left: 3px solid var(--dash-primary);
+        padding: 0.75rem;
+        border-radius: 4px;
+        line-height: 1.5;
     }
 </style>
 {% endblock %}
@@ -62,107 +89,171 @@
 
 {% block content %}
 <section>
-    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <div>
-            <h2 class="h6 mb-1">Materials Workspace</h2>
-            <p class="small text-secondary mb-0">Create reading inputs that can be used for student practice, reading assessment, or both.</p>
+            <h2 class="h6 mb-1" id="pageTitle">Materials Library</h2>
+            <p class="small text-secondary mb-0" id="pageDesc">Browse all reading materials. To add new materials, go to the main Materials page.</p>
         </div>
-        <a class="btn btn-outline-secondary btn-sm" href="{% url 'courses' %}">Back to Materials</a>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'courses' %}"><i class="bi bi-arrow-left me-1"></i>Back to Materials</a>
     </div>
 
-    <div class="materials-editor">
-        <aside class="material-panel">
-            <h3 class="h6 mb-3">Material Types</h3>
-            <div class="material-type-list">
-                <article class="material-type">
-                    <strong>Word Materials</strong>
-                    <span class="small text-secondary">Reusable word lists for decoding and accuracy checks.</span>
-                    <span class="dash-pill">24 items</span>
-                </article>
-                <article class="material-type">
-                    <strong>Sentence Materials</strong>
-                    <span class="small text-secondary">Sentence prompts for fluency and phrasing.</span>
-                    <span class="dash-pill">16 items</span>
-                </article>
-                <article class="material-type">
-                    <strong>Paragraph Materials</strong>
-                    <span class="small text-secondary">Longer passages for oral reading and comprehension follow-up.</span>
-                    <span class="dash-pill">9 items</span>
-                </article>
+    <div class="material-panel">
+        <div class="mb-3">
+            <h3 class="h6 mb-1" id="materialsTitle">All Materials</h3>
+            <p class="small text-secondary mb-0" id="materialsSubtitle">Complete list of materials organized by type.</p>
+        </div>
+
+        <!-- Word Materials Section -->
+        <div class="mb-4">
+            <div class="material-item-display" id="wordMaterialsContainer">
+                <div class="material-item-card" data-type="word" data-content="bahay, aklat, guro, paaralan, pagbasa, magsulat, basahin, libro, sulat, puno, bulaklak, ibon, kalangitan, lupa, tubig, apoy, hangin, liwanag, dilim, pamilya" data-title="Word List Set A">
+                    <strong><span>Word List Set A</span><span class="item-badge">24 words</span></strong>
+                    <p class="small text-secondary mb-0"><strong>Type:</strong> Word • <strong>Use:</strong> Practice & Assessment</p>
+                    <p class="small mb-0">bahay, aklat, guro, paaralan, pagbasa, and 19 more...</p>
+                </div>
+                <div class="material-item-card" data-type="word" data-content="ang, ng, sa, para, at, na, ay, pa, din, naman, kaya, dito, doon, saan, kailan, bakit, ano, sino, sila, kami" data-title="Common Sight Words">
+                    <strong><span>Common Sight Words</span><span class="item-badge">18 words</span></strong>
+                    <p class="small text-secondary mb-0"><strong>Type:</strong> Word • <strong>Use:</strong> Practice</p>
+                    <p class="small mb-0">ang, ng, sa, para, at, and 13 more...</p>
+                </div>
             </div>
-        </aside>
+        </div>
 
-        <article class="material-panel">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <div>
-                    <h3 class="h6 mb-1">Add or Edit Material</h3>
-                    <p class="small text-secondary mb-0">Choose where this material should appear for learners.</p>
+        <!-- Sentence Materials Section -->
+        <div class="mb-4">
+            <div class="material-item-display" id="sentenceMaterialsContainer">
+                <div class="material-item-card" data-type="sentence" data-content="Ang bata ay bumabasa ng libro.~Mahal ko ang pag-aaral.~Lumakad sila sa pulo.~Ang guro ay nagturo ng Tagalog.~Ang araw ay napakaganda.~Kumain kami ng tanghalian.~Ang bahay ay malapit sa paaralan.~May bago siyang damit.~Tumutuo siya ng malaki.~Ang tao ay masigasig.~Ang halaman ay lumalaki.~Matagal na kaming nagsusulat.~Ang buwan ay magniningning.~Ang loob ay madilim.~Ang tunog ay malakas.~Ang binata ay matalino." data-title="Sentence Fluency Set">
+                    <strong><span>Sentence Fluency Set</span><span class="item-badge">16 sentences</span></strong>
+                    <p class="small text-secondary mb-0"><strong>Type:</strong> Sentence • <strong>Use:</strong> Assessment</p>
+                    <p class="small mb-0">Ang bata ay bumabasa ng libro., Mahal ko ang pag-aaral., and 14 more...</p>
                 </div>
-                <span class="dash-pill">Teacher input</span>
+                <div class="material-item-card" data-type="sentence" data-content="Magbasa ng mga salita ng mabilis.~Sinabi niya ng maayos.~Ang pamilya ay masaya.~Pumunta sila sa siyudad.~Ang laro ay masaya.~Maglaro tayo ng palaruan.~Ang bago ay napakaganda.~Sumama ka sa amin.~Ang oras ay lumalipas.~Ang musika ay maririnig.~Ang kwento ay kawili-kawili.~Ang kaibigan ay mabuti." data-title="Daily Reading Prompts">
+                    <strong><span>Daily Reading Prompts</span><span class="item-badge">12 sentences</span></strong>
+                    <p class="small text-secondary mb-0"><strong>Type:</strong> Sentence • <strong>Use:</strong> Practice & Assessment</p>
+                    <p class="small mb-0">Magbasa ng mga salita ng mabilis., Sinabi niya ng maayos., and 10 more...</p>
+                </div>
             </div>
+        </div>
 
-            <form action="#" method="post" class="d-grid gap-3">
-                <div class="material-form-grid">
-                    <div>
-                        <label class="form-label small" for="materialTitle">Title</label>
-                        <input class="form-control" id="materialTitle" type="text" value="Word List Set A">
-                    </div>
-                    <div>
-                        <label class="form-label small" for="materialType">Type</label>
-                        <select class="form-select" id="materialType">
-                            <option selected>Words</option>
-                            <option>Sentences</option>
-                            <option>Paragraphs</option>
-                        </select>
-                    </div>
-                    <div class="full">
-                        <label class="form-label small" for="materialContent">Content</label>
-                        <textarea class="form-control" id="materialContent" rows="7">bahay
-aklat
-guro
-paaralan
-pagbasa</textarea>
-                    </div>
+        <!-- Paragraph Materials Section -->
+        <div class="mb-4">
+            <div class="material-item-display" id="paragraphMaterialsContainer">
+                <div class="material-item-card" data-type="paragraph" data-content="Si Maria ay isang magandang bata na mahilig basahin ang mga libro. Siya ay tumutayo sa hapon at nagbabasa. Ang kanyang mga kaibigan ay nasa laro ngunit siya ay nasa bahay. Mahal niya ang mga kwento tungkol sa mga hayop at halaman. Araw-araw ay may bagong libro siyang sinisimulan. Ang kaniyang iina ay masaya sa kanyang hilig sa pagbabasa. Si Maria ay siguradong magiging matalinong babae sa hinaharap." data-title="Paragraph Passage 1">
+                    <strong><span>Paragraph Passage 1</span><span class="item-badge">1 passage</span></strong>
+                    <p class="small text-secondary mb-0"><strong>Type:</strong> Paragraph • <strong>Use:</strong> Both</p>
+                    <p class="small mb-0">Si Maria ay isang magandang bata na mahilig basahin ang mga libro...</p>
                 </div>
-
-                <div>
-                    <label class="form-label small d-block">Use this material for</label>
-                    <div class="material-chip-row">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="usePractice" checked>
-                            <label class="form-check-label" for="usePractice">Practice mode</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="useAssessment" checked>
-                            <label class="form-check-label" for="useAssessment">Reading assessment</label>
-                        </div>
-                    </div>
+                <div class="material-item-card" data-type="paragraph" data-content="Noong unang panahon, may isang magandang prinsesa sa kaharian ng timog. Ang kanyang pangalan ay Margarita at siya ay kilala dahil sa kanyang kagandahan at kagayakan. Isang umaga, nag-iwan ang prinsesa ng kastilyo upang maglakbay sa kaharian. Nagsayaw siya sa ligaya at nag-awit ng mga kanta. Ang mga tao ay sumama sa kaniya at lahat ay masaya. Sa gabi, ang buwan ay sumikat at ang mga bituin ay magniningning. Ang prinsesa ay bumalik sa kastilyo na may puso na puno ng kaligayahan." data-title="Filipino Folk Tale">
+                    <strong><span>Filipino Folk Tale</span><span class="item-badge">1 passage</span></strong>
+                    <p class="small text-secondary mb-0"><strong>Type:</strong> Paragraph • <strong>Use:</strong> Practice</p>
+                    <p class="small mb-0">Noong unang panahon, may isang magandang prinsesa sa kaharian...</p>
                 </div>
-
-                <div class="material-form-grid">
-                    <div>
-                        <label class="form-label small" for="assignedClass">Assigned class</label>
-                        <select class="form-select" id="assignedClass">
-                            <option selected>Grade 3 Reading - Section A</option>
-                            <option>Remedial Reading Group</option>
-                            <option>Advanced Fluency Circle</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label small" for="materialStatus">Status</label>
-                        <select class="form-select" id="materialStatus">
-                            <option selected>Draft</option>
-                            <option>Published</option>
-                        </select>
-                    </div>
+                <div class="material-item-card" data-type="paragraph" data-content="Ang puno ay isang halaman na may malaking katawan at maraming dahon. Ito ay lumalaki mula sa isang munting binhi at tumataas ng mabilis. Ang mga ugat ng puno ay nasa lupa at ito ay tumutulong sa puno na kumain. Ang mga sanga ay lumalabas mula sa katawan at ito ay may maraming dahon. Ang mga pagpapabago ay nangyayari sa iba't ibang panahon. Sa tagsibol, ang mga bagong dahon ay sumusulong. Sa tag-araw, ang mga dahon ay berde at matatag. Sa taglamig, ang mga dahon ay nahuhulog. Ang mga ibon ay nakatira sa mga puno at kumakain ng mga insekto." data-title="Science Comprehension Text">
+                    <strong><span>Science Comprehension Text</span><span class="item-badge">1 passage</span></strong>
+                    <p class="small text-secondary mb-0"><strong>Type:</strong> Paragraph • <strong>Use:</strong> Assessment</p>
+                    <p class="small mb-0">Ang puno ay isang halaman na may malaking katawan at maraming dahon...</p>
                 </div>
-
-                <div class="d-flex flex-wrap gap-2">
-                    <button class="btn btn-primary" type="submit">Save Material</button>
-                    <button class="btn btn-outline-secondary" type="button">Preview</button>
-                </div>
-            </form>
-        </article>
+            </div>
+        </div>
     </div>
 </section>
+
+<!-- View Material Content Modal -->
+<div class="modal fade" id="viewMaterialModal" tabindex="-1" aria-labelledby="viewMaterialModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h1 class="modal-title fs-5" id="viewMaterialModalLabel">Material Content</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h4 id="modalMaterialTitle"></h4>
+                <div id="materialContentContainer" class="material-content-list">
+                    <!-- Content will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // Get URL parameters to filter by type
+        const urlParams = new URLSearchParams(window.location.search);
+        const typeFilter = urlParams.get('type');
+        
+        // If a type is specified, hide other category sections
+        if (typeFilter) {
+            const wordSection = document.querySelector('#wordMaterialsContainer').closest('div');
+            const sentenceSection = document.querySelector('#sentenceMaterialsContainer').closest('div');
+            const paragraphSection = document.querySelector('#paragraphMaterialsContainer').closest('div');
+            
+            // Hide all sections
+            wordSection.style.display = 'none';
+            sentenceSection.style.display = 'none';
+            paragraphSection.style.display = 'none';
+            
+            // Show only the selected type
+            let activeSection;
+            let typeLabel = '';
+            if (typeFilter === 'word') {
+                wordSection.style.display = 'block';
+                activeSection = wordSection;
+                typeLabel = 'Word';
+            } else if (typeFilter === 'sentence') {
+                sentenceSection.style.display = 'block';
+                activeSection = sentenceSection;
+                typeLabel = 'Sentence';
+            } else if (typeFilter === 'paragraph') {
+                paragraphSection.style.display = 'block';
+                activeSection = paragraphSection;
+                typeLabel = 'Paragraph';
+            }
+
+        }
+        
+        const allMaterials = document.querySelectorAll('.material-item-card');
+        const viewMaterialModal = new bootstrap.Modal(document.getElementById('viewMaterialModal'));
+
+        // Add click handlers to material cards to view content
+        allMaterials.forEach(card => {
+            card.addEventListener('click', function() {
+                const materialType = this.getAttribute('data-type');
+                const materialTitle = this.getAttribute('data-title');
+                const materialContent = this.getAttribute('data-content');
+                
+                document.getElementById('viewMaterialModalLabel').textContent = materialType.charAt(0).toUpperCase() + materialType.slice(1) + ' Material';
+                document.getElementById('modalMaterialTitle').textContent = materialTitle;
+                
+                const contentContainer = document.getElementById('materialContentContainer');
+                contentContainer.innerHTML = '';
+                
+                // Split content based on type
+                let items;
+                if (materialType === 'word') {
+                    items = materialContent.split(',').map(w => w.trim());
+                } else if (materialType === 'sentence') {
+                    items = materialContent.split('~');
+                } else {
+                    // For paragraphs, just show the whole text
+                    items = [materialContent];
+                }
+                
+                // Display content
+                items.forEach((item, index) => {
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'material-content-item';
+                    if (materialType === 'word' || materialType === 'sentence') {
+                        contentDiv.innerHTML = `<strong>${index + 1}.</strong> ${item}`;
+                    } else {
+                        contentDiv.innerHTML = item;
+                    }
+                    contentContainer.appendChild(contentDiv);
+                });
+                
+                viewMaterialModal.show();
+            });
+        });
+    })();
+</script>
 {% endblock %}

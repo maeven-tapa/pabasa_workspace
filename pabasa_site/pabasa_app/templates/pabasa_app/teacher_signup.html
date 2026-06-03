@@ -5,34 +5,220 @@
 <style>
     body {
         background:
-            linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.25) 100%),
-            radial-gradient(ellipse at 50% 50%, rgba(31, 111, 139, 0.15) 0%, transparent 80%),
-            url("{% static 'pabasa_app/images/read.jpg' %}") no-repeat center center fixed;
-        background-size: cover;
+            linear-gradient(135deg, rgba(8, 24, 38, 0.45), rgba(8, 24, 38, 0.28)),
+            url("{% static 'pabasa_app/images/read.jpg' %}") center / cover fixed no-repeat !important;
     }
 
     .account-card {
-        background: rgba(255, 255, 255, 0.75) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.35rem;
+        background: rgba(255, 255, 255, 0.78) !important;
+        border: 1px solid rgba(255, 255, 255, 0.58);
+        box-shadow: 0 24px 56px rgba(15, 23, 42, 0.26);
+        backdrop-filter: blur(14px) saturate(1.08);
+        -webkit-backdrop-filter: blur(14px) saturate(1.08);
+    }
+
+    .account-card::before {
+        content: "";
+        display: block;
+        height: 0.45rem;
+        background: linear-gradient(90deg, #54c2f0, #ffd639);
+    }
+
+    .account-card .card-body {
+        padding: clamp(1.5rem, 4vw, 2.25rem) !important;
+    }
+
+    .account-card h1,
+    .account-card h2 {
+        color: #0f2f45;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+
+    .account-card .form-label {
+        color: #12394f;
+        font-size: 0.92rem;
+        font-weight: 700;
+        margin-bottom: 0.4rem;
+    }
+
+    .account-card .form-control,
+    .account-card .form-select {
+        min-height: 3rem;
+        border-radius: 0.9rem;
+        border-color: rgba(16, 70, 110, 0.18);
+        background-color: rgba(255, 255, 255, 0.84);
+    }
+
+    .account-card .form-control:focus,
+    .account-card .form-select:focus {
+        border-color: #54c2f0;
+        box-shadow: 0 0 0 0.2rem rgba(84, 194, 240, 0.2);
+    }
+
+    .account-card .btn {
+        min-height: 2.9rem;
+        border-radius: 0.9rem;
+        font-weight: 700;
     }
 
     .account-card .text-secondary {
-        color: #000000 !important;
+        color: #263f4f !important;
+    }
+
+    .generated-pabasa-id {
+        display: none;
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 1px solid rgba(84, 194, 240, 0.36);
+        border-radius: 1rem;
+        background: rgba(255, 255, 255, 0.72);
+    }
+
+    .generated-pabasa-id.is-visible {
+        display: block;
+    }
+
+    .generated-pabasa-id code {
+        display: block;
+        margin-top: 0.45rem;
+        color: #10466e;
+        font-size: 1.08rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        word-break: break-word;
+    }
+
+    .teacher-signup-card {
+        width: min(820px, 100%);
+    }
+
+    .teacher-signup-form {
+        row-gap: 1rem;
+    }
+
+    .teacher-signup-form .form-actions {
+        gap: 0.75rem;
+        margin-top: 0.25rem;
+    }
+
+    .teacher-signup-form .form-actions .btn {
+        min-width: 9rem;
+    }
+
+    .form-actions {
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .form-actions .back-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-color: rgba(16, 70, 110, 0.2);
+        background: rgba(255, 255, 255, 0.62);
+        color: #10466e;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    .form-actions .back-button:hover,
+    .form-actions .back-button:focus {
+        border-color: rgba(84, 194, 240, 0.42);
+        background: rgba(255, 255, 255, 0.9);
+        color: #0f2f45;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    }
+
+    .account-card .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        box-shadow: none !important;
+        transform: none;
+    }
+
+    .password-helper {
+        margin-top: -0.15rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid rgba(16, 70, 110, 0.12);
+        border-radius: 0.9rem;
+        background: rgba(255, 255, 255, 0.58);
+    }
+
+    .password-helper-title {
+        margin-bottom: 0.45rem;
+        color: #526c7a;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .password-rules {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.4rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        color: #526c7a;
+        font-size: 0.82rem;
+    }
+
+    .password-rules li {
+        min-height: 2rem;
+        display: flex;
+        align-items: center;
+        padding: 0.4rem 0.55rem;
+        border-radius: 0.7rem;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(16, 70, 110, 0.1);
+    }
+
+    .password-rules li.is-valid {
+        border-color: rgba(8, 127, 91, 0.26);
+        background: rgba(8, 127, 91, 0.08);
+        color: #087f5b;
+        font-weight: 700;
+    }
+
+    .field-feedback {
+        display: none;
+        margin-top: 0.4rem;
+        color: #b42318;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .field-feedback.is-visible {
+        display: block;
+    }
+
+    @media (max-width: 575.98px) {
+        .teacher-signup-form .form-actions {
+            flex-direction: column-reverse;
+        }
+
+        .teacher-signup-form .form-actions .btn {
+            width: 100%;
+        }
+
+        .password-rules {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="account-stage">
-    <div class="row g-4 align-items-center">
-    <div class="col-12 col-lg-8 col-xl-6 mx-auto">
-        <article class="account-card card">
+    <div class="col-12 col-lg-9 col-xl-8 mx-auto">
+        <article class="account-card card teacher-signup-card mx-auto">
             <div class="card-body p-4 p-md-5">
                 <span class="modern-chip mb-2">Teacher Account</span>
                 <h1 class="h4">Create a Teacher Account</h1>
                 <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
-                <form action="{% url 'dashboard' %}" method="get" class="row g-3">
+                <form id="teacherSignupForm" action="{% url 'dashboard' %}" method="get" class="row g-3 teacher-signup-form">
                     <div class="col-md-6">
                         <label class="form-label">First name</label>
                         <input class="form-control" type="text" name="first_name" placeholder="Enter first name" required>
@@ -41,7 +227,7 @@
                         <label class="form-label">Last name</label>
                         <input class="form-control" type="text" name="last_name" placeholder="Enter last name" required>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <label class="form-label">Sex</label>
                         <select class="form-select" name="sex" required>
                             <option value="" selected disabled>Select sex</option>
@@ -50,7 +236,7 @@
                             <option value="prefer_not_to_say">Prefer not to say</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <label class="form-label">Birth month</label>
                         <select class="form-select" name="birth_month" required>
                             <option value="" selected disabled>Month</option>
@@ -68,11 +254,11 @@
                             <option value="12">December</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="form-label">Birth day</label>
                         <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
                         <label class="form-label">Birth year</label>
                         <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" required>
                     </div>
@@ -81,28 +267,109 @@
                         <input class="form-control" type="email" name="email" placeholder="you@example.com" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Username</label>
-                        <input class="form-control" type="text" name="username" placeholder="Choose a username" required>
-                    </div>
-                    <div class="col-12">
                         <label class="form-label">Contact number</label>
                         <input class="form-control" type="tel" name="contact_number" placeholder="09XXXXXXXXX">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Password</label>
-                        <input class="form-control" type="password" name="password" placeholder="Create a password" required>
+                        <input class="form-control" type="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Confirm password</label>
-                        <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" required>
+                        <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required>
+                        <div class="field-feedback" data-password-match-error>Passwords must match.</div>
                     </div>
-                    <div class="col-12 d-flex justify-content-between">
-                        <a class="btn btn-outline-secondary" href="{% url 'signup' %}">Back</a>
-                        <button class="btn btn-primary" type="submit">Create Account</button>
+                    <div class="col-12">
+                        <div class="password-helper">
+                            <div class="password-helper-title">Password requirements</div>
+                            <ul class="password-rules" aria-live="polite">
+                                <li data-rule="length">At least 8 characters</li>
+                                <li data-rule="uppercase">One uppercase letter</li>
+                                <li data-rule="number">One number</li>
+                            </ul>
+                        </div>
                     </div>
+                    <div class="col-12 d-flex justify-content-between form-actions">
+                        <a class="btn back-button" href="{% url 'signup' %}">Back</a>
+                        <button class="btn btn-primary" type="submit" disabled>Create Account</button>
+                    </div>
+                    <input type="hidden" name="school_id" data-generated-pabasa-id>
                 </form>
+                <div class="generated-pabasa-id" id="teacherGeneratedPabasaId" aria-live="polite">
+                    <span class="small fw-bold text-uppercase">Generated PABASA ID</span>
+                    <code data-pabasa-id-output></code>
+                    <a class="btn btn-primary w-100 mt-3" href="{% url 'dashboard_teacher' %}">Continue</a>
+                </div>
             </div>
         </article>
     </div>
 </section>
+<script>
+    (() => {
+        const form = document.getElementById("teacherSignupForm");
+        const result = document.getElementById("teacherGeneratedPabasaId");
+        const pabasaIdInput = form.querySelector("[data-generated-pabasa-id]");
+        const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
+        const submitButton = form.querySelector("button[type='submit']");
+        const passwordInput = form.elements.password;
+        const confirmPasswordInput = form.elements.confirm_password;
+        const passwordMatchError = form.querySelector("[data-password-match-error]");
+        const passwordRules = {
+            length: form.querySelector("[data-rule='length']"),
+            uppercase: form.querySelector("[data-rule='uppercase']"),
+            number: form.querySelector("[data-rule='number']"),
+        };
+
+        const generatePabasaId = () => {
+            const numericId = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+            return `TCH-${numericId}`;
+        };
+
+        const getPasswordState = () => ({
+            length: passwordInput.value.length >= 8,
+            uppercase: /[A-Z]/.test(passwordInput.value),
+            number: /[0-9]/.test(passwordInput.value),
+        });
+
+        const passwordsMatch = () => passwordInput.value === confirmPasswordInput.value && confirmPasswordInput.value.length > 0;
+
+        const updateValidation = () => {
+            const passwordState = getPasswordState();
+            const passwordIsValid = Object.values(passwordState).every(Boolean);
+
+            Object.entries(passwordState).forEach(([rule, isValid]) => {
+                passwordRules[rule].classList.toggle("is-valid", isValid);
+            });
+
+            const hasConfirmValue = confirmPasswordInput.value.length > 0;
+            const isPasswordMatch = passwordsMatch();
+            passwordMatchError.classList.toggle("is-visible", hasConfirmValue && !isPasswordMatch);
+            confirmPasswordInput.setCustomValidity(!hasConfirmValue || isPasswordMatch ? "" : "Passwords must match.");
+            passwordInput.setCustomValidity(passwordIsValid ? "" : "Password does not meet the requirements.");
+
+            submitButton.disabled = !form.checkValidity() || !passwordIsValid || !isPasswordMatch;
+        };
+
+        form.addEventListener("input", updateValidation);
+        form.addEventListener("change", updateValidation);
+
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            updateValidation();
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const pabasaId = generatePabasaId();
+            pabasaIdInput.value = pabasaId;
+            pabasaIdOutput.textContent = pabasaId;
+            result.classList.add("is-visible");
+            result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+
+        updateValidation();
+    })();
+</script>
 {% endblock %}

@@ -16,17 +16,24 @@
     const activeStudentCount = document.getElementById("activeStudentCount");
     const classBanner = document.getElementById("classBanner");
 
+    // Modal elements
+    const deleteClassModal = document.getElementById("deleteClassModal");
+    const deleteClassNameDisplay = document.getElementById("deleteClassNameDisplay");
+    const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+
     if (!createClassForm || !classList || !generatedClassCode) {
         return;
     }
 
+    let classToDelete = null;
+
     function makeClassCode() {
         const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
         let prefix = "";
-        for (let i = 0; i < 3; i += 1) {
+        for (let i = 0; i < 4; i += 1) {
             prefix += letters[Math.floor(Math.random() * letters.length)];
         }
-        const number = Math.floor(1000 + Math.random() * 9000);
+        const number = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
         return prefix + "-" + number;
     }
 
@@ -47,7 +54,7 @@
 
         const name = card.getAttribute("data-class-name") || "Reading Class";
         const subject = card.getAttribute("data-subject") || "Reading";
-        const code = card.getAttribute("data-code") || "PAB-0000";
+        const code = card.getAttribute("data-code") || "READ-000";
         const header = card.getAttribute("data-header") || "READ";
         const description = card.getAttribute("data-description") || "Class reading workspace.";
         const students = card.getAttribute("data-students") || "0";
@@ -61,15 +68,21 @@
     }
 
     function createClassCard(name, header, description, code) {
-        const card = document.createElement("button");
+        const card = document.createElement("div");
         card.className = "class-card";
-        card.type = "button";
         card.setAttribute("data-class-name", name);
         card.setAttribute("data-subject", name);
         card.setAttribute("data-code", code);
         card.setAttribute("data-header", header);
         card.setAttribute("data-description", description);
         card.setAttribute("data-students", "0");
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "class-card-delete";
+        deleteBtn.type = "button";
+        deleteBtn.title = "Delete class";
+        deleteBtn.setAttribute("aria-label", `Delete ${name} class`);
+        deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
 
         const head = document.createElement("span");
         head.className = "class-card-head";
@@ -87,16 +100,62 @@
 
         head.appendChild(title);
         head.appendChild(codePill);
+        card.appendChild(deleteBtn);
         card.appendChild(head);
         card.appendChild(meta);
 
         return card;
     }
 
+    function showDeleteConfirmation(card) {
+        classToDelete = card;
+        const className = card.getAttribute("data-class-name") || "this class";
+        deleteClassNameDisplay.textContent = className;
+        
+        const modal = new bootstrap.Modal(deleteClassModal);
+        modal.show();
+    }
+
+    function deleteClass(card) {
+        const nextCard = card.nextElementSibling || card.previousElementSibling;
+        card.remove();
+        updateClassCount();
+        
+        if (nextCard && nextCard.classList && nextCard.classList.contains("class-card")) {
+            selectClass(nextCard);
+        } else {
+            const remaining = classList.querySelector(".class-card");
+            if (remaining) {
+                selectClass(remaining);
+            }
+        }
+    }
+
     classList.addEventListener("click", function (event) {
+        const deleteBtn = event.target.closest(".class-card-delete");
+        if (deleteBtn) {
+            event.stopPropagation();
+            const card = deleteBtn.closest(".class-card");
+            if (card) {
+                showDeleteConfirmation(card);
+            }
+            return;
+        }
+
         const card = event.target.closest(".class-card");
         if (card) {
             selectClass(card);
+        }
+    });
+
+    confirmDeleteBtn.addEventListener("click", function () {
+        if (classToDelete) {
+            deleteClass(classToDelete);
+            classToDelete = null;
+            const modal = bootstrap.Modal.getInstance(deleteClassModal);
+            if (modal) {
+                modal.hide();
+            }
         }
     });
 

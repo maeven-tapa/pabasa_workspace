@@ -8,6 +8,106 @@
         border: 1px solid #d8c7ff;
         font-weight: 600;
     }
+
+    .material-items-list {
+        display: grid;
+        gap: 0.75rem;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 12px;
+        padding: 0.85rem;
+        background: #fffdf7;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .material-item-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 0.75rem;
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        padding: 0.65rem;
+    }
+
+    .material-item-number {
+        background: var(--dash-primary-soft);
+        color: var(--dash-primary-deep);
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .material-item-text {
+        word-break: break-word;
+        color: var(--dash-text);
+        font-size: 0.95rem;
+        padding: 0.25rem 0;
+    }
+
+    .material-item-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .material-item-edit,
+    .material-item-delete {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        font-size: 0.9rem;
+    }
+
+    .material-item-edit {
+        color: var(--dash-primary-deep);
+    }
+
+    .material-item-edit:hover {
+        opacity: 0.7;
+    }
+
+    .material-item-delete {
+        color: #dc2626;
+    }
+
+    .material-item-delete:hover {
+        color: #991b1b;
+        opacity: 0.8;
+    }
+
+    .material-type-badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        background: var(--dash-primary-soft);
+        color: var(--dash-primary-deep);
+        margin-left: 0.5rem;
+    }
+
+    .empty-materials-state {
+        color: var(--dash-muted);
+        text-align: center;
+        padding: 1.5rem;
+        font-size: 0.95rem;
+    }
 </style>
 {% endblock %}
 
@@ -34,7 +134,7 @@
                     <p class="course-meta mb-1">Reusable word lists for practice and word-level checks</p>
                     <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
                         <span class="dash-pill">Active</span>
-                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}">Open</a>
+                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}?type=word">Open</a>
                     </div>
                 </div>
             </article>
@@ -47,7 +147,7 @@
                     <p class="course-meta mb-1">Sentence prompts for fluency and phrasing</p>
                     <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
                         <span class="dash-pill">In Progress</span>
-                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}">Open</a>
+                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}?type=sentence">Open</a>
                     </div>
                 </div>
             </article>
@@ -60,7 +160,7 @@
                     <p class="course-meta mb-1">Longer passages for assessment and guided practice</p>
                     <div class="d-flex justify-content-between align-items-center mt-auto gap-2">
                         <span class="dash-pill">Upcoming</span>
-                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}">Open</a>
+                        <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}?type=paragraph">Open</a>
                     </div>
                 </div>
             </article>
@@ -110,21 +210,48 @@
     </div>
 
     <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h4 class="modal-title h6 mb-0" id="createCourseModalLabel">Add Material</h4>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="#" method="post">
+                <form action="#" method="post" id="addMaterialForm">
                     <div class="modal-body">
+                        <!-- Material Title -->
                         <div class="mb-3">
-                            <label for="courseName" class="form-label">Material Title</label>
-                            <input id="courseName" class="form-control" type="text" name="course_name" placeholder="Enter material title" required>
+                            <label for="materialTitle" class="form-label">Material Title</label>
+                            <input id="materialTitle" class="form-control" type="text" name="material_title" placeholder="Enter material title (e.g., Word List Set A)" required>
                         </div>
+
+                        <!-- Material Type -->
+                        <div class="mb-3">
+                            <label for="materialType" class="form-label">Content Type</label>
+                            <select id="materialType" class="form-select">
+                                <option value="word">Word</option>
+                                <option value="sentence">Sentence</option>
+                                <option value="paragraph">Paragraph</option>
+                            </select>
+                        </div>
+
+                        <!-- Input for single item -->
+                        <div class="mb-3">
+                            <label for="materialItemInput" class="form-label">Add Item <span class="material-type-badge" id="itemTypeBadge">Word</span></label>
+                            <div class="d-grid gap-2" style="grid-template-columns: 1fr auto;">
+                                <textarea id="materialItemInput" class="form-control" rows="2" placeholder="Enter word, sentence, or paragraph"></textarea>
+                                <div class="d-flex flex-column gap-2">
+                                    <button type="button" class="btn btn-primary" id="addItemBtn" title="Add new item"><i class="bi bi-plus-lg"></i></button>
+                                    <button type="button" class="btn btn-outline-secondary" id="cancelEditBtn" title="Cancel edit" style="display: none;"><i class="bi bi-x-lg"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- List of items -->
                         <div>
-                            <label for="courseBox" class="form-label">Material Content</label>
-                            <textarea id="courseBox" class="form-control" name="course_box" rows="4" placeholder="Type words, sentences, or paragraph passages"></textarea>
+                            <label class="form-label">Items <span class="text-muted" id="itemCount">(0)</span></label>
+                            <div class="material-items-list" id="materialItemsList">
+                                <div class="empty-materials-state">No items added yet</div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -135,5 +262,173 @@
             </div>
         </div>
     </div>
+
+    <script>
+        (function() {
+            const materialTypeSelect = document.getElementById("materialType");
+            const itemTypeBadge = document.getElementById("itemTypeBadge");
+            const materialItemInput = document.getElementById("materialItemInput");
+            const addItemBtn = document.getElementById("addItemBtn");
+            const cancelEditBtn = document.getElementById("cancelEditBtn");
+            const materialItemsList = document.getElementById("materialItemsList");
+            const itemCount = document.getElementById("itemCount");
+            const materialForm = document.getElementById("addMaterialForm");
+
+            let items = [];
+            let editingIndex = -1;
+
+            // Update badge when type changes
+            materialTypeSelect.addEventListener("change", function() {
+                const typeText = this.options[this.selectedIndex].text;
+                itemTypeBadge.textContent = typeText;
+            });
+
+            // Add or update item
+            addItemBtn.addEventListener("click", function() {
+                const itemText = materialItemInput.value.trim();
+                if (!itemText) {
+                    alert("Please enter an item");
+                    return;
+                }
+
+                if (editingIndex >= 0) {
+                    // Update existing item
+                    items[editingIndex].text = itemText;
+                    editingIndex = -1;
+                } else {
+                    // Add new item
+                    items.push({
+                        text: itemText,
+                        type: materialTypeSelect.value
+                    });
+                }
+
+                renderItems();
+                materialItemInput.value = "";
+                materialItemInput.focus();
+                cancelEditBtn.style.display = "none";
+                addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+                addItemBtn.title = "Add new item";
+            });
+
+            // Cancel edit
+            cancelEditBtn.addEventListener("click", function(e) {
+                e.preventDefault();
+                editingIndex = -1;
+                materialItemInput.value = "";
+                materialItemInput.focus();
+                cancelEditBtn.style.display = "none";
+                addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+                addItemBtn.title = "Add new item";
+            });
+
+            // Allow Enter key to add item
+            materialItemInput.addEventListener("keydown", function(e) {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    addItemBtn.click();
+                }
+            });
+
+            // Render items list
+            function renderItems() {
+                if (items.length === 0) {
+                    materialItemsList.innerHTML = '<div class="empty-materials-state">No items added yet</div>';
+                    itemCount.textContent = "(0)";
+                    return;
+                }
+
+                materialItemsList.innerHTML = items.map((item, index) => `
+                    <div class="material-item-row">
+                        <span class="material-item-number">${index + 1}</span>
+                        <span class="material-item-text">${escapeHtml(item.text)}</span>
+                        <div class="material-item-actions">
+                            <button type="button" class="material-item-edit" data-index="${index}" title="Edit item">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button type="button" class="material-item-delete" data-index="${index}" title="Delete item">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join("");
+
+                itemCount.textContent = `(${items.length})`;
+
+                // Add edit handlers
+                document.querySelectorAll(".material-item-edit").forEach(btn => {
+                    btn.addEventListener("click", function(e) {
+                        e.preventDefault();
+                        editingIndex = parseInt(this.getAttribute("data-index"));
+                        materialItemInput.value = items[editingIndex].text;
+                        materialItemInput.focus();
+                        materialItemInput.select();
+                        cancelEditBtn.style.display = "flex";
+                        addItemBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                        addItemBtn.title = "Update item";
+                    });
+                });
+
+                // Add delete handlers
+                document.querySelectorAll(".material-item-delete").forEach(btn => {
+                    btn.addEventListener("click", function(e) {
+                        e.preventDefault();
+                        const index = parseInt(this.getAttribute("data-index"));
+                        if (confirm(`Delete item ${index + 1}?`)) {
+                            items.splice(index, 1);
+                            if (editingIndex === index) {
+                                editingIndex = -1;
+                                materialItemInput.value = "";
+                                cancelEditBtn.style.display = "none";
+                                addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+                                addItemBtn.title = "Add new item";
+                            }
+                            renderItems();
+                        }
+                    });
+                });
+            }
+
+            // Helper function to escape HTML
+            function escapeHtml(text) {
+                const div = document.createElement("div");
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Clear items when form is reset
+            document.querySelector("#createCourseModal").addEventListener("hidden.bs.modal", function() {
+                items = [];
+                editingIndex = -1;
+                materialItemInput.value = "";
+                cancelEditBtn.style.display = "none";
+                addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+                addItemBtn.title = "Add new item";
+                renderItems();
+            });
+
+            // Form submission
+            materialForm.addEventListener("submit", function(e) {
+                e.preventDefault();
+                if (items.length === 0) {
+                    alert("Please add at least one item");
+                    return;
+                }
+                // In a real scenario, you'd send this data to the server
+                console.log("Form Data:", {
+                    title: document.getElementById("materialTitle").value,
+                    type: materialTypeSelect.value,
+                    items: items
+                });
+                alert("Material saved successfully!");
+                this.reset();
+                items = [];
+                editingIndex = -1;
+                renderItems();
+                const modal = bootstrap.Modal.getInstance(document.querySelector("#createCourseModal"));
+                modal.hide();
+            });
+        })();
+    </script>
 </section>
 {% endblock %}

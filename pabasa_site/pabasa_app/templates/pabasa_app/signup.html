@@ -5,20 +5,68 @@
 <style>
     body {
         background:
-            linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.25) 100%),
-            radial-gradient(ellipse at 50% 50%, rgba(31, 111, 139, 0.15) 0%, transparent 80%),
-            url("{% static 'pabasa_app/images/read.jpg' %}") no-repeat center center fixed;
-        background-size: cover;
+            linear-gradient(135deg, rgba(8, 24, 38, 0.45), rgba(8, 24, 38, 0.28)),
+            url("{% static 'pabasa_app/images/read.jpg' %}") center / cover fixed no-repeat !important;
     }
 
     .account-card {
-        background: rgba(255, 255, 255, 0.75) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        position: relative;
+        overflow: hidden;
+        border-radius: 1.35rem;
+        background: rgba(255, 255, 255, 0.78) !important;
+        border: 1px solid rgba(255, 255, 255, 0.58);
+        box-shadow: 0 24px 56px rgba(15, 23, 42, 0.26);
+        backdrop-filter: blur(14px) saturate(1.08);
+        -webkit-backdrop-filter: blur(14px) saturate(1.08);
+    }
+
+    .account-card::before {
+        content: "";
+        display: block;
+        height: 0.45rem;
+        background: linear-gradient(90deg, #54c2f0, #ffd639);
+    }
+
+    .account-card .card-body {
+        padding: clamp(1.5rem, 4vw, 2.25rem) !important;
+    }
+
+    .account-card h1,
+    .account-card h2 {
+        color: #0f2f45;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+
+    .account-card .form-label {
+        color: #12394f;
+        font-size: 0.92rem;
+        font-weight: 700;
+        margin-bottom: 0.4rem;
+    }
+
+    .account-card .form-control,
+    .account-card .form-select {
+        min-height: 3rem;
+        border-radius: 0.9rem;
+        border-color: rgba(16, 70, 110, 0.18);
+        background-color: rgba(255, 255, 255, 0.84);
+    }
+
+    .account-card .form-control:focus,
+    .account-card .form-select:focus {
+        border-color: #54c2f0;
+        box-shadow: 0 0 0 0.2rem rgba(84, 194, 240, 0.2);
+    }
+
+    .account-card .btn {
+        min-height: 2.9rem;
+        border-radius: 0.9rem;
+        font-weight: 700;
     }
 
     .account-card .text-secondary {
-        color: #000000 !important;
+        color: #263f4f !important;
     }
 </style>
 {% endblock %}

@@ -22,6 +22,7 @@
         overflow: visible;
         padding: clamp(1.5rem, 3vw, 2.5rem);
         position: relative;
+        transition: min-height 0.25s ease, grid-template-columns 0.25s ease, padding 0.25s ease;
     }
 
     .student-studio::before {
@@ -82,6 +83,20 @@
         padding: 1.5rem;
         position: relative;
         z-index: 1;
+    }
+
+    .student-dashboard.has-class .student-studio {
+        min-height: 210px;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+        padding: clamp(1.15rem, 2vw, 1.6rem);
+    }
+
+    .student-dashboard.has-class .student-studio-copy h2 {
+        font-size: clamp(1.55rem, 2.6vw, 2.15rem);
+    }
+
+    .student-dashboard.has-class .student-studio-copy p {
+        max-width: 680px;
     }
 
     .join-desk::before {
@@ -187,60 +202,222 @@
         margin-top: 0.1rem;
     }
 
-    .reading-shelf {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+    .class-list {
+        display: none;
         gap: 1rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .shelf-action {
-        background: #ffffff;
+    .student-dashboard.has-class .class-list {
+        display: grid;
+    }
+
+    .student-dashboard.has-class .desk-note {
+        display: none;
+    }
+
+    .student-dashboard.has-class [data-class-empty-note] {
+        display: none;
+    }
+
+    .class-card {
+        background:
+            linear-gradient(135deg, rgba(31, 111, 139, 0.1), transparent 50%),
+            #ffffff;
         border: 1px solid rgba(27, 26, 23, 0.08);
         border-radius: 22px;
-        color: var(--dash-text);
-        min-height: 150px;
+        box-shadow: 0 18px 38px rgba(27, 26, 23, 0.09);
+        aspect-ratio: 1 / 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
         overflow: hidden;
-        padding: 1rem;
+        padding: 1.1rem;
         position: relative;
-        text-decoration: none;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        width: 100%;
     }
 
-    .shelf-action:hover {
-        color: var(--dash-text);
-        box-shadow: 0 22px 42px rgba(27, 26, 23, 0.12);
-        transform: translateY(-3px);
+    .class-card.is-expanded {
+        aspect-ratio: auto;
+        border-color: rgba(31, 111, 139, 0.22);
+        box-shadow: 0 24px 48px rgba(27, 26, 23, 0.12);
     }
 
-    .shelf-action::after {
-        bottom: -36px;
-        color: rgba(31, 111, 139, 0.08);
-        content: attr(data-letter);
-        font-size: 9rem;
-        font-weight: 700;
-        line-height: 1;
-        position: absolute;
-        right: -12px;
+    .class-card::before {
+        content: "";
+        display: block;
+        height: 48px;
+        margin: -1.1rem -1.1rem 1rem;
+        background: linear-gradient(135deg, #1f6f8b, #ffd639);
     }
 
-    .shelf-action.practice {
-        background: linear-gradient(135deg, #ffffff, #e7f3f5);
+    .class-card h3 {
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin: 0 0 0.25rem;
     }
 
-    .shelf-action.assessment {
-        background: linear-gradient(135deg, #ffffff, #f8ead8);
+    .class-card-meta {
+        color: var(--dash-muted);
+        display: grid;
+        gap: 0.3rem;
+        font-size: 0.84rem;
     }
 
-    .shelf-icon {
-        align-items: center;
-        background: #1f6f8b;
-        border-radius: 15px;
-        color: #ffffff;
+    .class-card-code {
         display: inline-flex;
-        height: 46px;
+        align-items: center;
         justify-content: center;
-        margin-bottom: 1rem;
-        width: 46px;
+        background: rgba(31, 111, 139, 0.1);
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 999px;
+        color: var(--dash-primary-deep);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin-top: 0.85rem;
+        padding: 0.35rem 0.65rem;
+        text-transform: uppercase;
+        width: fit-content;
+    }
+
+    .class-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        justify-content: space-between;
+        margin-top: auto;
+        padding-top: 0.85rem;
+    }
+
+    .view-class-btn {
+        border: 1px solid rgba(31, 111, 139, 0.2);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--dash-primary-deep);
+        font-size: 0.82rem;
+        font-weight: 800;
+        min-height: 2.25rem;
+        padding: 0.35rem 0.75rem;
+        flex: 1 1 auto;
+    }
+
+    .view-class-btn:hover,
+    .view-class-btn:focus {
+        background: var(--dash-primary-soft);
+        border-color: rgba(31, 111, 139, 0.32);
+        color: var(--dash-primary-deep);
+    }
+
+    .unenroll-btn {
+        border: 1px solid rgba(185, 95, 68, 0.24);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.74);
+        color: #8f432f;
+        font-size: 0.82rem;
+        font-weight: 800;
+        min-height: 2.25rem;
+        padding: 0.35rem 0.75rem;
+        flex: 1 1 auto;
+    }
+
+    .unenroll-btn:hover,
+    .unenroll-btn:focus {
+        background: #fff0e6;
+        border-color: rgba(185, 95, 68, 0.36);
+        color: #8f432f;
+    }
+
+    .unenroll-modal .modal-content {
+        border: 1px solid rgba(185, 95, 68, 0.16);
+        border-radius: 22px;
+        box-shadow: 0 24px 52px rgba(27, 26, 23, 0.18);
+    }
+
+    .unenroll-modal .modal-icon {
+        align-items: center;
+        background: #fff0e6;
+        border: 1px solid rgba(185, 95, 68, 0.18);
+        border-radius: 16px;
+        color: #8f432f;
+        display: inline-flex;
+        height: 44px;
+        justify-content: center;
+        width: 44px;
+    }
+
+    .class-detail {
+        display: none;
+        margin-top: 0.85rem;
+        border-top: 1px solid rgba(27, 26, 23, 0.08);
+        padding-top: 0.85rem;
+    }
+
+    .class-card.is-expanded .class-detail {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .stat-grid {
+        display: grid;
+        gap: 0.45rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stat-box {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(31, 111, 139, 0.1);
+        border-radius: 12px;
+        padding: 0.55rem;
+    }
+
+    .stat-box span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+    }
+
+    .stat-box strong {
+        color: var(--dash-text);
+        display: block;
+        font-size: 0.98rem;
+    }
+
+    .progress-track {
+        background: rgba(31, 111, 139, 0.1);
+        border-radius: 999px;
+        height: 0.65rem;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        background: linear-gradient(90deg, var(--dash-primary), #ffd639);
+        border-radius: inherit;
+        height: 100%;
+    }
+
+    .class-detail-list {
+        display: grid;
+        gap: 0.5rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .class-detail-list li {
+        align-items: center;
+        background: rgba(255, 255, 255, 0.62);
+        border: 1px solid rgba(27, 26, 23, 0.07);
+        border-radius: 14px;
+        display: flex;
+        gap: 0.45rem;
+        padding: 0.5rem 0.6rem;
+        font-size: 0.78rem;
+        line-height: 1.3;
     }
 
     @media (max-width: 1000px) {
@@ -252,11 +429,13 @@
         .join-desk {
             align-self: auto;
         }
-    }
 
-    @media (max-width: 980px) {
-        .reading-shelf {
+        .student-dashboard.has-class .student-studio {
             grid-template-columns: 1fr;
+        }
+
+        .class-list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
@@ -273,6 +452,14 @@
         .code-input-row .btn {
             min-height: 48px;
         }
+
+        .class-list {
+            grid-template-columns: 1fr;
+        }
+
+        .stat-grid {
+            grid-template-columns: 1fr 1fr;
+        }
     }
 </style>
 {% endblock %}
@@ -282,12 +469,13 @@
 {% endblock %}
 
 {% block content %}
-<section class="student-dashboard">
+<section class="student-dashboard" data-student-dashboard>
     <div class="student-studio">
         <div class="student-studio-copy">
             <span class="studio-kicker">Your classroom canvas</span>
             <h2>Your reading space starts clean.</h2>
-            <p>Once you join a class, this page becomes your home for teacher notes, reading work, and assigned assessments. Until then, the dashboard stays intentionally quiet.</p>
+            <p data-class-empty-note>Once you join a class, this page becomes your home for teacher notes, reading work, and assigned assessments. Until then, the dashboard stays intentionally quiet.</p>
+            <p data-class-joined-note class="mb-0" style="display: none;">You are now connected to your class. Practice Mode and Reading Assessment are available from the sidebar.</p>
         </div>
 
         <article class="join-desk">
@@ -297,7 +485,7 @@
                 <p class="small text-secondary mb-0">Class cards and reading assignments appear here after the code is accepted.</p>
             </div>
 
-            <form action="#" method="post" class="class-code-form">
+            <form action="#" method="post" class="class-code-form" data-class-code-form>
                 {% csrf_token %}
                 <div class="code-input-shell">
                     <label for="classCode">Class code</label>
@@ -306,7 +494,7 @@
                         <button class="btn" type="submit"><i class="bi bi-plus-lg me-1"></i>Join</button>
                     </div>
                 </div>
-                <p id="classCodeHelp" class="small text-secondary mb-0">Codes are usually 6-8 characters and are not case-sensitive.</p>
+                <p id="classCodeHelp" class="small text-secondary mb-0">Class codes use 4 letters, a dash, then 3 numbers.</p>
             </form>
 
             <div class="desk-note">
@@ -316,17 +504,211 @@
         </article>
     </div>
 
-    <div class="reading-shelf" style="display: none;">
-        <a class="shelf-action practice" href="{% url 'practice' %}" data-letter="P">
-            <span class="shelf-icon"><i class="bi bi-mic"></i></span>
-            <span class="fw-semibold d-block mb-2">Practice Mode</span>
-            <span class="small text-secondary">Warm up with short reading drills before class work appears.</span>
-        </a>
-        <a class="shelf-action assessment" href="{% url 'assessment' %}" data-letter="R">
-            <span class="shelf-icon"><i class="bi bi-journal-check"></i></span>
-            <span class="fw-semibold d-block mb-2">Reading Assessment</span>
-            <span class="small text-secondary">Open the main reading assessment when your teacher assigns one.</span>
-        </a>
-    </div>
+    <div class="class-list" data-class-list aria-live="polite"></div>
 </section>
+
+<div class="modal fade unenroll-modal" id="unenrollConfirmModal" tabindex="-1" aria-labelledby="unenrollConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="modal-icon"><i class="bi bi-box-arrow-left"></i></span>
+                    <div>
+                        <h5 class="modal-title" id="unenrollConfirmModalLabel">Unenroll from class?</h5>
+                        <p class="small text-secondary mb-0">This will remove the class from your dashboard.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to unenroll from <strong data-unenroll-class-code>this class</strong>?
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" data-confirm-unenroll>Yes, Unenroll</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const dashboard = document.querySelector("[data-student-dashboard]");
+        const form = document.querySelector("[data-class-code-form]");
+        const classCodeInput = document.getElementById("classCode");
+        const classList = document.querySelector("[data-class-list]");
+        const emptyNote = document.querySelector("[data-class-empty-note]");
+        const joinedNote = document.querySelector("[data-class-joined-note]");
+        const unenrollModalElement = document.getElementById("unenrollConfirmModal");
+        const unenrollClassCode = document.querySelector("[data-unenroll-class-code]");
+        const confirmUnenrollButton = document.querySelector("[data-confirm-unenroll]");
+        const classJoinedKey = "pabasaStudentClassJoined";
+        const classCodesKey = "pabasaStudentClassCodes";
+        const legacyClassCodeKey = "pabasaStudentClassCode";
+        let pendingUnenrollCode = "";
+
+        if (!dashboard || !form || !classCodeInput || !classList) {
+            return;
+        }
+
+        const getSavedCodes = () => {
+            try {
+                const parsed = JSON.parse(window.localStorage.getItem(classCodesKey) || "[]");
+                return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+            } catch (error) {
+                return [];
+            }
+        };
+
+        const saveCodes = (codes) => {
+            window.localStorage.setItem(classCodesKey, JSON.stringify(codes));
+            window.localStorage.setItem(classJoinedKey, codes.length ? "1" : "0");
+            window.localStorage.removeItem(legacyClassCodeKey);
+        };
+
+        const renderClassCards = (codes) => {
+            classList.innerHTML = codes.map((code, index) => `
+                <article class="class-card" data-class-card>
+                    <h3>Grade 2 Reading Class ${index + 1}</h3>
+                    <div class="class-card-meta">
+                        <span><i class="bi bi-person-workspace me-1"></i> Teacher: Reading Coordinator</span>
+                        <span><i class="bi bi-journal-text me-1"></i> Filipino Oral Reading</span>
+                        <span><i class="bi bi-unlock me-1"></i> Practice and assessment unlocked</span>
+                    </div>
+                    <span class="class-card-code">${code}</span>
+                    <div class="class-detail" data-class-detail>
+                        <div class="stat-grid">
+                            <div class="stat-box">
+                                <span>Fluency</span>
+                                <strong>${82 + (index % 3) * 4}%</strong>
+                            </div>
+                            <div class="stat-box">
+                                <span>Accuracy</span>
+                                <strong>${88 + (index % 2) * 3}%</strong>
+                            </div>
+                            <div class="stat-box">
+                                <span>Practice</span>
+                                <strong>${6 + index} sets</strong>
+                            </div>
+                            <div class="stat-box">
+                                <span>Streak</span>
+                                <strong>${3 + index} days</strong>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex justify-content-between gap-2 mb-2 small fw-bold">
+                                <span>Reading progress</span>
+                                <span>${68 + (index % 3) * 8}%</span>
+                            </div>
+                            <div class="progress-track" aria-hidden="true">
+                                <div class="progress-fill" style="width: ${68 + (index % 3) * 8}%"></div>
+                            </div>
+                        </div>
+                        <ul class="class-detail-list">
+                            <li><i class="bi bi-check-circle text-success"></i> Last assessment: Developing Reader, improving in word recognition.</li>
+                            <li><i class="bi bi-clock-history text-warning"></i> Next recommended task: 10-minute sentence reading practice.</li>
+                            <li><i class="bi bi-chat-square-text text-primary"></i> Teacher note: Keep practicing clear pronunciation and pacing.</li>
+                        </ul>
+                    </div>
+                    <div class="class-card-actions">
+                        <button class="view-class-btn" type="button" data-toggle-class-detail>
+                            <i class="bi bi-eye me-1"></i>View details
+                        </button>
+                        <button class="unenroll-btn" type="button" data-unenroll-code="${code}">
+                            <i class="bi bi-box-arrow-left me-1"></i>Unenroll
+                        </button>
+                    </div>
+                </article>
+            `).join("");
+        };
+
+        const setJoinedState = (codes = []) => {
+            const isJoined = codes.length > 0;
+            dashboard.classList.toggle("has-class", isJoined);
+            emptyNote.style.display = isJoined ? "none" : "";
+            joinedNote.style.display = isJoined ? "" : "none";
+
+            if (isJoined) {
+                renderClassCards(codes);
+                saveCodes(codes);
+            } else {
+                classList.innerHTML = "";
+                window.localStorage.removeItem(classJoinedKey);
+                window.localStorage.removeItem(classCodesKey);
+                window.localStorage.removeItem(legacyClassCodeKey);
+            }
+
+            window.dispatchEvent(new Event("pabasa:student-class-updated"));
+        };
+
+        const legacyCode = window.localStorage.getItem(legacyClassCodeKey);
+        const savedCodes = getSavedCodes();
+        if (!savedCodes.length && legacyCode) {
+            savedCodes.push(legacyCode);
+        }
+        setJoinedState(savedCodes);
+
+        classCodeInput.addEventListener("input", () => {
+            const cleaned = classCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+            const letters = cleaned.replace(/[^A-Z]/g, "").slice(0, 4);
+            const numberSource = cleaned.slice(letters.length);
+            const numbers = numberSource.replace(/\D/g, "").slice(0, 3);
+            classCodeInput.value = numbers ? `${letters}-${numbers}` : letters;
+            classCodeInput.setCustomValidity("");
+        });
+
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+
+            const code = classCodeInput.value.trim().toUpperCase();
+            if (!/^[A-Z]{4}-[0-9]{3}$/.test(code)) {
+                classCodeInput.setCustomValidity("Class code must be 4 letters, a dash, then 3 numbers.");
+                classCodeInput.reportValidity();
+                return;
+            }
+
+            const codes = getSavedCodes();
+            if (!codes.includes(code)) {
+                codes.push(code);
+            }
+
+            classCodeInput.setCustomValidity("");
+            classCodeInput.value = "";
+            setJoinedState(codes);
+        });
+
+        classList.addEventListener("click", (event) => {
+            const detailButton = event.target.closest("[data-toggle-class-detail]");
+            if (detailButton) {
+                const card = detailButton.closest("[data-class-card]");
+                const isExpanded = card.classList.toggle("is-expanded");
+                detailButton.innerHTML = isExpanded
+                    ? '<i class="bi bi-eye-slash me-1"></i>Hide details'
+                    : '<i class="bi bi-eye me-1"></i>View details';
+                return;
+            }
+
+            const unenrollButton = event.target.closest("[data-unenroll-code]");
+            if (!unenrollButton) {
+                return;
+            }
+
+            const code = unenrollButton.dataset.unenrollCode;
+            pendingUnenrollCode = code;
+            unenrollClassCode.textContent = code;
+            bootstrap.Modal.getOrCreateInstance(unenrollModalElement).show();
+        });
+
+        confirmUnenrollButton.addEventListener("click", () => {
+            if (!pendingUnenrollCode) {
+                return;
+            }
+
+            const remainingCodes = getSavedCodes().filter((savedCode) => savedCode !== pendingUnenrollCode);
+            setJoinedState(remainingCodes);
+            pendingUnenrollCode = "";
+            bootstrap.Modal.getOrCreateInstance(unenrollModalElement).hide();
+        });
+    })();
+</script>
 {% endblock %}

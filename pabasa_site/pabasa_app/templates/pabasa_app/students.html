@@ -311,6 +311,47 @@
             justify-items: stretch;
         }
     }
+
+    .student-checkbox-list {
+        display: grid;
+        gap: 0.65rem;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 12px;
+        padding: 0.85rem;
+        background: #fffdf7;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .student-checkbox-list .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0;
+    }
+
+    .student-checkbox-list .form-check-input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        flex-shrink: 0;
+        cursor: pointer;
+        margin-top: 2px;
+    }
+
+    .student-checkbox-list .form-check-label {
+        margin-bottom: 0;
+        cursor: pointer;
+        color: var(--dash-text);
+        font-size: 0.95rem;
+        font-weight: 500;
+        user-select: none;
+    }
+
+    .student-checkbox-list .form-check-input:focus {
+        border-color: var(--dash-primary);
+        box-shadow: 0 0 0 0.2rem rgba(84, 194, 240, 0.25);
+    }
 </style>
 {% endblock %}
 
@@ -560,7 +601,7 @@
     </div>
 
     <div class="modal fade" id="parentUpdateModal" tabindex="-1" aria-labelledby="parentUpdateModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <div>
@@ -572,14 +613,64 @@
                 <form action="#" method="post">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label" for="parentUpdateGroup">Recipient group</label>
-                            <select class="form-select" id="parentUpdateGroup">
-                                <option selected>Priority group guardians</option>
-                                <option>Grade 3 Reading - Section A guardians</option>
-                                <option>All active class guardians</option>
+                            <label class="form-label" for="parentUpdateGroupType">Recipient group</label>
+                            <select class="form-select" id="parentUpdateGroupType">
+                                <option value="all" selected>All Students</option>
+                                <option value="custom">Custom</option>
                             </select>
                         </div>
-                        <div>
+
+                        <!-- Grade Level & Section - shown for both All and Custom -->
+                        <div class="mb-3" id="gradeAndSectionSection">
+                            <label class="form-label" for="parentUpdateGradeAndSection">Grade & Section</label>
+                            <select class="form-select" id="parentUpdateGradeAndSection">
+                                <option value="">Select grade and section</option>
+                                <option value="grade-2-a" selected>Grade 2 - A</option>
+                                <option value="grade-2-b">Grade 2 - B</option>
+                                <option value="grade-2-c">Grade 2 - C</option>
+                            </select>
+                        </div>
+
+                        <!-- Students list - shown only for Custom -->
+                        <div id="studentListSection" style="display: none;">
+                            <label class="form-label d-block mb-2">Select Students</label>
+                            <div class="student-checkbox-list">
+                                <div class="form-check">
+                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_1" value="luna-dela-cruz">
+                                    <label class="form-check-label" for="student_1">Luna Dela Cruz</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_2" value="marco-reyes">
+                                    <label class="form-check-label" for="student_2">Marco Reyes</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_3" value="alyssa-ramos">
+                                    <label class="form-check-label" for="student_3">Alyssa Ramos</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_4" value="noah-santos">
+                                    <label class="form-check-label" for="student_4">Noah Santos</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_5" value="sophia-cruz">
+                                    <label class="form-check-label" for="student_5">Sophia Cruz</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_6" value="jasmine-torres">
+                                    <label class="form-check-label" for="student_6">Jasmine Torres</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_7" value="carlos-mendoza">
+                                    <label class="form-check-label" for="student_7">Carlos Mendoza</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_8" value="isabella-santos">
+                                    <label class="form-check-label" for="student_8">Isabella Santos</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
                             <label class="form-label" for="parentUpdateMessage">Message</label>
                             <textarea class="form-control" id="parentUpdateMessage" rows="5">Good day. This week, we are giving extra short reading practice to learners who need support with accuracy and fluency. Please help your child read aloud for 10 minutes at home and remind them to pause at periods.</textarea>
                         </div>
@@ -593,5 +684,5 @@
         </div>
     </div>
 </section>
-<script src="{% static 'pabasa_app/js/students.js' %}?v=filters-2"></script>
+<script src="{% static 'pabasa_app/js/students.js' %}"></script>
 {% endblock %}
