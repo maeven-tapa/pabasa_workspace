@@ -321,7 +321,10 @@
         };
 
         const generatePabasaId = () => {
-            const numericId = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+            const storageKey = "pabasaTeacherIdCounter";
+            let counter = parseInt(window.localStorage.getItem(storageKey) || "1", 10);
+            const numericId = String(counter).padStart(4, "0");
+            window.localStorage.setItem(storageKey, String(counter + 1));
             return `TCH-${numericId}`;
         };
 
@@ -365,6 +368,8 @@
             const pabasaId = generatePabasaId();
             pabasaIdInput.value = pabasaId;
             pabasaIdOutput.textContent = pabasaId;
+            window.localStorage.setItem("pabasaCurrentUserId", pabasaId);
+            window.localStorage.setItem("pabasaUserRole", "teacher");
             result.classList.add("is-visible");
             result.scrollIntoView({ behavior: "smooth", block: "nearest" });
         });

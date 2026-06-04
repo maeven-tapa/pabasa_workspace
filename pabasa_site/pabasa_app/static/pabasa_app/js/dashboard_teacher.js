@@ -26,6 +26,7 @@
     }
 
     let classToDelete = null;
+    const classStorageKey = "pabasa_teacher_classes";
 
     function makeClassCode() {
         const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -47,6 +48,47 @@
         }
     }
 
+    function getCardData(card) {
+        return {
+            name: card.getAttribute("data-class-name") || "Reading Class",
+            subject: card.getAttribute("data-subject") || "Reading",
+            code: card.getAttribute("data-code") || "READ-000",
+            header: card.getAttribute("data-header") || "READ",
+            description: card.getAttribute("data-description") || "Class reading workspace.",
+            students: card.getAttribute("data-students") || "0"
+        };
+    }
+
+    function saveClasses() {
+        const classes = Array.from(classList.querySelectorAll(".class-card")).map(getCardData);
+        localStorage.setItem(classStorageKey, JSON.stringify(classes));
+    }
+
+    function loadSavedClasses() {
+        const saved = JSON.parse(localStorage.getItem(classStorageKey) || "null");
+        if (!saved || !Array.isArray(saved) || saved.length === 0) {
+            saveClasses();
+            return;
+        }
+
+        classList.innerHTML = "";
+        saved.forEach(function (classData) {
+            classList.appendChild(createClassCard(
+                classData.name,
+                classData.header,
+                classData.description,
+                classData.code,
+                classData.subject,
+                classData.students
+            ));
+        });
+
+        const firstCard = classList.querySelector(".class-card");
+        if (firstCard) {
+            selectClass(firstCard);
+        }
+    }
+
     function selectClass(card) {
         classList.querySelectorAll(".class-card").forEach(function (item) {
             item.classList.toggle("is-active", item === card);
@@ -65,17 +107,18 @@
         activeClassCode.textContent = code;
         activeStudentCount.textContent = students;
         classBanner.setAttribute("data-header", header);
+        generatedClassCode.textContent = code;
     }
 
-    function createClassCard(name, header, description, code) {
+    function createClassCard(name, header, description, code, subject, students) {
         const card = document.createElement("div");
         card.className = "class-card";
         card.setAttribute("data-class-name", name);
-        card.setAttribute("data-subject", name);
+        card.setAttribute("data-subject", subject || name);
         card.setAttribute("data-code", code);
         card.setAttribute("data-header", header);
         card.setAttribute("data-description", description);
-        card.setAttribute("data-students", "0");
+        card.setAttribute("data-students", students || "0");
 
         const deleteBtn = document.createElement("button");
         deleteBtn.className = "class-card-delete";
@@ -96,7 +139,7 @@
 
         const meta = document.createElement("span");
         meta.className = "small text-secondary";
-        meta.textContent = name + " • 0 students";
+        meta.textContent = (subject || name) + " • " + (students || "0") + " students";
 
         head.appendChild(title);
         head.appendChild(codePill);
@@ -120,6 +163,7 @@
         const nextCard = card.nextElementSibling || card.previousElementSibling;
         card.remove();
         updateClassCount();
+        saveClasses();
         
         if (nextCard && nextCard.classList && nextCard.classList.contains("class-card")) {
             selectClass(nextCard);
@@ -171,6 +215,7 @@
         classList.prepend(card);
         selectClass(card);
         updateClassCount();
+        saveClasses();
         setGeneratedCode();
     });
 
@@ -189,5 +234,47 @@
         });
     }
 
+    // Load and display persisted students from localStorage
+    (function() {
+        const studentRow = document.querySelector(".student-row");
+        if (!studentRow) return;
+        
+        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        
+        students.forEach(studentData => {
+            // Check if student already exists
+            const exists = Array.from(studentRow.querySelectorAll(".student-card")).some(
+                card => card.textContent.includes(studentData.name)
+            );
+            
+            if (exists) return;
+            
+            const levelClass = {
+                "Low Emerging Readers": "level-low",
+                "High Emerging Readers": "level-high",
+                "Developing Readers": "level-developing",
+                "Transitioning Readers": "level-transitioning",
+                "Readers at Grade Level": "level-grade"
+            }[studentData.level] || "level-high";
+            
+            const initials = studentData.name
+                .split(" ")
+                .map(n => n.charAt(0).toUpperCase())
+                .join("")
+                .substring(0, 2);
+            
+            const studentCard = document.createElement("div");
+            studentCard.className = "student-card";
+            studentCard.innerHTML = `
+                <span class="student-avatar">${initials}</span>
+                <div><strong>${studentData.name}</strong><div class="small text-secondary">WPM ${studentData.wpm} • ${studentData.accuracy}%</div></div>
+                <span class="level-chip ${levelClass}">${studentData.level}</span>
+            `;
+            
+            studentRow.appendChild(studentCard);
+        });
+    })();
+
+    loadSavedClasses();
     updateClassCount();
 })();

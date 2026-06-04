@@ -10,6 +10,12 @@
 
     .students-overview {
         display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .students-overview-metrics {
+        display: grid;
         gap: 1rem;
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -24,49 +30,118 @@
 
     .student-stat {
         display: grid;
-        gap: 0.65rem;
-        min-height: 128px;
+        gap: 0.8rem;
+        min-height: 140px;
         overflow: hidden;
-        padding: 1rem;
+        padding: 1.25rem;
         position: relative;
+        align-content: start;
     }
 
     .student-stat::after {
-        bottom: -0.8rem;
+        bottom: -1rem;
         color: rgba(31, 111, 139, 0.08);
         content: attr(data-mark);
-        font-size: 4.4rem;
+        font-size: 5rem;
         font-weight: 700;
         line-height: 1;
         position: absolute;
-        right: -0.25rem;
+        right: -0.5rem;
     }
 
     .student-stat span {
         color: var(--dash-muted);
         display: block;
-        font-size: 0.82rem;
-        font-weight: 700;
+        font-size: 0.84rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
         position: relative;
         z-index: 1;
+        text-transform: uppercase;
     }
 
     .student-stat strong {
         display: block;
-        font-size: 2rem;
+        font-size: 2.45rem;
         line-height: 1;
         position: relative;
         z-index: 1;
+        color: var(--dash-primary-deep);
     }
 
     .student-stat small {
         color: var(--dash-muted);
         display: block;
-        font-size: 0.76rem;
-        font-weight: 700;
-        line-height: 1.35;
+        font-size: 0.78rem;
+        font-weight: 600;
+        line-height: 1.4;
         position: relative;
         z-index: 1;
+    }
+
+    .student-stat.primary strong {
+        color: var(--dash-warm);
+    }
+
+    .student-stat.danger strong {
+        color: #dc2626;
+    }
+
+    .student-stat.success strong {
+        color: #16a34a;
+    }
+
+    .students-chart-panel {
+        background: #fff;
+        border: 1px solid var(--dash-border);
+        border-radius: 20px;
+        box-shadow: var(--dash-shadow);
+        padding: 1.5rem;
+        min-height: 300px;
+        display: grid;
+        gap: 1rem;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 250px;
+        width: 100%;
+    }
+
+    .students-secondary-metrics {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 0.5rem;
+    }
+
+    .secondary-metric {
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.08), transparent 42%);
+        border: 1px solid rgba(31, 111, 139, 0.16);
+        border-radius: 14px;
+        padding: 1rem;
+        text-align: center;
+        min-height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .secondary-metric strong {
+        display: block;
+        font-size: 1.65rem;
+        line-height: 1;
+        margin-bottom: 0.3rem;
+        color: var(--dash-primary-deep);
+    }
+
+    .secondary-metric span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 700;
     }
 
     .students-layout {
@@ -291,6 +366,10 @@
 
     @media (max-width: 1100px) {
         .students-overview {
+            grid-template-columns: 1fr;
+        }
+
+        .students-overview-metrics {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
@@ -299,11 +378,23 @@
         }
     }
 
+    @media (max-width: 768px) {
+        .students-overview-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .students-secondary-metrics {
+            grid-template-columns: 1fr;
+        }
+    }
+
     @media (max-width: 640px) {
         .students-overview,
         .student-card-row,
         .teacher-action-btn,
-        .student-meta {
+        .student-meta,
+        .students-overview-metrics,
+        .students-secondary-metrics {
             grid-template-columns: 1fr;
         }
 
@@ -361,25 +452,107 @@
 
 {% block content %}
 <section class="students-page">
-    <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="students-overview">
         <div>
-            <p class="small text-secondary mb-1">Review students by class, reading level, and recent activity.</p>
-            <p class="small mb-0"><strong>Note:</strong> Use this page to decide who needs intervention, transition support, or enrichment.</p>
+            <div class="students-overview-metrics">
+                <article class="student-stat primary" data-mark="S"><span>Total students</span><strong>84</strong><small>Across all classes</small></article>
+                <article class="student-stat danger" data-mark="🎯"><span>Needs Support</span><strong>21</strong><small>25% of cohort</small></article>
+                <article class="student-stat success" data-mark="✓"><span>Grade Level Ready</span><strong>34</strong><small>40% of cohort</small></article>
+            </div>
+            <div class="students-secondary-metrics mt-3">
+                <div class="secondary-metric">
+                    <strong>+12%</strong>
+                    <span>Avg Improvement (30d)</span>
+                </div>
+                <div class="secondary-metric">
+                    <strong>79</strong>
+                    <span>Active This Week</span>
+                </div>
+                <div class="secondary-metric">
+                    <strong>Luna D.</strong>
+                    <span>Top Performer</span>
+                </div>
+            </div>
         </div>
-        <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-outline-secondary btn-sm" type="button"><i class="bi bi-download me-1"></i>Export</button>
-            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus me-1"></i>Add Student</button>
-        </div>
+        <article class="students-chart-panel">
+            <div>
+                <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.35rem 0;">Reading Level Distribution</h3>
+                <p style="color: var(--dash-muted); font-size: 0.88rem; margin: 0;">Proficiency levels across cohort</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="readingLevelChart"></canvas>
+            </div>
+        </article>
     </div>
 
-    <div class="students-overview">
-        <article class="student-stat" data-mark="S"><span>Total students</span><strong>84</strong><small>Across active reading classes</small></article>
-        <article class="student-stat" data-mark="L"><span>Low Emerging Readers</span><strong>9</strong><small>Needs immediate word-level support</small></article>
-        <article class="student-stat" data-mark="H"><span>High Emerging Readers</span><strong>12</strong><small>Ready for guided sentence work</small></article>
-        <article class="student-stat" data-mark="D"><span>Developing Readers</span><strong>18</strong><small>Building accuracy and pacing</small></article>
-        <article class="student-stat" data-mark="T"><span>Transitioning Readers</span><strong>21</strong><small>Moving toward grade-level fluency</small></article>
-        <article class="student-stat" data-mark="G"><span>Readers at Grade Level</span><strong>34</strong><small>Ready for enrichment passages</small></article>
-    </div>
+    <article class="students-panel" style="padding: 1.25rem;">
+        <div style="margin-bottom: 1rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.35rem 0;">Reading Level Distribution</h3>
+            <p style="color: var(--dash-muted); font-size: 0.9rem; margin: 0;">Breakdown of students across proficiency levels with recommended support strategies.</p>
+        </div>
+        <div style="display: grid; gap: 1rem;">
+            <div style="display: grid; gap: 0.35rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                    <div style="flex: 1;">
+                        <span class="small fw-bold">Low Emerging Readers</span>
+                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Needs immediate word-level support</p>
+                    </div>
+                    <span class="small text-secondary fw-bold">9 (11%)</span>
+                </div>
+                <div style="background: #fee2e2; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #dc2626; height: 100%; width: 11%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                </div>
+            </div>
+            <div style="display: grid; gap: 0.35rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                    <div style="flex: 1;">
+                        <span class="small fw-bold">High Emerging Readers</span>
+                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Ready for guided sentence work</p>
+                    </div>
+                    <span class="small text-secondary fw-bold">12 (14%)</span>
+                </div>
+                <div style="background: #fed7aa; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #ea580c; height: 100%; width: 14%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                </div>
+            </div>
+            <div style="display: grid; gap: 0.35rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                    <div style="flex: 1;">
+                        <span class="small fw-bold">Developing Readers</span>
+                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Building accuracy and pacing</p>
+                    </div>
+                    <span class="small text-secondary fw-bold">18 (21%)</span>
+                </div>
+                <div style="background: #fef3c7; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #d97706; height: 100%; width: 21%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                </div>
+            </div>
+            <div style="display: grid; gap: 0.35rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                    <div style="flex: 1;">
+                        <span class="small fw-bold">Transitioning Readers</span>
+                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Moving toward grade-level fluency</p>
+                    </div>
+                    <span class="small text-secondary fw-bold">21 (25%)</span>
+                </div>
+                <div style="background: #dbeafe; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #0284c7; height: 100%; width: 25%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                </div>
+            </div>
+            <div style="display: grid; gap: 0.35rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                    <div style="flex: 1;">
+                        <span class="small fw-bold">Readers at Grade Level</span>
+                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Ready for enrichment passages</p>
+                    </div>
+                    <span class="small text-secondary fw-bold">34 (40%)</span>
+                </div>
+                <div style="background: #dcfce7; border-radius: 8px; height: 28px; overflow: hidden;">
+                    <div style="background: #16a34a; height: 100%; width: 40%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                </div>
+            </div>
+        </div>
+    </article>
 
     <div class="students-layout">
         <article class="students-panel">
@@ -417,7 +590,8 @@
                         <div class="reading-band mt-2"><span style="width: 92%;"></span></div>
                     </div>
                     <div class="student-row-actions">
-                        <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
+                        <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="{% url 'student_detail' %}">View</a>
+                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
                         <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
                     </div>
                 </div>
@@ -436,8 +610,9 @@
                         <div class="reading-band mt-2"><span style="width: 78%;"></span></div>
                     </div>
                     <div class="student-row-actions">
-                        <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
+                        <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="{% url 'student_detail' %}">View</a>
                         <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
+                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
                     </div>
                 </div>
                 <div class="student-card-row" data-student-name="Alyssa Ramos" data-reading-level="Developing Readers" data-class-name="Grade 3 Reading - A">
@@ -457,6 +632,7 @@
                     <div class="student-row-actions">
                         <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
                         <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
+                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
                     </div>
                 </div>
                 <div class="student-card-row" data-student-name="Noah Santos" data-reading-level="Low Emerging Readers" data-class-name="Remedial Reading Group">
@@ -474,7 +650,8 @@
                         <div class="reading-band mt-2"><span style="width: 39%;"></span></div>
                     </div>
                     <div class="student-row-actions">
-                        <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
+                        <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="{% url 'student_detail' %}">View</a>
+                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
                         <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
                     </div>
                 </div>
@@ -537,19 +714,45 @@
                     <h3 class="modal-title h6 mb-0" id="addStudentModalLabel">Add Student</h3>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="#" method="post">
+                <form id="addStudentForm">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label" for="studentName">Student Name</label>
-                            <input class="form-control" id="studentName" type="text" placeholder="Type student name">
+                            <label class="form-label" for="studentName">Student Name *</label>
+                            <input class="form-control" id="studentName" type="text" placeholder="First and Last Name" required>
                         </div>
-                        <div>
-                            <label class="form-label" for="studentClass">Class</label>
-                            <select class="form-select" id="studentClass">
-                                <option selected>Grade 3 Reading - Section A</option>
-                                <option>Remedial Reading Group</option>
-                                <option>Advanced Fluency Circle</option>
+                        <div class="mb-3">
+                            <label class="form-label" for="studentClass">Class *</label>
+                            <select class="form-select" id="studentClass" required>
+                                <option value="">Select a class...</option>
+                                <option value="Grade 3 Reading - Section A">Grade 3 Reading - Section A</option>
+                                <option value="Remedial Reading Group">Remedial Reading Group</option>
+                                <option value="Advanced Fluency Circle">Advanced Fluency Circle</option>
                             </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="studentReadingLevel">Reading Level *</label>
+                            <select class="form-select" id="studentReadingLevel" required>
+                                <option value="">Select reading level...</option>
+                                <option value="Low Emerging Readers">Low Emerging Readers</option>
+                                <option value="High Emerging Readers">High Emerging Readers</option>
+                                <option value="Developing Readers">Developing Readers</option>
+                                <option value="Transitioning Readers">Transitioning Readers</option>
+                                <option value="Readers at Grade Level">Readers at Grade Level</option>
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label" for="studentWPM">Baseline WPM</label>
+                                <input class="form-control" id="studentWPM" type="number" placeholder="e.g., 65" min="0">
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label" for="studentAccuracy">Baseline Accuracy %</label>
+                                <input class="form-control" id="studentAccuracy" type="number" placeholder="e.g., 80" min="0" max="100">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="parentContact">Parent/Guardian Contact (Optional)</label>
+                            <input class="form-control" id="parentContact" type="email" placeholder="Email or phone number">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -684,5 +887,204 @@
         </div>
     </div>
 </section>
+
+<script>
+// Load persisted students from localStorage on page load
+document.addEventListener("DOMContentLoaded", function() {
+    const studentDirectory = document.querySelector(".student-directory");
+    if (!studentDirectory) {
+        console.warn("student-directory not found");
+        return;
+    }
+    
+    function loadPersistedStudents() {
+        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        console.log("Loading persisted students:", students);
+        
+        students.forEach(studentData => {
+            // Check if student already exists
+            const exists = Array.from(studentDirectory.querySelectorAll(".student-card-row")).some(
+                card => card.getAttribute("data-student-name") === studentData.name
+            );
+            
+            if (exists) {
+                console.log("Student already exists:", studentData.name);
+                return;
+            }
+            
+            const levelClass = {
+                "Low Emerging Readers": "level-low",
+                "High Emerging Readers": "level-high",
+                "Developing Readers": "level-developing",
+                "Transitioning Readers": "level-transitioning",
+                "Readers at Grade Level": "level-grade"
+            }[studentData.level] || "level-high";
+            
+            const initials = studentData.name
+                .split(" ")
+                .map(n => n.charAt(0).toUpperCase())
+                .join("")
+                .substring(0, 2);
+            
+            const studentCard = document.createElement("div");
+            studentCard.className = "student-card-row";
+            studentCard.setAttribute("data-student-name", studentData.name);
+            studentCard.setAttribute("data-reading-level", studentData.level);
+            studentCard.setAttribute("data-class-name", studentData.class);
+            
+            studentCard.innerHTML = `
+                <span class="student-avatar">${initials}</span>
+                <div class="student-row-main">
+                    <div class="student-name-line">
+                        <strong>${studentData.name}</strong>
+                        <span class="level-chip ${levelClass}">${studentData.level}</span>
+                    </div>
+                    <div class="student-meta">
+                        <div class="student-meta-box"><span>Class</span><strong>${studentData.class}</strong></div>
+                        <div class="student-meta-box"><span>WPM</span><strong>${studentData.wpm}</strong></div>
+                        <div class="student-meta-box"><span>Accuracy</span><strong>${studentData.accuracy}%</strong></div>
+                    </div>
+                    <div class="reading-band mt-2"><span style="width: ${studentData.wpm}%;"></span></div>
+                </div>
+                <div class="student-row-actions">
+                    <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="#">View</a>
+                    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
+                    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
+                </div>
+            `;
+            
+            const emptyState = studentDirectory.querySelector(".student-empty-state");
+            if (emptyState) {
+                studentDirectory.insertBefore(studentCard, emptyState);
+            } else {
+                studentDirectory.appendChild(studentCard);
+            }
+            
+            console.log("✓ Added student to directory:", studentData.name);
+        });
+    }
+    
+    // Load on page load
+    loadPersistedStudents();
+});
+
+// Inline form handler to ensure it runs immediately
+document.addEventListener("DOMContentLoaded", function() {
+    const addStudentForm = document.getElementById("addStudentForm");
+    if (addStudentForm) {
+        addStudentForm.addEventListener("submit", function(e) {
+            e.preventDefault();
+            console.log("✓ Form submitted");
+            
+            const studentName = document.getElementById("studentName").value.trim();
+            const studentClass = document.getElementById("studentClass").value.trim();
+            const readingLevel = document.getElementById("studentReadingLevel").value.trim();
+            const wpm = document.getElementById("studentWPM").value || "0";
+            const accuracy = document.getElementById("studentAccuracy").value || "0";
+            
+            if (!studentName || !studentClass || !readingLevel) {
+                alert("Please fill in all required fields");
+                return;
+            }
+            
+            // Save to localStorage
+            const studentData = {
+                name: studentName,
+                class: studentClass,
+                level: readingLevel,
+                wpm: wpm,
+                accuracy: accuracy,
+                id: Date.now()
+            };
+            
+            let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+            students.push(studentData);
+            localStorage.setItem("pabasa_added_students", JSON.stringify(students));
+            console.log("✓ Saved to localStorage:", studentData);
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById("addStudentModal"));
+            if (modal) modal.hide();
+            
+            // Reset form
+            addStudentForm.reset();
+            
+            // Show alert
+            alert(studentName + " has been added!");
+            
+            // Reload page to show student in directory
+            setTimeout(() => {
+                location.reload();
+            }, 500);
+        });
+    }
+});
+</script>
+
+<!-- Chart.js for reading level distribution pie chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Initialize reading level distribution pie chart
+document.addEventListener("DOMContentLoaded", function() {
+    const chartCanvas = document.getElementById("readingLevelChart");
+    if (!chartCanvas) return;
+    
+    const chartCtx = chartCanvas.getContext("2d");
+    
+    new Chart(chartCtx, {
+        type: "doughnut",
+        data: {
+            labels: [
+                "Readers at Grade Level",
+                "Transitioning Readers",
+                "Developing Readers",
+                "High Emerging Readers",
+                "Low Emerging Readers"
+            ],
+            datasets: [{
+                data: [40, 25, 21, 14, 11],
+                backgroundColor: [
+                    "#16a34a",  // Grade Level - Green
+                    "#0284c7",  // Transitioning - Blue
+                    "#d97706",  // Developing - Orange
+                    "#ea580c",  // High Emerging - Red Orange
+                    "#dc2626"   // Low Emerging - Red
+                ],
+                borderColor: "#fff",
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        font: { size: 12, weight: "600" },
+                        padding: 15,
+                        color: "var(--dash-text)",
+                        usePointStyle: true,
+                        pointStyle: "circle"
+                    }
+                },
+                tooltip: {
+                    backgroundColor: "rgba(0, 0, 0, 0.8)",
+                    padding: 12,
+                    titleFont: { size: 13, weight: "600" },
+                    bodyFont: { size: 12 },
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ": " + context.parsed + "%";
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
 <script src="{% static 'pabasa_app/js/students.js' %}"></script>
 {% endblock %}

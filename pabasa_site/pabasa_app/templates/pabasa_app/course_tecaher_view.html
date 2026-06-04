@@ -3,38 +3,393 @@
 
 {% block extra_head %}
 <style>
-    .material-panel {
-        background: #fff;
-        border: 1px solid var(--dash-border);
-        border-radius: 22px;
-        box-shadow: var(--dash-shadow);
-        padding: 1rem;
+    .materials-workspace {
+        display: grid;
+        gap: 1rem;
     }
+
+    .material-panel {
+        background:
+            linear-gradient(145deg, rgba(255, 253, 247, 0.96), rgba(240, 239, 233, 0.78)),
+            #fff;
+        border: 1px solid var(--dash-border);
+        border-radius: 24px;
+        box-shadow: var(--dash-shadow);
+        overflow: hidden;
+        padding: clamp(1rem, 2vw, 1.25rem);
+    }
+
+    .materials-hero {
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 22px;
+        color: #1b1a17;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        padding: clamp(1rem, 2vw, 1.35rem);
+        position: relative;
+    }
+
+    .materials-hero.word {
+        background:
+            linear-gradient(135deg, rgba(31, 111, 139, 0.18), transparent 48%),
+            linear-gradient(245deg, rgba(247, 231, 207, 0.86), transparent 55%),
+            #fffdf7;
+    }
+
+    .materials-hero.sentence {
+        background:
+            linear-gradient(135deg, rgba(122, 139, 95, 0.18), transparent 48%),
+            linear-gradient(245deg, rgba(217, 238, 244, 0.86), transparent 55%),
+            #fffdf7;
+    }
+
+    .materials-hero.paragraph,
+    .materials-hero.all {
+        background:
+            linear-gradient(135deg, rgba(185, 95, 68, 0.16), transparent 48%),
+            linear-gradient(245deg, rgba(217, 238, 244, 0.78), transparent 55%),
+            #fffdf7;
+    }
+
+    .materials-hero-copy {
+        display: grid;
+        gap: 0.45rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .materials-kicker {
+        align-items: center;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-size: 0.72rem;
+        font-weight: 800;
+        gap: 0.45rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .materials-kicker i {
+        background: rgba(255, 255, 255, 0.68);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        border-radius: 12px;
+        display: inline-flex;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+    }
+
+    .materials-hero h3 {
+        font-size: clamp(1.45rem, 3vw, 2.35rem);
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 1;
+        margin: 0;
+    }
+
+    .materials-hero p {
+        color: var(--dash-ink-soft);
+        line-height: 1.55;
+        margin: 0;
+        max-width: 700px;
+    }
+
+    .materials-hero-stats {
+        display: grid;
+        gap: 0.65rem;
+        grid-template-columns: repeat(3, minmax(92px, 1fr));
+        min-width: min(380px, 100%);
+        position: relative;
+        z-index: 1;
+    }
+
+    .materials-stat {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 16px;
+        padding: 0.75rem;
+    }
+
+    .materials-stat strong {
+        display: block;
+        font-size: 1.35rem;
+        line-height: 1;
+    }
+
+    .materials-stat span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.74rem;
+        font-weight: 700;
+        margin-top: 0.32rem;
+    }
+
+    .materials-class-section {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 18px;
+        display: grid;
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+        padding: 0.9rem;
+    }
+
+    .materials-class-head {
+        align-items: center;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+    }
+
+    .materials-class-head h3 {
+        font-size: 0.98rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .materials-class-grid {
+        display: grid;
+        gap: 0.7rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .materials-class-card {
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 14px;
+        display: grid;
+        gap: 0.45rem;
+        padding: 0.75rem;
+    }
+
+    .materials-class-assigned {
+        background: #fffdf7;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 12px;
+        color: var(--dash-ink-soft);
+        font-size: 0.82rem;
+        line-height: 1.45;
+        padding: 0.55rem 0.65rem;
+    }
+
+    .materials-class-card strong {
+        overflow-wrap: anywhere;
+    }
+
+    .materials-class-code {
+        background: var(--dash-primary-soft);
+        border-radius: 999px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-size: 0.72rem;
+        font-weight: 800;
+        justify-self: start;
+        letter-spacing: 0.08em;
+        padding: 0.28rem 0.55rem;
+    }
+
+    .assignment-list {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .assignment-option {
+        align-items: center;
+        background: #fffdf7;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 14px;
+        display: grid;
+        gap: 0.7rem;
+        grid-template-columns: auto minmax(0, 1fr);
+        padding: 0.75rem;
+    }
+
+    .assignment-option strong,
+    .assignment-option span {
+        display: block;
+        overflow-wrap: anywhere;
+    }
+
+    .material-category-section {
+        display: grid;
+        gap: 0.9rem;
+        margin-top: 1rem;
+    }
+
+    .material-category-head {
+        align-items: center;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+        padding: 0 0.15rem;
+    }
+
+    .material-category-head h3 {
+        align-items: center;
+        display: flex;
+        font-size: 1rem;
+        gap: 0.55rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .category-mark {
+        align-items: center;
+        border-radius: 14px;
+        color: #fff;
+        display: inline-flex;
+        height: 38px;
+        justify-content: center;
+        width: 38px;
+    }
+
+    .category-mark.word { background: #1f6f8b; }
+    .category-mark.sentence { background: #7a8b5f; }
+    .category-mark.paragraph { background: #b95f44; }
 
     .material-item-display {
         display: grid;
-        gap: 0.75rem;
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 12px;
-        padding: 0.85rem;
-        background: #fffdf7;
-        max-height: 500px;
-        overflow-y: auto;
+        gap: 0.85rem;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     }
 
     .material-item-card {
-        display: grid;
-        gap: 0.5rem;
-        background: #fff;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 253, 247, 0.96));
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 8px;
-        padding: 0.65rem;
+        border-radius: 16px;
+        box-shadow: 0 16px 32px rgba(27, 26, 23, 0.07);
+        display: grid;
+        gap: 0.8rem;
+        min-height: 210px;
+        overflow: hidden;
+        padding: 0.9rem;
+        position: relative;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     }
 
-    .material-item-card strong {
-        display: flex;
-        gap: 0.5rem;
+    .material-item-card:hover {
+        border-color: rgba(31, 111, 139, 0.3);
+        box-shadow: 0 20px 38px rgba(27, 26, 23, 0.11);
+        transform: translateY(-2px);
+    }
+
+    .material-item-card::before {
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .material-item-card.word::before {
+        background: linear-gradient(90deg, rgba(31, 111, 139, 0.18), transparent 38%);
+    }
+
+    .material-item-card.sentence::before {
+        background: linear-gradient(90deg, rgba(122, 139, 95, 0.18), transparent 38%);
+    }
+
+    .material-item-card.paragraph::before {
+        background: linear-gradient(90deg, rgba(185, 95, 68, 0.16), transparent 38%);
+    }
+
+    .material-item-main {
+        background: transparent;
+        border: 0;
+        color: inherit;
+        display: grid;
+        gap: 0.65rem;
+        padding: 0;
+        position: relative;
+        text-align: left;
+        z-index: 1;
+    }
+
+    .material-item-main strong {
         align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        justify-content: space-between;
+    }
+
+    .material-title-row {
+        align-items: center;
+        display: flex;
+        gap: 0.6rem;
+        min-width: 0;
+    }
+
+    .material-icon {
+        align-items: center;
+        border-radius: 14px;
+        color: #fff;
+        display: inline-flex;
+        flex: 0 0 auto;
+        height: 42px;
+        justify-content: center;
+        width: 42px;
+    }
+
+    .material-icon.word { background: #1f6f8b; }
+    .material-icon.sentence { background: #7a8b5f; }
+    .material-icon.paragraph { background: #b95f44; }
+
+    .material-title-text {
+        display: grid;
+        gap: 0.15rem;
+        min-width: 0;
+    }
+
+    .material-title-text span:first-child {
+        overflow-wrap: anywhere;
+    }
+
+    .material-type-note {
+        color: var(--dash-muted);
+        font-size: 0.74rem;
+        font-weight: 700;
+    }
+
+    .material-preview {
+        color: var(--dash-ink-soft);
+        line-height: 1.55;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    .material-meta-grid {
+        display: grid;
+        gap: 0.55rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        position: relative;
+        z-index: 1;
+    }
+
+    .material-meta-tile {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 12px;
+        padding: 0.6rem;
+    }
+
+    .material-meta-tile span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .material-meta-tile strong {
+        display: block;
+        font-size: 0.88rem;
+        margin-top: 0.2rem;
     }
 
     .item-badge {
@@ -43,42 +398,97 @@
         border-radius: 999px;
         font-size: 0.7rem;
         font-weight: 700;
-        padding: 0.2rem 0.4rem;
+        padding: 0.2rem 0.45rem;
+    }
+
+    .material-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-top: auto;
+        position: relative;
+        z-index: 1;
+    }
+
+    .material-actions .btn {
+        border-radius: 999px;
+        font-weight: 700;
     }
 
     .empty-state {
+        background: rgba(255, 255, 255, 0.68);
+        border: 1px dashed rgba(31, 111, 139, 0.24);
+        border-radius: 16px;
         color: var(--dash-muted);
+        grid-column: 1 / -1;
         text-align: center;
         padding: 1.5rem;
-        font-size: 0.95rem;
-    }
-
-    .material-item-card.hidden {
-        display: none;
-    }
-
-    .material-item-card {
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .material-item-card:hover {
-        border-color: var(--dash-primary);
-        background: rgba(31, 111, 139, 0.02);
-        box-shadow: 0 2px 8px rgba(31, 111, 139, 0.1);
+        font-size: 0.92rem;
     }
 
     .material-content-list {
         display: grid;
-        gap: 0.5rem;
+        gap: 0.55rem;
     }
 
     .material-content-item {
-        background: #fffdf7;
+        align-items: start;
+        background:
+            linear-gradient(135deg, rgba(255, 253, 247, 0.98), rgba(255, 255, 255, 0.94));
         border-left: 3px solid var(--dash-primary);
-        padding: 0.75rem;
-        border-radius: 4px;
+        border-radius: 12px;
+        box-shadow: 0 10px 22px rgba(27, 26, 23, 0.06);
+        display: grid;
+        gap: 0.65rem;
+        grid-template-columns: minmax(0, 1fr) auto;
         line-height: 1.5;
+        padding: 0.75rem;
+    }
+
+    .material-content-item p {
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .modal-content {
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 20px;
+    }
+
+    .materials-modal-head {
+        align-items: center;
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .materials-modal-icon {
+        align-items: center;
+        border-radius: 14px;
+        color: #fff;
+        display: inline-flex;
+        flex: 0 0 auto;
+        height: 44px;
+        justify-content: center;
+        width: 44px;
+    }
+
+    .materials-modal-icon.word { background: #1f6f8b; }
+    .materials-modal-icon.sentence { background: #7a8b5f; }
+    .materials-modal-icon.paragraph { background: #b95f44; }
+
+    @media (max-width: 640px) {
+        .materials-hero {
+            grid-template-columns: 1fr;
+        }
+
+        .materials-hero-stats,
+        .material-meta-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .material-content-item {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {% endblock %}
@@ -88,172 +498,703 @@
 {% endblock %}
 
 {% block content %}
-<section>
+<section class="materials-workspace">
     <div class="dash-page-head d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <div>
             <h2 class="h6 mb-1" id="pageTitle">Materials Library</h2>
-            <p class="small text-secondary mb-0" id="pageDesc">Browse all reading materials. To add new materials, go to the main Materials page.</p>
+            <p class="small text-secondary mb-0" id="pageDesc">Browse, view, edit, and delete reading materials by category.</p>
         </div>
         <a class="btn btn-outline-secondary btn-sm" href="{% url 'courses' %}"><i class="bi bi-arrow-left me-1"></i>Back to Materials</a>
     </div>
 
-    <div class="material-panel">
-        <div class="mb-3">
-            <h3 class="h6 mb-1" id="materialsTitle">All Materials</h3>
-            <p class="small text-secondary mb-0" id="materialsSubtitle">Complete list of materials organized by type.</p>
-        </div>
-
-        <!-- Word Materials Section -->
-        <div class="mb-4">
-            <div class="material-item-display" id="wordMaterialsContainer">
-                <div class="material-item-card" data-type="word" data-content="bahay, aklat, guro, paaralan, pagbasa, magsulat, basahin, libro, sulat, puno, bulaklak, ibon, kalangitan, lupa, tubig, apoy, hangin, liwanag, dilim, pamilya" data-title="Word List Set A">
-                    <strong><span>Word List Set A</span><span class="item-badge">24 words</span></strong>
-                    <p class="small text-secondary mb-0"><strong>Type:</strong> Word • <strong>Use:</strong> Practice & Assessment</p>
-                    <p class="small mb-0">bahay, aklat, guro, paaralan, pagbasa, and 19 more...</p>
-                </div>
-                <div class="material-item-card" data-type="word" data-content="ang, ng, sa, para, at, na, ay, pa, din, naman, kaya, dito, doon, saan, kailan, bakit, ano, sino, sila, kami" data-title="Common Sight Words">
-                    <strong><span>Common Sight Words</span><span class="item-badge">18 words</span></strong>
-                    <p class="small text-secondary mb-0"><strong>Type:</strong> Word • <strong>Use:</strong> Practice</p>
-                    <p class="small mb-0">ang, ng, sa, para, at, and 13 more...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sentence Materials Section -->
-        <div class="mb-4">
-            <div class="material-item-display" id="sentenceMaterialsContainer">
-                <div class="material-item-card" data-type="sentence" data-content="Ang bata ay bumabasa ng libro.~Mahal ko ang pag-aaral.~Lumakad sila sa pulo.~Ang guro ay nagturo ng Tagalog.~Ang araw ay napakaganda.~Kumain kami ng tanghalian.~Ang bahay ay malapit sa paaralan.~May bago siyang damit.~Tumutuo siya ng malaki.~Ang tao ay masigasig.~Ang halaman ay lumalaki.~Matagal na kaming nagsusulat.~Ang buwan ay magniningning.~Ang loob ay madilim.~Ang tunog ay malakas.~Ang binata ay matalino." data-title="Sentence Fluency Set">
-                    <strong><span>Sentence Fluency Set</span><span class="item-badge">16 sentences</span></strong>
-                    <p class="small text-secondary mb-0"><strong>Type:</strong> Sentence • <strong>Use:</strong> Assessment</p>
-                    <p class="small mb-0">Ang bata ay bumabasa ng libro., Mahal ko ang pag-aaral., and 14 more...</p>
-                </div>
-                <div class="material-item-card" data-type="sentence" data-content="Magbasa ng mga salita ng mabilis.~Sinabi niya ng maayos.~Ang pamilya ay masaya.~Pumunta sila sa siyudad.~Ang laro ay masaya.~Maglaro tayo ng palaruan.~Ang bago ay napakaganda.~Sumama ka sa amin.~Ang oras ay lumalipas.~Ang musika ay maririnig.~Ang kwento ay kawili-kawili.~Ang kaibigan ay mabuti." data-title="Daily Reading Prompts">
-                    <strong><span>Daily Reading Prompts</span><span class="item-badge">12 sentences</span></strong>
-                    <p class="small text-secondary mb-0"><strong>Type:</strong> Sentence • <strong>Use:</strong> Practice & Assessment</p>
-                    <p class="small mb-0">Magbasa ng mga salita ng mabilis., Sinabi niya ng maayos., and 10 more...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Paragraph Materials Section -->
-        <div class="mb-4">
-            <div class="material-item-display" id="paragraphMaterialsContainer">
-                <div class="material-item-card" data-type="paragraph" data-content="Si Maria ay isang magandang bata na mahilig basahin ang mga libro. Siya ay tumutayo sa hapon at nagbabasa. Ang kanyang mga kaibigan ay nasa laro ngunit siya ay nasa bahay. Mahal niya ang mga kwento tungkol sa mga hayop at halaman. Araw-araw ay may bagong libro siyang sinisimulan. Ang kaniyang iina ay masaya sa kanyang hilig sa pagbabasa. Si Maria ay siguradong magiging matalinong babae sa hinaharap." data-title="Paragraph Passage 1">
-                    <strong><span>Paragraph Passage 1</span><span class="item-badge">1 passage</span></strong>
-                    <p class="small text-secondary mb-0"><strong>Type:</strong> Paragraph • <strong>Use:</strong> Both</p>
-                    <p class="small mb-0">Si Maria ay isang magandang bata na mahilig basahin ang mga libro...</p>
-                </div>
-                <div class="material-item-card" data-type="paragraph" data-content="Noong unang panahon, may isang magandang prinsesa sa kaharian ng timog. Ang kanyang pangalan ay Margarita at siya ay kilala dahil sa kanyang kagandahan at kagayakan. Isang umaga, nag-iwan ang prinsesa ng kastilyo upang maglakbay sa kaharian. Nagsayaw siya sa ligaya at nag-awit ng mga kanta. Ang mga tao ay sumama sa kaniya at lahat ay masaya. Sa gabi, ang buwan ay sumikat at ang mga bituin ay magniningning. Ang prinsesa ay bumalik sa kastilyo na may puso na puno ng kaligayahan." data-title="Filipino Folk Tale">
-                    <strong><span>Filipino Folk Tale</span><span class="item-badge">1 passage</span></strong>
-                    <p class="small text-secondary mb-0"><strong>Type:</strong> Paragraph • <strong>Use:</strong> Practice</p>
-                    <p class="small mb-0">Noong unang panahon, may isang magandang prinsesa sa kaharian...</p>
-                </div>
-                <div class="material-item-card" data-type="paragraph" data-content="Ang puno ay isang halaman na may malaking katawan at maraming dahon. Ito ay lumalaki mula sa isang munting binhi at tumataas ng mabilis. Ang mga ugat ng puno ay nasa lupa at ito ay tumutulong sa puno na kumain. Ang mga sanga ay lumalabas mula sa katawan at ito ay may maraming dahon. Ang mga pagpapabago ay nangyayari sa iba't ibang panahon. Sa tagsibol, ang mga bagong dahon ay sumusulong. Sa tag-araw, ang mga dahon ay berde at matatag. Sa taglamig, ang mga dahon ay nahuhulog. Ang mga ibon ay nakatira sa mga puno at kumakain ng mga insekto." data-title="Science Comprehension Text">
-                    <strong><span>Science Comprehension Text</span><span class="item-badge">1 passage</span></strong>
-                    <p class="small text-secondary mb-0"><strong>Type:</strong> Paragraph • <strong>Use:</strong> Assessment</p>
-                    <p class="small mb-0">Ang puno ay isang halaman na may malaking katawan at maraming dahon...</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="material-panel" id="materialsLibrary"></div>
 </section>
 
-<!-- View Material Content Modal -->
 <div class="modal fade" id="viewMaterialModal" tabindex="-1" aria-labelledby="viewMaterialModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
         <div class="modal-content">
             <div class="modal-header border-0">
-                <h1 class="modal-title fs-5" id="viewMaterialModalLabel">Material Content</h1>
+                <div class="materials-modal-head">
+                    <span class="materials-modal-icon word" id="viewMaterialIcon"><i class="bi bi-folder2-open"></i></span>
+                    <div>
+                        <h1 class="modal-title fs-5" id="viewMaterialModalLabel">Material Content</h1>
+                        <p class="small text-secondary mb-0" id="viewMaterialMeta"></p>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <h4 id="modalMaterialTitle"></h4>
-                <div id="materialContentContainer" class="material-content-list">
-                    <!-- Content will be inserted here -->
+                <div id="materialContentContainer" class="material-content-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editMaterialModal" tabindex="-1" aria-labelledby="editMaterialModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <form id="editMaterialForm">
+                <div class="modal-header border-0">
+                    <h1 class="modal-title fs-5" id="editMaterialModalLabel">Edit Material</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editMaterialId">
+                    <div class="mb-3">
+                        <label class="form-label" for="editMaterialTitle">Material Title</label>
+                        <input class="form-control" id="editMaterialTitle" type="text" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="editMaterialUse">Use</label>
+                        <select class="form-select" id="editMaterialUse">
+                            <option>Practice</option>
+                            <option>Assessment</option>
+                            <option>Practice & Assessment</option>
+                            <option>Both</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="editMaterialItems">Items</label>
+                        <textarea class="form-control" id="editMaterialItems" rows="8" required></textarea>
+                        <p class="small text-secondary mb-0 mt-2" id="editMaterialHelp">Put one item on each line.</p>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="assignMaterialModal" tabindex="-1" aria-labelledby="assignMaterialModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form id="assignMaterialForm">
+                <div class="modal-header border-0">
+                    <div>
+                        <h1 class="modal-title fs-5" id="assignMaterialModalLabel">Assign Material</h1>
+                        <p class="small text-secondary mb-0" id="assignMaterialMeta"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="assignMaterialId">
+                    <div class="assignment-list" id="assignmentClassList"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Assignments</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="editItemForm">
+                <div class="modal-header border-0">
+                    <h1 class="modal-title fs-5" id="editItemModalLabel">Edit Item</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editItemMaterialId">
+                    <input type="hidden" id="editItemIndex">
+                    <label class="form-label" for="editItemText">Item Text</label>
+                    <textarea class="form-control" id="editItemText" rows="5" required></textarea>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h1 class="modal-title fs-5" id="confirmActionModalLabel">Confirm Action</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" id="confirmActionMessage">Are you sure?</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="statusMessageModal" tabindex="-1" aria-labelledby="statusMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h1 class="modal-title fs-5" id="statusMessageModalLabel">Materials Updated</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" id="statusMessageText">Changes saved.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    (function() {
-        // Get URL parameters to filter by type
-        const urlParams = new URLSearchParams(window.location.search);
-        const typeFilter = urlParams.get('type');
-        
-        // If a type is specified, hide other category sections
-        if (typeFilter) {
-            const wordSection = document.querySelector('#wordMaterialsContainer').closest('div');
-            const sentenceSection = document.querySelector('#sentenceMaterialsContainer').closest('div');
-            const paragraphSection = document.querySelector('#paragraphMaterialsContainer').closest('div');
-            
-            // Hide all sections
-            wordSection.style.display = 'none';
-            sentenceSection.style.display = 'none';
-            paragraphSection.style.display = 'none';
-            
-            // Show only the selected type
-            let activeSection;
-            let typeLabel = '';
-            if (typeFilter === 'word') {
-                wordSection.style.display = 'block';
-                activeSection = wordSection;
-                typeLabel = 'Word';
-            } else if (typeFilter === 'sentence') {
-                sentenceSection.style.display = 'block';
-                activeSection = sentenceSection;
-                typeLabel = 'Sentence';
-            } else if (typeFilter === 'paragraph') {
-                paragraphSection.style.display = 'block';
-                activeSection = paragraphSection;
-                typeLabel = 'Paragraph';
+    document.addEventListener("DOMContentLoaded", () => {
+        const storageKey = "pabasa_materials";
+        const overridesKey = "pabasa_material_overrides";
+        const deletedKey = "pabasa_deleted_materials";
+        const assignmentsKey = "pabasa_material_assignments";
+        const typeLabels = { word: "Word", sentence: "Sentence", paragraph: "Paragraph" };
+        const typeIcons = { word: "bi-spellcheck", sentence: "bi-chat-left-text", paragraph: "bi-file-text" };
+        const typeCopy = {
+            word: "Short decoding sets and sight words for quick oral reading drills.",
+            sentence: "Fluency prompts for pacing, phrasing, and clear expression.",
+            paragraph: "Longer passages for comprehension, stamina, and assessment."
+        };
+        const separators = { word: ", ", sentence: " ", paragraph: " " };
+
+        const defaultMaterials = [
+            {
+                id: "default-word-a",
+                title: "Word List Set A",
+                type: "word",
+                use: "Practice & Assessment",
+                created: "2024-01-15",
+                items: ["bahay", "aklat", "guro", "paaralan", "pagbasa", "magsulat", "basahin", "libro", "sulat", "puno", "bulaklak", "ibon", "kalangitan", "lupa", "tubig", "apoy", "hangin", "liwanag", "dilim", "pamilya"]
+            },
+            {
+                id: "default-word-b",
+                title: "Common Sight Words",
+                type: "word",
+                use: "Practice",
+                created: "2024-01-18",
+                items: ["ang", "ng", "sa", "para", "at", "na", "ay", "pa", "din", "naman", "kaya", "dito", "doon", "saan", "kailan", "bakit", "ano", "sino", "sila", "kami"]
+            },
+            {
+                id: "default-sentence-a",
+                title: "Sentence Fluency Set",
+                type: "sentence",
+                use: "Assessment",
+                created: "2024-01-20",
+                items: ["Ang bata ay bumabasa ng libro.", "Mahal ko ang pag-aaral.", "Lumakad sila sa pulo.", "Ang guro ay nagturo ng Tagalog.", "Ang araw ay napakaganda.", "Kumain kami ng tanghalian.", "Ang bahay ay malapit sa paaralan.", "May bago siyang damit.", "Tumutuo siya ng malaki.", "Ang tao ay masigasig.", "Ang halaman ay lumalaki.", "Matagal na kaming nagsusulat.", "Ang buwan ay magniningning.", "Ang loob ay madilim.", "Ang tunog ay malakas.", "Ang binata ay matalino."]
+            },
+            {
+                id: "default-sentence-b",
+                title: "Daily Reading Prompts",
+                type: "sentence",
+                use: "Practice & Assessment",
+                created: "2024-02-05",
+                items: ["Magbasa ng mga salita ng mabilis.", "Sinabi niya ng maayos.", "Ang pamilya ay masaya.", "Pumunta sila sa siyudad.", "Ang laro ay masaya.", "Maglaro tayo ng palaruan.", "Ang bago ay napakaganda.", "Sumama ka sa amin.", "Ang oras ay lumalipas.", "Ang musika ay maririnig.", "Ang kwento ay kawili-kawili.", "Ang kaibigan ay mabuti."]
+            },
+            {
+                id: "default-paragraph-a",
+                title: "Paragraph Passage 1",
+                type: "paragraph",
+                use: "Both",
+                created: "2024-01-25",
+                items: ["Si Maria ay isang magandang bata na mahilig basahin ang mga libro. Siya ay tumutayo sa hapon at nagbabasa. Ang kanyang mga kaibigan ay nasa laro ngunit siya ay nasa bahay. Mahal niya ang mga kwento tungkol sa mga hayop at halaman. Araw-araw ay may bagong libro siyang sinisimulan. Ang kaniyang ina ay masaya sa kanyang hilig sa pagbabasa. Si Maria ay siguradong magiging matalinong babae sa hinaharap."]
+            },
+            {
+                id: "default-paragraph-b",
+                title: "Filipino Folk Tale",
+                type: "paragraph",
+                use: "Practice",
+                created: "2024-02-09",
+                items: ["Noong unang panahon, may isang magandang prinsesa sa kaharian ng timog. Ang kanyang pangalan ay Margarita at siya ay kilala dahil sa kanyang kagandahan at kagayakan. Isang umaga, nag-iwan ang prinsesa ng kastilyo upang maglakbay sa kaharian. Nagsayaw siya sa ligaya at nag-awit ng mga kanta. Ang mga tao ay sumama sa kaniya at lahat ay masaya. Sa gabi, ang buwan ay sumikat at ang mga bituin ay magniningning. Ang prinsesa ay bumalik sa kastilyo na may puso na puno ng kaligayahan."]
+            },
+            {
+                id: "default-paragraph-c",
+                title: "Science Comprehension Text",
+                type: "paragraph",
+                use: "Assessment",
+                created: "2024-02-10",
+                items: ["Ang puno ay isang halaman na may malaking katawan at maraming dahon. Ito ay lumalaki mula sa isang munting binhi at tumataas ng mabilis. Ang mga ugat ng puno ay nasa lupa at ito ay tumutulong sa puno na kumain. Ang mga sanga ay lumalabas mula sa katawan at ito ay may maraming dahon. Ang mga pagbabago ay nangyayari sa iba't ibang panahon. Sa tagsibol, ang mga bagong dahon ay sumusulong. Sa tag-araw, ang mga dahon ay berde at matatag. Sa taglamig, ang mga dahon ay nahuhulog. Ang mga ibon ay nakatira sa mga puno at kumakain ng mga insekto."]
+            }
+        ];
+
+        const library = document.getElementById("materialsLibrary");
+        const viewModal = new bootstrap.Modal(document.getElementById("viewMaterialModal"));
+        const editModal = new bootstrap.Modal(document.getElementById("editMaterialModal"));
+        const assignModal = new bootstrap.Modal(document.getElementById("assignMaterialModal"));
+        const editItemModal = new bootstrap.Modal(document.getElementById("editItemModal"));
+        const confirmActionModal = new bootstrap.Modal(document.getElementById("confirmActionModal"));
+        const statusMessageModal = new bootstrap.Modal(document.getElementById("statusMessageModal"));
+        let pendingConfirmAction = null;
+        const params = new URLSearchParams(window.location.search);
+        const typeFilter = params.get("type");
+
+        function readJson(key, fallback) {
+            try {
+                return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+            } catch (error) {
+                return fallback;
+            }
+        }
+
+        function getMaterials() {
+            const custom = readJson(storageKey, []);
+            const overrides = readJson(overridesKey, {});
+            const deleted = readJson(deletedKey, []);
+            const defaults = defaultMaterials
+                .filter(material => !deleted.includes(material.id))
+                .map(material => ({ ...material, ...(overrides[material.id] || {}) }));
+
+            return [...defaults, ...custom].filter(material => !typeFilter || material.type === typeFilter);
+        }
+
+        function saveCustomMaterials(materials) {
+            localStorage.setItem(storageKey, JSON.stringify(materials));
+        }
+
+        function getAssignments() {
+            return readJson(assignmentsKey, {});
+        }
+
+        function saveAssignments(assignments) {
+            localStorage.setItem(assignmentsKey, JSON.stringify(assignments));
+        }
+
+        function getClassAssignmentIds(classCode, materialType) {
+            const assignments = getAssignments();
+            return assignments[classCode] && Array.isArray(assignments[classCode][materialType])
+                ? assignments[classCode][materialType]
+                : [];
+        }
+
+        function getAssignedClassCount(material) {
+            return getTeacherClasses().filter(classData => {
+                return getClassAssignmentIds(classData.code, material.type).includes(material.id);
+            }).length;
+        }
+
+        function renderMaterials() {
+            const materials = getMaterials();
+            const categories = typeFilter ? [typeFilter] : ["word", "sentence", "paragraph"];
+
+            document.getElementById("pageTitle").textContent = typeFilter ? `${typeLabels[typeFilter]} Materials` : "Materials Library";
+            document.getElementById("pageDesc").textContent = typeFilter ? `View and manage ${typeLabels[typeFilter].toLowerCase()} materials.` : "Browse, view, edit, and delete reading materials by category.";
+
+            const totalItems = materials.reduce((sum, material) => sum + material.items.length, 0);
+            const practiceCount = materials.filter(material => (material.use || "").toLowerCase().includes("practice") || (material.use || "").toLowerCase().includes("both")).length;
+            const assessmentCount = materials.filter(material => (material.use || "").toLowerCase().includes("assessment") || (material.use || "").toLowerCase().includes("both")).length;
+            const heroType = typeFilter || "all";
+            const heroIcon = typeFilter ? typeIcons[typeFilter] : "bi-folder2-open";
+            const heroTitle = typeFilter ? `${typeLabels[typeFilter]} Materials` : "Materials Library";
+            const heroCopy = typeFilter ? typeCopy[typeFilter] : "Manage word, sentence, and paragraph reading materials in one organized workspace.";
+
+        library.innerHTML = `
+                <div class="materials-hero ${heroType}">
+                    <div class="materials-hero-copy">
+                        <span class="materials-kicker"><i class="bi ${heroIcon}"></i> Reading Materials</span>
+                        <h3>${heroTitle}</h3>
+                        <p>${heroCopy}</p>
+                    </div>
+                    <div class="materials-hero-stats">
+                        <div class="materials-stat"><strong>${materials.length}</strong><span>materials</span></div>
+                        <div class="materials-stat"><strong>${totalItems}</strong><span>items</span></div>
+                        <div class="materials-stat"><strong>${practiceCount}/${assessmentCount}</strong><span>practice / assessment</span></div>
+                    </div>
+                </div>
+                ${renderClassSection()}
+                ${categories.map(type => {
+                const categoryMaterials = materials.filter(material => material.type === type);
+                return `
+                    <section class="material-category-section">
+                        <div class="material-category-head">
+                            <h3><span class="category-mark ${type}"><i class="bi ${typeIcons[type]}"></i></span>${typeLabels[type]} Materials</h3>
+                            <span class="item-badge">${categoryMaterials.length}</span>
+                        </div>
+                        <div class="material-item-display">
+                            ${categoryMaterials.length ? categoryMaterials.map(renderCard).join("") : `<div class="empty-state">No ${typeLabels[type].toLowerCase()} materials yet.</div>`}
+                        </div>
+                    </section>
+                `;
+                }).join("")}
+            `;
+        }
+
+        function getTeacherClasses() {
+            const fallbackClasses = [
+                {
+                    name: "Grade 3 Reading - Section A",
+                    subject: "Filipino Reading",
+                    code: "PAB-4827",
+                    students: "28"
+                },
+                {
+                    name: "Remedial Reading Group",
+                    subject: "Intervention",
+                    code: "RRG-9154",
+                    students: "12"
+                },
+                {
+                    name: "Advanced Fluency Circle",
+                    subject: "Reading Enrichment",
+                    code: "AFC-7302",
+                    students: "10"
+                }
+            ];
+
+            try {
+                const saved = JSON.parse(localStorage.getItem("pabasa_teacher_classes") || "null");
+                return Array.isArray(saved) && saved.length ? saved : fallbackClasses;
+            } catch (error) {
+                return fallbackClasses;
+            }
+        }
+
+        function renderClassSection() {
+            const teacherClasses = getTeacherClasses();
+            const visibleMaterials = getMaterials();
+            return `
+                <section class="materials-class-section">
+                    <div class="materials-class-head">
+                        <h3><i class="bi bi-door-open me-1"></i>Teacher Classes</h3>
+                        <span class="item-badge">${teacherClasses.length}</span>
+                    </div>
+                    <div class="materials-class-grid">
+                        ${teacherClasses.map(classData => `
+                            <article class="materials-class-card">
+                                <span class="materials-class-code">${escapeHtml(classData.code || "READ-000")}</span>
+                                <strong>${escapeHtml(classData.name || "Reading Class")}</strong>
+                                <span class="small text-secondary">${escapeHtml(classData.subject || "Reading")} &bull; ${escapeHtml(classData.students || "0")} students</span>
+                                ${renderClassAssignments(classData, visibleMaterials)}
+                            </article>
+                        `).join("")}
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderClassAssignments(classData, visibleMaterials) {
+            const assignedMaterials = visibleMaterials.filter(material => {
+                return getClassAssignmentIds(classData.code, material.type).includes(material.id);
+            });
+
+            if (!assignedMaterials.length) {
+                return `<div class="materials-class-assigned">No materials assigned for this ${typeFilter ? typeLabels[typeFilter].toLowerCase() : "view"} yet.</div>`;
             }
 
+            const names = assignedMaterials.slice(0, 3).map(material => material.title).join(", ");
+            const extra = assignedMaterials.length > 3 ? ` and ${assignedMaterials.length - 3} more` : "";
+            return `<div class="materials-class-assigned"><strong>${assignedMaterials.length} assigned:</strong> ${escapeHtml(names)}${escapeHtml(extra)}</div>`;
         }
-        
-        const allMaterials = document.querySelectorAll('.material-item-card');
-        const viewMaterialModal = new bootstrap.Modal(document.getElementById('viewMaterialModal'));
 
-        // Add click handlers to material cards to view content
-        allMaterials.forEach(card => {
-            card.addEventListener('click', function() {
-                const materialType = this.getAttribute('data-type');
-                const materialTitle = this.getAttribute('data-title');
-                const materialContent = this.getAttribute('data-content');
-                
-                document.getElementById('viewMaterialModalLabel').textContent = materialType.charAt(0).toUpperCase() + materialType.slice(1) + ' Material';
-                document.getElementById('modalMaterialTitle').textContent = materialTitle;
-                
-                const contentContainer = document.getElementById('materialContentContainer');
-                contentContainer.innerHTML = '';
-                
-                // Split content based on type
-                let items;
-                if (materialType === 'word') {
-                    items = materialContent.split(',').map(w => w.trim());
-                } else if (materialType === 'sentence') {
-                    items = materialContent.split('~');
-                } else {
-                    // For paragraphs, just show the whole text
-                    items = [materialContent];
-                }
-                
-                // Display content
-                items.forEach((item, index) => {
-                    const contentDiv = document.createElement('div');
-                    contentDiv.className = 'material-content-item';
-                    if (materialType === 'word' || materialType === 'sentence') {
-                        contentDiv.innerHTML = `<strong>${index + 1}.</strong> ${item}`;
-                    } else {
-                        contentDiv.innerHTML = item;
+        function renderCard(material) {
+            const preview = material.items.slice(0, 3).join(separators[material.type]);
+            const more = material.items.length > 3 ? ` and ${material.items.length - 3} more` : "";
+            const itemWord = material.type === "paragraph" ? "passage" : `${material.type}${material.items.length === 1 ? "" : "s"}`;
+            const created = material.created || "Draft";
+            const assignedCount = getAssignedClassCount(material);
+
+            return `
+                <article class="material-item-card ${material.type}" data-material-id="${escapeHtml(material.id)}">
+                    <button class="material-item-main" type="button" data-action="view">
+                        <strong>
+                            <span class="material-title-row">
+                                <span class="material-icon ${material.type}"><i class="bi ${typeIcons[material.type]}"></i></span>
+                                <span class="material-title-text">
+                                    <span>${escapeHtml(material.title)}</span>
+                                    <span class="material-type-note">${typeLabels[material.type]} set</span>
+                                </span>
+                            </span>
+                            <span class="item-badge">${material.items.length} ${itemWord}</span>
+                        </strong>
+                        <p class="material-preview">${escapeHtml(preview)}${more ? escapeHtml(more) : ""}</p>
+                    </button>
+                    <div class="material-meta-grid">
+                        <div class="material-meta-tile">
+                            <span>Use</span>
+                            <strong>${escapeHtml(material.use || "Practice & Assessment")}</strong>
+                        </div>
+                        <div class="material-meta-tile">
+                            <span>Created</span>
+                            <strong>${escapeHtml(created)}</strong>
+                        </div>
+                        <div class="material-meta-tile">
+                            <span>Assigned</span>
+                            <strong>${assignedCount} class${assignedCount === 1 ? "" : "es"}</strong>
+                        </div>
+                    </div>
+                    <div class="material-actions">
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-action="view"><i class="bi bi-eye me-1"></i>View</button>
+                        <button class="btn btn-sm btn-outline-success" type="button" data-action="assign"><i class="bi bi-send me-1"></i>Assign</button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-action="edit"><i class="bi bi-pencil me-1"></i>Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete"><i class="bi bi-trash me-1"></i>Delete</button>
+                    </div>
+                </article>
+            `;
+        }
+
+        function findMaterial(id) {
+            return getMaterials().find(material => material.id === id);
+        }
+
+        function updateMaterial(updatedMaterial) {
+            const custom = readJson(storageKey, []);
+            const customIndex = custom.findIndex(material => material.id === updatedMaterial.id);
+
+            if (customIndex >= 0) {
+                custom[customIndex] = updatedMaterial;
+                saveCustomMaterials(custom);
+                return;
+            }
+
+            const overrides = readJson(overridesKey, {});
+            overrides[updatedMaterial.id] = updatedMaterial;
+            localStorage.setItem(overridesKey, JSON.stringify(overrides));
+        }
+
+        function deleteMaterial(id) {
+            const custom = readJson(storageKey, []);
+            const customIndex = custom.findIndex(material => material.id === id);
+
+            if (customIndex >= 0) {
+                custom.splice(customIndex, 1);
+                saveCustomMaterials(custom);
+            } else {
+                const deleted = readJson(deletedKey, []);
+                if (!deleted.includes(id)) deleted.push(id);
+                localStorage.setItem(deletedKey, JSON.stringify(deleted));
+            }
+            removeMaterialAssignments(id);
+        }
+
+        function removeMaterialAssignments(materialId) {
+            const assignments = getAssignments();
+            Object.keys(assignments).forEach(classCode => {
+                ["word", "sentence", "paragraph"].forEach(type => {
+                    if (Array.isArray(assignments[classCode][type])) {
+                        assignments[classCode][type] = assignments[classCode][type].filter(id => id !== materialId);
                     }
-                    contentContainer.appendChild(contentDiv);
                 });
-                
-                viewMaterialModal.show();
             });
+            saveAssignments(assignments);
+        }
+
+        function showMaterial(material) {
+            const modalIcon = document.getElementById("viewMaterialIcon");
+            modalIcon.className = `materials-modal-icon ${material.type}`;
+            modalIcon.innerHTML = `<i class="bi ${typeIcons[material.type]}"></i>`;
+            document.getElementById("viewMaterialModalLabel").textContent = material.title;
+            document.getElementById("viewMaterialMeta").textContent = `${typeLabels[material.type]} material - ${material.use || "Practice & Assessment"}`;
+            document.getElementById("materialContentContainer").innerHTML = material.items.map((item, index) => `
+                <div class="material-content-item" data-item-index="${index}">
+                    <p>${material.type === "paragraph" ? escapeHtml(item) : `<strong>${index + 1}.</strong> ${escapeHtml(item)}`}</p>
+                    <div class="material-actions">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-content-action="edit" data-material-id="${escapeHtml(material.id)}" data-item-index="${index}"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" type="button" data-content-action="delete" data-material-id="${escapeHtml(material.id)}" data-item-index="${index}"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            `).join("");
+            viewModal.show();
+        }
+
+        function showEditMaterial(material) {
+            document.getElementById("editMaterialId").value = material.id;
+            document.getElementById("editMaterialTitle").value = material.title;
+            document.getElementById("editMaterialUse").value = material.use || "Practice & Assessment";
+            document.getElementById("editMaterialItems").value = material.items.join("\n");
+            document.getElementById("editMaterialHelp").textContent = material.type === "paragraph" ? "Put each paragraph passage on its own line." : "Put one item on each line.";
+            editModal.show();
+        }
+
+        function showAssignMaterial(material) {
+            const teacherClasses = getTeacherClasses();
+            const assignedCodes = new Set(teacherClasses
+                .filter(classData => getClassAssignmentIds(classData.code, material.type).includes(material.id))
+                .map(classData => classData.code));
+
+            document.getElementById("assignMaterialId").value = material.id;
+            document.getElementById("assignMaterialModalLabel").textContent = `Assign ${material.title}`;
+            document.getElementById("assignMaterialMeta").textContent = `${typeLabels[material.type]} material - choose classes`;
+            document.getElementById("assignmentClassList").innerHTML = teacherClasses.map((classData, index) => {
+                const code = classData.code || `READ-${index}`;
+                return `
+                    <label class="assignment-option" for="assignClass${index}">
+                        <input class="form-check-input" id="assignClass${index}" type="checkbox" value="${escapeHtml(code)}" ${assignedCodes.has(code) ? "checked" : ""}>
+                        <span>
+                            <strong>${escapeHtml(classData.name || "Reading Class")}</strong>
+                            <span class="small text-secondary">${escapeHtml(code)} &bull; ${escapeHtml(classData.students || "0")} students</span>
+                        </span>
+                    </label>
+                `;
+            }).join("");
+            assignModal.show();
+        }
+
+        function showEditItem(material, itemIndex) {
+            document.getElementById("editItemMaterialId").value = material.id;
+            document.getElementById("editItemIndex").value = itemIndex;
+            document.getElementById("editItemText").value = material.items[itemIndex];
+            editItemModal.show();
+        }
+
+        function showConfirmPopup(title, message, buttonText, onConfirm) {
+            pendingConfirmAction = onConfirm;
+            document.getElementById("confirmActionModalLabel").textContent = title;
+            document.getElementById("confirmActionMessage").textContent = message;
+            document.getElementById("confirmActionBtn").textContent = buttonText;
+            confirmActionModal.show();
+        }
+
+        function showStatusPopup(title, message) {
+            document.getElementById("statusMessageModalLabel").textContent = title;
+            document.getElementById("statusMessageText").textContent = message;
+            statusMessageModal.show();
+        }
+
+        function escapeHtml(value) {
+            const div = document.createElement("div");
+            div.textContent = value;
+            return div.innerHTML;
+        }
+
+        library.addEventListener("click", event => {
+            const card = event.target.closest(".material-item-card");
+            const actionTarget = event.target.closest("[data-action]");
+            if (!card || !actionTarget) return;
+
+            const material = findMaterial(card.dataset.materialId);
+            if (!material) return;
+
+            const action = actionTarget.dataset.action;
+            if (action === "view") {
+                showMaterial(material);
+            } else if (action === "assign") {
+                showAssignMaterial(material);
+            } else if (action === "edit") {
+                showEditMaterial(material);
+            } else if (action === "delete") {
+                showConfirmPopup(
+                    "Delete Material?",
+                    `Are you sure you want to delete "${material.title}"?`,
+                    "Delete Material",
+                    () => {
+                        deleteMaterial(material.id);
+                        renderMaterials();
+                        showStatusPopup("Material Deleted", `"${material.title}" was deleted.`);
+                    }
+                );
+            }
         });
-    })();
+
+        document.getElementById("materialContentContainer").addEventListener("click", event => {
+            const button = event.target.closest("[data-content-action]");
+            if (!button) return;
+
+            const material = findMaterial(button.dataset.materialId);
+            if (!material) return;
+
+            const itemIndex = Number(button.dataset.itemIndex);
+            if (button.dataset.contentAction === "edit") {
+                showEditItem(material, itemIndex);
+            } else {
+                showConfirmPopup(
+                    "Delete Item?",
+                    `Are you sure you want to delete item ${itemIndex + 1}?`,
+                    "Delete Item",
+                    () => {
+                        material.items.splice(itemIndex, 1);
+                        updateMaterial(material);
+                        renderMaterials();
+                        showMaterial(material);
+                        showStatusPopup("Item Deleted", "The material item was deleted.");
+                    }
+                );
+            }
+        });
+
+        document.getElementById("confirmActionBtn").addEventListener("click", () => {
+            if (pendingConfirmAction) {
+                pendingConfirmAction();
+                pendingConfirmAction = null;
+            }
+            confirmActionModal.hide();
+        });
+
+        document.getElementById("editItemForm").addEventListener("submit", event => {
+            event.preventDefault();
+            const material = findMaterial(document.getElementById("editItemMaterialId").value);
+            const itemIndex = Number(document.getElementById("editItemIndex").value);
+            const nextValue = document.getElementById("editItemText").value.trim();
+            if (!material || !nextValue) return;
+
+            material.items[itemIndex] = nextValue;
+            updateMaterial(material);
+            editItemModal.hide();
+            renderMaterials();
+            showMaterial(material);
+            showStatusPopup("Item Updated", "The material item was updated.");
+        });
+
+        document.getElementById("assignMaterialForm").addEventListener("submit", event => {
+            event.preventDefault();
+            const material = findMaterial(document.getElementById("assignMaterialId").value);
+            if (!material) return;
+
+            const selectedCodes = new Set(Array.from(document.querySelectorAll("#assignmentClassList input:checked")).map(input => input.value));
+            const assignments = getAssignments();
+
+            getTeacherClasses().forEach(classData => {
+                const classCode = classData.code || "READ-000";
+                assignments[classCode] = assignments[classCode] || { word: [], sentence: [], paragraph: [] };
+                assignments[classCode][material.type] = Array.isArray(assignments[classCode][material.type])
+                    ? assignments[classCode][material.type].filter(id => id !== material.id)
+                    : [];
+
+                if (selectedCodes.has(classCode)) {
+                    assignments[classCode][material.type].push(material.id);
+                }
+            });
+
+            saveAssignments(assignments);
+            assignModal.hide();
+            renderMaterials();
+            showStatusPopup("Assignments Saved", `"${material.title}" was assigned to ${selectedCodes.size} class${selectedCodes.size === 1 ? "" : "es"}.`);
+        });
+
+        document.getElementById("editMaterialForm").addEventListener("submit", event => {
+            event.preventDefault();
+            const material = findMaterial(document.getElementById("editMaterialId").value);
+            if (!material) return;
+
+            const nextItems = document.getElementById("editMaterialItems").value
+                .split("\n")
+                .map(item => item.trim())
+                .filter(Boolean);
+
+            if (!nextItems.length) {
+                showStatusPopup("Add One Item", "Please keep at least one item in this material.");
+                return;
+            }
+
+            const updatedMaterial = {
+                ...material,
+                title: document.getElementById("editMaterialTitle").value.trim(),
+                use: document.getElementById("editMaterialUse").value,
+                items: nextItems
+            };
+
+            updateMaterial(updatedMaterial);
+            editModal.hide();
+            renderMaterials();
+            showStatusPopup("Material Updated", `"${updatedMaterial.title}" was updated.`);
+        });
+
+        renderMaterials();
+    });
 </script>
 {% endblock %}

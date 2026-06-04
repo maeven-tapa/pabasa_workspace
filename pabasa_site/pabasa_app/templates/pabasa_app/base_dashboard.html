@@ -26,7 +26,7 @@
             --dash-olive: #7a8b5f;
             --dash-ink-soft: rgba(27, 26, 23, 0.64);
             --dash-shadow: 0 22px 44px rgba(27, 26, 23, 0.11);
-            --sidebar-width: 280px;
+            --sidebar-width: 320px;
         }
 
         body.dashboard-body {
@@ -52,7 +52,7 @@
         }
 
         .dashboard-sidebar {
-            width: 280px;
+            width: var(--sidebar-width);
             min-height: 100vh;
             border-right: 0;
             background:
@@ -255,6 +255,20 @@
             border-radius: 20px;
             box-shadow: 0 16px 30px rgba(27, 26, 23, 0.08);
             padding: 0.7rem;
+        }
+
+        .sidebar-brand-row a {
+            min-width: 0;
+        }
+
+        .sidebar-brand-row .sidebar-text {
+            min-width: 0;
+        }
+
+        [data-sidebar-brand-id] {
+            max-width: 180px;
+            overflow-wrap: anywhere;
+            white-space: normal;
         }
 
         .brand-note {
@@ -898,5 +912,18 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="{% static 'pabasa_app/js/base_dashboard.js' %}"></script>
+    <script>
+        (() => {
+            const logoutLink = document.querySelector("#logoutConfirmModal a[href*='home']");
+            if (logoutLink) {
+                logoutLink.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    window.localStorage.removeItem("pabasaCurrentUserId");
+                    window.localStorage.removeItem("pabasaUserRole");
+                    window.location.href = logoutLink.href;
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

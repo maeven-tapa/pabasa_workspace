@@ -280,7 +280,7 @@
                         <a class="btn back-button" href="{% url 'signup' %}">Back</a>
                         <button class="btn btn-primary" type="submit" disabled>Create Account</button>
                     </div>
-                    <input type="hidden" name="school_id" data-generated-pabasa-id>
+                    <input type="hidden" name="pabasa_id" data-generated-pabasa-id>
                 </form>
                 <div class="generated-pabasa-id" id="studentGeneratedPabasaId" aria-live="polite">
                     <span class="small fw-bold text-uppercase">Generated PABASA ID</span>
@@ -308,7 +308,10 @@
         };
 
         const generatePabasaId = () => {
-            const numericId = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+            const storageKey = "pabasaStudentIdCounter";
+            let counter = parseInt(window.localStorage.getItem(storageKey) || "1", 10);
+            const numericId = String(counter).padStart(4, "0");
+            window.localStorage.setItem(storageKey, String(counter + 1));
             return `G2-${numericId}`;
         };
 
@@ -352,6 +355,8 @@
             const pabasaId = generatePabasaId();
             pabasaIdInput.value = pabasaId;
             pabasaIdOutput.textContent = pabasaId;
+            window.localStorage.setItem("pabasaCurrentUserId", pabasaId);
+            window.localStorage.setItem("pabasaUserRole", "student");
             result.classList.add("is-visible");
             result.scrollIntoView({ behavior: "smooth", block: "nearest" });
         });

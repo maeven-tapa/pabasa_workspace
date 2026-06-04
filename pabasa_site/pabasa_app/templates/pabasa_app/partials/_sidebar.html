@@ -6,8 +6,8 @@
                     <i class="bi bi-journal-check"></i>
                 </span>
                 <div class="sidebar-text">
-                    <div class="fs-5 fw-bold lh-1">PABASA</div>
-                    <div class="brand-note mt-1">Reading studio</div>
+                    <div class="fs-6 fw-bold lh-1" data-sidebar-brand-id>PABASA</div>
+                    <div class="brand-note mt-1 small">PABASA</div>
                 </div>
             </a>
             <button class="btn btn-sm btn-light sidebar-collapse-btn d-none d-lg-inline-flex" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
@@ -53,3 +53,22 @@
         </button>
     </div>
 </div>
+
+<script>
+    (() => {
+        const brandIdElement = document.querySelector("[data-sidebar-brand-id]");
+        if (!brandIdElement) return;
+
+        const updateBrandId = () => {
+            const storedId = window.localStorage.getItem("pabasaCurrentUserId");
+            if (storedId) {
+                brandIdElement.textContent = storedId;
+            } else {
+                brandIdElement.textContent = "PABASA";
+            }
+        };
+
+        updateBrandId();
+        window.addEventListener("storage", updateBrandId);
+    })();
+</script>

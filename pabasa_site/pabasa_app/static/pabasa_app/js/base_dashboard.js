@@ -81,8 +81,14 @@
         return window.localStorage.getItem(classJoinedKey) === "1";
     }
 
+    // Store locked title and unlocked title from data attributes FIRST
+    lockedLinks.forEach(function (link) {
+        link.dataset.lockedTitle = link.getAttribute("title");
+        link.dataset.unlockedTitle = link.getAttribute("data-unlocked-title");
+    });
+
     function reinitializeTooltips() {
-        // First, dispose all existing tooltips
+        // Dispose all existing tooltips
         lockedLinks.forEach(function (link) {
             const existingTooltip = bootstrap.Tooltip.getInstance(link);
             if (existingTooltip) {
@@ -91,7 +97,12 @@
             }
         });
         
-        // Small delay to ensure all disposals are complete, then recreate
+        // Remove all tooltip popper elements from the DOM
+        document.querySelectorAll('[role="tooltip"]').forEach(function(el) {
+            el.remove();
+        });
+        
+        // Longer delay and then recreate
         setTimeout(function() {
             lockedLinks.forEach(function (link) {
                 new bootstrap.Tooltip(link, {
@@ -100,7 +111,7 @@
                     container: "body"
                 });
             });
-        }, 15);
+        }, 150);
     }
 
     function updateLockedLinks() {
@@ -114,10 +125,9 @@
             link.classList.toggle("is-locked", !isJoined);
             link.setAttribute("aria-disabled", isJoined ? "false" : "true");
             
-            // Set the title to the unlocked title if joined, otherwise the locked message
-            const lockedTitle = link.getAttribute("title");
-            const unlockedTitle = link.getAttribute("data-unlocked-title") || lockedTitle;
-            link.setAttribute("title", isJoined ? unlockedTitle : lockedTitle);
+            // Get the appropriate title based on join state
+            const newTitle = isJoined ? link.dataset.unlockedTitle : link.dataset.lockedTitle;
+            link.setAttribute("title", newTitle);
 
             if (isJoined) {
                 link.setAttribute("href", link.dataset.lockedHref);
@@ -128,15 +138,12 @@
             }
         });
 
-        // Reinitialize tooltips after title is updated
+        // Reinitialize tooltips after updating titles
         reinitializeTooltips();
     }
 
-    // Store locked title and unlocked title from data attributes
+    // Setup click prevention for locked links
     lockedLinks.forEach(function (link) {
-        link.dataset.lockedTitle = link.getAttribute("title");
-        link.dataset.unlockedTitle = link.getAttribute("data-unlocked-title");
-
         link.addEventListener("click", function (event) {
             if (classIsJoined()) {
                 return;
@@ -148,6 +155,7 @@
         }, true);
     });
 
+    // Initial update
     updateLockedLinks();
 
     window.addEventListener("storage", function (event) {

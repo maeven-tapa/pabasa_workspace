@@ -669,5 +669,62 @@
     </div>
 </div>
 
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const studentRow = document.querySelector(".student-row");
+    if (!studentRow) return;
+    
+    function loadPersistedStudents() {
+        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        console.log("Loading students:", students);
+        
+        students.forEach(studentData => {
+            // Check if student already exists
+            const exists = Array.from(studentRow.querySelectorAll(".student-card")).some(
+                card => card.textContent.includes(studentData.name)
+            );
+            
+            if (exists) return;
+            
+            const levelClass = {
+                "Low Emerging Readers": "level-low",
+                "High Emerging Readers": "level-high",
+                "Developing Readers": "level-developing",
+                "Transitioning Readers": "level-transitioning",
+                "Readers at Grade Level": "level-grade"
+            }[studentData.level] || "level-high";
+            
+            const initials = studentData.name
+                .split(" ")
+                .map(n => n.charAt(0).toUpperCase())
+                .join("")
+                .substring(0, 2);
+            
+            const studentCard = document.createElement("div");
+            studentCard.className = "student-card";
+            studentCard.innerHTML = `
+                <span class="student-avatar">${initials}</span>
+                <div><strong>${studentData.name}</strong><div class="small text-secondary">WPM ${studentData.wpm} • ${studentData.accuracy}%</div></div>
+                <span class="level-chip ${levelClass}">${studentData.level}</span>
+            `;
+            
+            studentRow.appendChild(studentCard);
+            console.log("✓ Added student to dashboard:", studentData.name);
+        });
+    }
+    
+    // Load on page load
+    loadPersistedStudents();
+    
+    // Reload when localStorage changes (in another tab)
+    window.addEventListener("storage", function(e) {
+        if (e.key === "pabasa_added_students") {
+            console.log("Students updated in another tab, reloading");
+            loadPersistedStudents();
+        }
+    });
+});
+</script>
+
 <script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}"></script>
 {% endblock %}

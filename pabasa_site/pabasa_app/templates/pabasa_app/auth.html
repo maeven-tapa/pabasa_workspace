@@ -144,10 +144,16 @@
 
             event.preventDefault();
             
+            // Store PABASA ID and role in localStorage
+            const id = pabasaId.value;
+            window.localStorage.setItem("pabasaCurrentUserId", id);
+            
             // Route to appropriate dashboard based on ID prefix
-            if (pabasaId.value.startsWith("TCH-")) {
+            if (id.startsWith("TCH-")) {
+                window.localStorage.setItem("pabasaUserRole", "teacher");
                 window.location.href = "{% url 'dashboard_teacher' %}";
-            } else if (pabasaId.value.startsWith("G2-")) {
+            } else if (id.startsWith("G2-")) {
+                window.localStorage.setItem("pabasaUserRole", "student");
                 window.location.href = "{% url 'dashboard' %}";
             }
         });
