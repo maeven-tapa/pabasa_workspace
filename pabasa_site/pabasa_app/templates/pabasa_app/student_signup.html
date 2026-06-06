@@ -300,7 +300,52 @@
 </section>
 <script>
     (() => {
+                <div id="studentOtpStage" class="card mt-4 d-none">
+                    <div class="card-body p-4">
+                        <span class="modern-chip mb-2">OTP Verification</span>
+                        <h2 class="h5 mb-2">Enter the OTP</h2>
+                        <p class="text-secondary">
+                            We sent a verification code to <strong id="otpEmail"></strong>.
+                            Enter it below to complete your student account registration.
+                        </p>
+                        <form id="otpForm" class="row g-3">
+                            {% csrf_token %}
+                            <div class="col-12">
+                                <label class="form-label">OTP Code</label>
+                                <input class="form-control" type="text" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit OTP" required>
+                            </div>
+                            <div id="otpErrorMessage" class="alert alert-danger d-none" role="alert"></div>
+                            <div class="col-12 d-flex justify-content-between form-actions">
+                                <button class="btn btn-outline-secondary" type="button" id="backToSignupBtn">Back to signup</button>
+                                <button class="btn btn-primary" id="verifyOtpBtn" type="submit">Verify OTP</button>
+                            </div>
+                            <div class="col-12 d-flex justify-content-between align-items-center">
+                                <span class="small text-secondary">Didn’t get the code?</span>
+                                <button class="btn btn-link p-0" type="button" id="resendOtpBtn">Resend OTP</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="generated-pabasa-id" id="studentGeneratedPabasaId" aria-live="polite">
+        const result = document.getElementById("studentGeneratedPabasaId");
+        const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
+        const submitButton = form.querySelector("button[type='submit']");
+        const errorMessage = form.querySelector("#errorMessage");
+        const passwordInput = form.elements.password;
+        const confirmPasswordInput = form.elements.confirm_password;
+        const passwordMatchError = form.querySelector("[data-password-match-error]");
+        const passwordRules = {
+            length: form.querySelector("[data-rule='length']"),
+            uppercase: form.querySelector("[data-rule='uppercase']"),
         const form = document.getElementById("studentSignupForm");
+        const otpStage = document.getElementById("studentOtpStage");
+        const otpForm = document.getElementById("otpForm");
+        const otpEmailSpan = document.getElementById("otpEmail");
+        const otpErrorMessage = document.getElementById("otpErrorMessage");
+        const resendOtpBtn = document.getElementById("resendOtpBtn");
+        const backToSignupBtn = document.getElementById("backToSignupBtn");
+
         const result = document.getElementById("studentGeneratedPabasaId");
         const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
         const submitButton = form.querySelector("button[type='submit']");
@@ -313,6 +358,22 @@
             uppercase: form.querySelector("[data-rule='uppercase']"),
             number: form.querySelector("[data-rule='number']"),
         };
+
+            Object.entries(passwordState).forEach(([rule, isValid]) => {
+                passwordRules[rule].classList.toggle("is-valid", isValid);
+            });
+
+            const hasConfirmValue = confirmPasswordInput.value.length > 0;
+            const isPasswordMatch = passwordsMatch();
+            passwordMatchError.classList.toggle("is-visible", hasConfirmValue && !isPasswordMatch);
+            confirmPasswordInput.setCustomValidity(!hasConfirmValue || isPasswordMatch ? "" : "Passwords must match.");
+            passwordInput.setCustomValidity(passwordIsValid ? "" : "Password does not meet the requirements.");
+
+            submitButton.disabled = !form.checkValidity() || !passwordIsValid || !isPasswordMatch;
+        };
+
+        form.addEventListener("input", updateValidation);
+        form.addEventListener("change", updateValidation);
 
         const getPasswordState = () => ({
             length: passwordInput.value.length >= 8,
@@ -352,30 +413,26 @@
             }
 
             submitButton.disabled = true;
-            submitButton.innerHTML = 'Creating Account...';
+            submitButton.innerHTML = 'Sending OTP...';
             errorMessage.classList.add("d-none");
-            
+
             try {
                 const formData = new FormData(form);
                 const response = await fetch('{% url "register_student" %}', {
                     method: 'POST',
                     body: formData
                 });
-                
                 const data = await response.json();
-                
+
                 if (data.success) {
-                    // Show generated PABASA ID
-                    pabasaIdOutput.textContent = data.custom_id;
-                    result.classList.add("is-visible");
-                    result.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                    
-                    // Update continue button to redirect to login
-                    const continueBtn = result.querySelector(".btn");
-                    if (continueBtn) {
-                        continueBtn.href = "{% url 'auth' %}";
-                        continueBtn.textContent = "Go to Login";
-                    }
+                    // Show OTP stage
+                    form.classList.add("d-none");
+                    otpEmailSpan.textContent = data.email;
+                    otpStage.classList.remove("d-none");
+                    otpErrorMessage.classList.add("d-none");
+                    otpForm.reset();
+                    submitButton.innerHTML = 'Create Account';
+                    otpStage.scrollIntoView({ behavior: "smooth", block: "nearest" });
                 } else {
                     errorMessage.textContent = data.error || 'Registration failed. Please try again.';
                     errorMessage.classList.remove("d-none");
@@ -388,6 +445,94 @@
                 submitButton.disabled = false;
                 submitButton.innerHTML = 'Create Account';
             }
+        });
+
+        const showSignupForm = () => {
+            otpStage.classList.add("d-none");
+            form.classList.remove("d-none");
+            errorMessage.classList.add("d-none");
+            otpErrorMessage.classList.add("d-none");
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Create Account';
+        };
+
+        otpForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            otpErrorMessage.classList.add("d-none");
+            const verifyButton = document.getElementById("verifyOtpBtn");
+            verifyButton.disabled = true;
+            verifyButton.innerHTML = 'Verifying...';
+
+            try {
+                const verifyFormData = new FormData(otpForm);
+                const response = await fetch('{% url "verify_student_otp" %}', {
+                    method: 'POST',
+                    body: verifyFormData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    pabasaIdOutput.textContent = data.custom_id;
+                    result.classList.add("is-visible");
+                    result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    const continueBtn = result.querySelector(".btn");
+                    continueBtn.href = "{% url 'auth' %}";
+                    continueBtn.textContent = "Go to Login";
+                    otpStage.classList.add("d-none");
+                } else {
+                    otpErrorMessage.textContent = data.error || 'OTP verification failed. Please try again.';
+                    otpErrorMessage.classList.remove("d-none");
+                }
+            } catch (error) {
+                otpErrorMessage.textContent = 'An error occurred. Please try again.';
+                otpErrorMessage.classList.remove("d-none");
+            } finally {
+                verifyButton.disabled = false;
+                verifyButton.innerHTML = 'Verify OTP';
+            }
+        });
+
+        const getCsrfToken = () => {
+            const tokenInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+            return tokenInput ? tokenInput.value : '';
+        };
+
+        resendOtpBtn.addEventListener("click", async () => {
+            resendOtpBtn.disabled = true;
+            resendOtpBtn.innerHTML = 'Resending...';
+            otpErrorMessage.classList.add("d-none");
+            try {
+                const response = await fetch('{% url "resend_student_signup_otp" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                });
+                const data = await response.json();
+                if (data.success) {
+                    otpErrorMessage.textContent = data.message;
+                    otpErrorMessage.classList.remove("d-none");
+                    otpErrorMessage.classList.remove("alert-danger");
+                    otpErrorMessage.classList.add("alert-success");
+                } else {
+                    otpErrorMessage.textContent = data.error || 'Unable to resend OTP.';
+                    otpErrorMessage.classList.remove("d-none");
+                    otpErrorMessage.classList.remove("alert-success");
+                    otpErrorMessage.classList.add("alert-danger");
+                }
+            } catch (error) {
+                otpErrorMessage.textContent = 'An error occurred while resending OTP.';
+                otpErrorMessage.classList.remove("d-none");
+                otpErrorMessage.classList.remove("alert-success");
+                otpErrorMessage.classList.add("alert-danger");
+            } finally {
+                resendOtpBtn.disabled = false;
+                resendOtpBtn.innerHTML = 'Resend OTP';
+            }
+        });
+
+        backToSignupBtn.addEventListener("click", () => {
+            showSignupForm();
         });
 
         updateValidation();
