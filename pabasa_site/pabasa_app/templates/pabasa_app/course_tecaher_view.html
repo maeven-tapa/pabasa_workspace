@@ -133,47 +133,297 @@
         border: 1px solid rgba(27, 26, 23, 0.08);
         border-radius: 18px;
         display: grid;
-        gap: 0.85rem;
+        gap: 1.2rem;
         margin-bottom: 1rem;
-        padding: 0.9rem;
+        padding: 1.2rem;
     }
 
-    .materials-class-head {
+    .materials-workspace-head {
         align-items: center;
         display: flex;
         gap: 0.75rem;
         justify-content: space-between;
     }
 
-    .materials-class-head h3 {
-        font-size: 0.98rem;
+    .materials-workspace-head h2 {
+        font-size: 1.2rem;
         font-weight: 800;
         margin: 0;
     }
 
-    .materials-class-grid {
+    .materials-workspace-head .item-badge {
+        flex-shrink: 0;
+    }
+
+    .class-container {
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 14px;
         display: grid;
-        gap: 0.7rem;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.85rem;
+        padding: 1rem;
+        overflow: hidden;
+    }
+
+    .class-header {
+        display: grid;
+        gap: 0.4rem;
+        border-bottom: 2px solid rgba(31, 111, 139, 0.15);
+        padding-bottom: 0.75rem;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .class-header:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        margin: -0.5rem -0.75rem 0.25rem -0.75rem;
+    }
+
+    .class-header-top {
+        display: flex;
+        gap: 0.6rem;
+        align-items: baseline;
+        justify-content: space-between;
+    }
+
+    .class-header-top-left {
+        display: flex;
+        gap: 0.6rem;
+        align-items: baseline;
+    }
+
+    .class-expand-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+        transition: transform 0.2s ease;
+    }
+
+    .class-container.expanded .class-expand-icon {
+        transform: rotate(180deg);
+    }
+
+    .class-code {
+        background: var(--dash-primary-soft);
+        border-radius: 999px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        padding: 0.25rem 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .class-header-top-left strong {
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    .class-header-meta {
+        font-size: 0.78rem;
+        color: var(--dash-muted);
+    }
+
+    .class-header-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .class-header-actions button {
+        border-radius: 6px;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.65rem;
+    }
+
+    .class-materials {
+        display: grid;
+        gap: 0.6rem;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        opacity: 0;
+    }
+
+    .class-container.expanded .class-materials {
+        max-height: 2000px;
+        opacity: 1;
+    }
+
+    .class-materials-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--dash-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .class-material-item {
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 10px;
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.65rem 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .class-material-item:hover {
+        border-color: rgba(31, 111, 139, 0.3);
+        background: rgba(31, 111, 139, 0.05);
+    }
+
+    .class-material-info {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .class-material-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 32px;
+        width: 32px;
+        border-radius: 10px;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    .class-material-icon.word { background: #1f6f8b; }
+    .class-material-icon.sentence { background: #7a8b5f; }
+    .class-material-icon.paragraph { background: #b95f44; }
+
+    .class-material-details {
+        display: grid;
+        gap: 0.15rem;
+        min-width: 0;
+    }
+
+    .class-material-name {
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .class-material-count {
+        font-size: 0.72rem;
+        color: var(--dash-muted);
+    }
+
+    .class-material-actions {
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: nowrap;
+    }
+
+    .class-material-actions button {
+        border-radius: 6px;
+        font-size: 0.7rem;
+        padding: 0.3rem 0.5rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .class-material-actions i {
+        margin-right: 0.2rem;
+    }
+
+    .empty-class-materials {
+        font-size: 0.78rem;
+        color: var(--dash-muted);
+        padding: 0.6rem;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+    }
+
+    .student-list {
+        display: grid;
+        gap: 0.6rem;
+    }
+
+    .student-item {
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 10px;
+        padding: 0.8rem;
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+    }
+
+    .student-avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 36px;
+        width: 36px;
+        border-radius: 50%;;
+        background: var(--dash-primary-soft);
+        color: var(--dash-primary-deep);
+        font-weight: 700;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+
+    .student-info {
+        display: grid;
+        gap: 0.2rem;
+        min-width: 0;
+    }
+
+    .student-info p {
+        margin: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .student-name {
+        font-weight: 600;
+        font-size: 0.88rem;
+    }
+
+    .student-email {
+        font-size: 0.75rem;
+        color: var(--dash-muted);
+    }
+
+    .materials-class-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
     }
 
     .materials-class-card {
         background: #fff;
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 14px;
+        border-radius: 12px;
         display: grid;
-        gap: 0.45rem;
-        padding: 0.75rem;
+        gap: 0.35rem;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        padding: 0.65rem 0.85rem;
     }
 
     .materials-class-assigned {
-        background: #fffdf7;
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 12px;
-        color: var(--dash-ink-soft);
-        font-size: 0.82rem;
-        line-height: 1.45;
-        padding: 0.55rem 0.65rem;
+        background: transparent;
+        border: none;
+        color: var(--dash-muted);
+        font-size: 0.75rem;
+        line-height: 1.2;
+        padding: 0;
     }
 
     .materials-class-card strong {
@@ -264,8 +514,8 @@
         border-radius: 16px;
         box-shadow: 0 16px 32px rgba(27, 26, 23, 0.07);
         display: grid;
-        gap: 0.8rem;
-        min-height: 210px;
+        gap: 0.65rem;
+        min-height: auto;
         overflow: hidden;
         padding: 0.9rem;
         position: relative;
@@ -364,22 +614,22 @@
 
     .material-meta-grid {
         display: grid;
-        gap: 0.55rem;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.4rem;
+        grid-template-columns: 1fr;
         position: relative;
         z-index: 1;
     }
 
     .material-meta-tile {
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid rgba(27, 26, 23, 0.08);
+        background: transparent;
+        border: none;
         border-radius: 12px;
-        padding: 0.6rem;
+        padding: 0;
     }
 
     .material-meta-tile span {
         color: var(--dash-muted);
-        display: block;
+        display: inline;
         font-size: 0.68rem;
         font-weight: 800;
         letter-spacing: 0.06em;
@@ -387,9 +637,9 @@
     }
 
     .material-meta-tile strong {
-        display: block;
+        display: inline;
         font-size: 0.88rem;
-        margin-top: 0.2rem;
+        margin-left: 0.3rem;
     }
 
     .item-badge {
@@ -403,16 +653,23 @@
 
     .material-actions {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.45rem;
-        margin-top: auto;
+        flex-wrap: nowrap;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
         position: relative;
         z-index: 1;
     }
 
     .material-actions .btn {
-        border-radius: 999px;
+        border-radius: 8px;
         font-weight: 700;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.65rem;
+        white-space: nowrap;
+    }
+
+    .material-actions .btn i {
+        margin-right: 0.3rem;
     }
 
     .empty-state {
@@ -650,6 +907,45 @@
     </div>
 </div>
 
+<div class="modal fade" id="activityTypeModal" tabindex="-1" aria-labelledby="activityTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h1 class="modal-title fs-5" id="activityTypeModalLabel">Select Activity Type</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary mb-3" id="activityTypeMeta"></p>
+                <div id="activityTypeOptions" class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-info" data-activity-type="practice">
+                        <i class="bi bi-pencil-square me-2"></i>Practice
+                    </button>
+                    <button type="button" class="btn btn-outline-warning" data-activity-type="assessment">
+                        <i class="bi bi-clipboard-check me-2"></i>Assessment
+                    </button>
+                    <button type="button" class="btn btn-outline-success" data-activity-type="both">
+                        <i class="bi bi-collection me-2"></i>Practice & Assessment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="studentsModal" tabindex="-1" aria-labelledby="studentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h1 class="modal-title fs-5" id="studentsModalLabel">Students</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="studentsList" class="student-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener("DOMContentLoaded", () => {
         const storageKey = "pabasa_materials";
@@ -731,7 +1027,11 @@
         const editItemModal = new bootstrap.Modal(document.getElementById("editItemModal"));
         const confirmActionModal = new bootstrap.Modal(document.getElementById("confirmActionModal"));
         const statusMessageModal = new bootstrap.Modal(document.getElementById("statusMessageModal"));
+        const activityTypeModal = new bootstrap.Modal(document.getElementById("activityTypeModal"));
+        const studentsModal = new bootstrap.Modal(document.getElementById("studentsModal"));
         let pendingConfirmAction = null;
+        let pendingActivityMaterial = null;
+        let pendingActivityClass = null;
         const params = new URLSearchParams(window.location.search);
         const typeFilter = params.get("type");
 
@@ -781,7 +1081,7 @@
 
         function renderMaterials() {
             const materials = getMaterials();
-            const categories = typeFilter ? [typeFilter] : ["word", "sentence", "paragraph"];
+            const teacherClasses = getTeacherClasses();
 
             document.getElementById("pageTitle").textContent = typeFilter ? `${typeLabels[typeFilter]} Materials` : "Materials Library";
             document.getElementById("pageDesc").textContent = typeFilter ? `View and manage ${typeLabels[typeFilter].toLowerCase()} materials.` : "Browse, view, edit, and delete reading materials by category.";
@@ -794,7 +1094,7 @@
             const heroTitle = typeFilter ? `${typeLabels[typeFilter]} Materials` : "Materials Library";
             const heroCopy = typeFilter ? typeCopy[typeFilter] : "Manage word, sentence, and paragraph reading materials in one organized workspace.";
 
-        library.innerHTML = `
+            library.innerHTML = `
                 <div class="materials-hero ${heroType}">
                     <div class="materials-hero-copy">
                         <span class="materials-kicker"><i class="bi ${heroIcon}"></i> Reading Materials</span>
@@ -807,51 +1107,72 @@
                         <div class="materials-stat"><strong>${practiceCount}/${assessmentCount}</strong><span>practice / assessment</span></div>
                     </div>
                 </div>
-                ${renderClassSection()}
-                ${categories.map(type => {
-                const categoryMaterials = materials.filter(material => material.type === type);
-                return `
-                    <section class="material-category-section">
-                        <div class="material-category-head">
-                            <h3><span class="category-mark ${type}"><i class="bi ${typeIcons[type]}"></i></span>${typeLabels[type]} Materials</h3>
-                            <span class="item-badge">${categoryMaterials.length}</span>
+                <section class="materials-class-section">
+                    <div class="materials-workspace-head">
+                        <h2><i class="bi bi-door-open me-2"></i>Your Classes</h2>
+                    </div>
+                    ${teacherClasses.map(classData => renderClassWithMaterials(classData, materials)).join("")}
+                </section>
+            `;
+        }
+
+        function renderClassWithMaterials(classData, materials) {
+            const filteredMaterials = typeFilter ? materials.filter(m => m.type === typeFilter) : materials;
+            
+            return `
+                <div class="class-container" data-class-code="${escapeHtml(classData.code || 'READ-000')}">
+                    <div class="class-header">
+                        <div class="class-header-top">
+                            <div class="class-header-top-left">
+                                <span class="class-expand-icon"><i class="bi bi-chevron-down"></i></span>
+                                <span class="class-code">${escapeHtml(classData.code || "READ-000")}</span>
+                                <strong>${escapeHtml(classData.name || "Reading Class")}</strong>
+                            </div>
+                            <div class="class-header-actions">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-action="students">
+                                    <i class="bi bi-people"></i> Students
+                                </button>
+                            </div>
                         </div>
-                        <div class="material-item-display">
-                            ${categoryMaterials.length ? categoryMaterials.map(renderCard).join("") : `<div class="empty-state">No ${typeLabels[type].toLowerCase()} materials yet.</div>`}
+                        <span class="class-header-meta">${escapeHtml(classData.subject || "Reading")} • ${escapeHtml(classData.students || "0")} students</span>
+                    </div>
+                    <div class="class-materials">
+                        <div class="class-materials-label">Available Materials (${filteredMaterials.length})</div>
+                        ${filteredMaterials.length ? filteredMaterials.map(material => renderClassMaterialItem(material, classData.code)).join("") : `<div class="empty-class-materials">No materials available</div>`}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderClassMaterialItem(material, classCode) {
+            const itemWord = material.type === "paragraph" ? "passage" : `${material.type}${material.items.length === 1 ? "" : "s"}`;
+            return `
+                <div class="class-material-item" data-material-id="${escapeHtml(material.id)}" data-class-code="${escapeHtml(classCode)}">
+                    <div class="class-material-info">
+                        <span class="class-material-icon ${material.type}"><i class="bi ${typeIcons[material.type]}"></i></span>
+                        <div class="class-material-details">
+                            <p class="class-material-name">${escapeHtml(material.title)}</p>
+                            <span class="class-material-count">${material.items.length} ${itemWord}</span>
                         </div>
-                    </section>
-                `;
-                }).join("")}
+                    </div>
+                    <div class="class-material-actions">
+                        <button class="btn btn-sm btn-outline-info" type="button" data-action="assign" title="Assign for practice/assessment">
+                            <i class="bi bi-play-circle"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
             `;
         }
 
         function getTeacherClasses() {
-            const fallbackClasses = [
-                {
-                    name: "Grade 3 Reading - Section A",
-                    subject: "Filipino Reading",
-                    code: "PAB-4827",
-                    students: "28"
-                },
-                {
-                    name: "Remedial Reading Group",
-                    subject: "Intervention",
-                    code: "RRG-9154",
-                    students: "12"
-                },
-                {
-                    name: "Advanced Fluency Circle",
-                    subject: "Reading Enrichment",
-                    code: "AFC-7302",
-                    students: "10"
-                }
-            ];
-
             try {
                 const saved = JSON.parse(localStorage.getItem("pabasa_teacher_classes") || "null");
-                return Array.isArray(saved) && saved.length ? saved : fallbackClasses;
+                return Array.isArray(saved) ? saved : [];
             } catch (error) {
-                return fallbackClasses;
+                return [];
             }
         }
 
@@ -865,38 +1186,28 @@
                         <span class="item-badge">${teacherClasses.length}</span>
                     </div>
                     <div class="materials-class-grid">
-                        ${teacherClasses.map(classData => `
-                            <article class="materials-class-card">
-                                <span class="materials-class-code">${escapeHtml(classData.code || "READ-000")}</span>
-                                <strong>${escapeHtml(classData.name || "Reading Class")}</strong>
-                                <span class="small text-secondary">${escapeHtml(classData.subject || "Reading")} &bull; ${escapeHtml(classData.students || "0")} students</span>
-                                ${renderClassAssignments(classData, visibleMaterials)}
-                            </article>
-                        `).join("")}
+                        ${teacherClasses.map(classData => {
+                            const assignedCount = visibleMaterials.filter(material => {
+                                return getClassAssignmentIds(classData.code, material.type).includes(material.id);
+                            }).length;
+                            return `
+                                <article class="materials-class-card">
+                                    <span class="materials-class-code">${escapeHtml(classData.code || "READ-000")}</span>
+                                    <div>
+                                        <strong style="display: block;">${escapeHtml(classData.name || "Reading Class")}</strong>
+                                        <span class="small text-secondary">${escapeHtml(classData.subject || "Reading")} &bull; ${escapeHtml(classData.students || "0")} students</span>
+                                    </div>
+                                    <span class="item-badge">${assignedCount} items</span>
+                                </article>
+                            `;
+                        }).join("")}
                     </div>
                 </section>
             `;
         }
 
-        function renderClassAssignments(classData, visibleMaterials) {
-            const assignedMaterials = visibleMaterials.filter(material => {
-                return getClassAssignmentIds(classData.code, material.type).includes(material.id);
-            });
-
-            if (!assignedMaterials.length) {
-                return `<div class="materials-class-assigned">No materials assigned for this ${typeFilter ? typeLabels[typeFilter].toLowerCase() : "view"} yet.</div>`;
-            }
-
-            const names = assignedMaterials.slice(0, 3).map(material => material.title).join(", ");
-            const extra = assignedMaterials.length > 3 ? ` and ${assignedMaterials.length - 3} more` : "";
-            return `<div class="materials-class-assigned"><strong>${assignedMaterials.length} assigned:</strong> ${escapeHtml(names)}${escapeHtml(extra)}</div>`;
-        }
-
         function renderCard(material) {
-            const preview = material.items.slice(0, 3).join(separators[material.type]);
-            const more = material.items.length > 3 ? ` and ${material.items.length - 3} more` : "";
             const itemWord = material.type === "paragraph" ? "passage" : `${material.type}${material.items.length === 1 ? "" : "s"}`;
-            const created = material.created || "Draft";
             const assignedCount = getAssignedClassCount(material);
 
             return `
@@ -907,32 +1218,21 @@
                                 <span class="material-icon ${material.type}"><i class="bi ${typeIcons[material.type]}"></i></span>
                                 <span class="material-title-text">
                                     <span>${escapeHtml(material.title)}</span>
-                                    <span class="material-type-note">${typeLabels[material.type]} set</span>
+                                    <span class="material-type-note">${material.items.length} ${itemWord}</span>
                                 </span>
                             </span>
-                            <span class="item-badge">${material.items.length} ${itemWord}</span>
                         </strong>
-                        <p class="material-preview">${escapeHtml(preview)}${more ? escapeHtml(more) : ""}</p>
                     </button>
                     <div class="material-meta-grid">
                         <div class="material-meta-tile">
-                            <span>Use</span>
-                            <strong>${escapeHtml(material.use || "Practice & Assessment")}</strong>
-                        </div>
-                        <div class="material-meta-tile">
-                            <span>Created</span>
-                            <strong>${escapeHtml(created)}</strong>
-                        </div>
-                        <div class="material-meta-tile">
-                            <span>Assigned</span>
+                            <span>Assigned:</span>
                             <strong>${assignedCount} class${assignedCount === 1 ? "" : "es"}</strong>
                         </div>
                     </div>
                     <div class="material-actions">
-                        <button class="btn btn-sm btn-outline-primary" type="button" data-action="view"><i class="bi bi-eye me-1"></i>View</button>
-                        <button class="btn btn-sm btn-outline-success" type="button" data-action="assign"><i class="bi bi-send me-1"></i>Assign</button>
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-action="edit"><i class="bi bi-pencil me-1"></i>Edit</button>
-                        <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete"><i class="bi bi-trash me-1"></i>Delete</button>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-action="view"><i class="bi bi-eye"></i>View</button>
+                        <button class="btn btn-sm btn-outline-success" type="button" data-action="assign"><i class="bi bi-send"></i>Assign</button>
+                        <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete"><i class="bi bi-trash"></i>Delete</button>
                     </div>
                 </article>
             `;
@@ -1063,20 +1363,44 @@
         }
 
         library.addEventListener("click", event => {
-            const card = event.target.closest(".material-item-card");
-            const actionTarget = event.target.closest("[data-action]");
-            if (!card || !actionTarget) return;
+            // Handle students button FIRST (before header, since button is inside header)
+            const studentsBtn = event.target.closest("[data-action='students']");
+            if (studentsBtn) {
+                event.stopPropagation();
+                const container = studentsBtn.closest(".class-container");
+                const classCode = container.dataset.classCode;
+                const classData = getTeacherClasses().find(c => c.code === classCode);
+                if (classData) {
+                    showStudents(classCode, classData.name, classData.students);
+                }
+                return;
+            }
 
-            const material = findMaterial(card.dataset.materialId);
+            // Handle class header click for expand/collapse
+            const header = event.target.closest(".class-header");
+            if (header) {
+                const container = header.closest(".class-container");
+                if (container) {
+                    container.classList.toggle("expanded");
+                }
+                return;
+            }
+
+            // Handle material item actions
+            const item = event.target.closest(".class-material-item");
+            const actionTarget = event.target.closest("[data-action]");
+            if (!item || !actionTarget) return;
+
+            const material = findMaterial(item.dataset.materialId);
             if (!material) return;
 
             const action = actionTarget.dataset.action;
-            if (action === "view") {
-                showMaterial(material);
-            } else if (action === "assign") {
-                showAssignMaterial(material);
-            } else if (action === "edit") {
-                showEditMaterial(material);
+            if (action === "assign") {
+                pendingActivityMaterial = material;
+                pendingActivityClass = item.dataset.classCode;
+                document.getElementById("activityTypeModalLabel").textContent = `Assign to ${escapeHtml(material.title)}`;
+                document.getElementById("activityTypeMeta").textContent = `Choose activity type for this class`;
+                activityTypeModal.show();
             } else if (action === "delete") {
                 showConfirmPopup(
                     "Delete Material?",
@@ -1089,6 +1413,26 @@
                     }
                 );
             }
+        });
+
+        document.getElementById("activityTypeOptions").addEventListener("click", event => {
+            const btn = event.target.closest("[data-activity-type]");
+            if (!btn || !pendingActivityMaterial) return;
+
+            const activityType = btn.dataset.activityType;
+            const assignments = getAssignments();
+            assignments[pendingActivityClass] = assignments[pendingActivityClass] || { word: [], sentence: [], paragraph: [] };
+            
+            if (!assignments[pendingActivityClass][pendingActivityMaterial.type].includes(pendingActivityMaterial.id)) {
+                assignments[pendingActivityClass][pendingActivityMaterial.type].push(pendingActivityMaterial.id);
+            }
+            
+            saveAssignments(assignments);
+            activityTypeModal.hide();
+            renderMaterials();
+            showStatusPopup("Material Assigned", `"${pendingActivityMaterial.title}" assigned as ${activityType}`);
+            pendingActivityMaterial = null;
+            pendingActivityClass = null;
         });
 
         document.getElementById("materialContentContainer").addEventListener("click", event => {
@@ -1193,6 +1537,36 @@
             renderMaterials();
             showStatusPopup("Material Updated", `"${updatedMaterial.title}" was updated.`);
         });
+
+        function showStudents(classCode, className, studentCount) {
+            document.getElementById("studentsModalLabel").textContent = `${className} - ${studentCount} students`;
+            const studentsList = document.getElementById("studentsList");
+            
+            // Generate sample students (in real app, fetch from server)
+            const firstNames = ["Maria", "Juan", "Ana", "Carlos", "Sofia", "Miguel", "Rosa", "Pedro", "Lucia", "Diego"];
+            const lastNames = ["Santos", "Garcia", "Rodriguez", "Martinez", "Lopez", "Fernandez", "Gonzalez", "Reyes", "Castillo", "Morales"];
+            const studentCount_num = parseInt(studentCount) || 0;
+            
+            let studentsHTML = "";
+            for (let i = 0; i < Math.min(studentCount_num, 10); i++) {
+                const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+                const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+                const initials = (firstName[0] + lastName[0]).toUpperCase();
+                const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`;
+                studentsHTML += `
+                    <div class="student-item">
+                        <span class="student-avatar">${initials}</span>
+                        <div class="student-info">
+                            <p class="student-name">${firstName} ${lastName}</p>
+                            <p class="student-email">${email}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            studentsList.innerHTML = studentsHTML || '<p class="text-muted text-center">No students yet</p>';
+            studentsModal.show();
+        }
 
         renderMaterials();
     });

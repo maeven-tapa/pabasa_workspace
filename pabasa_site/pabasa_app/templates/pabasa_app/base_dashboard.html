@@ -202,10 +202,67 @@
         .help-links li {
             border: 1px solid var(--dash-border);
             border-radius: 0.6rem;
-            padding: 0.52rem 0.65rem;
+            padding: 0;
             background: #fbfbff;
+            font-size: 0.91rem;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .help-links li:hover {
+            border-color: var(--dash-primary);
+            background: rgba(31, 111, 139, 0.04);
+        }
+
+        .help-link-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.52rem 0.65rem;
+            width: 100%;
+            border: none;
+            background: transparent;
+            text-decoration: none;
             color: var(--dash-muted);
             font-size: 0.91rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: color 0.2s ease;
+            text-align: left;
+        }
+
+        .help-link-btn:hover {
+            color: var(--dash-primary);
+        }
+
+        .help-link-btn i {
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .help-content {
+            padding: 0.65rem;
+            border-top: 1px solid var(--dash-border);
+            background: rgba(31, 111, 139, 0.02);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            animation: slideDown 0.2s ease;
+        }
+
+        .help-content p {
+            margin: 0;
+            color: var(--dash-text);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                max-height: 500px;
+            }
         }
 
         .dashboard-main a {
@@ -892,11 +949,46 @@
                 </div>
                 <div class="help-panel-body">
                     <ul class="help-links">
-                        <li>How to create materials</li>
-                        <li>How to invite students</li>
-                        <li>How to assign practice materials</li>
-                        <li>How to view progress reports</li>
-                        <li>How to manage notifications</li>
+                        <li>
+                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-materials').style.display = document.getElementById('help-materials').style.display === 'none' ? 'block' : 'none'">
+                                <i class="bi bi-file-earmark-text"></i> How to create materials
+                            </button>
+                            <div id="help-materials" class="help-content" style="display: none;">
+                                <p>Log in to your teacher dashboard, navigate to your Class, click Create Material, and upload your content (PDF, image, or text). Students will see it in their assignments.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-invite').style.display = document.getElementById('help-invite').style.display === 'none' ? 'block' : 'none'">
+                                <i class="bi bi-person-plus"></i> How to invite students
+                            </button>
+                            <div id="help-invite" class="help-content" style="display: none;">
+                                <p>Go to your Class → Share → Copy the class code. Share this code with students. They can join by entering the code in their Student Dashboard.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-assign').style.display = document.getElementById('help-assign').style.display === 'none' ? 'block' : 'none'">
+                                <i class="bi bi-list-check"></i> How to assign practice
+                            </button>
+                            <div id="help-assign" class="help-content" style="display: none;">
+                                <p>Select your class → Choose students → Create assignment → Select materials → Set due date → Send. Students will receive notifications about the new assignment.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-reports').style.display = document.getElementById('help-reports').style.display === 'none' ? 'block' : 'none'">
+                                <i class="bi bi-graph-up"></i> How to view reports
+                            </button>
+                            <div id="help-reports" class="help-content" style="display: none;">
+                                <p>From your Dashboard → Progress Reports → Select your class or specific student → View detailed reading analytics, comprehension metrics, and performance trends.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-notify').style.display = document.getElementById('help-notify').style.display === 'none' ? 'block' : 'none'">
+                                <i class="bi bi-bell"></i> How to manage notifications
+                            </button>
+                            <div id="help-notify" class="help-content" style="display: none;">
+                                <p>Go to Profile → Account Security section → Toggle email and push notifications. You can also manage weekly digest preferences in the Preferences card.</p>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </aside>

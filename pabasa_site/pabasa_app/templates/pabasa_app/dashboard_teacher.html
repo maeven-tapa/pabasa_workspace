@@ -285,27 +285,11 @@
     }
 
     .class-card-delete {
-        position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        background: rgba(220, 38, 38, 0.9);
-        border: none;
-        color: white;
-        border-radius: 8px;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        padding: 0;
-        font-size: 0.9rem;
+        display: none !important;
     }
 
     .class-card-delete:hover {
-        background: rgba(220, 38, 38, 1);
+        display: none !important;
     }
 
     .class-code-pill {
@@ -499,15 +483,15 @@
             <form class="create-class-form" id="createClassForm">
                 <div class="teacher-field">
                     <label for="classNameInput">Class name / subject</label>
-                    <input class="form-control" id="classNameInput" type="text" value="Grade 3 Reading - Section A" required>
+                    <input class="form-control" id="classNameInput" type="text" placeholder="e.g., Grade 3 Reading - Section A" required>
                 </div>
                 <div class="teacher-field">
                     <label for="classHeaderInput">Header</label>
-                    <input class="form-control" id="classHeaderInput" type="text" value="READ" maxlength="12">
+                    <input class="form-control" id="classHeaderInput" type="text" placeholder="e.g., READ" maxlength="12">
                 </div>
                 <div class="teacher-field">
                     <label for="classDescriptionInput">Description</label>
-                    <textarea class="form-control" id="classDescriptionInput" rows="3">Daily Filipino reading practice, oral reading checks, and progress monitoring.</textarea>
+                    <textarea class="form-control" id="classDescriptionInput" rows="3" placeholder="Describe the class purpose, focus, or any special notes..."></textarea>
                 </div>
                 <div class="generated-code" aria-live="polite">
                     <div>
@@ -524,7 +508,7 @@
     <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
         <article class="teacher-stat-card" data-mark="C">
             <span>Classes</span>
-            <strong id="classCount">3</strong>
+            <strong id="classCount">0</strong>
             <small class="text-secondary">Active class spaces</small>
         </article>
         <article class="teacher-stat-card" data-mark="L">
@@ -564,48 +548,25 @@
             </div>
 
             <div class="class-list" id="classList">
-                <div class="class-card is-active" data-class-name="Grade 3 Reading - Section A" data-subject="Filipino Reading" data-code="PAB-4827" data-header="READ" data-description="Daily Filipino reading practice, oral reading checks, and progress monitoring." data-students="28">
-                    <button class="class-card-delete" type="button" title="Delete class" aria-label="Delete Grade 3 Reading - Section A class"><i class="bi bi-trash"></i></button>
-                    <span class="class-card-head">
-                        <strong>Grade 3 Reading - Section A</strong>
-                        <span class="class-code-pill">PAB-4827</span>
-                    </span>
-                    <span class="small text-secondary">Filipino Reading • 28 students</span>
-                </div>
-                <div class="class-card" data-class-name="Remedial Reading Group" data-subject="Intervention" data-code="RRG-9154" data-header="HELP" data-description="Small-group intervention for learners who need slower pacing and repeated oral reading." data-students="12">
-                    <button class="class-card-delete" type="button" title="Delete class" aria-label="Delete Remedial Reading Group class"><i class="bi bi-trash"></i></button>
-                    <span class="class-card-head">
-                        <strong>Remedial Reading Group</strong>
-                        <span class="class-code-pill">RRG-9154</span>
-                    </span>
-                    <span class="small text-secondary">Intervention • 12 students</span>
-                </div>
-                <div class="class-card" data-class-name="Advanced Fluency Circle" data-subject="Reading Enrichment" data-code="AFC-7302" data-header="FLOW" data-description="Enrichment activities for students ready for longer passages and smoother expression." data-students="10">
-                    <button class="class-card-delete" type="button" title="Delete class" aria-label="Delete Advanced Fluency Circle class"><i class="bi bi-trash"></i></button>
-                    <span class="class-card-head">
-                        <strong>Advanced Fluency Circle</strong>
-                        <span class="class-code-pill">AFC-7302</span>
-                    </span>
-                    <span class="small text-secondary">Reading Enrichment • 10 students</span>
-                </div>
+                <!-- Classes will be loaded from localStorage by JavaScript -->
             </div>
         </aside>
 
         <section class="class-workspace">
-            <article class="class-banner" id="classBanner" data-header="READ">
+            <article class="class-banner" id="classBanner" data-header="">
                 <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-                    <span class="dash-pill"><i class="bi bi-door-open"></i> Class code <strong id="activeClassCode">PAB-4827</strong></span>
-                    <button class="btn btn-sm btn-light border fw-bold" type="button" id="copyClassCodeBtn"><i class="bi bi-copy me-1"></i>Copy Code</button>
+                    <span class="dash-pill"><i class="bi bi-door-open"></i> Class code <strong id="activeClassCode">—</strong></span>
+                    <button class="btn btn-sm btn-light border fw-bold" type="button" id="copyClassCodeBtn" style="display: none;"><i class="bi bi-copy me-1"></i>Copy Code</button>
                 </div>
                 <div>
-                    <p class="teacher-kicker mb-2" id="activeClassSubject">Filipino Reading</p>
-                    <h3 id="activeClassName">Grade 3 Reading - Section A</h3>
-                    <p class="text-secondary mb-0" id="activeClassDescription">Daily Filipino reading practice, oral reading checks, and progress monitoring.</p>
+                    <p class="teacher-kicker mb-2" id="activeClassSubject"></p>
+                    <h3 id="activeClassName">No class selected</h3>
+                    <p class="text-secondary mb-0" id="activeClassDescription"></p>
                 </div>
                 <div class="class-meta-row">
-                    <div class="mini-metric"><strong id="activeStudentCount">28</strong><span class="small text-secondary">students joined</span></div>
-                    <div class="mini-metric"><strong>4</strong><span class="small text-secondary">assessment materials</span></div>
-                    <div class="mini-metric"><strong>8</strong><span class="small text-secondary">practice materials</span></div>
+                    <div class="mini-metric"><strong id="activeStudentCount">0</strong><span class="small text-secondary">students joined</span></div>
+                    <div class="mini-metric"><strong>0</strong><span class="small text-secondary">assessment materials</span></div>
+                    <div class="mini-metric"><strong>0</strong><span class="small text-secondary">practice materials</span></div>
                 </div>
             </article>
 

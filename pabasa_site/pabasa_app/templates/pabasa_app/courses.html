@@ -1,944 +1,3695 @@
 {% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
 
 {% block extra_head %}
 <style>
-    .material-items-list {
-        display: grid;
-        gap: 0.75rem;
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 12px;
-        padding: 0.85rem;
-        background: #fffdf7;
-        max-height: 300px;
-        overflow-y: auto;
-    }
-
-    .material-item-row {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto auto;
-        align-items: center;
-        gap: 0.75rem;
-        background: #fff;
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 8px;
-        padding: 0.65rem;
-    }
-
-    .material-item-number {
-        background: var(--dash-primary-soft);
-        color: var(--dash-primary-deep);
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 0.85rem;
-        flex-shrink: 0;
-    }
-
-    .material-item-text {
-        word-break: break-word;
-        color: var(--dash-text);
-        font-size: 0.95rem;
-        padding: 0.25rem 0;
-    }
-
-    .material-item-actions {
-        display: flex;
-        gap: 0.5rem;
-        flex-shrink: 0;
-    }
-
-    .material-item-edit,
-    .material-item-delete {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 28px;
-        height: 28px;
-        flex-shrink: 0;
-        font-size: 0.9rem;
-    }
-
-    .material-item-edit {
-        color: var(--dash-primary-deep);
-    }
-
-    .material-item-edit:hover {
-        opacity: 0.7;
-    }
-
-    .material-item-delete {
-        color: #dc2626;
-    }
-
-    .material-item-delete:hover {
-        color: #991b1b;
-        opacity: 0.8;
-    }
-
-    .material-type-badge {
-        display: inline-block;
-        font-size: 0.7rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        background: var(--dash-primary-soft);
-        color: var(--dash-primary-deep);
-        margin-left: 0.5rem;
-    }
-
-    .locked-material-type {
-        align-items: center;
-        background:
-            linear-gradient(135deg, rgba(31, 111, 139, 0.1), rgba(255, 255, 255, 0.84));
-        border: 1px solid rgba(31, 111, 139, 0.16);
-        border-radius: 14px;
-        color: var(--dash-primary-deep);
-        display: flex;
-        font-weight: 800;
-        gap: 0.55rem;
-        min-height: 46px;
-        padding: 0.7rem 0.85rem;
-    }
-
-    .locked-material-type i {
-        align-items: center;
-        background: var(--dash-primary);
-        border-radius: 10px;
-        color: #fff;
-        display: inline-flex;
-        height: 28px;
-        justify-content: center;
-        width: 28px;
-    }
-
-    .empty-materials-state {
-        color: var(--dash-muted);
-        text-align: center;
-        padding: 1.5rem;
-        font-size: 0.95rem;
-    }
-
-    .materials-home {
+    .classes-home {
         display: grid;
         gap: 1rem;
     }
 
-    .materials-grid {
-        align-items: stretch;
+    .classes-grid {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     }
 
-    .material-category-card {
-        background:
-            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 253, 247, 0.94));
+    .class-card-full {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 253, 247, 0.94));
         border: 1px solid rgba(27, 26, 23, 0.08);
         border-radius: 20px;
         box-shadow: var(--dash-shadow);
+        cursor: pointer;
         display: grid;
         gap: 1rem;
         height: 100%;
-        min-height: 260px;
+        min-height: 280px;
         overflow: hidden;
-        padding: 1.05rem;
+        padding: 1.25rem;
         position: relative;
         transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     }
 
-    .material-category-card:hover {
+    .class-card-full:hover {
         border-color: rgba(31, 111, 139, 0.3);
         box-shadow: 0 24px 42px rgba(27, 26, 23, 0.12);
         transform: translateY(-3px);
     }
 
-    .material-category-card::before {
+    .class-card-full::before {
         content: "";
         inset: 0;
         pointer-events: none;
         position: absolute;
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.08), transparent 46%);
     }
 
-    .material-category-card.word::before {
-        background: linear-gradient(135deg, rgba(31, 111, 139, 0.18), transparent 46%);
-    }
-
-    .material-category-card.sentence::before {
-        background: linear-gradient(135deg, rgba(122, 139, 95, 0.18), transparent 46%);
-    }
-
-    .material-category-card.paragraph::before {
-        background: linear-gradient(135deg, rgba(185, 95, 68, 0.16), transparent 46%);
-    }
-
-    .material-category-card > * {
+    .class-card-full > * {
         position: relative;
         z-index: 1;
     }
 
-    .material-category-head {
-        align-items: flex-start;
-        display: flex;
-        gap: 0.85rem;
-        justify-content: space-between;
-    }
-
-    .material-category-icon {
-        align-items: center;
-        border-radius: 18px;
-        color: #fff;
-        display: inline-flex;
-        flex: 0 0 auto;
-        font-size: 1.35rem;
-        height: 56px;
-        justify-content: center;
-        width: 56px;
-    }
-
-    .material-category-icon.word { background: #1f6f8b; }
-    .material-category-icon.sentence { background: #7a8b5f; }
-    .material-category-icon.paragraph { background: #b95f44; }
-
-    .material-category-copy {
+    .class-card-header {
         display: grid;
-        gap: 0.45rem;
+        gap: 0.5rem;
     }
 
-    .material-category-copy h3 {
-        font-size: 1.15rem;
+    .class-code-badge {
+        background: var(--dash-primary-soft);
+        border-radius: 6px;
+        color: var(--dash-primary-deep);
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        padding: 0.35rem 0.6rem;
+        width: fit-content;
+    }
+
+    .class-card-full h3 {
+        font-size: 1.35rem;
         font-weight: 800;
         margin: 0;
+        color: var(--dash-ink);
     }
 
-    .material-category-copy p {
+    .class-card-full .class-description {
         color: var(--dash-ink-soft);
+        font-size: 0.95rem;
         line-height: 1.55;
         margin: 0;
     }
 
-    .material-category-stats {
+    .class-card-stats {
         display: grid;
         gap: 0.65rem;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .material-stat-tile {
-        background: rgba(255, 255, 255, 0.74);
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 14px;
-        padding: 0.7rem;
-    }
-
-    .material-stat-tile strong {
-        display: block;
-        font-size: 1.05rem;
-        line-height: 1;
-    }
-
-    .material-stat-tile span {
-        color: var(--dash-muted);
-        display: block;
-        font-size: 0.72rem;
-        font-weight: 700;
-        margin-top: 0.32rem;
-    }
-
-    .material-card-actions {
-        display: flex;
-        gap: 0.55rem;
         margin-top: auto;
     }
 
-    .material-card-actions .btn {
+    .class-stat {
+        background: rgba(255, 255, 255, 0.74);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 12px;
+        padding: 0.7rem;
+    }
+
+    .class-stat strong {
+        display: block;
+        font-size: 1.15rem;
+        line-height: 1;
+    }
+
+    .class-stat span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-top: 0.4rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .class-card-actions {
+        display: flex;
+        gap: 0.65rem;
+        margin-top: 1rem;
+    }
+
+    .class-card-actions .btn {
         border-radius: 999px;
         font-weight: 700;
-    }
-
-    .material-card-actions .btn-primary,
-    .material-card-actions .btn-outline-secondary {
+        font-size: 0.9rem;
+        min-height: 44px;
         flex: 1;
     }
 
-    .materials-category-grid {
-        display: grid;
-        gap: 1.5rem;
-    }
-
-    .materials-category {
-        display: grid;
-        gap: 0.75rem;
-    }
-
-    .category-label {
-        display: flex;
+    .class-card-delete-btn {
         align-items: center;
-        gap: 0.5rem;
-        font-weight: 700;
-        color: var(--dash-primary-deep);
-        margin-bottom: 0.5rem;
-    }
-
-    .category-label .category-icon {
-        font-size: 1.25rem;
-    }
-
-    .material-card {
-        background: #fffdf7;
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 14px;
-        padding: 0.85rem;
+        background: rgba(199, 39, 59, 0.08);
+        border: 1px solid rgba(199, 39, 59, 0.2);
+        border-radius: 10px;
+        color: #c7273b;
         cursor: pointer;
+        display: inline-flex;
+        height: 36px;
+        justify-content: center;
+        opacity: 0;
+        padding: 0;
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
         transition: all 0.2s ease;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
+        width: 36px;
+        z-index: 2;
     }
 
-    .material-card:hover {
-        background: #fff;
-        border-color: rgba(31, 111, 139, 0.24);
-        box-shadow: 0 4px 12px rgba(27, 26, 23, 0.08);
-        transform: translateX(4px);
-    }
-
-    .material-card-content {
-        min-width: 0;
-        flex: 1;
-    }
-
-    .material-card-title {
-        font-weight: 600;
-        margin: 0;
-        color: var(--dash-ink);
-        word-break: break-word;
-    }
-
-    .material-card-meta {
-        font-size: 0.8rem;
-        color: var(--dash-muted);
-        margin: 0;
-    }
-
-    .material-card-action {
-        color: var(--dash-primary-deep);
-        opacity: 0.6;
-        transition: opacity 0.2s ease;
-    }
-
-    .material-card:hover .material-card-action {
+    .class-card-full:hover .class-card-delete-btn {
         opacity: 1;
     }
 
-    .empty-category-state {
+    .class-card-delete-btn:hover {
+        background: rgba(199, 39, 59, 0.16);
+        border-color: rgba(199, 39, 59, 0.4);
+    }
+
+    .class-card-delete-btn:active {
+        transform: scale(0.95);
+    }
+
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        background: #fffdf7;
+        border: 2px dashed rgba(27, 26, 23, 0.12);
+        border-radius: 20px;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
         color: var(--dash-muted);
-        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+        color: var(--dash-muted);
+        font-size: 1.25rem;
+        margin: 0.5rem 0;
+    }
+
+    .empty-state p {
+        color: var(--dash-muted);
+        margin: 0;
+    }
+
+    .course-modal-content {
+        background: linear-gradient(135deg, #f6f8f7 0%, #f0f4f3 100%);
+        border: 1px solid rgba(31, 111, 139, 0.1);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(27, 26, 23, 0.15);
+    }
+
+    .course-modal-header {
+        background: linear-gradient(135deg, #ffffff 0%, #f9fbfa 100%);
+        border-bottom: 2px solid rgba(31, 111, 139, 0.08);
+        padding: 1.5rem 2rem;
+        position: relative;
+    }
+    
+    .course-modal-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
+    }
+    
+    .course-modal-header .btn-close {
+        opacity: 0.6;
+        transition: opacity 0.2s ease;
+    }
+    
+    .course-modal-header .btn-close:hover {
+        opacity: 1;
+    }
+
+    .course-modal-body {
+        display: grid;
+        flex: 1;
+        grid-template-columns: 220px minmax(0, 1fr);
+        overflow: hidden;
+        padding: 0;
+    }
+
+    .course-sidebar {
+        background: #ffffff;
+        border-right: 1px solid rgba(27, 26, 23, 0.08);
+        overflow-y: auto;
         padding: 1rem;
+    }
+
+    .course-tabs {
+        display: grid;
+        gap: 0.45rem;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .course-tab-content {
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+
+    .workspace-shell {
+        margin: 0 auto;
+        max-width: 1120px;
+    }
+
+    .workspace-hero {
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+
+    .workspace-hero.is-compact {
+        margin-bottom: 0.85rem;
+        padding: 0.9rem 1rem;
+    }
+
+    .workspace-hero h5 {
+        color: var(--dash-ink);
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .workspace-hero p {
+        color: var(--dash-muted);
+        font-size: 0.85rem;
+        margin: 0.25rem 0 0;
+    }
+
+    .workspace-action-btn {
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        min-height: 40px;
+        white-space: nowrap;
+    }
+
+    /* ===== STREAM TAB STYLES ===== */
+    .stream-container {
+        max-width: none;
+        margin: 0;
+    }
+
+    .stream-layout {
+        align-items: start;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1fr) 280px;
+    }
+
+    .stream-main {
+        display: grid;
+        gap: 0.85rem;
+        min-width: 0;
+    }
+
+    .stream-aside {
+        display: grid;
+        gap: 0.85rem;
+        min-width: 0;
+        position: sticky;
+        top: 1rem;
+    }
+
+    .stream-feed {
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    /* ===== PINNED SPOTLIGHT SECTION ===== */
+    .pinned-spotlight {
+        display: none;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 1.25rem;
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.06), rgba(31, 111, 139, 0.03));
+        border: 2px solid rgba(31, 111, 139, 0.2);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .pinned-spotlight::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.08) 0%, transparent 100%);
+        pointer-events: none;
+    }
+
+    .pinned-spotlight.has-items {
+        display: grid;
+    }
+
+    .pinned-spotlight-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+        color: var(--dash-primary-deep);
+        font-size: 0.95rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .pinned-spotlight-header i {
+        font-size: 1.2rem;
+        color: var(--dash-primary);
+        filter: drop-shadow(0 2px 4px rgba(31, 111, 139, 0.2));
+    }
+
+    .pinned-spotlight-content {
+        display: grid;
+        gap: 0.85rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .stream-feed {
+        display: grid;
+        gap: 0.85rem;
+    }
+
+    .stream-composer {
+        align-items: center;
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        display: grid;
+        gap: 0.85rem;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        padding: 0.9rem;
+    }
+
+    .stream-composer-avatar {
+        align-items: center;
+        background: var(--dash-primary);
+        border-radius: 12px;
+        color: #fff;
+        display: inline-flex;
+        font-weight: 800;
+        height: 42px;
+        justify-content: center;
+        width: 42px;
+    }
+
+    .stream-composer-prompt {
+        background: #f8faf9;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        color: var(--dash-muted);
+        min-width: 0;
+        padding: 0.75rem 0.9rem;
+    }
+
+    .stream-panel {
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        padding: 0.95rem;
+    }
+
+    .stream-panel-title {
+        align-items: center;
+        color: var(--dash-ink);
+        display: flex;
+        font-size: 0.9rem;
+        font-weight: 800;
+        gap: 0.45rem;
+        margin: 0 0 0.75rem;
+    }
+
+    .stream-stats-grid {
+        display: grid;
+        gap: 0.55rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stream-stat {
+        background: #f8faf9;
+        border: 1px solid rgba(27, 26, 23, 0.06);
+        border-radius: 8px;
+        padding: 0.7rem;
+    }
+
+    .stream-stat strong {
+        color: var(--dash-primary-deep);
+        display: block;
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    .stream-stat span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        margin-top: 0.35rem;
+        text-transform: uppercase;
+    }
+
+    .stream-checklist {
+        display: grid;
+        gap: 0.6rem;
+        margin: 0;
+        padding: 0;
+    }
+
+    .stream-checklist li {
+        align-items: start;
+        color: var(--dash-muted);
+        display: grid;
+        font-size: 0.82rem;
+        gap: 0.5rem;
+        grid-template-columns: auto minmax(0, 1fr);
+        line-height: 1.45;
+        list-style: none;
+    }
+
+    .stream-checklist i {
+        color: var(--dash-primary);
+        margin-top: 0.1rem;
+    }
+
+    .stream-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        gap: 1rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid rgba(31, 111, 139, 0.1);
+    }
+
+    .stream-header h5 {
+        margin: 0;
+        font-weight: 800;
+        font-size: 1.35rem;
+        color: var(--dash-ink);
+    }
+
+    .stream-post-btn {
+        border-radius: 10px;
+        font-weight: 700;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        box-shadow: 0 2px 8px rgba(31, 111, 139, 0.15);
+        transition: all 0.2s ease;
+    }
+
+    .stream-post-btn:hover {
+        box-shadow: 0 4px 16px rgba(31, 111, 139, 0.25);
+        transform: translateY(-2px);
+    }
+
+    .announcement-card {
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-left: 3px solid var(--dash-primary);
+        border-radius: 8px;
+        padding: 1.1rem;
+        margin-bottom: 0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .announcement-card::before {
+        content: none;
+    }
+
+    .announcement-card:hover {
+        border-color: rgba(31, 111, 139, 0.25);
+        box-shadow: 0 8px 24px rgba(31, 111, 139, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .announcement-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.85rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid rgba(27, 26, 23, 0.06);
+    }
+
+    .announcement-author {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        flex: 1;
+    }
+
+    .announcement-avatar {
+        width: 42px;
+        height: 42px;
+        background: var(--dash-primary-soft);
+        color: #fff;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        color: var(--dash-primary-deep);
+        box-shadow: none;
+    }
+
+    .announcement-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .announcement-info h6 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--dash-ink);
+    }
+
+    .announcement-meta {
+        font-size: 0.8rem;
+        color: var(--dash-muted);
+        margin: 0;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .announcement-meta i {
+        font-size: 0.65rem;
+    }
+
+    .announcement-actions {
+        display: flex;
+        gap: 0.35rem;
+        opacity: 1;
+        transition: opacity 0.2s ease;
+    }
+
+    .announcement-card:hover .announcement-actions {
+        opacity: 1;
+    }
+
+    .announcement-actions .btn-icon {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: transparent;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        cursor: pointer;
+        color: var(--dash-muted);
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+    .announcement-actions .btn-icon:hover {
+        background: var(--dash-primary-soft);
+        color: var(--dash-primary-deep);
+        border-color: var(--dash-primary);
+    }
+
+    .announcement-content {
+        color: var(--dash-ink);
+        line-height: 1.65;
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        letter-spacing: 0.2px;
+    }
+
+    .announcement-engagement {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0;
+        border-top: 1px solid rgba(27, 26, 23, 0.06);
+        font-size: 0.8rem;
+        color: var(--dash-muted);
+        flex-wrap: wrap;
+        padding-top: 0.75rem;
+    }
+
+    .announcement-engagement-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        cursor: pointer;
+        transition: color 0.2s ease;
+        background: #f7f9f8;
+        border: 1px solid rgba(27, 26, 23, 0.06);
+        border-radius: 999px;
+        padding: 0.38rem 0.65rem;
+    }
+
+    .announcement-engagement-item:hover {
+        color: var(--dash-primary-deep);
+    }
+
+    .announcement-engagement-item i {
+        font-size: 0.85rem;
+    }
+
+    /* Reactions Section */
+    .announcement-reactions {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0;
+        border-top: 0;
+        flex-wrap: wrap;
+    }
+
+    .reaction-btn {
+        padding: 0.35rem 0.65rem;
+        border: 1px solid rgba(31, 111, 139, 0.2);
+        border-radius: 16px;
+        background: rgba(31, 111, 139, 0.05);
+        color: var(--dash-primary-deep);
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        white-space: nowrap;
+    }
+
+    .reaction-btn:hover {
+        background: rgba(31, 111, 139, 0.15);
+        border-color: rgba(31, 111, 139, 0.4);
+    }
+
+    .reaction-btn.active {
+        background: rgba(31, 111, 139, 0.2);
+        font-weight: 600;
+    }
+
+    .reaction-btn i {
+        font-size: 0.9rem;
+    }
+
+    .reaction-count {
+        font-size: 0.75rem;
+        min-width: 18px;
         text-align: center;
     }
 
-    @media (max-width: 640px) {
-        .material-category-stats,
-        .material-card-actions {
+    /* Comments Section */
+    .announcement-comments {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(27, 26, 23, 0.06);
+    }
+
+    .comment-item {
+        margin-bottom: 0.75rem;
+        padding: 0.5rem;
+        background: rgba(27, 26, 23, 0.02);
+        border-radius: 8px;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+
+    .comment-item:hover {
+        background: rgba(27, 26, 23, 0.04);
+    }
+
+    .comment-author {
+        font-weight: 600;
+        color: var(--dash-ink);
+        margin-bottom: 0.25rem;
+    }
+
+    .comment-text {
+        color: var(--dash-ink-soft);
+        line-height: 1.5;
+    }
+
+    .comment-time {
+        font-size: 0.75rem;
+        color: var(--dash-muted);
+        margin-top: 0.25rem;
+    }
+
+    .comment-edit-btn, .comment-delete-btn {
+        padding: 0.25rem 0.35rem;
+        border: none;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--dash-muted);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.75rem;
+    }
+
+    .comment-edit-btn:hover {
+        background: rgba(31, 111, 139, 0.2);
+        color: var(--dash-primary-deep);
+    }
+
+    .comment-delete-btn:hover {
+        background: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+    }
+
+    .add-comment-btn {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px dashed rgba(31, 111, 139, 0.3);
+        border-radius: 8px;
+        background: rgba(31, 111, 139, 0.03);
+        color: var(--dash-primary-deep);
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s ease;
+    }
+
+    .add-comment-btn:hover {
+        background: rgba(31, 111, 139, 0.08);
+        border-color: rgba(31, 111, 139, 0.5);
+    }
+
+    /* Pinned State */
+    .announcement-card.pinned {
+        border: 2px solid var(--dash-primary);
+        background: linear-gradient(180deg, rgba(31, 111, 139, 0.03) 0%, rgba(255, 253, 247, 0.94) 100%);
+    }
+
+    .announcement-card.pinned .announcement-header::after {
+        content: 'PINNED';
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--dash-primary);
+        margin-left: auto;
+        padding: 0.3rem 0.6rem;
+        background: rgba(31, 111, 139, 0.1);
+        border-radius: 4px;
+    }
+
+    /* Modern Tabs Styling */
+    .modern-tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 2px solid rgba(27, 26, 23, 0.1);
+        background: linear-gradient(90deg, rgba(255,255,255,0.5), rgba(31,111,139,0.02));
+        border-radius: 16px 16px 0 0;
+        padding: 0.5rem;
+        position: relative;
+    }
+
+    .modern-tabs .nav-item {
+        position: relative;
+        flex: 1;
+    }
+
+    .modern-tabs .nav-link {
+        border: none;
+        background: transparent;
+        color: var(--dash-muted);
+        font-weight: 600;
+        padding: 0.85rem 1.25rem;
+        border-radius: 12px 12px 0 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        overflow: hidden;
+    }
+
+    .modern-tabs .nav-link::before {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modern-tabs .nav-link:hover {
+        background: rgba(31, 111, 139, 0.08);
+        color: var(--dash-primary);
+    }
+
+    .modern-tabs .nav-link.active {
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.15), rgba(31, 111, 139, 0.08));
+        color: var(--dash-primary-deep);
+        box-shadow: 0 2px 8px rgba(31, 111, 139, 0.12);
+    }
+
+    .modern-tabs .nav-link.active::before {
+        transform: scaleX(1);
+    }
+
+    .modern-tabs .nav-link i {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    /* Vertical Tabs Styling */
+    .vertical-tabs {
+        list-style: none;
+    }
+
+    .vertical-nav-link {
+        border: none;
+        background: transparent;
+        color: var(--dash-muted);
+        border-radius: 8px;
+        font-weight: 700;
+        transition: all 0.25s ease;
+        position: relative;
+        border-left: 3px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        min-height: 44px;
+        padding: 0.75rem 0.9rem;
+        width: 100%;
+    }
+
+    .vertical-nav-link:hover {
+        background: rgba(31, 111, 139, 0.08);
+        color: var(--dash-primary);
+    }
+
+    .vertical-nav-link.active {
+        background: rgba(31, 111, 139, 0.12);
+        color: var(--dash-primary-deep);
+        border-left-color: var(--dash-primary);
+        font-weight: 800;
+    }
+
+    /* Inline Comment Input */
+    .comment-input-section {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px dashed rgba(31, 111, 139, 0.3);
+    }
+
+    .comment-input-box {
+        display: none;
+        gap: 0.5rem;
+    }
+
+    .comment-input-box.active {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .comment-textarea {
+        width: 100%;
+        padding: 0.65rem 0.85rem;
+        border: 1px solid rgba(31, 111, 139, 0.3);
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-family: inherit;
+        resize: none;
+        transition: all 0.2s ease;
+        background: rgba(31, 111, 139, 0.02);
+    }
+
+    .comment-textarea:focus {
+        outline: none;
+        border-color: var(--dash-primary);
+        background: rgba(31, 111, 139, 0.05);
+        box-shadow: 0 0 0 3px rgba(31, 111, 139, 0.1);
+    }
+
+    .comment-input-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .comment-input-actions button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .comment-input-actions .btn-submit {
+        background: var(--dash-primary);
+        color: white;
+    }
+
+    .comment-input-actions .btn-submit:hover {
+        background: var(--dash-primary-deep);
+        box-shadow: 0 2px 8px rgba(31, 111, 139, 0.25);
+    }
+
+    .comment-input-actions .btn-cancel {
+        background: rgba(27, 26, 23, 0.08);
+        color: var(--dash-ink-soft);
+    }
+
+    .comment-input-actions .btn-cancel:hover {
+        background: rgba(27, 26, 23, 0.15);
+    }
+
+    /* Comment Reactions */
+    .comment-reactions {
+        display: flex;
+        gap: 0.3rem;
+        margin-top: 0.4rem;
+    }
+
+    .comment-reaction-btn {
+        padding: 0.25rem 0.5rem;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--dash-muted);
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .comment-reaction-btn:hover {
+        background: rgba(31, 111, 139, 0.1);
+        color: var(--dash-primary);
+    }
+
+    .comment-reaction-btn.active {
+        background: rgba(31, 111, 139, 0.2);
+        color: var(--dash-primary-deep);
+    }
+
+    .stream-empty {
+        text-align: center;
+        padding: 3rem 1.5rem;
+        background: #fff;
+        border-radius: 8px;
+        border: 1px dashed rgba(31, 111, 139, 0.22);
+        color: var(--dash-muted);
+        margin-top: 0;
+    }
+
+    .stream-empty i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: rgba(31, 111, 139, 0.3);
+    }
+
+    .stream-empty h6 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: var(--dash-ink);
+    }
+
+    .stream-empty p {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+    /* ===== READINGS TAB STYLES ===== */
+    .readings-section {
+        background: #ffffff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 1rem;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .reading-category-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .readings-section-header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: flex-start;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid rgba(31, 111, 139, 0.1);
+    }
+
+    .readings-section-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    .readings-section-icon.word {
+        background: #1f6f8b;
+    }
+
+    .readings-section-icon.sentence {
+        background: #7a8b5f;
+    }
+
+    .readings-section-icon.paragraph {
+        background: #b95f44;
+    }
+
+    .readings-section-icon.assessment {
+        background: #7c3aed;
+    }
+
+    .readings-section-title {
+        font-weight: 700;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .readings-section-copy {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .readings-section-copy p {
+        color: var(--dash-muted);
+        font-size: 0.78rem;
+        line-height: 1.45;
+        margin: 0.25rem 0 0;
+    }
+
+    .readings-count-badge {
+        background: rgba(27, 26, 23, 0.08);
+        color: var(--dash-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.35rem 0.55rem;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        align-self: center;
+    }
+
+    .readings-add-btn {
+        grid-column: 1 / -1;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        gap: 0.4rem;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .readings-list {
+        display: grid;
+        gap: 0.75rem;
+        align-content: flex-start;
+        padding: 0;
+    }
+
+    .material-card-modern {
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        padding: 0.85rem;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+        transition: all 0.2s ease;
+        justify-content: space-between;
+        align-items: start;
+        min-width: 0;
+    }
+
+    .material-card-modern:hover {
+        border-color: rgba(31, 111, 139, 0.24);
+        box-shadow: 0 4px 12px rgba(27, 26, 23, 0.08);
+        background: #fffdf7;
+    }
+
+    .material-info {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.75rem;
+        min-width: 0;
+        flex: 1;
+        align-items: start;
+    }
+
+    .material-leading-icon {
+        align-items: center;
+        background: #f4f7f6;
+        border: 1px solid rgba(27, 26, 23, 0.06);
+        border-radius: 8px;
+        color: var(--dash-primary-deep);
+        display: flex;
+        flex-shrink: 0;
+        height: 40px;
+        justify-content: center;
+        width: 40px;
+    }
+
+    .material-title {
+        font-weight: 800;
+        font-size: 0.95rem;
+        margin: 0;
+        color: var(--dash-ink);
+        line-height: 1.35;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .material-preview {
+        font-size: 0.9rem;
+        color: var(--dash-muted);
+        margin: 0.25rem 0 0;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .material-meta {
+        font-size: 0.85rem;
+        color: var(--dash-muted);
+        margin: 0.55rem 0 0;
+        display: flex;
+        gap: 0.45rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .material-type-badge {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: capitalize;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        background: var(--dash-primary-soft);
+        color: var(--dash-primary-deep);
+    }
+
+    .material-type-badge.assessment {
+        background: rgba(220, 38, 38, 0.1);
+        color: #dc2626;
+    }
+
+    .material-type-badge.both {
+        background: rgba(101, 163, 13, 0.1);
+        color: #65a30d;
+    }
+
+    .material-actions {
+        display: flex;
+        gap: 0.35rem;
+        justify-content: flex-end;
+        flex-shrink: 0;
+    }
+
+    .material-btn {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border-radius: 8px;
+        border: 1px solid rgba(27, 26, 23, 0.12);
+        background: #fff;
+        color: var(--dash-muted);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+    .material-btn:hover {
+        border-color: rgba(31, 111, 139, 0.24);
+        background: var(--dash-primary-soft);
+        color: var(--dash-primary-deep);
+    }
+
+    .material-btn.delete:hover {
+        border-color: rgba(220, 38, 38, 0.24);
+        background: rgba(220, 38, 38, 0.1);
+        color: #dc2626;
+    }
+
+    .readings-empty {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #f9fbfa;
+        border: 1px dashed rgba(27, 26, 23, 0.12);
+        border-radius: 12px;
+        color: var(--dash-muted);
+    }
+
+    .readings-empty i {
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+    }
+
+    .reading-preview-list {
+        background: #f8faf9;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        display: grid;
+        gap: 0.5rem;
+        margin: 0;
+        max-height: 280px;
+        overflow-y: auto;
+        padding: 0.75rem;
+    }
+
+    .reading-preview-item {
+        background: #ffffff;
+        border: 1px solid rgba(27, 26, 23, 0.06);
+        border-radius: 8px;
+        color: var(--dash-ink);
+        line-height: 1.5;
+        padding: 0.7rem 0.8rem;
+    }
+
+    .system-modal {
+        border: 0;
+        border-radius: 16px;
+        box-shadow: 0 30px 90px rgba(20, 24, 28, 0.3);
+        overflow: hidden;
+        background: linear-gradient(135deg, #ffffff 0%, #f9fbfa 100%);
+        border: 1px solid rgba(31, 111, 139, 0.1);
+    }
+
+    .system-modal-accent {
+        height: 4px;
+        background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
+    }
+
+    .system-modal-accent.danger {
+        background: linear-gradient(90deg, #dc2626, #ef4444);
+    }
+
+    .system-modal-icon {
+        align-items: center;
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.12), rgba(31, 111, 139, 0.08));
+        border-radius: 12px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-size: 1.8rem;
+        height: 56px;
+        justify-content: center;
+        margin-bottom: 0.85rem;
+        width: 56px;
+        border: 2px solid rgba(31, 111, 139, 0.15);
+        box-shadow: 0 4px 16px rgba(31, 111, 139, 0.1);
+    }
+
+    .system-modal-icon.danger {
+        background: linear-gradient(135deg, rgba(220, 38, 38, 0.12), rgba(220, 38, 38, 0.08));
+        color: #dc2626;
+        border-color: rgba(220, 38, 38, 0.15);
+        box-shadow: 0 4px 16px rgba(220, 38, 38, 0.1);
+    }
+
+    .system-modal .modal-title {
+        color: var(--dash-ink);
+        font-weight: 800;
+        font-size: 1.35rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .system-modal .modal-body {
+        color: var(--dash-ink-soft);
+        line-height: 1.65;
+        font-size: 0.95rem;
+        padding: 1.5rem 0;
+    }
+    
+    .system-modal .modal-footer {
+        border-top: 1px solid rgba(27, 26, 23, 0.08);
+        padding: 1.5rem 2rem;
+        background: rgba(31, 111, 139, 0.02);
+    }
+    
+    .system-modal .modal-footer .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        min-height: 42px;
+        padding: 0.65rem 1.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .system-modal .modal-footer .btn-primary {
+        background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-soft));
+        border: none;
+        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.25);
+    }
+    
+    .system-modal .modal-footer .btn-primary:hover {
+        box-shadow: 0 8px 24px rgba(31, 111, 139, 0.35);
+        transform: translateY(-2px);
+    }
+
+    /* ===== ASSESSMENT TAB STYLES ===== */
+    .assessment-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+
+    .assessment-card {
+        background: #ffffff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .assessment-card:hover {
+        border-color: rgba(124, 58, 237, 0.22);
+        box-shadow: 0 10px 24px rgba(27, 26, 23, 0.08);
+        transform: translateY(-2px);
+    }
+
+    .assessment-card-header {
+        align-items: flex-start;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+    }
+
+    .assessment-icon {
+        align-items: center;
+        background: rgba(124, 58, 237, 0.1);
+        border-radius: 8px;
+        color: #6d28d9;
+        display: flex;
+        flex-shrink: 0;
+        height: 42px;
+        justify-content: center;
+        width: 42px;
+    }
+
+    .assessment-title {
+        color: var(--dash-ink);
+        font-size: 0.98rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .assessment-meta {
+        color: var(--dash-muted);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 0.8rem;
+        gap: 0.65rem;
+        margin: 0.35rem 0 0;
+    }
+
+    .assessment-stats {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .assessment-stat {
+        background: #f8faf9;
+        border: 1px solid rgba(27, 26, 23, 0.06);
+        border-radius: 8px;
+        padding: 0.65rem;
+    }
+
+    .assessment-stat strong {
+        color: var(--dash-ink);
+        display: block;
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .assessment-stat span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        margin-top: 0.4rem;
+        text-transform: uppercase;
+    }
+
+    .assessment-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+
+    .assessment-empty {
+        background: #ffffff;
+        border: 1px dashed rgba(27, 26, 23, 0.14);
+        border-radius: 8px;
+        color: var(--dash-muted);
+        grid-column: 1 / -1;
+        padding: 3rem 1rem;
+        text-align: center;
+    }
+
+    .assessment-empty i {
+        color: rgba(124, 58, 237, 0.35);
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* ===== STUDENTS TAB STYLES ===== */
+    .students-toolbar {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        padding: 0.85rem;
+    }
+
+    .students-search {
+        flex: 1;
+        min-width: 200px;
+        align-items: center;
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.12);
+        border-radius: 8px;
+        display: grid;
+        gap: 0.55rem;
+        grid-template-columns: auto minmax(0, 1fr);
+        padding: 0 0.85rem;
+    }
+
+    .students-search input {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        font-size: 0.9rem;
+        min-width: 0;
+        padding: 0.65rem 0;
+    }
+
+    .students-search input:focus {
+        border: 0;
+        box-shadow: none;
+    }
+
+    .students-search-icon {
+        color: var(--dash-muted);
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-size: 0.95rem;
+        line-height: 1;
+    }
+
+    .students-search input::placeholder {
+        color: var(--dash-muted);
+    }
+
+    .students-filter {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(27, 26, 23, 0.12);
+        background: #fff;
+        color: var(--dash-ink);
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+        background: var(--dash-primary);
+        color: #fff;
+        border-color: var(--dash-primary);
+    }
+
+    .students-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 0.85rem;
+    }
+
+    .student-card-modern {
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        padding: 0.95rem;
+        text-align: left;
+        transition: all 0.2s ease;
+        display: grid;
+        gap: 0.8rem;
+    }
+
+    .student-card-modern:hover {
+        border-color: rgba(31, 111, 139, 0.24);
+        box-shadow: 0 8px 20px rgba(27, 26, 23, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .student-avatar-large {
+        width: 46px;
+        height: 46px;
+        background: var(--dash-primary-soft);
+        color: var(--dash-primary-deep);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.15rem;
+        margin: 0;
+    }
+
+    .student-card-head {
+        align-items: center;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .student-identity {
+        min-width: 0;
+    }
+
+    .student-name {
+        font-weight: 700;
+        font-size: 1rem;
+        margin: 0;
+        color: var(--dash-ink);
+    }
+
+    .student-email {
+        font-size: 0.8rem;
+        color: var(--dash-muted);
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .student-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .student-stat {
+        background: #f8faf9;
+        border: 1px solid rgba(27, 26, 23, 0.06);
+        border-radius: 8px;
+        display: grid;
+        gap: 0.25rem;
+        padding: 0.65rem;
+    }
+
+    .student-stat-value {
+        font-weight: 700;
+        color: var(--dash-primary-deep);
+    }
+
+    .student-stat-label {
+        color: var(--dash-muted);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .students-empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 2.5rem 1rem;
+        background: #fff;
+        border: 1px dashed rgba(27, 26, 23, 0.14);
+        border-radius: 8px;
+        color: var(--dash-muted);
+    }
+
+    .students-empty i {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    @media (max-width: 768px) {
+        .classes-grid {
             grid-template-columns: 1fr;
         }
 
-        .material-card-actions {
+        .course-modal-body {
+            grid-template-columns: 1fr;
+        }
+
+        .course-sidebar {
+            border-bottom: 1px solid rgba(27, 26, 23, 0.08);
+            border-right: 0;
+            overflow-x: auto;
+        }
+
+        .course-tabs {
+            display: flex;
+            min-width: max-content;
+        }
+
+        .course-tab-content {
+            padding: 1rem;
+        }
+
+        .stream-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .stream-aside {
+            position: static;
+        }
+
+        .stream-composer {
+            grid-template-columns: auto minmax(0, 1fr);
+        }
+
+        .stream-composer .stream-post-btn {
+            grid-column: 1 / -1;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .workspace-hero {
+            align-items: flex-start;
             flex-direction: column;
         }
+
+        .students-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .students-toolbar {
+            flex-direction: column;
+        }
+
+        .students-search {
+            min-width: unset;
+            width: 100%;
+        }
+
+        .material-card-modern {
+            grid-template-columns: 1fr;
+        }
+
+        .reading-category-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .readings-section-header {
+            grid-template-columns: auto minmax(0, 1fr);
+        }
+
+        .readings-count-badge,
+        .readings-add-btn {
+            grid-column: 1 / -1;
+        }
+    }
+
+    /* ===== MODERN BOOTSTRAP MODAL OVERRIDES ===== */
+    .modal-content {
+        background: linear-gradient(135deg, #ffffff 0%, #f9fbfa 100%);
+        border: 1px solid rgba(31, 111, 139, 0.1);
+        border-radius: 16px;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #ffffff 0%, #f9fbfa 100%);
+        border-bottom: 2px solid rgba(31, 111, 139, 0.1);
+        padding: 1.5rem 2rem;
+        position: relative;
+    }
+    
+    .modal-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
+    }
+
+    .modal-title {
+        color: var(--dash-ink);
+        font-weight: 800;
+        font-size: 1.3rem;
+    }
+
+    .modal-header .btn-close {
+        opacity: 0.6;
+        filter: invert(0);
+        transition: all 0.2s ease;
+    }
+
+    .modal-header .btn-close:hover {
+        opacity: 1;
+        transform: rotate(90deg);
+    }
+
+    .modal-body {
+        padding: 2rem;
+        color: var(--dash-ink);
+        font-size: 0.95rem;
+        line-height: 1.65;
+    }
+
+    .modal-footer {
+        background: rgba(31, 111, 139, 0.02);
+        border-top: 1px solid rgba(31, 111, 139, 0.1);
+        padding: 1.5rem 2rem;
+        gap: 0.75rem;
+    }
+
+    .modal-footer .btn {
+        border-radius: 10px;
+        font-weight: 600;
+        min-height: 42px;
+        padding: 0.65rem 1.5rem;
+        transition: all 0.25s ease;
+        border: none;
+    }
+
+    .modal-footer .btn-primary {
+        background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-soft));
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.25);
+    }
+
+    .modal-footer .btn-primary:hover {
+        box-shadow: 0 8px 24px rgba(31, 111, 139, 0.35);
+        transform: translateY(-2px);
+    }
+
+    .modal-footer .btn-secondary {
+        background: rgba(27, 26, 23, 0.08);
+        color: var(--dash-ink-soft);
+        border: 1px solid rgba(27, 26, 23, 0.1);
+    }
+
+    .modal-footer .btn-secondary:hover {
+        background: rgba(27, 26, 23, 0.12);
+        color: var(--dash-ink);
+    }
+
+    .modal-footer .btn-danger {
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+    }
+
+    .modal-footer .btn-danger:hover {
+        box-shadow: 0 8px 24px rgba(220, 38, 38, 0.35);
+        transform: translateY(-2px);
+    }
+
+    /* Modern Form Styling in Modals */
+    .modal-content .form-control,
+    .modal-content .form-select {
+        border: 1px solid rgba(27, 26, 23, 0.12);
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        background: rgba(31, 111, 139, 0.02);
+    }
+
+    .modal-content .form-control:focus,
+    .modal-content .form-select:focus {
+        border-color: var(--dash-primary);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(31, 111, 139, 0.1);
+        outline: none;
+    }
+
+    .modal-content .form-label {
+        color: var(--dash-ink);
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .modal-content .form-text {
+        color: var(--dash-muted);
+        font-size: 0.85rem;
+    }
+
+    /* Modal Input Group Styling */
+    .modal-content .input-group .form-control,
+    .modal-content .input-group .form-select {
+        border-right: none;
+    }
+
+    .modal-content .input-group .btn {
+        border: 1px solid rgba(27, 26, 23, 0.12);
+        background: rgba(31, 111, 139, 0.08);
+        color: var(--dash-ink-soft);
+        transition: all 0.2s ease;
+    }
+
+    .modal-content .input-group .btn:hover {
+        background: rgba(31, 111, 139, 0.15);
+        color: var(--dash-ink);
+    }
+
+    /* Modal Animations */
+    .modal.fade .modal-dialog {
+        transition: transform 0.3s cubic-bezier(0.36, 0, 0.66, 1);
+        transform: translate(0, -50px);
+        opacity: 0;
+    }
+
+    .modal.show .modal-dialog {
+        transform: translate(0, 0);
+        opacity: 1;
+    }
+
+    .modal-backdrop.fade {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+        opacity: 0.65;
+        background-color: rgba(27, 26, 23, 0.5);
     }
 </style>
 {% endblock %}
 
 {% block header %}
-    {% include "pabasa_app/partials/_header.html" with page_title="Materials" page_date="" %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Class" page_date="" %}
 {% endblock %}
 
 {% block content %}
-<section class="materials-home">
-    <div class="row g-3 materials-grid">
-        <div class="col-md-6 col-xl-4">
-            <article class="material-category-card word">
-                <div class="material-category-head">
-                    <span class="material-category-icon word"><i class="bi bi-spellcheck"></i></span>
-                    <span class="dash-pill">Word</span>
-                </div>
-                <div class="material-category-copy">
-                    <h3>Word Materials</h3>
-                    <p>Build reusable word lists for decoding, sight-word drills, and quick oral checks.</p>
-                </div>
-                <div class="material-category-stats">
-                    <div class="material-stat-tile"><strong>2</strong><span>ready sets</span></div>
-                    <div class="material-stat-tile"><strong>40</strong><span>sample words</span></div>
-                </div>
-                <div class="material-card-actions">
-                    <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}?type=word"><i class="bi bi-eye me-1"></i>View</a>
-                    <button class="btn btn-outline-secondary btn-sm" type="button" data-material-new="word" data-bs-toggle="modal" data-bs-target="#createCourseModal"><i class="bi bi-plus-lg me-1"></i>New</button>
-                </div>
-            </article>
-        </div>
-        <div class="col-md-6 col-xl-4">
-            <article class="material-category-card sentence">
-                <div class="material-category-head">
-                    <span class="material-category-icon sentence"><i class="bi bi-chat-left-text"></i></span>
-                    <span class="dash-pill course-in-progress">Sentence</span>
-                </div>
-                <div class="material-category-copy">
-                    <h3>Sentence Materials</h3>
-                    <p>Create sentence prompts for fluency, phrasing, expression, and guided reading.</p>
-                </div>
-                <div class="material-category-stats">
-                    <div class="material-stat-tile"><strong>2</strong><span>ready sets</span></div>
-                    <div class="material-stat-tile"><strong>28</strong><span>sample sentences</span></div>
-                </div>
-                <div class="material-card-actions">
-                    <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}?type=sentence"><i class="bi bi-eye me-1"></i>View</a>
-                    <button class="btn btn-outline-secondary btn-sm" type="button" data-material-new="sentence" data-bs-toggle="modal" data-bs-target="#createCourseModal"><i class="bi bi-plus-lg me-1"></i>New</button>
-                </div>
-            </article>
-        </div>
-        <div class="col-md-6 col-xl-4">
-            <article class="material-category-card paragraph">
-                <div class="material-category-head">
-                    <span class="material-category-icon paragraph"><i class="bi bi-file-text"></i></span>
-                    <span class="dash-pill course-upcoming">Paragraph</span>
-                </div>
-                <div class="material-category-copy">
-                    <h3>Paragraph Materials</h3>
-                    <p>Prepare longer reading passages for stamina, comprehension, and assessment work.</p>
-                </div>
-                <div class="material-category-stats">
-                    <div class="material-stat-tile"><strong>3</strong><span>ready passages</span></div>
-                    <div class="material-stat-tile"><strong>3</strong><span>sample texts</span></div>
-                </div>
-                <div class="material-card-actions">
-                    <a class="btn btn-primary btn-sm" href="{% url 'course_teacher_view' %}?type=paragraph"><i class="bi bi-eye me-1"></i>View</a>
-                    <button class="btn btn-outline-secondary btn-sm" type="button" data-material-new="paragraph" data-bs-toggle="modal" data-bs-target="#createCourseModal"><i class="bi bi-plus-lg me-1"></i>New</button>
-                </div>
-            </article>
-        </div>
+<section class="classes-home">
+    <div class="classes-grid" id="classesGrid">
+        <!-- Classes will be rendered here -->
     </div>
+</section>
 
-    <!-- View Class Materials Modal -->
-    <div class="modal fade" id="viewMaterialsModal" tabindex="-1" aria-labelledby="viewMaterialsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div>
-                        <h4 class="modal-title h6 mb-0" id="viewMaterialsModalLabel">Class Materials</h4>
-                        <p class="small text-secondary mb-0 mt-1" id="selectedClassInfo"></p>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Class Detail Modal -->
+<div class="modal fade" id="classDetailModal" tabindex="-1" aria-labelledby="classDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+        <div class="modal-content course-modal-content">
+            <div class="modal-header course-modal-header">
+                <div>
+                    <h5 class="modal-title" id="classDetailModalLabel"></h5>
+                    <p class="small text-secondary mb-0 mt-1" id="classDetailInfo"></p>
                 </div>
-                <div class="modal-body">
-                    <div class="materials-category-grid" id="materialsContainer">
-                        <!-- Materials will be inserted here -->
-                    </div>
-                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        </div>
-    </div>
+            <div class="modal-body course-modal-body">
+                <!-- Vertical Tabs Sidebar -->
+                <aside class="course-sidebar">
+                    <ul class="nav flex-column vertical-tabs course-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active vertical-nav-link" id="stream-tab" data-bs-toggle="tab" data-bs-target="#streamContent" type="button" role="tab" aria-controls="streamContent" aria-selected="true">
+                                <i class="bi bi-chat-dots"></i><span>Stream</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link vertical-nav-link" id="readings-tab" data-bs-toggle="tab" data-bs-target="#readingsContent" type="button" role="tab" aria-controls="readingsContent" aria-selected="false">
+                                <i class="bi bi-book-half"></i><span>Readings</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link vertical-nav-link" id="students-tab" data-bs-toggle="tab" data-bs-target="#studentsContent" type="button" role="tab" aria-controls="studentsContent" aria-selected="false">
+                                <i class="bi bi-people"></i><span>Students</span>
+                            </button>
+                        </li>
+                    </ul>
+                </aside>
 
-    <!-- View Material Detail Modal -->
-    <div class="modal fade" id="viewMaterialDetailModal" tabindex="-1" aria-labelledby="viewMaterialDetailModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title h6 mb-0" id="viewMaterialDetailModalLabel"></h4>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="materialDetailContent" class="material-detail-content">
-                        <!-- Material details will be inserted here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Material Modal -->
-    <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title h6 mb-0" id="createCourseModalLabel">Add Material</h4>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="#" method="post" id="addMaterialForm">
-                    <div class="modal-body">
-                        <!-- Material Title -->
-                        <div class="mb-3">
-                            <label for="materialTitle" class="form-label">Material Title</label>
-                            <input id="materialTitle" class="form-control" type="text" name="material_title" placeholder="Enter material title (e.g., Word List Set A)" required>
-                        </div>
-
-                        <!-- Material Type -->
-                        <div class="mb-3">
-                            <label class="form-label">Content Type</label>
-                            <div class="locked-material-type" id="lockedMaterialType">
-                                <i class="bi bi-spellcheck"></i>
-                                <span>Word Material</span>
+                <!-- Tab Content -->
+                <div class="tab-content course-tab-content">
+                    <!-- Stream Tab -->
+                    <div class="tab-pane fade show active" id="streamContent" role="tabpanel" aria-labelledby="stream-tab">
+                        <div class="workspace-shell stream-container">
+                            <div class="workspace-hero is-compact">
+                                <div>
+                                    <h5><i class="bi bi-megaphone me-2"></i>Class Stream</h5>
+                                    <p>Post announcements, pin updates, and respond to comments.</p>
+                                </div>
                             </div>
-                            <select id="materialType" class="form-select d-none" aria-hidden="true" tabindex="-1">
-                                <option value="word">Word</option>
-                                <option value="sentence">Sentence</option>
-                                <option value="paragraph">Paragraph</option>
-                            </select>
-                        </div>
 
-                        <!-- Input for single item -->
-                        <div class="mb-3">
-                            <label for="materialItemInput" class="form-label">Add Item <span class="material-type-badge" id="itemTypeBadge">Word</span></label>
-                            <div class="d-grid gap-2" style="grid-template-columns: 1fr auto;">
-                                <textarea id="materialItemInput" class="form-control" rows="2" placeholder="Enter word, sentence, or paragraph"></textarea>
-                                <div class="d-flex flex-column gap-2">
-                                    <button type="button" class="btn btn-primary" id="addItemBtn" title="Add new item"><i class="bi bi-plus-lg"></i></button>
-                                    <button type="button" class="btn btn-outline-secondary" id="cancelEditBtn" title="Cancel edit" style="display: none;"><i class="bi bi-x-lg"></i></button>
+                            <div class="stream-layout">
+                                <div class="stream-main">
+                                    <div class="stream-composer">
+                                        <div class="stream-composer-avatar">T</div>
+                                        <div class="stream-composer-prompt">Share an announcement with this class</div>
+                                        <button class="btn btn-primary stream-post-btn workspace-action-btn" type="button">
+                                            <i class="bi bi-plus-lg"></i> Post
+                                        </button>
+                                    </div>
+
+                                    <div id="pinnedSpotlight" class="pinned-spotlight">
+                                        <!-- Pinned posts will appear here -->
+                                    </div>
+
+                                    <div id="streamContainer" class="stream-feed">
+                                        <div class="stream-empty">
+                                            <i class="bi bi-chat-dots"></i>
+                                            <h6>No announcements yet</h6>
+                                            <p>Post an announcement to keep your class informed</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <aside class="stream-aside" aria-label="Stream summary">
+                                    <div class="stream-panel">
+                                        <h6 class="stream-panel-title"><i class="bi bi-activity"></i> Stream Snapshot</h6>
+                                        <div class="stream-stats-grid">
+                                            <div class="stream-stat">
+                                                <strong id="streamPostCount">0</strong>
+                                                <span>Posts</span>
+                                            </div>
+                                            <div class="stream-stat">
+                                                <strong id="streamViewCount">0</strong>
+                                                <span>Views</span>
+                                            </div>
+                                            <div class="stream-stat">
+                                                <strong id="streamCommentCount">0</strong>
+                                                <span>Comments</span>
+                                            </div>
+                                            <div class="stream-stat">
+                                                <strong id="streamPinnedCount">0</strong>
+                                                <span>Pinned</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="stream-panel">
+                                        <h6 class="stream-panel-title"><i class="bi bi-list-check"></i> Quick Actions</h6>
+                                        <ul class="stream-checklist">
+                                            <li><i class="bi bi-pin-angle"></i><span>Pin urgent reminders so they stay easy to find.</span></li>
+                                            <li><i class="bi bi-chat-square-text"></i><span>Use comments for follow-up questions and clarifications.</span></li>
+                                            <li><i class="bi bi-book-half"></i><span>Point students to new reading materials when they are added.</span></li>
+                                        </ul>
+                                    </div>
+                                </aside>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Readings Tab -->
+                    <div class="tab-pane fade" id="readingsContent" role="tabpanel" aria-labelledby="readings-tab">
+                        <div class="workspace-shell" id="readingsContainer">
+                            <div class="workspace-hero is-compact">
+                                <div>
+                                    <h5><i class="bi bi-book-half me-2"></i>Reading Materials</h5>
+                                    <p>Add reading materials and choose whether each one appears in practice mode, assessment mode, or both.</p>
+                                </div>
+                            </div>
+                            <div class="reading-category-grid">
+                            <!-- Word Readings -->
+                            <div class="readings-section">
+                                <div class="readings-section-header">
+                                    <div class="readings-section-icon word">
+                                        <i class="bi bi-spellcheck"></i>
+                                    </div>
+                                    <div class="readings-section-copy">
+                                        <h6 class="readings-section-title">Word Materials</h6>
+                                        <p>Short words, syllables, and decoding drills.</p>
+                                    </div>
+                                    <span class="readings-count-badge" data-word-count="0">0 items</span>
+                                    <button class="btn btn-outline-primary readings-add-btn" type="button" data-add-reading="word">
+                                        <i class="bi bi-plus-lg"></i> Add
+                                    </button>
+                                </div>
+                                <div id="wordReadings" class="readings-list">
+                                    <!-- Word readings will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Sentence Readings -->
+                            <div class="readings-section">
+                                <div class="readings-section-header">
+                                    <div class="readings-section-icon sentence">
+                                        <i class="bi bi-chat-left-text"></i>
+                                    </div>
+                                    <div class="readings-section-copy">
+                                        <h6 class="readings-section-title">Sentence Materials</h6>
+                                        <p>Sentence fluency and comprehension lines.</p>
+                                    </div>
+                                    <span class="readings-count-badge" data-sentence-count="0">0 items</span>
+                                    <button class="btn btn-outline-primary readings-add-btn" type="button" data-add-reading="sentence">
+                                        <i class="bi bi-plus-lg"></i> Add
+                                    </button>
+                                </div>
+                                <div id="sentenceReadings" class="readings-list">
+                                    <!-- Sentence readings will appear here -->
+                                </div>
+                            </div>
+
+                            <!-- Paragraph Readings -->
+                            <div class="readings-section">
+                                <div class="readings-section-header">
+                                    <div class="readings-section-icon paragraph">
+                                        <i class="bi bi-file-text"></i>
+                                    </div>
+                                    <div class="readings-section-copy">
+                                        <h6 class="readings-section-title">Paragraph Materials</h6>
+                                        <p>Longer passages for connected reading.</p>
+                                    </div>
+                                    <span class="readings-count-badge" data-paragraph-count="0">0 items</span>
+                                    <button class="btn btn-outline-primary readings-add-btn" type="button" data-add-reading="paragraph">
+                                        <i class="bi bi-plus-lg"></i> Add
+                                    </button>
+                                </div>
+                                <div id="paragraphReadings" class="readings-list">
+                                    <!-- Paragraph readings will appear here -->
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Students Tab -->
+                    <div class="tab-pane fade" id="studentsContent" role="tabpanel" aria-labelledby="students-tab">
+                        <div class="workspace-shell">
+                            <div class="workspace-hero is-compact">
+                                <div>
+                                    <h5><i class="bi bi-people me-2"></i>Students</h5>
+                                    <p>Search students and review quick reading progress.</p>
+                                </div>
+                            </div>
+                            <div class="students-toolbar">
+                                <div class="students-search">
+                                    <i class="bi bi-search students-search-icon" aria-hidden="true"></i>
+                                    <input type="text" id="studentsSearchInput" class="form-control" placeholder="Search by name or email" autocomplete="off">
+                                </div>
+                                <div class="students-filter">
+                                    <button class="filter-btn active" data-filter="all">All</button>
+                                    <button class="filter-btn" data-filter="progress">Progress</button>
+                                    <button class="filter-btn" data-filter="recent">Recent</button>
+                                </div>
+                            </div>
+                            <div id="studentsContainer" class="students-grid">
+                                <!-- Students will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Modal for Adding Announcements -->
+                    <div class="modal fade" id="postAnnouncementModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title">Post Announcement</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <textarea id="announcementText" class="form-control" rows="4" placeholder="Write your announcement..." style="resize: vertical;"></textarea>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" id="submitAnnouncement">Post</button>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- List of items -->
-                        <div>
-                            <label class="form-label">Items <span class="text-muted" id="itemCount">(0)</span></label>
-                            <div class="material-items-list" id="materialItemsList">
-                                <div class="empty-materials-state">No items added yet</div>
+                    <!-- Modal for Adding Materials -->
+                    <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title">Add Reading Material</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-600">Material Title</label>
+                                        <input type="text" id="materialTitle" class="form-control" placeholder="e.g., Filipino Consonants Set A" style="border-radius: 8px;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-600">Reading Content/Text</label>
+                                        <textarea id="materialContent" class="form-control" rows="5" placeholder="Paste or type the reading material that students will read..." style="border-radius: 8px; resize: vertical;"></textarea>
+                                        <small class="text-muted d-block mt-2">This is what students will read and practice with</small>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-600">Type</label>
+                                            <select id="materialType" class="form-select" style="border-radius: 8px;">
+                                                <option value="practice">Practice Only</option>
+                                                <option value="assessment">Assessment Only</option>
+                                                <option value="both">Both (Practice + Assessment)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-600">Reading Level</label>
+                                            <select id="readingLevel" class="form-select" style="border-radius: 8px;">
+                                                <option value="beginner">Beginner</option>
+                                                <option value="intermediate">Intermediate</option>
+                                                <option value="advanced">Advanced</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" id="submitMaterial"><i class="bi bi-plus-lg"></i> Add Material</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Material</button>
+
+                    <!-- Modal for Editing Material -->
+                    <div class="modal fade" id="editMaterialModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title">Edit Reading Material</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-600">Material Title</label>
+                                        <input type="text" id="editMaterialTitle" class="form-control" style="border-radius: 8px;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-600">Reading Content/Text</label>
+                                        <textarea id="editMaterialContent" class="form-control" rows="6" style="border-radius: 8px; resize: vertical;"></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" id="submitEditMaterial">Save Changes</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </form>
+
+                    <!-- Modal for Adding or Editing Assessments -->
+                    <div class="modal fade" id="assessmentModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title" id="assessmentModalTitle">Add Assessment</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="text" id="assessmentTitle" class="form-control mb-3" placeholder="Assessment title">
+                                    <div class="row g-3">
+                                        <div class="col-sm-6">
+                                            <label class="form-label">Reading Level</label>
+                                            <select id="assessmentLevel" class="form-select">
+                                                <option value="Word">Word</option>
+                                                <option value="Sentence">Sentence</option>
+                                                <option value="Paragraph">Paragraph</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label">Number of Items</label>
+                                            <input type="number" id="assessmentItems" class="form-control" value="10" min="1">
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label">Time Limit</label>
+                                            <input type="number" id="assessmentMinutes" class="form-control" value="15" min="1">
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label">Due Date</label>
+                                            <input type="date" id="assessmentDueDate" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" id="submitAssessment">Save Assessment</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="modal fade" id="materialStatusModal" tabindex="-1" aria-labelledby="materialStatusModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h4 class="modal-title h6 mb-0" id="materialStatusModalLabel">Materials Updated</h4>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-0" id="materialStatusMessage">Changes saved.</p>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
-                </div>
+<!-- Modal for Delete Confirmation -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteConfirmText">Are you sure you want to delete this item?</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
             </div>
         </div>
     </div>
+</div>
 
-    <div class="modal fade" id="deleteDraftItemModal" tabindex="-1" aria-labelledby="deleteDraftItemModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h4 class="modal-title h6 mb-0" id="deleteDraftItemModalLabel">Delete Item?</h4>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-0" id="deleteDraftItemMessage">Are you sure you want to delete this item?</p>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteDraftItemBtn">Delete Item</button>
-                </div>
+<!-- Modal for Add Comment -->
+<div class="modal fade" id="addCommentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Add Comment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="commentText" class="form-control" rows="3" placeholder="Write your comment..."></textarea>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitComment">Post Comment</button>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const materialTypeSelect = document.getElementById("materialType");
-            const itemTypeBadge = document.getElementById("itemTypeBadge");
-            const materialItemInput = document.getElementById("materialItemInput");
-            const addItemBtn = document.getElementById("addItemBtn");
-            const cancelEditBtn = document.getElementById("cancelEditBtn");
-            const materialItemsList = document.getElementById("materialItemsList");
-            const itemCount = document.getElementById("itemCount");
-            const materialForm = document.getElementById("addMaterialForm");
-            const materialTitleInput = document.getElementById("materialTitle");
-            const lockedMaterialType = document.getElementById("lockedMaterialType");
-            const createCourseModalLabel = document.getElementById("createCourseModalLabel");
-            const materialStatusModal = new bootstrap.Modal(document.getElementById("materialStatusModal"));
-            const deleteDraftItemModal = new bootstrap.Modal(document.getElementById("deleteDraftItemModal"));
-            const confirmDeleteDraftItemBtn = document.getElementById("confirmDeleteDraftItemBtn");
-            const deleteDraftItemMessage = document.getElementById("deleteDraftItemMessage");
-            const storageKey = "pabasa_materials";
-            const materialTypeMeta = {
-                word: { label: "Word Material", badge: "Word", icon: "bi-spellcheck", placeholder: "Enter a word" },
-                sentence: { label: "Sentence Material", badge: "Sentence", icon: "bi-chat-left-text", placeholder: "Enter a sentence" },
-                paragraph: { label: "Paragraph Material", badge: "Paragraph", icon: "bi-file-text", placeholder: "Enter a paragraph" }
-            };
+<!-- Modal for Success Message -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0">
+            <div class="modal-body text-center py-4">
+                <div style="font-size: 2.5rem; color: #10b981; margin-bottom: 1rem;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <h5 class="mb-2" id="successTitle">Success!</h5>
+                <p class="text-muted mb-0" id="successMessage">Operation completed successfully</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-            // Early exit if form elements don't exist
-            if (!materialForm || !materialTypeSelect || !materialItemInput || !addItemBtn) {
-                console.warn("Form elements not found on this page");
+<!-- Edit Comment Modal -->
+<div class="modal fade" id="editCommentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Edit Comment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <textarea class="form-control" placeholder="Edit your comment..." rows="3" style="border-color: var(--dash-border); border-radius: 8px; padding: 0.75rem;"></textarea>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-save-comment">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Get classes from localStorage (synced with dashboard_teacher.html)
+    let classes_from_storage = [];
+    try {
+        const stored = localStorage.getItem("pabasa_teacher_classes");
+        if (stored) {
+            classes_from_storage = JSON.parse(stored);
+            console.log("✓ Loaded classes from localStorage:", classes_from_storage.length, "classes");
+        }
+    } catch (e) {
+        console.warn('Could not load classes from localStorage:', e);
+    }
+    
+    // Initialize teacher classes with real data from localStorage
+    let teacherClasses = classes_from_storage || [];
+    
+    // Listen for localStorage changes (when classes are created in another tab)
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'pabasa_teacher_classes' && e.newValue) {
+            try {
+                const updatedClasses = JSON.parse(e.newValue);
+                console.log('✓ Classes updated from another tab, reloading...');
+                location.reload();
+            } catch (err) {
+                console.warn('Could not parse updated classes:', err);
+            }
+        }
+    });
+
+    // Sample readings data for each class
+    const classReadings = {};
+
+    const classAssessments = {};
+
+    let currentClassCode = null;
+
+    // Render classes grid
+    function renderClasses() {
+        const grid = document.getElementById('classesGrid');
+        
+        if (teacherClasses.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-folder2-open"></i>
+                    <h3>No Classes Yet</h3>
+                    <p>Go to your dashboard to create your first class</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = teacherClasses.map(cls => `
+            <article class="class-card-full" data-class-code="${cls.code}">
+                <button class="class-card-delete-btn" type="button" data-class-code="${cls.code}" title="Delete class" onclick="event.stopPropagation();"><i class="bi bi-trash3"></i></button>
+                <div class="class-card-header" onclick="openClassDetail('${cls.code}')" style="cursor: pointer;">
+                    <span class="class-code-badge">${cls.code}</span>
+                    <h3>${cls.name}</h3>
+                    <p class="class-description">${cls.description}</p>
+                </div>
+                <div class="class-card-stats">
+                    <div class="class-stat">
+                        <strong>${cls.students}</strong>
+                        <span>Students</span>
+                    </div>
+                    <div class="class-stat">
+                        <strong>${getClassReadingCount(cls.code)}</strong>
+                        <span>Readings</span>
+                    </div>
+                </div>
+                <div class="class-card-actions">
+                    <button class="btn btn-primary" type="button" style="cursor: pointer;" onclick="event.stopPropagation(); openClassDetail('${cls.code}');">
+                        <i class="bi bi-arrow-right me-2"></i>Open Class
+                    </button>
+                </div>
+            </article>
+        `).join('');
+        
+        // Add event listeners to delete buttons
+        attachDeleteListeners();
+    }
+
+    function getClassReadingCount(classCode) {
+        const readings = classReadings[classCode] || { word: [], sentence: [], paragraph: [] };
+        return readings.word.length + readings.sentence.length + readings.paragraph.length;
+    }
+
+    function attachDeleteListeners() {
+        document.querySelectorAll('.class-card-delete-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const classCode = this.getAttribute('data-class-code');
+                const classData = teacherClasses.find(cls => cls.code === classCode);
+                if (classData) {
+                    showDeleteClassConfirmation(classCode, classData.name);
+                }
+            });
+        });
+    }
+
+    let classToDeleteCode = null;
+
+    function showDeleteClassConfirmation(classCode, className) {
+        classToDeleteCode = classCode;
+        const deleteConfirmText = document.getElementById('deleteConfirmText');
+        
+        deleteConfirmText.innerHTML = `<p>Are you sure you want to delete <strong>${className}</strong>?</p><p class="text-danger small mt-2"><i class="bi bi-exclamation-triangle me-2"></i>This action cannot be undone. All class data will be removed.</p>`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        modal.show();
+    }
+
+    function deleteClass(classCode) {
+        teacherClasses = teacherClasses.filter(cls => cls.code !== classCode);
+        localStorage.setItem('pabasa_teacher_classes', JSON.stringify(teacherClasses));
+        renderClasses();
+        showSuccessModal('Class Deleted', 'The class has been successfully deleted.');
+    }
+
+    // Handle confirm delete button click
+    document.getElementById('confirmDelete').addEventListener('click', function() {
+        if (classToDeleteCode) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
+            if (modal) modal.hide();
+            
+            deleteClass(classToDeleteCode);
+            classToDeleteCode = null;
+        }
+    });
+
+
+
+    window.openClassDetail = function(classCode) {
+        const classData = teacherClasses.find(c => c.code === classCode);
+        if (!classData) return;
+        currentClassCode = classCode;
+
+        // Update modal header
+        document.getElementById('classDetailModalLabel').textContent = classData.name;
+        document.getElementById('classDetailInfo').textContent = `${classData.code} - ${classData.students} students enrolled`;
+
+        // Load all content
+        loadAnnouncements(classCode);
+        loadReadings(classCode);
+        loadAssessments(classCode);
+        loadStudents(classCode, classData.students);
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('classDetailModal'));
+        modal.show();
+    };
+
+    function loadReadings(classCode) {
+        const readings = classReadings[classCode] || { word: [], sentence: [], paragraph: [] };
+
+        function renderReadingsList(readingsArray, containerId, type) {
+            const container = document.getElementById(containerId);
+            const countBadge = document.querySelector(`[data-${type}-count]`);
+            
+            if (readingsArray.length === 0) {
+                container.innerHTML = `
+                    <div class="readings-empty">
+                        <i class="bi bi-inbox"></i>
+                        <p>No ${type} materials yet</p>
+                    </div>
+                `;
+                if (countBadge) countBadge.textContent = '0 items';
                 return;
             }
-
-            let items = [];
-            let editingIndex = -1;
-            let pendingDeleteIndex = -1;
-
-            function showMaterialStatus(title, message) {
-                document.getElementById("materialStatusModalLabel").textContent = title;
-                document.getElementById("materialStatusMessage").textContent = message;
-                materialStatusModal.show();
-            }
-
-            function setMaterialType(type) {
-                const meta = materialTypeMeta[type] || materialTypeMeta.word;
-                materialTypeSelect.value = type;
-                itemTypeBadge.textContent = meta.badge;
-                materialItemInput.placeholder = meta.placeholder;
-                createCourseModalLabel.textContent = `Add ${meta.label}`;
-                lockedMaterialType.innerHTML = `<i class="bi ${meta.icon}"></i><span>${meta.label}</span>`;
-            }
-
-            document.querySelectorAll("[data-material-new]").forEach(button => {
-                button.addEventListener("click", function() {
-                    setMaterialType(this.dataset.materialNew);
-                });
-            });
-
-            setMaterialType("word");
-
-            // Update badge when type changes
-            materialTypeSelect.addEventListener("change", function() {
-                const typeText = this.options[this.selectedIndex].text;
-                itemTypeBadge.textContent = typeText;
-            });
-
-            // Add or update item
-            addItemBtn.addEventListener("click", function() {
-                const itemText = materialItemInput.value.trim();
-                if (!itemText) {
-                    showMaterialStatus("Add Item", "Please enter an item before adding it to the material.");
-                    return;
-                }
-
-                if (editingIndex >= 0) {
-                    // Update existing item
-                    items[editingIndex].text = itemText;
-                    editingIndex = -1;
-                } else {
-                    // Add new item
-                    items.push({
-                        text: itemText,
-                        type: materialTypeSelect.value
-                    });
-                }
-
-                renderItems();
-                materialItemInput.value = "";
-                materialItemInput.focus();
-                cancelEditBtn.style.display = "none";
-                addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
-                addItemBtn.title = "Add new item";
-            });
-
-            // Cancel edit
-            cancelEditBtn.addEventListener("click", function(e) {
-                e.preventDefault();
-                editingIndex = -1;
-                materialItemInput.value = "";
-                materialItemInput.focus();
-                cancelEditBtn.style.display = "none";
-                addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
-                addItemBtn.title = "Add new item";
-            });
-
-            // Allow Enter key to add item
-            materialItemInput.addEventListener("keydown", function(e) {
-                if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    addItemBtn.click();
-                }
-            });
-
-            // Render items list
-            function renderItems() {
-                if (items.length === 0) {
-                    materialItemsList.innerHTML = '<div class="empty-materials-state">No items added yet</div>';
-                    itemCount.textContent = "(0)";
-                    return;
-                }
-
-                materialItemsList.innerHTML = items.map((item, index) => `
-                    <div class="material-item-row">
-                        <span class="material-item-number">${index + 1}</span>
-                        <span class="material-item-text">${escapeHtml(item.text)}</span>
-                        <div class="material-item-actions">
-                            <button type="button" class="material-item-edit" data-index="${index}" title="Edit item">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button type="button" class="material-item-delete" data-index="${index}" title="Delete item">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `).join("");
-
-                itemCount.textContent = `(${items.length})`;
-
-                // Add edit handlers
-                document.querySelectorAll(".material-item-edit").forEach(btn => {
-                    btn.addEventListener("click", function(e) {
-                        e.preventDefault();
-                        editingIndex = parseInt(this.getAttribute("data-index"));
-                        materialItemInput.value = items[editingIndex].text;
-                        materialItemInput.focus();
-                        materialItemInput.select();
-                        cancelEditBtn.style.display = "flex";
-                        addItemBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
-                        addItemBtn.title = "Update item";
-                    });
-                });
-
-                // Add delete handlers
-                document.querySelectorAll(".material-item-delete").forEach(btn => {
-                    btn.addEventListener("click", function(e) {
-                        e.preventDefault();
-                        pendingDeleteIndex = parseInt(this.getAttribute("data-index"));
-                        deleteDraftItemMessage.textContent = `Are you sure you want to delete item ${pendingDeleteIndex + 1}?`;
-                        deleteDraftItemModal.show();
-                    });
-                });
-            }
-
-            confirmDeleteDraftItemBtn.addEventListener("click", function() {
-                if (pendingDeleteIndex < 0) return;
-
-                items.splice(pendingDeleteIndex, 1);
-                if (editingIndex === pendingDeleteIndex) {
-                    editingIndex = -1;
-                    materialItemInput.value = "";
-                    cancelEditBtn.style.display = "none";
-                    addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
-                    addItemBtn.title = "Add new item";
-                }
-                pendingDeleteIndex = -1;
-                renderItems();
-                deleteDraftItemModal.hide();
-                showMaterialStatus("Item Deleted", "The draft item was removed.");
-            });
-
-            // Helper function to escape HTML
-            function escapeHtml(text) {
-                const div = document.createElement("div");
-                div.textContent = text;
-                return div.innerHTML;
-            }
-
-            // Clear items when form is reset
-            const createCourseModal = document.querySelector("#createCourseModal");
-            if (createCourseModal) {
-                createCourseModal.addEventListener("hidden.bs.modal", function() {
-                    items = [];
-                    editingIndex = -1;
-                    materialItemInput.value = "";
-                    cancelEditBtn.style.display = "none";
-                    addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
-                    addItemBtn.title = "Add new item";
-                    setMaterialType(materialTypeSelect.value || "word");
-                    renderItems();
-                });
-            }
-
-            // Form submission
-            materialForm.addEventListener("submit", function(e) {
-                e.preventDefault();
-                if (items.length === 0) {
-                    showMaterialStatus("Add One Item", "Please add at least one item before saving this material.");
-                    return;
-                }
-                const savedMaterials = JSON.parse(localStorage.getItem(storageKey) || "[]");
-                savedMaterials.push({
-                    id: `material-${Date.now()}`,
-                    title: materialTitleInput.value.trim(),
-                    type: materialTypeSelect.value,
-                    use: "Practice & Assessment",
-                    items: items.map(item => item.text),
-                    created: new Date().toISOString().slice(0, 10)
-                });
-                localStorage.setItem(storageKey, JSON.stringify(savedMaterials));
-                this.reset();
-                items = [];
-                editingIndex = -1;
-                renderItems();
-                const modalElement = document.querySelector("#createCourseModal");
-                const modal = bootstrap.Modal.getInstance(modalElement);
-                const showSavedStatus = () => showMaterialStatus("Material Saved", "The material was saved successfully.");
-                if (modal) {
-                    modalElement.addEventListener("hidden.bs.modal", showSavedStatus, { once: true });
-                    modal.hide();
-                } else {
-                    showSavedStatus();
-                }
-            });
-        });
-
-        // Handle class card clicks with event delegation
-        document.addEventListener('click', function(e) {
-            const courseCard = e.target.closest('.course-card');
-            if (courseCard && courseCard.dataset.className) {
-                console.log('✓ Course card clicked!', courseCard);
-                showClassMaterials(courseCard);
-            }
-        });
-
-        window.showClassMaterials = function(cardElement) {
-            const title = cardElement.getAttribute('data-class-name');
-            const code = cardElement.getAttribute('data-code');
-            const students = cardElement.getAttribute('data-students');
             
-            console.log('Showing materials for class:', title, 'Code:', code);
+            if (countBadge) countBadge.textContent = `${readingsArray.length} item${readingsArray.length !== 1 ? 's' : ''}`;
             
-            // Update modal header
-            document.getElementById('viewMaterialsModalLabel').textContent = title;
-            document.getElementById('selectedClassInfo').textContent = `Code: ${code} • ${students} students`;
-            
-            // Display materials
-            displayMaterialsByCategory(code);
-            
-            // Show modal
-            const modal = new bootstrap.Modal(document.getElementById('viewMaterialsModal'));
-            modal.show();
-        };
-
-        // Sample materials data (normally would come from server)
-        const allMaterials = {
-            'PAB-4827': {
-                word: [
-                    { id: 1, title: 'Filipino Consonants Set A', itemCount: 15, created: '2024-01-15' },
-                    { id: 2, title: 'Common Vowel Combinations', itemCount: 12, created: '2024-01-18' },
-                    { id: 3, title: 'High-Frequency Words Grade 3', itemCount: 28, created: '2024-02-01' }
-                ],
-                sentence: [
-                    { id: 4, title: 'Simple Subject-Verb Sentences', itemCount: 10, created: '2024-01-20' },
-                    { id: 5, title: 'Complex Sentence Practice', itemCount: 8, created: '2024-02-05' }
-                ],
-                paragraph: [
-                    { id: 6, title: 'Filipino Folk Tales - Short', itemCount: 5, created: '2024-01-25' },
-                    { id: 7, title: 'Informational Passages Grade 3', itemCount: 6, created: '2024-02-10' }
-                ]
-            },
-            'RRG-9154': {
-                word: [
-                    { id: 8, title: 'Remedial Word List - CVC Words', itemCount: 20, created: '2024-02-01' },
-                    { id: 9, title: 'Sight Words for Intervention', itemCount: 25, created: '2024-02-03' }
-                ],
-                sentence: [
-                    { id: 10, title: 'Basic Intervention Sentences', itemCount: 12, created: '2024-02-05' }
-                ],
-                paragraph: [
-                    { id: 11, title: 'Decodable Stories - Level 1', itemCount: 8, created: '2024-02-08' }
-                ]
-            },
-            'AFC-7302': {
-                word: [
-                    { id: 12, title: 'Vocabulary Enrichment - Advanced', itemCount: 30, created: '2024-02-02' }
-                ],
-                sentence: [
-                    { id: 13, title: 'Literary Devices in Context', itemCount: 15, created: '2024-02-07' },
-                    { id: 14, title: 'Advanced Fluency Sentences', itemCount: 12, created: '2024-02-12' }
-                ],
-                paragraph: [
-                    { id: 15, title: 'Chapter Books - Grade 4-5 Level', itemCount: 4, created: '2024-02-09' },
-                    { id: 16, title: 'Poetry and Creative Texts', itemCount: 10, created: '2024-02-14' }
-                ]
-            }
-        };
-
-        function displayMaterialsByCategory(classCode) {
-            const container = document.getElementById('materialsContainer');
-            const materials = allMaterials[classCode] || { word: [], sentence: [], paragraph: [] };
-            
-            const categories = [
-                { type: 'word', label: 'Word Materials', icon: 'bi-letter-uppercase' },
-                { type: 'sentence', label: 'Sentence Materials', icon: 'bi-chat-left-text' },
-                { type: 'paragraph', label: 'Paragraph Materials', icon: 'bi-file-text' }
-            ];
-            
-            container.innerHTML = categories.map(category => {
-                const categoryMaterials = materials[category.type] || [];
+            container.innerHTML = readingsArray.map(reading => {
+                const typeMap = {
+                    'practice': 'practice',
+                    'assessment': 'assessment',
+                    'both': 'both'
+                };
+                const badgeType = typeMap[reading.type] || reading.type;
                 
                 return `
-                    <div class="materials-category">
-                        <div class="category-label">
-                            <i class="bi ${category.icon} category-icon"></i>
-                            ${category.label}
-                            <span class="badge bg-secondary ms-auto">${categoryMaterials.length}</span>
+                    <div class="material-card-modern" data-full-content="${(reading.content || '').replace(/"/g, '&quot;')}">
+                        <div class="material-info">
+                            <div class="material-leading-icon">
+                                <i class="bi ${type === 'word' ? 'bi-spellcheck' : type === 'sentence' ? 'bi-chat-left-text' : 'bi-file-text'}"></i>
+                            </div>
+                            <div>
+                                <p class="material-title">${reading.title}</p>
+                                <p class="material-preview">${(reading.content || '').substring(0, 100)}${(reading.content || '').length > 100 ? '...' : ''}</p>
+                                <p class="material-meta">
+                                    <span>${reading.items} item${reading.items !== 1 ? 's' : ''}</span>
+                                    <span class="material-type-badge ${badgeType}">${reading.type}</span>
+                                </p>
+                            </div>
                         </div>
-                        <div style="display: grid; gap: 0.5rem;">
-                            ${categoryMaterials.length > 0 
-                                ? categoryMaterials.map(material => `
-                                    <div class="material-card" onclick="viewMaterialDetail('${material.title}', '${category.label}', ${material.itemCount})">
-                                        <div class="material-card-content">
-                                            <p class="material-card-title">${material.title}</p>
-                                            <p class="material-card-meta">${material.itemCount} items • Created ${material.created}</p>
-                                        </div>
-                                        <i class="bi bi-arrow-right material-card-action"></i>
-                                    </div>
-                                `).join('')
-                                : '<div class="empty-category-state">No materials available</div>'
-                            }
+                        <div class="material-actions">
+                            <button class="material-btn" title="View" data-action="view">
+                                <i class="bi bi-eye" style="color: #00bcd4;"></i>
+                            </button>
+                            <button class="material-btn" title="Edit" data-action="edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="material-btn delete" title="Delete" data-action="delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        window.viewMaterialDetail = function(title, category, itemCount) {
-            document.getElementById('viewMaterialDetailModalLabel').textContent = title;
-            
-            // Generate sample items based on type
-            let items = [];
-            if (category.includes('Word')) {
-                items = Array.from({length: Math.min(itemCount, 10)}, (_, i) => `Word ${i + 1}`);
-            } else if (category.includes('Sentence')) {
-                items = [
-                    'The cat sat on the mat.',
-                    'She ran quickly to the store.',
-                    'They enjoyed reading books together.',
-                    'The teacher explained the lesson clearly.',
-                    'We will go to the park tomorrow.'
-                ];
-            } else {
-                items = [
-                    'This is a sample paragraph. Students can read this to practice their fluency and comprehension skills.',
-                    'A longer passage would be displayed here for paragraph-level reading practice.',
-                    'Teachers can use these materials to assess student reading levels and track progress.'
-                ];
-            }
-            
-            const detailContent = document.getElementById('materialDetailContent');
-            detailContent.innerHTML = `
-                <div>
-                    <p class="small text-secondary mb-2">${category} • ${itemCount} items</p>
-                    <div style="display: grid; gap: 0.75rem;">
-                        ${items.map((item, idx) => `
-                            <div style="padding: 0.75rem; background: #fffdf7; border: 1px solid rgba(27, 26, 23, 0.08); border-radius: 10px;">
-                                <p style="margin: 0; line-height: 1.6;">${item}</p>
-                            </div>
-                        `).join('')}
-                    </div>
+        renderReadingsList(readings.word, 'wordReadings', 'word');
+        renderReadingsList(readings.sentence, 'sentenceReadings', 'sentence');
+        renderReadingsList(readings.paragraph, 'paragraphReadings', 'paragraph');
+    }
+
+    function formatDueDate(value) {
+        if (!value) return 'No due date';
+        const date = new Date(`${value}T00:00:00`);
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function loadAssessments(classCode) {
+        const grid = document.getElementById('assessmentGrid');
+        const assessments = classAssessments[classCode] || [];
+        if (!grid) return;
+
+        if (assessments.length === 0) {
+            grid.innerHTML = `
+                <div class="assessment-empty">
+                    <i class="bi bi-clipboard2-check"></i>
+                    <h6>No assessments yet</h6>
+                    <p>Create an assessment to measure reading progress.</p>
                 </div>
             `;
+            return;
+        }
+
+        grid.innerHTML = assessments.map(assessment => `
+            <article class="assessment-card" data-assessment-id="${assessment.id}">
+                <div class="assessment-card-header">
+                    <div style="display: flex; gap: 0.75rem; min-width: 0;">
+                        <div class="assessment-icon"><i class="bi bi-clipboard2-check"></i></div>
+                        <div style="min-width: 0;">
+                            <h6 class="assessment-title">${assessment.title}</h6>
+                            <p class="assessment-meta">
+                                <span><i class="bi bi-book me-1"></i>${assessment.level}</span>
+                                <span><i class="bi bi-calendar3 me-1"></i>${formatDueDate(assessment.dueDate)}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <span class="material-type-badge assessment">Assessment</span>
+                </div>
+                <div class="assessment-stats">
+                    <div class="assessment-stat">
+                        <strong>${assessment.items}</strong>
+                        <span>Items</span>
+                    </div>
+                    <div class="assessment-stat">
+                        <strong>${assessment.minutes}m</strong>
+                        <span>Limit</span>
+                    </div>
+                    <div class="assessment-stat">
+                        <strong>${assessment.average}%</strong>
+                        <span>Average</span>
+                    </div>
+                </div>
+                <div class="assessment-actions">
+                    <button class="material-btn" title="Preview" data-assessment-action="preview">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="material-btn" title="Edit" data-assessment-action="edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="material-btn delete" title="Delete" data-assessment-action="delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </article>
+        `).join('');
+    }
+
+    function loadStudents(classCode, studentCount) {
+        const container = document.getElementById('studentsContainer');
+        const firstNames = ["Maria", "Juan", "Ana", "Carlos", "Sofia", "Miguel", "Rosa", "Pedro", "Lucia", "Diego", "Emma", "Antonio", "Isabel", "Jesus", "Rosa", "Fernando", "Teresa"];
+        const lastNames = ["Santos", "Garcia", "Rodriguez", "Martinez", "Lopez", "Fernandez", "Gonzalez", "Reyes", "Castillo", "Morales", "Diaz", "Cruz", "Navarro", "Ochoa"];
+        
+        if (studentCount === 0) {
+            container.innerHTML = `
+                <div class="students-empty">
+                    <i class="bi bi-people"></i>
+                    <h6>No students enrolled</h6>
+                    <p>Students will appear here once they join the class</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const students = [];
+        for (let i = 0; i < Math.min(studentCount, 25); i++) {
+            const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+            const initials = (firstName[0] + lastName[0]).toUpperCase();
+            const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@school.edu`;
+            const readingScore = Math.floor(Math.random() * 100);
+            const assessmentsPassed = Math.floor(Math.random() * 15);
             
-            const modal = new bootstrap.Modal(document.getElementById('viewMaterialDetailModal'));
-            modal.show();
+            students.push({
+                initials,
+                name: `${firstName} ${lastName}`,
+                email,
+                readingScore,
+                assessmentsPassed
+            });
+        }
+        
+        let studentsHTML = students.map(student => `
+            <div class="student-card-modern">
+                <div class="student-card-head">
+                    <div class="student-avatar-large">${student.initials}</div>
+                    <div class="student-identity">
+                        <p class="student-name">${student.name}</p>
+                        <p class="student-email">${student.email}</p>
+                    </div>
+                </div>
+                <div class="student-stats">
+                    <div class="student-stat">
+                        <div class="student-stat-value">${student.readingScore}%</div>
+                        <div class="student-stat-label">Reading Level</div>
+                    </div>
+                    <div class="student-stat">
+                        <div class="student-stat-value">${student.assessmentsPassed}</div>
+                        <div class="student-stat-label">Completed</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        if (studentCount > 25) {
+            studentsHTML += `
+                <div class="students-empty">
+                    <p style="margin: 1rem 0 0; font-size: 0.9rem;">... and ${studentCount - 25} more students</p>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = studentsHTML;
+        
+        // Add search functionality
+        const searchInput = document.getElementById('studentsSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase();
+                const cards = document.querySelectorAll('.student-card-modern');
+                cards.forEach(card => {
+                    const name = card.querySelector('.student-name').textContent.toLowerCase();
+                    const email = card.querySelector('.student-email').textContent.toLowerCase();
+                    card.style.display = (name.includes(query) || email.includes(query)) ? '' : 'none';
+                });
+            });
+        }
+    }
+
+    // Track pinned announcement globally
+    let pinnedAnnouncementId = null;
+
+    function updatePinnedSpotlight() {
+        const spotlight = document.getElementById('pinnedSpotlight');
+        const pinnedContent = spotlight.querySelector('.pinned-spotlight-content');
+        
+        if (!pinnedContent) return;
+        
+        const pinnedCards = spotlight.querySelectorAll('.announcement-card.pinned');
+        
+        if (pinnedCards.length === 0) {
+            spotlight.classList.remove('has-items');
+            pinnedContent.innerHTML = '';
+        } else {
+            spotlight.classList.add('has-items');
+        }
+    }
+
+    function movePinnedCardToSpotlight(card) {
+        const spotlight = document.getElementById('pinnedSpotlight');
+        let pinnedContent = spotlight.querySelector('.pinned-spotlight-content');
+        
+        // Create the header if it doesn't exist
+        let header = spotlight.querySelector('.pinned-spotlight-header');
+        if (!header) {
+            header = document.createElement('div');
+            header.className = 'pinned-spotlight-header';
+            header.innerHTML = '<i class="bi bi-pin-fill"></i> <span>Pinned Announcement</span>';
+            spotlight.appendChild(header);
+            
+            pinnedContent = document.createElement('div');
+            pinnedContent.className = 'pinned-spotlight-content';
+            spotlight.appendChild(pinnedContent);
+        }
+        
+        pinnedContent.innerHTML = '';
+        pinnedContent.appendChild(card);
+        spotlight.classList.add('has-items');
+    }
+
+    function updateStreamSnapshot() {
+        const streamContainer = document.getElementById('streamContainer');
+        if (!streamContainer) return;
+
+        const cards = Array.from(streamContainer.querySelectorAll('.announcement-card'));
+        let commentCount = 0;
+        let viewCount = 0;
+
+        cards.forEach(card => {
+            card.querySelectorAll('.announcement-engagement-item span').forEach(item => {
+                const text = item.textContent || '';
+                const count = Number.parseInt(text, 10) || 0;
+                if (text.includes('comment')) commentCount += count;
+                if (text.includes('view')) viewCount += count;
+            });
+        });
+
+        const stats = {
+            streamPostCount: cards.length,
+            streamViewCount: viewCount,
+            streamCommentCount: commentCount,
+            streamPinnedCount: streamContainer.querySelectorAll('.announcement-card.pinned').length
         };
-    </script>
+
+        Object.entries(stats).forEach(([id, value]) => {
+            const node = document.getElementById(id);
+            if (node) node.textContent = value;
+        });
+    }
+
+    function loadAnnouncements(classCode) {
+        const container = document.getElementById('streamContainer');
+        const announcements = [
+            {
+                id: 1,
+                author: 'Teacher',
+                initials: 'MS',
+                title: 'Ms. Maria Santos',
+                time: '2 hours ago',
+                content: 'Welcome to Grade 3 Reading class! We\'ll be focusing on fluency and comprehension this week. Make sure to complete your assigned readings by Friday.',
+                comments: 3,
+                views: 24,
+                reactions: { like: 0, love: 0, wow: 0, helpful: 0 },
+                commentsList: []
+            },
+            {
+                id: 2,
+                author: 'Teacher',
+                initials: 'MS',
+                title: 'Ms. Maria Santos',
+                time: '1 day ago',
+                content: 'Upcoming assessment: Word recognition practice on Monday. Please review the materials provided in the Readings section.',
+                comments: 5,
+                views: 18,
+                reactions: { like: 0, love: 0, wow: 0, helpful: 0 },
+                commentsList: []
+            }
+        ];
+        
+        if (announcements.length === 0) {
+            container.innerHTML = `
+                <div class="stream-empty">
+                    <i class="bi bi-chat-dots"></i>
+                    <h6>No announcements yet</h6>
+                    <p>Post an announcement to keep your class informed</p>
+                </div>
+            `;
+            updateStreamSnapshot();
+            return;
+        }
+        
+        container.innerHTML = announcements.map(ann => {
+            const totalReactions = Object.values(ann.reactions).reduce((a, b) => a + b, 0);
+            return `
+            <div class="announcement-card" data-announcement-id="${ann.id}">
+                <div class="announcement-header">
+                    <div class="announcement-author">
+                        <div class="announcement-avatar">${ann.initials}</div>
+                        <div class="announcement-info">
+                            <h6>${ann.title}</h6>
+                            <p class="announcement-meta">
+                                <i class="bi bi-clock"></i> ${ann.time}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="announcement-actions">
+                        <button class="btn-icon" title="Pin"><i class="bi bi-pin"></i></button>
+                        <button class="btn-icon" title="Delete"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+                <div class="announcement-content">${ann.content}</div>
+                <div class="announcement-reactions">
+                    <button class="reaction-btn" data-reaction="like"><i class="bi bi-hand-thumbs-up"></i> <span class="reaction-count">${ann.reactions.like || ''}</span></button>
+                    <button class="reaction-btn" data-reaction="love"><i class="bi bi-heart"></i> <span class="reaction-count">${ann.reactions.love || ''}</span></button>
+                    <button class="reaction-btn" data-reaction="wow"><i class="bi bi-star"></i> <span class="reaction-count">${ann.reactions.wow || ''}</span></button>
+                    <button class="reaction-btn" data-reaction="helpful"><i class="bi bi-lightbulb"></i> <span class="reaction-count">${ann.reactions.helpful || ''}</span></button>
+                </div>
+                <div class="announcement-engagement">
+                    <div class="announcement-engagement-item">
+                        <i class="bi bi-chat"></i>
+                        <span>${ann.comments} comment${ann.comments !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="announcement-engagement-item">
+                        <i class="bi bi-eye"></i>
+                        <span>${ann.views} view${ann.views !== 1 ? 's' : ''}</span>
+                    </div>
+                    ${totalReactions > 0 ? `<div class="announcement-engagement-item" style="margin-left: auto;"><i class="bi bi-emoji-smile"></i> <span>${totalReactions} reaction${totalReactions !== 1 ? 's' : ''}</span></div>` : ''}
+                </div>
+                ${ann.commentsList && ann.commentsList.length > 0 ? `
+                    <div class="announcement-comments">
+                        ${ann.commentsList.map((c, idx) => `
+                            <div class="comment-item" data-comment-index="${idx}">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div class="comment-author">${c.author}</div>
+                                        <div class="comment-text">${c.text}</div>
+                                        <div class="comment-time">${c.time}</div>
+                                    </div>
+                                    <div style="display: flex; gap: 0.25rem;">
+                                        <button class="comment-edit-btn" title="Edit"><i class="bi bi-pencil-sm"></i></button>
+                                        <button class="comment-delete-btn" title="Delete"><i class="bi bi-trash-sm"></i></button>
+                                    </div>
+                                </div>
+                                <div class="comment-reactions">
+                                    <button class="comment-reaction-btn" data-reaction-type="thumbup" data-reaction-count="${c.reactions ? c.reactions.thumbup || 0 : 0}">
+                                        <i class="bi bi-hand-thumbs-up"></i>
+                                        <span class="reaction-text">${c.reactions && c.reactions.thumbup > 0 ? c.reactions.thumbup : ''}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div class="comment-input-section">
+                            <button class="add-comment-btn" data-add-comment="true" style="width: 100%; text-align: left;">
+                                <i class="bi bi-chat-left-plus"></i> Add comment
+                            </button>
+                            <div class="comment-input-box">
+                                <textarea class="comment-textarea" placeholder="Write a comment..." rows="2"></textarea>
+                                <div class="comment-input-actions">
+                                    <button class="btn-cancel">Cancel</button>
+                                    <button class="btn-submit">Post</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="comment-input-section">
+                        <button class="add-comment-btn" data-add-comment="true" style="width: 100%; text-align: left;">
+                            <i class="bi bi-chat-left-plus"></i> Add comment
+                        </button>
+                        <div class="comment-input-box">
+                            <textarea class="comment-textarea" placeholder="Write a comment..." rows="2"></textarea>
+                            <div class="comment-input-actions">
+                                <button class="btn-cancel">Cancel</button>
+                                <button class="btn-submit">Post</button>
+                            </div>
+                        </div>
+                    </div>
+                `}
+            </div>
+        `}).join('');
+
+        updateStreamSnapshot();
+    }
+
+    // Initialize on page load
+    // Helper functions for modals
+    function showSuccessModal(title, message) {
+        document.getElementById('successTitle').textContent = title;
+        document.getElementById('successMessage').textContent = message;
+        const modal = new bootstrap.Modal(document.getElementById('successModal'));
+        modal.show();
+        setTimeout(() => modal.hide(), 2000);
+    }
+
+    function showDeleteConfirmModal(message, onConfirm) {
+        document.getElementById('deleteConfirmText').textContent = message;
+        const confirmBtn = document.getElementById('confirmDelete');
+        confirmBtn.textContent = 'Delete';
+        
+        // Remove old listener and add new one
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        newConfirmBtn.addEventListener('click', function() {
+            bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+            if (onConfirm) onConfirm();
+            showSuccessModal('Deleted', 'Item removed successfully');
+        });
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        modal.show();
+    }
+
+    // ===== STREAM TAB HANDLERS =====
+    function setupStreamHandlers() {
+        const postBtn = document.querySelector('.stream-post-btn');
+        if (postBtn && !postBtn.dataset.bound) {
+            postBtn.dataset.bound = 'true';
+            postBtn.addEventListener('click', function() {
+                const modal = new bootstrap.Modal(document.getElementById('postAnnouncementModal'));
+                modal.show();
+            });
+        }
+        
+        // Submit announcement
+        const submitBtn = document.getElementById('submitAnnouncement');
+        if (submitBtn && !submitBtn.dataset.bound) {
+            submitBtn.dataset.bound = 'true';
+            submitBtn.addEventListener('click', function() {
+                const text = document.getElementById('announcementText').value;
+                if (text.trim()) {
+                    // Add new announcement to stream
+                    const streamContainer = document.getElementById('streamContainer');
+                    const newAnnouncement = document.createElement('div');
+                    newAnnouncement.className = 'announcement-card';
+                    newAnnouncement.dataset.announcementId = Date.now();
+                    newAnnouncement.innerHTML = `
+                        <div class="announcement-header">
+                            <div class="announcement-author">
+                                <div class="announcement-avatar">T</div>
+                                <div class="announcement-info">
+                                    <h6>You (Teacher)</h6>
+                                    <p class="announcement-meta">
+                                        <i class="bi bi-clock"></i> Just now
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="announcement-actions">
+                                <button class="btn-icon" title="Pin"><i class="bi bi-pin"></i></button>
+                                <button class="btn-icon" title="Delete"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="announcement-content">${text}</div>
+                        <div class="announcement-reactions">
+                            <button class="reaction-btn" data-reaction="like"><i class="bi bi-hand-thumbs-up"></i> <span class="reaction-count"></span></button>
+                            <button class="reaction-btn" data-reaction="love"><i class="bi bi-heart"></i> <span class="reaction-count"></span></button>
+                            <button class="reaction-btn" data-reaction="wow"><i class="bi bi-star"></i> <span class="reaction-count"></span></button>
+                            <button class="reaction-btn" data-reaction="helpful"><i class="bi bi-lightbulb"></i> <span class="reaction-count"></span></button>
+                        </div>
+                        <div class="announcement-engagement">
+                            <div class="announcement-engagement-item">
+                                <i class="bi bi-chat"></i>
+                                <span>0 comments</span>
+                            </div>
+                            <div class="announcement-engagement-item">
+                                <i class="bi bi-eye"></i>
+                                <span>0 views</span>
+                            </div>
+                        </div>
+                        <div class="comment-input-section">
+                            <button class="add-comment-btn" data-add-comment="true"><i class="bi bi-chat-left-plus"></i> Add comment</button>
+                            <div class="comment-input-box">
+                                <textarea class="comment-textarea" placeholder="Write a comment..." rows="2"></textarea>
+                                <div class="comment-input-actions">
+                                    <button class="btn-cancel">Cancel</button>
+                                    <button class="btn-submit">Post</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    streamContainer.insertBefore(newAnnouncement, streamContainer.firstChild);
+                    updateStreamSnapshot();
+                    document.getElementById('announcementText').value = '';
+                    bootstrap.Modal.getInstance(document.getElementById('postAnnouncementModal')).hide();
+                    showSuccessModal('Posted', 'Announcement published successfully');
+                }
+            });
+        }
+        
+        // Pin/Delete buttons on announcements - use stream-main for proper event delegation
+        const streamMain = document.querySelector('.stream-main');
+        if (streamMain && !streamMain.dataset.bound) {
+            streamMain.dataset.bound = 'true';
+            streamMain.addEventListener('click', function(e) {
+                const iconBtn = e.target.closest('.btn-icon');
+                if (iconBtn) {
+                    const icon = iconBtn.querySelector('i');
+                    const card = iconBtn.closest('.announcement-card');
+                    const text = card.querySelector('.announcement-content').textContent.substring(0, 30) + '...';
+                    const annId = card.dataset.announcementId;
+                    
+                    if (icon.classList.contains('bi-pin')) {
+                        // Check if another announcement is already pinned
+                        const pinnedCard = document.querySelector('.announcement-card.pinned');
+                        const spotlight = document.getElementById('pinnedSpotlight');
+                        
+                        if (pinnedCard && pinnedCard !== card) {
+                            // Another announcement is pinned, ask user to unpin it first
+                            const pinnedText = pinnedCard.querySelector('.announcement-content').textContent.substring(0, 30) + '...';
+                            showDeleteConfirmModal(
+                                `"${pinnedText}" is already pinned. Unpin it first?`,
+                                () => {
+                                    pinnedCard.classList.remove('pinned');
+                                    const pinnedContent = spotlight.querySelector('.pinned-spotlight-content');
+                                    if (pinnedContent) {
+                                        streamContainer.appendChild(pinnedCard);
+                                    }
+                                    card.classList.add('pinned');
+                                    pinnedAnnouncementId = annId;
+                                    movePinnedCardToSpotlight(card);
+                                    updateStreamSnapshot();
+                                    showSuccessModal('Pinned', `"${text}" is now pinned`);
+                                }
+                            );
+                            document.querySelector('#deleteConfirmModal .btn-danger').textContent = 'Unpin and Pin This';
+                        } else if (card.classList.contains('pinned')) {
+                            // Already pinned, unpin it
+                            card.classList.remove('pinned');
+                            streamContainer.appendChild(card);
+                            pinnedAnnouncementId = null;
+                            updatePinnedSpotlight();
+                            updateStreamSnapshot();
+                            showSuccessModal('Unpinned', `"${text}" unpinned`);
+                        } else {
+                            // Pin this announcement
+                            card.classList.add('pinned');
+                            pinnedAnnouncementId = annId;
+                            movePinnedCardToSpotlight(card);
+                            updateStreamSnapshot();
+                            showSuccessModal('Pinned', `"${text}" is now pinned`);
+                        }
+                    } else if (icon.classList.contains('bi-trash')) {
+                        showDeleteConfirmModal(`Delete announcement "${text}"?`, () => {
+                            if (card.classList.contains('pinned')) {
+                                pinnedAnnouncementId = null;
+                            }
+                            card.style.opacity = '0.5';
+                            card.style.pointerEvents = 'none';
+                            setTimeout(() => {
+                                card.remove();
+                                updateStreamSnapshot();
+                            }, 300);
+                        });
+                    }
+                }
+                
+                // Reaction buttons - FIXED to work properly
+                const reactionBtn = e.target.closest('.reaction-btn');
+                if (reactionBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const reaction = reactionBtn.dataset.reaction;
+                    const card = reactionBtn.closest('.announcement-card');
+                    const countSpan = reactionBtn.querySelector('.reaction-count');
+                    let count = parseInt(countSpan.textContent) || 0;
+                    
+                    if (reactionBtn.classList.contains('active')) {
+                        reactionBtn.classList.remove('active');
+                        count = Math.max(0, count - 1);
+                    } else {
+                        reactionBtn.classList.add('active');
+                        count++;
+                    }
+                    
+                    countSpan.textContent = count || '';
+                    
+                    // Update engagement section
+                    const engagementSection = card.querySelector('.announcement-engagement');
+                    const totalReactions = Array.from(card.querySelectorAll('.reaction-btn')).reduce((sum, btn) => {
+                        return sum + (parseInt(btn.querySelector('.reaction-count').textContent) || 0);
+                    }, 0);
+                    
+                    let reactionsDisplay = engagementSection.querySelector('div[style*="margin-left"]');
+                    if (totalReactions > 0) {
+                        if (!reactionsDisplay) {
+                            reactionsDisplay = document.createElement('div');
+                            reactionsDisplay.className = 'announcement-engagement-item';
+                            reactionsDisplay.style.marginLeft = 'auto';
+                            engagementSection.appendChild(reactionsDisplay);
+                        }
+                        reactionsDisplay.innerHTML = `<i class="bi bi-emoji-smile"></i> <span>${totalReactions} reaction${totalReactions !== 1 ? 's' : ''}</span>`;
+                    } else if (reactionsDisplay) {
+                        reactionsDisplay.remove();
+                    }
+                    return;
+                }
+                
+                // Add comment button - inline
+                const addCommentBtn = e.target.closest('[data-add-comment]');
+                if (addCommentBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const section = addCommentBtn.closest('.comment-input-section');
+                    const inputBox = section.querySelector('.comment-input-box');
+                    const textarea = inputBox.querySelector('.comment-textarea');
+                    
+                    if (!inputBox.classList.contains('active')) {
+                        inputBox.classList.add('active');
+                        addCommentBtn.style.display = 'none';
+                        textarea.focus();
+                    }
+                    return;
+                }
+                
+                // Comment submit
+                const submitBtn = e.target.closest('.comment-input-section .btn-submit');
+                if (submitBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const section = submitBtn.closest('.comment-input-section');
+                    const textarea = section.querySelector('.comment-textarea');
+                    const text = textarea.value.trim();
+                    
+                    if (text) {
+                        const card = submitBtn.closest('.announcement-card');
+                        let commentsContainer = card.querySelector('.announcement-comments');
+                        
+                        if (!commentsContainer) {
+                            commentsContainer = document.createElement('div');
+                            commentsContainer.className = 'announcement-comments';
+                            const reactions = card.querySelector('.announcement-reactions');
+                            reactions.parentNode.insertBefore(commentsContainer, reactions.nextSibling);
+                        }
+                        
+                        const commentItem = document.createElement('div');
+                        commentItem.className = 'comment-item';
+                        commentItem.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div class="comment-author">You (Teacher)</div>
+                                    <div class="comment-text">${text}</div>
+                                    <div class="comment-time">Just now</div>
+                                </div>
+                                <div style="display: flex; gap: 0.25rem;">
+                                    <button class="comment-edit-btn" title="Edit"><i class="bi bi-pencil-sm"></i></button>
+                                    <button class="comment-delete-btn" title="Delete"><i class="bi bi-trash-sm"></i></button>
+                                </div>
+                            </div>
+                            <div class="comment-reactions">
+                                <button class="comment-reaction-btn" data-reaction-type="thumbup" data-reaction-count="0">
+                                    <i class="bi bi-hand-thumbs-up"></i>
+                                    <span class="reaction-text"></span>
+                                </button>
+                            </div>
+                        `;
+                        
+                        const inputSection = commentsContainer.querySelector('.comment-input-section');
+                        if (inputSection) {
+                            commentsContainer.insertBefore(commentItem, inputSection);
+                        } else {
+                            commentsContainer.appendChild(commentItem);
+                        }
+                        
+                        // Update comment count in engagement
+                        const totalComments = commentsContainer.querySelectorAll('.comment-item').length;
+                        const commentEngItem = card.querySelector('.announcement-engagement-item:first-child');
+                        if (commentEngItem) {
+                            commentEngItem.innerHTML = `<i class="bi bi-chat"></i> <span>${totalComments} comment${totalComments !== 1 ? 's' : ''}</span>`;
+                        }
+                        updateStreamSnapshot();
+                        
+                        textarea.value = '';
+                        const inputBox = section.querySelector('.comment-input-box');
+                        inputBox.classList.remove('active');
+                        section.querySelector('[data-add-comment]').style.display = 'block';
+                        showSuccessModal('Comment Added', 'Your comment was posted');
+                    }
+                    return;
+                }
+                
+                // Comment cancel
+                const cancelBtn = e.target.closest('.comment-input-section .btn-cancel');
+                if (cancelBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const section = cancelBtn.closest('.comment-input-section');
+                    const inputBox = section.querySelector('.comment-input-box');
+                    const textarea = inputBox.querySelector('.comment-textarea');
+                    
+                    textarea.value = '';
+                    inputBox.classList.remove('active');
+                    section.querySelector('[data-add-comment]').style.display = 'block';
+                    return;
+                }
+                
+                // Comment reaction button (thumbs up)
+                const commentReactionBtn = e.target.closest('.comment-reaction-btn');
+                if (commentReactionBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const count = parseInt(commentReactionBtn.dataset.reactionCount) || 0;
+                    
+                    if (commentReactionBtn.classList.contains('active')) {
+                        commentReactionBtn.classList.remove('active');
+                        commentReactionBtn.dataset.reactionCount = Math.max(0, count - 1);
+                    } else {
+                        commentReactionBtn.classList.add('active');
+                        commentReactionBtn.dataset.reactionCount = count + 1;
+                    }
+                    
+                    const newCount = parseInt(commentReactionBtn.dataset.reactionCount);
+                    const reactionText = commentReactionBtn.querySelector('.reaction-text');
+                    reactionText.textContent = newCount > 0 ? newCount : '';
+                    
+                    showSuccessModal('Reacted', 'Added to comment');
+                    return;
+                }
+                
+                // Comment edit button
+                const editCommentBtn = e.target.closest('.comment-edit-btn');
+                if (editCommentBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const commentItem = editCommentBtn.closest('.comment-item');
+                    const commentText = commentItem.querySelector('.comment-text');
+                    const originalText = commentText.textContent;
+                    
+                    // Show edit modal
+                    const editModal = document.getElementById('editCommentModal');
+                    if (editModal) {
+                        const textarea = editModal.querySelector('textarea');
+                        textarea.value = originalText;
+                        const modal = new bootstrap.Modal(editModal);
+                        
+                        // Store reference to the comment being edited
+                        editModal.dataset.editingComment = commentText;
+                        editModal.dataset.editingText = originalText;
+                        
+                        const saveBtn = editModal.querySelector('.btn-save-comment');
+                        const oldHandler = saveBtn.onclick;
+                        
+                        saveBtn.onclick = function() {
+                            const newText = textarea.value.trim();
+                            if (newText && newText !== originalText) {
+                                commentText.textContent = newText;
+                                showSuccessModal('Updated', 'Comment has been edited');
+                            } else if (!newText) {
+                                showSuccessModal('Error', 'Comment cannot be empty');
+                            }
+                            modal.hide();
+                        };
+                        
+                        modal.show();
+                    } else {
+                        // Fallback if modal doesn't exist
+                        const newText = prompt('Edit comment:', originalText);
+                        if (newText !== null && newText.trim()) {
+                            commentText.textContent = newText;
+                            showSuccessModal('Updated', 'Comment has been edited');
+                        }
+                    }
+                    return;
+                }
+                
+                // Comment delete button
+                const deleteCommentBtn = e.target.closest('.comment-delete-btn');
+                if (deleteCommentBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const commentItem = deleteCommentBtn.closest('.comment-item');
+                    const card = deleteCommentBtn.closest('.announcement-card');
+                    const commentsContainer = card.querySelector('.announcement-comments');
+                    
+                    commentItem.style.opacity = '0.5';
+                    setTimeout(() => {
+                        commentItem.remove();
+                        
+                        // Update comment count
+                        const totalComments = commentsContainer.querySelectorAll('.comment-item').length;
+                        const commentEngItem = card.querySelector('.announcement-engagement-item:first-child');
+                        if (commentEngItem) {
+                            commentEngItem.innerHTML = `<i class="bi bi-chat"></i> <span>${totalComments} comment${totalComments !== 1 ? 's' : ''}</span>`;
+                        }
+                        updateStreamSnapshot();
+                        showSuccessModal('Deleted', 'Comment removed');
+                    }, 300);
+                    return;
+                }
+                
+                // Engagement indicators (comments/views)
+                const engagementItem = e.target.closest('.announcement-engagement-item');
+                if (engagementItem && !engagementItem.querySelector('.reaction-count')) {
+                    const icon = engagementItem.querySelector('i');
+                    const text = engagementItem.textContent.trim();
+                    
+                    if (icon && icon.classList.contains('bi-chat')) {
+                        showSuccessModal('Comments', `${text}`);
+                    } else if (icon && icon.classList.contains('bi-eye')) {
+                        showSuccessModal('Views', `${text}`);
+                    } else if (icon && icon.classList.contains('bi-emoji-smile')) {
+                        showSuccessModal('Reactions', `${text}`);
+                    }
+                }
+            });
+        }
+    }
+
+    // ===== READINGS TAB HANDLERS =====
+    function setupReadingsHandlers() {
+        let currentMaterialType = '';
+        let editingCard = null;
+        
+        const readingsContainer = document.getElementById('readingsContainer');
+        if (readingsContainer && !readingsContainer.dataset.bound) {
+            readingsContainer.dataset.bound = 'true';
+            readingsContainer.addEventListener('click', function(e) {
+                // Add material button
+                if (e.target.closest('[data-add-reading]')) {
+                    const btn = e.target.closest('[data-add-reading]');
+                    currentMaterialType = btn.dataset.addReading;
+                    const modal = new bootstrap.Modal(document.getElementById('addMaterialModal'));
+                    modal.show();
+                }
+                
+                // View material button
+                if (e.target.closest('[data-action="view"]')) {
+                    const btn = e.target.closest('[data-action="view"]');
+                    const card = btn.closest('.material-card-modern');
+                    const title = card.querySelector('.material-title').textContent;
+                    const content = card.dataset.fullContent;
+                    
+                    // Show content in a modal
+                    const viewModal = new bootstrap.Modal(document.createElement('div'));
+                    const modalDiv = document.createElement('div');
+                    modalDiv.className = 'modal fade';
+                    modalDiv.id = 'viewMaterialModal_' + Date.now();
+                    modalDiv.innerHTML = `
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title">${title}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding: 2rem;">
+                                    <div style="white-space: normal; word-break: break-word; overflow-wrap: break-word; line-height: 1.8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; padding: 1.5rem; background: linear-gradient(135deg, #f8f9fa 0%, #f0f4f3 100%); border-radius: 12px; border: 1px solid rgba(31, 111, 139, 0.1);">
+                                        ${content}
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modalDiv);
+                    const modal = new bootstrap.Modal(modalDiv);
+                    modal.show();
+                    
+                    // Clean up modal after it's hidden
+                    modalDiv.addEventListener('hidden.bs.modal', function() {
+                        modalDiv.remove();
+                    });
+                }
+                
+                // Edit material button
+                if (e.target.closest('[data-action="edit"]')) {
+                    const btn = e.target.closest('[data-action="edit"]');
+                    editingCard = btn.closest('.material-card-modern');
+                    const title = editingCard.querySelector('.material-title').textContent;
+                    const content = editingCard.dataset.fullContent;
+                    document.getElementById('editMaterialTitle').value = title;
+                    document.getElementById('editMaterialContent').value = content;
+                    const modal = new bootstrap.Modal(document.getElementById('editMaterialModal'));
+                    modal.show();
+                }
+                
+                // Delete material button
+                if (e.target.closest('[data-action="delete"]')) {
+                    const btn = e.target.closest('[data-action="delete"]');
+                    const card = btn.closest('.material-card-modern');
+                    const title = card.querySelector('.material-title').textContent;
+                    showDeleteConfirmModal(`Delete "${title}"?`, () => {
+                        card.style.opacity = '0.5';
+                        card.style.pointerEvents = 'none';
+                        setTimeout(() => card.remove(), 300);
+                    });
+                }
+            });
+        }
+        
+        // Submit edit
+        const submitEditBtn = document.getElementById('submitEditMaterial');
+        if (submitEditBtn && !submitEditBtn.dataset.bound) {
+            submitEditBtn.dataset.bound = 'true';
+            submitEditBtn.addEventListener('click', function() {
+                const newTitle = document.getElementById('editMaterialTitle').value;
+                const newContent = document.getElementById('editMaterialContent').value;
+                if (newTitle.trim() && newContent.trim() && editingCard) {
+                    const oldTitle = editingCard.querySelector('.material-title').textContent;
+                    
+                    // Update title
+                    editingCard.querySelector('.material-title').textContent = newTitle;
+                    
+                    // Update content
+                    editingCard.dataset.fullContent = newContent;
+                    
+                    // Update preview
+                    const contentPreview = newContent.substring(0, 100) + (newContent.length > 100 ? '...' : '');
+                    const previewEl = editingCard.querySelector('.material-preview');
+                    if (previewEl) previewEl.textContent = contentPreview;
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('editMaterialModal')).hide();
+                    showSuccessModal('Updated', `"${newTitle}" has been updated`);
+                } else if (!newTitle.trim() || !newContent.trim()) {
+                    showSuccessModal('Error', 'Title and content cannot be empty');
+                }
+            });
+        }
+        
+        // Submit material
+        const submitMaterialBtn = document.getElementById('submitMaterial');
+        if (submitMaterialBtn && !submitMaterialBtn.dataset.bound) {
+            submitMaterialBtn.dataset.bound = 'true';
+            submitMaterialBtn.addEventListener('click', function() {
+                const title = document.getElementById('materialTitle').value;
+                const content = document.getElementById('materialContent').value;
+                const type = document.getElementById('materialType').value;
+                const level = document.getElementById('readingLevel').value;
+                
+                if (title.trim() && content.trim()) {
+                    // Add material card to appropriate section
+                    const containerId = currentMaterialType === 'word' ? 'wordReadings' : 
+                                      currentMaterialType === 'sentence' ? 'sentenceReadings' : 
+                                      'paragraphReadings';
+                    const container = document.getElementById(containerId);
+                    
+                    const contentPreview = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+                    
+                    const newMaterial = document.createElement('div');
+                    newMaterial.className = 'material-card-modern';
+                    newMaterial.dataset.fullContent = content;
+                    newMaterial.innerHTML = `
+                        <div class="material-info">
+                            <div class="material-leading-icon">
+                                <i class="bi ${currentMaterialType === 'word' ? 'bi-spellcheck' : currentMaterialType === 'sentence' ? 'bi-chat-left-text' : 'bi-file-text'}"></i>
+                            </div>
+                            <div>
+                                <p class="material-title">${title}</p>
+                                <p class="material-preview">${contentPreview}</p>
+                                <p class="material-meta">
+                                    <span class="material-type-badge ${type}">${type}</span>
+                                    <span class="material-type-badge both">${level}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="material-actions">
+                            <button class="material-btn" title="View" data-action="view" style="color: #17a2b8;">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="material-btn" title="Edit" data-action="edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="material-btn delete" title="Delete" data-action="delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Remove empty state if exists
+                    const emptyState = container.querySelector('.readings-empty');
+                    if (emptyState) emptyState.remove();
+                    
+                    container.appendChild(newMaterial);
+                    
+                    // Update count badge
+                    const typeLabel = currentMaterialType === 'word' ? 'word' : 
+                                    currentMaterialType === 'sentence' ? 'sentence' : 
+                                    'paragraph';
+                    const countBadge = document.querySelector(`[data-${typeLabel}-count]`);
+                    const cardCount = container.querySelectorAll('.material-card-modern').length;
+                    if (countBadge) countBadge.textContent = `${cardCount} item${cardCount !== 1 ? 's' : ''}`;
+                    
+                    // Reset form and close
+                    document.getElementById('materialTitle').value = '';
+                    document.getElementById('materialContent').value = '';
+                    document.getElementById('materialType').value = 'practice';
+                    document.getElementById('readingLevel').value = 'beginner';
+                    bootstrap.Modal.getInstance(document.getElementById('addMaterialModal')).hide();
+                    showSuccessModal('Added', `"${title}" added successfully`);
+                }
+            });
+        }
+    }
+
+    // ===== ASSESSMENT TAB HANDLERS =====
+    function setupAssessmentHandlers() {
+        let editingAssessmentId = null;
+        const container = document.getElementById('assessmentsContainer');
+        const modalEl = document.getElementById('assessmentModal');
+        const submitBtn = document.getElementById('submitAssessment');
+
+        function resetAssessmentForm() {
+            editingAssessmentId = null;
+            document.getElementById('assessmentModalTitle').textContent = 'Add Assessment';
+            document.getElementById('assessmentTitle').value = '';
+            document.getElementById('assessmentLevel').value = 'Word';
+            document.getElementById('assessmentItems').value = '10';
+            document.getElementById('assessmentMinutes').value = '15';
+            document.getElementById('assessmentDueDate').value = '';
+        }
+
+        function openAssessmentModal(assessment) {
+            resetAssessmentForm();
+            if (assessment) {
+                editingAssessmentId = assessment.id;
+                document.getElementById('assessmentModalTitle').textContent = 'Edit Assessment';
+                document.getElementById('assessmentTitle').value = assessment.title;
+                document.getElementById('assessmentLevel').value = assessment.level;
+                document.getElementById('assessmentItems').value = assessment.items;
+                document.getElementById('assessmentMinutes').value = assessment.minutes;
+                document.getElementById('assessmentDueDate').value = assessment.dueDate || '';
+            }
+            new bootstrap.Modal(modalEl).show();
+        }
+
+        if (container && !container.dataset.bound) {
+            container.dataset.bound = 'true';
+            container.addEventListener('click', function(e) {
+                const addBtn = e.target.closest('[data-add-assessment]');
+                if (addBtn) {
+                    openAssessmentModal();
+                    return;
+                }
+
+                const actionBtn = e.target.closest('[data-assessment-action]');
+                if (!actionBtn) return;
+
+                const card = actionBtn.closest('.assessment-card');
+                const assessmentId = Number(card.dataset.assessmentId);
+                const assessments = classAssessments[currentClassCode] || [];
+                const assessment = assessments.find(item => item.id === assessmentId);
+                if (!assessment) return;
+
+                if (actionBtn.dataset.assessmentAction === 'preview') {
+                    showSuccessModal('Assessment Preview', `${assessment.title} has ${assessment.items} items and a ${assessment.minutes}-minute limit.`);
+                    return;
+                }
+
+                if (actionBtn.dataset.assessmentAction === 'edit') {
+                    openAssessmentModal(assessment);
+                    return;
+                }
+
+                if (actionBtn.dataset.assessmentAction === 'delete') {
+                    showDeleteConfirmModal(`Delete "${assessment.title}"?`, () => {
+                        classAssessments[currentClassCode] = assessments.filter(item => item.id !== assessmentId);
+                        loadAssessments(currentClassCode);
+                    });
+                }
+            });
+        }
+
+        if (submitBtn && !submitBtn.dataset.bound) {
+            submitBtn.dataset.bound = 'true';
+            submitBtn.addEventListener('click', function() {
+                const title = document.getElementById('assessmentTitle').value.trim();
+                const level = document.getElementById('assessmentLevel').value;
+                const items = Number(document.getElementById('assessmentItems').value);
+                const minutes = Number(document.getElementById('assessmentMinutes').value);
+                const dueDate = document.getElementById('assessmentDueDate').value;
+
+                if (!title || items < 1 || minutes < 1 || !currentClassCode) {
+                    showSuccessModal('Missing Details', 'Add a title, item count, and time limit.');
+                    return;
+                }
+
+                if (!classAssessments[currentClassCode]) {
+                    classAssessments[currentClassCode] = [];
+                }
+
+                if (editingAssessmentId) {
+                    const assessment = classAssessments[currentClassCode].find(item => item.id === editingAssessmentId);
+                    if (assessment) {
+                        assessment.title = title;
+                        assessment.level = level;
+                        assessment.items = items;
+                        assessment.minutes = minutes;
+                        assessment.dueDate = dueDate;
+                    }
+                    showSuccessModal('Updated', `"${title}" was updated.`);
+                } else {
+                    classAssessments[currentClassCode].push({
+                        id: Date.now(),
+                        title,
+                        level,
+                        items,
+                        minutes,
+                        dueDate,
+                        completed: 0,
+                        average: 0
+                    });
+                    showSuccessModal('Added', `"${title}" was added.`);
+                }
+
+                bootstrap.Modal.getInstance(modalEl).hide();
+                loadAssessments(currentClassCode);
+            });
+        }
+    }
+
+    // ===== STUDENTS TAB HANDLERS =====
+    function setupStudentsHandlers() {
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            if (btn.dataset.bound) return;
+            btn.dataset.bound = 'true';
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                const cards = document.querySelectorAll('.student-card-modern');
+                
+                // Simple filter demo - in real app would filter actual data
+                cards.forEach(card => {
+                    card.style.display = '';
+                });
+                
+                showSuccessModal('Filtered', `Showing: ${filter.charAt(0).toUpperCase() + filter.slice(1)}`);
+            });
+        });
+    }
+
+    // Setup all handlers when modal content changes
+    function setupAllHandlers() {
+        setupStreamHandlers();
+        setupReadingsHandlers();
+        setupAssessmentHandlers();
+        setupStudentsHandlers();
+    }
+
+    // Override openClassDetail to setup handlers
+    const originalOpenClassDetail = window.openClassDetail;
+    window.openClassDetail = function(classCode) {
+        originalOpenClassDetail(classCode);
+        setTimeout(setupAllHandlers, 300);
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        renderClasses();
+        setupAllHandlers();
+    });
+</script>
 </section>
 {% endblock %}

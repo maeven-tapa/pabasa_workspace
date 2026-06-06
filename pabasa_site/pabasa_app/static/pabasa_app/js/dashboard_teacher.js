@@ -108,6 +108,11 @@
         activeStudentCount.textContent = students;
         classBanner.setAttribute("data-header", header);
         generatedClassCode.textContent = code;
+        
+        // Show copy code button when class is selected
+        if (copyClassCodeBtn) {
+            copyClassCodeBtn.style.display = "block";
+        }
     }
 
     function createClassCard(name, header, description, code, subject, students) {
@@ -119,13 +124,6 @@
         card.setAttribute("data-header", header);
         card.setAttribute("data-description", description);
         card.setAttribute("data-students", students || "0");
-
-        const deleteBtn = document.createElement("button");
-        deleteBtn.className = "class-card-delete";
-        deleteBtn.type = "button";
-        deleteBtn.title = "Delete class";
-        deleteBtn.setAttribute("aria-label", `Delete ${name} class`);
-        deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
 
         const head = document.createElement("span");
         head.className = "class-card-head";
@@ -143,7 +141,6 @@
 
         head.appendChild(title);
         head.appendChild(codePill);
-        card.appendChild(deleteBtn);
         card.appendChild(head);
         card.appendChild(meta);
 
@@ -176,16 +173,6 @@
     }
 
     classList.addEventListener("click", function (event) {
-        const deleteBtn = event.target.closest(".class-card-delete");
-        if (deleteBtn) {
-            event.stopPropagation();
-            const card = deleteBtn.closest(".class-card");
-            if (card) {
-                showDeleteConfirmation(card);
-            }
-            return;
-        }
-
         const card = event.target.closest(".class-card");
         if (card) {
             selectClass(card);
@@ -217,6 +204,11 @@
         updateClassCount();
         saveClasses();
         setGeneratedCode();
+        
+        // Clear the form fields after successful class creation
+        classNameInput.value = "";
+        classHeaderInput.value = "";
+        classDescriptionInput.value = "";
     });
 
     regenerateCodeBtn.addEventListener("click", setGeneratedCode);

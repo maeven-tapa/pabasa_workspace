@@ -27,7 +27,7 @@
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'practice' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Practice Mode" data-unlocked-title="Start your reading practice"><i class="bi bi-mic"></i><span class="sidebar-text">Practice Mode</span></a>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'assessment' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Reading Assessment" data-unlocked-title="Take your reading assessment"><i class="bi bi-journal-check"></i><span class="sidebar-text">Reading Assessment</span></a>
         {% else %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Materials"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Materials</span></a>
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Classes"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Class</span></a>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="Students"><i class="bi bi-people"></i><span class="sidebar-text">Students</span></a>
         {% endif %}
     </nav>
@@ -56,19 +56,28 @@
 
 <script>
     (() => {
-        const brandIdElement = document.querySelector("[data-sidebar-brand-id]");
-        if (!brandIdElement) return;
-
+        // Update ALL instances of the brand ID (desktop + mobile sidebars)
         const updateBrandId = () => {
             const storedId = window.localStorage.getItem("pabasaCurrentUserId");
-            if (storedId) {
-                brandIdElement.textContent = storedId;
-            } else {
-                brandIdElement.textContent = "PABASA";
-            }
+            const brandIdElements = document.querySelectorAll("[data-sidebar-brand-id]");
+            
+            brandIdElements.forEach(element => {
+                if (storedId) {
+                    element.textContent = storedId;
+                } else {
+                    element.textContent = "PABASA";
+                }
+            });
         };
 
-        updateBrandId();
+        // Update on page load
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", updateBrandId);
+        } else {
+            updateBrandId();
+        }
+        
+        // Update when localStorage changes
         window.addEventListener("storage", updateBrandId);
     })();
 </script>
