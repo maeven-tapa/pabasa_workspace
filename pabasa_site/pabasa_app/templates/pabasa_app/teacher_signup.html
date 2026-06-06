@@ -218,7 +218,11 @@
                 <span class="modern-chip mb-2">Teacher Account</span>
                 <h1 class="h4">Create a Teacher Account</h1>
                 <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
-                <form id="teacherSignupForm" action="{% url 'dashboard' %}" method="get" class="row g-3 teacher-signup-form">
+                <form id="teacherSignupForm" method="post" class="row g-3 teacher-signup-form">
+                    {% csrf_token %}
+                    <div class="col-12">
+                        <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+                    </div>
                     <div class="col-md-6">
                         <label class="form-label">First name</label>
                         <input class="form-control" type="text" name="first_name" placeholder="Enter first name" required>
@@ -268,7 +272,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Contact number</label>
-                        <input class="form-control" type="tel" name="contact_number" placeholder="09XXXXXXXXX">
+                        <input class="form-control" type="tel" name="contact_no" placeholder="09XXXXXXXXX">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Password</label>
@@ -289,11 +293,22 @@
                             </ul>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Teacher Role</label>
+                        <input class="form-control" type="text" name="teacher_role" placeholder="e.g., Grade 1 Teacher">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">School</label>
+                        <input class="form-control" type="text" name="school" placeholder="School name">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Department</label>
+                        <input class="form-control" type="text" name="department" placeholder="Department">
+                    </div>
                     <div class="col-12 d-flex justify-content-between form-actions">
                         <a class="btn back-button" href="{% url 'signup' %}">Back</a>
-                        <button class="btn btn-primary" type="submit" disabled>Create Account</button>
+                        <button class="btn btn-primary" id="submitBtn" type="submit" disabled>Create Account</button>
                     </div>
-                    <input type="hidden" name="school_id" data-generated-pabasa-id>
                 </form>
                 <div class="generated-pabasa-id" id="teacherGeneratedPabasaId" aria-live="polite">
                     <span class="small fw-bold text-uppercase">Generated PABASA ID</span>
@@ -308,9 +323,9 @@
     (() => {
         const form = document.getElementById("teacherSignupForm");
         const result = document.getElementById("teacherGeneratedPabasaId");
-        const pabasaIdInput = form.querySelector("[data-generated-pabasa-id]");
         const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
         const submitButton = form.querySelector("button[type='submit']");
+        const errorMessage = form.querySelector("#errorMessage");
         const passwordInput = form.elements.password;
         const confirmPasswordInput = form.elements.confirm_password;
         const passwordMatchError = form.querySelector("[data-password-match-error]");
@@ -318,14 +333,6 @@
             length: form.querySelector("[data-rule='length']"),
             uppercase: form.querySelector("[data-rule='uppercase']"),
             number: form.querySelector("[data-rule='number']"),
-        };
-
-        const generatePabasaId = () => {
-            const storageKey = "pabasaTeacherIdCounter";
-            let counter = parseInt(window.localStorage.getItem(storageKey) || "1", 10);
-            const numericId = String(counter).padStart(4, "0");
-            window.localStorage.setItem(storageKey, String(counter + 1));
-            return `TCH-${numericId}`;
         };
 
         const getPasswordState = () => ({
@@ -356,7 +363,7 @@
         form.addEventListener("input", updateValidation);
         form.addEventListener("change", updateValidation);
 
-        form.addEventListener("submit", (event) => {
+        form.addEventListener("submit", async (event) => {
             event.preventDefault();
             updateValidation();
 
@@ -365,13 +372,41 @@
                 return;
             }
 
-            const pabasaId = generatePabasaId();
-            pabasaIdInput.value = pabasaId;
-            pabasaIdOutput.textContent = pabasaId;
-            window.localStorage.setItem("pabasaCurrentUserId", pabasaId);
-            window.localStorage.setItem("pabasaUserRole", "teacher");
-            result.classList.add("is-visible");
-            result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            submitButton.disabled = true;
+            submitButton.innerHTML = 'Creating Account...';
+            errorMessage.classList.add("d-none");
+            
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('{% url "register_teacher" %}', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show generated PABASA ID
+                    pabasaIdOutput.textContent = data.custom_id;
+                    result.classList.add("is-visible");
+                    result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    
+                    // Update continue button to redirect to login
+                    const continueBtn = result.querySelector(".btn");
+                    continueBtn.href = "{% url 'auth' %}";
+                    continueBtn.textContent = "Go to Login";
+                } else {
+                    errorMessage.textContent = data.error || 'Registration failed. Please try again.';
+                    errorMessage.classList.remove("d-none");
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = 'Create Account';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'An error occurred. Please try again.';
+                errorMessage.classList.remove("d-none");
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Create Account';
+            }
         });
 
         updateValidation();

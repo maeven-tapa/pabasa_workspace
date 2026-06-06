@@ -3,6 +3,13 @@ from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    
+    # Authentication routes
+    path('api/register/teacher/', views.register_teacher, name='register_teacher'),
+    path('api/register/student/', views.register_student, name='register_student'),
+    path('api/login/', views.login_user, name='login_user'),
+    path('logout/', views.logout_user, name='logout'),
+    
     path('auth/', views.auth, name='auth'),
     path('forgot-password/', views.forgot_password, name='forgot_password'),
     path('forgot-password/otp/', views.forgot_password_otp, name='forgot_password_otp'),

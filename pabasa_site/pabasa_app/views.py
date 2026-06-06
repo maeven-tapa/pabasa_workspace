@@ -1,9 +1,211 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
+from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth import authenticate, login
+from django.db import IntegrityError
+from functools import wraps
 import os
 from pathlib import Path
+import uuid
+from .models import User, TeacherProfile, StudentProfile
+
+# Authentication decorator
+def login_required(role=None):
+    """Decorator to check if user is authenticated and optionally check role"""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if 'user_id' not in request.session:
+                return redirect('auth')
+            if role and request.session.get('user_role') != role:
+                return redirect('auth')
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+# Authentication functions
+def generate_custom_id(role):
+    """Generate unique custom ID based on role"""
+    if role == 'teacher':
+        prefix = 'TCH'
+    else:  # student
+        prefix = 'G2'
+    
+    # Get the count of existing users with this role
+    count = User.objects.filter(role=role).count() + 1
+    return f"{prefix}-{count:04d}"
+
+@csrf_protect
+@require_http_methods(["POST"])
+def register_teacher(request):
+    """Register a new teacher"""
+    try:
+        data = request.POST
+        
+        # Validate required fields
+        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 
+                         'sex', 'birth_month', 'birth_day', 'birth_year']
+        
+        for field in required_fields:
+            if not data.get(field):
+                return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
+        
+        # Validate password match
+        if data.get('password') != data.get('confirm_password'):
+            return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
+        
+        # Check if email already exists
+        if User.objects.filter(email=data.get('email')).exists():
+            return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
+        
+        # Create user
+        custom_id = generate_custom_id('teacher')
+        user = User.objects.create(
+            custom_id=custom_id,
+            role='teacher',
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
+            email=data.get('email'),
+            sex=data.get('sex'),
+            birth_month=int(data.get('birth_month', 0)),
+            birth_day=int(data.get('birth_day', 0)),
+            birth_year=int(data.get('birth_year', 0)),
+            password_hash=make_password(data.get('password')),
+            contact_no=data.get('contact_no', '')
+        )
+        
+        # Create teacher profile
+        teacher_code = f"TCH-{user.id:04d}"
+        TeacherProfile.objects.create(
+            user=user,
+            teacher_code=teacher_code,
+            teacher_role=data.get('teacher_role', ''),
+            school=data.get('school', ''),
+            department=data.get('department', '')
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Teacher registered successfully',
+            'custom_id': custom_id
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+def register_student(request):
+    """Register a new student"""
+    try:
+        data = request.POST
+        
+        # Validate required fields
+        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password',
+                         'sex', 'birth_month', 'birth_day', 'birth_year']
+        
+        for field in required_fields:
+            if not data.get(field):
+                return JsonResponse({'success': False, 'error': f'{field} is required'}, status=400)
+        
+        # Validate password match
+        if data.get('password') != data.get('confirm_password'):
+            return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
+        
+        # Check if email already exists
+        if User.objects.filter(email=data.get('email')).exists():
+            return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
+        
+        # Create user
+        custom_id = generate_custom_id('student')
+        user = User.objects.create(
+            custom_id=custom_id,
+            role='student',
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
+            email=data.get('email'),
+            sex=data.get('sex'),
+            birth_month=int(data.get('birth_month', 0)),
+            birth_day=int(data.get('birth_day', 0)),
+            birth_year=int(data.get('birth_year', 0)),
+            password_hash=make_password(data.get('password')),
+            contact_no=data.get('contact_no', '')
+        )
+        
+        # Create student profile
+        student_code = f"G2-{user.id:04d}"
+        StudentProfile.objects.create(
+            user=user,
+            student_code=student_code,
+            grade_level=data.get('grade_level', ''),
+            section=data.get('section', ''),
+            reading_level=data.get('reading_level', ''),
+            parent_contact_no=data.get('parent_contact_no', '')
+        )
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Student registered successfully',
+            'custom_id': custom_id
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+def login_user(request):
+    """Authenticate user and create session"""
+    try:
+        data = request.POST
+        custom_id = data.get('custom_id', '').strip()
+        password = data.get('password', '')
+        
+        if not custom_id or not password:
+            return JsonResponse({'success': False, 'error': 'Custom ID and password are required'}, status=400)
+        
+        # Find user by custom_id
+        try:
+            user = User.objects.get(custom_id=custom_id)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
+        
+        # Verify password
+        if not check_password(password, user.password_hash):
+            return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
+        
+        # Create session
+        request.session['user_id'] = user.id
+        request.session['custom_id'] = user.custom_id
+        request.session['user_role'] = user.role
+        request.session['first_name'] = user.first_name
+        request.session['last_name'] = user.last_name
+        request.session['email'] = user.email
+        
+        # Determine redirect URL based on role
+        redirect_url = '/dashboard/teacher/' if user.role == 'teacher' else '/dashboard/'
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Login successful',
+            'role': user.role,
+            'redirect_url': redirect_url,
+            'custom_id': user.custom_id
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+def logout_user(request):
+    """Logout user and destroy session"""
+    request.session.flush()
+    return redirect('home')
+
+def _check_auth(request):
+    """Check if user is authenticated"""
+    return 'user_id' in request.session
 
 def home(request):
     return render(request, 'pabasa_app/home.html')
@@ -34,15 +236,43 @@ def student_signup(request):
     return render(request, 'pabasa_app/student_signup.html')
 
 def dashboard(request):
-    return render(request, 'pabasa_app/dashboard.html', {'nav_role': 'student'})
+    if not _check_auth(request):
+        return redirect('auth')
+    if request.session.get('user_role') != 'student':
+        return redirect('auth')
+    
+    user_data = {
+        'nav_role': 'student',
+        'user_id': request.session.get('custom_id'),
+        'first_name': request.session.get('first_name'),
+        'last_name': request.session.get('last_name'),
+        'email': request.session.get('email')
+    }
+    return render(request, 'pabasa_app/dashboard.html', user_data)
 
 def dashboard_teacher(request):
-    return render(request, 'pabasa_app/dashboard_teacher.html', {'nav_role': 'teacher'})
+    if not _check_auth(request):
+        return redirect('auth')
+    if request.session.get('user_role') != 'teacher':
+        return redirect('auth')
+    
+    user_data = {
+        'nav_role': 'teacher',
+        'user_id': request.session.get('custom_id'),
+        'first_name': request.session.get('first_name'),
+        'last_name': request.session.get('last_name'),
+        'email': request.session.get('email')
+    }
+    return render(request, 'pabasa_app/dashboard_teacher.html', user_data)
 
 def courses(request):
+    if not _check_auth(request):
+        return redirect('auth')
     return render(request, 'pabasa_app/courses.html', {'nav_role': 'teacher'})
 
 def assessment(request):
+    if not _check_auth(request):
+        return redirect('auth')
     return render(request, 'pabasa_app/assessment.html', {'nav_role': 'student'})
 
 def reading_word_page(request):
