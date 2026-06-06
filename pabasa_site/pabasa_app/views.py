@@ -431,7 +431,7 @@ def student_detail(request):
 def calendar(request):
     return render(request, 'pabasa_app/calendar.html')
 
-def settings(request):
+def settings_view(request):
     nav_role = request.GET.get('role', 'student')
     return render(request, 'pabasa_app/settings.html', {'nav_role': nav_role})
 
