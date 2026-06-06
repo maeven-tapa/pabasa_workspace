@@ -4,10 +4,15 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth import authenticate, login
+from django.core.mail import send_mail
+from django.conf import settings
+from django.urls import reverse
 from django.db import IntegrityError
 from functools import wraps
 import os
 from pathlib import Path
+import random
+import time
 import uuid
 from .models import User, TeacherProfile, StudentProfile
 
@@ -37,6 +42,64 @@ def generate_custom_id(role):
     count = User.objects.filter(role=role).count() + 1
     return f"{prefix}-{count:04d}"
 
+def generate_otp(length=6):
+    return ''.join(random.choice('0123456789') for _ in range(length))
+
+def _store_pending_teacher_signup(request, data):
+    otp = generate_otp()
+    request.session['pending_teacher_signup'] = {
+        'first_name': data.get('first_name'),
+        'last_name': data.get('last_name'),
+        'email': data.get('email'),
+        'sex': data.get('sex'),
+        'birth_month': int(data.get('birth_month', 0)),
+        'birth_day': int(data.get('birth_day', 0)),
+        'birth_year': int(data.get('birth_year', 0)),
+        'password_hash': make_password(data.get('password')),
+        'contact_no': data.get('contact_no', ''),
+        'teacher_role': data.get('teacher_role', ''),
+        'school': data.get('school', ''),
+        'department': data.get('department', ''),
+    }
+    request.session['pending_teacher_signup_otp'] = otp
+    request.session['pending_teacher_signup_otp_created'] = time.time()
+    request.session.modified = True
+    return otp
+
+def _clear_pending_teacher_signup(request):
+    request.session.pop('pending_teacher_signup', None)
+    request.session.pop('pending_teacher_signup_otp', None)
+    request.session.pop('pending_teacher_signup_otp_created', None)
+    request.session.modified = True
+
+def send_teacher_signup_otp_email(request, email, otp, first_name):
+    auth_url = request.build_absolute_uri(reverse('auth'))
+    subject = "PABASA Teacher Signup OTP"
+    message = (
+        f"Hello {first_name},\n\n"
+        f"Use the following One-Time Password (OTP) to complete your PABASA teacher account registration:\n\n"
+        f"{otp}\n\n"
+        "This OTP is valid for 10 minutes.\n\n"
+        "If you did not request this, please ignore this email.\n\n"
+        f"You can log in after verification at: {auth_url}\n\n"
+        "Thank you,\nPABASA Team"
+    )
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+
+def send_teacher_confirmation_email(request, user, teacher_code):
+    auth_url = request.build_absolute_uri(reverse('auth'))
+    subject = "Your PABASA Teacher Account is Ready"
+    message = (
+        f"Hello {user.first_name},\n\n"
+        "Your PABASA teacher account has been created successfully.\n\n"
+        f"User ID: {user.custom_id}\n"
+        f"Teacher Code: {teacher_code}\n"
+        f"Email: {user.email}\n\n"
+        f"You can now log in at: {auth_url}\n\n"
+        "Thank you for joining PABASA.\n"
+    )
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+
 @csrf_protect
 @require_http_methods(["POST"])
 def register_teacher(request):
@@ -60,36 +123,14 @@ def register_teacher(request):
         if User.objects.filter(email=data.get('email')).exists():
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
         
-        # Create user
-        custom_id = generate_custom_id('teacher')
-        user = User.objects.create(
-            custom_id=custom_id,
-            role='teacher',
-            first_name=data.get('first_name'),
-            last_name=data.get('last_name'),
-            email=data.get('email'),
-            sex=data.get('sex'),
-            birth_month=int(data.get('birth_month', 0)),
-            birth_day=int(data.get('birth_day', 0)),
-            birth_year=int(data.get('birth_year', 0)),
-            password_hash=make_password(data.get('password')),
-            contact_no=data.get('contact_no', '')
-        )
-        
-        # Create teacher profile
-        teacher_code = f"TCH-{user.id:04d}"
-        TeacherProfile.objects.create(
-            user=user,
-            teacher_code=teacher_code,
-            teacher_role=data.get('teacher_role', ''),
-            school=data.get('school', ''),
-            department=data.get('department', '')
-        )
-        
+        # Create pending signup and send OTP
+        otp = _store_pending_teacher_signup(request, data)
+        send_teacher_signup_otp_email(request, data.get('email'), otp, data.get('first_name'))
+
         return JsonResponse({
-            'success': True, 
-            'message': 'Teacher registered successfully',
-            'custom_id': custom_id
+            'success': True,
+            'message': 'OTP sent to your email. Enter it below to finish registration.',
+            'email': data.get('email')
         })
     
     except Exception as e:
@@ -151,6 +192,88 @@ def register_student(request):
             'custom_id': custom_id
         })
     
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+def verify_teacher_otp(request):
+    try:
+        otp = request.POST.get('otp', '').strip()
+        if not otp:
+            return JsonResponse({'success': False, 'error': 'OTP is required'}, status=400)
+
+        pending = request.session.get('pending_teacher_signup')
+        expected_otp = request.session.get('pending_teacher_signup_otp')
+        otp_created = request.session.get('pending_teacher_signup_otp_created')
+
+        if not pending or not expected_otp or not otp_created:
+            return JsonResponse({'success': False, 'error': 'No pending signup found. Please start registration again.'}, status=400)
+
+        if time.time() - otp_created > 10 * 60:
+            _clear_pending_teacher_signup(request)
+            return JsonResponse({'success': False, 'error': 'OTP expired. Please request a new code.'}, status=400)
+
+        if otp != expected_otp:
+            return JsonResponse({'success': False, 'error': 'Invalid OTP. Please try again.'}, status=400)
+
+        if User.objects.filter(email=pending['email']).exists():
+            _clear_pending_teacher_signup(request)
+            return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
+
+        custom_id = generate_custom_id('teacher')
+        user = User.objects.create(
+            custom_id=custom_id,
+            role='teacher',
+            first_name=pending['first_name'],
+            last_name=pending['last_name'],
+            email=pending['email'],
+            sex=pending['sex'],
+            birth_month=pending['birth_month'],
+            birth_day=pending['birth_day'],
+            birth_year=pending['birth_year'],
+            password_hash=pending['password_hash'],
+            contact_no=pending['contact_no']
+        )
+
+        teacher_code = f"TCH-{user.id:04d}"
+        TeacherProfile.objects.create(
+            user=user,
+            teacher_code=teacher_code,
+            teacher_role=pending['teacher_role'],
+            school=pending['school'],
+            department=pending['department']
+        )
+
+        send_teacher_confirmation_email(request, user, teacher_code)
+        _clear_pending_teacher_signup(request)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Teacher registered successfully',
+            'custom_id': custom_id,
+            'teacher_code': teacher_code
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+def resend_teacher_signup_otp(request):
+    try:
+        pending = request.session.get('pending_teacher_signup')
+        if not pending:
+            return JsonResponse({'success': False, 'error': 'No pending signup found. Please start registration again.'}, status=400)
+
+        otp = generate_otp()
+        request.session['pending_teacher_signup_otp'] = otp
+        request.session['pending_teacher_signup_otp_created'] = time.time()
+        request.session.modified = True
+
+        send_teacher_signup_otp_email(request, pending['email'], otp, pending['first_name'])
+        return JsonResponse({'success': True, 'message': 'A new OTP has been sent to your email.'})
+
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

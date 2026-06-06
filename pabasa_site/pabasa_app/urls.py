@@ -6,6 +6,8 @@ urlpatterns = [
     
     # Authentication routes
     path('api/register/teacher/', views.register_teacher, name='register_teacher'),
+    path('api/register/teacher/verify-otp/', views.verify_teacher_otp, name='verify_teacher_otp'),
+    path('api/register/teacher/resend-otp/', views.resend_teacher_signup_otp, name='resend_teacher_signup_otp'),
     path('api/register/student/', views.register_student, name='register_student'),
     path('api/login/', views.login_user, name='login_user'),
     path('logout/', views.logout_user, name='logout'),
