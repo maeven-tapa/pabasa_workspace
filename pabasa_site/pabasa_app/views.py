@@ -155,9 +155,196 @@ def send_student_confirmation_email(request, user):
     )
     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
 
+
+def _store_pending_password_reset(request, email):
+    otp = generate_otp()
+    request.session['pending_password_reset'] = {
+        'email': email,
+    }
+    request.session['pending_password_reset_otp'] = otp
+    request.session['pending_password_reset_otp_created'] = time.time()
+    request.session.modified = True
+    return otp
+
+
+def _clear_pending_password_reset(request):
+    request.session.pop('pending_password_reset', None)
+    request.session.pop('pending_password_reset_otp', None)
+    request.session.pop('pending_password_reset_otp_created', None)
+    request.session.pop('password_reset_verified', None)
+    request.session.pop('password_reset_email', None)
+    request.session.modified = True
+
+
+def send_password_reset_otp_email(request, email, otp, first_name):
+    otp_url = request.build_absolute_uri(reverse('forgot_password_otp'))
+    subject = "PABASA Password Reset OTP"
+    message = (
+        f"Hello {first_name},\n\n"
+        "We received a request to reset your PABASA password. Use the code below to continue:\n\n"
+        f"{otp}\n\n"
+        "This OTP is valid for 10 minutes.\n\n"
+        f"If you did not request this, please ignore this email.\n\n"
+        f"Open the following link to verify the code: {otp_url}\n\n"
+        "Thank you,\nPABASA Team"
+    )
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+
+
+def send_password_reset_confirmation_email(request, user):
+    auth_url = request.build_absolute_uri(reverse('auth'))
+    subject = "Your PABASA Password Has Been Reset"
+    message = (
+        f"Hello {user.first_name},\n\n"
+        "Your password has been successfully reset.\n\n"
+        f"You can now log in at: {auth_url}\n\n"
+        "If you did not make this change, please contact support immediately.\n\n"
+        "Thank you,\nPABASA Team"
+    )
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+
+
 @csrf_protect
 @require_http_methods(["POST"])
-def register_teacher(request):
+def request_password_reset(request):
+    email = request.POST.get('email', '').strip()
+    if not email:
+        return render(request, 'pabasa_app/forgot_password.html', {
+            'error': 'Email is required',
+            'email': email
+        })
+
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
+        return render(request, 'pabasa_app/forgot_password.html', {
+            'error': 'No account found with that email address.',
+            'email': email
+        })
+
+    _store_pending_password_reset(request, user.email)
+    send_password_reset_otp_email(request, user.email, request.session['pending_password_reset_otp'], user.first_name)
+    return redirect(f"{reverse('forgot_password_otp')}?email={user.email}")
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def verify_forgot_password_otp(request):
+    email = request.POST.get('email', '').strip()
+    otp = request.POST.get('otp', '').strip()
+
+    if not email or not otp:
+        return render(request, 'pabasa_app/forgot_password_otp.html', {
+            'error': 'Email and OTP are required.',
+            'email': email
+        })
+
+    pending = request.session.get('pending_password_reset')
+    expected_otp = request.session.get('pending_password_reset_otp')
+    otp_created = request.session.get('pending_password_reset_otp_created')
+
+    if not pending or pending.get('email') != email or not expected_otp or not otp_created:
+        _clear_pending_password_reset(request)
+        return render(request, 'pabasa_app/forgot_password_otp.html', {
+            'error': 'No pending password reset found. Please start again.',
+            'email': email
+        })
+
+    if time.time() - otp_created > 10 * 60:
+        _clear_pending_password_reset(request)
+        return render(request, 'pabasa_app/forgot_password_otp.html', {
+            'error': 'OTP expired. Please request a new code.',
+            'email': email
+        })
+
+    if otp != expected_otp:
+        return render(request, 'pabasa_app/forgot_password_otp.html', {
+            'error': 'Invalid OTP. Please try again.',
+            'email': email
+        })
+
+    request.session['password_reset_verified'] = True
+    request.session['password_reset_email'] = email
+    request.session.modified = True
+    return redirect(f"{reverse('forgot_password_reset')}?email={email}")
+
+
+@csrf_protect
+@require_http_methods(["GET"])
+def resend_password_reset_otp(request):
+    pending = request.session.get('pending_password_reset')
+    if not pending:
+        return redirect('forgot_password')
+
+    otp = generate_otp()
+    request.session['pending_password_reset_otp'] = otp
+    request.session['pending_password_reset_otp_created'] = time.time()
+    request.session.modified = True
+
+    user = User.objects.filter(email__iexact=pending.get('email')).first()
+    if user:
+        send_password_reset_otp_email(request, user.email, otp, user.first_name)
+
+    return redirect(f"{reverse('forgot_password_otp')}?email={pending.get('email')}")
+
+
+@csrf_protect
+@require_http_methods(["GET"])
+def forgot_password_reset(request):
+    email = request.GET.get('email', '')
+    if not email:
+        email = request.session.get('password_reset_email', '')
+
+    if not request.session.get('password_reset_verified') or not email:
+        return redirect('forgot_password')
+
+    return render(request, 'pabasa_app/forgot_password_reset.html', {
+        'email': email
+    })
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def reset_password(request):
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '')
+    confirm_password = request.POST.get('confirm_password', '')
+
+    if not email or not password or not confirm_password:
+        return render(request, 'pabasa_app/forgot_password_reset.html', {
+            'error': 'All fields are required.',
+            'email': email
+        })
+
+    if password != confirm_password:
+        return render(request, 'pabasa_app/forgot_password_reset.html', {
+            'error': 'Passwords do not match.',
+            'email': email
+        })
+
+    if not request.session.get('password_reset_verified') or request.session.get('password_reset_email') != email:
+        return redirect('forgot_password')
+
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
+        return render(request, 'pabasa_app/forgot_password_reset.html', {
+            'error': 'No account found with that email address.',
+            'email': email
+        })
+
+    user.password_hash = make_password(password)
+    user.save()
+    send_password_reset_confirmation_email(request, user)
+    _clear_pending_password_reset(request)
+
+    return render(request, 'pabasa_app/forgot_password_reset.html', {
+        'email': email,
+        'success': True
+    })
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def verify_teacher_otp(request):
     """Register a new teacher"""
     try:
         data = request.POST
