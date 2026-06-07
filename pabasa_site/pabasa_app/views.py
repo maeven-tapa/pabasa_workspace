@@ -344,7 +344,7 @@ def reset_password(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
-def verify_teacher_otp(request):
+def register_teacher(request):
     """Register a new teacher"""
     try:
         data = request.POST
