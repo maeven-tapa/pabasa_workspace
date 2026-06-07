@@ -3,12 +3,18 @@
 
 {% block extra_head %}
 <style>
+    /* Tighten the bottom of the page to eliminate dead space */
+    section {
+        padding-bottom: 2rem !important;
+        min-height: auto !important;
+    }
+
     .profile-layout {
         display: grid;
         gap: 1.5rem;
         grid-template-columns: 1fr;
         align-items: start;
-        max-width: 1000px;
+        max-width: 1200px;
         margin: 0 auto;
     }
 
@@ -36,7 +42,7 @@
     }
 
     .profile-summary .card-body {
-        padding: 1.75rem !important;
+        padding: 1.5rem !important;
     }
 
     .profile-avatar-lg {
@@ -93,16 +99,19 @@
     .profile-details-mini > div {
         display: flex;
         gap: 0.3rem;
+        flex-wrap: wrap;
     }
 
     .profile-details-mini .label {
         color: var(--dash-muted);
         font-weight: 600;
+        flex-shrink: 0;
     }
 
     .profile-details-mini .value {
         color: var(--dash-text);
         font-weight: 700;
+        overflow-wrap: anywhere;
     }
 
     .profile-status-badge {
@@ -156,7 +165,8 @@
     .profile-card-spacing {
         gap: 1.2rem;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Allow cards to expand to fill available space */
+        align-items: stretch;
     }
 
     .profile-section-card {
@@ -168,7 +178,9 @@
         display: flex;
         flex-direction: column;
         position: relative;
+        height: 100%;
         overflow: hidden;
+        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.05);
     }
 
     .profile-section-card::before {
@@ -247,14 +259,66 @@
     }
 
     .profile-stat-box {
-        background: linear-gradient(135deg, rgba(46, 168, 229, 0.06), rgba(16, 70, 110, 0.03));
+        background: #ffffff;
         border: 1px solid rgba(31, 111, 139, 0.1);
         border-radius: 12px;
-        padding: 0.9rem;
+        padding: 1.15rem 0.5rem;
         text-align: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
+        box-shadow: 0 2px 6px rgba(31, 111, 139, 0.03);
+    }
+
+    /* Prevent grid items from overflowing their cells */
+    .profile-stat-box, 
+    .mic-status-info, .mic-test-area,
+    .speaker-status-info, .speaker-volume-area {
+        min-width: 0;
+    }
+
+    @media (min-width: 992px) {
+        .profile-main {
+            grid-template-columns: 350px 1fr; /* Slightly wider left column to reduce compression */
+            gap: 2rem;
+        }
+
+        .profile-summary {
+            grid-row: 1 / span 3; /* Matches the number of right-column sections */
+            position: sticky;
+            top: 2rem;
+            z-index: 5;
+        }
+
+        .profile-card-spacing,
+        .mic-settings-card,
+        .danger-zone-wrapper {
+            grid-column: 2;
+        }
+    }
+
+    .mic-settings-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 2.5rem;
+        align-items: center;
+    }
+
+    .mic-visualizer-container {
+        width: 100%;
+        height: 12px;
+        background: rgba(31, 111, 139, 0.1);
+        border-radius: 999px;
+        overflow: hidden;
+        position: relative;
+        margin-top: 0.5rem;
+    }
+
+    .mic-visualizer-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--dash-primary), #ffd639);
+        transition: width 0.05s ease;
     }
 
     .profile-stat-box::before {
@@ -328,6 +392,11 @@
         .profile-edit-grid {
             grid-template-columns: 1fr;
         }
+
+        .mic-settings-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
     }
 
     @media (max-width: 600px) {
@@ -366,7 +435,9 @@
             <p class="small text-secondary mb-1">Manage your dashboard profile and account details.</p>
             <p class="small mb-0"><strong>Note:</strong> {% if nav_role == 'teacher' %}Teacher details support class ownership, material posts, and progress reports.{% else %}Student details support learner tracking, reminders, and reading reports.{% endif %}</p>
         </div>
+        {% if nav_role != 'teacher' %}
         <a class="btn btn-outline-primary btn-sm" href="{% url 'settings' %}?role={{ nav_role }}">Open Settings</a>
+        {% endif %}
     </div>
 
     <div class="profile-layout">
@@ -375,22 +446,22 @@
             <aside class="profile-summary">
                 <div class="card-body p-0">
                     <div class="profile-identity">
-                        <div class="profile-avatar-lg">{% if nav_role == 'teacher' %}TR{% else %}IF{% endif %}</div>
+                        <div class="profile-avatar-lg" id="profileAvatarDisplay" data-initials="{{ initials }}"{% if profile_photo_url %} style="background-image: url('{{ profile_photo_url }}'); background-size: cover; background-position: center;"{% endif %}>{% if not profile_photo_url %}{{ initials }}{% endif %}</div>
                         <div class="profile-main-content">
-                            <h2>{% if nav_role == 'teacher' %}Teacher Account{% else %}Isla Faye{% endif %}</h2>
-                            <div class="profile-role">{% if nav_role == 'teacher' %}Teacher - Reading Coordinator{% else %}Student - Grade 2{% endif %}</div>
+                            <h2>{{ full_name }}</h2>
+                            <div class="profile-role">{{ role_display }}</div>
                             <div class="profile-details-mini">
                                 <div>
                                     <span class="label">Username:</span>
-                                    <span class="value">{% if nav_role == 'teacher' %}teacheraccount{% else %}islafaye{% endif %}</span>
+                                    <span class="value">{{ username }}</span>
                                 </div>
                                 <div>
                                     <span class="label">Email:</span>
-                                    <span class="value">{% if nav_role == 'teacher' %}teacher@example.com{% else %}isla.faye@example.com{% endif %}</span>
+                                    <span class="value">{{ email }}</span>
                                 </div>
                                 <div>
-                                    <span class="label">{% if nav_role == 'teacher' %}Teacher ID{% else %}Learner ID{% endif %}:</span>
-                                    <span class="value">{% if nav_role == 'teacher' %}TCH-2046{% else %}G2-0847{% endif %}</span>
+                                    <span class="label">PABASA ID:</span>
+                                    <span class="value">{{ pabasa_id }}</span>
                                 </div>
                             </div>
                             <div class="profile-status-badge">{% if nav_role == 'teacher' %}Active Teacher{% else %}Active Student{% endif %}</div>
@@ -405,28 +476,29 @@
                             <div class="profile-edit-grid">
                                 <div class="full">
                                     <label class="form-label" for="profilePhoto">Profile Photo</label>
-                                    <div style="display: flex; gap: 0.75rem; align-items: flex-end;">
-                                        <div style="flex: 1;">
+                                    <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+                                        <div style="flex: 1; min-width: 140px;">
                                             <input class="form-control d-none" id="profilePhoto" name="profile_photo" type="file" accept="image/*">
                                             <button class="btn btn-outline-primary w-100" type="button" onclick="document.getElementById('profilePhoto').click();">
                                                 <i class="bi bi-cloud-upload"></i> Choose Photo
                                             </button>
                                         </div>
-                                        <button class="btn btn-outline-danger" type="button" id="removePhotoBtn">Remove</button>
+                                        <button class="btn btn-primary btn-sm" type="button" id="uploadPhotoBtn">Save</button>
+                                        <button class="btn btn-outline-danger btn-sm" type="button" id="removePhotoBtn">Remove</button>
                                     </div>
                                     <p class="text-muted small mt-2 mb-0">PNG, JPG, GIF. Max 5MB.</p>
                                 </div>
                                 <div>
                                     <label class="form-label" for="firstName">First Name</label>
-                                    <input class="form-control" id="firstName" name="first_name" type="text" value="{% if nav_role == 'teacher' %}Teacher{% else %}Isla{% endif %}" data-account-details-field disabled>
+                                    <input class="form-control" id="firstName" name="first_name" type="text" value="{{ first_name }}" data-account-details-field disabled>
                                 </div>
                                 <div>
                                     <label class="form-label" for="lastName">Last Name</label>
-                                    <input class="form-control" id="lastName" name="last_name" type="text" value="{% if nav_role == 'teacher' %}Account{% else %}Faye{% endif %}" data-account-details-field disabled>
+                                    <input class="form-control" id="lastName" name="last_name" type="text" value="{{ last_name }}" data-account-details-field disabled>
                                 </div>
                                 <div class="full">
                                     <label class="form-label" for="email">Email Address</label>
-                                    <input class="form-control" id="email" name="email" type="email" value="{% if nav_role == 'teacher' %}teacher@example.com{% else %}isla.faye@example.com{% endif %}" data-account-details-field disabled>
+                                    <input class="form-control" id="email" name="email" type="email" value="{{ email }}" data-account-details-field disabled>
                                 </div>
                                 {% if nav_role == 'teacher' %}
                                 <div class="full">
@@ -447,8 +519,8 @@
 
             <!-- Right Column Cards -->
             <div class="profile-card-spacing">
-                <!-- Quick Stats -->
-                {% if nav_role == 'student' %}
+            <!-- Quick Stats -->
+            {% if nav_role == 'student' %}
             <div class="profile-section-card">
                 <h3 class="profile-section-title">
                     <i class="bi bi-graph-up"></i>
@@ -456,20 +528,20 @@
                 </h3>
                 <div class="profile-stat-grid">
                     <div class="profile-stat-box">
-                        <div class="profile-stat-value">24</div>
+                        <div class="profile-stat-value" id="profileStudentClassesCount">0</div>
                         <div class="profile-stat-label">Total Lessons</div>
                     </div>
                     <div class="profile-stat-box">
-                        <div class="profile-stat-value">18</div>
+                        <div class="profile-stat-value" id="profileStudentCompletedCount">0</div>
                         <div class="profile-stat-label">Completed</div>
                     </div>
                     <div class="profile-stat-box">
-                        <div class="profile-stat-value">75%</div>
+                        <div class="profile-stat-value" id="profileStudentProgressPercent">0%</div>
                         <div class="profile-stat-label">Progress</div>
                     </div>
                     <div class="profile-stat-box">
-                        <div class="profile-stat-value">🏆</div>
-                        <div class="profile-stat-label">Advanced</div>
+                        <div class="profile-stat-value" id="profileStudentLevel">-</div>
+                        <div class="profile-stat-label">Level</div>
                     </div>
                 </div>
             </div>
@@ -484,19 +556,19 @@
                 </h3>
                 <div class="profile-stat-grid">
                     <div class="profile-stat-box">
-                        <div class="profile-stat-value">3</div>
+                        <div class="profile-stat-value" id="profileActiveClassesCount">0</div>
                         <div class="profile-stat-label">Active Classes</div>
                     </div>
                     <div class="profile-stat-box">
-                        <div class="profile-stat-value">45</div>
+                        <div class="profile-stat-value" id="profileTotalStudentsCount">0</div>
                         <div class="profile-stat-label">Total Students</div>
                     </div>
                     <div class="profile-stat-box">
-                        <div class="profile-stat-value">12</div>
+                        <div class="profile-stat-value" id="profileMaterialsPostedCount">0</div>
                         <div class="profile-stat-label">Materials Posted</div>
                     </div>
                     <div class="profile-stat-box">
-                        <div class="profile-stat-value">28</div>
+                        <div class="profile-stat-value" id="profileReportsGeneratedCount">0</div>
                         <div class="profile-stat-label">Reports Generated</div>
                     </div>
                 </div>
@@ -517,17 +589,17 @@
                 </div>
                 <div class="profile-info-row">
                     <span class="profile-info-label">Last Changed</span>
-                    <span class="profile-info-value">45 days ago</span>
+                    <span class="profile-info-value" id="passwordLastChanged">Not changed yet</span>
                 </div>
                 <div class="profile-info-row">
                     <span class="profile-info-label">Two-Factor Auth</span>
                     <span class="profile-info-value">
-                        <span class="badge bg-secondary">Not Enabled</span>
+                        <span class="badge bg-secondary" id="twoFactorStatus">Not Enabled</span>
                     </span>
                 </div>
                 <div class="mt-3 btn-group-small">
-                    <button class="btn btn-primary" type="button">Change Password</button>
-                    <button class="btn btn-outline-primary" type="button">Enable 2FA</button>
+                    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Change Password</button>
+                    <button class="btn btn-outline-primary" type="button" id="toggleTwoFactorBtn">Enable 2FA</button>
                 </div>
             </div>
 
@@ -537,14 +609,15 @@
                     <i class="bi bi-gear"></i>
                     Preferences
                 </h3>
+                <p class="text-muted small mb-3">Settings below apply to both Email and In-App delivery channels.</p>
                 <div class="profile-info-row">
-                    <span class="profile-info-label">Email Notifications</span>
+                    <span class="profile-info-label">Email Alerts</span>
                     <div class="form-check form-switch">
                         <input class="form-check-input" id="emailNotifToggle" type="checkbox" checked>
                     </div>
                 </div>
                 <div class="profile-info-row">
-                    <span class="profile-info-label">Push Notifications</span>
+                    <span class="profile-info-label">In-App Alerts</span>
                     <div class="form-check form-switch">
                         <input class="form-check-input" id="pushNotifToggle" type="checkbox" checked>
                     </div>
@@ -557,23 +630,121 @@
                 </div>
             </div>
 
-            <!-- Danger Zone -->
-            <div class="profile-section-card" style="border-color: rgba(220, 53, 69, 0.2); background: rgba(220, 53, 69, 0.02);">
-                <h3 class="profile-section-title" style="color: #dc3545;">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    Danger Zone
+            </div> <!-- End of grid -->
+
+            {% if nav_role == 'student' %}
+            <!-- Microphone Settings -->
+            <div class="profile-section-card mic-settings-card mt-2" style="padding: 2.2rem !important; min-height: 420px;">
+                <h3 class="profile-section-title">
+                    <i class="bi bi-mic"></i>
+                    Microphone Settings
                 </h3>
-                <p class="text-muted small mb-3">Irreversible actions. Use with caution.</p>
-                <div class="btn-group-small">
-                    <button class="btn btn-outline-danger" type="button">Download Data</button>
-                    <button class="btn btn-outline-danger" type="button">Deactivate Account</button>
-                    <button class="btn btn-danger" type="button">Delete Account</button>
+                <div class="mic-settings-grid">
+                    <div class="mic-status-info">
+                        <div class="profile-info-row">
+                            <span class="profile-info-label">Microphone Status</span>
+                            <span class="profile-info-value">
+                                <span id="micStatusBadge" class="badge bg-secondary">Unknown</span>
+                            </span>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label" for="micDeviceSelect">Input Device</label>
+                            <select class="form-select" id="micDeviceSelect">
+                                <option value="">Detecting devices...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mic-test-area">
+                        <label class="form-label">Input Level</label>
+                        <div class="mic-visualizer-container">
+                            <div id="micVisualizerBar" class="mic-visualizer-bar"></div>
+                        </div>
+                        <div class="mt-3 d-flex gap-2 flex-wrap">
+                            <button id="btnTestMic" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-play-fill"></i> Test Mic
+                            </button>
+                            <button id="btnRequestMic" class="btn btn-primary btn-sm">
+                                Request Permission
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Speaker Settings -->
+                    <div class="speaker-status-info pt-4" style="border-top: 1px solid rgba(27, 26, 23, 0.06);">
+                        <label class="form-label" for="speakerDeviceSelect">Speaker Device</label>
+                        <select class="form-select" id="speakerDeviceSelect">
+                            <option value="">Detecting speakers...</option>
+                        </select>
+                    </div>
+                    <div class="speaker-volume-area pt-4" style="border-top: 1px solid rgba(27, 26, 23, 0.06);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Speaker Volume</label>
+                            <span id="volumeValue" class="fw-bold text-primary">80%</span>
+                        </div>
+                        <input type="range" class="form-range" id="speakerVolumeInput" min="0" max="100" value="80">
+                        <p class="text-muted small mt-2 mb-0">Adjust the volume for practice audio and feedback.</p>
+                    </div>
                 </div>
             </div>
+            {% endif %}
+
+            <!-- Danger Zone (Separated) -->
+            <div class="danger-zone-wrapper mt-4 pt-3" style="border-top: 1px solid rgba(27, 26, 23, 0.08);">
+                <div class="profile-section-card danger-zone-card">
+                    <h3 class="profile-section-title" style="color: #dc3545;">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Danger Zone
+                    </h3>
+                    <p class="text-muted small mb-3">These actions are irreversible. Use with extreme caution.</p>
+                    <div class="btn-group-small">
+                        <button class="btn btn-outline-danger" type="button" id="downloadDataBtn">Download Data</button>
+                        <button class="btn btn-outline-danger" type="button" id="deactivateAccountBtn">Deactivate Account</button>
+                        <button class="btn btn-danger" type="button" id="deleteAccountBtn">Delete Account</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<script src="{% static 'pabasa_app/js/profile.js' %}"></script>
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="changePasswordForm">
+                {% csrf_token %}
+                <div class="modal-header border-0">
+                    <h1 class="modal-title fs-5" id="changePasswordModalLabel">Change Password</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-3">
+                        <div>
+                            <label class="form-label" for="currentPassword">Current Password</label>
+                            <input class="form-control" id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="newPassword">New Password</label>
+                            <input class="form-control" id="newPassword" name="new_password" type="password" autocomplete="new-password" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="confirmPassword">Confirm New Password</label>
+                            <input class="form-control" id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{ username|json_script:"profileUsername" }}
+{{ full_name|json_script:"profileFullName" }}
+{{ email|json_script:"profileEmail" }}
+{{ pabasa_id|json_script:"profilePabasaId" }}
+{{ role_display|json_script:"profileRoleDisplay" }}
+<script src="{% static 'pabasa_app/js/profile.js' %}?v=materials-overview-2"></script>
 {% endblock %}

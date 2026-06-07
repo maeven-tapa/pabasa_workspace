@@ -130,7 +130,28 @@
             link.setAttribute("title", newTitle);
 
             if (isJoined) {
-                link.setAttribute("href", link.dataset.lockedHref);
+                link.classList.remove("is-locked");
+                let targetHref = link.dataset.lockedHref;
+                
+                // Automatically append class code for classroom-specific links
+                if (link.hasAttribute('data-append-class-code')) {
+                    let primaryCode = null;
+                    try {
+                        const codes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
+                        primaryCode = codes[0] || localStorage.getItem("pabasaStudentClassCode");
+                    } catch(e) {
+                        primaryCode = localStorage.getItem("pabasaStudentClassCode");
+                    }
+
+                    if (primaryCode) {
+                        const separator = targetHref.includes('?') ? '&' : '?';
+                        targetHref = `${targetHref}${separator}code=${primaryCode}`;
+                    } else {
+                        console.warn("PABASA Sidebar: Link requires class code but none found in localStorage.");
+                    }
+                }
+                
+                link.setAttribute("href", targetHref);
                 link.removeAttribute("tabindex");
             } else {
                 link.removeAttribute("href");
@@ -159,10 +180,89 @@
     updateLockedLinks();
 
     window.addEventListener("storage", function (event) {
-        if (event.key === classJoinedKey) {
+        const classKeys = [classJoinedKey, "pabasaStudentClassCode", "pabasaStudentClassCodes"];
+        if (classKeys.includes(event.key)) {
             updateLockedLinks();
         }
     });
 
     window.addEventListener("pabasa:student-class-updated", updateLockedLinks);
+})();
+
+(function () {
+    // Sidebar Badge Logic for Reading Materials
+    function updateSidebarBadges() {
+        const isStudent = window.localStorage.getItem("pabasaStudentClassJoined") === "1";
+        if (!isStudent) return;
+
+        let studentCodes = [];
+        try {
+            studentCodes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
+            const legacy = localStorage.getItem("pabasaStudentClassCode");
+            if (legacy && !studentCodes.includes(legacy)) studentCodes.push(legacy);
+        } catch(e) {}
+
+        const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+        // Normalize readings map for case-insensitive class code lookups
+        const readingsMap = {};
+        Object.keys(readings).forEach(key => {
+            readingsMap[key.toUpperCase()] = readings[key];
+        });
+
+        const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(String);
+
+        let practiceCount = 0;
+        let assessmentCount = 0;
+
+        studentCodes.forEach(code => {
+            const upperCode = String(code).toUpperCase();
+            const classData = readingsMap[upperCode];
+            if (!classData) return;
+
+            ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
+                // Check both singular and plural keys (e.g., 'word' and 'words')
+                [type, type + 's'].forEach(key => {
+                    (classData[key] || []).forEach(material => {
+                        if (material && material.id && seenIds.includes(String(material.id))) return;
+
+                        const mType = (material.type || "").toLowerCase();
+                        if (mType === 'practice' || mType === 'both') practiceCount++;
+                        if (mType === 'assessment' || mType === 'both') assessmentCount++;
+                    });
+                });
+            });
+        });
+
+        updateLinkBadge('/dashboard/practice/', practiceCount);
+        updateLinkBadge('/dashboard/assessment/', assessmentCount);
+    }
+
+    function updateLinkBadge(pathPart, count) {
+        const link = document.querySelector(`.dashboard-sidebar .nav-link[href*="${pathPart}"], .dashboard-sidebar .nav-link[data-locked-href*="${pathPart}"]`);
+        if (!link) return;
+
+        let badge = link.querySelector('.badge-notif');
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'badge rounded-pill bg-danger badge-notif ms-auto';
+                badge.style.fontSize = '0.65rem';
+                link.appendChild(badge);
+            }
+            badge.textContent = count > 99 ? '99+' : count;
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+
+    updateSidebarBadges();
+
+    window.addEventListener("storage", function (event) {
+        const badgeKeys = ['pabasa_class_readings', 'pabasa_seen_material_ids', 'pabasaStudentClassCodes'];
+        if (badgeKeys.includes(event.key)) {
+            updateSidebarBadges();
+        }
+    });
+
+    window.addEventListener("pabasa:student-class-updated", updateSidebarBadges);
 })();

@@ -10,5 +10,5 @@
 {% block content_class %}content-sentence{% endblock %}
 {% block watermark %}sent{% endblock %}
 {% block helper_text %}Read the whole sentence smoothly from left to right.{% endblock %}
-{% block initial_text %}Si Ana ay nagbabasa ng aklat.{% endblock %}
-{% block script %}<script src="{% static 'pabasa_app/js/reading_sentence_page.js' %}?v=completion"></script>{% endblock %}
+{% block initial_text %}Loading materials...{% endblock %}
+{% block script %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>{% endblock %}

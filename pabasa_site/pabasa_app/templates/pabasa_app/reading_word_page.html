@@ -10,5 +10,5 @@
 {% block content_class %}content-word{% endblock %}
 {% block watermark %}word{% endblock %}
 {% block helper_text %}Look at the word, breathe, then read it out loud.{% endblock %}
-{% block initial_text %}bahay{% endblock %}
-{% block script %}<script src="{% static 'pabasa_app/js/reading_word_page.js' %}"></script>{% endblock %}
+{% block initial_text %}Loading materials...{% endblock %}
+{% block script %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>{% endblock %}

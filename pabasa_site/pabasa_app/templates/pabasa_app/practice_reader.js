@@ -1,37 +1,43 @@
 (function () {
-    const shell = document.querySelector(".practice-shell") || document.querySelector("[data-practice-mode]");
-    if (!shell) return;
+    const shell = document.querySelector(".practice-shell");
+    if (!shell) { console.warn("PABASA: .practice-shell not found"); return; }
 
-    const mode = shell.dataset.practiceMode || shell.getAttribute("data-practice-mode") || "word";
-    let items = [];
-    let currentIndex = 0;
-    let starsEarned = 0;
-
+    const mode = shell.dataset.practiceMode;
     const practiceText = document.getElementById("practiceText");
     const practiceCounter = document.getElementById("practiceCounter");
     const practiceProgress = document.getElementById("practiceProgress");
     const practiceFeedback = document.getElementById("practiceFeedback");
-    const starCount = document.getElementById("starCount");
+    const listenBtn = document.getElementById("listenBtn");
     const skipBtn = document.getElementById("skipBtn");
     const recordBtn = document.getElementById("recordBtn");
-    const nextBtn = document.getElementById("practiceNextBtn");
+    const practiceNextBtn = document.getElementById("practiceNextBtn");
+    const practiceAgainBtn = document.getElementById("practiceAgainBtn");
+    const starCountDisplay = document.getElementById("starCount");
+    
     const completeStars = document.getElementById("completeStars");
     const completeItems = document.getElementById("completeItems");
-    const practiceAgainBtn = document.getElementById("practiceAgainBtn");
+    console.log("PABASA: Practice reader initialized in mode:", mode);
+
+    let items = [];
+    let currentIndex = 0;
+    let starsEarned = 0;
 
     const studentClassCodesKey = "pabasaStudentClassCodes";
     const legacyStudentClassCodeKey = "pabasaStudentClassCode";
     const readingsStorageKey = "pabasa_class_readings";
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const materialId = urlParams.get("id");
-
     function getStoredArray(key) {
-        try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { return []; }
+        try {
+            const parsed = JSON.parse(localStorage.getItem(key) || "[]");
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) { return []; }
     }
 
     function getStoredObject(key) {
-        try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; }
+        try {
+            const parsed = JSON.parse(localStorage.getItem(key) || "{}");
+            return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
+        } catch (e) { return {}; }
     }
 
     function parseItems(material, currentMode) {
@@ -59,28 +65,22 @@
         }
 
         const readings = getStoredObject(readingsStorageKey);
-        console.log(`PABASA [Practice]: Loading for codes:`, codes);
         
         let aggregatedItems = [];
-        const storageKeys = [mode, mode + 's'];
+        const storageKeys = [mode, mode === 'paragraph' ? 'paragraph' : mode + 's'];
 
         codes.forEach(code => {
-            const classReadings = readings[code.toUpperCase()];
-            if (!classReadings) {
-                console.warn(`PABASA: No practice readings for code: ${code}`);
-                return;
-            }
+            const upperCode = String(code).toUpperCase();
+            const classReadings = readings[upperCode];
+            if (!classReadings) return;
 
             storageKeys.forEach(m => {
                 if (Array.isArray(classReadings[m])) {
                     classReadings[m].forEach(material => {
                         if (typeof material === 'string') {
                             aggregatedItems.push(material);
-                        } else if (material && material.type) {
-                            const type = material.type.toLowerCase();
-                            if (type.includes("practice") || type === "both") {
-                                aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
-                            }
+                        } else if (material && (material.type === "practice" || material.type === "both")) {
+                            aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
                         }
                     });
                 }
@@ -88,19 +88,19 @@
         });
 
         items = aggregatedItems;
-        console.log(`PABASA [Practice]: Found ${items.length} items.`);
+        console.log("PABASA: Found total items for practice:", items.length);
 
         if (items.length === 0) {
-            if (practiceText) practiceText.textContent = "No materials available.";
-            if (nextBtn) nextBtn.disabled = true;
+            practiceText.textContent = "No materials available.";
+            if (practiceNextBtn) practiceNextBtn.disabled = true;
             return;
         }
 
         currentIndex = 0;
-        render();
+        updateUI();
     }
 
-    function render() {
+    function updateUI() {
         if (currentIndex >= items.length) {
             showCompletion();
             return;
@@ -110,11 +110,9 @@
         const label = mode.charAt(0).toUpperCase() + mode.slice(1);
         practiceCounter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
         practiceProgress.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
-        if (starCount) starCount.textContent = `${starsEarned} stars`;
-        if (nextBtn) {
-            nextBtn.textContent = currentIndex === items.length - 1 ? "Finish" : "Next";
-            nextBtn.disabled = false;
-        }
+        practiceFeedback.textContent = "Ready when you are.";
+        practiceFeedback.style.color = "";
+        if (starCountDisplay) starCountDisplay.textContent = `${starsEarned} stars`;
     }
 
     function showCompletion() {
@@ -125,52 +123,31 @@
         // Persist stars to total progress
         const currentTotal = parseInt(localStorage.getItem("pabasa_total_stars") || "0");
         localStorage.setItem("pabasa_total_stars", currentTotal + starsEarned);
-
-        // Mark material as seen
-        if (materialId) {
-            const seenIds = getStoredArray("pabasa_seen_material_ids");
-            if (!seenIds.map(String).includes(String(materialId))) {
-                const idToSave = isNaN(materialId) ? materialId : Number(materialId);
-                seenIds.push(idToSave);
-                localStorage.setItem("pabasa_seen_material_ids", JSON.stringify(seenIds));
-                window.dispatchEvent(new CustomEvent('pabasa:student-class-updated'));
-            }
-        }
     }
 
-    function restartPractice() {
-        shell.classList.remove("is-complete");
-        currentIndex = 0;
-        starsEarned = 0;
-        practiceFeedback.textContent = "Ready when you are.";
-        render();
-    }
+    listenBtn?.addEventListener("click", () => {
+        if (!items[currentIndex]) return;
+        const utterance = new SpeechSynthesisUtterance(items[currentIndex]);
+        utterance.lang = 'tl-PH';
+        window.speechSynthesis.speak(utterance);
+        practiceFeedback.textContent = "Listening...";
+    });
 
-    skipBtn?.addEventListener("click", function () {
+    skipBtn?.addEventListener("click", () => {
         starsEarned = Math.max(0, starsEarned - 5);
         practiceFeedback.textContent = "Word skipped. -5 stars deducted.";
         practiceFeedback.style.color = "#b95f44";
-        render();
+        updateUI();
     });
 
-    recordBtn?.addEventListener("click", function () {
+    recordBtn?.addEventListener("click", () => {
         starsEarned += 10;
-        practiceFeedback.textContent = "Nice reading. You earned a practice star.";
-        render();
+        practiceFeedback.textContent = "Great job! +10 stars earned.";
+        practiceFeedback.style.color = "#16a34a";
+        if (starCountDisplay) starCountDisplay.textContent = `${starsEarned} stars`;
     });
 
-    nextBtn?.addEventListener("click", function () {
-        if (currentIndex < items.length - 1) {
-            currentIndex += 1;
-            practiceFeedback.textContent = "New item ready. Take your time.";
-            render();
-            return;
-        }
-
-        showCompletion();
-    });
-
-    practiceAgainBtn?.addEventListener("click", restartPractice);
-
+    practiceNextBtn?.addEventListener("click", () => { currentIndex++; updateUI(); });
+    practiceAgainBtn?.addEventListener("click", () => { location.reload(); });
     loadItems();
 })();

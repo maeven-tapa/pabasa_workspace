@@ -309,7 +309,7 @@
                                 <button class="btn btn-primary" id="verifyOtpBtn" type="submit">Verify OTP</button>
                             </div>
                             <div class="col-12 d-flex justify-content-between align-items-center">
-                                <span class="small text-secondary">Didn’t get the code?</span>
+                                <span class="small text-secondary">Didn't get the code?</span>
                                 <button class="btn btn-link p-0" type="button" id="resendOtpBtn">Resend OTP</button>
                             </div>
                         </form>
@@ -318,7 +318,7 @@
                 <div class="generated-pabasa-id" id="studentGeneratedPabasaId" aria-live="polite">
                     <span class="small fw-bold text-uppercase">Generated PABASA ID</span>
                     <code data-pabasa-id-output></code>
-                    <a class="btn btn-primary w-100 mt-3" href="{% url 'auth' %}" data-new-student-continue>Continue</a>
+                    <a class="btn btn-primary w-100 mt-3" href="{% url 'dashboard' %}" data-new-student-continue>Continue</a>
                 </div>
             </div>
         </article>
@@ -327,25 +327,26 @@
 <script>
     (() => {
         const form = document.getElementById("studentSignupForm");
-        const result = document.getElementById("studentGeneratedPabasaId");
-        const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
-        const submitButton = form.querySelector("button[type='submit']");
-        const errorMessage = form.querySelector("#errorMessage");
-        const passwordInput = form.elements.password;
-        const confirmPasswordInput = form.elements.confirm_password;
-        const passwordMatchError = form.querySelector("[data-password-match-error]");
-        const passwordRules = {
-            length: form.querySelector("[data-rule='length']"),
-            uppercase: form.querySelector("[data-rule='uppercase']"),
-            number: form.querySelector("[data-rule='number']"),
-        };
-
         const otpStage = document.getElementById("studentOtpStage");
         const otpForm = document.getElementById("otpForm");
         const otpEmailSpan = document.getElementById("otpEmail");
         const otpErrorMessage = document.getElementById("otpErrorMessage");
         const resendOtpBtn = document.getElementById("resendOtpBtn");
         const backToSignupBtn = document.getElementById("backToSignupBtn");
+        const result = document.getElementById("studentGeneratedPabasaId");
+        const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
+        
+        const submitButton = form.querySelector("button[type='submit']");
+        const errorMessage = form.querySelector("#errorMessage");
+        const passwordInput = form.elements.password;
+        const confirmPasswordInput = form.elements.confirm_password;
+        const passwordMatchError = form.querySelector("[data-password-match-error]");
+        
+        const passwordRules = {
+            length: form.querySelector("[data-rule='length']"),
+            uppercase: form.querySelector("[data-rule='uppercase']"),
+            number: form.querySelector("[data-rule='number']"),
+        };
 
         const getPasswordState = () => ({
             length: passwordInput.value.length >= 8,
@@ -366,6 +367,7 @@
             const hasConfirmValue = confirmPasswordInput.value.length > 0;
             const isPasswordMatch = passwordsMatch();
             passwordMatchError.classList.toggle("is-visible", hasConfirmValue && !isPasswordMatch);
+            
             confirmPasswordInput.setCustomValidity(!hasConfirmValue || isPasswordMatch ? "" : "Passwords must match.");
             passwordInput.setCustomValidity(passwordIsValid ? "" : "Password does not meet the requirements.");
 
@@ -379,6 +381,11 @@
             otpErrorMessage.classList.add("d-none");
             submitButton.disabled = false;
             submitButton.innerHTML = 'Create Account';
+        };
+
+        const getCsrfToken = () => {
+            const tokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            return tokenInput ? tokenInput.value : '';
         };
 
         form.addEventListener("input", updateValidation);
@@ -411,7 +418,6 @@
                     otpStage.classList.remove("d-none");
                     otpErrorMessage.classList.add("d-none");
                     otpForm.reset();
-                    submitButton.innerHTML = 'Create Account';
                     otpStage.scrollIntoView({ behavior: "smooth", block: "nearest" });
                 } else {
                     errorMessage.textContent = data.error || 'Registration failed. Please try again.';
@@ -462,11 +468,6 @@
                 verifyButton.innerHTML = 'Verify OTP';
             }
         });
-
-        const getCsrfToken = () => {
-            const tokenInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
-            return tokenInput ? tokenInput.value : '';
-        };
 
         resendOtpBtn.addEventListener("click", async () => {
             resendOtpBtn.disabled = true;

@@ -10,15 +10,10 @@
             {% endif %}
         </div>
     </div>
-
-    {% if nav_role != 'student' %}
-    <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-light dash-top-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#notificationPane" aria-controls="notificationPane" aria-label="Open notifications">
-            <i class="bi bi-bell"></i>
-        </button>
-        <button class="btn btn-light dash-top-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#profilePane" aria-controls="profilePane" aria-label="Open profile menu">
-            <i class="bi bi-person-circle"></i>
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-link text-dark p-0 position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#notificationPane" aria-label="View notifications">
+            <i class="bi bi-bell fs-5"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="display: none; font-size: 0.6rem; padding: 0.35em 0.5em;">0</span>
         </button>
     </div>
-    {% endif %}
 </header>

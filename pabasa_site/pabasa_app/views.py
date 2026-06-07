@@ -9,12 +9,19 @@ from django.conf import settings
 from django.urls import reverse
 from django.db import IntegrityError
 from functools import wraps
+import logging
+import json
 import os
 from pathlib import Path
 import random
 import time
 import uuid
-from .models import User, TeacherProfile, StudentProfile
+from .models import User, TeacherProfile, StudentProfile, ReadingClass, ClassEnrollment, Assessment
+
+
+logger = logging.getLogger(__name__)
+
+PROFILE_PHOTOS_DIR = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'uploads' / 'profiles'
 
 # Authentication decorator
 def login_required(role=None):
@@ -601,6 +608,15 @@ def login_user(request):
         # Verify password
         if not check_password(password, user.password_hash):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
+
+        if user.role == 'teacher':
+            teacher_profile = TeacherProfile.objects.filter(user=user).first()
+            if teacher_profile and not teacher_profile.is_active:
+                return JsonResponse({'success': False, 'error': 'This account is deactivated'}, status=403)
+        elif user.role == 'student':
+            student_profile = StudentProfile.objects.filter(user=user).first()
+            if student_profile and not student_profile.is_active:
+                return JsonResponse({'success': False, 'error': 'This account is deactivated'}, status=403)
         
         # Create session
         request.session['user_id'] = user.id
@@ -632,6 +648,60 @@ def logout_user(request):
 def _check_auth(request):
     """Check if user is authenticated"""
     return 'user_id' in request.session
+
+
+def _dashboard_context(request, nav_role=None, extra=None):
+    first_name = request.session.get('first_name', '')
+    last_name = request.session.get('last_name', '')
+    full_name = f"{first_name} {last_name}".strip() or request.session.get('custom_id', 'User')
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    teacher_role = ''
+    initials = "".join(part[:1] for part in full_name.split()[:2]).upper() or "PA"
+    profile_photo_url = None
+
+    if user:
+        if user.role == 'teacher':
+            teacher_profile = TeacherProfile.objects.filter(user=user).first()
+            if teacher_profile:
+                teacher_role = teacher_profile.teacher_role
+
+        username = f"{user.first_name}_{user.last_name}".lower().replace(" ", "_")
+        if PROFILE_PHOTOS_DIR.exists():
+            for file in PROFILE_PHOTOS_DIR.glob(f'profile_photo_{username}.*'):
+                profile_photo_url = f'/static/pabasa_app/uploads/profiles/{file.name}'
+                break
+    
+    joined_classes = []
+    if user and user.role == 'student':
+        student_profile = StudentProfile.objects.filter(user=user).first()
+        if student_profile:
+            enrollments = ClassEnrollment.objects.filter(student=student_profile, is_active=True)
+            for enrollment in enrollments:
+                cls = enrollment.reading_class
+                # Real-time student count from database
+                student_count = ClassEnrollment.objects.filter(reading_class=cls, is_active=True).count()
+                joined_classes.append({
+                    'code': cls.class_code,
+                    'name': cls.class_name,
+                    'student_count': student_count,
+                })
+
+    context = {
+        'nav_role': nav_role or request.session.get('user_role', 'student'),
+        'user_id': request.session.get('custom_id'),
+        'first_name': first_name,
+        'last_name': last_name,
+        'user_full_name': full_name,
+        'email': request.session.get('email'),
+        'teacher_role': teacher_role,
+        'role_display': teacher_role or (nav_role or request.session.get('user_role', 'student')).title(),
+        'profile_photo_url': profile_photo_url,
+        'initials': initials,
+        'joined_classes': joined_classes,
+    }
+    if extra:
+        context.update(extra)
+    return context
 
 def home(request):
     return render(request, 'pabasa_app/home.html')
@@ -667,14 +737,7 @@ def dashboard(request):
     if request.session.get('user_role') != 'student':
         return redirect('auth')
     
-    user_data = {
-        'nav_role': 'student',
-        'user_id': request.session.get('custom_id'),
-        'first_name': request.session.get('first_name'),
-        'last_name': request.session.get('last_name'),
-        'email': request.session.get('email')
-    }
-    return render(request, 'pabasa_app/dashboard.html', user_data)
+    return render(request, 'pabasa_app/dashboard.html', _dashboard_context(request, 'student'))
 
 def dashboard_teacher(request):
     if not _check_auth(request):
@@ -682,76 +745,96 @@ def dashboard_teacher(request):
     if request.session.get('user_role') != 'teacher':
         return redirect('auth')
     
-    user_data = {
-        'nav_role': 'teacher',
-        'user_id': request.session.get('custom_id'),
-        'first_name': request.session.get('first_name'),
-        'last_name': request.session.get('last_name'),
-        'email': request.session.get('email')
-    }
-    return render(request, 'pabasa_app/dashboard_teacher.html', user_data)
+    return render(request, 'pabasa_app/dashboard_teacher.html', _dashboard_context(request, 'teacher'))
 
 def courses(request):
     if not _check_auth(request):
         return redirect('auth')
-    return render(request, 'pabasa_app/courses.html', {'nav_role': 'teacher'})
+    return render(request, 'pabasa_app/courses.html', _dashboard_context(request, 'teacher'))
 
 def assessment(request):
     if not _check_auth(request):
         return redirect('auth')
-    return render(request, 'pabasa_app/assessment.html', {'nav_role': 'student'})
+    return render(request, 'pabasa_app/assessment.html', _dashboard_context(request, 'student'))
 
 def reading_word_page(request):
-    return render(request, 'pabasa_app/reading_word_page.html')
+    return render(request, 'pabasa_app/reading_word_page.html', _dashboard_context(request))
 
 def reading_sentence_page(request):
-    return render(request, 'pabasa_app/reading_sentence_page.html')
+    return render(request, 'pabasa_app/reading_sentence_page.html', _dashboard_context(request))
 
 def reading_para_page(request):
-    return render(request, 'pabasa_app/reading_para_page.html')
+    return render(request, 'pabasa_app/reading_para_page.html', _dashboard_context(request))
 
 def practice_word_page(request):
-    return render(request, 'pabasa_app/practice_word_page.html')
+    return render(request, 'pabasa_app/practice_word_page.html', _dashboard_context(request))
 
 def practice_sentence_page(request):
-    return render(request, 'pabasa_app/practice_sentence_page.html')
+    return render(request, 'pabasa_app/practice_sentence_page.html', _dashboard_context(request))
 
 def practice_para_page(request):
-    return render(request, 'pabasa_app/practice_para_page.html')
+    return render(request, 'pabasa_app/practice_para_page.html', _dashboard_context(request))
 
 def course_teacher_view(request):
-    return render(request, 'pabasa_app/course_tecaher_view.html', {'nav_role': 'teacher'})
+    return render(request, 'pabasa_app/course_tecaher_view.html', _dashboard_context(request, 'teacher'))
 
 def course_student_view(request):
-    return render(request, 'pabasa_app/course_student_view.html')
+    return render(request, 'pabasa_app/course_student_view.html', _dashboard_context(request))
 
 def students(request):
-    return render(request, 'pabasa_app/students.html', {'nav_role': 'teacher'})
+    return render(request, 'pabasa_app/students.html', _dashboard_context(request, 'teacher'))
 
 def student_detail(request):
     return render(request, 'pabasa_app/student_detail.html')
 
 def calendar(request):
-    return render(request, 'pabasa_app/calendar.html')
+    return render(request, 'pabasa_app/calendar.html', _dashboard_context(request))
 
 def settings_view(request):
     nav_role = request.GET.get('role', 'student')
-    return render(request, 'pabasa_app/settings.html', {'nav_role': nav_role})
+    return render(request, 'pabasa_app/settings.html', _dashboard_context(request, nav_role))
 
 def practice(request):
-    return render(request, 'pabasa_app/practice.html', {'nav_role': 'student'})
+    return render(request, 'pabasa_app/practice.html', _dashboard_context(request, 'student'))
 
 @csrf_protect
 @require_http_methods(["GET", "POST"])
 def profile(request):
     nav_role = request.GET.get('role', 'student')
-    username = request.user.username if request.user.is_authenticated else 'user'
+    if not _check_auth(request):
+        return redirect('auth')
+
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not user:
+        request.session.flush()
+        return redirect('auth')
+
+    nav_role = user.role
+    full_name = f"{user.first_name} {user.last_name}".strip()
+    username = f"{user.first_name}_{user.last_name}".lower().replace(" ", "_")
+    pabasa_id = user.custom_id
+    role_display = "Teacher"
+    teacher_profile = None
+    student_profile = None
+
+    if user.role == "teacher":
+        teacher_profile = TeacherProfile.objects.filter(user=user).first()
+        if teacher_profile:
+            pabasa_id = teacher_profile.teacher_code
+            role_display = f"Teacher - {teacher_profile.teacher_role}" if teacher_profile.teacher_role else "Teacher"
+    else:
+        student_profile = StudentProfile.objects.filter(user=user).first()
+        if student_profile:
+            pabasa_id = student_profile.student_code
+            role_display = f"Student - {student_profile.grade_level}" if student_profile.grade_level else "Student"
+
+    initials = "".join(part[:1] for part in full_name.split()[:2]).upper() or "PA"
     
     # Check if user has a profile photo
     profile_photo_url = None
-    photos_dir = Path('pabasa_site/pabasa_app/static/pabasa_app/uploads/profiles')
+    photos_dir = PROFILE_PHOTOS_DIR
     if photos_dir.exists():
-        for file in photos_dir.glob(f'student_photo_{username}.*'):
+        for file in photos_dir.glob(f'profile_photo_{username}.*'):
             profile_photo_url = f'/static/pabasa_app/uploads/profiles/{file.name}'
             break
     
@@ -774,15 +857,14 @@ def profile(request):
                         return JsonResponse({'success': False, 'error': 'Only image files are allowed'})
                     
                     # Create photos directory if it doesn't exist
-                    photos_dir = Path('pabasa_site/pabasa_app/static/pabasa_app/uploads/profiles')
+                    photos_dir = PROFILE_PHOTOS_DIR
                     photos_dir.mkdir(parents=True, exist_ok=True)
                     
-                    # Save the file with a unique name (e.g., student_photo_maeventapa.jpg)
-                    filename = f"student_photo_{username}.{file_ext}"
+                    filename = f"profile_photo_{username}.{file_ext}"
                     filepath = photos_dir / filename
                     
                     # Delete any previous photos with different extensions
-                    for file in photos_dir.glob(f'student_photo_{username}.*'):
+                    for file in photos_dir.glob(f'profile_photo_{username}.*'):
                         try:
                             file.unlink()
                         except:
@@ -802,20 +884,96 @@ def profile(request):
             # Handle photo removal
             elif request.POST.get('remove_photo') == 'true':
                 try:
-                    photos_dir = Path('pabasa_site/pabasa_app/static/pabasa_app/uploads/profiles')
+                    photos_dir = PROFILE_PHOTOS_DIR
                     
                     # Find and delete any profile photo for this user
                     if photos_dir.exists():
-                        for file in photos_dir.glob(f'student_photo_{username}.*'):
+                        for file in photos_dir.glob(f'profile_photo_{username}.*'):
                             file.unlink()
                     
                     return JsonResponse({'success': True, 'message': 'Photo removed successfully'})
                 
                 except Exception as e:
                     return JsonResponse({'success': False, 'error': str(e)})
+
+            elif request.POST.get('change_password') == 'true':
+                current_password = request.POST.get('current_password', '')
+                new_password = request.POST.get('new_password', '')
+                confirm_password = request.POST.get('confirm_password', '')
+
+                if not current_password or not new_password or not confirm_password:
+                    return JsonResponse({'success': False, 'error': 'All password fields are required'})
+
+                if not check_password(current_password, user.password_hash):
+                    return JsonResponse({'success': False, 'error': 'Current password is incorrect'})
+
+                if new_password != confirm_password:
+                    return JsonResponse({'success': False, 'error': 'New passwords do not match'})
+
+                if len(new_password) < 8:
+                    return JsonResponse({'success': False, 'error': 'Password must be at least 8 characters'})
+
+                user.password_hash = make_password(new_password)
+                user.save()
+                return JsonResponse({'success': True, 'message': 'Password changed successfully'})
+
+            elif request.POST.get('deactivate_account') == 'true':
+                if user.role == "teacher":
+                    TeacherProfile.objects.filter(user=user).update(is_active=False)
+                else:
+                    StudentProfile.objects.filter(user=user).update(is_active=False)
+                request.session.flush()
+                return JsonResponse({'success': True, 'redirect_url': reverse('auth')})
+
+            elif request.POST.get('delete_account') == 'true':
+                try:
+                    if photos_dir.exists():
+                        for file in photos_dir.glob(f'profile_photo_{username}.*'):
+                            file.unlink()
+                    user.delete()
+                    request.session.flush()
+                    return JsonResponse({'success': True, 'redirect_url': reverse('home')})
+                except Exception as e:
+                    return JsonResponse({'success': False, 'error': str(e)})
     
-    return render(request, 'pabasa_app/profile.html', {'nav_role': nav_role, 'profile_photo_url': profile_photo_url, 'username': username})
+    return render(request, 'pabasa_app/profile.html', {
+        'nav_role': nav_role,
+        'profile_photo_url': profile_photo_url,
+        'username': username,
+        'full_name': full_name,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'pabasa_id': pabasa_id,
+        'role_display': role_display,
+        'initials': initials,
+    })
 
 def notifications(request):
     nav_role = request.GET.get('role', 'teacher')
-    return render(request, 'pabasa_app/notifications.html', {'nav_role': nav_role})
+    return render(request, 'pabasa_app/notifications.html', _dashboard_context(request, nav_role))
+
+@csrf_protect
+@require_http_methods(["POST"])
+def send_parent_email(request):
+    """Backend API to send emails to parents using pabasa.tupc@gmail.com"""
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=401)
+    
+    try:
+        data = json.loads(request.body)
+        recipient = data.get('email')
+        subject = data.get('subject')
+        message = data.get('message')
+
+        if not recipient or not message:
+            return JsonResponse({'success': False, 'error': 'Missing recipient or message content'})
+
+        # Explicitly use the sender email requested
+        sender = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
+        send_mail(subject, message, sender, [recipient], fail_silently=False)
+        return JsonResponse({'success': True})
+
+    except Exception as e:
+        print(f"SMTP Error: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

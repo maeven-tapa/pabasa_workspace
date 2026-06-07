@@ -10,5 +10,5 @@
 {% block content_class %}content-paragraph{% endblock %}
 {% block watermark %}para{% endblock %}
 {% block helper_text %}Read by sentence groups. Pause a little at periods.{% endblock %}
-{% block initial_text %}Maagang pumasok si Ana sa paaralan upang magbasa kasama ang kaniyang guro. Tahimik siyang umupo at dahan-dahang binigkas ang bawat salita. Dahil sa araw-araw na praktis, mas naging malinaw at mabilis ang kaniyang pagbasa.{% endblock %}
-{% block script %}<script src="{% static 'pabasa_app/js/reading_para_page.js' %}?v=completion"></script>{% endblock %}
+{% block initial_text %}Loading materials...{% endblock %}
+{% block script %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>{% endblock %}

@@ -13,13 +13,13 @@
             linear-gradient(245deg, rgba(185, 95, 68, 0.13), transparent 42%),
             #fffdf7;
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 26px;
+        border-radius: 16px;
         box-shadow: 0 26px 58px rgba(27, 26, 23, 0.12);
         display: grid;
         grid-template-columns: minmax(0, 1fr) 290px;
-        gap: 1.25rem;
+        gap: 1rem;
         overflow: hidden;
-        padding: clamp(1.2rem, 3vw, 2rem);
+        padding: 0.6rem 1rem;
         position: relative;
     }
 
@@ -27,14 +27,14 @@
         content: "";
         position: absolute;
         inset: auto 28px 24px auto;
-        width: 180px;
-        height: 180px;
+        width: 90px;
+        height: 90px;
         border: 28px solid rgba(31, 111, 139, 0.08);
         border-radius: 50%;
     }
 
     .assessment-stage h2 {
-        font-size: clamp(1.9rem, 3vw, 3.2rem);
+        font-size: clamp(1rem, 1.6vw, 1.4rem);
         font-weight: 700;
         line-height: 1;
         margin: 0 0 0.75rem;
@@ -43,6 +43,7 @@
 
     .assessment-stage p {
         color: var(--dash-ink-soft);
+        font-size: 0.85rem;
         line-height: 1.6;
         margin: 0;
         max-width: 660px;
@@ -88,105 +89,6 @@
         text-transform: uppercase;
     }
 
-    .assessment-routes {
-        display: grid;
-        grid-template-columns: 0.9fr 1.1fr 1fr;
-        gap: 1rem;
-    }
-
-    .route-card {
-        background: #ffffff;
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 24px;
-        box-shadow: 0 22px 44px rgba(27, 26, 23, 0.1);
-        display: grid;
-        gap: 1rem;
-        min-height: 310px;
-        overflow: hidden;
-        padding: 1.1rem;
-        position: relative;
-        text-decoration: none;
-    }
-
-    .route-card:hover {
-        box-shadow: 0 28px 54px rgba(27, 26, 23, 0.14);
-        transform: translateY(-3px);
-    }
-
-    .route-card::before {
-        bottom: -42px;
-        color: rgba(27, 26, 23, 0.06);
-        content: attr(data-route);
-        font-size: 8rem;
-        font-weight: 700;
-        line-height: 1;
-        position: absolute;
-        right: -10px;
-    }
-
-    .route-card.words {
-        background: linear-gradient(135deg, #ffffff 0%, #e6f3f5 100%);
-    }
-
-    .route-card.sentences {
-        background: linear-gradient(135deg, #ffffff 0%, #f8ead8 100%);
-    }
-
-    .route-card.paragraph {
-        background: linear-gradient(135deg, #ffffff 0%, #eef2e5 100%);
-    }
-
-    .route-icon {
-        align-items: center;
-        border-radius: 16px;
-        color: #ffffff;
-        display: inline-flex;
-        height: 52px;
-        justify-content: center;
-        width: 52px;
-    }
-
-    .words .route-icon {
-        background: #1f6f8b;
-    }
-
-    .sentences .route-icon {
-        background: #b95f44;
-    }
-
-    .paragraph .route-icon {
-        background: #7a8b5f;
-    }
-
-    .route-card h3 {
-        color: var(--dash-text);
-        font-size: 1.2rem;
-        font-weight: 700;
-        margin: 0;
-    }
-
-    .route-card p {
-        color: var(--dash-ink-soft);
-        line-height: 1.55;
-        margin: 0;
-    }
-
-    .route-action {
-        align-items: center;
-        align-self: end;
-        background: #1b1a17;
-        border-radius: 14px;
-        color: #fffdf7;
-        display: inline-flex;
-        font-weight: 700;
-        gap: 0.5rem;
-        justify-content: center;
-        min-height: 48px;
-        padding: 0.75rem 1rem;
-        position: relative;
-        z-index: 1;
-    }
-
     .assessment-prep {
         align-items: center;
         background: #ffffff;
@@ -197,6 +99,130 @@
         grid-template-columns: auto 1fr auto;
         gap: 1rem;
         padding: 1rem;
+    }
+
+    .subject-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .subject-card {
+        background: #ffffff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 24px;
+        color: var(--dash-text);
+        box-shadow: 0 22px 44px rgba(27, 26, 23, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        overflow: hidden;
+        padding: 1.25rem;
+        position: relative;
+        text-decoration: none;
+    }
+
+    .subject-card::before {
+        content: "";
+        height: 7px;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+        background: var(--dash-primary);
+    }
+
+    .subject-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+
+    .subject-info h3 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin: 0;
+        color: var(--dash-text);
+    }
+
+    .subject-code {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: var(--dash-primary);
+        background: var(--dash-primary-soft);
+        padding: 2px 8px;
+        border-radius: 6px;
+        text-transform: uppercase;
+    }
+
+    .assessment-type-link {
+        align-items: center;
+        background: #f8f9fa;
+        border: 1px solid rgba(27, 26, 23, 0.05);
+        border-radius: 16px;
+        display: flex;
+        padding: 0.75rem 1rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        color: var(--dash-text);
+        justify-content: space-between;
+    }
+
+    .assessment-type-link:hover {
+        background: #fff;
+        border-color: var(--dash-primary);
+        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.1);
+        transform: translateX(4px);
+    }
+
+    .assessment-type-link.is-disabled {
+        opacity: 0.5;
+        pointer-events: none;
+        filter: grayscale(1);
+    }
+
+    .type-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .type-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.9rem;
+    }
+
+    .type-word .type-icon { background: #1f6f8b; }
+    .type-sentence .type-icon { background: #b95f44; }
+    .type-paragraph .type-icon { background: #7a8b5f; }
+
+    .type-info strong {
+        display: block;
+        font-size: 0.95rem;
+        font-weight: 800;
+    }
+
+    .type-info span {
+        font-size: 0.78rem;
+        color: var(--dash-muted);
+    }
+
+    .assessment-empty-state {
+        background: white;
+        border: 1px dashed var(--dash-border);
+        border-radius: 20px;
+        padding: 3rem;
+        text-align: center;
+        color: var(--dash-muted);
+        grid-column: 1 / -1;
     }
 
     .prep-icon {
@@ -212,7 +238,6 @@
 
     @media (max-width: 980px) {
         .assessment-stage,
-        .assessment-routes,
         .assessment-prep {
             grid-template-columns: 1fr;
         }
@@ -239,34 +264,7 @@
         </aside>
     </div>
 
-    <div class="assessment-routes">
-        <a class="route-card words" href="{% url 'reading_word_page' %}?test=Main%20Reading%20Assessment&code=READ-001" data-route="W">
-            <span class="route-icon"><i class="bi bi-type"></i></span>
-            <div>
-                <h3>Word Reading</h3>
-                <p>Individual words for decoding accuracy and clear pronunciation.</p>
-            </div>
-            <span class="route-action">Start Words <i class="bi bi-arrow-right"></i></span>
-        </a>
-
-        <a class="route-card sentences" href="{% url 'reading_sentence_page' %}?test=Main%20Reading%20Assessment&code=READ-001" data-route="S">
-            <span class="route-icon"><i class="bi bi-chat-left-text"></i></span>
-            <div>
-                <h3>Sentence Reading</h3>
-                <p>Complete sentences for pacing, clarity, and expression.</p>
-            </div>
-            <span class="route-action">Start Sentences <i class="bi bi-arrow-right"></i></span>
-        </a>
-
-        <a class="route-card paragraph" href="{% url 'reading_para_page' %}?test=Main%20Reading%20Assessment&code=READ-001" data-route="P">
-            <span class="route-icon"><i class="bi bi-card-text"></i></span>
-            <div>
-                <h3>Paragraph Reading</h3>
-                <p>A short passage for connected-text fluency and stamina.</p>
-            </div>
-            <span class="route-action">Start Paragraph <i class="bi bi-arrow-right"></i></span>
-        </a>
-    </div>
+    <div class="subject-grid" id="subjectGrid"></div>
 
     <div class="assessment-prep">
         <span class="prep-icon"><i class="bi bi-mic"></i></span>
@@ -274,4 +272,139 @@
         <span class="dash-pill">Ready check</span>
     </div>
 </section>
+
+<script>
+    (() => {
+        const studentClassCodesKey = "pabasaStudentClassCodes";
+        const legacyStudentClassCodeKey = "pabasaStudentClassCode";
+        const teacherClassesKey = "pabasa_teacher_classes";
+        const readingsStorageKey = "pabasa_class_readings";
+        const materialTypes = ["word", "sentence", "paragraph"];
+
+        const escapeHtml = (value) => {
+            const div = document.createElement("div");
+            div.textContent = value == null ? "" : String(value);
+            return div.innerHTML;
+        };
+
+        const getStoredArray = (key) => {
+            try {
+                const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (error) { return []; }
+        };
+
+        const getStoredObject = (key) => {
+            try {
+                const parsed = JSON.parse(window.localStorage.getItem(key) || "{}");
+                return (parsed && typeof parsed === "object") ? parsed : {};
+            } catch (error) { return {}; }
+        };
+
+        const getJoinedCodes = () => {
+            const codes = getStoredArray(studentClassCodesKey).filter(Boolean);
+            const legacyCode = window.localStorage.getItem(legacyStudentClassCodeKey);
+            if (!codes.length && legacyCode) {
+                codes.push(legacyCode);
+            }
+            return codes.map((code) => String(code).toUpperCase());
+        };
+
+        const getAssessmentMaterials = () => {
+            const joinedCodes = getJoinedCodes();
+            const teacherClasses = getStoredArray(teacherClassesKey);
+            const readingsByClass = getStoredObject(readingsStorageKey);
+
+            // Create normalized map for case-insensitive class code lookups
+            const readingsMap = {};
+            Object.keys(readingsByClass).forEach(key => {
+                readingsMap[key.toUpperCase()] = readingsByClass[key];
+            });
+
+            return joinedCodes.map((code) => {
+                const upperCode = String(code).toUpperCase();
+                const classData = teacherClasses.find((item) => String(item.code || "").toUpperCase() === upperCode) || { code: upperCode, name: "Reading Class" };
+                const readings = readingsMap[upperCode] || {};
+                const materials = {};
+
+                materialTypes.forEach((type) => {
+                    // Support both singular and plural forms (word/words) for broader compatibility
+                    const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
+                    materials[type] = list
+                        .filter((material) => material && material.type && (material.type.toLowerCase() === "assessment" || material.type.toLowerCase() === "both"));
+                });
+                return { classData, materials };
+            });
+        };
+
+        function updateAssessmentHub() {
+            const grid = document.getElementById("subjectGrid");
+            if (!grid) return;
+
+            const classMaterials = getAssessmentMaterials();
+            
+            if (!classMaterials.length) {
+                grid.innerHTML = `
+                    <div class="assessment-empty-state">
+                        <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <h3>No classes joined yet</h3>
+                        <p>Join a class from your dashboard to start your reading assessments.</p>
+                    </div>`;
+                return;
+            }
+
+            grid.innerHTML = classMaterials.map(({ classData, materials }) => {
+                const wordCount = materials.word.length;
+                const sentenceCount = materials.sentence.length;
+                const paragraphCount = materials.paragraph.length;
+
+                // Get actual material titles if available, otherwise fallback to default
+                const getTestTitle = (list) => list.length > 0 ? encodeURIComponent(list[0].title) : "Main%20Reading%20Assessment";
+                const wordTitle = getTestTitle(materials.word);
+                const sentenceTitle = getTestTitle(materials.sentence);
+                const paragraphTitle = getTestTitle(materials.paragraph);
+
+                return `
+                <div class="subject-card">
+                    <div class="subject-info">
+                        <div>
+                            <h3>${escapeHtml(classData.name)}</h3>
+                            <p class="small text-secondary mb-0">${escapeHtml(classData.subject || "Reading")}</p>
+                        </div>
+                        <span class="subject-code">${escapeHtml(classData.code)}</span>
+                    </div>
+                    
+                    <a href="{% url 'reading_word_page' %}?test=${wordTitle}&code=${classData.code}" class="assessment-type-link type-word ${wordCount === 0 ? 'is-disabled' : ''}">
+                        <div class="type-meta">
+                            <span class="type-icon"><i class="bi bi-type"></i></span>
+                            <div class="type-info"><strong>Word Reading</strong><span>${wordCount} material${wordCount === 1 ? '' : 's'}</span></div>
+                        </div>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <a href="{% url 'reading_sentence_page' %}?test=${sentenceTitle}&code=${classData.code}" class="assessment-type-link type-sentence ${sentenceCount === 0 ? 'is-disabled' : ''}">
+                        <div class="type-meta">
+                            <span class="type-icon"><i class="bi bi-chat-left-text"></i></span>
+                            <div class="type-info"><strong>Sentence Reading</strong><span>${sentenceCount} material${sentenceCount === 1 ? '' : 's'}</span></div>
+                        </div>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <a href="{% url 'reading_para_page' %}?test=${paragraphTitle}&code=${classData.code}" class="assessment-type-link type-paragraph ${paragraphCount === 0 ? 'is-disabled' : ''}">
+                        <div class="type-meta">
+                            <span class="type-icon"><i class="bi bi-card-text"></i></span>
+                            <div class="type-info"><strong>Paragraph Reading</strong><span>${paragraphCount} material${paragraphCount === 1 ? '' : 's'}</span></div>
+                        </div>
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </div>`;
+            }).join("");
+        }
+
+        updateAssessmentHub();
+        window.addEventListener("storage", (event) => {
+            if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey].includes(event.key)) {
+                updateAssessmentHub();
+            }
+        });
+    })();
+</script>
 {% endblock %}

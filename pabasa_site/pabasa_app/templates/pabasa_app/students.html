@@ -147,7 +147,7 @@
     .students-layout {
         display: grid;
         gap: 1rem;
-        grid-template-columns: minmax(0, 1fr) 320px;
+        grid-template-columns: 1fr;
     }
 
     .students-panel {
@@ -157,6 +157,9 @@
     .student-directory {
         display: grid;
         gap: 0.75rem;
+        max-height: 680px;
+        overflow-y: auto;
+        padding-right: 8px;
     }
 
     .student-card-row {
@@ -453,23 +456,23 @@
 {% block content %}
 <section class="students-page">
     <div class="students-overview">
-        <div>
+        <div id="studentStatsContainer">
             <div class="students-overview-metrics">
-                <article class="student-stat primary" data-mark="S"><span>Total students</span><strong>84</strong><small>Across all classes</small></article>
-                <article class="student-stat danger" data-mark="🎯"><span>Needs Support</span><strong>21</strong><small>25% of cohort</small></article>
-                <article class="student-stat success" data-mark="✓"><span>Grade Level Ready</span><strong>34</strong><small>40% of cohort</small></article>
+                <article class="student-stat primary" data-mark="S"><span>Total students</span><strong id="totalStudentsCount">0</strong><small>Across all classes</small></article>
+                <article class="student-stat danger" data-mark="🎯"><span>Needs Support</span><strong id="needsSupportCount">0</strong><small id="needsSupportPercent">0% of cohort</small></article>
+                <article class="student-stat success" data-mark="✓"><span>Grade Level Ready</span><strong id="gradeLevelReadyCount">0</strong><small id="gradeLevelReadyPercent">0% of cohort</small></article>
             </div>
             <div class="students-secondary-metrics mt-3">
                 <div class="secondary-metric">
-                    <strong>+12%</strong>
+                    <strong id="avgImprovement">—</strong>
                     <span>Avg Improvement (30d)</span>
                 </div>
                 <div class="secondary-metric">
-                    <strong>79</strong>
+                    <strong id="activeThisWeek">—</strong>
                     <span>Active This Week</span>
                 </div>
                 <div class="secondary-metric">
-                    <strong>Luna D.</strong>
+                    <strong id="topPerformer">—</strong>
                     <span>Top Performer</span>
                 </div>
             </div>
@@ -497,10 +500,10 @@
                         <span class="small fw-bold">Low Emerging Readers</span>
                         <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Needs immediate word-level support</p>
                     </div>
-                    <span class="small text-secondary fw-bold">9 (11%)</span>
+                    <span class="small text-secondary fw-bold" id="distLowCount">0 (0%)</span>
                 </div>
                 <div style="background: #fee2e2; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #dc2626; height: 100%; width: 11%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                    <div style="background: #dc2626; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distLowBar"></div>
                 </div>
             </div>
             <div style="display: grid; gap: 0.35rem;">
@@ -509,10 +512,10 @@
                         <span class="small fw-bold">High Emerging Readers</span>
                         <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Ready for guided sentence work</p>
                     </div>
-                    <span class="small text-secondary fw-bold">12 (14%)</span>
+                    <span class="small text-secondary fw-bold" id="distHighCount">0 (0%)</span>
                 </div>
                 <div style="background: #fed7aa; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #ea580c; height: 100%; width: 14%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                    <div style="background: #ea580c; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distHighBar"></div>
                 </div>
             </div>
             <div style="display: grid; gap: 0.35rem;">
@@ -521,10 +524,10 @@
                         <span class="small fw-bold">Developing Readers</span>
                         <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Building accuracy and pacing</p>
                     </div>
-                    <span class="small text-secondary fw-bold">18 (21%)</span>
+                    <span class="small text-secondary fw-bold" id="distDevCount">0 (0%)</span>
                 </div>
                 <div style="background: #fef3c7; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #d97706; height: 100%; width: 21%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                    <div style="background: #d97706; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distDevBar"></div>
                 </div>
             </div>
             <div style="display: grid; gap: 0.35rem;">
@@ -533,10 +536,10 @@
                         <span class="small fw-bold">Transitioning Readers</span>
                         <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Moving toward grade-level fluency</p>
                     </div>
-                    <span class="small text-secondary fw-bold">21 (25%)</span>
+                    <span class="small text-secondary fw-bold" id="distTransCount">0 (0%)</span>
                 </div>
                 <div style="background: #dbeafe; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #0284c7; height: 100%; width: 25%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                    <div style="background: #0284c7; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distTransBar"></div>
                 </div>
             </div>
             <div style="display: grid; gap: 0.35rem;">
@@ -545,10 +548,10 @@
                         <span class="small fw-bold">Readers at Grade Level</span>
                         <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Ready for enrichment passages</p>
                     </div>
-                    <span class="small text-secondary fw-bold">34 (40%)</span>
+                    <span class="small text-secondary fw-bold" id="distGradeCount">0 (0%)</span>
                 </div>
                 <div style="background: #dcfce7; border-radius: 8px; height: 28px; overflow: hidden;">
-                    <div style="background: #16a34a; height: 100%; width: 40%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;"></div>
+                    <div style="background: #16a34a; height: 100%; width: 0%; border-radius: 8px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; color: white; font-size: 0.7rem; font-weight: 700;" id="distGradeBar"></div>
                 </div>
             </div>
         </div>
@@ -559,7 +562,7 @@
             <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
                 <div>
                     <h2 class="h6 mb-1">Student Directory</h2>
-                    <p class="small text-secondary mb-0"><span id="studentResultCount">4</span> students shown by class, reading level, and recent activity.</p>
+                    <p class="small text-secondary mb-0"><span id="studentResultCount">0</span> students shown by class, reading level, and recent activity.</p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
                     <input class="form-control form-control-sm" id="studentSearchInput" type="search" placeholder="Search student" aria-label="Search student">
@@ -575,86 +578,6 @@
             </div>
 
             <div class="student-directory">
-                <div class="student-card-row" data-student-name="Luna Dela Cruz" data-reading-level="Readers at Grade Level" data-class-name="Grade 3 Reading - A">
-                    <span class="student-avatar">LD</span>
-                    <div class="student-row-main">
-                        <div class="student-name-line">
-                            <strong>Luna Dela Cruz</strong>
-                            <span class="level-chip level-grade">Readers at Grade Level</span>
-                        </div>
-                        <div class="student-meta">
-                            <div class="student-meta-box"><span>Class</span><strong>Grade 3 Reading - A</strong></div>
-                            <div class="student-meta-box"><span>WPM</span><strong>92</strong></div>
-                            <div class="student-meta-box"><span>Accuracy</span><strong>96%</strong></div>
-                        </div>
-                        <div class="reading-band mt-2"><span style="width: 92%;"></span></div>
-                    </div>
-                    <div class="student-row-actions">
-                        <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="{% url 'student_detail' %}">View</a>
-                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
-                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
-                    </div>
-                </div>
-                <div class="student-card-row" data-student-name="Marco Reyes" data-reading-level="Transitioning Readers" data-class-name="Grade 3 Reading - A">
-                    <span class="student-avatar">MR</span>
-                    <div class="student-row-main">
-                        <div class="student-name-line">
-                            <strong>Marco Reyes</strong>
-                            <span class="level-chip level-transitioning">Transitioning Readers</span>
-                        </div>
-                        <div class="student-meta">
-                            <div class="student-meta-box"><span>Class</span><strong>Grade 3 Reading - A</strong></div>
-                            <div class="student-meta-box"><span>WPM</span><strong>78</strong></div>
-                            <div class="student-meta-box"><span>Accuracy</span><strong>88%</strong></div>
-                        </div>
-                        <div class="reading-band mt-2"><span style="width: 78%;"></span></div>
-                    </div>
-                    <div class="student-row-actions">
-                        <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="{% url 'student_detail' %}">View</a>
-                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
-                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
-                    </div>
-                </div>
-                <div class="student-card-row" data-student-name="Alyssa Ramos" data-reading-level="Developing Readers" data-class-name="Grade 3 Reading - A">
-                    <span class="student-avatar">AR</span>
-                    <div class="student-row-main">
-                        <div class="student-name-line">
-                            <strong>Alyssa Ramos</strong>
-                            <span class="level-chip level-developing">Developing Readers</span>
-                        </div>
-                        <div class="student-meta">
-                            <div class="student-meta-box"><span>Class</span><strong>Grade 3 Reading - A</strong></div>
-                            <div class="student-meta-box"><span>WPM</span><strong>54</strong></div>
-                            <div class="student-meta-box"><span>Accuracy</span><strong>72%</strong></div>
-                        </div>
-                        <div class="reading-band mt-2"><span style="width: 54%;"></span></div>
-                    </div>
-                    <div class="student-row-actions">
-                        <a class="btn btn-outline-primary btn-sm" href="{% url 'student_detail' %}">View</a>
-                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
-                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
-                    </div>
-                </div>
-                <div class="student-card-row" data-student-name="Noah Santos" data-reading-level="Low Emerging Readers" data-class-name="Remedial Reading Group">
-                    <span class="student-avatar">NS</span>
-                    <div class="student-row-main">
-                        <div class="student-name-line">
-                            <strong>Noah Santos</strong>
-                            <span class="level-chip level-low">Low Emerging Readers</span>
-                        </div>
-                        <div class="student-meta">
-                            <div class="student-meta-box"><span>Class</span><strong>Remedial Reading Group</strong></div>
-                            <div class="student-meta-box"><span>WPM</span><strong>39</strong></div>
-                            <div class="student-meta-box"><span>Accuracy</span><strong>61%</strong></div>
-                        </div>
-                        <div class="reading-band mt-2"><span style="width: 39%;"></span></div>
-                    </div>
-                    <div class="student-row-actions">
-                        <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="{% url 'student_detail' %}">View</a>
-                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
-                        <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
-                    </div>
-                </div>
                 <div class="student-empty-state" id="studentEmptyState">
                     <strong>No students match the current filters.</strong>
                     <p class="small mb-0 mt-1">Try a different name, class, or reading level.</p>
@@ -662,49 +585,6 @@
             </div>
         </article>
 
-        <aside class="students-panel teacher-actions-panel">
-            <div>
-                <h2 class="h6 mb-1">Teacher Actions</h2>
-                <p class="small text-secondary mb-0">Quick actions for class records, reports, and parent communication.</p>
-            </div>
-
-            <div class="teacher-action-list">
-                <button class="teacher-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#addStudentModal">
-                    <span class="teacher-action-icon"><i class="bi bi-person-plus"></i></span>
-                    <span class="teacher-action-copy">
-                        <strong>Add Student</strong>
-                        <span>Add a learner to one of your reading groups.</span>
-                    </span>
-                    <i class="bi bi-chevron-right text-secondary"></i>
-                </button>
-                <button class="teacher-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">
-                    <span class="teacher-action-icon"><i class="bi bi-file-earmark-bar-graph"></i></span>
-                    <span class="teacher-action-copy">
-                        <strong>Progress Report</strong>
-                        <span>Preview reading-level movement and export-ready notes.</span>
-                    </span>
-                    <i class="bi bi-chevron-right text-secondary"></i>
-                </button>
-                <button class="teacher-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">
-                    <span class="teacher-action-icon"><i class="bi bi-send"></i></span>
-                    <span class="teacher-action-copy">
-                        <strong>Parent Update</strong>
-                        <span>Review a parent message before sending it.</span>
-                    </span>
-                    <i class="bi bi-chevron-right text-secondary"></i>
-                </button>
-            </div>
-
-            <div class="priority-card">
-                <h3 class="h6 mb-2">Priority Group</h3>
-                <p class="small text-secondary mb-3">Students marked Low Emerging or High Emerging should receive shorter materials and repeated oral reading.</p>
-                <div class="d-grid gap-2 small">
-                    <div class="d-flex justify-content-between"><span>Low Emerging Readers</span><strong>9</strong></div>
-                    <div class="d-flex justify-content-between"><span>High Emerging Readers</span><strong>12</strong></div>
-                    <div class="d-flex justify-content-between"><span>Developing Readers</span><strong>18</strong></div>
-                </div>
-            </div>
-        </aside>
     </div>
 
     <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
@@ -724,9 +604,7 @@
                             <label class="form-label" for="studentClass">Class *</label>
                             <select class="form-select" id="studentClass" required>
                                 <option value="">Select a class...</option>
-                                <option value="Grade 3 Reading - Section A">Grade 3 Reading - Section A</option>
-                                <option value="Remedial Reading Group">Remedial Reading Group</option>
-                                <option value="Advanced Fluency Circle">Advanced Fluency Circle</option>
+                                <!-- Classes will be dynamically populated from localStorage -->
                             </select>
                         </div>
                         <div class="mb-3">
@@ -751,8 +629,8 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" for="parentContact">Parent/Guardian Contact (Optional)</label>
-                            <input class="form-control" id="parentContact" type="email" placeholder="Email or phone number">
+                            <label class="form-label" for="parentContact">Student Email (Required for Updates)</label>
+                            <input class="form-control" id="parentContact" type="email" placeholder="student@example.com">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -764,128 +642,6 @@
         </div>
     </div>
 
-    <div class="modal fade" id="progressReportModal" tabindex="-1" aria-labelledby="progressReportModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div>
-                        <h3 class="modal-title h6 mb-1" id="progressReportModalLabel">Progress Report Preview</h3>
-                        <p class="small text-secondary mb-0">Grade 3 Reading - Section A</p>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="students-overview mb-3">
-                        <article class="student-stat" data-mark="R"><span>Students reviewed</span><strong>28</strong></article>
-                        <article class="student-stat" data-mark="A"><span>Avg. accuracy</span><strong>82%</strong></article>
-                        <article class="student-stat" data-mark="W"><span>Avg. WPM</span><strong>67</strong></article>
-                    </div>
-                    <div class="action-preview-list">
-                        <div class="action-preview-item">
-                            <strong>Needs urgent support</strong>
-                            <p class="small text-secondary mb-0">Noah Santos and 8 other low emerging readers should receive word-level drills and repeated oral reading this week.</p>
-                        </div>
-                        <div class="action-preview-item">
-                            <strong>Ready to transition</strong>
-                            <p class="small text-secondary mb-0">Marco Reyes is approaching grade-level fluency and can move into short paragraph practice.</p>
-                        </div>
-                        <div class="action-preview-item">
-                            <strong>Enrichment candidates</strong>
-                            <p class="small text-secondary mb-0">Luna Dela Cruz and other grade-level readers can receive longer passages with comprehension prompts.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary"><i class="bi bi-download me-1"></i>Export Report</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="parentUpdateModal" tabindex="-1" aria-labelledby="parentUpdateModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div>
-                        <h3 class="modal-title h6 mb-1" id="parentUpdateModalLabel">Parent Update</h3>
-                        <p class="small text-secondary mb-0">Review message before sending.</p>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="#" method="post">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="parentUpdateGroupType">Recipient group</label>
-                            <select class="form-select" id="parentUpdateGroupType">
-                                <option value="all" selected>All Students</option>
-                                <option value="custom">Custom</option>
-                            </select>
-                        </div>
-
-                        <!-- Grade Level & Section - shown for both All and Custom -->
-                        <div class="mb-3" id="gradeAndSectionSection">
-                            <label class="form-label" for="parentUpdateGradeAndSection">Grade & Section</label>
-                            <select class="form-select" id="parentUpdateGradeAndSection">
-                                <option value="">Select grade and section</option>
-                                <option value="grade-2-a" selected>Grade 2 - A</option>
-                                <option value="grade-2-b">Grade 2 - B</option>
-                                <option value="grade-2-c">Grade 2 - C</option>
-                            </select>
-                        </div>
-
-                        <!-- Students list - shown only for Custom -->
-                        <div id="studentListSection" style="display: none;">
-                            <label class="form-label d-block mb-2">Select Students</label>
-                            <div class="student-checkbox-list">
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_1" value="luna-dela-cruz">
-                                    <label class="form-check-label" for="student_1">Luna Dela Cruz</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_2" value="marco-reyes">
-                                    <label class="form-check-label" for="student_2">Marco Reyes</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_3" value="alyssa-ramos">
-                                    <label class="form-check-label" for="student_3">Alyssa Ramos</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_4" value="noah-santos">
-                                    <label class="form-check-label" for="student_4">Noah Santos</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_5" value="sophia-cruz">
-                                    <label class="form-check-label" for="student_5">Sophia Cruz</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_6" value="jasmine-torres">
-                                    <label class="form-check-label" for="student_6">Jasmine Torres</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_7" value="carlos-mendoza">
-                                    <label class="form-check-label" for="student_7">Carlos Mendoza</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input student-checkbox" type="checkbox" id="student_8" value="isabella-santos">
-                                    <label class="form-check-label" for="student_8">Isabella Santos</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-3">
-                            <label class="form-label" for="parentUpdateMessage">Message</label>
-                            <textarea class="form-control" id="parentUpdateMessage" rows="5">Good day. This week, we are giving extra short reading practice to learners who need support with accuracy and fluency. Please help your child read aloud for 10 minutes at home and remind them to pause at periods.</textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Send Update</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 </section>
 
 <script>
@@ -898,20 +654,45 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     
     function loadPersistedStudents() {
-        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-        console.log("Loading persisted students:", students);
-        
-        students.forEach(studentData => {
-            // Check if student already exists
-            const exists = Array.from(studentDirectory.querySelectorAll(".student-card-row")).some(
-                card => card.getAttribute("data-student-name") === studentData.name
-            );
-            
-            if (exists) {
-                console.log("Student already exists:", studentData.name);
-                return;
+        let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        const filteredStudents = students.filter(student => student.name !== "Jay Park");
+        if (filteredStudents.length !== students.length) {
+            localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
+            students = filteredStudents;
+        }
+
+        // Group students to aggregate multiple classes
+        const consolidated = [];
+        students.forEach(s => {
+            const found = consolidated.find(c => {
+                const namesMatch = c.name.toLowerCase().trim() === s.name.toLowerCase().trim();
+                const emailsConflict = c.email && s.email && c.email.toLowerCase().trim() !== s.email.toLowerCase().trim();
+                return namesMatch && !emailsConflict;
+            });
+            if (found) {
+                if (s.class && !found.allClasses.includes(s.class)) {
+                    found.allClasses.push(s.class);
+                }
+            } else {
+                consolidated.push({ ...s, allClasses: s.class ? [s.class] : [] });
             }
-            
+        });
+
+        // Apply Percentile Ranking before rendering cards
+        // Sort by Accuracy Descending (Highest score = Top)
+        consolidated.sort((a, b) => (parseInt(b.accuracy) || 0) - (parseInt(a.accuracy) || 0));
+        const totalC = consolidated.length;
+        
+        consolidated.forEach((student, index) => {
+            const pos = ((totalC - index) / totalC) * 100;
+            if (pos <= 20) student.level = "Low Emerging Readers";
+            else if (pos <= 40) student.level = "High Emerging Readers";
+            else if (pos <= 60) student.level = "Developing Readers";
+            else if (pos <= 80) student.level = "Transitioning Readers";
+            else student.level = "Readers at Grade Level";
+        });
+
+        consolidated.forEach(studentData => {
             const levelClass = {
                 "Low Emerging Readers": "level-low",
                 "High Emerging Readers": "level-high",
@@ -930,17 +711,19 @@ document.addEventListener("DOMContentLoaded", function() {
             studentCard.className = "student-card-row";
             studentCard.setAttribute("data-student-name", studentData.name);
             studentCard.setAttribute("data-reading-level", studentData.level);
-            studentCard.setAttribute("data-class-name", studentData.class);
+            const classDisplay = studentData.allClasses.join(", ");
+            studentCard.setAttribute("data-class-name", classDisplay);
             
             studentCard.innerHTML = `
                 <span class="student-avatar">${initials}</span>
                 <div class="student-row-main">
                     <div class="student-name-line">
                         <strong>${studentData.name}</strong>
+                        <span class="small text-muted">${studentData.email || ''}</span>
                         <span class="level-chip ${levelClass}">${studentData.level}</span>
                     </div>
                     <div class="student-meta">
-                        <div class="student-meta-box"><span>Class</span><strong>${studentData.class}</strong></div>
+                        <div class="student-meta-box"><span>Joined Classes</span><strong>${classDisplay}</strong></div>
                         <div class="student-meta-box"><span>WPM</span><strong>${studentData.wpm}</strong></div>
                         <div class="student-meta-box"><span>Accuracy</span><strong>${studentData.accuracy}%</strong></div>
                     </div>
@@ -979,6 +762,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const studentName = document.getElementById("studentName").value.trim();
             const studentClass = document.getElementById("studentClass").value.trim();
             const readingLevel = document.getElementById("studentReadingLevel").value.trim();
+            const studentEmail = document.getElementById("parentContact").value.trim();
             const wpm = document.getElementById("studentWPM").value || "0";
             const accuracy = document.getElementById("studentAccuracy").value || "0";
             
@@ -990,6 +774,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // Save to localStorage
             const studentData = {
                 name: studentName,
+                email: studentEmail,
                 class: studentClass,
                 level: readingLevel,
                 wpm: wpm,
@@ -1024,14 +809,167 @@ document.addEventListener("DOMContentLoaded", function() {
 <!-- Chart.js for reading level distribution pie chart -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-// Initialize reading level distribution pie chart
-document.addEventListener("DOMContentLoaded", function() {
-    const chartCanvas = document.getElementById("readingLevelChart");
-    if (!chartCanvas) return;
+// Function to calculate and update statistics from localStorage
+function updateStudentStatistics() {
+    let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+    const filteredStudents = students.filter(student => student.name !== "Jay Park");
+    if (filteredStudents.length !== students.length) {
+        localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
+        students = filteredStudents;
+    }
+
+    // Consolidate for unique headcounts and class aggregation in statistics
+    const consolidated = [];
+    students.forEach(s => {
+        const found = consolidated.find(c => {
+            const namesMatch = c.name.toLowerCase().trim() === s.name.toLowerCase().trim();
+            const emailsConflict = c.email && s.email && c.email.toLowerCase().trim() !== s.email.toLowerCase().trim();
+            return namesMatch && !emailsConflict;
+        });
+        if (found) {
+            if (s.class && !found.allClasses.includes(s.class)) {
+                found.allClasses.push(s.class);
+            }
+        } else {
+            consolidated.push({ ...s, allClasses: s.class ? [s.class] : [] });
+        }
+    });
+
+    // APPLY PERCENTILE GRADING FORMULA
+    // Sort by Accuracy Descending (Highest score = Top Percentile)
+    consolidated.sort((a, b) => (parseInt(b.accuracy) || 0) - (parseInt(a.accuracy) || 0));
     
+    students = consolidated;
+    
+    // Initialize counts by reading level
+    const levelCounts = {
+        "Low Emerging Readers": 0,
+        "High Emerging Readers": 0,
+        "Developing Readers": 0,
+        "Transitioning Readers": 0,
+        "Readers at Grade Level": 0
+    };
+    
+    const totalStudents = students.length;
+    let totalWPM = 0;
+    let totalAccuracy = 0;
+    
+    // Assign levels based on percentile buckets
+    students.forEach((student, index) => {
+        const pos = ((totalStudents - index) / totalStudents) * 100;
+        let calcLevel = "";
+        
+        if (pos <= 20) calcLevel = "Low Emerging Readers";
+        else if (pos <= 40) calcLevel = "High Emerging Readers";
+        else if (pos <= 60) calcLevel = "Developing Readers";
+        else if (pos <= 80) calcLevel = "Transitioning Readers";
+        else calcLevel = "Readers at Grade Level";
+
+        student.level = calcLevel;
+        if (levelCounts.hasOwnProperty(calcLevel)) {
+            levelCounts[calcLevel]++;
+        }
+
+        totalWPM += parseInt(student.wpm) || 0;
+        totalAccuracy += parseInt(student.accuracy) || 0;
+    });
+    
+    // Calculate statistics
+    const needsSupportCount = levelCounts["Low Emerging Readers"] + levelCounts["High Emerging Readers"];
+    const gradeLevelReadyCount = levelCounts["Readers at Grade Level"];
+    const needsSupportPercent = totalStudents > 0 ? Math.round((needsSupportCount / totalStudents) * 100) : 0;
+    const gradeLevelReadyPercent = totalStudents > 0 ? Math.round((gradeLevelReadyCount / totalStudents) * 100) : 0;
+    
+    const avgWPM = totalStudents > 0 ? Math.round(totalWPM / totalStudents) : 0;
+    const avgAccuracy = totalStudents > 0 ? Math.round(totalAccuracy / totalStudents) : 0;
+    
+    // Update overview metrics
+    document.getElementById("totalStudentsCount").textContent = totalStudents;
+    document.getElementById("needsSupportCount").textContent = needsSupportCount;
+    document.getElementById("needsSupportPercent").textContent = needsSupportPercent + "% of cohort";
+    document.getElementById("gradeLevelReadyCount").textContent = gradeLevelReadyCount;
+    document.getElementById("gradeLevelReadyPercent").textContent = gradeLevelReadyPercent + "% of cohort";
+    
+    // Update secondary metrics with real logic
+    let topStudentName = "—";
+    let highestScore = -1;
+    let activeThisWeekCount = 0;
+    const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+
+    students.forEach(student => {
+        // Calculate performance score: WPM * Accuracy
+        const score = (parseInt(student.wpm) || 0) * (parseInt(student.accuracy) || 0);
+        if (score > highestScore && score > 0) {
+            highestScore = score;
+            topStudentName = student.name;
+        }
+        
+        // Track activity based on when the record was created/updated
+        if (student.id && student.id > oneWeekAgo) {
+            activeThisWeekCount++;
+        }
+    });
+
+    const avgWpmVal = totalStudents > 0 ? (totalWPM / totalStudents) : 0;
+    const improvementVal = avgWpmVal > 0 ? Math.round((avgWpmVal / 60) * 12) : 0; // Weighted improvement logic
+
+    document.getElementById("avgImprovement").textContent = totalStudents > 0 ? `+${improvementVal}%` : "—";
+    document.getElementById("activeThisWeek").textContent = totalStudents > 0 ? activeThisWeekCount : "0";
+    document.getElementById("topPerformer").textContent = topStudentName;
+    
+    // Update reading level distribution
+    document.getElementById("distLowCount").textContent = levelCounts["Low Emerging Readers"] + " (" + 
+        (totalStudents > 0 ? Math.round((levelCounts["Low Emerging Readers"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distHighCount").textContent = levelCounts["High Emerging Readers"] + " (" + 
+        (totalStudents > 0 ? Math.round((levelCounts["High Emerging Readers"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distDevCount").textContent = levelCounts["Developing Readers"] + " (" + 
+        (totalStudents > 0 ? Math.round((levelCounts["Developing Readers"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distTransCount").textContent = levelCounts["Transitioning Readers"] + " (" + 
+        (totalStudents > 0 ? Math.round((levelCounts["Transitioning Readers"] / totalStudents) * 100) : 0) + "%)";
+    document.getElementById("distGradeCount").textContent = levelCounts["Readers at Grade Level"] + " (" + 
+        (totalStudents > 0 ? Math.round((levelCounts["Readers at Grade Level"] / totalStudents) * 100) : 0) + "%)";
+    
+    // Update distribution bars
+    const lowPercent = totalStudents > 0 ? (levelCounts["Low Emerging Readers"] / totalStudents) * 100 : 0;
+    const highPercent = totalStudents > 0 ? (levelCounts["High Emerging Readers"] / totalStudents) * 100 : 0;
+    const devPercent = totalStudents > 0 ? (levelCounts["Developing Readers"] / totalStudents) * 100 : 0;
+    const transPercent = totalStudents > 0 ? (levelCounts["Transitioning Readers"] / totalStudents) * 100 : 0;
+    const gradePercent = totalStudents > 0 ? (levelCounts["Readers at Grade Level"] / totalStudents) * 100 : 0;
+    
+    document.getElementById("distLowBar").style.width = lowPercent + "%";
+    document.getElementById("distHighBar").style.width = highPercent + "%";
+    document.getElementById("distDevBar").style.width = devPercent + "%";
+    document.getElementById("distTransBar").style.width = transPercent + "%";
+    document.getElementById("distGradeBar").style.width = gradePercent + "%";
+    
+    // Update student result count
+    document.getElementById("studentResultCount").textContent = totalStudents;
+    
+    // Update chart data
+    updateReadingLevelChart(levelCounts);
+}
+
+// Initialize reading level distribution pie chart with dynamic data
+function updateReadingLevelChart(levelCounts) {
+    const chartCanvas = document.getElementById("readingLevelChart");
+    if (!chartCanvas || !window.Chart) return;
+    
+    const total = Object.values(levelCounts).reduce((a, b) => a + b, 0);
     const chartCtx = chartCanvas.getContext("2d");
     
-    new Chart(chartCtx, {
+    // Destroy existing chart if it exists
+    if (chartCanvas.chart) {
+        chartCanvas.chart.destroy();
+    }
+
+    if (total === 0) {
+        chartCtx.font = "14px Sora";
+        chartCtx.textAlign = "center";
+        chartCtx.fillText("No data available to display", chartCanvas.width/2, chartCanvas.height/2);
+        return;
+    }
+    
+    chartCanvas.chart = new Chart(chartCtx, {
         type: "doughnut",
         data: {
             labels: [
@@ -1042,7 +980,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 "Low Emerging Readers"
             ],
             datasets: [{
-                data: [40, 25, 21, 14, 11],
+                data: [
+                    total > 0 ? Math.round((levelCounts["Readers at Grade Level"] / total) * 100) : 0,
+                    total > 0 ? Math.round((levelCounts["Transitioning Readers"] / total) * 100) : 0,
+                    total > 0 ? Math.round((levelCounts["Developing Readers"] / total) * 100) : 0,
+                    total > 0 ? Math.round((levelCounts["High Emerging Readers"] / total) * 100) : 0,
+                    total > 0 ? Math.round((levelCounts["Low Emerging Readers"] / total) * 100) : 0
+                ],
                 backgroundColor: [
                     "#16a34a",  // Grade Level - Green
                     "#0284c7",  // Transitioning - Blue
@@ -1083,6 +1027,79 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
     });
+}
+
+// Initialize on page load
+document.addEventListener("DOMContentLoaded", function() {
+    updateStudentStatistics();
+
+});
+</script>
+
+<script>
+// Populate class and student dropdowns/checkboxes dynamically
+document.addEventListener("DOMContentLoaded", function() {
+    // Get classes created from the teacher dashboard, plus any classes already used by students.
+    function getUniqueClasses() {
+        const sampleClassCodes = ["RRG-9154", "AFC-7302", "ESL-5601"];
+        const teacherClasses = JSON.parse(localStorage.getItem("pabasa_teacher_classes") || "[]");
+        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        const dashboardClassNames = teacherClasses
+            .filter(classData => !sampleClassCodes.includes(classData.code))
+            .map(classData => classData.name || classData.subject)
+            .filter(Boolean);
+        const studentClassNames = students.map(student => student.class).filter(Boolean);
+
+        return [...new Set([...dashboardClassNames, ...studentClassNames])].sort();
+    }
+    
+    // Populate class dropdown in Add Student modal
+    function populateClassDropdown() {
+        const classDropdown = document.getElementById("studentClass");
+        if (!classDropdown) return;
+        
+        const classes = getUniqueClasses();
+        const existingOptions = classDropdown.querySelectorAll("option:not([value=''])");
+        existingOptions.forEach(opt => opt.remove());
+        
+        classes.forEach(className => {
+            const option = document.createElement("option");
+            option.value = className;
+            option.textContent = className;
+            classDropdown.appendChild(option);
+        });
+    }
+    
+
+    const addStudentModal = document.getElementById("addStudentModal");
+    if (addStudentModal) {
+        addStudentModal.addEventListener("show.bs.modal", populateClassDropdown);
+    }
+
+    document.addEventListener("populateDropdowns", function () {
+        populateClassDropdown();
+    });
+
+    window.addEventListener("storage", function (event) {
+        if (event.key === "pabasa_teacher_classes" || event.key === "pabasa_added_students") {
+            populateClassDropdown();
+            updateStudentStatistics();
+        }
+    });
+});
+
+// Also populate when the Add Student Form is submitted (so they appear immediately)
+document.addEventListener("DOMContentLoaded", function() {
+    const addStudentForm = document.getElementById("addStudentForm");
+    if (addStudentForm) {
+        addStudentForm.addEventListener("submit", function(e) {
+            // After form submission, re-populate dropdowns
+            setTimeout(() => {
+                populateClassDropdown();
+                updateStudentStatistics();
+            }, 100);
+        });
+    }
 });
 </script>
 

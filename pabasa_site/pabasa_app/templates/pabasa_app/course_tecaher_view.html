@@ -1362,6 +1362,55 @@
             return div.innerHTML;
         }
 
+        async function notifyStudentsOfMaterial(classCode, material, readingType) {
+            const teacherClasses = getTeacherClasses();
+            const classData = teacherClasses.find(c => c.code === classCode);
+            if (!classData) return;
+
+            const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+            const classStudents = allStudents.filter(s => 
+                s.class && classData.name && 
+                s.class.trim().toLowerCase() === classData.name.trim().toLowerCase() && 
+                s.name !== "Jay Park"
+            );
+
+            if (classStudents.length === 0) return;
+
+            const typeLabel = material.type === 'both' ? 'Practice & Assessment' : (material.type === 'practice' ? 'Practice Mode' : 'Reading Assessment');
+            const title = `New Activity Ready!`;
+
+            // 1. Create In-App Notifications
+            const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+            // Send a single broadcast notification to all students in the class to ensure it reflects for everyone
+            notifications.unshift({
+                id: Date.now(),
+                recipientId: null, // Omit specific recipient ID to broadcast to the entire class
+                classCode: classData.code,
+                title: title,
+                message: `🎉 A new ${typeLabel} activity is ready for your class! Check it out and start now!`,
+                timestamp: Date.now(),
+                read: false,
+                role: 'student'
+            });
+            localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
+            window.dispatchEvent(new Event('pabasa:notifications-updated'));
+            
+            // 2. Send Emails
+            const recipients = classStudents.filter(s => s.email);
+            recipients.forEach(s => {
+                const emailMessage = `A new ${typeLabel} activity is now available for you to practice.`;
+                fetch('/dashboard/students/send-email/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value },
+                    body: JSON.stringify({
+                        email: s.email,
+                        subject: `PABASA: ${title}`,
+                        message: `Hello ${s.name},\n\n${emailMessage}\n\nLog in to your PABASA dashboard to start practicing.\n\nThank you,\nPABASA Team`
+                    })
+                }).catch(e => console.warn('Failed to send email to', s.email, e));
+            });
+        }
+
         library.addEventListener("click", event => {
             // Handle students button FIRST (before header, since button is inside header)
             const studentsBtn = event.target.closest("[data-action='students']");
@@ -1429,6 +1478,7 @@
             
             saveAssignments(assignments);
             activityTypeModal.hide();
+            notifyStudentsOfMaterial(pendingActivityClass, pendingActivityMaterial, pendingActivityMaterial.type);
             renderMaterials();
             showStatusPopup("Material Assigned", `"${pendingActivityMaterial.title}" assigned as ${activityType}`);
             pendingActivityMaterial = null;

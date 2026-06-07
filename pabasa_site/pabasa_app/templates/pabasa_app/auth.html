@@ -162,6 +162,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
+                    localStorage.setItem("pabasaCurrentUserId", data.custom_id);
                     // Redirect to appropriate dashboard
                     window.location.href = data.redirect_url;
                 } else {

@@ -1,0 +1,1 @@
+// This file should be removed. Logic moved to static/pabasa_app/js/assessment_reader.js

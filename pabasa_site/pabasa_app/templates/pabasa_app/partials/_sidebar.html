@@ -6,7 +6,7 @@
                     <i class="bi bi-journal-check"></i>
                 </span>
                 <div class="sidebar-text">
-                    <div class="fs-6 fw-bold lh-1" data-sidebar-brand-id>PABASA</div>
+                    <div class="fs-6 fw-bold lh-1" data-sidebar-brand-id>{{ user_id|default:"PABASA ID" }}</div>
                     <div class="brand-note mt-1 small">PABASA</div>
                 </div>
             </a>
@@ -56,17 +56,22 @@
 
 <script>
     (() => {
+        const currentUserId = "{{ user_id|default:''|escapejs }}";
+        const fallbackUserId = "{% if nav_role == 'teacher' %}TCH-0000{% else %}G2-0000{% endif %}";
+
         // Update ALL instances of the brand ID (desktop + mobile sidebars)
         const updateBrandId = () => {
-            const storedId = window.localStorage.getItem("pabasaCurrentUserId");
             const brandIdElements = document.querySelectorAll("[data-sidebar-brand-id]");
-            
+
+            const storedUserId = window.localStorage.getItem("pabasaCurrentUserId") || "";
+            const displayUserId = currentUserId || storedUserId || fallbackUserId;
+
+            if (currentUserId) {
+                window.localStorage.setItem("pabasaCurrentUserId", currentUserId);
+            }
+
             brandIdElements.forEach(element => {
-                if (storedId) {
-                    element.textContent = storedId;
-                } else {
-                    element.textContent = "PABASA";
-                }
+                element.textContent = displayUserId;
             });
         };
 

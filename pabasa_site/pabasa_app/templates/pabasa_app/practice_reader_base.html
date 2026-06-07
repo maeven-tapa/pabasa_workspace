@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -153,10 +154,10 @@
             color: #fff;
             display: grid;
             place-items: center;
-            font-size: clamp(4rem, 11vw, 7rem);
+            font-size: clamp(2rem, 5vw, 3.2rem);
             font-weight: 900;
             line-height: 1;
-            min-height: 170px;
+            min-height: 80px;
         }
 
         .coach-panel h2 {
@@ -205,7 +206,7 @@
             display: grid;
             grid-template-rows: auto 1fr auto;
             gap: 1rem;
-            min-height: calc(100vh - 126px);
+            min-height: calc(100vh - 180px);
             overflow: hidden;
             padding: clamp(1rem, 2.5vw, 1.6rem);
             position: relative;
@@ -226,7 +227,7 @@
             right: -0.25rem;
             bottom: -1.5rem;
             color: rgba(31, 111, 139, 0.07);
-            font-size: clamp(7rem, 17vw, 13rem);
+            font-size: clamp(2.5rem, 7vw, 4.2rem);
             font-weight: 900;
             line-height: 1;
             pointer-events: none;
@@ -275,6 +276,7 @@
             position: relative;
             z-index: 1;
             text-align: center;
+            width: 100%;
         }
 
         .practice-text {
@@ -284,15 +286,17 @@
             margin: 0;
             max-width: min(980px, 100%);
             text-wrap: balance;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
 
         .practice-word .practice-text {
-            font-size: clamp(4rem, 13vw, 10rem);
+            font-size: clamp(1.8rem, 6vw, 3.8rem);
             letter-spacing: 0.03em;
         }
 
         .practice-sentence .practice-text {
-            font-size: clamp(2.4rem, 7vw, 5.5rem);
+            font-size: clamp(1.2rem, 3.5vw, 2.2rem);
         }
 
         .practice-paragraph .practice-text {
@@ -300,7 +304,7 @@
             border: 1px solid rgba(27, 26, 23, 0.08);
             border-radius: 24px;
             box-shadow: inset 0 0 0 8px rgba(247, 200, 106, 0.2);
-            font-size: clamp(1.25rem, 3vw, 2.35rem);
+            font-size: clamp(0.85rem, 1.6vw, 1.25rem);
             line-height: 1.48;
             padding: clamp(1rem, 2.5vw, 2rem);
             text-align: left;
@@ -329,6 +333,12 @@
         .practice-controls button:hover {
             filter: brightness(0.97);
             transform: translateY(-1px);
+        }
+
+        .skip-btn {
+            background: #fff;
+            border: 1px solid var(--line) !important;
+            color: var(--muted);
         }
 
         .listen-btn {
@@ -534,7 +544,7 @@
                     <p>{% block coach_text %}Tap listen, read it aloud, then try the next one.{% endblock %}</p>
                 </div>
                 <div class="mini-steps">
-                    <div class="mini-step"><strong>1</strong><span>Listen or read silently.</span></div>
+                    <div class="mini-step"><strong>1</strong><span>Read the text silently.</span></div>
                     <div class="mini-step"><strong>2</strong><span>Say it in a clear voice.</span></div>
                     <div class="mini-step"><strong>3</strong><span>Tap next when you feel ready.</span></div>
                 </div>
@@ -553,8 +563,8 @@
                 <p class="practice-feedback" id="practiceFeedback">Ready when you are.</p>
 
                 <div class="practice-controls">
-                    <button class="listen-btn" id="listenBtn" type="button">Listen</button>
-                    <button class="record-btn" id="recordBtn" type="button">I read it</button>
+                    <button class="skip-btn" id="skipBtn" type="button">Skip</button>
+                    <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Read</button>
                     <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
                 </div>
             </article>
@@ -564,7 +574,7 @@
             <article class="practice-complete-card">
                 <div class="complete-star">*</div>
                 <h2>Practice complete.</h2>
-                <p>You finished the set. Take a short rest, then try again if you want to make your reading smoother.</p>
+                <p>You finished the set. Te a short rest, then try again if you want to make your reading smoother.</p>
                 <div class="practice-complete-stats">
                     <div class="practice-stat">
                         <strong id="completeStars">0</strong>
@@ -583,6 +593,10 @@
         </section>
     </main>
 
-    <script src="{% static 'pabasa_app/js/practice_reader.js' %}"></script>
+    <script>
+        window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
+        window.PABASA_USER_ROLE = "{{ nav_role }}";
+    </script>
+    <script src="{% static 'pabasa_app/js/practice_reader.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>

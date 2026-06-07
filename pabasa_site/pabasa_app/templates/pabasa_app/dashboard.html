@@ -14,10 +14,10 @@
         background:
             linear-gradient(135deg, rgba(31, 111, 139, 0.08), transparent 40%),
             linear-gradient(245deg, rgba(185, 95, 68, 0.06), transparent 45%),
-            #fffdf7;
+            #ffffff;
         box-shadow: 0 24px 52px rgba(27, 26, 23, 0.08);
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr);
+        grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
         gap: 2rem;
         overflow: visible;
         padding: clamp(1.5rem, 3vw, 2.5rem);
@@ -131,16 +131,16 @@
     }
 
     .code-input-shell {
-        background: #1b1a17;
+        background: #f8fafc;
         border-radius: 16px;
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(31, 111, 139, 0.1);
         display: grid;
         gap: 0.65rem;
         padding: 0.95rem;
     }
 
     .code-input-shell label {
-        color: rgba(255, 255, 255, 0.62);
+        color: var(--dash-muted);
         font-size: 0.75rem;
         font-weight: 700;
         letter-spacing: 0.1em;
@@ -155,8 +155,8 @@
     }
 
     .code-input-row .form-control {
-        background: #fffdf7;
-        border: 0;
+        background: #ffffff;
+        border: 1px solid rgba(31, 111, 139, 0.15);
         border-radius: 12px;
         color: #1b1a17;
         font-size: 1rem;
@@ -204,8 +204,10 @@
 
     .class-list {
         display: none;
-        gap: 1rem;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.25rem;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(320px, 360px));
+        align-items: stretch;
     }
 
     .student-dashboard.has-class .class-list {
@@ -221,24 +223,28 @@
     }
 
     .class-card {
-        background:
-            linear-gradient(135deg, rgba(31, 111, 139, 0.1), transparent 50%),
-            #ffffff;
+        background: #ffffff;
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 22px;
-        box-shadow: 0 18px 38px rgba(27, 26, 23, 0.09);
-        aspect-ratio: 1 / 1;
+        border-radius: 20px;
+        box-shadow: 0 12px 32px rgba(27, 26, 23, 0.06);
         display: flex;
         flex-direction: column;
-        min-height: 0;
+        min-height: 280px;
         overflow: hidden;
-        padding: 1.1rem;
+        padding: 1.25rem;
         position: relative;
         width: 100%;
+        height: 100%;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .class-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 24px 48px rgba(27, 26, 23, 0.12);
+        border-color: rgba(31, 111, 139, 0.2);
     }
 
     .class-card.is-expanded {
-        aspect-ratio: auto;
         border-color: rgba(31, 111, 139, 0.22);
         box-shadow: 0 24px 48px rgba(27, 26, 23, 0.12);
     }
@@ -246,8 +252,8 @@
     .class-card::before {
         content: "";
         display: block;
-        height: 48px;
-        margin: -1.1rem -1.1rem 1rem;
+        height: 54px;
+        margin: -1.25rem -1.25rem 1.25rem;
         background: linear-gradient(135deg, #1f6f8b, #ffd639);
     }
 
@@ -531,6 +537,23 @@
     </div>
 </div>
 
+<div class="modal fade" id="invalidClassCodeModal" tabindex="-1" aria-labelledby="invalidClassCodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title" id="invalidClassCodeModalLabel">Class code not found</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                This code does not match any class created by a teacher. Please check the code and try again.
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     (() => {
         const dashboard = document.querySelector("[data-student-dashboard]");
@@ -542,9 +565,11 @@
         const unenrollModalElement = document.getElementById("unenrollConfirmModal");
         const unenrollClassCode = document.querySelector("[data-unenroll-class-code]");
         const confirmUnenrollButton = document.querySelector("[data-confirm-unenroll]");
+        const invalidClassCodeModalElement = document.getElementById("invalidClassCodeModal");
         const classJoinedKey = "pabasaStudentClassJoined";
         const classCodesKey = "pabasaStudentClassCodes";
         const legacyClassCodeKey = "pabasaStudentClassCode";
+        const teacherClassesKey = "pabasa_teacher_classes";
         let pendingUnenrollCode = "";
 
         if (!dashboard || !form || !classCodeInput || !classList) {
@@ -566,55 +591,92 @@
             window.localStorage.removeItem(legacyClassCodeKey);
         };
 
+        const getTeacherClasses = () => {
+            try {
+                const parsed = JSON.parse(window.localStorage.getItem(teacherClassesKey) || "[]");
+                return Array.isArray(parsed) ? parsed.filter((classData) => classData && classData.code) : [];
+            } catch (error) {
+                return [];
+            }
+        };
+
+        const findTeacherClass = (code) => {
+            return getTeacherClasses().find((classData) => String(classData.code || "").toUpperCase() === code);
+        };
+
+        const escapeHtml = (value) => {
+            const div = document.createElement("div");
+            div.textContent = value == null ? "" : String(value);
+            return div.innerHTML;
+        };
+
+        const showInvalidClassCodeMessage = () => {
+            if (invalidClassCodeModalElement && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(invalidClassCodeModalElement).show();
+                return;
+            }
+
+            window.alert("This code does not match any class created by a teacher.");
+        };
+
         const renderClassCards = (codes) => {
-            classList.innerHTML = codes.map((code, index) => `
-                <article class="class-card" data-class-card>
-                    <h3>Grade 2 Reading Class ${index + 1}</h3>
+            const teacherClasses = getTeacherClasses();
+            const validClasses = codes
+                .map((code) => teacherClasses.find((classData) => String(classData.code || "").toUpperCase() === code))
+                .filter(Boolean);
+
+            if (validClasses.length !== codes.length) {
+                saveCodes(validClasses.map((classData) => classData.code));
+            }
+
+            classList.innerHTML = validClasses.map((classData) => `
+                <article class="class-card" data-class-card data-class-card-code="${escapeHtml(classData.code)}">
+                    <h3>${escapeHtml(classData.name || "Reading Class")}</h3>
                     <div class="class-card-meta">
-                        <span><i class="bi bi-person-workspace me-1"></i> Teacher: Reading Coordinator</span>
-                        <span><i class="bi bi-journal-text me-1"></i> Filipino Oral Reading</span>
+                        <span><i class="bi bi-person-workspace me-1"></i> Teacher class</span>
+                        <span><i class="bi bi-journal-text me-1"></i> ${escapeHtml(classData.subject || classData.header || "Reading")}</span>
                         <span><i class="bi bi-unlock me-1"></i> Practice and assessment unlocked</span>
                     </div>
-                    <span class="class-card-code">${code}</span>
+                    <span class="class-card-code">${escapeHtml(classData.code)}</span>
                     <div class="class-detail" data-class-detail>
                         <div class="stat-grid">
                             <div class="stat-box">
-                                <span>Fluency</span>
-                                <strong>${82 + (index % 3) * 4}%</strong>
+                                <span>Students</span>
+                                <strong>${escapeHtml(classData.students || "0")}</strong>
                             </div>
                             <div class="stat-box">
-                                <span>Accuracy</span>
-                                <strong>${88 + (index % 2) * 3}%</strong>
+                                <span>Header</span>
+                                <strong>${escapeHtml(classData.header || "READ")}</strong>
                             </div>
                             <div class="stat-box">
                                 <span>Practice</span>
-                                <strong>${6 + index} sets</strong>
+                                <strong class="practice-count">0 sets</strong>
                             </div>
                             <div class="stat-box">
-                                <span>Streak</span>
-                                <strong>${3 + index} days</strong>
+                                <span>Assessments</span>
+                                <strong class="assessment-count">0</strong>
                             </div>
                         </div>
                         <div>
                             <div class="d-flex justify-content-between gap-2 mb-2 small fw-bold">
                                 <span>Reading progress</span>
-                                <span>${68 + (index % 3) * 8}%</span>
+                                <span>0%</span>
                             </div>
                             <div class="progress-track" aria-hidden="true">
-                                <div class="progress-fill" style="width: ${68 + (index % 3) * 8}%"></div>
+                                <div class="progress-fill" style="width: 0%"></div>
                             </div>
                         </div>
                         <ul class="class-detail-list">
-                            <li><i class="bi bi-check-circle text-success"></i> Last assessment: Developing Reader, improving in word recognition.</li>
-                            <li><i class="bi bi-clock-history text-warning"></i> Next recommended task: 10-minute sentence reading practice.</li>
-                            <li><i class="bi bi-chat-square-text text-primary"></i> Teacher note: Keep practicing clear pronunciation and pacing.</li>
+                            <li><i class="bi bi-info-circle text-primary"></i> ${escapeHtml(classData.description || "No class description yet.")}</li>
+                            <li><i class="bi bi-clock-history text-warning"></i> No assigned practice yet.</li>
+                            <li><i class="bi bi-chat-square-text text-primary"></i> No teacher note yet.</li>
                         </ul>
                     </div>
                     <div class="class-card-actions">
                         <button class="view-class-btn" type="button" data-toggle-class-detail>
                             <i class="bi bi-eye me-1"></i>View details
                         </button>
-                        <button class="unenroll-btn" type="button" data-unenroll-code="${code}">
+                        <button class="unenroll-btn" type="button" data-unenroll-code="${escapeHtml(classData.code)}">
                             <i class="bi bi-box-arrow-left me-1"></i>Unenroll
                         </button>
                     </div>
@@ -623,14 +685,15 @@
         };
 
         const setJoinedState = (codes = []) => {
-            const isJoined = codes.length > 0;
+            const validCodes = codes.filter((code) => findTeacherClass(code));
+            const isJoined = validCodes.length > 0;
             dashboard.classList.toggle("has-class", isJoined);
             emptyNote.style.display = isJoined ? "none" : "";
             joinedNote.style.display = isJoined ? "" : "none";
 
             if (isJoined) {
-                renderClassCards(codes);
-                saveCodes(codes);
+                renderClassCards(validCodes);
+                saveCodes(validCodes);
             } else {
                 classList.innerHTML = "";
                 window.localStorage.removeItem(classJoinedKey);
@@ -667,9 +730,52 @@
                 return;
             }
 
+            const teacherClass = findTeacherClass(code);
+            if (!teacherClass) {
+                classCodeInput.value = "";
+                showInvalidClassCodeMessage();
+                return;
+            }
+
             const codes = getSavedCodes();
             if (!codes.includes(code)) {
                 codes.push(code);
+                
+                // SIMULATE ENROLLMENT: Add student to the teacher's list
+                try {
+                    let allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+                    const studentId = localStorage.getItem("pabasaCurrentUserId") || Date.now();
+                    const studentName = "{{ user_full_name|escapejs }}" || "Student User";
+                    const studentEmail = "{{ email|escapejs }}";
+                    
+                    const isEnrolled = allStudents.some(s => s.name === studentName && s.class === teacherClass.name);
+                    if (!isEnrolled) {
+                        allStudents.push({
+                            id: studentId,
+                            name: studentName,
+                            email: studentEmail,
+                            class: teacherClass.name,
+                            level: "Developing Readers",
+                            wpm: "0",
+                            accuracy: "0"
+                        });
+                        localStorage.setItem("pabasa_added_students", JSON.stringify(allStudents));
+                        
+                        // Notify teacher
+                        let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+                        notifications.unshift({
+                            id: Date.now() + Math.random(),
+                            classCode: code,
+                            title: "New Student Joined",
+                            message: `Hi, Teacher! ${studentName} has joined your class ${teacherClass.name}`,
+                            timestamp: Date.now(),
+                            read: false,
+                            role: 'teacher'
+                        });
+                        localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
+                        window.dispatchEvent(new Event('pabasa:notifications-updated'));
+                    }
+                } catch (e) { console.error("Enrollment failed:", e); }
             }
 
             classCodeInput.setCustomValidity("");
@@ -708,6 +814,12 @@
             setJoinedState(remainingCodes);
             pendingUnenrollCode = "";
             bootstrap.Modal.getOrCreateInstance(unenrollModalElement).hide();
+        });
+
+        window.addEventListener("storage", (event) => {
+            if (event.key === teacherClassesKey) {
+                setJoinedState(getSavedCodes());
+            }
         });
     })();
 </script>

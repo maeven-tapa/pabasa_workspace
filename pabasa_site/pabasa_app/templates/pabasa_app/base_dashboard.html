@@ -53,7 +53,7 @@
 
         .dashboard-sidebar {
             width: var(--sidebar-width);
-            min-height: 100vh;
+            height: 100vh; /* Changed from min-height to height to ensure it always fills the viewport */
             border-right: 0;
             background:
                 linear-gradient(165deg, rgba(31, 111, 139, 0.12), transparent 34%),
@@ -61,10 +61,12 @@
                 linear-gradient(180deg, #fffdf7 0%, #f7f4ea 100%);
             box-shadow: 18px 0 46px rgba(27, 26, 23, 0.1);
             backdrop-filter: blur(18px);
-            position: sticky;
+            position: fixed; /* Changed from sticky to fixed to keep it in place */
             top: 0;
+            left: 0; /* Ensure it's fixed to the left edge */
             transition: width 0.2s ease;
-            overflow: hidden;
+            overflow-y: auto; /* Allow internal scrolling for sidebar content if it overflows */
+            z-index: 1030; /* Ensure it's above main content but below modals */
         }
 
         .dashboard-sidebar::after {
@@ -127,10 +129,15 @@
         }
 
         .dashboard-main {
-            min-height: 100vh;
+            min-height: 100vh; /* Keep for overall layout, but the body will handle the main scrolling */
+            margin-left: var(--sidebar-width); /* Add margin to push content away from the fixed sidebar */
+            transition: margin-left 0.2s ease; /* Smooth transition for margin when sidebar collapses */
         }
 
         .dashboard-topbar {
+            /* The topbar is inside dashboard-main, so it will scroll with the main content.
+               No changes are needed here for the fixed sidebar. */
+            
             background: rgba(255, 253, 247, 0.82);
             border: 1px solid rgba(27, 26, 23, 0.08);
             border-radius: 20px;
@@ -143,6 +150,10 @@
             backdrop-filter: blur(18px);
         }
 
+        /* Adjust for collapsed sidebar */
+        body.sidebar-collapsed .dashboard-main {
+            margin-left: 90px; /* Adjust margin for collapsed sidebar width */
+        }
         .dashboard-topbar h1 {
             font-weight: 700;
             letter-spacing: 0;
@@ -295,10 +306,19 @@
             align-items: center;
             justify-content: center;
             color: #fff;
-            background:
+            background-size: cover !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            background-image: {% if profile_photo_url %}url('{{ profile_photo_url }}'){% else %}
                 linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 48%),
-                linear-gradient(145deg, var(--dash-primary) 0%, #5a9fb5 100%);
+                linear-gradient(145deg, var(--dash-primary) 0%, #5a9fb5 100%)
+            {% endif %};
+            background-color: var(--dash-primary);
             box-shadow: 0 12px 24px rgba(31, 111, 139, 0.24);
+        }
+
+        .dash-brand-mark i {
+            display: {% if profile_photo_url %}none{% else %}inline-flex{% endif %};
         }
 
         .dashboard-sidebar .sidebar-inner {
@@ -852,21 +872,8 @@
                     <h5 class="offcanvas-title" id="notificationPaneLabel">Notifications</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
-                <div class="offcanvas-body">
-                    <div class="notif-list">
-                        <div class="notif-item">
-                            <p>{% if nav_role == 'teacher' %}A student completed a reading practice set for review.{% else %}Your reading practice schedule for tomorrow is ready.{% endif %}</p>
-                            <span class="notif-time">Just now</span>
-                        </div>
-                        <div class="notif-item">
-                            <p>{% if nav_role == 'teacher' %}New class code activity was recorded in your reading class.{% else %}Teacher posted feedback on your Technical Research activity.{% endif %}</p>
-                            <span class="notif-time">24 minutes ago</span>
-                        </div>
-                        <div class="notif-item">
-                            <p>New calendar event added: Software Design Lab review session.</p>
-                            <span class="notif-time">Today, 8:10 AM</span>
-                        </div>
-                    </div>
+                <div class="offcanvas-body p-0">
+                    <div id="notifContainer" class="p-3"></div>
                 </div>
             </div>
 
@@ -878,18 +885,20 @@
                 <div class="offcanvas-body profile-pane-body">
                     <div class="profile-pane-card">
                         <div class="profile-pane-identity">
-                            <div class="profile-badge">{% if nav_role == 'teacher' %}TR{% else %}IS{% endif %}</div>
+                            <div class="profile-badge" {% if profile_photo_url %}style="background-image: url('{{ profile_photo_url }}'); background-size: cover; background-position: center; border: 2px solid #fff;"{% endif %}>
+                                {% if not profile_photo_url %}{{ initials }}{% endif %}
+                            </div>
                             <div>
                                 <span class="dash-pill">{% if nav_role == 'teacher' %}<i class="bi bi-person-workspace"></i> Active Teacher{% else %}<i class="bi bi-person-check"></i> Active Student{% endif %}</span>
-                                <p class="profile-name mt-3">{% if nav_role == 'teacher' %}Teacher Account{% else %}Isla Santos{% endif %}</p>
-                                <p class="profile-role">{% if nav_role == 'teacher' %}Reading Coordinator{% else %}Grade 2 Learner{% endif %}</p>
+                                <p class="profile-name mt-3">{{ first_name|default:"" }} {{ last_name|default:"" }}</p>
+                                <p class="profile-role">{% if nav_role == 'teacher' %}Teacher{% else %}Student{% endif %}</p>
                             </div>
                         </div>
 
                         <div class="profile-pane-meta">
                             <div>
                                 <span>{% if nav_role == 'teacher' %}Teacher ID{% else %}Learner ID{% endif %}</span>
-                                <strong>{% if nav_role == 'teacher' %}TCH-2046{% else %}G2-0847{% endif %}</strong>
+                                <strong>{{ user_id|default:"" }}</strong>
                             </div>
                             {% if nav_role == 'teacher' %}
                             <div>
@@ -1016,6 +1025,86 @@
                 });
             }
         })();
+    </script>
+    <script>
+        // Global user context for notifications
+        window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
+        window.PABASA_USER_ROLE = "{{ nav_role }}";
+    </script>
+    <script>
+        function updateInAppNotifications() {
+            const container = document.getElementById('notifContainer');
+            const badge = document.getElementById('notifBadge');
+            if (!container) return;
+
+            const userRole = "{{ nav_role }}";
+            const userId = localStorage.getItem("pabasaCurrentUserId") || "";
+
+            let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+
+            if (userRole === 'student') {
+                let joinedCodes = [];
+                try {
+                    joinedCodes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]").map(c => c.toUpperCase());
+                    const legacy = localStorage.getItem("pabasaStudentClassCode");
+                    if (legacy) joinedCodes.push(legacy.toUpperCase());
+                } catch(e) {}
+                
+                notifications = notifications.filter(n => 
+                    n.role === 'student' && 
+                    joinedCodes.includes(n.classCode.toUpperCase()) &&
+                    (n.recipientId === userId || !n.recipientId)
+                );
+            } else {
+                const teacherClasses = JSON.parse(localStorage.getItem('pabasa_teacher_classes') || '[]');
+                const myCodes = teacherClasses.map(c => c.code.toUpperCase());
+                notifications = notifications.filter(n => n.role === 'teacher' && myCodes.includes(n.classCode.toUpperCase()));
+            }
+            
+            const unreadCount = notifications.filter(n => !n.read).length;
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i> No notifications yet</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="notif-list">
+                    ${notifications.map(n => `
+                        <div class="notif-item mb-2 p-3 border rounded-3 ${n.read ? 'bg-light' : 'bg-white border-primary shadow-sm'}" style="cursor: pointer;" onclick="markNotifRead('${n.id}')">
+                            <p class="mb-1 fw-bold small">${n.title}</p>
+                            <p class="small text-secondary mb-1" style="line-height: 1.4;">${n.message}</p>
+                            <span class="notif-time text-muted" style="font-size: 0.7rem;">${new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
+                    `).join('')}
+                    <button class="btn btn-sm btn-link w-100 mt-2 text-decoration-none" onclick="localStorage.setItem('pabasa_notifications', '[]'); updateInAppNotifications();">Clear All</button>
+                </div>
+            `;
+        }
+
+        window.markNotifRead = function(id) {
+            const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+            const index = notifications.findIndex(n => n.id.toString() === id.toString());
+            if (index !== -1) {
+                notifications[index].read = true;
+                localStorage.setItem('pabasa_notifications', JSON.stringify(notifications));
+                updateInAppNotifications();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', updateInAppNotifications);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'pabasa_notifications') updateInAppNotifications();
+        });
+        window.addEventListener('pabasa:notifications-updated', updateInAppNotifications);
     </script>
 </body>
 </html>

@@ -62,22 +62,54 @@ function initStudentsPage() {
 
     filterStudents();
 
-    // Load previously added students from localStorage
-    (function() {
+    function renderStudentDirectory() {
         const studentDirectory = document.querySelector(".student-directory");
         if (!studentDirectory) return;
         
-        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-        const emptyState = studentDirectory.querySelector(".student-empty-state");
+        // Clear current rows to re-render consolidated list
+        studentDirectory.querySelectorAll(".student-card-row").forEach(row => row.remove());
         
-        students.forEach(studentData => {
-            // Check if student already exists in the directory
-            const exists = Array.from(studentDirectory.querySelectorAll(".student-card-row")).some(
-                card => card.getAttribute("data-student-name") === studentData.name
-            );
-            
-            if (exists) return; // Skip if already in the DOM
-            
+        let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        const filteredStudents = students.filter(student => student.name !== "Jay Park");
+        if (filteredStudents.length !== students.length) {
+            localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
+            students = filteredStudents;
+        }
+
+        // Group students to aggregate multiple classes
+        const consolidated = [];
+        students.forEach(s => {
+            const found = consolidated.find(c => {
+                const namesMatch = c.name.toLowerCase().trim() === s.name.toLowerCase().trim();
+                const emailsConflict = c.email && s.email && c.email.toLowerCase().trim() !== s.email.toLowerCase().trim();
+                return namesMatch && !emailsConflict;
+            });
+            if (found) {
+                if (s.class && !found.allClasses.includes(s.class)) {
+                    found.allClasses.push(s.class);
+                }
+            } else {
+                consolidated.push({ ...s, allClasses: s.class ? [s.class] : [] });
+            }
+        });
+
+        // Apply Percentile Ranking before rendering directory
+        // Sort by Accuracy Descending (Highest score = Top)
+        consolidated.sort((a, b) => (parseInt(b.accuracy) || 0) - (parseInt(a.accuracy) || 0));
+        const totalC = consolidated.length;
+        
+        consolidated.forEach((student, index) => {
+            const pos = ((totalC - index) / totalC) * 100;
+            if (pos <= 20) student.level = "Low Emerging Readers";
+            else if (pos <= 40) student.level = "High Emerging Readers";
+            else if (pos <= 60) student.level = "Developing Readers";
+            else if (pos <= 80) student.level = "Transitioning Readers";
+            else student.level = "Readers at Grade Level";
+        });
+
+        const emptyState = studentDirectory.querySelector(".student-empty-state");
+
+        consolidated.forEach(studentData => {
             const levelClass = getLevelClass(studentData.level);
             const initials = studentData.name
                 .split(" ")
@@ -89,17 +121,19 @@ function initStudentsPage() {
             studentCard.className = "student-card-row";
             studentCard.setAttribute("data-student-name", studentData.name);
             studentCard.setAttribute("data-reading-level", studentData.level);
-            studentCard.setAttribute("data-class-name", studentData.class);
+            const classDisplay = studentData.allClasses.join(", ");
+            studentCard.setAttribute("data-class-name", classDisplay);
             
             studentCard.innerHTML = `
                 <span class="student-avatar">${initials}</span>
                 <div class="student-row-main">
                     <div class="student-name-line">
                         <strong>${studentData.name}</strong>
+                        <span class="small text-muted">${studentData.email || ''}</span>
                         <span class="level-chip ${levelClass}">${studentData.level}</span>
                     </div>
                     <div class="student-meta">
-                        <div class="student-meta-box"><span>Class</span><strong>${studentData.class}</strong></div>
+                        <div class="student-meta-box"><span>Joined Classes</span><strong>${classDisplay}</strong></div>
                         <div class="student-meta-box"><span>WPM</span><strong>${studentData.wpm}</strong></div>
                         <div class="student-meta-box"><span>Accuracy</span><strong>${studentData.accuracy}%</strong></div>
                     </div>
@@ -121,7 +155,11 @@ function initStudentsPage() {
         
         // Re-run filter to ensure proper visibility
         filterStudents();
-    })();
+    }
+
+    // Load on start
+    renderStudentDirectory();
+    window.refreshStudentDirectory = renderStudentDirectory;
 
     // Parent Update Modal - Student Selection Logic
     (function() {
@@ -175,7 +213,7 @@ function initStudentsPage() {
             const readingLevel = document.getElementById("studentReadingLevel").value;
             const wpm = document.getElementById("studentWPM").value || "0";
             const accuracy = document.getElementById("studentAccuracy").value || "0";
-            const parentContact = document.getElementById("parentContact").value;
+            const studentEmail = document.getElementById("parentContact").value;
             
             // Create student data object
             const studentData = {
@@ -184,7 +222,7 @@ function initStudentsPage() {
                 level: readingLevel,
                 wpm: wpm,
                 accuracy: accuracy,
-                contact: parentContact,
+                email: studentEmail,
                 id: Date.now() // Simple unique ID
             };
             
@@ -193,59 +231,12 @@ function initStudentsPage() {
             students.push(studentData);
             localStorage.setItem("pabasa_added_students", JSON.stringify(students));
             
-            // Create student avatar initials
-            const initials = studentName
-                .split(" ")
-                .map(n => n.charAt(0).toUpperCase())
-                .join("")
-                .substring(0, 2);
+            // Refresh the directory list to handle consolidation
+            renderStudentDirectory();
             
-            // Determine level chip class
-            const levelClass = getLevelClass(readingLevel);
-            
-            // Create new student card HTML
-            const newStudentCard = document.createElement("div");
-            newStudentCard.className = "student-card-row";
-            newStudentCard.setAttribute("data-student-name", studentName);
-            newStudentCard.setAttribute("data-reading-level", readingLevel);
-            newStudentCard.setAttribute("data-class-name", studentClass);
-            
-            newStudentCard.innerHTML = `
-                <span class="student-avatar">${initials}</span>
-                <div class="student-row-main">
-                    <div class="student-name-line">
-                        <strong>${studentName}</strong>
-                        <span class="level-chip ${levelClass}">${readingLevel}</span>
-                    </div>
-                    <div class="student-meta">
-                        <div class="student-meta-box"><span>Class</span><strong>${studentClass}</strong></div>
-                        <div class="student-meta-box"><span>WPM</span><strong>${wpm}</strong></div>
-                        <div class="student-meta-box"><span>Accuracy</span><strong>${accuracy}%</strong></div>
-                    </div>
-                    <div class="reading-band mt-2"><span style="width: ${wpm}%;"></span></div>
-                </div>
-                <div class="student-row-actions">
-                    <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="#">View</a>
-                    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
-                    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
-                </div>
-            `;
-            
-            // Add to student directory if it exists (students.html page)
-            const studentDirectory = document.querySelector(".student-directory");
-            if (studentDirectory) {
-                const emptyState = studentDirectory.querySelector(".student-empty-state");
-                if (emptyState) {
-                    studentDirectory.insertBefore(newStudentCard, emptyState);
-                } else {
-                    studentDirectory.appendChild(newStudentCard);
-                }
-            }
-            
-            // Reset form and close modal
             addStudentForm.reset();
-            const bsModal = bootstrap.Modal.getInstance(addStudentModal) || new bootstrap.Modal(addStudentModal);
-            bsModal.hide();
+            const bsModal = bootstrap.Modal.getInstance(addStudentModal);
+            if (bsModal) bsModal.hide();
             
             // Show success message
             showSuccessMessage(`${studentName} has been added to the student directory.`);

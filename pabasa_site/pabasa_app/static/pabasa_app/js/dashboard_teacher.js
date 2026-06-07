@@ -48,7 +48,18 @@
         }
     }
 
-    function getCardData(card) {
+    function getStudentCountForClass(className) {
+        try {
+            const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+            // Filter out "Jay Park" if it's a placeholder student
+            return allStudents.filter(s => s.class === className && s.name !== "Jay Park").length;
+        } catch (e) {
+            console.error("Error getting student count for class:", e);
+            return 0;
+        }
+    }
+
+    function getCardData(card) { // This function is not used for rendering, only for saving.
         return {
             name: card.getAttribute("data-class-name") || "Reading Class",
             subject: card.getAttribute("data-subject") || "Reading",
@@ -71,10 +82,20 @@
             return;
         }
 
+        // Remove hardcoded/sample classes (ticket RRG-9154)
+        const sampleCodes = ['RRG-9154', 'AFC-7302', 'ESL-5601'];
+        const filteredClasses = saved.filter(cls => !sampleCodes.includes(cls.code));
+        
+        // Update localStorage if any sample classes were removed
+        if (filteredClasses.length !== saved.length) {
+            localStorage.setItem(classStorageKey, JSON.stringify(filteredClasses));
+            console.log("✓ Removed sample classes from localStorage");
+        }
+
         classList.innerHTML = "";
-        saved.forEach(function (classData) {
+        filteredClasses.forEach(function (classData) {
             classList.appendChild(createClassCard(
-                classData.name,
+                classData.name, // Pass class name
                 classData.header,
                 classData.description,
                 classData.code,
@@ -89,7 +110,7 @@
         }
     }
 
-    function selectClass(card) {
+    function selectClass(card) { // Updates the right panel
         classList.querySelectorAll(".class-card").forEach(function (item) {
             item.classList.toggle("is-active", item === card);
         });
@@ -99,13 +120,15 @@
         const code = card.getAttribute("data-code") || "READ-000";
         const header = card.getAttribute("data-header") || "READ";
         const description = card.getAttribute("data-description") || "Class reading workspace.";
-        const students = card.getAttribute("data-students") || "0";
+        
+        // Get actual student count for the selected class
+        const actualStudentCount = getStudentCountForClass(name);
 
         activeClassName.textContent = name;
         activeClassSubject.textContent = subject;
         activeClassDescription.textContent = description;
         activeClassCode.textContent = code;
-        activeStudentCount.textContent = students;
+        activeStudentCount.textContent = actualStudentCount; // Use actual count
         classBanner.setAttribute("data-header", header);
         generatedClassCode.textContent = code;
         
@@ -115,7 +138,7 @@
         }
     }
 
-    function createClassCard(name, header, description, code, subject, students) {
+    function createClassCard(name, header, description, code, subject) { // Renders cards in the left panel
         const card = document.createElement("div");
         card.className = "class-card";
         card.setAttribute("data-class-name", name);
@@ -123,7 +146,9 @@
         card.setAttribute("data-code", code);
         card.setAttribute("data-header", header);
         card.setAttribute("data-description", description);
-        card.setAttribute("data-students", students || "0");
+        
+        const actualStudentCount = getStudentCountForClass(name);
+        card.setAttribute("data-students", actualStudentCount); // Store actual count
 
         const head = document.createElement("span");
         head.className = "class-card-head";
@@ -137,7 +162,7 @@
 
         const meta = document.createElement("span");
         meta.className = "small text-secondary";
-        meta.textContent = (subject || name) + " • " + (students || "0") + " students";
+        meta.textContent = (subject || name) + " • " + actualStudentCount + " students"; // Use actual count
 
         head.appendChild(title);
         head.appendChild(codePill);
@@ -231,7 +256,12 @@
         const studentRow = document.querySelector(".student-row");
         if (!studentRow) return;
         
-        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        const filteredStudents = students.filter(student => student.name !== "Jay Park");
+        if (filteredStudents.length !== students.length) {
+            localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
+            students = filteredStudents;
+        }
         
         students.forEach(studentData => {
             // Check if student already exists
