@@ -146,6 +146,10 @@ function initProfilePage() {
         if (button) {
             button.textContent = enabled ? "Disable 2FA" : "Enable 2FA";
         }
+        const recoveryBtn = document.getElementById("viewRecoveryCodesBtn");
+        if (recoveryBtn) {
+            recoveryBtn.classList.toggle("d-none", !enabled);
+        }
     }
 
     function updatePreferenceState(toggle, enabled) {
@@ -440,18 +444,136 @@ function initProfilePage() {
         });
     });
 
+    // --- 2FA Logic ---
     const toggleTwoFactorBtn = document.getElementById("toggleTwoFactorBtn");
+    const setup2FAModalEl = document.getElementById("setup2FAModal");
+    const disable2FAModalEl = document.getElementById("disable2FAModal");
+    const setup2FAModal = setup2FAModalEl ? new bootstrap.Modal(setup2FAModalEl) : null;
+    const disable2FAModal = disable2FAModalEl ? new bootstrap.Modal(disable2FAModalEl) : null;
+    let generated2FACode = "";
+
     if (toggleTwoFactorBtn) {
         toggleTwoFactorBtn.addEventListener("click", function () {
             const settings = loadProfileSettings();
-            if (!confirm(settings.twoFactorEnabled ? "Disable two-factor authentication?" : "Enable two-factor authentication for this profile?")) {
-                return;
+            if (settings.twoFactorEnabled) {
+                disable2FAModal?.show();
+            } else {
+                // Reset UI state for enable modal
+                document.getElementById("setup2FAStep1").classList.remove("d-none");
+                document.getElementById("setup2FAStep2").classList.add("d-none");
+                document.getElementById("setup2FAStep3").classList.add("d-none");
+                document.getElementById("twoFactorCode").value = "";
+                setup2FAModal?.show();
             }
-            settings.twoFactorEnabled = !settings.twoFactorEnabled;
-            saveProfileSettings(settings);
-            setTwoFactorState(settings.twoFactorEnabled);
         });
     }
+
+    function generateRecoveryCodes() {
+        const codes = [];
+        for (let i = 0; i < 8; i++) {
+            codes.push(Math.random().toString(36).substring(2, 8).toUpperCase());
+        }
+        return codes;
+    }
+
+    document.getElementById("viewRecoveryCodesBtn")?.addEventListener("click", () => {
+        const settings = loadProfileSettings();
+        if (settings.recoveryCodes) {
+            const list = document.getElementById("recoveryCodesList");
+            if (list) {
+                list.innerHTML = settings.recoveryCodes.map(c => `<div class="col-6"><code>${c}</code></div>`).join("");
+                document.getElementById("setup2FAStep1").classList.add("d-none");
+                document.getElementById("setup2FAStep2").classList.add("d-none");
+                document.getElementById("setup2FAStep3").classList.remove("d-none");
+                setup2FAModal?.show();
+            }
+        }
+    });
+
+    async function send2FAEmail() {
+        generated2FACode = Math.floor(100000 + Math.random() * 900000).toString();
+        const btn = document.getElementById("btnSend2FACode");
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending Code...';
+        }
+
+        try {
+            const response = await fetch('/students/send-email/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    email: profileEmail,
+                    subject: "PABASA Security: 2FA Verification Code",
+                    message: `Your PABASA verification code is: ${generated2FACode}\n\nEnter this code on the profile page to enable two-factor authentication.`
+                })
+            });
+            
+            if (response.ok) {
+                document.getElementById("setup2FAStep1").classList.add("d-none");
+                document.getElementById("setup2FAStep2").classList.remove("d-none");
+                showToast("Verification code sent!");
+            }
+        } catch (e) {
+            console.error("2FA Send Error:", e);
+            alert("Could not send verification code. Please try again.");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-envelope-check me-2"></i>Send Verification Code';
+            }
+        }
+    }
+
+    document.getElementById("btnSend2FACode")?.addEventListener("click", send2FAEmail);
+    document.getElementById("btnResend2FACode")?.addEventListener("click", send2FAEmail);
+
+    document.getElementById("btnVerify2FA")?.addEventListener("click", function() {
+        const codeInput = document.getElementById("twoFactorCode").value.trim();
+        if (codeInput === generated2FACode) {
+            const codes = generateRecoveryCodes();
+            const settings = loadProfileSettings();
+            settings.twoFactorEnabled = true;
+            settings.recoveryCodes = codes;
+            saveProfileSettings(settings);
+            setTwoFactorState(true);
+            
+            // Show step 3 (Recovery Codes)
+            document.getElementById("setup2FAStep2").classList.add("d-none");
+            const step3 = document.getElementById("setup2FAStep3");
+            const list = document.getElementById("recoveryCodesList");
+            if (step3 && list) {
+                list.innerHTML = codes.map(c => `<div class="col-6"><code>${c}</code></div>`).join("");
+                step3.classList.remove("d-none");
+            }
+            showToast("Verified! Please save your recovery codes.");
+        } else {
+            alert("Invalid verification code. Please try again.");
+        }
+    });
+
+    document.getElementById("btnDownloadRecoveryCodes")?.addEventListener("click", function() {
+        const settings = loadProfileSettings();
+        const text = "PABASA RECOVERY CODES\nGenerated: " + new Date().toLocaleString() + "\n\n" + settings.recoveryCodes.join("\n");
+        const blob = new Blob([text], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "pabasa-recovery-codes.txt";
+        link.click();
+    });
+
+    document.getElementById("btnConfirmDisable2FA")?.addEventListener("click", function() {
+        const settings = loadProfileSettings();
+        settings.twoFactorEnabled = false;
+        saveProfileSettings(settings);
+        setTwoFactorState(false);
+        disable2FAModal?.hide();
+        showToast("Two-factor authentication disabled.", "info");
+    });
 
     const changePasswordForm = document.getElementById("changePasswordForm");
     if (changePasswordForm) {

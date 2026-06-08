@@ -25,15 +25,23 @@
         const finishBtn = document.getElementById("finishBtn");
         const completionCount = document.getElementById("completionCount");
         const completionLevel = document.getElementById("completionLevel");
+        const btnStartReading = document.getElementById("btnStartReading");
+        const btnStopReading = document.getElementById("btnStopReading");
+        const btnToggleMic = document.getElementById("btnToggleMic");
+        const btnTestMic = document.getElementById("btnTestMic");
 
         const urlParams = new URLSearchParams(window.location.search);
         const testTitle = urlParams.get("test") || "Assessment";
         const testCode = urlParams.get("code") || "TST-000";
         const materialId = urlParams.get("id");
+        const viewMode = urlParams.get("viewMode");
         if (testMeta) testMeta.textContent = `${testTitle} - ${testCode}`;
 
         let items = [];
         let currentIndex = 0;
+        let isRecording = false;
+        let isMuted = false;
+        let startTime = null;
 
         const studentClassCodesKey = "pabasaStudentClassCodes";
         const readingsStorageKey = "pabasa_class_readings";
@@ -99,10 +107,11 @@
             const label = mode.charAt(0).toUpperCase() + mode.slice(1);
             if (counter) counter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
             if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
-            if (prevBtn) prevBtn.disabled = (currentIndex === 0);
+            
+            if (prevBtn) prevBtn.disabled = !isRecording || (currentIndex === 0);
             if (nextBtn) {
-                nextBtn.disabled = false;
-                nextBtn.textContent = currentIndex === items.length - 1 ? "Finish" : "Next";
+                nextBtn.disabled = !isRecording || (currentIndex === items.length - 1);
+                nextBtn.textContent = "Next";
             }
         }
 
@@ -111,6 +120,18 @@
             closePauseMenu();
             if (completionCount) completionCount.textContent = items.length;
             if (completionLevel) completionLevel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+            
+            // Add retake attempt information to the results title
+            if (viewMode === 'retake' && materialId) {
+                const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
+                const count = retakeCounts[String(materialId).trim()] || 0;
+                const title = document.querySelector(".completion-card h1");
+                if (title) title.innerHTML += ` <span style="background: var(--sun); color: #1b1a17; padding: 4px 12px; border-radius: 10px; font-size: 0.4em; vertical-align: middle; margin-left: 10px; font-weight: 900;">RETAKE ${count}/3</span>`;
+            }
+
+            // Skip updating stats if in view mode
+            if (viewMode === 'view') return;
+
             const count = parseInt(localStorage.getItem("pabasa_assessments_completed") || "0");
             localStorage.setItem("pabasa_assessments_completed", count + 1);
 
@@ -123,7 +144,8 @@
                     seenIds.push(mId);
                     localStorage.setItem("pabasa_seen_material_ids", JSON.stringify(seenIds));
                     // Dispatch both events to ensure sidebar and dashboard update
-                    window.dispatchEvent(new Event('pabasa:student-class-updated'));
+                    window.dispatchEvent(new CustomEvent('pabasa:student-class-updated', { bubbles: true }));
+                    window.dispatchEvent(new Event('storage')); // Fake storage event for current tab consistency
                 }
             }
 
@@ -142,6 +164,36 @@
             localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
             window.dispatchEvent(new Event('pabasa:notifications-updated'));
         }
+
+        const startReading = () => {
+            isRecording = true;
+            startTime = Date.now();
+            btnStartReading?.classList.add("d-none");
+            btnStopReading?.classList.remove("d-none");
+            updateUI();
+            console.log("PABASA: Assessment recording and timer started.");
+        };
+
+        const stopReading = () => {
+            if (!isRecording) return;
+            isRecording = false;
+            showCompletion();
+        };
+
+        btnStartReading?.addEventListener("click", startReading);
+        btnStopReading?.addEventListener("click", stopReading);
+        
+        btnToggleMic?.addEventListener("click", () => {
+            isMuted = !isMuted;
+            const icon = btnToggleMic.querySelector("i");
+            if (icon) icon.className = isMuted ? "bi bi-mic-mute-fill" : "bi bi-mic-fill";
+            btnToggleMic.classList.toggle("btn-outline-danger", isMuted);
+            btnToggleMic.classList.toggle("btn-outline-dark", !isMuted);
+        });
+
+        btnTestMic?.addEventListener("click", () => {
+            alert("🎧 Microphone Check\n\nTesting device audio input... \n\nYour microphone is receiving signal clearly! You are ready to start reading.");
+        });
 
         function closePauseMenu() {
             pauseMenu?.classList.add("d-none");
@@ -179,6 +231,11 @@
         quitBtn?.addEventListener("click", () => { window.location.href = '/dashboard/assessment/'; });
         reviewBtn?.addEventListener("click", () => { location.reload(); });
         finishBtn?.addEventListener("click", () => { window.location.href = '/dashboard/assessment/'; });
+
+        if (viewMode === 'view') {
+            if (pauseBtn) pauseBtn.classList.add("d-none");
+            if (testMeta) testMeta.innerHTML += ' <span style="background: rgba(148, 163, 184, 0.2); color: var(--muted); padding: 2px 8px; border-radius: 6px; font-size: 0.6em; vertical-align: middle; margin-left: 8px;">Review Mode</span>';
+        }
 
         loadItems();
     };

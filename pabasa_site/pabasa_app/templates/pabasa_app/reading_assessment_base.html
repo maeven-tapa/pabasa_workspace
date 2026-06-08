@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -151,6 +152,34 @@
             font-size: 0.88rem;
             font-weight: 900;
             white-space: nowrap;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-action-btn {
+            border: 1px solid rgba(31, 111, 139, 0.25);
+            background: #fff;
+            color: var(--accent);
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            font-size: 1.15rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(27, 26, 23, 0.12);
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+
+        .header-action-btn:hover {
+            background: var(--accent-soft);
+            border-color: var(--accent);
         }
 
         .pause-btn {
@@ -361,6 +390,66 @@
             white-space: nowrap;
         }
 
+        .recording-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 999px;
+        }
+
+        .recording-controls button {
+            border: 0;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 24px rgba(27, 26, 23, 0.1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+        }
+
+        #btnStartReading, #btnStopReading {
+            min-height: 54px;
+            padding: 0 1.75rem;
+            border-radius: 999px;
+            color: #fff;
+            gap: 0.65rem;
+            font-size: 1.05rem;
+        }
+
+        #btnStartReading {
+            background: #16a34a;
+            box-shadow: 0 10px 20px rgba(22, 163, 74, 0.2);
+        }
+        #btnStartReading:hover { background: #15803d; transform: translateY(-2px); }
+
+        #btnStopReading {
+            background: var(--clay);
+            box-shadow: 0 10px 20px rgba(185, 95, 68, 0.2);
+        }
+        #btnStopReading:hover { background: #a8543b; transform: translateY(-2px); }
+
+        #btnToggleMic, #btnTestMic {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #fff;
+            color: var(--accent);
+            border: 2px solid var(--accent-soft) !important;
+            font-size: 1.2rem;
+        }
+
+        #btnToggleMic:hover, #btnTestMic:hover {
+            background: var(--accent-soft);
+            border-color: var(--accent) !important;
+        }
+
+        .d-none { display: none !important; }
+
         .mic-chip span {
             width: 12px;
             height: 12px;
@@ -389,10 +478,12 @@
             padding: 1rem;
             z-index: 20;
         }
-
-        .pause-menu.d-none,
-        .pause-overlay.d-none {
-            display: none;
+        
+        .btn-outline-danger {
+            background: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #ef4444 !important;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15) !important;
         }
 
         .pause-title {
@@ -636,8 +727,19 @@
             border-color: rgba(255, 255, 255, 0.1) !important;
             color: #f1f5f9 !important;
         }
+        body.dark-theme .header-action-btn {
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
         body.dark-theme .reading-word,
         body.dark-theme .test-meta,
+        body.dark-theme .summary-tile strong {
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .summary-tile span {
+            color: #94a3b8 !important;
+        }
         body.dark-theme .completion-card h1,
         body.dark-theme .completion-card p,
         body.dark-theme .pause-title {
@@ -694,7 +796,15 @@
             <div class="reader-progress-card">
                 <div class="progress-head">
                     <div class="counter" id="counter">{% block counter_text %}Item 1/10{% endblock %}</div>
-                    <button class="pause-btn" id="pauseBtn" type="button" aria-label="Pause options" aria-expanded="false">II</button>
+                    <div class="header-actions">
+                        <button id="btnToggleMic" class="header-action-btn" title="Toggle Microphone">
+                            <i class="bi bi-mic-fill"></i>
+                        </button>
+                        <button id="btnTestMic" class="header-action-btn" title="Microphone Check">
+                            <i class="bi bi-headphones"></i>
+                        </button>
+                        <button class="pause-btn" id="pauseBtn" type="button" aria-label="Pause options" aria-expanded="false">II</button>
+                    </div>
                 </div>
                 <div class="progress-track" aria-hidden="true">
                     <div class="progress-fill" id="progressFill"></div>
@@ -713,7 +823,16 @@
                 </section>
                 <div class="reader-footer">
                     <button class="nav-btn nav-prev" id="prevBtn" type="button" aria-label="Previous item">Back</button>
-                    <div class="mic-chip"><span aria-hidden="true"></span> Voice ready</div>
+                    
+                    <div class="recording-controls">
+                        <button id="btnStartReading" class="btn btn-success rounded-pill px-4 fw-bold">
+                            <i class="bi bi-play-fill"></i> Start Reading
+                        </button>
+                        <button id="btnStopReading" class="btn btn-danger rounded-pill px-4 fw-bold d-none">
+                            <i class="bi bi-stop-fill"></i> Finish Reading
+                        </button>
+                    </div>
+
                     <button class="nav-btn nav-next" id="nextBtn" type="button" aria-label="Next item">Next</button>
                 </div>
             </article>

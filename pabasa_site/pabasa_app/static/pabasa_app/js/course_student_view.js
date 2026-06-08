@@ -12,6 +12,11 @@ document.addEventListener("DOMContentLoaded", function () {
             border-color: rgba(255, 214, 57, 0.4) !important;
             box-shadow: 0 4px 12px rgba(255, 214, 57, 0.15) !important;
         }
+        .material-card-done {
+            background: #f0fdf4 !important;
+            border-color: rgba(22, 163, 74, 0.2) !important;
+            opacity: 0.85;
+        }
     `;
     document.head.appendChild(style);
 
@@ -56,9 +61,10 @@ document.addEventListener("DOMContentLoaded", function () {
             container.innerHTML = items.map(item => {
                 const mId = (item.id !== undefined && item.id !== null) ? String(item.id).trim() : null;
                 const isNew = mId && !seenIds.includes(mId);
+                const isDone = mId && seenIds.includes(mId);
 
                 return `
-                    <div class="material-card-modern shadow-sm border mb-2 ${isNew ? 'material-card-highlighted' : ''}" 
+                    <div class="material-card-modern shadow-sm border mb-2 ${isNew ? 'material-card-highlighted' : (isDone ? 'material-card-done' : '')}" 
                          data-material-id="${item.id}" 
                          data-material-type="${type}" 
                          data-material-title="${item.title}"
@@ -71,10 +77,11 @@ document.addEventListener("DOMContentLoaded", function () {
                             <h6 class="mb-0 fw-bold d-flex align-items-center">
                                 ${item.title}
                                 ${isNew ? '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.6rem; padding: 0.25em 0.5em;">NEW</span>' : ''}
+                                ${isDone ? '<span class="badge bg-success ms-2" style="font-size: 0.6rem; padding: 0.25em 0.5em;">DONE</span>' : ''}
                             </h6>
                             <p class="mb-0 text-muted small">${Array.isArray(item.items) ? item.items.length : item.items} items • ${item.level}</p>
                         </div>
-                        <button class="btn btn-sm btn-primary rounded-pill px-3">Start</button>
+                        <button class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-primary'} rounded-pill px-3">${isDone ? 'Review' : 'Start'}</button>
                     </div>
                 `;
             }).join('');
@@ -86,35 +93,49 @@ document.addEventListener("DOMContentLoaded", function () {
         renderList('paragraph', 'paragraphReadings');
     }
 
+    // --- Review Choice Logic ---
+    let selectedMaterialData = null;
+    
+    function navigateToReader(viewMode = 'initial') {
+        if (!selectedMaterialData) return;
+        const { materialId, type, title, usage } = selectedMaterialData;
+        
+        // Notify teacher that activity started
+        if (viewMode === 'initial') {
+            const studentName = window.PABASA_USER_NAME || "A student";
+            let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+            notifications.unshift({
+                id: Date.now() + Math.random(),
+                classCode: classCode,
+                title: "Activity Update",
+                message: `${studentName} started reading "${selectedMaterialData.title}"`,
+                timestamp: Date.now(),
+                read: false,
+                role: 'teacher'
+            });
+            localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
+            window.dispatchEvent(new Event('pabasa:notifications-updated'));
+        }
+
+        // Determine correct base URL based on designation
+        const baseUrl = (usage === 'assessment' || usage === 'both') ? '/dashboard/assessment' : '/dashboard/practice';
+        window.location.href = `${baseUrl}/${type}/?code=${classCode}&test=${encodeURIComponent(selectedMaterialData.title)}&id=${selectedMaterialData.materialId}&viewMode=${viewMode}`;
+    }
+
     // --- Click Handler for Marking as Read & Navigation ---
     function handleStartClick(e) {
-        const btn = e.target.closest('button');
-        if (!btn) return;
+        // Handle clicks on the card itself or any children, not just the start button
+        const card = e.target.closest('.material-card-modern');
+        if (!card) return;
 
-        const card = btn.closest('.material-card-modern');
-        const materialId = card.dataset.materialId;
-        const type = card.dataset.materialType;
-        const title = card.dataset.materialTitle;
-        const usage = card.dataset.usageType;
+        selectedMaterialData = {
+            materialId: card.dataset.materialId,
+            type: card.dataset.materialType,
+            title: card.dataset.materialTitle,
+            usage: card.dataset.usageType
+        };
 
-        // Notify teacher that activity started
-        const studentName = window.PABASA_USER_NAME || "A student";
-        let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
-        notifications.unshift({
-            id: Date.now() + Math.random(),
-            classCode: classCode,
-            title: "Activity Update",
-            message: `${studentName} started reading "${title}"`,
-            timestamp: Date.now(),
-            read: false,
-            role: 'teacher'
-        });
-        localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
-        window.dispatchEvent(new Event('pabasa:notifications-updated'));
-        
-        // Navigate to the appropriate reader page
-        const baseUrl = usage === 'assessment' ? '/dashboard/assessment/reading_ui' : '/dashboard/practice';
-        window.location.href = `${baseUrl}/${type}/?code=${classCode}&test=${encodeURIComponent(title)}&id=${materialId}`;
+        navigateToReader('initial');
     }
 
     // Attach click listeners to the containers

@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.hashers import make_password, check_password
+from django.core.mail import EmailMultiAlternatives
 from django.contrib.auth import authenticate, login
 from django.core.mail import send_mail
 from django.conf import settings
@@ -608,6 +609,16 @@ def login_user(request):
         # Verify password
         if not check_password(password, user.password_hash):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
+            
+        # Placeholder for 2FA Logic
+        # In a real environment, we'd check if user.two_factor_enabled is True here.
+        # Since settings are in localStorage for this demo, the frontend will handle 
+        # triggering the secondary verification check after this successful credential check.
+        # We return a flag to the frontend.
+        requires_2fa = False 
+        # if user.two_factor_enabled:
+        #     requires_2fa = True
+        #     return JsonResponse({'success': True, 'requires_2fa': True, 'temp_token': '...'})
 
         if user.role == 'teacher':
             teacher_profile = TeacherProfile.objects.filter(user=user).first()
@@ -965,13 +976,20 @@ def send_parent_email(request):
         recipient = data.get('email')
         subject = data.get('subject')
         message = data.get('message')
+        html_message = data.get('html_message')
 
-        if not recipient or not message:
+        if not recipient or (not message and not html_message):
             return JsonResponse({'success': False, 'error': 'Missing recipient or message content'})
 
         # Explicitly use the sender email requested
         sender = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
-        send_mail(subject, message, sender, [recipient], fail_silently=False)
+        
+        if html_message:
+            email = EmailMultiAlternatives(subject, message or "Reading Report", sender, [recipient])
+            email.attach_alternative(html_message, "text/html")
+            email.send(fail_silently=False)
+        else:
+            send_mail(subject, message, sender, [recipient], fail_silently=False)
         return JsonResponse({'success': True})
 
     except Exception as e:

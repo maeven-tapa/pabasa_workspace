@@ -177,6 +177,14 @@
         transform: translateX(4px);
     }
 
+    .assessment-type-link.is-done {
+        border-color: #16a34a;
+        background: #f0fdf4;
+    }
+    .assessment-type-link.is-done:hover {
+        box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
+    }
+
     .assessment-type-link.is-disabled {
         opacity: 0.5;
         pointer-events: none;
@@ -274,6 +282,92 @@
 </section>
 
 <script>
+    // --- Assessment Retake/Review Logic ---
+    let selectedAssessment = null;
+
+    // Inject Modal HTML structure for already completed assessments
+    const modalHtml = `
+        <div class="modal fade" id="assessmentDoneModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border-radius: 20px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                    <div class="modal-body text-center p-4">
+                        <div class="mb-3" style="font-size: 3rem; color: #16a34a;"><i class="bi bi-check-circle-fill"></i></div>
+                        <h4 class="fw-bold mb-2">Review Assessment</h4>
+                        <p id="assessmentModalBody" class="text-muted"></p>
+                        <div class="d-grid gap-2 mt-4">
+                            <button id="btnRetakeAssessment" class="btn btn-primary rounded-pill py-2 fw-bold">Retake (Update Score)</button>
+                            <button id="btnViewAssessment" class="btn btn-outline-secondary rounded-pill py-2">Just View (No Score)</button>
+                            <button class="btn btn-link text-muted btn-sm mt-2" data-bs-dismiss="modal" type="button">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    function handleAssessmentClick(e) {
+        const link = e.target.closest('.assessment-type-link');
+        if (!link || !link.classList.contains('is-done')) return;
+
+        // Intercept navigation for completed items to show choice modal
+        e.preventDefault();
+        
+        const url = new URL(link.href, window.location.origin);
+        selectedAssessment = {
+            path: url.pathname,
+            id: url.searchParams.get('id'),
+            code: url.searchParams.get('code'),
+            test: url.searchParams.get('test')
+        };
+
+        const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
+        const count = retakeCounts[String(selectedAssessment.id).trim()] || 0;
+        const remaining = 3 - count;
+
+        const retakeBtn = document.getElementById('btnRetakeAssessment');
+        const modalBody = document.getElementById('assessmentModalBody');
+
+        if (remaining <= 0) {
+            retakeBtn.classList.add('d-none');
+            modalBody.innerHTML = `You have used all <strong>3 retake attempts</strong> for this assessment. <br><br>You can still view the content to review.`;
+        } else {
+            retakeBtn.classList.remove('d-none');
+            retakeBtn.textContent = `Retake (Update Score) - ${remaining} left`;
+            modalBody.innerHTML = `You have already completed this assessment. Would you like to retake it and update your progress? <br><br>You have <strong>${remaining} attempts</strong> remaining.`;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('assessmentDoneModal'));
+        modal.show();
+    }
+
+    document.getElementById('btnRetakeAssessment').addEventListener('click', () => navigateToAssessment('retake'));
+    document.getElementById('btnViewAssessment').addEventListener('click', () => navigateToAssessment('view'));
+
+    function navigateToAssessment(viewMode) {
+        if (!selectedAssessment) return;
+        
+        const modalEl = document.getElementById('assessmentDoneModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+
+        if (viewMode === 'retake') {
+            const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
+            const mId = String(selectedAssessment.id).trim();
+            retakeCounts[mId] = (retakeCounts[mId] || 0) + 1;
+            localStorage.setItem('pabasa_retake_counts', JSON.stringify(retakeCounts));
+        }
+
+        const finalUrl = `${selectedAssessment.path}?code=${selectedAssessment.code}&test=${encodeURIComponent(selectedAssessment.test)}&id=${selectedAssessment.id}&viewMode=${viewMode}`;
+        window.location.href = finalUrl;
+    }
+
+    // Event delegation for subject grid cards
+    const subjectGrid = document.getElementById('subjectGrid');
+    if (subjectGrid) {
+        subjectGrid.addEventListener('click', handleAssessmentClick);
+    }
+
     (() => {
         const studentClassCodesKey = "pabasaStudentClassCodes";
         const legacyStudentClassCodeKey = "pabasaStudentClassCode";
@@ -342,6 +436,7 @@
             if (!grid) return;
 
             const classMaterials = getAssessmentMaterials();
+            const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
             
             if (!classMaterials.length) {
                 grid.innerHTML = `
@@ -354,15 +449,12 @@
             }
 
             grid.innerHTML = classMaterials.map(({ classData, materials }) => {
-                const wordCount = materials.word.length;
-                const sentenceCount = materials.sentence.length;
-                const paragraphCount = materials.paragraph.length;
-
-                // Get actual material titles if available, otherwise fallback to default
-                const getTestTitle = (list) => list.length > 0 ? encodeURIComponent(list[0].title) : "Main%20Reading%20Assessment";
-                const wordTitle = getTestTitle(materials.word);
-                const sentenceTitle = getTestTitle(materials.sentence);
-                const paragraphTitle = getTestTitle(materials.paragraph);
+                const itemsToRender = [];
+                materialTypes.forEach(type => {
+                    materials[type].forEach(m => {
+                        itemsToRender.push({ ...m, category: type });
+                    });
+                });
 
                 return `
                 <div class="subject-card">
@@ -374,34 +466,30 @@
                         <span class="subject-code">${escapeHtml(classData.code)}</span>
                     </div>
                     
-                    <a href="{% url 'reading_word_page' %}?test=${wordTitle}&code=${classData.code}" class="assessment-type-link type-word ${wordCount === 0 ? 'is-disabled' : ''}">
-                        <div class="type-meta">
-                            <span class="type-icon"><i class="bi bi-type"></i></span>
-                            <div class="type-info"><strong>Word Reading</strong><span>${wordCount} material${wordCount === 1 ? '' : 's'}</span></div>
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
-                    <a href="{% url 'reading_sentence_page' %}?test=${sentenceTitle}&code=${classData.code}" class="assessment-type-link type-sentence ${sentenceCount === 0 ? 'is-disabled' : ''}">
-                        <div class="type-meta">
-                            <span class="type-icon"><i class="bi bi-chat-left-text"></i></span>
-                            <div class="type-info"><strong>Sentence Reading</strong><span>${sentenceCount} material${sentenceCount === 1 ? '' : 's'}</span></div>
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
-                    <a href="{% url 'reading_para_page' %}?test=${paragraphTitle}&code=${classData.code}" class="assessment-type-link type-paragraph ${paragraphCount === 0 ? 'is-disabled' : ''}">
-                        <div class="type-meta">
-                            <span class="type-icon"><i class="bi bi-card-text"></i></span>
-                            <div class="type-info"><strong>Paragraph Reading</strong><span>${paragraphCount} material${paragraphCount === 1 ? '' : 's'}</span></div>
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
+                    ${itemsToRender.map(m => {
+                        const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}" };
+                        const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text' };
+                        const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading' };
+                        const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                        const isDone = mId && seenIds.includes(mId);
+
+                        return `
+                        <a href="${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${classData.code}&id=${m.id}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''}">
+                            <div class="type-meta">
+                                <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
+                                <div class="type-info"><strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-2" style="font-size: 0.6rem;">DONE</span>' : ''}</strong><span>${labelMap[m.category]} • ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span></div>
+                            </div>
+                            <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-play-circle-fill text-primary'}"></i>
+                        </a>`;
+                    }).join("") || '<p class="text-center text-muted small my-3">No assessments assigned for this class.</p>'}
                 </div>`;
             }).join("");
         }
 
         updateAssessmentHub();
+        window.addEventListener("pabasa:student-class-updated", updateAssessmentHub);
         window.addEventListener("storage", (event) => {
-            if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey].includes(event.key)) {
+            if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey, "pabasa_seen_material_ids"].includes(event.key)) {
                 updateAssessmentHub();
             }
         });

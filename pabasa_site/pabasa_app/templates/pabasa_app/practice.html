@@ -172,6 +172,14 @@
         transform: translateX(4px);
     }
 
+    .practice-type-link.is-done {
+        border-color: #16a34a;
+        background: #f0fdf4;
+    }
+    .practice-type-link.is-done:hover {
+        box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
+    }
+
     .practice-type-link.is-disabled {
         opacity: 0.5;
         pointer-events: none;
@@ -379,6 +387,7 @@
             if (!grid) return;
 
             const classMaterials = getPracticeMaterials();
+            const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
             
             if (!classMaterials.length) {
                 grid.innerHTML = `
@@ -391,9 +400,12 @@
             }
 
             grid.innerHTML = classMaterials.map(({ classData, materials }) => {
-                const wordCount = materials.word.length;
-                const sentenceCount = materials.sentence.length;
-                const paragraphCount = materials.paragraph.length;
+                const itemsToRender = [];
+                materialTypes.forEach(type => {
+                    materials[type].forEach(m => {
+                        itemsToRender.push({ ...m, category: type });
+                    });
+                });
 
                 return `
                 <div class="subject-card">
@@ -405,35 +417,31 @@
                         <span class="subject-code">${escapeHtml(classData.code)}</span>
                     </div>
                     
-                    <a href="{% url 'practice_word_page' %}?code=${classData.code}" class="practice-type-link type-word ${wordCount === 0 ? 'is-disabled' : ''}">
-                        <div class="type-meta">
-                            <span class="type-icon"><i class="bi bi-type"></i></span>
-                            <div class="type-info"><strong>Words</strong><span>${wordCount} material${wordCount === 1 ? '' : 's'}</span></div>
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
-                    <a href="{% url 'practice_sentence_page' %}?code=${classData.code}" class="practice-type-link type-sentence ${sentenceCount === 0 ? 'is-disabled' : ''}">
-                        <div class="type-meta">
-                            <span class="type-icon"><i class="bi bi-chat-left-text"></i></span>
-                            <div class="type-info"><strong>Sentences</strong><span>${sentenceCount} material${sentenceCount === 1 ? '' : 's'}</span></div>
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
-                    <a href="{% url 'practice_para_page' %}?code=${classData.code}" class="practice-type-link type-paragraph ${paragraphCount === 0 ? 'is-disabled' : ''}">
-                        <div class="type-meta">
-                            <span class="type-icon"><i class="bi bi-card-text"></i></span>
-                            <div class="type-info"><strong>Stories</strong><span>${paragraphCount} material${paragraphCount === 1 ? '' : 's'}</span></div>
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
+                    ${itemsToRender.map(m => {
+                        const urlMap = { word: "{% url 'practice_word_page' %}", sentence: "{% url 'practice_sentence_page' %}", paragraph: "{% url 'practice_para_page' %}" };
+                        const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text' };
+                        const labelMap = { word: 'Words', sentence: 'Sentences', paragraph: 'Stories' };
+                        const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                        const isDone = mId && seenIds.includes(mId);
+
+                        return `
+                        <a href="${urlMap[m.category]}?code=${classData.code}&test=${encodeURIComponent(m.title)}&id=${m.id}" class="practice-type-link type-${m.category} ${isDone ? 'is-done' : ''}">
+                            <div class="type-meta">
+                                <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
+                                <div class="type-info"><strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-2" style="font-size: 0.6rem;">DONE</span>' : ''}</strong><span>${labelMap[m.category]} • ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span></div>
+                            </div>
+                            <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-play-circle-fill text-primary'}"></i>
+                        </a>`;
+                    }).join("") || '<p class="text-center text-muted small my-3">No practice materials assigned for this class.</p>'}
                 </div>`;
             }).join("");
         };
 
         renderPracticeHub();
 
+        window.addEventListener("pabasa:student-class-updated", renderPracticeHub);
         window.addEventListener("storage", (event) => {
-            if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey].includes(event.key)) {
+            if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey, "pabasa_seen_material_ids"].includes(event.key)) {
                 renderPracticeHub();
             }
         });

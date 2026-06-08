@@ -25,6 +25,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const materialId = urlParams.get("id");
+    const viewMode = urlParams.get("viewMode");
 
     function getStoredArray(key) {
         try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { return []; }
@@ -112,7 +113,7 @@
         practiceProgress.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
         if (starCount) starCount.textContent = `${starsEarned} stars`;
         if (nextBtn) {
-            nextBtn.textContent = currentIndex === items.length - 1 ? "Finish" : "Next";
+            nextBtn.textContent = currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next";
             nextBtn.disabled = false;
         }
     }
@@ -121,6 +122,9 @@
         shell.classList.add("is-complete");
         if (completeStars) completeStars.textContent = starsEarned;
         if (completeItems) completeItems.textContent = items.length;
+
+        // Skip updating stats if in view mode
+        if (viewMode === 'view') return;
 
         // Persist stars to total progress
         const currentTotal = parseInt(localStorage.getItem("pabasa_total_stars") || "0");
@@ -172,6 +176,13 @@
     });
 
     practiceAgainBtn?.addEventListener("click", restartPractice);
+
+    if (viewMode === 'view') {
+        if (skipBtn) skipBtn.classList.add("d-none");
+        if (recordBtn) recordBtn.classList.add("d-none");
+        if (starCount) starCount.classList.add("d-none");
+        if (practiceFeedback) practiceFeedback.textContent = "Reviewing completed content.";
+    }
 
     loadItems();
 })();

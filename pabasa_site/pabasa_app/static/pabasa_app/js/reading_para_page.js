@@ -29,6 +29,7 @@
     const testTitle = params.get("test") || "Assessment";
     const testCode = params.get("code") || "TST-000";
     const materialId = params.get("id");
+    const viewMode = params.get("viewMode");
     if (testMeta) testMeta.textContent = testTitle + " - " + testCode;
 
     function getStoredArray(key) {
@@ -101,7 +102,7 @@
         if (progressFill) progressFill.style.width = ((currentIndex + 1) / words.length) * 100 + "%";
         if (prevBtn) prevBtn.disabled = currentIndex === 0;
         if (nextBtn) nextBtn.disabled = false;
-        if (nextBtn) nextBtn.textContent = currentIndex === words.length - 1 ? "Finish" : "Next";
+        if (nextBtn) nextBtn.textContent = currentIndex === words.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next";
         if (completionCount) {
             completionCount.textContent = words.length;
         }
@@ -116,6 +117,9 @@
         }
         shell.classList.add("is-complete");
         closePauseMenu();
+
+        // Skip updating stats if in view mode
+        if (viewMode === 'view') return;
 
         // Explicitly mark this specific material as seen to decrease sidebar badges
         if (materialId) {
@@ -198,6 +202,11 @@
             closePauseMenu();
         }
     });
+
+    if (viewMode === 'view') {
+        if (pauseBtn) pauseBtn.classList.add("d-none");
+        if (testMeta) testMeta.innerHTML += ' <span style="background: rgba(148, 163, 184, 0.2); color: var(--muted); padding: 2px 8px; border-radius: 6px; font-size: 0.6em; vertical-align: middle; margin-left: 8px;">Review Mode</span>';
+    }
 
     loadItems();
     renderWord();

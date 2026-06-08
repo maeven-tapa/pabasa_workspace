@@ -219,8 +219,8 @@
 
         const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
 
-        let practiceCount = 0;
-        let assessmentCount = 0;
+        const unreadPractice = new Set();
+        const unreadAssessment = new Set();
 
         studentCodes.forEach(code => {
             const upperCode = String(code).toUpperCase();
@@ -237,15 +237,16 @@
                         if (mId && seenIds.includes(mId)) return;
 
                         const mType = (m.type || "").toLowerCase();
-                        if (mType === 'practice' || mType === 'both') practiceCount++;
-                        if (mType === 'assessment' || mType === 'both') assessmentCount++;
+                        if (mType === 'practice' || mType === 'both') if (mId) unreadPractice.add(mId);
+                        if (mType === 'assessment' || mType === 'both') if (mId) unreadAssessment.add(mId);
                     });
                 });
             });
         });
 
-        updateLinkBadge('/dashboard/practice/', practiceCount);
-        updateLinkBadge('/dashboard/assessment/', assessmentCount);
+        // Using robust path matching without trailing slashes
+        updateLinkBadge('/dashboard/practice', unreadPractice.size);
+        updateLinkBadge('/dashboard/assessment', unreadAssessment.size);
     }
 
     function updateLinkBadge(pathPart, count) {
