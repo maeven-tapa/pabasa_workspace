@@ -14,6 +14,28 @@ function initProfilePage() {
 
     const accountFields = form ? form.querySelectorAll("[data-account-details-field]") : [];
 
+    // Theme Toggle Logic
+    const themeToggle = document.getElementById("themeToggle");
+    if (themeToggle) {
+        const themeIcon = themeToggle.querySelector("i");
+        const themeKey = "pabasa_theme";
+        const updateThemeUI = (theme) => {
+            if (theme === "dark") {
+                document.body.classList.add("dark-theme");
+                themeIcon.className = "bi bi-moon-stars";
+            } else {
+                document.body.classList.remove("dark-theme");
+                themeIcon.className = "bi bi-sun";
+            }
+        };
+        updateThemeUI(localStorage.getItem(themeKey) || "light");
+        themeToggle.addEventListener("click", () => {
+            const newTheme = document.body.classList.contains("dark-theme") ? "light" : "dark";
+            localStorage.setItem(themeKey, newTheme);
+            updateThemeUI(newTheme);
+        });
+    }
+
     function setEditMode(editing) {
         accountFields.forEach(function (field) {
             field.disabled = !editing;
@@ -38,6 +60,44 @@ function initProfilePage() {
                 setEditMode(false);
             }, 0);
         });
+    }
+
+    function showToast(message, type = "success") {
+        let toastContainer = document.getElementById("pabasaToastContainer");
+        if (!toastContainer) {
+            toastContainer = document.createElement("div");
+            toastContainer.id = "pabasaToastContainer";
+            toastContainer.className = "toast-container position-fixed top-0 end-0 p-3";
+            toastContainer.style.zIndex = "1090";
+            document.body.appendChild(toastContainer);
+        }
+
+        const toastId = "toast-" + Date.now();
+        const bgClass = type === "success" ? "bg-success" : "bg-primary";
+        
+        const html = `
+            <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-info-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', html);
+        const toastEl = document.getElementById(toastId);
+        
+        if (window.bootstrap && bootstrap.Toast) {
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            bsToast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        } else {
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.remove(), 3000);
+        }
     }
 
     function getCsrfToken() {
@@ -189,7 +249,7 @@ function initProfilePage() {
             }
             const studentCodes = codesArray.filter(Boolean);
 
-            const seenIds = getStoredArray("pabasa_seen_material_ids").map(String);
+            const seenIds = getStoredArray("pabasa_seen_material_ids").map(id => String(id).trim());
             const readings = getStoredValue("pabasa_class_readings", {});
             
             // Build a normalized lookup map
@@ -210,10 +270,10 @@ function initProfilePage() {
                         const list = classData[key];
                         if (Array.isArray(list)) {
                             list.forEach(m => {
-                                if (!m || !m.id) return;
+                                if (!m) return;
                                 totalAvailable++;
-                                // Check if this specific material ID is in the "seen" list
-                                if (seenIds.includes(String(m.id).trim())) {
+                                const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                                if (mId && seenIds.includes(mId)) {
                                     completedCount++;
                                 }
                             });
@@ -271,6 +331,8 @@ function initProfilePage() {
             readingsMap[key.toUpperCase()] = readings[key];
         });
 
+        const seenIds = getStoredArray("pabasa_seen_material_ids").map(id => String(id).trim());
+
         const cards = document.querySelectorAll("[data-class-card-code]");
         
         cards.forEach(card => {
@@ -282,12 +344,17 @@ function initProfilePage() {
             
             if (classData) {
                 ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
-                    [type, type + 's'].forEach(key => {
+                    const keys = [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean);
+                    keys.forEach(key => {
                         const materials = classData[key];
                         if (Array.isArray(materials)) {
                             materials.forEach(m => {
-                                if (!m || !m.type) return;
-                                const mType = m.type.toLowerCase();
+                                if (!m) return;
+
+                                const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                                if (mId && seenIds.includes(mId)) return;
+
+                                const mType = (m.type || "").toLowerCase();
                                 if (mType === 'assessment' || mType === 'both') assessmentCount++;
                                 if (mType === 'practice' || mType === 'both') practiceCount++;
                             });
@@ -333,12 +400,43 @@ function initProfilePage() {
     [emailNotifToggle, pushNotifToggle, digestToggle].forEach(function (toggle) {
         if (!toggle) return;
         toggle.addEventListener("change", function () {
+            const isEnabled = toggle.checked;
             const settings = loadProfileSettings();
-            settings.emailNotifications = emailNotifToggle ? emailNotifToggle.checked : true;
-            settings.pushNotifications = pushNotifToggle ? pushNotifToggle.checked : true;
-            settings.weeklyDigest = digestToggle ? digestToggle.checked : false;
+            
+            if (toggle === emailNotifToggle) settings.emailNotifications = isEnabled;
+            if (toggle === pushNotifToggle) settings.pushNotifications = isEnabled;
+            if (toggle === digestToggle) settings.weeklyDigest = isEnabled;
+
             saveProfileSettings(settings);
-            updatePreferenceState(toggle, toggle.checked);
+            updatePreferenceState(toggle, isEnabled);
+
+            // Logic for "In-App Alerts" (Push Notifications)
+            if (toggle === pushNotifToggle && isEnabled) {
+                if ("Notification" in window) {
+                    if (Notification.permission !== "granted") {
+                        Notification.requestPermission().then(permission => {
+                            if (permission === "granted") {
+                                new Notification("PABASA", { body: "In-app alerts are enabled! You will now receive dashboard updates." });
+                            } else {
+                                showToast("Notification access denied. Check browser settings.", "info");
+                            }
+                        });
+                    } else {
+                        new Notification("PABASA", { body: "In-app alerts are active." });
+                    }
+                }
+            }
+
+            // Logic for "Email Alerts"
+            if (toggle === emailNotifToggle && isEnabled && (!profileEmail || profileEmail === '""')) {
+                showToast("Email alerts enabled, but no email address is set.", "info");
+            }
+
+            const label = toggle.closest(".profile-info-row")?.querySelector("strong")?.textContent || "Setting";
+            showToast(`${label} successfully ${isEnabled ? 'enabled' : 'disabled'}.`);
+            
+            // Sync state globally
+            window.dispatchEvent(new CustomEvent('pabasa:preferences-updated', { detail: settings }));
         });
     });
 

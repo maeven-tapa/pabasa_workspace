@@ -956,6 +956,7 @@ function updateReadingLevelChart(levelCounts) {
     
     const total = Object.values(levelCounts).reduce((a, b) => a + b, 0);
     const chartCtx = chartCanvas.getContext("2d");
+    const isDark = document.body.classList.contains('dark-theme');
     
     // Destroy existing chart if it exists
     if (chartCanvas.chart) {
@@ -1008,7 +1009,7 @@ function updateReadingLevelChart(levelCounts) {
                     labels: {
                         font: { size: 12, weight: "600" },
                         padding: 15,
-                        color: "var(--dash-text)",
+                        color: isDark ? "#f1f5f9" : "#1b1a17",
                         usePointStyle: true,
                         pointStyle: "circle"
                     }

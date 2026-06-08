@@ -18,6 +18,7 @@
             --dash-primary-deep: #155e75;
             --dash-bg: #f6f5f2;
             --dash-border: rgba(27, 26, 23, 0.08);
+            --dash-ink: #1b1a17;
             --dash-text: #1b1a17;
             --dash-muted: #5f645f;
             --dash-panel: #f0efe9;
@@ -847,10 +848,201 @@
                 max-height: calc(100vh - 100px);
             }
         }
+
+        /* Global Dark Theme Support */
+        body.dark-theme {
+            --dash-bg: #0f172a;
+            --dash-text: #f1f5f9;
+            --dash-muted: #94a3b8;
+            --dash-border: rgba(255, 255, 255, 0.1);
+            --dash-panel: #1e293b;
+            --dash-primary-soft: rgba(31, 111, 139, 0.2);
+            --dash-shadow: 0 22px 44px rgba(0, 0, 0, 0.4);
+            --dash-ink-soft: rgba(241, 245, 249, 0.64);
+            --dash-ink: #f1f5f9;
+            --dash-primary-deep: #38bdf8;
+            background: #0f172a !important;
+            color: #f1f5f9 !important;
+        }
+
+        body.dark-theme .dashboard-sidebar {
+            background: #1e293b !important;
+            box-shadow: 18px 0 46px rgba(0, 0, 0, 0.3);
+        }
+        body.dark-theme .dashboard-sidebar::after { color: rgba(255, 255, 255, 0.02); }
+        body.dark-theme .sidebar-brand-row,
+        body.dark-theme .sidebar-role-card,
+        body.dark-theme .notif-item,
+        body.dark-theme .profile-pane-card,
+        body.dark-theme .profile-pane-meta div {
+            background: #111827 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        body.dark-theme .dash-link { color: #cbd5e1 !important; }
+        body.dark-theme .dash-link i { background: rgba(255, 255, 255, 0.05); color: #38bdf8; }
+        body.dark-theme .dash-link:hover,
+        body.dark-theme .dash-link.is-active {
+            background: rgba(255, 255, 255, 0.05);
+            color: #38bdf8 !important;
+        }
+
+        body.dark-theme .dashboard-topbar {
+            background: rgba(30, 41, 59, 0.8) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 18px 34px rgba(0, 0, 0, 0.2);
+        }
+
+        body.dark-theme .dash-top-btn,
+        body.dark-theme .dashboard-topbar .btn,
+        body.dark-theme .dash-surface,
+        body.dark-theme .dash-card,
+        body.dark-theme .dash-page-head,
+        body.dark-theme .profile-section-card,
+        body.dark-theme .profile-summary,
+        body.dark-theme .modal-content,
+        body.dark-theme .offcanvas,
+        body.dark-theme .help-panel,
+        body.dark-theme .kids-card,
+        body.dark-theme .course-card,
+        body.dark-theme .teacher-hero,
+        body.dark-theme .create-class-card,
+        body.dark-theme .teacher-stat-card,
+        body.dark-theme .teacher-panel,
+        body.dark-theme .class-card,
+        body.dark-theme .class-banner,
+        body.dark-theme .student-card,
+        body.dark-theme .class-card-full,
+        body.dark-theme .readings-section,
+        body.dark-theme .material-card-modern,
+        body.dark-theme .assessment-card,
+        body.dark-theme .student-card-modern,
+        body.dark-theme .action-preview-item,
+        body.dark-theme .student-checkbox-list,
+        body.dark-theme .students-toolbar,
+        body.dark-theme .students-search,
+        body.dark-theme .students-chart-panel,
+        body.dark-theme .students-panel,
+        body.dark-theme .student-card-row,
+        body.dark-theme .course-modal-content,
+        body.dark-theme .course-modal-header,
+        body.dark-theme .course-sidebar,
+        body.dark-theme .course-tab-content,
+        body.dark-theme .workspace-hero,
+        body.dark-theme .student-studio,
+        body.dark-theme .join-desk,
+        body.dark-theme .code-input-shell,
+        body.dark-theme .class-detail-list li,
+        body.dark-theme .practice-hero,
+        body.dark-theme .assessment-stage,
+        body.dark-theme .subject-card,
+        body.dark-theme .practice-tip-strip,
+        body.dark-theme .assessment-prep {
+            background: #1e293b !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+            background-image: none !important;
+        }
+
+        body.dark-theme .dash-top-btn i,
+        body.dark-theme .dashboard-topbar .btn i {
+            color: #38bdf8 !important;
+        }
+
+        body.dark-theme .profile-stat-box,
+        body.dark-theme .stat-box,
+        body.dark-theme .mini-metric,
+        body.dark-theme .class-stat,
+        body.dark-theme .assessment-stat,
+        body.dark-theme .student-stat,
+        body.dark-theme .material-leading-icon,
+        body.dark-theme .material-btn,
+        body.dark-theme .student-avatar-large,
+        body.dark-theme .reading-preview-list,
+        body.dark-theme .reading-preview-item,
+        body.dark-theme .filter-btn,
+        body.dark-theme .secondary-metric,
+        body.dark-theme .student-meta-box,
+        body.dark-theme .reading-band,
+        body.dark-theme .readings-empty,
+        body.dark-theme .vertical-nav-link,
+        body.dark-theme .readings-count-badge,
+        body.dark-theme .student-meta-box,
+        body.dark-theme .desk-note,
+        body.dark-theme .practice-type-link,
+        body.dark-theme .assessment-type-link,
+        body.dark-theme .practice-meter,
+        body.dark-theme .status-ticket,
+        body.dark-theme .tip-mark,
+        body.dark-theme .prep-icon,
+        body.dark-theme .meter-track {
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.05) !important;
+            color: #f1f5f9 !important;
+        }
+
+        body.dark-theme .teacher-kicker,
+        body.dark-theme .materials-kicker,
+        body.dark-theme .studio-kicker,
+        body.dark-theme .dash-pill,
+        body.dark-theme .class-code-pill,
+        body.dark-theme .class-code-badge {
+            color: #38bdf8 !important;
+            background: rgba(56, 189, 248, 0.1) !important;
+        }
+
+        body.dark-theme .vertical-nav-link.active {
+            background: rgba(31, 111, 139, 0.3) !important;
+            color: #38bdf8 !important;
+        }
+
+        body.dark-theme .btn-light,
+        body.dark-theme .teacher-quick-links a:not(.primary) {
+            background: #334155 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
+
+        body.dark-theme .btn-light:hover {
+            background: #475569 !important;
+        }
+
+        body.dark-theme .form-control,
+        body.dark-theme .form-select {
+            background-color: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .text-secondary,
+        body.dark-theme .text-muted { color: #94a3b8 !important; }
+        body.dark-theme label,
+        body.dark-theme .teacher-field label { color: #f1f5f9 !important; }
+        body.dark-theme .form-control::placeholder { color: #94a3b8 !important; opacity: 1; }
+        body.dark-theme h1, body.dark-theme h2, body.dark-theme h3, 
+        body.dark-theme h4, body.dark-theme h5, body.dark-theme h6,
+        body.dark-theme .teacher-hero, 
+        body.dark-theme .class-banner,
+        body.dark-theme .workspace-hero h5,
+        body.dark-theme strong, body.dark-theme b,
+        body.dark-theme .students-chart-panel h3,
+        body.dark-theme .students-chart-panel p,
+        body.dark-theme .secondary-metric strong,
+        body.dark-theme .subject-info h3,
+        body.dark-theme .type-info strong,
+        body.dark-theme .course-modal-header .modal-title { 
+            color: #f1f5f9 !important; 
+        }
+        body.dark-theme hr { border-color: rgba(255, 255, 255, 0.1) !important; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="dashboard-body">
+    <script>
+        (function() {
+            if (localStorage.getItem('pabasa_theme') === 'dark') {
+                document.body.classList.add('dark-theme');
+            }
+        })();
+    </script>
     <div class="d-flex">
         <aside class="dashboard-sidebar d-none d-lg-block">
             {% include "pabasa_app/partials/_sidebar.html" %}
@@ -1030,12 +1222,27 @@
         // Global user context for notifications
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
+        window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
     </script>
     <script>
         function updateInAppNotifications() {
             const container = document.getElementById('notifContainer');
             const badge = document.getElementById('notifBadge');
             if (!container) return;
+
+            // Check user preferences for In-App (push) alerts
+            const username = (window.PABASA_USER_NAME || "user").toLowerCase().replace(/ /g, "_");
+            const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
+            
+            if (settings.pushNotifications === false) {
+                if (badge) badge.style.display = 'none';
+                container.innerHTML = `
+                    <div class="p-5 text-center text-muted small">
+                        <i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i>
+                        In-app alerts are disabled in preferences
+                    </div>`;
+                return;
+            }
 
             const userRole = "{{ nav_role }}";
             const userId = localStorage.getItem("pabasaCurrentUserId") || "";
@@ -1105,6 +1312,7 @@
             if (e.key === 'pabasa_notifications') updateInAppNotifications();
         });
         window.addEventListener('pabasa:notifications-updated', updateInAppNotifications);
+        window.addEventListener('pabasa:preferences-updated', updateInAppNotifications);
     </script>
 </body>
 </html>

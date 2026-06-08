@@ -205,13 +205,13 @@
     .class-list {
         display: none;
         gap: 1.25rem;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        grid-template-columns: repeat(auto-fill, minmax(320px, 360px));
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         align-items: stretch;
     }
 
     .student-dashboard.has-class .class-list {
         display: grid;
+        margin-top: 1.5rem;
     }
 
     .student-dashboard.has-class .desk-note {
@@ -229,13 +229,14 @@
         box-shadow: 0 12px 32px rgba(27, 26, 23, 0.06);
         display: flex;
         flex-direction: column;
-        min-height: 280px;
+        min-height: 300px;
         overflow: hidden;
         padding: 1.25rem;
         position: relative;
         width: 100%;
         height: 100%;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+        backface-visibility: hidden;
     }
 
     .class-card:hover {
@@ -252,8 +253,8 @@
     .class-card::before {
         content: "";
         display: block;
-        height: 54px;
-        margin: -1.25rem -1.25rem 1.25rem;
+        height: 12px;
+        margin: -1.25rem -1.25rem 1.15rem;
         background: linear-gradient(135deg, #1f6f8b, #ffd639);
     }
 
@@ -441,7 +442,7 @@
         }
 
         .class-list {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         }
     }
 
@@ -621,8 +622,47 @@
 
         const renderClassCards = (codes) => {
             const teacherClasses = getTeacherClasses();
+            const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+            const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+
+            // Create normalized map for case-insensitive class code lookups
+            const readingsMap = {};
+            Object.keys(readings).forEach(key => { readingsMap[key.toUpperCase()] = readings[key]; });
+
             const validClasses = codes
-                .map((code) => teacherClasses.find((classData) => String(classData.code || "").toUpperCase() === code))
+                .map((code) => {
+                    const classData = teacherClasses.find((item) => String(item.code || "").toUpperCase() === code);
+                    if (!classData) return null;
+                    
+                    let pCount = 0;
+                    let aCount = 0;
+                    let totalInClass = 0;
+                    let seenInClass = 0;
+
+                    const classReadings = readingsMap[classData.code.toUpperCase()] || {};
+
+                    ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
+                        [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean).forEach(key => {
+                            (classReadings[key] || []).forEach(m => {
+                                if (!m) return;
+                                const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                                
+                                totalInClass++;
+                                if (mId && seenIds.includes(mId)) {
+                                    seenInClass++;
+                                    return;
+                                }
+
+                                const mType = (m.type || "").toLowerCase();
+                                if (mType === 'practice' || mType === 'both') pCount++;
+                                if (mType === 'assessment' || mType === 'both') aCount++;
+                            });
+                        });
+                    });
+
+                    const progress = totalInClass > 0 ? Math.round((seenInClass / totalInClass) * 100) : 0;
+                    return { ...classData, practiceCount: pCount, assessmentCount: aCount, progress: progress };
+                })
                 .filter(Boolean);
 
             if (validClasses.length !== codes.length) {
@@ -650,20 +690,20 @@
                             </div>
                             <div class="stat-box">
                                 <span>Practice</span>
-                                <strong class="practice-count">0 sets</strong>
+                                <strong class="practice-count">${classData.practiceCount} set${classData.practiceCount !== 1 ? 's' : ''}</strong>
                             </div>
                             <div class="stat-box">
                                 <span>Assessments</span>
-                                <strong class="assessment-count">0</strong>
+                                <strong class="assessment-count">${classData.assessmentCount}</strong>
                             </div>
                         </div>
                         <div>
                             <div class="d-flex justify-content-between gap-2 mb-2 small fw-bold">
                                 <span>Reading progress</span>
-                                <span>0%</span>
+                                <span>${classData.progress}%</span>
                             </div>
                             <div class="progress-track" aria-hidden="true">
-                                <div class="progress-fill" style="width: 0%"></div>
+                                <div class="progress-fill" style="width: ${classData.progress}%"></div>
                             </div>
                         </div>
                         <ul class="class-detail-list">
@@ -817,10 +857,12 @@
         });
 
         window.addEventListener("storage", (event) => {
-            if (event.key === teacherClassesKey) {
+            if ([teacherClassesKey, "pabasa_class_readings", "pabasa_seen_material_ids"].includes(event.key)) {
                 setJoinedState(getSavedCodes());
             }
         });
+
+        window.addEventListener("pabasa:student-class-updated", () => { setJoinedState(getSavedCodes()); });
     })();
 </script>
 {% endblock %}

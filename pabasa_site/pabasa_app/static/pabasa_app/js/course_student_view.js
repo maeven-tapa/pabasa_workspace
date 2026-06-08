@@ -7,6 +7,11 @@ document.addEventListener("DOMContentLoaded", function () {
             box-shadow: 0 8px 24px rgba(31, 111, 139, 0.12) !important;
             border-color: #2ea8e5 !important;
         }
+        .material-card-highlighted {
+            background: linear-gradient(135deg, #fffdf7 0%, #fff9e6 100%) !important;
+            border-color: rgba(255, 214, 57, 0.4) !important;
+            box-shadow: 0 4px 12px rgba(255, 214, 57, 0.15) !important;
+        }
     `;
     document.head.appendChild(style);
 
@@ -36,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const classData = readingsMap[classCode.toUpperCase()];
         if (!classData) return;
 
-        const seenIds = JSON.parse(localStorage.getItem('pabasa_seen_material_ids') || '[]');
+        const seenIds = JSON.parse(localStorage.getItem('pabasa_seen_material_ids') || '[]').map(id => String(id).trim());
 
         function renderList(type, containerId) {
             const container = document.getElementById(containerId);
@@ -49,15 +54,16 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             container.innerHTML = items.map(item => {
-                const isNew = !seenIds.map(String).includes(String(item.id));
+                const mId = (item.id !== undefined && item.id !== null) ? String(item.id).trim() : null;
+                const isNew = mId && !seenIds.includes(mId);
 
                 return `
-                    <div class="material-card-modern shadow-sm border mb-2" 
+                    <div class="material-card-modern shadow-sm border mb-2 ${isNew ? 'material-card-highlighted' : ''}" 
                          data-material-id="${item.id}" 
                          data-material-type="${type}" 
                          data-material-title="${item.title}"
                          data-usage-type="${item.type}"
-                         style="background: white; border-radius: 12px; padding: 1.1rem; display: flex; align-items: center; border-color: rgba(31, 111, 139, 0.1); transition: all 0.2s ease; cursor: pointer;">
+                         style="border-radius: 12px; padding: 1.1rem; display: flex; align-items: center; border-color: rgba(31, 111, 139, 0.1); transition: all 0.2s ease; cursor: pointer;">
                         <div class="material-leading-icon me-3" style="width: 42px; height: 42px; background: #eaf7fd; color: #2ea8e5; display: flex; align-items: center; justify-content: center; border-radius: 10px;">
                             <i class="bi ${type === 'word' ? 'bi-spellcheck' : type === 'sentence' ? 'bi-chat-left-text' : 'bi-file-text'}"></i>
                         </div>
@@ -91,18 +97,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const title = card.dataset.materialTitle;
         const usage = card.dataset.usageType;
 
-        // Mark as seen in localStorage
-        const seenIds = JSON.parse(localStorage.getItem('pabasa_seen_material_ids') || '[]');
-        if (!seenIds.map(String).includes(String(materialId))) {
-            // Save as number if possible to maintain consistency
-            const idToSave = isNaN(materialId) ? materialId : Number(materialId);
-            seenIds.push(idToSave);
-            localStorage.setItem('pabasa_seen_material_ids', JSON.stringify(seenIds));
-            
-            // Dispatch custom event so base_dashboard.js updates the sidebar badges instantly
-            window.dispatchEvent(new CustomEvent('pabasa:student-class-updated'));
-        }
-
         // Notify teacher that activity started
         const studentName = window.PABASA_USER_NAME || "A student";
         let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
@@ -131,4 +125,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Run once on load
     loadReadings();
+
+    // Refresh highlights if storage updates (e.g., student finishes an activity)
+    window.addEventListener("pabasa:student-class-updated", loadReadings);
+    window.addEventListener("pabasa:preferences-updated", loadReadings);
+    window.addEventListener("storage", (e) => {
+        if (e.key === 'pabasa_seen_material_ids' || e.key === 'pabasa_class_readings') loadReadings();
+    });
 });

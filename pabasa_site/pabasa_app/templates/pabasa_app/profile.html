@@ -435,9 +435,9 @@
             <p class="small text-secondary mb-1">Manage your dashboard profile and account details.</p>
             <p class="small mb-0"><strong>Note:</strong> {% if nav_role == 'teacher' %}Teacher details support class ownership, material posts, and progress reports.{% else %}Student details support learner tracking, reminders, and reading reports.{% endif %}</p>
         </div>
-        {% if nav_role != 'teacher' %}
-        <a class="btn btn-outline-primary btn-sm" href="{% url 'settings' %}?role={{ nav_role }}">Open Settings</a>
-        {% endif %}
+        <button class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" id="themeToggle" type="button" style="width: 38px; height: 38px; padding: 0;" title="Toggle Theme">
+            <i class="bi bi-sun"></i>
+        </button>
     </div>
 
     <div class="profile-layout">

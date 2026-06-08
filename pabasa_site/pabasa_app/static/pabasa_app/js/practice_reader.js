@@ -128,10 +128,11 @@
 
         // Mark material as seen
         if (materialId) {
-            const seenIds = getStoredArray("pabasa_seen_material_ids");
-            if (!seenIds.map(String).includes(String(materialId))) {
-                const idToSave = isNaN(materialId) ? materialId : Number(materialId);
-                seenIds.push(idToSave);
+            const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+            const mId = String(materialId).trim();
+            
+            if (!seenIds.includes(mId)) {
+                seenIds.push(mId);
                 localStorage.setItem("pabasa_seen_material_ids", JSON.stringify(seenIds));
                 window.dispatchEvent(new CustomEvent('pabasa:student-class-updated'));
             }

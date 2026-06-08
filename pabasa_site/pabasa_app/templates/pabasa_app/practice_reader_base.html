@@ -523,9 +523,76 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Dark Theme Support */
+        body.dark-theme {
+            background: #0f172a !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .practice-top,
+        body.dark-theme .coach-panel,
+        body.dark-theme .play-card,
+        body.dark-theme .practice-complete-card {
+            background: #1e293b !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .back-link,
+        body.dark-theme .star-counter,
+        body.dark-theme .mini-step,
+        body.dark-theme .practice-stat,
+        body.dark-theme .complete-star {
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .practice-text,
+        body.dark-theme .coach-panel h2,
+        body.dark-theme .coach-panel p,
+        body.dark-theme .practice-complete-card h2,
+        body.dark-theme .practice-complete-card p {
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .practice-progress {
+            background: #334155 !important;
+        }
+        body.dark-theme .practice-feedback {
+            background: #000 !important;
+        }
+        body.dark-theme .skip-btn {
+            background: #334155 !important;
+            color: #cbd5e1 !important;
+        }
+        body.dark-theme .listen-btn {
+            background: rgba(31, 111, 139, 0.2) !important;
+            color: #38bdf8 !important;
+        }
+        body.dark-theme .play-card::before {
+            border-color: rgba(255, 255, 255, 0.05) !important;
+        }
+        body.dark-theme .mini-step strong {
+            background: rgba(31, 111, 139, 0.3) !important;
+            color: #38bdf8 !important;
+        }
+        body.dark-theme .round-pill {
+            background: rgba(31, 111, 139, 0.2) !important;
+            color: #38bdf8 !important;
+            border-color: rgba(31, 111, 139, 0.3) !important;
+        }
+        body.dark-theme .practice-paragraph .practice-text {
+            background: #1e293b !important;
+            box-shadow: inset 0 0 0 8px rgba(31, 111, 139, 0.1) !important;
+        }
     </style>
 </head>
 <body>
+    <script>
+        (function() {
+            if (localStorage.getItem('pabasa_theme') === 'dark') {
+                document.body.classList.add('dark-theme');
+            }
+        })();
+    </script>
     <main class="practice-shell {% block mode_class %}{% endblock %}" data-practice-mode="{% block data_mode %}word{% endblock %}">
         <header class="practice-top">
             <a class="back-link" href="{% url 'practice' %}">Back</a>

@@ -2056,16 +2056,23 @@
             message: `🎉 A new ${typeLabel} activity is ready for your class! Check it out and start now!`,
             timestamp: Date.now(),
             read: false,
-            role: 'student'
+            role: 'student',
+            emailSent: true // Mark as sent here to prevent student browsers from re-sending mirrored emails
         });
         localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
         window.dispatchEvent(new Event('pabasa:notifications-updated'));
         
         // 2. Send Emails
-        const recipients = classStudents.filter(s => s.email);
+        const recipients = classStudents.filter(s => {
+            if (!s.email) return false;
+            // Respect student individual preference stored in localStorage
+            const studentUsername = s.name.toLowerCase().replace(/ /g, "_");
+            const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + studentUsername) || "{}");
+            return settings.emailNotifications !== false;
+        });
         recipients.forEach(s => {
             const emailMessageContent = `Hi ${s.name}! 🎉 Your new reading activity is here! Check ${typeLabel} and start now!`;
-            fetch('/dashboard/students/send-email/', {
+                fetch('/students/send-email/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value },
                 body: JSON.stringify({
@@ -2496,12 +2503,18 @@
             checkboxList.innerHTML = '<p class="text-muted small text-center p-3">No students found.</p>';
         } else {
             classStudents.forEach((student, index) => {
+                // Look up student individual preference
+                const studentUsername = student.name.toLowerCase().replace(/ /g, "_");
+                const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + studentUsername) || "{}");
+                const emailEnabled = settings.emailNotifications !== false;
+                const statusNote = !student.email ? '<span class="text-danger small ms-1">(No Email)</span>' : (!emailEnabled ? '<span class="text-warning small ms-1">(Email Off)</span>' : '');
+
                 const formCheck = document.createElement("div");
                 formCheck.className = "form-check mb-2";
                 formCheck.innerHTML = `
-                    <input class="form-check-input student-checkbox" type="checkbox" id="upd_student_${index}" value="${student.id || student.name}">
+                    <input class="form-check-input student-checkbox" type="checkbox" id="upd_student_${index}" value="${student.id || student.name}" ${(!student.email || !emailEnabled) ? 'disabled' : ''}>
                     <label class="form-check-label" for="upd_student_${index}">
-                        ${student.name} ${student.email ? "" : '<span class="text-danger small ms-1">(No Email)</span>'}
+                        ${student.name} ${statusNote}
                     </label>
                 `;
                 checkboxList.appendChild(formCheck);
@@ -3001,11 +3014,16 @@
             
             let recipients = [];
             if (groupType === "all") {
-                recipients = classStudents.filter(s => s.email);
+                recipients = classStudents.filter(s => {
+                    if (!s.email) return false;
+                    const studentUsername = s.name.toLowerCase().replace(/ /g, "_");
+                    const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + studentUsername) || "{}");
+                    return settings.emailNotifications !== false;
+                });
             } else {
                 const selectedIds = Array.from(document.querySelectorAll(".student-checkbox:checked")).map(cb => String(cb.value).trim());
                 recipients = classStudents.filter(s => 
-                    selectedIds.includes(String(s.id || s.name).trim()) && s.email
+                    selectedIds.includes(String(s.id || s.name).trim()) && s.email && (JSON.parse(localStorage.getItem("pabasa_profile_settings_" + s.name.toLowerCase().replace(/ /g, "_")) || "{}").emailNotifications !== false)
                 );
             }
 
@@ -3044,7 +3062,7 @@
 
                 // Robust fetch logic to handle 404s and non-JSON responses
                 const emailPromises = personalizedLogs.map(log => 
-                    fetch('/dashboard/students/send-email/', {
+                    fetch('/students/send-email/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

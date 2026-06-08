@@ -614,9 +614,74 @@
                 width: 100%;
             }
         }
+
+        /* Dark Theme Support */
+        body.dark-theme {
+            background: #0f172a !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .reader-top,
+        body.dark-theme .reader-card,
+        body.dark-theme .completion-card,
+        body.dark-theme .pause-menu {
+            background: #1e293b !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .counter,
+        body.dark-theme .summary-tile,
+        body.dark-theme .pause-menu button,
+        body.dark-theme .completion-mark {
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .reading-word,
+        body.dark-theme .test-meta,
+        body.dark-theme .completion-card h1,
+        body.dark-theme .completion-card p,
+        body.dark-theme .pause-title {
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .progress-track {
+            background: #334155 !important;
+        }
+        body.dark-theme .nav-btn {
+            background: #334155 !important;
+            color: #cbd5e1 !important;
+        }
+        body.dark-theme .nav-btn:hover:not(:disabled) {
+            background: var(--accent) !important;
+            color: #fff !important;
+        }
+        body.dark-theme .mic-chip {
+            background: #000 !important;
+        }
+        body.dark-theme .pause-btn {
+            background: #334155 !important;
+            color: #38bdf8 !important;
+        }
+        body.dark-theme .reader-card::before {
+            border-color: rgba(255, 255, 255, 0.05) !important;
+        }
+        body.dark-theme .content-paragraph .reading-word {
+            background: #1e293b !important;
+            box-shadow: inset 0 0 0 8px rgba(31, 111, 139, 0.1) !important;
+        }
+        body.dark-theme .completion-secondary {
+            background: #334155 !important;
+            color: #38bdf8 !important;
+        }
     </style>
 </head>
 <body>
+    <script>
+        (function() {
+            if (localStorage.getItem('pabasa_theme') === 'dark') {
+                document.body.classList.add('dark-theme');
+            }
+        })();
+    </script>
     <main class="reader-shell {% block mode_class %}{% endblock %}">
         <header class="reader-top">
             <div class="reader-title">

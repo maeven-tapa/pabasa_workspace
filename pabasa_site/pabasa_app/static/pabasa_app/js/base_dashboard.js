@@ -67,6 +67,14 @@
             setHelpPanel(false);
         }
     });
+
+    // Global Fix for "Blocked aria-hidden on an element because its descendant retained focus"
+    // This ensures that when a modal hides, focus is removed from its internal elements
+    document.addEventListener('hide.bs.modal', function (event) {
+        if (document.activeElement && event.target.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+    });
 })();
 
 (function () {
@@ -209,7 +217,7 @@
             readingsMap[key.toUpperCase()] = readings[key];
         });
 
-        const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(String);
+        const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
 
         let practiceCount = 0;
         let assessmentCount = 0;
@@ -221,11 +229,14 @@
 
             ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
                 // Check both singular and plural keys (e.g., 'word' and 'words')
-                [type, type + 's'].forEach(key => {
-                    (classData[key] || []).forEach(material => {
-                        if (material && material.id && seenIds.includes(String(material.id))) return;
+                const keys = [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean);
+                keys.forEach(key => {
+                    (classData[key] || []).forEach(m => {
+                        if (!m) return;
+                        const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                        if (mId && seenIds.includes(mId)) return;
 
-                        const mType = (material.type || "").toLowerCase();
+                        const mType = (m.type || "").toLowerCase();
                         if (mType === 'practice' || mType === 'both') practiceCount++;
                         if (mType === 'assessment' || mType === 'both') assessmentCount++;
                     });
@@ -262,7 +273,135 @@
         if (badgeKeys.includes(event.key)) {
             updateSidebarBadges();
         }
+        // Trigger email sync if notifications are updated from another tab
+        if (event.key === 'pabasa_notifications') {
+            window.dispatchEvent(new Event('pabasa:notifications-updated'));
+        }
     });
 
     window.addEventListener("pabasa:student-class-updated", updateSidebarBadges);
+})();
+
+(function () {
+    /**
+     * Notification to Email Sync
+     * Monitors in-app alerts and mirrors them to the student's email if preferences allow.
+     */
+    async function syncNotificationToEmail() {
+        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole");
+        if (!userRole) return;
+
+        const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+        if (!notifications.length) return;
+
+        // Filter for all notifications meant for the current user role that haven't been emailed yet
+        const unsentNotifications = notifications.filter(n => n.role === userRole && !n.emailSent);
+        if (unsentNotifications.length === 0) return;
+
+        // Check user preferences (works for both Teacher and Student)
+        const username = (window.PABASA_USER_NAME || "user").toLowerCase().replace(/ /g, "_");
+        const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
+        if (settings.emailNotifications === false) return;
+
+        const email = window.PABASA_USER_EMAIL;
+        if (!email) return;
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        let notificationsUpdated = false;
+
+        for (const notification of unsentNotifications) {
+            try {
+                // Always use the absolute path /students/send-email/ to avoid 404 relative path errors
+                const response = await fetch('/students/send-email/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken || ""
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        subject: notification.title || "PABASA Alert",
+                        message: notification.message
+                    })
+                });
+
+                if (response.ok) {
+                    notification.emailSent = true;
+                    notificationsUpdated = true;
+                    console.log(`PABASA: Email alert "${notification.title}" synced successfully.`);
+                } else {
+                    console.error("PABASA: Email sync failed for", notification.title, "Status:", response.status);
+                }
+            } catch (e) {
+                console.error("PABASA: Network error syncing notification:", e);
+            }
+        }
+
+        if (notificationsUpdated) {
+            localStorage.setItem('pabasa_notifications', JSON.stringify(notifications));
+        }
+    }
+
+    /**
+     * Weekly Digest Sync
+     * Compiles activity from the last 7 days and sends a summary email if preferences allow.
+     */
+    async function syncWeeklyDigest() {
+        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole");
+        if (!userRole) return;
+
+        const username = (window.PABASA_USER_NAME || "user").toLowerCase().replace(/ /g, "_");
+        const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
+        
+        // Only proceed if Weekly Digest is enabled in preferences
+        if (settings.weeklyDigest !== true) return;
+
+        const email = window.PABASA_USER_EMAIL;
+        if (!email) return;
+
+        const lastSentKey = "pabasa_last_digest_sent_" + username;
+        const lastSent = parseInt(localStorage.getItem(lastSentKey) || "0");
+        const now = Date.now();
+        const weekInMs = 7 * 24 * 60 * 60 * 1000;
+
+        // Check if at least a week has passed since the last digest was sent
+        if (now - lastSent < weekInMs) return;
+
+        const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+        // Filter notifications for the current user role from the past 7 days
+        const weeklyNotifs = notifications.filter(n => n.role === userRole && n.timestamp > (now - weekInMs));
+
+        if (weeklyNotifs.length === 0) return;
+
+        const summaryList = weeklyNotifs.slice(0, 10).map(n => `- ${n.title}: ${n.message}`).join('\n');
+        const message = `Hello ${window.PABASA_USER_NAME},\n\nHere is your PABASA weekly activity summary:\n\n${summaryList}${weeklyNotifs.length > 10 ? '\n... and more in your dashboard.' : ''}\n\nKeep up the great progress!\n\nThank you,\nThe PABASA Team`;
+
+        try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            const response = await fetch('/students/send-email/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || ""
+                },
+                body: JSON.stringify({
+                    email: email,
+                    subject: "Your Weekly PABASA Digest",
+                    message: message
+                })
+            });
+
+            if (response.ok) {
+                localStorage.setItem(lastSentKey, now.toString());
+                console.log("PABASA: Weekly digest sent successfully.");
+            }
+        } catch (e) {
+            console.error("PABASA: Failed to sync weekly digest:", e);
+        }
+    }
+
+    window.addEventListener('pabasa:notifications-updated', syncNotificationToEmail);
+    // Check on initial load
+    syncNotificationToEmail();
+    syncWeeklyDigest();
 })();

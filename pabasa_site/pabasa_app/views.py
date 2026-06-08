@@ -975,5 +975,5 @@ def send_parent_email(request):
         return JsonResponse({'success': True})
 
     except Exception as e:
-        print(f"SMTP Error: {str(e)}")
+        logger.error(f"PABASA SMTP Error: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
