@@ -554,8 +554,8 @@ var getStudentClassData = window.getStudentClassData = function() {
  * Uses a ready-state check to ensure it attaches even if the page is already loaded.
  */
 (function() {
-    function initJoinInput() {
-        const input = document.getElementById("joinClassCodeInput");
+    function initClassCodeInput() {
+        const input = document.getElementById("classCode"); // Target the correct ID for the class code input
         if (!input || input.dataset.pabasaBound) return;
         
         input.dataset.pabasaBound = "true";
@@ -577,8 +577,8 @@ var getStudentClassData = window.getStudentClassData = function() {
     }
 
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", initJoinInput);
+        document.addEventListener("DOMContentLoaded", initClassCodeInput);
     } else {
-        initJoinInput();
+        initClassCodeInput();
     }
 })();

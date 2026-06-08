@@ -623,6 +623,7 @@
         const renderClassCards = (codes) => {
             const teacherClasses = getTeacherClasses();
             const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+            const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]"); // Define allStudents here
             const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
 
             // Create normalized map for case-insensitive class code lookups
@@ -639,7 +640,7 @@
                         classData = { code: upperCode, name: `Class ${upperCode}`, subject: "Reading", students: "N/A", header: upperCode.substring(0,3) };
                     }
 
-                    classData.students = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park").length;
+                    classData.students = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park").length; // This line now has allStudents defined
                     
                     let pCount = 0;
                     let aCount = 0;
@@ -781,26 +782,8 @@
         }
         setJoinedState(initialCodes);
 
-        let lastLen = 0; // Track previous length for backspace detection
-        classCodeInput.addEventListener("input", (e) => {
-            const cleaned = classCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-            const letters = cleaned.replace(/[^A-Z]/g, "").slice(0, 4);
-            const numberSource = cleaned.slice(letters.length);
-            const numbers = numberSource.replace(/\D/g, "").slice(0, 3);
-            classCodeInput.value = numbers ? `${letters}-${numbers}` : letters;
-            classCodeInput.setCustomValidity("");
-        });
-        
-        // Corrected auto-dash logic for XXXX-000 format
-        classCodeInput.addEventListener("input", (e) => {
-            let val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-            if (val.length > 4) {
-                e.target.value = val.slice(0, 4) + '-' + val.slice(4, 7);
-            } else if (val.length === 4 && e.inputType !== 'deleteContentBackward') {
-                e.target.value = val + '-';
-            } else {
-                e.target.value = val;
-            }
+        // Remove redundant input event listeners for auto-dashing, as base_dashboard.js will handle it.
+        classCodeInput.addEventListener("input", (e) => { // Keep this listener to clear custom validity
             e.target.setCustomValidity("");
         });
 
