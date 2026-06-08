@@ -747,7 +747,7 @@
             if (window.PABASA_USER_ROLE === 'teacher') {
                 validCodes = codes.filter((code) => findTeacherClass(code));
             } else { // Assume student role
-                validCodes = getStudentClassData(); // Use the global function to get the canonical list of student codes
+                validCodes = codes; // Use the provided codes directly for student role
             }
             const isJoined = validCodes.length > 0;
             dashboard.classList.toggle("has-class", isJoined);
@@ -890,7 +890,7 @@
             }
         });
 
-        window.addEventListener("pabasa:student-class-updated", () => { setJoinedState(getSavedCodes()); });
+        // Removed: This event listener caused infinite recursion by calling setJoinedState, which itself dispatches this event.
     })();
 </script>
 {% endblock %}
