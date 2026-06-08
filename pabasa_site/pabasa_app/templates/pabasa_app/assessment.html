@@ -267,8 +267,8 @@
         </div>
         <aside class="status-ticket">
             <span class="ticket-label">Class status</span>
-            <strong>Waiting for class</strong>
-            <p class="small mb-0" style="color: rgba(255,255,255,.64);">Join a class from the dashboard to receive assigned tests.</p>
+            <strong id="classStatusTitle">Waiting for class</strong>
+            <p id="classStatusText" class="small mb-0" style="color: rgba(255,255,255,.64);">Join a class from the dashboard to receive assigned tests.</p>
         </aside>
     </div>
 
@@ -425,7 +425,15 @@
                     // Support both singular and plural forms (word/words) for broader compatibility
                     const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
                     materials[type] = list
-                        .filter((material) => material && material.type && (material.type.toLowerCase() === "assessment" || material.type.toLowerCase() === "both"));
+                        .filter((material) => material && material.type && (material.type.toLowerCase() === "assessment" || material.type.toLowerCase() === "both"))
+                        .filter((material) => {
+                            // Check if material is live (published or scheduled time passed)
+                            if (!material.status || material.status === 'published') return true;
+                            if (material.status === 'scheduled' && material.schedule) {
+                                return new Date(material.schedule).getTime() <= Date.now();
+                            }
+                            return false;
+                        });
                 });
                 return { classData, materials };
             });

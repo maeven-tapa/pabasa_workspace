@@ -25,6 +25,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const materialId = urlParams.get("id");
+    const testTitle = urlParams.get("test");
     const viewMode = urlParams.get("viewMode");
 
     function getStoredArray(key) {
@@ -75,11 +76,17 @@
             storageKeys.forEach(m => {
                 if (Array.isArray(classReadings[m])) {
                     classReadings[m].forEach(material => {
-                        if (typeof material === 'string') {
+                        // If it's a raw string, we can't filter by ID/Title, so we only add if no specific target is set
+                        if (typeof material === 'string' && !materialId && !testTitle) {
                             aggregatedItems.push(material);
                         } else if (material && material.type) {
                             const type = material.type.toLowerCase();
-                            if (type.includes("practice") || type === "both") {
+                            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+                            
+                            // Filter by ID (preferred) or Title
+                            const matchesTarget = (materialId && mId === String(materialId).trim()) || (testTitle && material.title === testTitle);
+
+                            if ((type.includes("practice") || type === "both") && matchesTarget) {
                                 aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
                             }
                         }

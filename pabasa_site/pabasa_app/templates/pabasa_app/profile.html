@@ -591,16 +591,8 @@
                     <span class="profile-info-label">Last Changed</span>
                     <span class="profile-info-value" id="passwordLastChanged">Not changed yet</span>
                 </div>
-                <div class="profile-info-row">
-                    <span class="profile-info-label">Two-Factor Auth</span>
-                    <span class="profile-info-value">
-                        <span class="badge bg-secondary" id="twoFactorStatus">Not Enabled</span>
-                    </span>
-                </div>
                 <div class="mt-3 btn-group-small">
                     <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Change Password</button>
-                    <button class="btn btn-outline-primary" type="button" id="toggleTwoFactorBtn">Enable 2FA</button>
-                    <button class="btn btn-link btn-sm text-decoration-none d-none" id="viewRecoveryCodesBtn" type="button">View Recovery Codes</button>
                 </div>
             </div>
 
@@ -742,72 +734,6 @@
     </div>
 </div>
 
-<!-- 2FA Setup Modal -->
-<div class="modal fade" id="setup2FAModal" tabindex="-1" aria-labelledby="setup2FAModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h1 class="modal-title fs-5" id="setup2FAModalLabel">Set Up 2FA</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Two-factor authentication adds an extra layer of security. We'll send a 6-digit verification code to <strong>{{ email }}</strong> to verify your access.</p>
-                
-                <div id="setup2FAStep1">
-                    <button class="btn btn-primary w-100" id="btnSend2FACode">
-                        <i class="bi bi-envelope-check me-2"></i>Send Verification Code
-                    </button>
-                </div>
-
-                <div id="setup2FAStep2" class="d-none">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold" for="twoFactorCode">Verification Code</label>
-                        <input class="form-control text-center fw-bold fs-4" id="twoFactorCode" type="text" maxlength="6" inputmode="numeric" placeholder="000000" style="letter-spacing: 0.5rem;">
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-primary" id="btnVerify2FA">Verify & Enable</button>
-                        <button class="btn btn-link btn-sm text-decoration-none" id="btnResend2FACode">Resend code</button>
-                    </div>
-                </div>
-
-                <div id="setup2FAStep3" class="d-none">
-                    <div class="alert alert-warning small">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Save these recovery codes in a safe place. You can use them to access your account if you lose access to your email.
-                    </div>
-                    <div class="bg-light p-3 rounded-3 mb-3">
-                        <div id="recoveryCodesList" class="row g-2 text-center font-monospace" style="font-size: 0.9rem;">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary" id="btnDownloadRecoveryCodes">Download Codes (.txt)</button>
-                        <button class="btn btn-primary" data-bs-dismiss="modal">I've Saved Them</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 2FA Disable Modal -->
-<div class="modal fade" id="disable2FAModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h1 class="modal-title fs-5">Disable 2FA</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to disable two-factor authentication? This will make your account less secure.</p>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="btnConfirmDisable2FA">Yes, Disable 2FA</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {{ username|json_script:"profileUsername" }}
 {{ full_name|json_script:"profileFullName" }}
 {{ email|json_script:"profileEmail" }}
@@ -854,6 +780,14 @@
                     keys.forEach(key => {
                         (classData[key] || []).forEach(m => {
                             if (!m) return;
+                            
+                            // Check if material is live (published or scheduled time passed)
+                            let isLive = !m.status || m.status === 'published';
+                            if (m.status === 'scheduled' && m.schedule) {
+                                isLive = new Date(m.schedule).getTime() <= Date.now();
+                            }
+                            if (!isLive) return;
+
                             totalItems++;
                             const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
                             if (mId && seenIds.includes(mId)) completedItems++;

@@ -52,7 +52,17 @@ document.addEventListener("DOMContentLoaded", function () {
             const container = document.getElementById(containerId);
             if (!container) return;
 
-            const items = classData[type] || [];
+            // Support both singular and plural forms (word/words)
+            const rawItems = Array.isArray(classData[type]) ? classData[type] : (Array.isArray(classData[type + 's']) ? classData[type + 's'] : []);
+
+            const items = rawItems.filter(m => { // Ensure 'm' is defined and has 'status' and 'schedule' properties
+                // Check if material is live (published or scheduled time passed)
+                if (!m.status || m.status === 'published') return true;
+                if (m.status === 'scheduled' && m.schedule) {
+                    return new Date(m.schedule).getTime() <= Date.now();
+                }
+                return false;
+            });
             if (items.length === 0) {
                 container.innerHTML = '<div class="readings-empty text-center p-3 text-muted small"><i class="bi bi-inbox d-block mb-1"></i> No materials yet</div>';
                 return;
@@ -79,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 ${isNew ? '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.6rem; padding: 0.25em 0.5em;">NEW</span>' : ''}
                                 ${isDone ? '<span class="badge bg-success ms-2" style="font-size: 0.6rem; padding: 0.25em 0.5em;">DONE</span>' : ''}
                             </h6>
-                            <p class="mb-0 text-muted small">${Array.isArray(item.items) ? item.items.length : item.items} items • ${item.level}</p>
+                            <p class="mb-0 text-muted small">${Array.isArray(item.items) ? item.items.length : item.items} items</p>
                         </div>
                         <button class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-primary'} rounded-pill px-3">${isDone ? 'Review' : 'Start'}</button>
                     </div>
@@ -150,6 +160,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // Refresh highlights if storage updates (e.g., student finishes an activity)
     window.addEventListener("pabasa:student-class-updated", loadReadings);
     window.addEventListener("pabasa:preferences-updated", loadReadings);
+    
+    // Refresh list if a scheduled material is activated and triggers a notification
+    window.addEventListener("pabasa:notifications-updated", loadReadings);
+
     window.addEventListener("storage", (e) => {
         if (e.key === 'pabasa_seen_material_ids' || e.key === 'pabasa_class_readings') loadReadings();
     });

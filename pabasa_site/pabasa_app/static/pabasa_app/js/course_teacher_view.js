@@ -43,6 +43,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const editUnlockTime = document.getElementById("editUnlockTime");
     const editTriesCount = document.getElementById("editTriesCount");
     const addItemModal = document.getElementById("addItemModal");
+    const addItemStatus = document.getElementById("addItemStatus");
+    const itemPublishDateRow = document.getElementById("itemPublishDateRow");
+    const itemPublishDate = document.getElementById("itemPublishDate");
     const itemLessonName = document.getElementById("itemLessonName");
     const readingType = document.getElementById("readingType");
     const removeLessonModal = document.getElementById("removeLessonModal");
@@ -333,6 +336,18 @@ document.addEventListener("DOMContentLoaded", function () {
             const trigger = event.relatedTarget;
             const lessonTitle = trigger ? trigger.getAttribute("data-lesson-title") : "Lesson";
             itemLessonName.textContent = lessonTitle || "Lesson";
+
+            // Safety: Hide legacy reading level dropdown if still present in HTML
+            const legacyLevel = document.getElementById("itemLevel") || document.querySelector('[name="level"]');
+            if (legacyLevel && legacyLevel.closest('.mb-3')) {
+                legacyLevel.closest('.mb-3').style.display = 'none';
+            }
+
+            // Reset publication status to default when opening the modal
+            if (addItemStatus) {
+                addItemStatus.value = "published";
+                toggleItemPublishDate();
+            }
         });
     }
 

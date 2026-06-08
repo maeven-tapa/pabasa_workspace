@@ -22,6 +22,10 @@
     let currentIndex = 0;
     let starsEarned = 0;
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const materialId = urlParams.get("id");
+    const testTitle = urlParams.get("test");
+
     const studentClassCodesKey = "pabasaStudentClassCodes";
     const legacyStudentClassCodeKey = "pabasaStudentClassCode";
     const readingsStorageKey = "pabasa_class_readings";
@@ -77,10 +81,15 @@
             storageKeys.forEach(m => {
                 if (Array.isArray(classReadings[m])) {
                     classReadings[m].forEach(material => {
-                        if (typeof material === 'string') {
+                        if (typeof material === 'string' && !materialId && !testTitle) {
                             aggregatedItems.push(material);
                         } else if (material && (material.type === "practice" || material.type === "both")) {
-                            aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
+                            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+                            const matchesTarget = (materialId && mId === String(materialId).trim()) || (testTitle && material.title === testTitle);
+                            
+                            if (matchesTarget) {
+                                aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
+                            }
                         }
                     });
                 }

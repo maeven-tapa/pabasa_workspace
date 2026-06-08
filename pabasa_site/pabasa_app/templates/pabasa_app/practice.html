@@ -306,7 +306,7 @@
         </div>
         <aside class="practice-meter">
             <p class="small mb-1" style="color: rgba(255,255,255,.62);">Today</p>
-            <strong>0 practice sets</strong>
+            <strong id="practiceMeterCount">0 practice sets</strong>
             <div class="meter-track" aria-hidden="true"><span></span></div>
         </aside>
     </div>
@@ -374,8 +374,19 @@
                 const materials = {};
 
                 materialTypes.forEach((type) => {
-                    materials[type] = (Array.isArray(readings[type]) ? readings[type] : [])
-                        .filter((material) => material && (material.type === "practice" || material.type === "both"));
+                    // Support both singular and plural forms (word/words) for broader compatibility
+                    const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
+                    
+                    materials[type] = list
+                        .filter((material) => material && (String(material.type).toLowerCase() === "practice" || String(material.type).toLowerCase() === "both"))
+                        .filter((material) => {
+                            // Check if material is live (published or scheduled time passed)
+                            if (!material.status || material.status === 'published') return true;
+                            if (material.status === 'scheduled' && material.schedule) {
+                                return new Date(material.schedule).getTime() <= Date.now();
+                            }
+                            return false;
+                        });
                 });
 
                 return { classData, materials };
@@ -388,6 +399,25 @@
 
             const classMaterials = getPracticeMaterials();
             const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+            
+            // Calculate totals for the meter
+            let totalSets = 0;
+            let completedSets = 0;
+
+            classMaterials.forEach(({ materials }) => {
+                materialTypes.forEach(type => {
+                    materials[type].forEach(m => {
+                        totalSets++;
+                        const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                        if (mId && seenIds.includes(mId)) completedSets++;
+                    });
+                });
+            });
+
+            const meterCount = document.getElementById("practiceMeterCount");
+            if (meterCount) meterCount.textContent = `${totalSets} practice set${totalSets !== 1 ? 's' : ''}`;
+            const meterProgress = document.querySelector(".meter-track span");
+            if (meterProgress) meterProgress.style.width = (totalSets > 0 ? (completedSets / totalSets) * 100 : 0) + "%";
             
             if (!classMaterials.length) {
                 grid.innerHTML = `

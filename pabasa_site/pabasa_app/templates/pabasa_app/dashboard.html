@@ -556,7 +556,7 @@
 </div>
 
 <script>
-    (() => {
+    document.addEventListener("DOMContentLoaded", () => {
         const dashboard = document.querySelector("[data-student-dashboard]");
         const form = document.querySelector("[data-class-code-form]");
         const classCodeInput = document.getElementById("classCode");
@@ -631,11 +631,19 @@
 
             const validClasses = codes
                 .map((code) => {
-                    const classData = teacherClasses.find((item) => String(item.code || "").toUpperCase() === code);
-                    if (!classData) return null;
+                    let classData = teacherClasses.find((item) => String(item.code || "").toUpperCase() === code);
+                    if (!classData) {
+                        // If not found in teacher's own classes (e.g., student view), create a placeholder
+                        const upperCode = String(code).toUpperCase();
+                        if (!readingsMap[upperCode]) return null; // If no readings for this code, it's not a valid class
+                        classData = { code: upperCode, name: `Class ${upperCode}`, subject: "Reading", students: "N/A", header: upperCode.substring(0,3) };
+                    }
+
+                    classData.students = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park").length;
                     
                     let pCount = 0;
                     let aCount = 0;
+                    let totalPracticeInClass = 0;
                     let totalInClass = 0;
                     let seenInClass = 0;
 
@@ -645,15 +653,24 @@
                         [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean).forEach(key => {
                             (classReadings[key] || []).forEach(m => {
                                 if (!m) return;
+                                // Check if material is live (published or scheduled time passed)
+                                let isLive = !m.status || m.status === 'published';
+                                if (m.status === 'scheduled' && m.schedule) {
+                                    isLive = new Date(m.schedule).getTime() <= Date.now();
+                                }
+                                if (!isLive) return;
+
                                 const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
                                 
                                 totalInClass++;
+                                const mType = (m.type || "").toLowerCase();
+                                if (mType === 'practice' || mType === 'both') totalPracticeInClass++;
+
                                 if (mId && seenIds.includes(mId)) {
                                     seenInClass++;
                                     return;
                                 }
 
-                                const mType = (m.type || "").toLowerCase();
                                 if (mType === 'practice' || mType === 'both') pCount++;
                                 if (mType === 'assessment' || mType === 'both') aCount++;
                             });
@@ -661,7 +678,7 @@
                     });
 
                     const progress = totalInClass > 0 ? Math.round((seenInClass / totalInClass) * 100) : 0;
-                    return { ...classData, practiceCount: pCount, assessmentCount: aCount, progress: progress };
+                    return { ...classData, practiceCount: pCount, assessmentCount: aCount, totalPractice: totalPracticeInClass, progress: progress };
                 })
                 .filter(Boolean);
 
@@ -708,8 +725,7 @@
                         </div>
                         <ul class="class-detail-list">
                             <li><i class="bi bi-info-circle text-primary"></i> ${escapeHtml(classData.description || "No class description yet.")}</li>
-                            <li><i class="bi bi-clock-history text-warning"></i> No assigned practice yet.</li>
-                            <li><i class="bi bi-chat-square-text text-primary"></i> No teacher note yet.</li>
+                            <li><i class="bi bi-clock-history text-warning"></i> ${classData.totalPractice > 0 ? `${classData.totalPractice} assigned practice set${classData.totalPractice !== 1 ? 's' : ''}.` : "No assigned practice yet."}</li>
                         </ul>
                     </div>
                     <div class="class-card-actions">
@@ -725,13 +741,24 @@
         };
 
         const setJoinedState = (codes = []) => {
-            const validCodes = codes.filter((code) => findTeacherClass(code));
+            let validCodes = [];
+            // Determine validation method based on user role or available data
+            if (window.PABASA_USER_ROLE === 'teacher') {
+                validCodes = codes.filter((code) => findTeacherClass(code));
+            } else { // Assume student role
+                validCodes = getStudentClassData(); // Use the global function to get the canonical list of student codes
+            }
             const isJoined = validCodes.length > 0;
             dashboard.classList.toggle("has-class", isJoined);
             emptyNote.style.display = isJoined ? "none" : "";
             joinedNote.style.display = isJoined ? "" : "none";
 
             if (isJoined) {
+                // Ensure that the codes passed to renderClassCards are indeed the valid ones
+                // and that they are unique and uppercase, which getStudentClassData() already handles.
+                // If codes is meant to be filtered against a master list of *all* available classes,
+                // that logic would need to be implemented. For now, we assume getStudentClassData()
+                // provides the correct list of classes the student is joined to.
                 renderClassCards(validCodes);
                 saveCodes(validCodes);
             } else {
@@ -744,14 +771,18 @@
             window.dispatchEvent(new Event("pabasa:student-class-updated"));
         };
 
+        // The getSavedCodes function is local to this IIFE, but getStudentClassData is global.
+        // We should use getStudentClassData for consistency and its legacy handling.
         const legacyCode = window.localStorage.getItem(legacyClassCodeKey);
-        const savedCodes = getSavedCodes();
-        if (!savedCodes.length && legacyCode) {
-            savedCodes.push(legacyCode);
+        let initialCodes = getStudentClassData(); // Use the global function
+        if (!initialCodes.length && legacyCode) { // Add legacy if not already included
+            initialCodes.push(legacyCode.toUpperCase());
+            initialCodes = [...new Set(initialCodes)]; // Deduplicate
         }
-        setJoinedState(savedCodes);
+        setJoinedState(initialCodes);
 
-        classCodeInput.addEventListener("input", () => {
+        let lastLen = 0; // Track previous length for backspace detection
+        classCodeInput.addEventListener("input", (e) => {
             const cleaned = classCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
             const letters = cleaned.replace(/[^A-Z]/g, "").slice(0, 4);
             const numberSource = cleaned.slice(letters.length);
@@ -759,7 +790,21 @@
             classCodeInput.value = numbers ? `${letters}-${numbers}` : letters;
             classCodeInput.setCustomValidity("");
         });
+        
+        // Corrected auto-dash logic for XXXX-000 format
+        classCodeInput.addEventListener("input", (e) => {
+            let val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (val.length > 4) {
+                e.target.value = val.slice(0, 4) + '-' + val.slice(4, 7);
+            } else if (val.length === 4 && e.inputType !== 'deleteContentBackward') {
+                e.target.value = val + '-';
+            } else {
+                e.target.value = val;
+            }
+            e.target.setCustomValidity("");
+        });
 
+        // Original form submission logic
         form.addEventListener("submit", (event) => {
             event.preventDefault();
 

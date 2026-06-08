@@ -34,6 +34,51 @@ document.addEventListener("DOMContentLoaded", function () {
     const availabilityStartTime = document.getElementById("availabilityStartTime");
     const availabilityEndDate = document.getElementById("availabilityEndDate");
     const availabilityEndTime = document.getElementById("availabilityEndTime");
+    const addItemStatus = document.getElementById("addItemStatus");
+    const itemPublishDateRow = document.getElementById("itemPublishDateRow");
+    const itemPublishDate = document.getElementById("itemPublishDate");
+
+    /**
+     * Updates the Class Status card on the student assessment dashboard.
+     * Reflects the current enrollment status from localStorage.
+     */
+    function updateClassStatusUI() {
+        const classStatusTitle = document.getElementById("classStatusTitle");
+        const classStatusText = document.getElementById("classStatusText");
+        
+        if (!classStatusTitle || !classStatusText) return;
+
+        const isJoinedFlag = localStorage.getItem("pabasaStudentClassJoined") === "1";
+        let codes = [];
+        
+        try {
+            codes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
+            const legacy = localStorage.getItem("pabasaStudentClassCode");
+            if (legacy && !codes.some(c => String(c).toUpperCase() === String(legacy).toUpperCase())) {
+                codes.push(legacy);
+            }
+        } catch(e) {
+            const legacy = localStorage.getItem("pabasaStudentClassCode");
+            if (legacy) codes = [legacy];
+        }
+        
+        const activeCodes = codes.filter(Boolean);
+        const count = activeCodes.length;
+
+        // Fetch completed assessments for the student
+        const assessmentsCompleted = parseInt(localStorage.getItem("pabasa_assessments_completed") || "0");
+
+        // Show "Active" if the flag is set OR if we actually found codes in the array
+        if (isJoinedFlag || count > 0) {
+            classStatusTitle.textContent = "Classrooms Active";
+            classStatusTitle.className = "fw-bold text-success";
+            classStatusText.textContent = `You have joined ${count || 1} class${count !== 1 ? 'es' : ''} and finished ${assessmentsCompleted} assessment${assessmentsCompleted !== 1 ? 's' : ''}. Assigned tests appear below.`;
+        } else {
+            classStatusTitle.textContent = "Waiting for class";
+            classStatusTitle.className = "fw-bold text-muted";
+            classStatusText.textContent = "Join a class from the dashboard to receive assigned tests.";
+        }
+    }
 
     function toggleSectionOnlyRow() {
         if (!editSectionOnly || !editSectionOnlyRow || !editAllowedSection) {
@@ -130,6 +175,18 @@ document.addEventListener("DOMContentLoaded", function () {
             const trigger = event.relatedTarget;
             const lessonTitle = trigger ? trigger.getAttribute("data-lesson-title") : "Assessment";
             itemLessonName.textContent = lessonTitle || "Assessment";
+
+            // Safety: Hide legacy reading level dropdown if still present in HTML
+            const legacyLevel = document.getElementById("itemLevel") || document.querySelector('[name="level"]');
+            if (legacyLevel && legacyLevel.closest('.mb-3')) {
+                legacyLevel.closest('.mb-3').style.display = 'none';
+            }
+
+            // Reset publication status to default when opening the modal
+            if (addItemStatus) {
+                addItemStatus.value = "published";
+                toggleItemPublishDate();
+            }
         });
     }
 
@@ -257,4 +314,14 @@ document.addEventListener("DOMContentLoaded", function () {
     toggleParentEmailRows();
     toggleAvailabilitySection();
     toggleTargetReadingTimeRow();
+
+    // Initialize the class status UI
+    updateClassStatusUI();
+
+    // Listen for enrollment updates to keep the UI in sync
+    window.addEventListener("pabasa:student-class-updated", updateClassStatusUI);
+    window.addEventListener("storage", (e) => {
+        const updateKeys = ["pabasaStudentClassJoined", "pabasaStudentClassCodes", "pabasa_assessments_completed"];
+        if (updateKeys.includes(e.key)) updateClassStatusUI();
+    });
 });

@@ -81,9 +81,12 @@
                         classReadings[m].forEach(material => {
                             const type = String(material.type || "").toLowerCase();
                             const isAssessment = type.includes("assessment") || type.includes("both");
+                            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+
+                            // Filter by ID (preferred) or Title
+                            const matchesTarget = (materialId && mId === String(materialId).trim()) || (testTitle && material.title === testTitle);
                             
-                            // Load material only if it matches the requested test title for this specific class
-                            if (isAssessment && (material.title === testTitle || (!testTitle && aggregatedItems.length === 0))) {
+                            if (isAssessment && (matchesTarget || (!testTitle && !materialId && aggregatedItems.length === 0))) {
                                 aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
                             }
                         });

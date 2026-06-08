@@ -135,23 +135,6 @@ function initProfilePage() {
         localStorage.setItem(profileStorageKey, JSON.stringify(settings));
     }
 
-    function setTwoFactorState(enabled) {
-        const status = document.getElementById("twoFactorStatus");
-        const button = document.getElementById("toggleTwoFactorBtn");
-        if (status) {
-            status.textContent = enabled ? "Enabled" : "Not Enabled";
-            status.classList.toggle("bg-success", enabled);
-            status.classList.toggle("bg-secondary", !enabled);
-        }
-        if (button) {
-            button.textContent = enabled ? "Disable 2FA" : "Enable 2FA";
-        }
-        const recoveryBtn = document.getElementById("viewRecoveryCodesBtn");
-        if (recoveryBtn) {
-            recoveryBtn.classList.toggle("d-none", !enabled);
-        }
-    }
-
     function updatePreferenceState(toggle, enabled) {
         if (!toggle) return;
         const row = toggle.closest(".profile-info-row");
@@ -226,7 +209,7 @@ function initProfilePage() {
             activeClasses: classes.length,
             totalStudents: Math.max(storedStudentCount, classStudentCount),
             materialsPosted: Math.max(countClassReadings(), countStoredCollection("pabasa_materials"), storedMaterialsPosted),
-            reportsGenerated: countStoredCollection("pabasa_generated_reports")
+            reportsGenerated: countStoredCollection("pabasa_parent_notice_history")
         };
     }
 
@@ -275,6 +258,14 @@ function initProfilePage() {
                         if (Array.isArray(list)) {
                             list.forEach(m => {
                                 if (!m) return;
+                                
+                                // Check if material is live (published or scheduled time passed)
+                                let isLive = !m.status || m.status === 'published';
+                                if (m.status === 'scheduled' && m.schedule) {
+                                    isLive = new Date(m.schedule).getTime() <= Date.now();
+                                }
+                                if (!isLive) return;
+
                                 totalAvailable++;
                                 const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
                                 if (mId && seenIds.includes(mId)) {
@@ -293,8 +284,8 @@ function initProfilePage() {
             const completedEl = document.getElementById("profileStudentCompletedCount");
             const percentEl = document.getElementById("profileStudentProgressPercent");
 
-            // "Total Lessons" should show the count of materials/lessons, not classes
-            if (classesEl) classesEl.textContent = totalAvailable;
+            // Correctly show the count of joined classes
+            if (classesEl) classesEl.textContent = studentCodes.length;
             if (completedEl) completedEl.textContent = completedCount;
             if (percentEl) percentEl.textContent = percentage + "%";
 
@@ -340,7 +331,10 @@ function initProfilePage() {
         const cards = document.querySelectorAll("[data-class-card-code]");
         
         cards.forEach(card => {
-            const code = card.getAttribute("data-class-card-code").toUpperCase();
+            const rawCode = card.getAttribute("data-class-card-code");
+            if (!rawCode) return;
+            
+            const code = rawCode.toUpperCase();
             const classData = readingsMap[code];
             
             let practiceCount = 0;
@@ -354,6 +348,13 @@ function initProfilePage() {
                         if (Array.isArray(materials)) {
                             materials.forEach(m => {
                                 if (!m) return;
+
+                                // Check if material is live (published or scheduled time passed)
+                                let isLive = !m.status || m.status === 'published';
+                                if (m.status === 'scheduled' && m.schedule) {
+                                    isLive = new Date(m.schedule).getTime() <= Date.now();
+                                }
+                                if (!isLive) return;
 
                                 const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
                                 if (mId && seenIds.includes(mId)) return;
@@ -389,10 +390,12 @@ function initProfilePage() {
     updatePreferenceState(emailNotifToggle, savedSettings.emailNotifications !== false);
     updatePreferenceState(pushNotifToggle, savedSettings.pushNotifications !== false);
     updatePreferenceState(digestToggle, savedSettings.weeklyDigest === true);
-    if (passwordLastChanged && savedSettings.passwordLastChanged) {
-        passwordLastChanged.textContent = savedSettings.passwordLastChanged;
+
+    if (passwordLastChanged) {
+        passwordLastChanged.textContent = (savedSettings.passwordLastChanged && savedSettings.passwordLastChanged !== "Just now") 
+            ? savedSettings.passwordLastChanged 
+            : "Not changed yet";
     }
-    setTwoFactorState(savedSettings.twoFactorEnabled === true);
     
     // Only run overview if we find teacher stats containers
     if (document.getElementById("profileActiveClassesCount")) {
@@ -444,137 +447,6 @@ function initProfilePage() {
         });
     });
 
-    // --- 2FA Logic ---
-    const toggleTwoFactorBtn = document.getElementById("toggleTwoFactorBtn");
-    const setup2FAModalEl = document.getElementById("setup2FAModal");
-    const disable2FAModalEl = document.getElementById("disable2FAModal");
-    const setup2FAModal = setup2FAModalEl ? new bootstrap.Modal(setup2FAModalEl) : null;
-    const disable2FAModal = disable2FAModalEl ? new bootstrap.Modal(disable2FAModalEl) : null;
-    let generated2FACode = "";
-
-    if (toggleTwoFactorBtn) {
-        toggleTwoFactorBtn.addEventListener("click", function () {
-            const settings = loadProfileSettings();
-            if (settings.twoFactorEnabled) {
-                disable2FAModal?.show();
-            } else {
-                // Reset UI state for enable modal
-                document.getElementById("setup2FAStep1").classList.remove("d-none");
-                document.getElementById("setup2FAStep2").classList.add("d-none");
-                document.getElementById("setup2FAStep3").classList.add("d-none");
-                document.getElementById("twoFactorCode").value = "";
-                setup2FAModal?.show();
-            }
-        });
-    }
-
-    function generateRecoveryCodes() {
-        const codes = [];
-        for (let i = 0; i < 8; i++) {
-            codes.push(Math.random().toString(36).substring(2, 8).toUpperCase());
-        }
-        return codes;
-    }
-
-    document.getElementById("viewRecoveryCodesBtn")?.addEventListener("click", () => {
-        const settings = loadProfileSettings();
-        if (settings.recoveryCodes) {
-            const list = document.getElementById("recoveryCodesList");
-            if (list) {
-                list.innerHTML = settings.recoveryCodes.map(c => `<div class="col-6"><code>${c}</code></div>`).join("");
-                document.getElementById("setup2FAStep1").classList.add("d-none");
-                document.getElementById("setup2FAStep2").classList.add("d-none");
-                document.getElementById("setup2FAStep3").classList.remove("d-none");
-                setup2FAModal?.show();
-            }
-        }
-    });
-
-    async function send2FAEmail() {
-        generated2FACode = Math.floor(100000 + Math.random() * 900000).toString();
-        const btn = document.getElementById("btnSend2FACode");
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending Code...';
-        }
-
-        try {
-            const response = await fetch('/students/send-email/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: JSON.stringify({
-                    email: profileEmail,
-                    subject: "PABASA Security: 2FA Verification Code",
-                    message: `Your PABASA verification code is: ${generated2FACode}\n\nEnter this code on the profile page to enable two-factor authentication.`
-                })
-            });
-            
-            if (response.ok) {
-                document.getElementById("setup2FAStep1").classList.add("d-none");
-                document.getElementById("setup2FAStep2").classList.remove("d-none");
-                showToast("Verification code sent!");
-            }
-        } catch (e) {
-            console.error("2FA Send Error:", e);
-            alert("Could not send verification code. Please try again.");
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-envelope-check me-2"></i>Send Verification Code';
-            }
-        }
-    }
-
-    document.getElementById("btnSend2FACode")?.addEventListener("click", send2FAEmail);
-    document.getElementById("btnResend2FACode")?.addEventListener("click", send2FAEmail);
-
-    document.getElementById("btnVerify2FA")?.addEventListener("click", function() {
-        const codeInput = document.getElementById("twoFactorCode").value.trim();
-        if (codeInput === generated2FACode) {
-            const codes = generateRecoveryCodes();
-            const settings = loadProfileSettings();
-            settings.twoFactorEnabled = true;
-            settings.recoveryCodes = codes;
-            saveProfileSettings(settings);
-            setTwoFactorState(true);
-            
-            // Show step 3 (Recovery Codes)
-            document.getElementById("setup2FAStep2").classList.add("d-none");
-            const step3 = document.getElementById("setup2FAStep3");
-            const list = document.getElementById("recoveryCodesList");
-            if (step3 && list) {
-                list.innerHTML = codes.map(c => `<div class="col-6"><code>${c}</code></div>`).join("");
-                step3.classList.remove("d-none");
-            }
-            showToast("Verified! Please save your recovery codes.");
-        } else {
-            alert("Invalid verification code. Please try again.");
-        }
-    });
-
-    document.getElementById("btnDownloadRecoveryCodes")?.addEventListener("click", function() {
-        const settings = loadProfileSettings();
-        const text = "PABASA RECOVERY CODES\nGenerated: " + new Date().toLocaleString() + "\n\n" + settings.recoveryCodes.join("\n");
-        const blob = new Blob([text], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "pabasa-recovery-codes.txt";
-        link.click();
-    });
-
-    document.getElementById("btnConfirmDisable2FA")?.addEventListener("click", function() {
-        const settings = loadProfileSettings();
-        settings.twoFactorEnabled = false;
-        saveProfileSettings(settings);
-        setTwoFactorState(false);
-        disable2FAModal?.hide();
-        showToast("Two-factor authentication disabled.", "info");
-    });
-
     const changePasswordForm = document.getElementById("changePasswordForm");
     if (changePasswordForm) {
         changePasswordForm.addEventListener("submit", function (event) {
@@ -597,9 +469,20 @@ function initProfilePage() {
                 }
 
                 const settings = loadProfileSettings();
-                settings.passwordLastChanged = "Just now";
+                const now = new Date();
+                const timestamp = now.toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric', 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                settings.passwordLastChanged = timestamp;
                 saveProfileSettings(settings);
-                if (passwordLastChanged) passwordLastChanged.textContent = "Just now";
+
+                if (passwordLastChanged) passwordLastChanged.textContent = timestamp;
                 changePasswordForm.reset();
                 bootstrap.Modal.getInstance(document.getElementById("changePasswordModal"))?.hide();
                 alert("Password changed successfully.");
@@ -691,8 +574,8 @@ function initProfilePage() {
             event.key === "pabasa_added_students" ||
             event.key === "pabasa_class_readings" ||
             event.key === "pabasa_materials" ||
-            event.key === "pabasa_teacher_overview_stats" ||
-            event.key === "pabasa_generated_reports"
+            event.key === "pabasa_teacher_overview_stats" || // This key is for overall stats, not individual reports
+            event.key === "pabasa_parent_notice_history" // Listen for changes in report history
         ) {
             updateClassOverview();
         }

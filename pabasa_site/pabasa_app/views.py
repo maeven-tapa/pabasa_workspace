@@ -463,10 +463,9 @@ def verify_teacher_otp(request):
             contact_no=pending['contact_no']
         )
 
-        teacher_code = f"TCH-{user.id:04d}"
         TeacherProfile.objects.create(
             user=user,
-            teacher_code=teacher_code,
+            teacher_code=custom_id,
             teacher_role=pending['teacher_role'],
             school=pending['school'],
             department=pending['department']
@@ -479,7 +478,7 @@ def verify_teacher_otp(request):
             'success': True,
             'message': 'Teacher registered successfully',
             'custom_id': custom_id,
-            'teacher_code': teacher_code
+            'teacher_code': custom_id
         })
 
     except Exception as e:
@@ -546,10 +545,9 @@ def verify_student_otp(request):
             contact_no=pending.get('contact_no', '')
         )
 
-        student_code = f"G2-{user.id:04d}"
         StudentProfile.objects.create(
             user=user,
-            student_code=student_code,
+            student_code=custom_id,
             grade_level=pending.get('grade_level', ''),
             section=pending.get('section', ''),
             reading_level=pending.get('reading_level', ''),
@@ -609,17 +607,8 @@ def login_user(request):
         # Verify password
         if not check_password(password, user.password_hash):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
-            
-        # Placeholder for 2FA Logic
-        # In a real environment, we'd check if user.two_factor_enabled is True here.
-        # Since settings are in localStorage for this demo, the frontend will handle 
-        # triggering the secondary verification check after this successful credential check.
-        # We return a flag to the frontend.
-        requires_2fa = False 
-        # if user.two_factor_enabled:
-        #     requires_2fa = True
-        #     return JsonResponse({'success': True, 'requires_2fa': True, 'temp_token': '...'})
 
+        # Verify account activity status before proceeding to 2FA
         if user.role == 'teacher':
             teacher_profile = TeacherProfile.objects.filter(user=user).first()
             if teacher_profile and not teacher_profile.is_active:
@@ -628,7 +617,7 @@ def login_user(request):
             student_profile = StudentProfile.objects.filter(user=user).first()
             if student_profile and not student_profile.is_active:
                 return JsonResponse({'success': False, 'error': 'This account is deactivated'}, status=403)
-        
+
         # Create session
         request.session['user_id'] = user.id
         request.session['custom_id'] = user.custom_id
@@ -995,3 +984,44 @@ def send_parent_email(request):
     except Exception as e:
         logger.error(f"PABASA SMTP Error: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='student') # Only students can join classes
+def join_class(request):
+    """
+    Allows a student to join a class by creating a ClassEnrollment record.
+    Expects a JSON payload with 'class_code'.
+    """
+    try:
+        data = json.loads(request.body)
+        class_code = data.get('class_code', '').strip().upper()
+
+        if not class_code:
+            return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
+
+        user_id = request.session.get('user_id')
+        student_profile = StudentProfile.objects.filter(user__id=user_id, is_active=True).first()
+
+        if not student_profile:
+            return JsonResponse({'success': False, 'error': 'Student profile not found or inactive'}, status=404)
+
+        reading_class = ReadingClass.objects.filter(class_code=class_code, is_active=True).first()
+
+        if not reading_class:
+            return JsonResponse({'success': False, 'error': 'Class not found or inactive'}, status=404)
+
+        # Check if already enrolled to prevent duplicate entries
+        if ClassEnrollment.objects.filter(student=student_profile, reading_class=reading_class, is_active=True).exists():
+            return JsonResponse({'success': False, 'error': 'Already enrolled in this class'}, status=409)
+
+        ClassEnrollment.objects.create(student=student_profile, reading_class=reading_class, is_active=True)
+
+        return JsonResponse({'success': True, 'message': f'Successfully joined class {class_code}'})
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
+    except Exception as e:
+        logger.error(f"Error joining class: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'An unexpected error occurred'}, status=500)

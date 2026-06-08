@@ -1,3 +1,28 @@
+/**
+ * GLOBAL UTILITIES
+ * These are defined at the very top and attached to window to prevent ReferenceErrors 
+ * in inline scripts (like the dashboard page).
+ */
+var getStudentClassData = window.getStudentClassData = function() {
+    let codes = [];
+    try {
+        codes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
+        const legacy = localStorage.getItem("pabasaStudentClassCode");
+        if (legacy && !codes.some(c => String(c).toUpperCase() === String(legacy).toUpperCase())) codes.push(legacy);
+    } catch(e) {
+        const legacy = localStorage.getItem("pabasaStudentClassCode");
+        if (legacy) codes = [legacy];
+    }
+    return [...new Set(codes.filter(Boolean).map(c => String(c).toUpperCase()))];
+};
+
+(function () {
+    // Persist session-injected user info to localStorage for background scripts
+    if (window.PABASA_USER_ROLE) localStorage.setItem("pabasaUserRole", window.PABASA_USER_ROLE);
+    if (window.PABASA_USER_EMAIL) localStorage.setItem("pabasaUserEmail", window.PABASA_USER_EMAIL);
+    if (window.PABASA_USER_NAME) localStorage.setItem("pabasaUserName", window.PABASA_USER_NAME);
+})();
+
 (function () {
     // Initialize tooltips only for elements that don't require class lock
     const tooltipTargets = document.querySelectorAll("[data-nav-tooltip]:not([data-student-class-required])");
@@ -198,17 +223,110 @@
 })();
 
 (function () {
+    /**
+     * Checks for scheduled materials that have reached their scheduled time.
+     * If a material just became active, it adds a notification for the student.
+     */
+    function checkScheduledNotifications() {
+        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole");
+        if (userRole !== "student") return;
+
+        const isJoined = window.localStorage.getItem("pabasaStudentClassJoined") === "1";
+        if (!isJoined) return;
+
+        const studentCodes = getStudentClassData();
+        const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+        const readingsMap = {};
+        Object.keys(readings).forEach(key => readingsMap[key.toUpperCase()] = readings[key]);
+
+        const notifiedIds = JSON.parse(localStorage.getItem("pabasa_notified_scheduled_ids") || "[]");
+        let notificationsAdded = false;
+
+        studentCodes.forEach(code => {
+            const classData = readingsMap[code];
+            if (!classData) return;
+
+            ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
+                const keys = [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean);
+                keys.forEach(key => {
+                    (classData[key] || []).forEach(m => {
+                        if (!m || m.status !== 'scheduled' || !m.schedule) return;
+                        
+                        const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                        if (!mId || notifiedIds.includes(mId)) return;
+
+                        if (new Date(m.schedule).getTime() <= Date.now()) {
+                            const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+                            notifications.unshift({
+                                id: Date.now() + Math.random(),
+                                classCode: code,
+                                title: "New Material Available",
+                                message: `"${m.title}" is now active and ready for you to read.`,
+                                timestamp: Date.now(),
+                                read: false,
+                                role: 'student'
+                            });
+                            localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
+                            notifiedIds.push(mId);
+                            notificationsAdded = true;
+                        }
+                    });
+                });
+            });
+        });
+
+        if (notificationsAdded) {
+            localStorage.setItem("pabasa_notified_scheduled_ids", JSON.stringify(notifiedIds));
+            window.dispatchEvent(new Event('pabasa:notifications-updated'));
+        }
+    }
+
+    /**
+     * Checks for new students who have joined a teacher's class.
+     * If a new student is detected, it adds a notification for the teacher.
+     */
+    function checkStudentJoinNotifications() {
+        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole");
+        if (userRole !== "teacher") return;
+
+        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        const notifiedStudentIds = JSON.parse(localStorage.getItem("pabasa_notified_student_ids") || "[]");
+        let notificationsAdded = false;
+
+        students.forEach(student => {
+            const sId = student.id ? String(student.id) : null;
+            if (!sId || notifiedStudentIds.includes(sId)) return;
+
+            const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+            notifications.unshift({
+                id: Date.now() + Math.random(),
+                classCode: student.class || "General",
+                title: "New Student Joined",
+                message: `${student.name} has joined your class directory.`,
+                timestamp: Date.now(),
+                read: false,
+                role: 'teacher'
+            });
+            localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
+            notifiedStudentIds.push(sId);
+            notificationsAdded = true;
+        });
+
+        if (notificationsAdded) {
+            localStorage.setItem("pabasa_notified_student_ids", JSON.stringify(notifiedStudentIds));
+            window.dispatchEvent(new Event('pabasa:notifications-updated'));
+        }
+    }
+
     // Sidebar Badge Logic for Reading Materials
     function updateSidebarBadges() {
+        checkScheduledNotifications();
+        checkStudentJoinNotifications();
+
         const isStudent = window.localStorage.getItem("pabasaStudentClassJoined") === "1";
         if (!isStudent) return;
 
-        let studentCodes = [];
-        try {
-            studentCodes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
-            const legacy = localStorage.getItem("pabasaStudentClassCode");
-            if (legacy && !studentCodes.includes(legacy)) studentCodes.push(legacy);
-        } catch(e) {}
+        const studentCodes = getStudentClassData();
 
         const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
         // Normalize readings map for case-insensitive class code lookups
@@ -221,6 +339,7 @@
 
         const unreadPractice = new Set();
         const unreadAssessment = new Set();
+        const unreadGeneralNotifications = new Set(); // New set for general notifications
 
         studentCodes.forEach(code => {
             const upperCode = String(code).toUpperCase();
@@ -233,6 +352,13 @@
                 keys.forEach(key => {
                     (classData[key] || []).forEach(m => {
                         if (!m) return;
+                        // Filter by visibility/status
+                        let isLive = !m.status || m.status === 'published';
+                        if (m.status === 'scheduled' && m.schedule) {
+                            isLive = new Date(m.schedule).getTime() <= Date.now();
+                        }
+                        if (!isLive) return;
+
                         const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
                         if (mId && seenIds.includes(mId)) return;
 
@@ -244,9 +370,19 @@
             });
         });
 
+        // Count unread general notifications for the current user's role
+        const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+        const currentUserRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole") || (isStudent ? 'student' : 'teacher'); 
+        notifications.forEach(n => {
+            if (!n.read && n.role === currentUserRole) {
+                unreadGeneralNotifications.add(n.id);
+            }
+        });
+
         // Using robust path matching without trailing slashes
         updateLinkBadge('/dashboard/practice', unreadPractice.size);
         updateLinkBadge('/dashboard/assessment', unreadAssessment.size);
+        updateLinkBadge('/dashboard/notifications', unreadGeneralNotifications.size); // Update badge for general notifications
     }
 
     function updateLinkBadge(pathPart, count) {
@@ -269,6 +405,9 @@
 
     updateSidebarBadges();
 
+    // Check for materials reaching their schedule every 30 seconds
+    setInterval(updateSidebarBadges, 30000);
+
     window.addEventListener("storage", function (event) {
         const badgeKeys = ['pabasa_class_readings', 'pabasa_seen_material_ids', 'pabasaStudentClassCodes'];
         if (badgeKeys.includes(event.key)) {
@@ -281,6 +420,8 @@
     });
 
     window.addEventListener("pabasa:student-class-updated", updateSidebarBadges);
+    window.addEventListener("pabasa:notifications-updated", updateSidebarBadges); // Listen for general notification updates
+    window.addEventListener("studentAdded", checkStudentJoinNotifications); // Immediate check for teachers
 })();
 
 (function () {
@@ -289,7 +430,7 @@
      * Monitors in-app alerts and mirrors them to the student's email if preferences allow.
      */
     async function syncNotificationToEmail() {
-        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole");
+        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole") || (window.localStorage.getItem("pabasaStudentClassJoined") === "1" ? 'student' : 'teacher');
         if (!userRole) return;
 
         const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
@@ -300,11 +441,11 @@
         if (unsentNotifications.length === 0) return;
 
         // Check user preferences (works for both Teacher and Student)
-        const username = (window.PABASA_USER_NAME || "user").toLowerCase().replace(/ /g, "_");
+        const username = (window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "user").toLowerCase().replace(/ /g, "_");
         const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
         if (settings.emailNotifications === false) return;
 
-        const email = window.PABASA_USER_EMAIL;
+        const email = window.PABASA_USER_EMAIL || window.localStorage.getItem("pabasaUserEmail");
         if (!email) return;
 
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
@@ -348,16 +489,16 @@
      * Compiles activity from the last 7 days and sends a summary email if preferences allow.
      */
     async function syncWeeklyDigest() {
-        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole");
+        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole") || (window.localStorage.getItem("pabasaStudentClassJoined") === "1" ? 'student' : 'teacher');
         if (!userRole) return;
 
-        const username = (window.PABASA_USER_NAME || "user").toLowerCase().replace(/ /g, "_");
+        const username = (window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "user").toLowerCase().replace(/ /g, "_");
         const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
         
         // Only proceed if Weekly Digest is enabled in preferences
         if (settings.weeklyDigest !== true) return;
 
-        const email = window.PABASA_USER_EMAIL;
+        const email = window.PABASA_USER_EMAIL || window.localStorage.getItem("pabasaUserEmail");
         if (!email) return;
 
         const lastSentKey = "pabasa_last_digest_sent_" + username;
@@ -405,4 +546,39 @@
     // Check on initial load
     syncNotificationToEmail();
     syncWeeklyDigest();
+})();
+
+/**
+ * INPUT FORMATTING
+ * Auto-dash for class code input (XXXX-000). 
+ * Uses a ready-state check to ensure it attaches even if the page is already loaded.
+ */
+(function() {
+    function initJoinInput() {
+        const input = document.getElementById("joinClassCodeInput");
+        if (!input || input.dataset.pabasaBound) return;
+        
+        input.dataset.pabasaBound = "true";
+        let lastLen = 0;
+
+        input.addEventListener("input", function (event) {
+            let val = event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            let isDeleting = val.length < lastLen;
+            lastLen = val.length;
+            
+            if (val.length > 4) {
+                event.target.value = val.slice(0, 4) + '-' + val.slice(4, 7);
+            } else if (val.length === 4 && !isDeleting) {
+                event.target.value = val + '-';
+            } else {
+                event.target.value = val;
+            }
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initJoinInput);
+    } else {
+        initJoinInput();
+    }
 })();
