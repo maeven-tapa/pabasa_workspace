@@ -21,6 +21,27 @@ var getStudentClassData = window.getStudentClassData = function() {
     if (window.PABASA_USER_ROLE) localStorage.setItem("pabasaUserRole", window.PABASA_USER_ROLE);
     if (window.PABASA_USER_EMAIL) localStorage.setItem("pabasaUserEmail", window.PABASA_USER_EMAIL);
     if (window.PABASA_USER_NAME) localStorage.setItem("pabasaUserName", window.PABASA_USER_NAME);
+
+    // If this page shows the teacher classCount stat, fetch authoritative classes from server
+    try {
+        const classCountEl = document.getElementById('classCount');
+        const role = window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '';
+        if (classCountEl && role === 'teacher') {
+            fetch('/dashboard/teacher/classes/', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(r => r.json()).then(function(data) {
+                if (data && data.success && Array.isArray(data.classes)) {
+                    classCountEl.textContent = String(data.classes.length);
+                }
+            }).catch(function() {
+                // ignore
+            });
+        }
+    } catch (e) {
+        // ignore
+    }
 })();
 
 (function () {

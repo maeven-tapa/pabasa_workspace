@@ -3,6 +3,57 @@
 
 {% block extra_head %}
 <style>
+    /* Page-specific design tokens (keeps changes scoped) */
+    :root {
+        --dash-primary: #1f6f8b;
+        --dash-primary-soft: rgba(31,111,139,0.08);
+        --dash-primary-deep: #0b4d63;
+        --dash-border: rgba(27,26,23,0.06);
+        --dash-shadow: 0 8px 24px rgba(16,40,64,0.06);
+        --dash-ink-soft: #58676f;
+    }
+
+    /* Polished pill and button styles */
+    .dash-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4));
+        border: 1px solid rgba(31,111,139,0.06);
+        font-weight: 800;
+        color: var(--dash-primary-deep);
+        box-shadow: none;
+    }
+
+    .teacher-quick-links a.primary {
+        box-shadow: 0 6px 20px rgba(15,78,100,0.12);
+    }
+
+    .btn.btn-primary {
+        border-radius: 14px;
+        padding: 0.6rem 1rem;
+        box-shadow: 0 8px 20px rgba(15,78,100,0.08);
+        transition: transform 0.14s ease, box-shadow 0.14s ease;
+    }
+    .btn.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(15,78,100,0.12); }
+
+    /* Improve teacher-stat-card visuals */
+    .teacher-stat-card { background: linear-gradient(180deg,#ffffff,#fbfdff); border-radius: 18px; }
+    .teacher-stat-card small { color: var(--dash-ink-soft); }
+
+    /* Slight elevation for active class workspace */
+    .class-banner { transition: transform 0.16s ease, box-shadow 0.16s ease; }
+    .class-banner:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(16,40,64,0.06); }
+
+    /* Improve scrollbar visibility for lists */
+    .class-list::-webkit-scrollbar, .student-row::-webkit-scrollbar { height: 8px; width: 8px; }
+    .class-list::-webkit-scrollbar-thumb, .student-row::-webkit-scrollbar-thumb { background: rgba(16,40,64,0.06); border-radius: 6px; }
+
+    /* Utility: subtle number animation */
+    .stat-animate { will-change: transform; }
+
     .teacher-dashboard {
         display: grid;
         gap: 1.15rem;
@@ -277,10 +328,6 @@
         transform: translateY(-1px);
     }
 
-    .class-card:hover .class-card-delete {
-        opacity: 1;
-    }
-
     .class-card-head strong {
         white-space: nowrap;
         overflow: hidden;
@@ -305,11 +352,29 @@
     }
 
     .class-card-delete {
-        display: none !important;
+        align-items: center;
+        background: rgba(199, 39, 59, 0.08);
+        border: 1px solid rgba(199, 39, 59, 0.2);
+        border-radius: 8px;
+        color: #c7273b;
+        cursor: pointer;
+        display: none;
+        height: 32px;
+        justify-content: center;
+        padding: 0;
+        transition: all 0.2s ease;
+        width: 32px;
+        z-index: 2;
+    }
+
+    .class-card:hover .class-card-delete {
+        display: flex;
+        opacity: 1;
     }
 
     .class-card-delete:hover {
-        display: none !important;
+        background: rgba(199, 39, 59, 0.16);
+        border-color: rgba(199, 39, 59, 0.4);
     }
 
     .class-code-pill {
@@ -723,16 +788,23 @@
 </div>
 
 <script>
-// Update reading level statistics from localStorage
+// Update reading level statistics from localStorage using percentile formula
 function updateDashboardStatistics() {
-    let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-    const filteredStudents = students.filter(student => student.name !== "Jay Park");
-    if (filteredStudents.length !== students.length) {
-        localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
-        students = filteredStudents;
-    }
-    
-    // Initialize counts by reading level
+    const rawStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+    const studentsAll = rawStudents.filter(student => student && student.name && student.name !== "Jay Park");
+
+    // Determine currently selected class (if any) and filter students accordingly
+    const currentClassEl = document.getElementById('activeClassName');
+    const currentClass = currentClassEl ? (currentClassEl.textContent || '').trim() : '';
+    const students = currentClass ? studentsAll.filter(s => s.class === currentClass) : studentsAll.slice();
+
+    // Build array of numeric accuracy scores for percentile ranking
+    const scores = students.map(s => {
+        const a = parseFloat(s.accuracy);
+        return isNaN(a) ? null : a;
+    }).filter(v => v !== null);
+
+    // If no numeric scores available, fall back to pre-assigned `level` values
     const levelCounts = {
         "Low Emerging Readers": 0,
         "High Emerging Readers": 0,
@@ -740,20 +812,65 @@ function updateDashboardStatistics() {
         "Transitioning Readers": 0,
         "Readers at Grade Level": 0
     };
-    
-    // Count students by reading level
-    students.forEach(student => {
-        if (levelCounts.hasOwnProperty(student.level)) {
-            levelCounts[student.level]++;
-        }
-    });
-    
+
+    if (scores.length === 0) {
+        // Tally existing `level` fields without mutating storage
+        students.forEach(student => {
+            if (student && student.level && levelCounts.hasOwnProperty(student.level)) {
+                levelCounts[student.level]++;
+            }
+        });
+    } else {
+        // Sort students by accuracy descending and assign percentile-based levels
+        const studentsWithScores = students.map(s => ({ s, score: (parseFloat(s.accuracy) || 0) }));
+        studentsWithScores.sort((a, b) => b.score - a.score);
+        const total = studentsWithScores.length || 1;
+        studentsWithScores.forEach((item, idx) => {
+            const pos = ((total - idx) / total) * 100; // match existing formula: top performers get highest pos
+            let level = "Readers at Grade Level";
+            if (pos <= 20) level = "Low Emerging Readers";
+            else if (pos <= 40) level = "High Emerging Readers";
+            else if (pos <= 60) level = "Developing Readers";
+            else if (pos <= 80) level = "Transitioning Readers";
+            levelCounts[level]++;
+        });
+    }
+
     // Update dashboard statistics
-    document.getElementById("dashLowEmergingCount").textContent = levelCounts["Low Emerging Readers"];
-    document.getElementById("dashHighEmergingCount").textContent = levelCounts["High Emerging Readers"];
-    document.getElementById("dashDevelopingCount").textContent = levelCounts["Developing Readers"];
-    document.getElementById("dashTransitioningCount").textContent = levelCounts["Transitioning Readers"];
-    document.getElementById("dashGradeLevelCount").textContent = levelCounts["Readers at Grade Level"];
+    const elLow = document.getElementById("dashLowEmergingCount");
+    const elHigh = document.getElementById("dashHighEmergingCount");
+    const elDev = document.getElementById("dashDevelopingCount");
+    const elTrans = document.getElementById("dashTransitioningCount");
+    const elGrade = document.getElementById("dashGradeLevelCount");
+
+    if (elLow) animateNumber(elLow, Number(levelCounts["Low Emerging Readers"] || 0));
+    if (elHigh) animateNumber(elHigh, Number(levelCounts["High Emerging Readers"] || 0));
+    if (elDev) animateNumber(elDev, Number(levelCounts["Developing Readers"] || 0));
+    if (elTrans) animateNumber(elTrans, Number(levelCounts["Transitioning Readers"] || 0));
+    if (elGrade) animateNumber(elGrade, Number(levelCounts["Readers at Grade Level"] || 0));
+
+    // Ensure Classes count is dynamic: prefer server-filled value, otherwise compute from localStorage teacher classes
+    const classCountEl = document.getElementById('classCount');
+    if (classCountEl) {
+        // If server hasn't populated it yet (value is 0), compute local fallback
+        const currentVal = parseInt(classCountEl.textContent || "0", 10) || 0;
+        if (currentVal <= 0) {
+            // Aggregate any pabasa_teacher_classes* keys
+            let count = 0;
+            try {
+                Object.keys(localStorage).forEach(function (k) {
+                    if (!k || typeof k !== 'string') return;
+                    if (k.startsWith('pabasa_teacher_classes')) {
+                        try {
+                            const parsed = JSON.parse(localStorage.getItem(k) || '[]');
+                            if (Array.isArray(parsed)) count = Math.max(count, parsed.length);
+                        } catch (e) {}
+                    }
+                });
+            } catch (e) {}
+            classCountEl.textContent = String(count || 0);
+        }
+    }
 }
 
 // Load and display student cards
@@ -762,23 +879,50 @@ function loadPersistedStudents() {
     if (!studentRow) return;
     
     let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-    const filteredStudents = students.filter(student => student.name !== "Jay Park");
+    const filteredStudents = students.filter(student => student && student.name && student.name !== "Jay Park");
     if (filteredStudents.length !== students.length) {
-        localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
+        // Do not overwrite the persisted students; use filtered list in-memory only
         students = filteredStudents;
     }
     console.log("Loading students for dashboard:", students);
     
-    // Hide the no students message if there are students
+    // Determine currently selected class (if any) and filter students accordingly
+    const currentClassEl = document.getElementById('activeClassName');
+    const currentClass = currentClassEl ? (currentClassEl.textContent || '').trim() : '';
+
     const noStudentsMsg = document.getElementById("noStudentsMessage");
-    if (students.length === 0) {
+
+    // If a class is selected, only show students enrolled in that class;
+    // otherwise show a preview across all students.
+    let studentsToShow = students;
+    if (currentClass) {
+        studentsToShow = students.filter(s => s.class === currentClass);
+    }
+
+    if (!studentsToShow || studentsToShow.length === 0) {
         if (noStudentsMsg) noStudentsMsg.style.display = "block";
+        // Clear existing student cards
+        studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
         return;
     }
+
     if (noStudentsMsg) noStudentsMsg.style.display = "none";
-    
+
+    // For dashboard preview, show one card per unique student (by email or name)
+    // but DO NOT mutate the stored `pabasa_added_students` so a student can belong to multiple classes
+    const seenKeys = new Set();
+    const dedupedStudents = [];
+    studentsToShow.forEach(s => {
+        const key = (s.email || s.name || "").toString().trim().toLowerCase();
+        if (!key) return;
+        if (!seenKeys.has(key)) {
+            seenKeys.add(key);
+            dedupedStudents.push(s);
+        }
+    });
+
     // Limit to first 4 students for dashboard preview
-    const previewStudents = students.slice(0, 4);
+    const previewStudents = dedupedStudents.slice(0, 4);
     
     // Clear existing student cards (but not the no students message)
     studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
@@ -789,9 +933,10 @@ function loadPersistedStudents() {
             "High Emerging Readers": "level-high",
             "Developing Readers": "level-developing",
             "Transitioning Readers": "level-transitioning",
-            "Readers at Grade Level": "level-grade"
+            "Readers at Grade Level": "level-grade",
+            "Pending": "level-pending"
         }[studentData.level] || "level-high";
-        
+
         const initials = studentData.name
             .split(" ")
             .map(n => n.charAt(0).toUpperCase())
@@ -803,7 +948,6 @@ function loadPersistedStudents() {
         studentCard.innerHTML = `
             <span class="student-avatar">${initials}</span>
             <div class="min-width-0"><strong class="d-block text-truncate">${studentData.name}</strong><div class="small text-secondary text-truncate">${studentData.email || 'No email captured'}</div></div>
-            <span class="level-chip ${levelClass}">${studentData.level}</span>
         `;
         
         studentRow.appendChild(studentCard);
@@ -823,6 +967,38 @@ document.addEventListener("DOMContentLoaded", function() {
             loadPersistedStudents();
         }
     });
+});
+</script>
+
+<script>
+// Small helper: animate numbers from 0 to target for visual polish
+function animateNumber(el, target, duration = 800) {
+    if (!el) return;
+    const start = 0;
+    const range = target - start;
+    const startTime = performance.now();
+    function tick(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress; // easeInOutQuad
+        const value = Math.round(start + range * ease);
+        el.textContent = String(value);
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+
+// Hook into existing updates to animate counts
+document.addEventListener("DOMContentLoaded", function() {
+    try {
+        const classCountEl = document.getElementById('classCount');
+        const materialsEl = document.getElementById('profileMaterialsPostedCount');
+        const studentsEl = document.getElementById('profileTotalStudentsCount');
+        // animate small dashboard numbers if present
+        if (classCountEl) animateNumber(classCountEl, Number(classCountEl.textContent || 0));
+        if (studentsEl) animateNumber(studentsEl, Number(studentsEl.textContent || 0));
+        if (materialsEl) animateNumber(materialsEl, Number(materialsEl.textContent || 0));
+    } catch (e) { console.warn('Animate numbers error', e); }
 });
 </script>
 

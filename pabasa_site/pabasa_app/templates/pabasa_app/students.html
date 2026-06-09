@@ -560,6 +560,7 @@
                         <option>Developing Readers</option>
                         <option>Transitioning Readers</option>
                         <option>Readers at Grade Level</option>
+                        <option>Pending</option>
                     </select>
                 </div>
             </div>
@@ -631,6 +632,7 @@
                                 <option value="Developing Readers">Developing Readers</option>
                                 <option value="Transitioning Readers">Transitioning Readers</option>
                                 <option value="Readers at Grade Level">Readers at Grade Level</option>
+                                <option value="Pending">Pending</option>
                             </select>
                         </div>
                         <div class="row">
@@ -886,11 +888,12 @@ function updateStudentStatistics() {
     });
 
     // APPLY PERCENTILE GRADING FORMULA
-    // Sort by Accuracy Descending (Highest score = Top Percentile)
-    consolidated.sort((a, b) => (parseInt(b.accuracy) || 0) - (parseInt(a.accuracy) || 0));
-    
-    students = consolidated;
-    
+    // Separate students with numeric accuracy from pending (no data)
+    const scored = consolidated.filter(s => !isNaN(parseFloat(s.accuracy)));
+    const pending = consolidated.filter(s => isNaN(parseFloat(s.accuracy)));
+
+    scored.sort((a, b) => (parseFloat(b.accuracy) || 0) - (parseFloat(a.accuracy) || 0));
+
     // Initialize counts by reading level
     const levelCounts = {
         "Low Emerging Readers": 0,
@@ -899,16 +902,17 @@ function updateStudentStatistics() {
         "Transitioning Readers": 0,
         "Readers at Grade Level": 0
     };
-    
-    const totalStudents = students.length;
+
+    const totalStudents = consolidated.length;
     let totalWPM = 0;
     let totalAccuracy = 0;
-    
-    // Assign levels based on percentile buckets
-    students.forEach((student, index) => {
-        const pos = ((totalStudents - index) / totalStudents) * 100;
+
+    // Assign levels based on percentile buckets among scored students
+    const totalScored = scored.length;
+    scored.forEach((student, index) => {
+        const pos = ((totalScored - index) / Math.max(1, totalScored)) * 100;
         let calcLevel = "";
-        
+
         if (pos <= 20) calcLevel = "Low Emerging Readers";
         else if (pos <= 40) calcLevel = "High Emerging Readers";
         else if (pos <= 60) calcLevel = "Developing Readers";
@@ -923,6 +927,12 @@ function updateStudentStatistics() {
         totalWPM += parseInt(student.wpm) || 0;
         totalAccuracy += parseInt(student.accuracy) || 0;
     });
+
+    // Mark pending students explicitly
+    pending.forEach(s => { s.level = "Pending"; });
+
+    // Recombine list for any downstream use
+    students = scored.concat(pending);
     
     // Calculate statistics
     const needsSupportCount = levelCounts["Low Emerging Readers"] + levelCounts["High Emerging Readers"];

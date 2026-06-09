@@ -582,6 +582,10 @@
             return;
         }
 
+        // Ensure toast helpers exist to avoid ReferenceErrors in pages that don't include them
+        window.showSuccessToast = window.showSuccessToast || function(msg){ if (typeof showToast === 'function') return showToast(msg, 'success'); try{ alert(msg); }catch(e){} };
+        window.showErrorToast = window.showErrorToast || function(msg){ if (typeof showToast === 'function') return showToast(msg, 'error'); try{ alert(msg); }catch(e){} };
+
         const getSavedCodes = () => {
             try {
                 const parsed = JSON.parse(window.localStorage.getItem(classCodesKey) || "[]");
@@ -663,10 +667,17 @@
                 .map((code) => {
                     let classData = teacherClasses.find((item) => String(item.code || "").toUpperCase() === code);
                     if (!classData) {
-                        // If not found in teacher's own classes (e.g., student view), create a placeholder
+                        // Not found among teacher classes — could have been removed by the teacher
                         const upperCode = String(code).toUpperCase();
-                        if (!readingsMap[upperCode]) return null; // If no readings for this code, it's not a valid class
-                        classData = { code: upperCode, name: `Class ${upperCode}`, subject: "Reading", students: "N/A", header: upperCode.substring(0,3) };
+                        if (!readingsMap[upperCode]) return null; // If no readings for this code, treat as invalid
+                        classData = {
+                            code: upperCode,
+                            name: `Removed class ${upperCode}`,
+                            subject: "Reading",
+                            students: "N/A",
+                            header: upperCode.substring(0,3),
+                            removedByTeacher: true
+                        };
                     }
 
                     classData.students = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park").length; // This line now has allStudents defined
@@ -757,6 +768,17 @@
                             <li><i class="bi bi-info-circle text-primary"></i> ${escapeHtml(classData.description || "No class description yet.")}</li>
                             <li><i class="bi bi-clock-history text-warning"></i> ${classData.totalPractice > 0 ? `${classData.totalPractice} assigned practice set${classData.totalPractice !== 1 ? 's' : ''}.` : "No assigned practice yet."}</li>
                         </ul>
+                        ${classData.removedByTeacher ? `
+                        <div class="mt-3 alert alert-warning d-flex justify-content-between align-items-center" role="alert">
+                            <div>
+                                <strong>Class removed by teacher</strong>
+                                <div class="small">This class was removed by its teacher. You can remove it from your dashboard.</div>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-danger remove-deleted-class-btn" data-code="${escapeHtml(classData.code)}">Remove</button>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                     <div class="class-card-actions">
                         <button class="view-class-btn" type="button" data-toggle-class-detail>
@@ -768,6 +790,19 @@
                     </div>
                 </article>
             `).join("");
+
+            // Attach handlers for Remove buttons on classes removed by their teacher
+            classList.querySelectorAll('.remove-deleted-class-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const code = btn.getAttribute('data-code');
+                    if (!code) return;
+                    if (!confirm('Remove this deleted class from your dashboard?')) return;
+                    const saved = getSavedCodes().map(c => String(c).toUpperCase());
+                    const filtered = saved.filter(c => c !== String(code).toUpperCase());
+                    saveCodes(filtered);
+                    renderClassCards(filtered);
+                });
+            });
         };
 
         const setJoinedState = (codes = []) => {
@@ -938,15 +973,81 @@
             bootstrap.Modal.getOrCreateInstance(unenrollModalElement).show();
         });
 
-        confirmUnenrollButton.addEventListener("click", () => {
-            if (!pendingUnenrollCode) {
-                return;
-            }
+        confirmUnenrollButton.addEventListener("click", async () => {
+            if (!pendingUnenrollCode) return;
 
-            const remainingCodes = getSavedCodes().filter((savedCode) => savedCode !== pendingUnenrollCode);
-            setJoinedState(remainingCodes);
-            pendingUnenrollCode = "";
-            bootstrap.Modal.getOrCreateInstance(unenrollModalElement).hide();
+            // Find teacher class name for local student list cleanup
+            const teacherClass = findTeacherClass(pendingUnenrollCode) || { name: null };
+
+            // Get CSRF token from cookies
+            const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
+
+            try {
+                const resp = await fetch('/dashboard/student/unenroll/', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ class_code: pendingUnenrollCode })
+                });
+
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    // If enrollment not found on server, still remove locally and create local notification so teacher sees it.
+                    const isEnrollNotFound = data && data.error && String(data.error).toLowerCase().includes('enrollment not found');
+                    if (!isEnrollNotFound) {
+                        console.error('Unenroll failed', data);
+                        showErrorToast && showErrorToast('Unable to unenroll. Please try again.');
+                        return;
+                    }
+
+                    // fallthrough: treat as soft-success when server has no record
+                }
+
+                // Remove from local saved codes and update UI
+                const remainingCodes = getSavedCodes().filter((savedCode) => savedCode !== pendingUnenrollCode);
+                setJoinedState(remainingCodes);
+
+                // Cleanup simulated teacher student list in localStorage if present
+                try {
+                    const allStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                    const studentId = localStorage.getItem('pabasaCurrentUserId') || Date.now();
+                    const studentName = "{{ user_full_name|escapejs }}" || null;
+                    const filtered = allStudents.filter(s => !(studentName && s.name === studentName && s.class === teacherClass.name));
+                    localStorage.setItem('pabasa_added_students', JSON.stringify(filtered));
+
+                    // Create a localStorage teacher notification fallback so the teacher tab sees it immediately
+                    try {
+                        let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+                        notifications.unshift({
+                            id: Date.now() + Math.random(),
+                            classCode: pendingUnenrollCode,
+                            title: 'Student Unenrolled',
+                            message: `Hi, Teacher! ${studentName || 'A student'} has unenrolled from your class ${teacherClass.name || pendingUnenrollCode}.`,
+                            timestamp: Date.now(),
+                            read: false,
+                            role: 'teacher',
+                            recipientEmail: (findTeacherClass(pendingUnenrollCode) || {}).teacher_email || null
+                        });
+                        localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0,100)));
+                        window.dispatchEvent(new Event('pabasa:notifications-updated'));
+                    } catch (e) {
+                        console.error('Failed to create local notification fallback', e);
+                    }
+                } catch (e) {
+                    console.error('Failed to cleanup local students', e);
+                }
+
+                showSuccessToast && showSuccessToast('You have been unenrolled.');
+            } catch (e) {
+                console.error('Network error when unenrolling', e);
+                showErrorToast && showErrorToast('Network error. Please try again.');
+            } finally {
+                pendingUnenrollCode = "";
+                bootstrap.Modal.getOrCreateInstance(unenrollModalElement).hide();
+            }
         });
 
         window.addEventListener("storage", (event) => {

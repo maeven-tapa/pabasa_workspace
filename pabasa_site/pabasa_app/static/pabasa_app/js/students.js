@@ -95,17 +95,28 @@ function initStudentsPage() {
 
         // Apply Percentile Ranking before rendering directory
         // Sort by Accuracy Descending (Highest score = Top)
-        consolidated.sort((a, b) => (parseInt(b.accuracy) || 0) - (parseInt(a.accuracy) || 0));
-        const totalC = consolidated.length;
-        
-        consolidated.forEach((student, index) => {
-            const pos = ((totalC - index) / totalC) * 100;
-            if (pos <= 20) student.level = "Low Emerging Readers";
-            else if (pos <= 40) student.level = "High Emerging Readers";
-            else if (pos <= 60) student.level = "Developing Readers";
-            else if (pos <= 80) student.level = "Transitioning Readers";
-            else student.level = "Readers at Grade Level";
+        // Separate students with numeric accuracy from those without (pending)
+        const withScore = consolidated.filter(s => !isNaN(parseFloat(s.accuracy)));
+        const pending = consolidated.filter(s => isNaN(parseFloat(s.accuracy)));
+
+        withScore.sort((a, b) => (parseFloat(b.accuracy) || 0) - (parseFloat(a.accuracy) || 0));
+        const totalC = withScore.length;
+
+        // Assign percentile-based levels to students with scores
+        withScore.forEach((item, idx) => {
+            const pos = ((totalC - idx) / Math.max(1, totalC)) * 100;
+            if (pos <= 20) item.level = "Low Emerging Readers";
+            else if (pos <= 40) item.level = "High Emerging Readers";
+            else if (pos <= 60) item.level = "Developing Readers";
+            else if (pos <= 80) item.level = "Transitioning Readers";
+            else item.level = "Readers at Grade Level";
         });
+
+        // Mark pending students clearly
+        pending.forEach(s => s.level = "Pending");
+
+        // Reconstruct consolidated preserving scored first then pending
+        consolidated = withScore.concat(pending);
 
         const emptyState = studentDirectory.querySelector(".student-empty-state");
 
@@ -250,7 +261,8 @@ function initStudentsPage() {
             "High Emerging Readers": "level-high",
             "Developing Readers": "level-developing",
             "Transitioning Readers": "level-transitioning",
-            "Readers at Grade Level": "level-grade"
+            "Readers at Grade Level": "level-grade",
+            "Pending": "level-pending"
         };
         return levelMap[level] || "level-high";
     }

@@ -1,4 +1,28 @@
 function initProfilePage() {
+    // Ensure a minimal pabasaStore API exists to avoid runtime errors
+    if (!window.pabasaStore || typeof window.pabasaStore.get !== 'function') {
+        window.pabasaStore = {
+            get: function (key, fallback) {
+                try {
+                    const v = localStorage.getItem(key);
+                    if (v === null || v === undefined) return fallback;
+                    return JSON.parse(v);
+                } catch (e) {
+                    try { return localStorage.getItem(key) || fallback; } catch (e2) { return fallback; }
+                }
+            },
+            set: function (key, value) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                } catch (e) {
+                    try { localStorage.setItem(key, String(value)); } catch (e2) { /* ignore */ }
+                }
+            },
+            remove: function (key) {
+                try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+            }
+        };
+    }
     const form = document.getElementById("accountDetailsForm");
     const editBtn = document.getElementById("editAccountDetailsBtn");
     const actions = document.getElementById("accountDetailsActions");
@@ -6,7 +30,7 @@ function initProfilePage() {
     const uploadPhotoBtn = document.getElementById("uploadPhotoBtn");
     const removePhotoBtn = document.getElementById("removePhotoBtn");
     const profileUsername = JSON.parse(document.getElementById("profileUsername")?.textContent || "\"user\"");
-    const profileFullName = JSON.parse(document.getElementById("profileFullName")?.textContent || "\"\"");
+    const profileFullName = JSON.parse(document.getElementById("profileFullName")?.textContent || '""');
     const profileEmail = JSON.parse(document.getElementById("profileEmail")?.textContent || "\"\"");
     const profilePabasaId = JSON.parse(document.getElementById("profilePabasaId")?.textContent || "\"\"");
     const profileRoleDisplay = JSON.parse(document.getElementById("profileRoleDisplay")?.textContent || "\"\"");
@@ -28,10 +52,10 @@ function initProfilePage() {
                 themeIcon.className = "bi bi-sun";
             }
         };
-        updateThemeUI(localStorage.getItem(themeKey) || "light");
+        updateThemeUI(window.pabasaStore.get(themeKey, "light"));
         themeToggle.addEventListener("click", () => {
             const newTheme = document.body.classList.contains("dark-theme") ? "light" : "dark";
-            localStorage.setItem(themeKey, newTheme);
+            window.pabasaStore.set(themeKey, newTheme);
             updateThemeUI(newTheme);
         });
     }
@@ -123,44 +147,17 @@ function initProfilePage() {
         });
     }
 
-    function loadProfileSettings() {
-        try {
-            return JSON.parse(localStorage.getItem(profileStorageKey) || "{}");
-        } catch (error) {
-            return {};
-        }
-    }
-
-    function saveProfileSettings(settings) {
-        localStorage.setItem(profileStorageKey, JSON.stringify(settings));
-    }
-
-    function updatePreferenceState(toggle, enabled) {
-        if (!toggle) return;
-        const row = toggle.closest(".profile-info-row");
-        const value = row ? row.querySelector(".profile-info-value") : null;
-        toggle.checked = enabled;
-        if (value) {
-            value.textContent = enabled ? "On" : "Off";
-        }
-    }
-
     function getStoredValue(key, fallback) {
-        try {
-            const stored = localStorage.getItem(key);
-            return stored ? JSON.parse(stored) : fallback;
-        } catch (error) {
-            return fallback;
-        }
+        return window.pabasaStore.get(key, fallback);
     }
 
     function getStoredArray(key) {
-        const value = getStoredValue(key, []);
+        const value = window.pabasaStore.get(key, []);
         return Array.isArray(value) ? value : [];
     }
 
     function countStoredCollection(key) {
-        const value = getStoredValue(key, []);
+        const value = window.pabasaStore.get(key, []);
         if (Array.isArray(value)) {
             return value.length;
         }
@@ -178,7 +175,17 @@ function initProfilePage() {
             return 0;
         }
 
-        return Object.values(readingsByClass).reduce(function (total, readings) {
+        // Only count readings for classes that still appear in stored teacher classes
+        const activeClassCodes = getStoredArray("pabasa_teacher_classes").map(function(c){
+            try { return (c.code || c.class_code || "").toString().toUpperCase(); } catch (e) { return ""; }
+        }).filter(Boolean);
+
+        return Object.keys(readingsByClass).reduce(function (total, classCodeKey) {
+            if (activeClassCodes.length > 0 && !activeClassCodes.includes(classCodeKey.toUpperCase())) {
+                // skip readings for classes that are no longer active
+                return total;
+            }
+            const readings = readingsByClass[classCodeKey];
             if (!readings || typeof readings !== "object") {
                 return total;
             }
@@ -192,9 +199,28 @@ function initProfilePage() {
 
     function getTeacherOverviewStats() {
         const sampleClassCodes = ["RRG-9154", "AFC-7302", "ESL-5601"];
-        const classes = getStoredArray("pabasa_teacher_classes").filter(function (classData) {
-            return !sampleClassCodes.includes(classData.code);
-        });
+        // Aggregate teacher classes from any pabasa_teacher_classes_{email} key for robustness
+        const classes = (function() {
+            try {
+                const out = [];
+                Object.keys(localStorage).forEach(function(key) {
+                    if (!key || typeof key !== 'string') return;
+                    if (key.startsWith('pabasa_teacher_classes')) {
+                        try {
+                            const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+                            if (Array.isArray(parsed)) {
+                                parsed.forEach(function(c) { if (c && c.code && !sampleClassCodes.includes(c.code)) out.push(c); });
+                            }
+                        } catch (e) {
+                            // ignore parse errors
+                        }
+                    }
+                });
+                return out;
+            } catch (e) {
+                return [];
+            }
+        })();
         const students = getStoredArray("pabasa_added_students").filter(function (student) {
             return student.name !== "Jay Park";
         });
@@ -205,10 +231,19 @@ function initProfilePage() {
         const overviewStats = getStoredValue("pabasa_teacher_overview_stats", {});
         const storedMaterialsPosted = Number.parseInt(overviewStats.materialsPosted, 10) || 0;
 
+        // Ensure flattened materials are also filtered to active classes
+        const activeClassCodes = classes.map(function(c) { return (c.code || c.class_code || "").toString().toUpperCase(); }).filter(Boolean);
+        const flattenedMaterials = getStoredArray("pabasa_materials").filter(function(m) {
+            if (!m) return false;
+            if (!m.classCode && !m.class) return true; // keep global materials
+            const mCode = (m.classCode || m.class || "").toString().toUpperCase();
+            return activeClassCodes.length === 0 || activeClassCodes.includes(mCode);
+        });
+
         return {
             activeClasses: classes.length,
             totalStudents: Math.max(storedStudentCount, classStudentCount),
-            materialsPosted: Math.max(countClassReadings(), countStoredCollection("pabasa_materials"), storedMaterialsPosted),
+            materialsPosted: Math.max(countClassReadings(), countStoredCollection("pabasa_materials") /* fallback */, flattenedMaterials.length, storedMaterialsPosted),
             reportsGenerated: countStoredCollection("pabasa_parent_notice_history")
         };
     }
@@ -224,13 +259,75 @@ function initProfilePage() {
         if (totalStudentsCount) totalStudentsCount.textContent = String(stats.totalStudents);
         if (materialsPostedCount) materialsPostedCount.textContent = String(stats.materialsPosted);
         if (reportsGeneratedCount) reportsGeneratedCount.textContent = String(stats.reportsGenerated);
+
+        // If the current user is a teacher, request authoritative overview from the server
+        try {
+            const role = window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '';
+            if (role === 'teacher') {
+                fetch('/dashboard/teacher/overview/', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                }).then(function (r) {
+                    if (!r.ok) {
+                        console.warn('Teacher overview request failed', r.status, r.statusText);
+                        return null;
+                    }
+                    const ct = r.headers.get('content-type') || '';
+                    if (!ct.includes('application/json')) {
+                        // Possibly redirected to login or an HTML error page
+                        r.text().then(function (body) {
+                            console.warn('Teacher overview returned non-JSON response', ct, body.substring(0, 200));
+                        });
+                        return null;
+                    }
+                    return r.json();
+                }).then(function (data) {
+                    if (!data) return;
+                    if (!data.success) {
+                        console.warn('Teacher overview returned error', data.error || data);
+                        return;
+                    }
+                    if (activeClassesCount) activeClassesCount.textContent = String(data.classes_count || stats.activeClasses);
+                    if (totalStudentsCount) totalStudentsCount.textContent = String(data.total_students || stats.totalStudents);
+                    if (materialsPostedCount) materialsPostedCount.textContent = String(data.materials_posted || stats.materialsPosted);
+                    if (reportsGeneratedCount) reportsGeneratedCount.textContent = String(data.reports_generated || stats.reportsGenerated);
+                }).catch(function (err) {
+                    console.warn('Network error fetching teacher overview', err);
+                });
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        // Update Activity Status (Active, Inactive) for Teachers
+        const teacherStatusDisplay = document.getElementById("profileTeacherStatus"); // Assuming this ID exists in HTML for teacher status
+        if (teacherStatusDisplay) {
+            const notifications = getStoredValue("pabasa_notifications", []);
+            const lastActivity = notifications
+                .filter(n => n.role === 'teacher') // Filter for teacher notifications
+                .reduce((max, n) => Math.max(max, n.timestamp), 0); // Get the most recent timestamp
+
+            let statusText = "Inactive";
+            let statusClass = "bg-danger"; // Default for Inactive
+
+            if (lastActivity > 0) {
+                const diffDays = (Date.now() - lastActivity) / (1000 * 60 * 60 * 24);
+                if (diffDays <= 7) {
+                    statusText = "Active";
+                    statusClass = "bg-success";
+                }
+            }
+            teacherStatusDisplay.textContent = statusText;
+            teacherStatusDisplay.className = "badge rounded-pill " + statusClass;
+        }
     }
 
     function updateStudentProgress() {
         try {
             // Get class codes with case-insensitive deduplication
             const codesArray = getStoredArray("pabasaStudentClassCodes").map(c => String(c).toUpperCase());
-            const legacyCode = localStorage.getItem("pabasaStudentClassCode");
+            const legacyCode = window.pabasaStore.get("pabasaStudentClassCode");
             if (legacyCode && !codesArray.includes(legacyCode.toUpperCase())) {
                 codesArray.push(legacyCode.toUpperCase());
             }
@@ -245,15 +342,13 @@ function initProfilePage() {
 
             let totalAvailable = 0;
             let completedCount = 0;
-            let totalAssessments = 0;
-            let completedAssessmentsCount = 0;
 
             studentCodes.forEach(code => {
                 const classData = readingsMap[code];
                 if (!classData) return;
 
                 // Scan all possible material categories
-                ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
+                ['word', 'sentence', 'paragraph', 'story', 'all'].forEach(type => {
                     // Support both singular and plural keys
                     [type, type + 's'].forEach(key => {
                         const list = classData[key];
@@ -270,14 +365,8 @@ function initProfilePage() {
 
                                 totalAvailable++;
                                 const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
-                                
-                                const mUsage = (m.type || "").toLowerCase();
-                                const isAssessment = mUsage === 'assessment' || mUsage === 'both';
-                                if (isAssessment) totalAssessments++;
-
                                 if (mId && seenIds.includes(mId)) {
                                     completedCount++;
-                                    if (isAssessment) completedAssessmentsCount++;
                                 }
                             });
                         }
@@ -291,31 +380,15 @@ function initProfilePage() {
             const classesEl = document.getElementById("profileStudentClassesCount");
             const completedEl = document.getElementById("profileStudentCompletedCount");
             const percentEl = document.getElementById("profileStudentProgressPercent");
-            const statusSummaryEl = document.getElementById("classStatusSummary");
 
             // Correctly show the count of joined classes
             if (classesEl) classesEl.textContent = studentCodes.length;
             if (completedEl) completedEl.textContent = completedCount;
             if (percentEl) percentEl.textContent = percentage + "%";
-            
-            // Update the new Class Status summary card
-            if (statusSummaryEl) {
-                let summary = `You have joined ${studentCodes.length} class${studentCodes.length === 1 ? '' : 'es'}. There are ${totalAssessments} assigned assessments.`;
-                
-                if (totalAssessments === 0) {
-                    summary += " No assessments assigned yet.";
-                } else if (completedAssessmentsCount === totalAssessments) {
-                    summary += " All assigned assessments are completed.";
-                } else {
-                    const remaining = totalAssessments - completedAssessmentsCount;
-                    summary += ` You have ${remaining} assessment${remaining === 1 ? '' : 's'} remaining.`;
-                }
-                statusSummaryEl.textContent = summary;
-            }
 
             // Update level and other persistent stats
-            const totalStars = parseInt(localStorage.getItem("pabasa_total_stars") || "0", 10);
-            const assessmentsCompleted = parseInt(localStorage.getItem("pabasa_assessments_completed") || "0", 10);
+            const totalStars = parseInt(window.pabasaStore.get("pabasa_total_stars", "0"), 10);
+            const assessmentsCompleted = parseInt(window.pabasaStore.get("pabasa_assessments_completed", "0"), 10);
             
             const progressBar = document.getElementById("profileStudentProgressBar");
             if (progressBar) {
@@ -334,6 +407,34 @@ function initProfilePage() {
                 
                 levelDisplay.textContent = level;
             }
+
+        // Update Activity Status (Active, Pending, Inactive)
+        const statusDisplay = document.getElementById("profileStudentStatus");
+        if (statusDisplay) {
+            const notifications = getStoredValue("pabasa_notifications", []);
+            const lastActivity = notifications
+                .filter(n => n.title === "Activity Update")
+                .reduce((max, n) => Math.max(max, n.timestamp), 0);
+
+            let statusText = "Pending";
+            let statusClass = "bg-warning text-dark"; // Default for Pending
+
+            if (completedCount === 0 && lastActivity === 0) {
+                statusText = "Pending";
+                statusClass = "bg-info text-dark";
+            } else {
+                const diffDays = (Date.now() - lastActivity) / (1000 * 60 * 60 * 24);
+                if (lastActivity > 0 && diffDays <= 7) {
+                    statusText = "Active";
+                    statusClass = "bg-success";
+                } else {
+                    statusText = "Inactive";
+                    statusClass = "bg-danger";
+                }
+            }
+            statusDisplay.textContent = statusText;
+            statusDisplay.className = "badge rounded-pill " + statusClass;
+        }
 
             console.log("PABASA Progress Sync:", { lessons: totalAvailable, completed: completedCount, progress: percentage + "%" });
         } catch (e) {
@@ -403,6 +504,37 @@ function initProfilePage() {
                 viewBtn.setAttribute("href", `/dashboard/courses/student-view/?code=${code}`);
             }
         });
+    }
+
+    function loadProfileSettings() {
+        try {
+            const stored = window.pabasaStore.get(profileStorageKey, null);
+            if (stored && typeof stored === 'object') return stored;
+            if (stored !== null && stored !== undefined) return stored;
+        } catch (e) {
+            // ignore
+        }
+        try {
+            const raw = localStorage.getItem(profileStorageKey) || "{}";
+            return JSON.parse(raw || "{}") || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveProfileSettings(settings) {
+        try {
+            window.pabasaStore.set(profileStorageKey, settings);
+        } catch (e) {
+            try { localStorage.setItem(profileStorageKey, JSON.stringify(settings)); } catch (e2) { /* ignore */ }
+        }
+        try { window.dispatchEvent(new CustomEvent('pabasa:preferences-updated', { detail: settings })); } catch (e) {}
+    }
+
+    function updatePreferenceState(toggle, isEnabled) {
+        if (!toggle) return;
+        try { toggle.checked = !!isEnabled; } catch (e) {}
+        try { toggle.setAttribute('aria-pressed', !!isEnabled); } catch (e) {}
     }
 
     const savedSettings = loadProfileSettings();
@@ -507,8 +639,11 @@ function initProfilePage() {
                 saveProfileSettings(settings);
 
                 if (passwordLastChanged) passwordLastChanged.textContent = timestamp;
-                changePasswordForm.reset();
-                bootstrap.Modal.getInstance(document.getElementById("changePasswordModal"))?.hide();
+                const modalEl = document.getElementById("changePasswordModal");
+                if (changePasswordForm) changePasswordForm.reset();
+                if (modalEl) {
+                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                }
                 alert("Password changed successfully.");
             }).catch(function (error) {
                 alert("Error changing password: " + error.message);
@@ -593,28 +728,61 @@ function initProfilePage() {
     }
 
     window.addEventListener("storage", function (event) {
-        if (
-            event.key === "pabasa_teacher_classes" ||
-            event.key === "pabasa_added_students" ||
-            event.key === "pabasa_class_readings" ||
-            event.key === "pabasa_materials" ||
-            event.key === "pabasa_teacher_overview_stats" || // This key is for overall stats, not individual reports
-            event.key === "pabasa_parent_notice_history" // Listen for changes in report history
-        ) {
-            updateClassOverview();
-        }
-        if (
-            event.key === "pabasa_seen_material_ids" ||
-            event.key === "pabasa_class_readings" ||
-            event.key === "pabasaStudentClassCodes" ||
-            event.key === "pabasaStudentClassCode" ||
-            event.key === "pabasa_total_stars" ||
-            event.key === "pabasa_assessments_completed"
-        ) {
-            updateStudentProgress();
-            updateDashboardClassStats();
+        try {
+            const k = event.key || "";
+            // Trigger overview updates when any teacher classes key or related collections change
+            if (
+                k === "pabasa_teacher_classes" ||
+                k.startsWith && typeof k.startsWith === 'function' && k.startsWith('pabasa_teacher_classes') ||
+                k === "pabasa_added_students" ||
+                k === "pabasa_class_readings" ||
+                k === "pabasa_materials" ||
+                k === "pabasa_teacher_overview_stats" || // This key is for overall stats, not individual reports
+                k === "pabasa_parent_notice_history" || // Listen for changes in report history
+                k === "pabasa_notifications"
+            ) {
+                updateClassOverview();
+            }
+
+            // Student progress and dashboard stats react to these keys
+            if (
+                k === "pabasa_seen_material_ids" ||
+                k === "pabasa_class_readings" ||
+                k === "pabasaStudentClassCodes" ||
+                k === "pabasaStudentClassCode" ||
+                k === "pabasa_total_stars" ||
+                k === "pabasa_assessments_completed" ||
+                k === "pabasa_notifications"
+            ) {
+                updateStudentProgress();
+                updateDashboardClassStats();
+            }
+        } catch (e) {
+            console.warn('Error handling storage event in profile.js', e);
         }
     });
+
+    // React to in-app custom events that signal data changes
+    window.addEventListener("pabasa:notifications-updated", function () {
+        updateClassOverview();
+        updateStudentProgress();
+        updateDashboardClassStats();
+    });
+
+    window.addEventListener("pabasa:preferences-updated", function () {
+        updateClassOverview();
+        updateStudentProgress();
+    });
+
+    window.addEventListener("pabasa:teacher-classes-updated", function () {
+        updateClassOverview();
+    });
+
+    // Periodic refresh to keep status chips current (handles cases where other tabs or server updates don't emit events)
+    setInterval(function () {
+        updateClassOverview();
+        updateStudentProgress();
+    }, 60 * 1000); // every 60s
     
     window.addEventListener("pabasa:student-class-updated", function() {
         updateStudentProgress();
@@ -783,21 +951,19 @@ function initProfilePage() {
                 if (speakerDeviceSelect) {
                     const savedSpeaker = localStorage.getItem("pabasa_speaker_device_id");
                     speakerDeviceSelect.innerHTML = audioOutputs.map(device => 
-                        `<option value="${device.deviceId}" ${device.deviceId === savedSpeaker ? 'selected' : ''}>${device.label || 'Speaker ' + device.deviceId.slice(0, 5)}</option>`
+                        `<option value="${device.deviceId}" ${device.deviceId === savedSpeaker ? 'selected' : ''}>${device.label || 'Speaker ' + device.deviceId.slice(0, 5)}</option>` // This is still direct localStorage
                     ).join('') || '<option value="">No speaker detected</option>';
                 }
             } catch (err) {
                 console.error("Error listing devices:", err);
             }
         }
-
         function updateMicStatus(state) {
             if (!micStatusBadge) return;
             micStatusBadge.textContent = state.charAt(0).toUpperCase() + state.slice(1);
             micStatusBadge.className = 'badge ' + (state === 'granted' ? 'bg-success' : state === 'denied' ? 'bg-danger' : 'bg-secondary');
             if (state === 'granted') updateDeviceList();
         }
-
         async function checkPermission() {
             try {
                 const result = await navigator.permissions.query({ name: 'microphone' });
@@ -807,7 +973,6 @@ function initProfilePage() {
                 console.warn("Permissions API check failed for microphone");
             }
         }
-
         function draw() {
             if (!isTesting) return;
             const array = new Uint8Array(analyser.frequencyBinCount);
@@ -822,7 +987,6 @@ function initProfilePage() {
             }
             animationId = requestAnimationFrame(draw);
         }
-
         async function startMicTest() {
             if (isTesting) return stopMicTest();
 
@@ -852,8 +1016,7 @@ function initProfilePage() {
                 alert("Could not access microphone: " + err.message);
                 updateMicStatus('denied');
             }
-        }
-
+            }
         function stopMicTest() {
             isTesting = false;
             cancelAnimationFrame(animationId);
@@ -865,7 +1028,6 @@ function initProfilePage() {
             if (window._micStream) window._micStream.getTracks().forEach(t => t.stop());
             if (audioContext) audioContext.close();
         }
-
         btnRequestMic?.addEventListener("click", () => {
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(stream => {
@@ -877,23 +1039,22 @@ function initProfilePage() {
                     updateMicStatus('denied');
                 });
         });
-
-        micDeviceSelect?.addEventListener("change", () => {
-            localStorage.setItem("pabasa_mic_device_id", micDeviceSelect.value);
+        speakerDeviceSelect?.addEventListener("change", () => {
+            window.pabasaStore.set("pabasa_speaker_device_id", speakerDeviceSelect.value);
         });
 
-        speakerDeviceSelect?.addEventListener("change", () => {
-            localStorage.setItem("pabasa_speaker_device_id", speakerDeviceSelect.value);
+        micDeviceSelect?.addEventListener("change", () => {
+            window.pabasaStore.set("pabasa_mic_device_id", micDeviceSelect.value);
         });
 
         speakerVolumeInput?.addEventListener("input", function() {
             if (volumeValueDisplay) volumeValueDisplay.textContent = this.value + "%";
-            localStorage.setItem("pabasa_speaker_volume", this.value);
+            window.pabasaStore.set("pabasa_speaker_volume", this.value);
         });
 
         // Load initial volume
         (function loadInitialSpeakerSettings() {
-            const savedVolume = localStorage.getItem("pabasa_speaker_volume");
+            const savedVolume = window.pabasaStore.get("pabasa_speaker_volume");
             if (savedVolume && speakerVolumeInput) {
                 speakerVolumeInput.value = savedVolume;
                 if (volumeValueDisplay) volumeValueDisplay.textContent = savedVolume + "%";

@@ -126,6 +126,27 @@
         margin-top: 0.75rem;
     }
 
+    .profile-status-badge.status-active {
+        background: linear-gradient(90deg, rgba(40,167,69,0.12), rgba(40,167,69,0.06));
+        border-color: rgba(40,167,69,0.25);
+        color: #155724;
+    }
+    .profile-status-badge.status-idle {
+        background: linear-gradient(90deg, rgba(255,193,7,0.09), rgba(255,193,7,0.04));
+        border-color: rgba(255,193,7,0.22);
+        color: #856404;
+    }
+    .profile-status-badge.status-inactive {
+        background: linear-gradient(90deg, rgba(108,117,125,0.06), rgba(108,117,125,0.03));
+        border-color: rgba(108,117,125,0.12);
+        color: #343a40;
+    }
+    .profile-status-badge.status-pending {
+        background: linear-gradient(90deg, rgba(13,110,253,0.08), rgba(13,110,253,0.04));
+        border-color: rgba(13,110,253,0.16);
+        color: #0b5ed7;
+    }
+
     .profile-edit-grid {
         display: grid;
         gap: 1.2rem;
@@ -464,7 +485,7 @@
                                     <span class="value">{{ pabasa_id }}</span>
                                 </div>
                             </div>
-                            <div class="profile-status-badge">{% if nav_role == 'teacher' %}Active Teacher{% else %}Active Student{% endif %}</div>
+                            <div class="profile-status-badge {{ account_status_class|default:'status-active' }}" title="{{ account_status_tooltip|default:'' }}">{{ account_status_label|default:"Active" }} {% if nav_role == 'teacher' %}Teacher{% else %}Student{% endif %}</div>
                         </div>
                     </div>
 

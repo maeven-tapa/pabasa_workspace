@@ -56,6 +56,46 @@
                 // Split by line to allow multiple items (words, sentences, or paragraphs)
                 return material.content.split(/\n/).map(i => i.trim()).filter(item => item.length > 0);
             }
+
+            // Also mark linked practice materials (type 'practice' or 'both') that share the same id or title
+            try {
+                const readings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+                const normalizedId = materialId ? String(materialId).trim() : null;
+                const normalizedTitle = testTitle || null;
+                const seenIds = JSON.parse(localStorage.getItem('pabasa_seen_material_ids') || '[]').map(id => String(id).trim());
+                const seenSet = new Set(seenIds);
+
+                Object.keys(readings).forEach(function (classCode) {
+                    const classMaterials = readings[classCode] || {};
+                    ['word', 'sentence', 'paragraph', 'story'].forEach(function (type) {
+                        [type, type + 's'].forEach(function (key) {
+                            const list = classMaterials[key] || [];
+                            if (!Array.isArray(list)) return;
+                            list.forEach(function (mat) {
+                                if (!mat) return;
+                                const matType = String(mat.type || '').toLowerCase();
+                                if (!matType.includes('practice') && !matType.includes('both')) return;
+
+                                const matId = (mat.id !== undefined && mat.id !== null) ? String(mat.id).trim() : null;
+                                const matTitle = (mat.title || mat.content || '').toString();
+
+                                if ((normalizedId && matId && normalizedId === matId) || (normalizedTitle && matTitle && normalizedTitle === normalizedTitle)) {
+                                    if (matId && !seenSet.has(matId)) {
+                                        seenSet.add(matId);
+                                    }
+                                }
+                            });
+                        });
+                    });
+                });
+
+                const finalSeen = Array.from(seenSet);
+                localStorage.setItem('pabasa_seen_material_ids', JSON.stringify(finalSeen));
+                window.dispatchEvent(new CustomEvent('pabasa:student-class-updated', { bubbles: true }));
+                window.dispatchEvent(new Event('storage'));
+            } catch (e) {
+                console.warn('PABASA: Could not mark linked practice materials as seen', e);
+            }
             return [];
         }
 

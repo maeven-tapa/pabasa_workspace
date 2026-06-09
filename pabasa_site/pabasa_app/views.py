@@ -19,7 +19,11 @@ import traceback
 import ssl
 import time
 import uuid
-from .models import User, TeacherProfile, StudentProfile, ReadingClass, ClassEnrollment, Assessment
+from .models import User, TeacherProfile, StudentProfile, ReadingClass, ClassEnrollment, Assessment, AssessmentAttempt, Notification, TeacherNote
+from django.db import transaction
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Max, Count
 
 
 logger = logging.getLogger(__name__)
@@ -737,6 +741,102 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'initials': initials,
         'joined_classes': joined_classes,
     }
+    # Compute an account activity status label + class for UI chips
+    account_status_label = 'Unknown'
+    account_status_class = ''
+    account_status_tooltip = ''
+    try:
+        if user:
+            # Default: pending if teacher has no classes/materials/activity
+            last_activity = None
+            has_activity = False
+            if user.role == 'teacher':
+                tp = TeacherProfile.objects.filter(user=user).first()
+                if tp:
+                    # Check for classes, materials, enrollments, attempts
+                    has_classes = ReadingClass.objects.filter(teacher=tp, is_active=True).exists()
+                    has_materials = Assessment.objects.filter(teacher=tp, is_active=True).exists()
+                    has_enrollments = ClassEnrollment.objects.filter(reading_class__teacher=tp, is_active=True).exists()
+                    has_attempts = AssessmentAttempt.objects.filter(assessment__teacher=tp).exists()
+                    has_activity = has_classes or has_materials or has_enrollments or has_attempts
+
+                    # Get latest timestamps
+                    candidate_dates = []
+                    if tp.updated_at:
+                        candidate_dates.append(tp.updated_at)
+                    cls_max = ReadingClass.objects.filter(teacher=tp).aggregate(m=Max('updated_at'))['m']
+                    if cls_max:
+                        candidate_dates.append(cls_max)
+                    asm_max = Assessment.objects.filter(teacher=tp).aggregate(m=Max('updated_at'))['m']
+                    if asm_max:
+                        candidate_dates.append(asm_max)
+                    enr_max = ClassEnrollment.objects.filter(reading_class__teacher=tp).aggregate(m=Max('joined_at'))['m']
+                    if enr_max:
+                        candidate_dates.append(enr_max)
+                    att_max = AssessmentAttempt.objects.filter(assessment__teacher=tp).aggregate(m=Max('started_at'))['m']
+                    if att_max:
+                        candidate_dates.append(att_max)
+
+                    if candidate_dates:
+                        last_activity = max(candidate_dates)
+
+            else:
+                # For students, use student profile updated or enrollment/attempt timestamps
+                sp = StudentProfile.objects.filter(user=user).first()
+                if sp:
+                    has_activity = True
+                    candidate_dates = [d for d in [sp.updated_at, sp.created_at] if d]
+                    enr_max = ClassEnrollment.objects.filter(student=sp, is_active=True).aggregate(m=Max('joined_at'))['m']
+                    if enr_max:
+                        candidate_dates.append(enr_max)
+                    att_max = AssessmentAttempt.objects.filter(student=sp).aggregate(m=Max('started_at'))['m']
+                    if att_max:
+                        candidate_dates.append(att_max)
+                    if candidate_dates:
+                        last_activity = max(candidate_dates)
+
+            if not has_activity and not last_activity:
+                account_status_label = 'Pending'
+                account_status_class = 'status-pending'
+                account_status_tooltip = 'No activity recorded yet.'
+            else:
+                now = timezone.now()
+                if last_activity:
+                    delta = now - last_activity
+                    days = delta.days
+                    if user.role == 'teacher':
+                        # keep existing teacher granularity
+                        if days <= 7:
+                            account_status_label = 'Active'
+                            account_status_class = 'status-active'
+                        elif 8 <= days <= 30:
+                            account_status_label = 'Idle'
+                            account_status_class = 'status-idle'
+                        else:
+                            account_status_label = 'Inactive'
+                            account_status_class = 'status-inactive'
+                    else:
+                        # Student: Pending (no activity handled earlier), Active = 1-7 days, Inactive = 8+ days
+                        if days <= 7:
+                            account_status_label = 'Active'
+                            account_status_class = 'status-active'
+                        else:
+                            account_status_label = 'Inactive'
+                            account_status_class = 'status-inactive'
+                    account_status_tooltip = f'Last activity: {last_activity.strftime("%Y-%m-%d %H:%M")}'
+                else:
+                    account_status_label = 'Pending'
+                    account_status_class = 'status-pending'
+                    account_status_tooltip = 'No activity recorded yet.'
+    except Exception:
+        account_status_label = 'Unknown'
+        account_status_class = ''
+
+    context.update({
+        'account_status_label': account_status_label,
+        'account_status_class': account_status_class,
+        'account_status_tooltip': account_status_tooltip,
+    })
     if extra:
         context.update(extra)
     return context
@@ -1094,6 +1194,62 @@ def join_class(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
+@login_required(role='student')
+def unenroll_class(request):
+    """Student unenroll endpoint: deactivates the ClassEnrollment and notifies the teacher."""
+    try:
+        data = json.loads(request.body)
+        class_code = data.get('class_code', '').strip().upper()
+        if not class_code:
+            return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
+
+        user_id = request.session.get('user_id')
+        student_profile = StudentProfile.objects.filter(user__id=user_id, is_active=True).first()
+        if not student_profile:
+            return JsonResponse({'success': False, 'error': 'Student profile not found'}, status=404)
+
+        reading_class = ReadingClass.objects.filter(class_code=class_code).first()
+        if not reading_class:
+            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+
+        enrollment = ClassEnrollment.objects.filter(student=student_profile, reading_class=reading_class, is_active=True).first()
+        if not enrollment:
+            return JsonResponse({'success': False, 'error': 'Enrollment not found'}, status=404)
+
+        with transaction.atomic():
+            enrollment.is_active = False
+            enrollment.save()
+
+            # Create an in-app notification for the teacher
+            teacher_user = reading_class.teacher.user
+            student_user = student_profile.user
+            title = 'Student unenrolled'
+            message = f"{student_user.first_name} {student_user.last_name} has unenrolled from your class {reading_class.class_name}."
+            Notification.objects.create(
+                recipient=teacher_user,
+                created_by=student_user,
+                title=title,
+                message=message,
+                notification_type='info'
+            )
+
+            # Send email to teacher (best-effort)
+            try:
+                subject = f"Student unenrolled from {reading_class.class_name}"
+                send_mail(subject, message, getattr(settings, 'DEFAULT_FROM_EMAIL', None), [teacher_user.email], fail_silently=True)
+            except Exception:
+                logger.exception('Failed to send unenroll email')
+
+        return JsonResponse({'success': True, 'message': 'Unenrolled successfully'})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
+    except Exception as e:
+        logger.error(f"Error unenrolling class: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'An unexpected error occurred'}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
 @login_required(role='teacher')
 def create_reading_class(request):
     """
@@ -1178,6 +1334,120 @@ def get_teacher_classes(request):
         })
 
     return JsonResponse({'success': True, 'classes': class_list})
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_teacher_overview(request):
+    """
+    Return aggregated teacher overview stats: active classes, total students,
+    materials posted (assessments), and reports generated (teacher notes).
+    """
+    try:
+        user_id = request.session.get('user_id')
+        teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
+        if not teacher_profile:
+            return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
+
+        classes_count = ReadingClass.objects.filter(teacher=teacher_profile, is_active=True).count()
+        total_students = ClassEnrollment.objects.filter(reading_class__teacher=teacher_profile, is_active=True).count()
+        materials_posted = Assessment.objects.filter(teacher=teacher_profile, is_active=True).count()
+        reports_generated = TeacherNote.objects.filter(teacher=teacher_profile).count()
+
+        return JsonResponse({
+            'success': True,
+            'classes_count': classes_count,
+            'total_students': total_students,
+            'materials_posted': materials_posted,
+            'reports_generated': reports_generated,
+        })
+    except Exception as e:
+        logger.error('Error computing teacher overview: %s', e, exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def delete_reading_class(request):
+    """
+    Backend endpoint for deleting a classroom.
+    Expects JSON: { class_code }
+    """
+    try:
+        data = json.loads(request.body)
+        class_code = data.get('class_code', '').strip()
+
+        if not class_code:
+            return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
+
+        # Retrieve the teacher profile for the logged-in user
+        user_id = request.session.get('user_id')
+        teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
+        
+        if not teacher_profile:
+            return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
+
+        # Find the class
+        reading_class = ReadingClass.objects.filter(
+            teacher=teacher_profile,
+            class_code=class_code,
+            is_active=True
+        ).first()
+
+        if not reading_class:
+            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+
+        # Soft delete by setting is_active to False and deactivate related data
+        # Capture affected students before deactivating so we can notify them
+        affected_enrollments = list(ClassEnrollment.objects.filter(reading_class=reading_class, is_active=True).select_related('student__user'))
+        affected_students = [en.student for en in affected_enrollments]
+
+        with transaction.atomic():
+            reading_class.is_active = False
+            reading_class.save()
+
+            # Deactivate class enrollments
+            ClassEnrollment.objects.filter(reading_class=reading_class, is_active=True).update(is_active=False)
+
+            # Deactivate assessments tied to this class
+            Assessment.objects.filter(reading_class=reading_class, is_active=True).update(is_active=False)
+
+            # Notify affected students (in-app + email)
+            teacher_user = teacher_profile.user
+            teacher_name = f"{teacher_user.first_name} {teacher_user.last_name}" if teacher_user else 'Your teacher'
+            for student_profile in affected_students:
+                try:
+                    student_user = student_profile.user
+                    title = 'Class removed by teacher'
+                    message = (
+                        f"{teacher_name} has removed the class '{reading_class.class_name}'. "
+                        "Visit your account to completely remove the class."
+                    )
+                    Notification.objects.create(
+                        recipient=student_user,
+                        created_by=teacher_user,
+                        title=title,
+                        message=message,
+                        notification_type='warning'
+                    )
+
+                    # Best-effort email to student
+                    try:
+                        subject = f"Class removed: {reading_class.class_name}"
+                        send_mail(subject, message, getattr(settings, 'DEFAULT_FROM_EMAIL', None), [student_user.email], fail_silently=True)
+                    except Exception:
+                        logger.exception('Failed to send class-deleted email to student %s', student_user.email)
+                except Exception:
+                    logger.exception('Failed to notify a student for class deletion')
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Class deleted successfully',
+            'class_code': class_code
+        })
+    except Exception as e:
+        logger.error(f"Class deletion error: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
 
 @csrf_protect
 @require_http_methods(["POST"])

@@ -47,11 +47,18 @@ urlpatterns = [
     path('what-is-pabasa/', views.pabasa_info, name='pabasa_info'),
     path('about/', views.about, name='about'),
     path('dashboard/teacher/classes/', views.get_teacher_classes, name='get_teacher_classes'),
+    path('dashboard/teacher/overview/', views.get_teacher_overview, name='get_teacher_overview'),
     path('students/send-email/', views.send_parent_email, name='send_parent_email'),
+    path('dashboard/student/unenroll/', views.unenroll_class, name='unenroll_class'),
     path('dashboard/teacher/add-material/', views.add_reading_material, name='add_reading_material'),
     path(
     'dashboard/teacher/create-class/',
     views.create_reading_class,
     name='create_reading_class'
+),
+    path(
+    'dashboard/teacher/delete-class/',
+    views.delete_reading_class,
+    name='delete_reading_class'
 ),
 ]

@@ -18,16 +18,11 @@
         const activeStudentCount = document.getElementById("activeStudentCount");
         const classBanner = document.getElementById("classBanner");
 
-        const deleteClassModal = document.getElementById("deleteClassModal");
-        const deleteClassNameDisplay = document.getElementById("deleteClassNameDisplay");
-        const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
-
         if (!createClassForm || !classList || !generatedClassCode) {
             return;
         }
 
-        let classToDelete = null;
-        const teacherEmail = (window.PABASA_USER_EMAIL || '').trim();
+        const teacherEmail = (window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || '').trim();
         const scopedKey = teacherEmail ? `pabasa_teacher_classes_${teacherEmail}` : null;
 
         function makeClassCode() {
@@ -41,7 +36,9 @@
         }
 
         function setGeneratedCode() {
-            generatedClassCode.textContent = makeClassCode();
+            if (generatedClassCode) {
+                generatedClassCode.textContent = makeClassCode();
+            }
         }
 
         function updateClassCount() {
@@ -53,14 +50,48 @@
         function getStudentCountForClass(className) {
             try {
                 const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-                return allStudents.filter(s => s.class === className && s.name !== "Jay Park").length;
+                // Filter to target class and exclude placeholder name
+                const matched = allStudents.filter(s => s.class === className && s.name !== "Jay Park");
+
+                // Deduplicate by email when available, otherwise by name
+                const seen = new Set();
+                const unique = [];
+                matched.forEach(s => {
+                    const key = (s.email || s.name || "").toString().trim().toLowerCase();
+                    if (!key) return;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        unique.push(s);
+                    }
+                });
+
+                return unique.length;
             } catch (e) {
                 console.error("Error getting student count for class:", e);
                 return 0;
             }
         }
 
-        function saveClasses() {
+        // Remove students from localStorage whose class no longer exists
+        function cleanupLocalStudents(activeClasses) {
+            try {
+                const classNames = new Set((activeClasses || []).map(c => (c.name || '').toString()));
+                const students = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                const filtered = students.filter(s => {
+                    // keep students without a class
+                    if (!s.class) return true;
+                    // keep students whose class still exists
+                    if (classNames.has(s.class)) return true;
+                    // otherwise drop (stale)
+                    return false;
+                });
+                if (filtered.length !== students.length) {
+                    localStorage.setItem('pabasa_added_students', JSON.stringify(filtered));
+                    console.info('Cleaned up', students.length - filtered.length, 'stale student entries from localStorage');
+                }
+            } catch (e) {
+                console.warn('Failed to cleanup local students', e);
+            }
         }
 
         function loadSavedClasses() {
@@ -90,6 +121,13 @@
                     localStorage.setItem(scopedKey, JSON.stringify(data.classes));
                 }
 
+                // Remove any students in localStorage that belong to classes no longer returned by the server
+                try {
+                    cleanupLocalStudents(data.classes);
+                } catch (e) {
+                    console.warn('Error running cleanupLocalStudents', e);
+                }
+
                 classList.innerHTML = '';
 
                 data.classes.forEach(function (classData) {
@@ -115,7 +153,7 @@
                 updateClassCount();
 
                 const firstCard = classList.querySelector('.class-card');
-                if (firstCard) {
+                if (firstCard && activeClassName) {
                     selectClass(firstCard);
                 }
             })
@@ -125,6 +163,9 @@
         }
 
         function selectClass(card) {
+            // Defensive check for pages that list classes but don't have an "Active Class" detail area
+            if (!activeClassName) return;
+
             classList.querySelectorAll(".class-card").forEach(function (item) {
                 item.classList.toggle("is-active", item === card);
             });
@@ -141,11 +182,21 @@
             activeClassDescription.textContent = description;
             activeClassCode.textContent = code;
             activeStudentCount.textContent = actualStudentCount;
-            classBanner.setAttribute("data-header", header);
-            generatedClassCode.textContent = code;
+            if (classBanner) classBanner.setAttribute("data-header", header);
+            if (generatedClassCode) generatedClassCode.textContent = code;
 
             if (copyClassCodeBtn) {
                 copyClassCodeBtn.style.display = "block";
+            }
+            // Refresh student directory to show students for the selected class (if present)
+            try {
+                if (typeof loadPersistedStudents === 'function') {
+                    loadPersistedStudents();
+                } else if (window.refreshStudentDirectory) {
+                    window.refreshStudentDirectory();
+                }
+            } catch (e) {
+                console.warn('Could not refresh student directory after class select', e);
             }
         }
 
@@ -174,40 +225,30 @@
             codePill.className = "class-code-pill";
             codePill.textContent = code;
 
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "class-card-delete";
+            deleteBtn.type = "button";
+            deleteBtn.title = "Delete class";
+            deleteBtn.innerHTML = '<i class="bi bi-trash3"></i>';
+            deleteBtn.setAttribute("data-class-code", code);
+            deleteBtn.setAttribute("data-class-name", name);
+            deleteBtn.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                showDeleteClassConfirmation(code, name);
+            });
+
             const meta = document.createElement("span");
             meta.className = "small text-secondary";
             meta.textContent = (subject || name) + " • " + actualStudentCount + " students";
 
             head.appendChild(title);
             head.appendChild(codePill);
+            head.appendChild(deleteBtn);
             card.appendChild(head);
             card.appendChild(meta);
 
             return card;
-        }
-
-        function showDeleteConfirmation(card) {
-            classToDelete = card;
-            const className = card.getAttribute("data-class-name") || "this class";
-            deleteClassNameDisplay.textContent = className;
-            const modal = new bootstrap.Modal(deleteClassModal);
-            modal.show();
-        }
-
-        function deleteClass(card) {
-            const nextCard = card.nextElementSibling || card.previousElementSibling;
-            card.remove();
-            updateClassCount();
-            saveClasses();
-
-            if (nextCard && nextCard.classList && nextCard.classList.contains("class-card")) {
-                selectClass(nextCard);
-            } else {
-                const remaining = classList.querySelector(".class-card");
-                if (remaining) {
-                    selectClass(remaining);
-                }
-            }
         }
 
         classList.addEventListener("click", function (event) {
@@ -217,17 +258,7 @@
             }
         });
 
-        confirmDeleteBtn.addEventListener("click", function () {
-            if (classToDelete) {
-                deleteClass(classToDelete);
-                classToDelete = null;
-                const modal = bootstrap.Modal.getInstance(deleteClassModal);
-                if (modal) {
-                    modal.hide();
-                }
-            }
-        });
-
+        if (createClassForm) {
         createClassForm.addEventListener("submit", function (event) {
             event.preventDefault();
 
@@ -307,8 +338,7 @@
                     });
                     localStorage.setItem(currentScopedKey, JSON.stringify(existing));
 
-                    setGeneratedCode();
-                    classDescriptionInput.value = "";
+                    createClassForm.reset();
 
                 } else {
                     alert("Creation failed: " + data.error);
@@ -319,8 +349,11 @@
                 alert("An error occurred while creating the classroom.");
             });
         });
+        }
 
-        regenerateCodeBtn.addEventListener("click", setGeneratedCode);
+        if (regenerateCodeBtn) {
+            regenerateCodeBtn.addEventListener("click", setGeneratedCode);
+        }
 
         if (copyClassCodeBtn) {
             copyClassCodeBtn.addEventListener("click", function () {
@@ -406,6 +439,156 @@
                 setTimeout(() => {
                     this.innerHTML = '<i class="bi bi-copy me-2"></i>Copy Code';
                 }, 1500);
+            });
+        }
+
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || (() => {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+                document.body.appendChild(container);
+                return container;
+            })();
+
+            const toastId = 'toast-' + Date.now();
+            const bgColor = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-info';
+            
+            const toastHTML = `
+                <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" aria-live="assertive" aria-atomic="true" id="${toastId}">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            const toastElement = document.createElement('div');
+            toastElement.innerHTML = toastHTML;
+            toastContainer.appendChild(toastElement.firstElementChild);
+            
+            const toast = new bootstrap.Toast(document.getElementById(toastId));
+            toast.show();
+            
+            setTimeout(() => {
+                document.getElementById(toastId)?.remove();
+            }, 5000);
+        }
+
+        // Delete class functionality
+        let classToDeleteCode = null;
+        let classToDeleteName = null;
+
+        function showDeleteClassConfirmation(classCode, className) {
+            classToDeleteCode = classCode;
+            classToDeleteName = className;
+            const deleteClassNameDisplay = document.getElementById("deleteClassNameDisplay");
+            if (deleteClassNameDisplay) {
+                deleteClassNameDisplay.textContent = className;
+            }
+            const deleteModal = new bootstrap.Modal(document.getElementById("deleteClassModal"));
+            deleteModal.show();
+        }
+
+        function deleteTeacherClass(classCode) {
+            // Call backend to delete the class
+            fetch('/dashboard/teacher/delete-class/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+                },
+                body: JSON.stringify({ class_code: classCode })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove from classList DOM
+                    const cardToRemove = classList.querySelector(`[data-code="${classCode}"]`);
+                    if (cardToRemove) {
+                        cardToRemove.remove();
+                    }
+                    
+                    // Update localStorage for classes
+                    const _email = (window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || '').trim();
+                    if (_email && scopedKey) {
+                        const existing = JSON.parse(localStorage.getItem(scopedKey) || '[]');
+                        const updated = existing.filter(cls => cls.code !== classCode);
+                        localStorage.setItem(scopedKey, JSON.stringify(updated));
+                    }
+
+                    // Remove students associated with this class from localStorage
+                    try {
+                        const studentsRaw = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                        const filteredStudents = studentsRaw.filter(s => (s.class || '') !== classToDeleteName);
+                        if (filteredStudents.length !== studentsRaw.length) {
+                            localStorage.setItem('pabasa_added_students', JSON.stringify(filteredStudents));
+                        }
+                    } catch (e) {
+                        console.warn('Could not update pabasa_added_students after class delete', e);
+                    }
+
+                    // Remove class readings/materials from localStorage
+                    try {
+                        const readings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+                        if (readings && readings[classCode]) {
+                            delete readings[classCode];
+                            localStorage.setItem('pabasa_class_readings', JSON.stringify(readings));
+                        }
+
+                        // Also update flattened materials list if present
+                        const flat = JSON.parse(localStorage.getItem('pabasa_materials') || '[]');
+                        const filteredFlat = flat.filter(m => (m.classCode || '') !== classCode);
+                        if (filteredFlat.length !== flat.length) {
+                            localStorage.setItem('pabasa_materials', JSON.stringify(filteredFlat));
+                        }
+                    } catch (e) {
+                        console.warn('Could not update class readings/materials after class delete', e);
+                    }
+                    
+                    // Update counts
+                    updateClassCount();
+                    
+                    // Clear active class if it's the one being deleted
+                    if (activeClassName && activeClassName.textContent === classToDeleteName) {
+                        const firstCard = classList.querySelector('.class-card');
+                        if (firstCard) {
+                            selectClass(firstCard);
+                        } else {
+                            activeClassName.textContent = "No class selected";
+                            activeClassSubject.textContent = "";
+                            activeClassDescription.textContent = "";
+                            activeClassCode.textContent = "";
+                            activeStudentCount.textContent = "0";
+                        }
+                    }
+
+                    // Show success message
+                    showToast("Class deleted successfully.", 'success');
+                } else {
+                    showToast('Error deleting class: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting class:', error);
+                showToast('An error occurred while deleting the class.', 'error');
+            });
+        }
+
+        // Handle confirm delete button click
+        const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener("click", function() {
+                if (classToDeleteCode) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("deleteClassModal"));
+                    if (modal) modal.hide();
+                    deleteTeacherClass(classToDeleteCode);
+                    classToDeleteCode = null;
+                    classToDeleteName = null;
+                }
             });
         }
 

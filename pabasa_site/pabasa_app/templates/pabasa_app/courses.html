@@ -2045,6 +2045,42 @@
     // Initialize teacher classes with real data from localStorage
     let teacherClasses = classes_from_storage || [];
     
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        const toastContainer = document.getElementById('toastContainer') || (() => {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+            document.body.appendChild(container);
+            return container;
+        })();
+
+        const toastId = 'toast-' + Date.now();
+        const bgColor = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-info';
+        
+        const toastHTML = `
+            <div class="toast align-items-center text-white ${bgColor} border-0" role="alert" aria-live="assertive" aria-atomic="true" id="${toastId}">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        const toastElement = document.createElement('div');
+        toastElement.innerHTML = toastHTML;
+        toastContainer.appendChild(toastElement.firstElementChild);
+        
+        const toast = new bootstrap.Toast(document.getElementById(toastId));
+        toast.show();
+        
+        setTimeout(() => {
+            document.getElementById(toastId)?.remove();
+        }, 5000);
+    }
+    
     // Listen for localStorage changes (when classes are created in another tab)
     window.addEventListener('storage', function(e) {
         const scopedKey = `pabasa_teacher_classes_${(window.PABASA_USER_EMAIL||'').trim()}`;
@@ -2257,11 +2293,65 @@
     }
 
     function deleteClass(classCode) {
-        teacherClasses = teacherClasses.filter(cls => cls.code !== classCode);
-        const _email = (window.PABASA_USER_EMAIL || '').trim();
-        if (_email) localStorage.setItem(`pabasa_teacher_classes_${_email}`, JSON.stringify(teacherClasses));
-        renderClasses();
-        showSuccessModal('Class Deleted', 'The class has been successfully deleted.');
+        // Call backend to delete the class
+        fetch('/dashboard/teacher/delete-class/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+            },
+            body: JSON.stringify({ class_code: classCode })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove from frontend array
+                teacherClasses = teacherClasses.filter(cls => cls.code !== classCode);
+                
+                // Update localStorage for classes
+                const _email = (window.PABASA_USER_EMAIL || '').trim();
+                if (_email) localStorage.setItem(`pabasa_teacher_classes_${_email}`, JSON.stringify(teacherClasses));
+
+                // Remove students associated with this class from localStorage
+                try {
+                    const students = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                    const updatedStudents = students.filter(s => (s.class || '') !== classData.name);
+                    if (updatedStudents.length !== students.length) {
+                        localStorage.setItem('pabasa_added_students', JSON.stringify(updatedStudents));
+                    }
+                } catch (e) {
+                    console.warn('Could not update pabasa_added_students after deletion', e);
+                }
+
+                // Remove class readings/materials from localStorage
+                try {
+                    const readings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+                    if (readings && readings[classCode]) {
+                        delete readings[classCode];
+                        localStorage.setItem('pabasa_class_readings', JSON.stringify(readings));
+                    }
+                    const flat = JSON.parse(localStorage.getItem('pabasa_materials') || '[]');
+                    const filteredFlat = flat.filter(m => (m.classCode || '') !== classCode);
+                    if (filteredFlat.length !== flat.length) {
+                        localStorage.setItem('pabasa_materials', JSON.stringify(filteredFlat));
+                    }
+                } catch (e) {
+                    console.warn('Could not update class readings/materials after class delete', e);
+                }
+
+                // Re-render the classes
+                renderClasses();
+
+                // Show success message
+                showToast('Class deleted successfully.', 'success');
+            } else {
+                showToast('Error deleting class: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting class:', error);
+            showToast('An error occurred while deleting the class.', 'error');
+        });
     }
 
     // Handle confirm delete button click
