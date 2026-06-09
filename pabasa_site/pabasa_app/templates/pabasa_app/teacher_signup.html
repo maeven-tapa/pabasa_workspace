@@ -223,13 +223,29 @@
                     <div class="col-12">
                         <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">First name</label>
                         <input class="form-control" type="text" name="first_name" required>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-2">
+                        <label class="form-label">Middle Initial</label>
+                        <input class="form-control" type="text" name="middle_initial" maxlength="1" placeholder="M">
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">Last name</label>
                         <input class="form-control" type="text" name="last_name" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Suffix</label>
+                        <select class="form-select" name="suffix">
+                            <option value="">None</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                            <option value="V">V</option>
+                        </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Sex</label>
