@@ -15,6 +15,8 @@ import json
 import os
 from pathlib import Path
 import random
+import traceback
+import ssl
 import time
 import uuid
 from .models import User, TeacherProfile, StudentProfile, ReadingClass, ClassEnrollment, Assessment
@@ -52,6 +54,26 @@ def generate_custom_id(role):
 
 def generate_otp(length=6):
     return ''.join(random.choice('0123456789') for _ in range(length))
+
+def generate_unique_class_code():
+    """
+    Generates a unique 4-letter and 3-digit class code (e.g., ABCD-123).
+    Automatically checks the database to ensure no duplicates exist.
+    """
+    letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    digits = "0123456789"
+    
+    while True:
+        # Follow the existing format: 4 uppercase letters followed by 3 digits
+        prefix = "".join(random.choices(letters, k=4))
+        suffix = "".join(random.choices(digits, k=3))
+        code = f"{prefix}-{suffix}"
+        
+        # Uniqueness Check: Ensure this code does not already exist in the database
+        # This prevents duplicate classrooms even across different teachers
+        if not ReadingClass.objects.filter(class_code=code).exists():
+            return code
+        # If exists, the loop continues to generate a fresh candidate
 
 def _store_pending_teacher_signup(request, data):
     otp = generate_otp()
@@ -471,7 +493,9 @@ def verify_teacher_otp(request):
             department=pending['department']
         )
 
-        send_teacher_confirmation_email(request, user, teacher_code)
+        teacher_code = custom_id
+
+        send_teacher_confirmation_email(request, user, custom_id)
         _clear_pending_teacher_signup(request)
 
         return JsonResponse({
@@ -970,6 +994,11 @@ def send_parent_email(request):
         if not recipient or (not message and not html_message):
             return JsonResponse({'success': False, 'error': 'Missing recipient or message content'})
 
+        # Debugging SSL context and Environment
+        logger.debug(f"PABASA SMTP: Attempting send to {recipient}")
+        logger.debug(f"PABASA SSL: OpenSSL Version: {ssl.OPENSSL_VERSION}")
+        logger.debug(f"PABASA SSL: Default Verify Paths: {ssl.get_default_verify_paths()}")
+
         # Explicitly use the sender email requested
         sender = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
         
@@ -982,8 +1011,9 @@ def send_parent_email(request):
         return JsonResponse({'success': True})
 
     except Exception as e:
-        logger.error(f"PABASA SMTP Error: {str(e)}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        error_detail = traceback.format_exc()
+        logger.error(f"PABASA SMTP Error Details:\n{error_detail}")
+        return JsonResponse({'success': False, 'error': f"SMTP Error: {str(e)}"}, status=500)
 
 
 @csrf_protect
@@ -1010,11 +1040,19 @@ def join_class(request):
         reading_class = ReadingClass.objects.filter(class_code=class_code, is_active=True).first()
 
         if not reading_class:
-            return JsonResponse({'success': False, 'error': 'Class not found or inactive'}, status=404)
-
-        # Check if already enrolled to prevent duplicate entries
-        if ClassEnrollment.objects.filter(student=student_profile, reading_class=reading_class, is_active=True).exists():
-            return JsonResponse({'success': False, 'error': 'Already enrolled in this class'}, status=409)
+            return JsonResponse(
+                {'success': False, 'error': 'Invalid class code.'},
+                status=404
+    )
+        if ClassEnrollment.objects.filter(
+            student=student_profile,
+            reading_class=reading_class,
+            is_active=True
+        ).exists():
+            return JsonResponse(
+                {'success': False, 'error': 'You have already joined this class.'},
+                status=409
+            )
 
         ClassEnrollment.objects.create(student=student_profile, reading_class=reading_class, is_active=True)
 
@@ -1025,3 +1063,61 @@ def join_class(request):
     except Exception as e:
         logger.error(f"Error joining class: {e}", exc_info=True)
         return JsonResponse({'success': False, 'error': 'An unexpected error occurred'}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def create_reading_class(request):
+    """
+    Backend endpoint for creating a classroom.
+    Ensures that the class code is unique via database verification.
+    """
+    try:
+        data = json.loads(request.body)
+        class_name = data.get('class_name', '').strip()
+        header = data.get('header', '').strip() or "Reading Class"
+        description = data.get('description', '').strip()
+        grade_level = data.get('grade_level', '').strip()
+        section = data.get('section', '').strip()
+
+        if not grade_level:
+            return JsonResponse({'success': False, 'error': 'Grade level is required'}, status=400)
+
+        if not section:
+            return JsonResponse({'success': False, 'error': 'Section is required'}, status=400)
+
+        if not class_name:
+            return JsonResponse({'success': False, 'error': 'Class name is required'}, status=400)
+
+        # Retrieve the teacher profile for the logged-in user
+        user_id = request.session.get('user_id')
+        teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
+        
+        if not teacher_profile:
+            return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
+
+        # Uniqueness Verification: Generate a code that doesn't exist in DB
+        # This fulfills the requirement to check for duplicates before saving
+        unique_code = generate_unique_class_code()
+
+        # Persistent storage - ReadingClass model has unique=True on class_code for final safety
+        new_class = ReadingClass.objects.create(
+            teacher=teacher_profile,
+            class_code=unique_code,
+            class_name=class_name,
+            grade_level=grade_level,
+            section=section,
+            header=header,
+            description=description
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Classroom created successfully',
+            'class_code': unique_code,
+            'class_name': new_class.class_name
+        })
+    except Exception as e:
+        logger.error(f"Class creation error: {str(e)}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)

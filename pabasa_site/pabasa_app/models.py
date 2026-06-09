@@ -71,13 +71,17 @@ class StudentProfile(models.Model):
 
 class ReadingClass(models.Model):
     class_code = models.CharField(max_length=20, unique=True)
-    class_name = models.CharField(max_length=150)
+    class_name = models.CharField(max_length=150) 
+    grade_level = models.CharField(max_length=20)
+    section = models.CharField(max_length=50)
     header = models.CharField(max_length=100, default="Reading Class")
     description = models.TextField(blank=True)
     teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE, related_name="reading_classes")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    subject = models.CharField(max_length=50)
+    
 
     class Meta:
         db_table = "reading_classes"

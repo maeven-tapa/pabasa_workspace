@@ -1,8 +1,9 @@
 (function () {
     const createClassForm = document.getElementById("createClassForm");
-    const classNameInput = document.getElementById("classNameInput");
-    const classHeaderInput = document.getElementById("classHeaderInput");
+    const subjectInput = document.getElementById("subjectInput");
     const classDescriptionInput = document.getElementById("classDescriptionInput");
+    const gradeLevelInput = document.getElementById("gradeLevelInput");
+    const sectionInput = document.getElementById("sectionInput");
     const generatedClassCode = document.getElementById("generatedClassCode");
     const regenerateCodeBtn = document.getElementById("regenerateCodeBtn");
     const classList = document.getElementById("classList");
@@ -66,7 +67,8 @@
             code: card.getAttribute("data-code") || "READ-000",
             header: card.getAttribute("data-header") || "READ",
             description: card.getAttribute("data-description") || "Class reading workspace.",
-            students: card.getAttribute("data-students") || "0"
+            students: card.getAttribute("data-students") || "0",
+            teacherEmail: card.getAttribute("data-teacher-email") || ""
         };
     }
 
@@ -100,7 +102,8 @@
                 classData.description,
                 classData.code,
                 classData.subject,
-                classData.students
+                classData.students,
+                classData.teacherEmail
             ));
         });
 
@@ -138,7 +141,7 @@
         }
     }
 
-    function createClassCard(name, header, description, code, subject) { // Renders cards in the left panel
+    function createClassCard(name, header, description, code, subject, students, teacherEmail) { // Renders cards in the left panel
         const card = document.createElement("div");
         card.className = "class-card";
         card.setAttribute("data-class-name", name);
@@ -146,6 +149,8 @@
         card.setAttribute("data-code", code);
         card.setAttribute("data-header", header);
         card.setAttribute("data-description", description);
+        const email = teacherEmail || window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || "";
+        card.setAttribute("data-teacher-email", email);
         
         const actualStudentCount = getStudentCountForClass(name);
         card.setAttribute("data-students", actualStudentCount); // Store actual count
@@ -218,22 +223,90 @@
     createClassForm.addEventListener("submit", function (event) {
         event.preventDefault();
 
-        const name = classNameInput.value.trim() || "New Reading Class";
-        const header = (classHeaderInput.value.trim() || "READ").toUpperCase();
-        const description = classDescriptionInput.value.trim() || "Reading class workspace.";
-        const code = generatedClassCode.textContent.trim() || makeClassCode();
-        const card = createClassCard(name, header, description, code);
+        const subject = subjectInput.value;
+        const gradeLevel = gradeLevelInput.value;
+        const section = sectionInput.value;
 
-        classList.prepend(card);
-        selectClass(card);
-        updateClassCount();
-        saveClasses();
-        setGeneratedCode();
-        
-        // Clear the form fields after successful class creation
-        classNameInput.value = "";
-        classHeaderInput.value = "";
-        classDescriptionInput.value = "";
+        if (!subject || !gradeLevel || !section) {
+            alert("Please select Subject, Grade Level, and Section.");
+            return;
+        }
+        const description = classDescriptionInput.value.trim() || "Reading class workspace.";   
+
+        if (!gradeLevel || !section) {
+            alert("Please select a Grade Level and Section.");
+            return;
+        }
+        const name = `${gradeLevel} - ${section} (${subject})`;
+        fetch('/dashboard/teacher/create-class/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+            },
+            body: JSON.stringify({
+                class_name: name,
+                subject: subject,
+                grade_level: gradeLevel,
+                section: section,
+                description: description
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) { 
+                document.getElementById("createdClassName").textContent =
+                data.class_name;
+
+                document.getElementById("createdClassCode").textContent =
+                    data.class_code;
+
+                const successModal = new bootstrap.Modal(
+                    document.getElementById("classCreatedModal"),
+                    {
+                        backdrop: false,
+                        keyboard: true
+                    }
+                );
+
+                successModal.show();
+
+                document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
+                document.body.classList.remove("modal-open");
+                document.body.style.overflow = "auto";
+                document.body.style.paddingRight = "0";
+
+                const teacherEmail =
+                    window.PABASA_USER_EMAIL ||
+                    localStorage.getItem("pabasaUserEmail") ||
+                    "";
+
+                const card = createClassCard(
+                    data.class_name,
+                    "READ",
+                    description,
+                    data.class_code,
+                    subject,
+                    "0",
+                    teacherEmail
+                );
+
+                classList.prepend(card);
+                selectClass(card);
+                updateClassCount();
+                saveClasses();
+                setGeneratedCode();
+
+                classDescriptionInput.value = "";
+
+            } else {
+                alert("Creation failed: " + data.error);
+            }
+        })
+        .catch(error => {
+            console.error("Error creating classroom:", error);
+            alert("An error occurred while creating the classroom.");
+        });
     });
 
     regenerateCodeBtn.addEventListener("click", setGeneratedCode);
@@ -251,52 +324,129 @@
         });
     }
 
-    // Load and display persisted students from localStorage
-    (function() {
-        const studentRow = document.querySelector(".student-row");
-        if (!studentRow) return;
-        
-        let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-        const filteredStudents = students.filter(student => student.name !== "Jay Park");
-        if (filteredStudents.length !== students.length) {
-            localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
-            students = filteredStudents;
-        }
-        
-        students.forEach(studentData => {
-            // Check if student already exists
-            const exists = Array.from(studentRow.querySelectorAll(".student-card")).some(
-                card => card.textContent.includes(studentData.name)
-            );
-            
-            if (exists) return;
-            
-            const levelClass = {
-                "Low Emerging Readers": "level-low",
-                "High Emerging Readers": "level-high",
-                "Developing Readers": "level-developing",
-                "Transitioning Readers": "level-transitioning",
-                "Readers at Grade Level": "level-grade"
-            }[studentData.level] || "level-high";
-            
-            const initials = studentData.name
-                .split(" ")
-                .map(n => n.charAt(0).toUpperCase())
-                .join("")
-                .substring(0, 2);
-            
-            const studentCard = document.createElement("div");
-            studentCard.className = "student-card";
-            studentCard.innerHTML = `
-                <span class="student-avatar">${initials}</span>
-                <div><strong>${studentData.name}</strong><div class="small text-secondary">WPM ${studentData.wpm} • ${studentData.accuracy}%</div></div>
-                <span class="level-chip ${levelClass}">${studentData.level}</span>
-            `;
-            
-            studentRow.appendChild(studentCard);
-        });
-    })();
+// Load and display persisted students from localStorage
+(function() {
 
-    loadSavedClasses();
-    updateClassCount();
-})();
+    const studentRow = document.querySelector(".student-row");
+    if (!studentRow) return;
+
+    let students = JSON.parse(
+        localStorage.getItem("pabasa_added_students") || "[]"
+    );
+
+    const filteredStudents = students.filter(
+        student => student.name !== "Jay Park"
+    );
+
+    if (filteredStudents.length !== students.length) {
+        localStorage.setItem(
+            "pabasa_added_students",
+            JSON.stringify(filteredStudents)
+        );
+        students = filteredStudents;
+    }
+
+    students.forEach(studentData => {
+
+        const exists = Array.from(
+            studentRow.querySelectorAll(".student-card")
+        ).some(
+            card => card.textContent.includes(studentData.name)
+        );
+
+        if (exists) return;
+
+        const levelClass = {
+            "Low Emerging Readers": "level-low",
+            "High Emerging Readers": "level-high",
+            "Developing Readers": "level-developing",
+            "Transitioning Readers": "level-transitioning",
+            "Readers at Grade Level": "level-grade"
+        }[studentData.level] || "level-high";
+
+        const initials = studentData.name
+            .split(" ")
+            .map(n => n.charAt(0).toUpperCase())
+            .join("")
+            .substring(0, 2);
+
+        const studentCard = document.createElement("div");
+
+        studentCard.className = "student-card";
+
+        studentCard.innerHTML = `
+            <span class="student-avatar">${initials}</span>
+            <div>
+                <strong>${studentData.name}</strong>
+                <div class="small text-secondary">
+                    WPM ${studentData.wpm} • ${studentData.accuracy}%
+                </div>
+            </div>
+            <span class="level-chip ${levelClass}">
+                ${studentData.level}
+            </span>
+        `;
+
+        studentRow.appendChild(studentCard);
+
+    });
+
+})(); // closes student section
+
+
+// Success modal cleanup
+const classCreatedModalEl =
+    document.getElementById("classCreatedModal");
+
+if (classCreatedModalEl) {
+
+    classCreatedModalEl.addEventListener(
+        "hidden.bs.modal",
+        function () {
+
+            document
+                .querySelectorAll(".modal-backdrop")
+                .forEach(el => el.remove());
+
+            document.body.classList.remove("modal-open");
+            document.body.style.overflow = "";
+            document.body.style.paddingRight = "";
+
+        }
+    );
+
+}
+
+
+// Copy code button
+const copyCreatedBtn =
+    document.getElementById("copyCreatedClassCode");
+
+if (copyCreatedBtn) {
+
+    copyCreatedBtn.addEventListener("click", function () {
+
+        const code =
+            document.getElementById("createdClassCode").textContent;
+
+        navigator.clipboard.writeText(code);
+
+        this.innerHTML =
+            '<i class="bi bi-check2 me-2"></i>Copied!';
+
+        setTimeout(() => {
+
+            this.innerHTML =
+                '<i class="bi bi-copy me-2"></i>Copy Code';
+
+        }, 1500);
+
+    });
+
+}
+
+
+loadSavedClasses();
+updateClassCount();
+
+})(); // closes whole file

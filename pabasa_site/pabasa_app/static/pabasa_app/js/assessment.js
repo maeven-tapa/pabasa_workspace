@@ -38,46 +38,107 @@ document.addEventListener("DOMContentLoaded", function () {
     const itemPublishDateRow = document.getElementById("itemPublishDateRow");
     const itemPublishDate = document.getElementById("itemPublishDate");
 
-    /**
-     * Updates the Class Status card on the student assessment dashboard.
-     * Reflects the current enrollment status from localStorage.
-     */
+        /**
+         * Updates the Class Status card on the student assessment dashboard.
+         * Reflects the current enrollment status from localStorage.
+         */
     function updateClassStatusUI() {
+        console.log("UPDATE CLASS STATUS RUNNING");
         const classStatusTitle = document.getElementById("classStatusTitle");
         const classStatusText = document.getElementById("classStatusText");
-        
+
         if (!classStatusTitle || !classStatusText) return;
 
-        const isJoinedFlag = localStorage.getItem("pabasaStudentClassJoined") === "1";
         let codes = [];
-        
+
         try {
             codes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]");
+
             const legacy = localStorage.getItem("pabasaStudentClassCode");
-            if (legacy && !codes.some(c => String(c).toUpperCase() === String(legacy).toUpperCase())) {
+            if (
+                legacy &&
+                !codes.some(
+                    c => String(c).toUpperCase() === String(legacy).toUpperCase()
+                )
+            ) {
                 codes.push(legacy);
             }
-        } catch(e) {
+        } catch (e) {
             const legacy = localStorage.getItem("pabasaStudentClassCode");
             if (legacy) codes = [legacy];
         }
-        
+
         const activeCodes = codes.filter(Boolean);
-        const count = activeCodes.length;
 
-        // Fetch completed assessments for the student
-        const assessmentsCompleted = parseInt(localStorage.getItem("pabasa_assessments_completed") || "0");
-
-        // Show "Active" if the flag is set OR if we actually found codes in the array
-        if (isJoinedFlag || count > 0) {
-            classStatusTitle.textContent = "Classrooms Active";
-            classStatusTitle.className = "fw-bold text-success";
-            classStatusText.textContent = `You have joined ${count || 1} class${count !== 1 ? 'es' : ''} and finished ${assessmentsCompleted} assessment${assessmentsCompleted !== 1 ? 's' : ''}. Assigned tests appear below.`;
-        } else {
+        if (activeCodes.length === 0) {
             classStatusTitle.textContent = "Waiting for class";
             classStatusTitle.className = "fw-bold text-muted";
-            classStatusText.textContent = "Join a class from the dashboard to receive assigned tests.";
+            classStatusText.textContent =
+                "Join a class from the dashboard to receive assigned tests.";
+            return;
         }
+
+        const classCode = activeCodes[0];
+
+        const teacherClasses = JSON.parse(
+            localStorage.getItem("pabasa_teacher_classes") || "[]"
+        );
+
+        const currentClass = teacherClasses.find(
+            c => String(c.code).toUpperCase() === String(classCode).toUpperCase()
+        );
+
+        const className =
+            currentClass?.name ||
+            currentClass?.subject ||
+            "Unknown Class";
+
+        const readings = JSON.parse(
+            localStorage.getItem("pabasa_class_readings") || "{}"
+        );
+
+        const classReadings =
+            readings[classCode] ||
+            readings[classCode.toUpperCase()] ||
+            {};
+
+        const assignedAssessments =
+            (classReadings.words?.length || classReadings.word?.length || 0) +
+            (classReadings.sentences?.length || classReadings.sentence?.length || 0) +
+            (classReadings.paragraphs?.length || classReadings.paragraph?.length || 0);
+
+        const completedAssessments = parseInt(
+            localStorage.getItem("pabasa_assessments_completed") || "0"
+        );
+
+        const progress =
+            assignedAssessments > 0
+                ? Math.round(
+                    (completedAssessments / assignedAssessments) * 100
+                )
+                : 0;
+
+    const classCount = activeCodes.length;
+    const remaining = Math.max(0, assignedAssessments - completedAssessments);
+
+    classStatusTitle.textContent = "Classrooms Active";
+    classStatusTitle.className = "class-status-title";
+
+    let summary = `You have joined ${classCount} class${classCount === 1 ? '' : 'es'}. `;
+    summary += `There are ${assignedAssessments} assigned assessments. `;
+
+    if (assignedAssessments === 0) {
+        summary += "No assessments assigned yet.";
+    } else if (remaining === 0) {
+        summary += "All assigned assessments are completed.";
+    } else {
+        summary += `You have ${remaining} assessment${remaining === 1 ? '' : 's'} remaining.`;
+    }
+
+    classStatusText.innerHTML = `
+        <span class="class-status-label">CLASS STATUS</span>
+        <div class="class-status-summary">${summary}</div>
+    `;
     }
 
     function toggleSectionOnlyRow() {

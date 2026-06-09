@@ -139,11 +139,6 @@ function initStudentsPage() {
                     </div>
                     <div class="reading-band mt-2"><span style="width: ${studentData.wpm}%;"></span></div>
                 </div>
-                <div class="student-row-actions">
-                    <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="#">View</a>
-                    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
-                    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
-                </div>
             `;
             
             if (emptyState) {

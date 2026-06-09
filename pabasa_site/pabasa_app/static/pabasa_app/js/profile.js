@@ -245,13 +245,15 @@ function initProfilePage() {
 
             let totalAvailable = 0;
             let completedCount = 0;
+            let totalAssessments = 0;
+            let completedAssessmentsCount = 0;
 
             studentCodes.forEach(code => {
                 const classData = readingsMap[code];
                 if (!classData) return;
 
                 // Scan all possible material categories
-                ['word', 'sentence', 'paragraph', 'story', 'all'].forEach(type => {
+                ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
                     // Support both singular and plural keys
                     [type, type + 's'].forEach(key => {
                         const list = classData[key];
@@ -268,8 +270,14 @@ function initProfilePage() {
 
                                 totalAvailable++;
                                 const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                                
+                                const mUsage = (m.type || "").toLowerCase();
+                                const isAssessment = mUsage === 'assessment' || mUsage === 'both';
+                                if (isAssessment) totalAssessments++;
+
                                 if (mId && seenIds.includes(mId)) {
                                     completedCount++;
+                                    if (isAssessment) completedAssessmentsCount++;
                                 }
                             });
                         }
@@ -283,11 +291,27 @@ function initProfilePage() {
             const classesEl = document.getElementById("profileStudentClassesCount");
             const completedEl = document.getElementById("profileStudentCompletedCount");
             const percentEl = document.getElementById("profileStudentProgressPercent");
+            const statusSummaryEl = document.getElementById("classStatusSummary");
 
             // Correctly show the count of joined classes
             if (classesEl) classesEl.textContent = studentCodes.length;
             if (completedEl) completedEl.textContent = completedCount;
             if (percentEl) percentEl.textContent = percentage + "%";
+            
+            // Update the new Class Status summary card
+            if (statusSummaryEl) {
+                let summary = `You have joined ${studentCodes.length} class${studentCodes.length === 1 ? '' : 'es'}. There are ${totalAssessments} assigned assessments.`;
+                
+                if (totalAssessments === 0) {
+                    summary += " No assessments assigned yet.";
+                } else if (completedAssessmentsCount === totalAssessments) {
+                    summary += " All assigned assessments are completed.";
+                } else {
+                    const remaining = totalAssessments - completedAssessmentsCount;
+                    summary += ` You have ${remaining} assessment${remaining === 1 ? '' : 's'} remaining.`;
+                }
+                statusSummaryEl.textContent = summary;
+            }
 
             // Update level and other persistent stats
             const totalStars = parseInt(localStorage.getItem("pabasa_total_stars") || "0", 10);

@@ -154,6 +154,10 @@
 
             // Notify teacher that activity finished
             const studentName = window.PABASA_USER_NAME || "A student";
+            const teacherClasses = JSON.parse(localStorage.getItem('pabasa_teacher_classes') || '[]');
+            const cls = teacherClasses.find(c => c.code === testCode);
+            const teacherEmail = cls ? cls.teacherEmail : null;
+
             let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
             notifications.unshift({
                 id: Date.now() + Math.random(),
@@ -162,7 +166,8 @@
                 message: `${studentName} finished reading "${testTitle}"`,
                 timestamp: Date.now(),
                 read: false,
-                role: 'teacher'
+                role: 'teacher',
+                recipientEmail: teacherEmail
             });
             localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
             window.dispatchEvent(new Event('pabasa:notifications-updated'));

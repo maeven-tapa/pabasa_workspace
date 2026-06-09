@@ -383,6 +383,15 @@
         padding: 0.75rem;
     }
 
+    .form-control[type="text"] {
+        appearance: auto;
+    }
+
+    select.form-control {
+        appearance: auto;
+        cursor: pointer;
+    }
+
     .mini-metric strong {
         display: block;
         font-size: 1.25rem;
@@ -504,24 +513,101 @@
             </div>
 
             <form class="create-class-form" id="createClassForm">
+                {% csrf_token %}
+
                 <div class="teacher-field">
-                    <label for="classNameInput">Class name / subject</label>
-                    <input class="form-control" id="classNameInput" type="text" placeholder="e.g., Grade 3 Reading - Section A" required>
+                    <label for="subjectInput">Subject</label>
+                    <select class="form-control" id="subjectInput" required>
+                        <option value="">Select Subject</option>
+                        <option value="English">English</option>
+                        <option value="Tagalog">Tagalog</option>
+                    </select>
                 </div>
+
                 <div class="teacher-field">
-                    <label for="classHeaderInput">Header</label>
-                    <input class="form-control" id="classHeaderInput" type="text" placeholder="e.g., READ" maxlength="12">
+                    <label for="gradeLevelInput">Grade Level</label>
+                    <select class="form-control" id="gradeLevelInput" required>
+                        <option value="">Select Grade Level</option>
+                        <option value="Grade 1">Grade 1</option>
+                        <option value="Grade 2">Grade 2</option>
+                        <option value="Grade 3">Grade 3</option>
+                        <option value="Grade 4">Grade 4</option>
+                        <option value="Grade 5">Grade 5</option>
+                        <option value="Grade 6">Grade 6</option>
+                    </select>
                 </div>
+
+                <div class="teacher-field">
+                    <label for="sectionInput">Section</label>
+                    <select class="form-control" id="sectionInput" required>
+                        <option value="">Select Section</option>
+                        <option value="Sampaguita">Sampaguita</option>
+                        <option value="Camia">Camia</option>
+                        <option value="Rose">Rose</option>
+                    </select>
+                </div>
+
                 <div class="teacher-field">
                     <label for="classDescriptionInput">Description</label>
                     <textarea class="form-control" id="classDescriptionInput" rows="3" placeholder="Describe the class purpose, focus, or any special notes..."></textarea>
                 </div>
-                <div class="generated-code" aria-live="polite">
-                    <div>
-                        <span>Generated class code</span>
-                        <strong id="generatedClassCode">PABC-482</strong>
+                
+                <div class="modal fade"
+                    id="classCreatedModal"
+                    tabindex="-1"
+                    aria-hidden="true">
+
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+
+                            <div class="modal-header border-0">
+                                <h5 class="modal-title text-success fw-bold">
+                                    🎉 Class Created Successfully
+                                </h5>
+
+                                <button
+                                    type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="modal"
+                                    aria-label="Close">
+                                </button>
+                            </div>
+
+                            <div class="modal-body text-center">
+
+                                <h3 id="createdClassName"></h3>
+
+                                <div class="mt-4">
+                                    <small class="text-muted">
+                                        CLASS CODE
+                                    </small>
+
+                                    <h1 id="createdClassCode"></h1>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-success mt-3"
+                                    id="copyCreatedClassCode">
+                                    Copy Code
+                                </button>   
+                            </div>
+                        </div>
                     </div>
-                    <button class="btn btn-light fw-bold" id="regenerateCodeBtn" type="button"><i class="bi bi-arrow-clockwise me-1"></i>New Code</button>
+                </div>
+                <div class="generated-code">
+                    <div>
+                        <span>Generated Class Code</span>
+                        <strong id="generatedClassCode">ABCD-123</strong>
+                    </div>
+
+                    <button
+                        id="regenerateCodeBtn"
+                        type="button"
+                        class="btn btn-light fw-bold">
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        New Code
+                    </button>
                 </div>
                 <button class="btn btn-primary fw-bold" type="submit"><i class="bi bi-check2-circle me-1"></i>Create Class</button>
             </form>

@@ -47,4 +47,9 @@ urlpatterns = [
     path('what-is-pabasa/', views.pabasa_info, name='pabasa_info'),
     path('about/', views.about, name='about'),
     path('students/send-email/', views.send_parent_email, name='send_parent_email'),
+    path(
+    'dashboard/teacher/create-class/',
+    views.create_reading_class,
+    name='create_reading_class'
+),
 ]

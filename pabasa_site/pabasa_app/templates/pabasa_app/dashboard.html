@@ -806,44 +806,77 @@
             }
 
             const codes = getSavedCodes();
-            if (!codes.includes(code)) {
-                codes.push(code);
-                
-                // SIMULATE ENROLLMENT: Add student to the teacher's list
-                try {
-                    let allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-                    const studentId = localStorage.getItem("pabasaCurrentUserId") || Date.now();
-                    const studentName = "{{ user_full_name|escapejs }}" || "Student User";
-                    const studentEmail = "{{ email|escapejs }}";
-                    
-                    const isEnrolled = allStudents.some(s => s.name === studentName && s.class === teacherClass.name);
-                    if (!isEnrolled) {
-                        allStudents.push({
-                            id: studentId,
-                            name: studentName,
-                            email: studentEmail,
-                            class: teacherClass.name,
-                            level: "Developing Readers",
-                            wpm: "0",
-                            accuracy: "0"
-                        });
-                        localStorage.setItem("pabasa_added_students", JSON.stringify(allStudents));
-                        
-                        // Notify teacher
-                        let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
-                        notifications.unshift({
-                            id: Date.now() + Math.random(),
-                            classCode: code,
-                            title: "New Student Joined",
-                            message: `Hi, Teacher! ${studentName} has joined your class ${teacherClass.name}`,
-                            timestamp: Date.now(),
-                            read: false,
-                            role: 'teacher'
-                        });
-                        localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
-                        window.dispatchEvent(new Event('pabasa:notifications-updated'));
-                    }
-                } catch (e) { console.error("Enrollment failed:", e); }
+
+            // Check if student already joined this class
+            if (codes.includes(code)) {
+                if (invalidClassCodeModalElement && window.bootstrap) {
+                    document.getElementById("invalidClassCodeModalLabel").textContent =
+                        "Already Joined";
+
+                    invalidClassCodeModalElement.querySelector(".modal-body").textContent =
+                        "You have already joined this class.";
+
+                    bootstrap.Modal.getOrCreateInstance(invalidClassCodeModalElement).show();
+                } else {
+                    alert("You have already joined this class.");
+                }
+
+                return;
+            }
+
+            codes.push(code);
+
+            // SIMULATE ENROLLMENT: Add student to the teacher's list
+            try {
+                let allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+                const studentId = localStorage.getItem("pabasaCurrentUserId") || Date.now();
+                const studentName = "{{ user_full_name|escapejs }}" || "Student User";
+                const studentEmail = "{{ email|escapejs }}";
+
+                const isEnrolled = allStudents.some(
+                    s => s.name === studentName && s.class === teacherClass.name
+                );
+
+                if (!isEnrolled) {
+                    allStudents.push({
+                        id: studentId,
+                        name: studentName,
+                        email: studentEmail,
+                        class: teacherClass.name,
+                        level: "Developing Readers",
+                        wpm: "0",
+                        accuracy: "0"
+                    });
+
+                    localStorage.setItem(
+                        "pabasa_added_students",
+                        JSON.stringify(allStudents)
+                    );
+
+                    // Notify teacher
+                    let notifications = JSON.parse(
+                        localStorage.getItem("pabasa_notifications") || "[]"
+                    );
+
+                    notifications.unshift({
+                        id: Date.now() + Math.random(),
+                        classCode: code,
+                        title: "New Student Joined",
+                        message: `Hi, Teacher! ${studentName} has joined your class ${teacherClass.name}`,
+                        timestamp: Date.now(),
+                        read: false,
+                        role: "teacher"
+                    });
+
+                    localStorage.setItem(
+                        "pabasa_notifications",
+                        JSON.stringify(notifications.slice(0, 100))
+                    );
+
+                    window.dispatchEvent(new Event("pabasa:notifications-updated"));
+                }
+            } catch (e) {
+                console.error("Enrollment failed:", e);
             }
 
             classCodeInput.setCustomValidity("");

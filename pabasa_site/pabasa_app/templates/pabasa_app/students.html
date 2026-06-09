@@ -169,7 +169,7 @@
         border-radius: 18px;
         display: grid;
         gap: 0.8rem;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: auto minmax(0, 1fr);
         padding: 0.85rem;
     }
 
@@ -226,19 +226,6 @@
         display: block;
         font-size: 0.84rem;
         overflow-wrap: anywhere;
-    }
-
-    .student-row-actions {
-        align-self: stretch;
-        display: grid;
-        gap: 0.5rem;
-        justify-items: end;
-    }
-
-    .student-row-actions .btn {
-        border-radius: 12px;
-        font-weight: 700;
-        min-width: 82px;
     }
 
     .level-chip {
@@ -728,11 +715,6 @@ document.addEventListener("DOMContentLoaded", function() {
                         <div class="student-meta-box"><span>Accuracy</span><strong>${studentData.accuracy}%</strong></div>
                     </div>
                     <div class="reading-band mt-2"><span style="width: ${studentData.wpm}%;"></span></div>
-                </div>
-                <div class="student-row-actions">
-                    <a class="btn btn-outline-primary btn-sm d-flex justify-content-center align-items-center" href="#">View</a>
-                    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#progressReportModal">Report</button>
-                    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#parentUpdateModal">Update</button>
                 </div>
             `;
             

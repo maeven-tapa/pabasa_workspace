@@ -436,8 +436,8 @@ var getStudentClassData = window.getStudentClassData = function() {
         const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
         if (!notifications.length) return;
 
-        // Filter for all notifications meant for the current user role that haven't been emailed yet
-        const unsentNotifications = notifications.filter(n => n.role === userRole && !n.emailSent);
+        // Filter for notifications meant for the current user OR notifications with an explicit recipientEmail
+        const unsentNotifications = notifications.filter(n => (n.role === userRole || n.recipientEmail) && !n.emailSent);
         if (unsentNotifications.length === 0) return;
 
         // Check user preferences (works for both Teacher and Student)
@@ -445,13 +445,13 @@ var getStudentClassData = window.getStudentClassData = function() {
         const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
         if (settings.emailNotifications === false) return;
 
-        const email = window.PABASA_USER_EMAIL || window.localStorage.getItem("pabasaUserEmail");
-        if (!email) return;
-
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
         let notificationsUpdated = false;
 
         for (const notification of unsentNotifications) {
+            const email = notification.recipientEmail || window.PABASA_USER_EMAIL || window.localStorage.getItem("pabasaUserEmail");
+            if (!email) continue;
+
             try {
                 // Always use the absolute path /students/send-email/ to avoid 404 relative path errors
                 const response = await fetch('/students/send-email/', {

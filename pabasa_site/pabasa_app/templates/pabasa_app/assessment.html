@@ -409,7 +409,6 @@
             const teacherClasses = getStoredArray(teacherClassesKey);
             const readingsByClass = getStoredObject(readingsStorageKey);
 
-            // Create normalized map for case-insensitive class code lookups
             const readingsMap = {};
             Object.keys(readingsByClass).forEach(key => {
                 readingsMap[key.toUpperCase()] = readingsByClass[key];
@@ -438,6 +437,75 @@
                 return { classData, materials };
             });
         };
+
+        function updateClassStatus() {
+            const title = document.getElementById("classStatusTitle");
+            const text = document.getElementById("classStatusText");
+
+            if (!title || !text) return;
+
+            const joinedCodes = getJoinedCodes();
+
+            if (!joinedCodes.length) {
+                title.textContent = "Waiting for class";
+                text.textContent =
+                    "Join a class from the dashboard to receive assigned tests.";
+                return;
+            }
+
+            const code = joinedCodes[0];
+
+            const teacherClasses = getStoredArray(teacherClassesKey);
+
+            const currentClass = teacherClasses.find(
+                c => String(c.code || "").toUpperCase() === code
+            );
+
+            const className = currentClass?.name || "Unknown Class";
+
+            const readingsByClass = getStoredObject(readingsStorageKey);
+
+            const readingsMap = {};
+            Object.keys(readingsByClass).forEach(key => {
+                readingsMap[key.toUpperCase()] = readingsByClass[key];
+            });
+
+            const readings = readingsMap[code.toUpperCase()] || {};
+
+            const assigned =
+                (readings.words?.length || readings.word?.length || 0) +
+                (readings.sentences?.length || readings.sentence?.length || 0) +
+                (readings.paragraphs?.length || readings.paragraph?.length || 0);
+
+            const completed =
+                JSON.parse(
+                    localStorage.getItem("pabasa_seen_material_ids") || "[]"
+                ).length;
+
+            const progress =
+                assigned > 0
+                    ? Math.round((completed / assigned) * 100)
+                    : 0;
+
+        title.textContent = "Classrooms Active";
+
+        const remaining = Math.max(0, assigned - completed);
+
+        let summary = `You have joined 1 class. `;
+        summary += `There are ${assigned} assigned assessments. `;
+
+        if (assigned === 0) {
+            summary += "No assessments assigned yet.";
+        } else if (remaining === 0) {
+            summary += "All assigned assessments are completed.";
+        } else {
+            summary += `You have ${remaining} assessment${remaining === 1 ? "" : "s"} remaining.`;
+        }
+
+        text.innerHTML = `
+            <div class="class-status-summary">${summary}</div>
+        `;
+        }
 
         function updateAssessmentHub() {
             const grid = document.getElementById("subjectGrid");
@@ -495,10 +563,15 @@
         }
 
         updateAssessmentHub();
-        window.addEventListener("pabasa:student-class-updated", updateAssessmentHub);
+        updateClassStatus();
+        window.addEventListener("pabasa:student-class-updated", () => {
+            updateAssessmentHub();
+            updateClassStatus();
+        });
         window.addEventListener("storage", (event) => {
             if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey, "pabasa_seen_material_ids"].includes(event.key)) {
                 updateAssessmentHub();
+                updateClassStatus();
             }
         });
     })();
