@@ -583,15 +583,43 @@
                 </div>
                 <form id="addStudentForm">
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="studentName">Student Name *</label>
-                            <input class="form-control" id="studentName" type="text" placeholder="First and Last Name" required>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">First Name *</label>
+                            <input class="form-control" id="studentFirstName" type="text" required>
                         </div>
+
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">M.I.</label>
+                            <input class="form-control"
+                                id="studentMiddleInitial"
+                                type="text"
+                                maxlength="1"
+                                placeholder="M">
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Last Name *</label>
+                            <input class="form-control" id="studentLastName" type="text" required>
+                        </div>
+
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Suffix</label>
+                            <select class="form-select" id="studentSuffix">
+                                <option value="">None</option>
+                                <option value="Jr.">Jr.</option>
+                                <option value="Sr.">Sr.</option>
+                                <option value="II">II</option>
+                                <option value="III">III</option>
+                                <option value="IV">IV</option>
+                                <option value="V">V</option>
+                            </select>
+                        </div>
+                    </div> 
                         <div class="mb-3">
                             <label class="form-label" for="studentClass">Class *</label>
                             <select class="form-select" id="studentClass" required>
                                 <option value="">Select a class...</option>
-                                <!-- Classes will be dynamically populated from localStorage -->
                             </select>
                         </div>
                         <div class="mb-3">
@@ -733,59 +761,99 @@ document.addEventListener("DOMContentLoaded", function() {
     loadPersistedStudents();
 });
 
-// Inline form handler to ensure it runs immediately
-document.addEventListener("DOMContentLoaded", function() {
+// Add Student Form
+document.addEventListener("DOMContentLoaded", function () {
+
     const addStudentForm = document.getElementById("addStudentForm");
-    if (addStudentForm) {
-        addStudentForm.addEventListener("submit", function(e) {
-            e.preventDefault();
-            console.log("✓ Form submitted");
-            
-            const studentName = document.getElementById("studentName").value.trim();
-            const studentClass = document.getElementById("studentClass").value.trim();
-            const readingLevel = document.getElementById("studentReadingLevel").value.trim();
-            const studentEmail = document.getElementById("parentContact").value.trim();
-            const wpm = document.getElementById("studentWPM").value || "0";
-            const accuracy = document.getElementById("studentAccuracy").value || "0";
-            
-            if (!studentName || !studentClass || !readingLevel) {
-                alert("Please fill in all required fields");
-                return;
-            }
-            
-            // Save to localStorage
-            const studentData = {
-                name: studentName,
-                email: studentEmail,
-                class: studentClass,
-                level: readingLevel,
-                wpm: wpm,
-                accuracy: accuracy,
-                id: Date.now()
-            };
-            
-            let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-            students.push(studentData);
-            localStorage.setItem("pabasa_added_students", JSON.stringify(students));
-            console.log("✓ Saved to localStorage:", studentData);
-            
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById("addStudentModal"));
-            if (modal) modal.hide();
-            
-            // Reset form
-            addStudentForm.reset();
-            
-            // Show alert
-            alert(studentName + " has been added!");
-            
-            // Reload page to show student in directory
-            setTimeout(() => {
-                location.reload();
-            }, 500);
-        });
-    }
+
+    if (!addStudentForm) return;
+
+    addStudentForm.addEventListener("submit", function (e) {
+
+        e.preventDefault();
+
+        const firstName =
+            document.getElementById("studentFirstName").value.trim();
+
+        const middleInitial =
+            document.getElementById("studentMiddleInitial").value.trim();
+
+        const lastName =
+            document.getElementById("studentLastName").value.trim();
+
+        const suffix =
+            document.getElementById("studentSuffix").value;
+
+        const studentClass =
+            document.getElementById("studentClass").value;
+
+        const readingLevel =
+            document.getElementById("studentReadingLevel").value;
+
+        const studentEmail =
+            document.getElementById("parentContact").value.trim();
+
+        const wpm =
+            document.getElementById("studentWPM").value || "0";
+
+        const accuracy =
+            document.getElementById("studentAccuracy").value || "0";
+
+        if (!firstName || !lastName || !studentClass || !readingLevel) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
+        let studentName = firstName;
+
+        if (middleInitial) {
+            studentName += ` ${middleInitial}.`;
+        }
+
+        studentName += ` ${lastName}`;
+
+        if (suffix) {
+            studentName += ` ${suffix}`;
+        }
+
+        const studentData = {
+            id: Date.now(),
+            name: studentName,
+            email: studentEmail,
+            class: studentClass,
+            level: readingLevel,
+            wpm: wpm,
+            accuracy: accuracy
+        };
+
+        let students = JSON.parse(
+            localStorage.getItem("pabasa_added_students") || "[]"
+        );
+
+        students.push(studentData);
+
+        localStorage.setItem(
+            "pabasa_added_students",
+            JSON.stringify(students)
+        );
+
+        const modalEl = document.getElementById("addStudentModal");
+
+        const modal =
+            bootstrap.Modal.getInstance(modalEl);
+
+        if (modal) {
+            modal.hide();
+        }
+
+        addStudentForm.reset();
+
+        alert(`${studentName} has been added successfully!`);
+
+        location.reload();
+    });
 });
+
 </script>
 
 <!-- Chart.js for reading level distribution pie chart -->
@@ -1025,7 +1093,9 @@ document.addEventListener("DOMContentLoaded", function() {
     // Get classes created from the teacher dashboard, plus any classes already used by students.
     function getUniqueClasses() {
         const sampleClassCodes = ["RRG-9154", "AFC-7302", "ESL-5601"];
-        const teacherClasses = JSON.parse(localStorage.getItem("pabasa_teacher_classes") || "[]");
+        const email = (window.PABASA_USER_EMAIL || '').trim();
+        const scopedKey = email ? `pabasa_teacher_classes_${email}` : 'pabasa_teacher_classes';
+        const teacherClasses = JSON.parse(localStorage.getItem(scopedKey) || "[]");
         const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
         const dashboardClassNames = teacherClasses
             .filter(classData => !sampleClassCodes.includes(classData.code))
@@ -1064,7 +1134,9 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     window.addEventListener("storage", function (event) {
-        if (event.key === "pabasa_teacher_classes" || event.key === "pabasa_added_students") {
+        const _email = (window.PABASA_USER_EMAIL || '').trim();
+        const _scopedKey = _email ? `pabasa_teacher_classes_${_email}` : 'pabasa_teacher_classes';
+        if (event.key === _scopedKey || event.key === "pabasa_added_students") {
             populateClassDropdown();
             updateStudentStatistics();
         }
@@ -1076,9 +1148,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const addStudentForm = document.getElementById("addStudentForm");
     if (addStudentForm) {
         addStudentForm.addEventListener("submit", function(e) {
-            // After form submission, re-populate dropdowns
             setTimeout(() => {
-                populateClassDropdown();
                 updateStudentStatistics();
             }, 100);
         });

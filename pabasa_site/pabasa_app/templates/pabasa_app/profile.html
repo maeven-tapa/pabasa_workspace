@@ -492,10 +492,48 @@
                                     <label class="form-label" for="firstName">First Name</label>
                                     <input class="form-control" id="firstName" name="first_name" type="text" value="{{ first_name }}" data-account-details-field disabled>
                                 </div>
+                                {% if middle_name %}
+                                <div>
+                                    <label class="form-label" for="middleName">Middle Name</label>
+                                    <input class="form-control" id="middleName" name="middle_initial" type="text" value="{{ middle_name }}" maxlength="1" data-account-details-field disabled>
+                                </div>
+                                {% else %}
+                                <div>
+                                    <label class="form-label" for="middleName">Middle Name <span class="text-muted fw-normal" style="text-transform:none;">(optional)</span></label>
+                                    <input class="form-control" id="middleName" name="middle_initial" type="text" value="" maxlength="1" placeholder="M" data-account-details-field disabled>
+                                </div>
+                                {% endif %}
                                 <div>
                                     <label class="form-label" for="lastName">Last Name</label>
                                     <input class="form-control" id="lastName" name="last_name" type="text" value="{{ last_name }}" data-account-details-field disabled>
                                 </div>
+                                {% if suffix %}
+                                <div>
+                                    <label class="form-label" for="suffix">Suffix</label>
+                                    <select class="form-select" id="suffix" name="suffix" data-account-details-field disabled>
+                                        <option value="">None</option>
+                                        <option value="Jr." {% if suffix == 'Jr.' %}selected{% endif %}>Jr.</option>
+                                        <option value="Sr." {% if suffix == 'Sr.' %}selected{% endif %}>Sr.</option>
+                                        <option value="II"  {% if suffix == 'II'  %}selected{% endif %}>II</option>
+                                        <option value="III" {% if suffix == 'III' %}selected{% endif %}>III</option>
+                                        <option value="IV"  {% if suffix == 'IV'  %}selected{% endif %}>IV</option>
+                                        <option value="V"   {% if suffix == 'V'   %}selected{% endif %}>V</option>
+                                    </select>
+                                </div>
+                                {% else %}
+                                <div>
+                                    <label class="form-label" for="suffix">Suffix <span class="text-muted fw-normal" style="text-transform:none;">(optional)</span></label>
+                                    <select class="form-select" id="suffix" name="suffix" data-account-details-field disabled>
+                                        <option value="" selected>None</option>
+                                        <option value="Jr.">Jr.</option>
+                                        <option value="Sr.">Sr.</option>
+                                        <option value="II">II</option>
+                                        <option value="III">III</option>
+                                        <option value="IV">IV</option>
+                                        <option value="V">V</option>
+                                    </select>
+                                </div>
+                                {% endif %}
                                 <div class="full">
                                     <label class="form-label" for="email">Email Address</label>
                                     <input class="form-control" id="email" name="email" type="email" value="{{ email }}" data-account-details-field disabled>

@@ -171,6 +171,17 @@
             });
             localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
             window.dispatchEvent(new Event('pabasa:notifications-updated'));
+            // Notify teacher via Backend (Ensuring fetch is correctly implemented)
+            const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            if (materialId && token) {
+                fetch('/record-assessment-completion/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+                    body: JSON.stringify({ assessment_id: materialId })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) console.log("PABASA: Completion notified.");
+                }).catch(e => console.error("PABASA: Completion error", e));
+            }
         }
 
         const startReading = () => {

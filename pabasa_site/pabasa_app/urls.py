@@ -46,7 +46,9 @@ urlpatterns = [
     path('dashboard/notifications/', views.notifications, name='notifications'),
     path('what-is-pabasa/', views.pabasa_info, name='pabasa_info'),
     path('about/', views.about, name='about'),
+    path('dashboard/teacher/classes/', views.get_teacher_classes, name='get_teacher_classes'),
     path('students/send-email/', views.send_parent_email, name='send_parent_email'),
+    path('dashboard/teacher/add-material/', views.add_reading_material, name='add_reading_material'),
     path(
     'dashboard/teacher/create-class/',
     views.create_reading_class,

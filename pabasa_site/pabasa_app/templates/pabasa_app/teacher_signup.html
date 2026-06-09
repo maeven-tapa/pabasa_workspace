@@ -223,13 +223,36 @@
                     <div class="col-12">
                         <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">First name</label>
-                        <input class="form-control" type="text" name="first_name" placeholder="Enter first name" required>
+                        <input class="form-control" type="text" name="first_name" required>
                     </div>
-                    <div class="col-md-6">
+
+                    <div class="col-md-2">
+                        <label class="form-label">Middle Initial</label>
+                        <input class="form-control"
+                            type="text"
+                            name="middle_initial"
+                            maxlength="1"
+                            placeholder="M">
+                    </div>
+
+                    <div class="col-md-4">
                         <label class="form-label">Last name</label>
-                        <input class="form-control" type="text" name="last_name" placeholder="Enter last name" required>
+                        <input class="form-control" type="text" name="last_name" required>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Suffix</label>
+                        <select class="form-select" name="suffix">
+                            <option value="">None</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                            <option value="V">V</option>
+                        </select>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Sex</label>
@@ -295,15 +318,34 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Teacher Role</label>
-                        <input class="form-control" type="text" name="teacher_role" placeholder="e.g., Grade 1 Teacher">
+                        <select class="form-select" name="teacher_role" required>
+                            <option value="" selected disabled>Select Teacher Role</option>
+                            <option value="Grade 1 Teacher">Grade 1 Teacher</option>
+                            <option value="Grade 2 Teacher">Grade 2 Teacher</option>
+                            <option value="Grade 3 Teacher">Grade 3 Teacher</option>
+                            <option value="Grade 4 Teacher">Grade 4 Teacher</option>
+                            <option value="Grade 5 Teacher">Grade 5 Teacher</option>
+                            <option value="Grade 6 Teacher">Grade 6 Teacher</option>
+                        </select>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">School</label>
-                        <input class="form-control" type="text" name="school" placeholder="School name">
+                        <select class="form-select" name="school" required>
+                            <option value="" selected disabled>Select School</option>
+                            <option value="Salawag Elementary School">Salawag Elementary School</option>
+                        </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <label class="form-label">Department</label>
-                        <input class="form-control" type="text" name="department" placeholder="Department">
+                        <select class="form-select" name="department" required>
+                            <option value="" selected disabled>Select Department</option>
+                            <option value="Language &amp; Communication (English and Filipino)">Language &amp; Communication (English and Filipino)</option>
+                            <option value="Mathematics">Mathematics</option>
+                            <option value="Science">Science</option>
+                            <option value="Social Studies (Araling Panlipunan)">Social Studies (Araling Panlipunan)</option>
+                            <option value="Maka-Bayan / MAPEH">Maka-Bayan / MAPEH</option>
+                            <option value="Edukasyong Pantahanan at Pangkabuhayan (EPP)">Edukasyong Pantahanan at Pangkabuhayan (EPP)</option>
+                        </select>
                     </div>
                     <div class="col-12 d-flex justify-content-between form-actions">
                         <a class="btn back-button" href="{% url 'signup' %}">Back</a>

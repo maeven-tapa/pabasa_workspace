@@ -826,5 +826,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
+<script>
+    window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
+</script>
+
 <script src="{% static 'pabasa_app/js/dashboard_teacher.js' %}"></script>
 {% endblock %}

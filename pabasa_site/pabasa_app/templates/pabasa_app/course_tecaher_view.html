@@ -1079,6 +1079,32 @@
             }).length;
         }
 
+        function loadTeacherClassesThenRender() {
+            fetch('/dashboard/teacher/classes/', {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const email = (window.PABASA_USER_EMAIL || '').trim();
+                    if (email) {
+                        localStorage.setItem(
+                            `pabasa_teacher_classes_${email}`,
+                            JSON.stringify(data.classes)
+                        );
+                    }
+                    // Remove the legacy shared key so it can never leak
+                    localStorage.removeItem('pabasa_teacher_classes');
+                }
+                renderMaterials();
+            })
+            .catch(() => {
+                // Fallback: render with whatever is cached
+                renderMaterials();
+            });
+        }
+
         function renderMaterials() {
             const materials = getMaterials();
             const teacherClasses = getTeacherClasses();
@@ -1169,9 +1195,11 @@
 
         function getTeacherClasses() {
             try {
-                const saved = JSON.parse(localStorage.getItem("pabasa_teacher_classes") || "null");
-                return Array.isArray(saved) ? saved : [];
-            } catch (error) {
+                const email = (window.PABASA_USER_EMAIL || '').trim();
+                if (!email) return [];
+                const raw = localStorage.getItem(`pabasa_teacher_classes_${email}`) || '[]';
+                return JSON.parse(raw);
+            } catch (e) {
                 return [];
             }
         }
@@ -1618,7 +1646,25 @@
             studentsModal.show();
         }
 
-        renderMaterials();
-    });
-</script>
+        (function purgeForeignClassKeys() {
+            const me = (window.PABASA_USER_EMAIL || '').trim();
+            localStorage.removeItem('pabasa_teacher_classes');
+            Object.keys(localStorage).forEach(function(k) {
+                if (
+                    k.startsWith('pabasa_teacher_classes_') &&
+                    k !== `pabasa_teacher_classes_${me}`
+                ) {
+                    localStorage.removeItem(k);
+                }
+            });
+        })();
+        
+    loadTeacherClassesThenRender();
+            });
+        </script>
+
+        <script>
+            window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
+        </script>
+
 {% endblock %}

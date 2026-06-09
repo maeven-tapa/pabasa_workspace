@@ -445,7 +445,11 @@ var getStudentClassData = window.getStudentClassData = function() {
         const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
         if (settings.emailNotifications === false) return;
 
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        const csrfToken =
+            document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
         let notificationsUpdated = false;
 
         for (const notification of unsentNotifications) {

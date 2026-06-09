@@ -99,13 +99,28 @@
         transform: none;
     }
 
+    /* ── ADDED: match teacher-signup-card width/centering ── */
+    .student-signup-card {
+        width: min(820px, 100%);
+    }
+
+    /* ── ADDED: match teacher-signup-form row-gap and action sizing ── */
+    .student-signup-form {
+        row-gap: 1rem;
+    }
+
+    .student-signup-form .form-actions {
+        gap: 0.75rem;
+        margin-top: 0.25rem;
+    }
+
+    .student-signup-form .form-actions .btn {
+        min-width: 9rem;
+    }
+
     .form-actions {
         align-items: center;
         gap: 0.75rem;
-    }
-
-    .form-actions .btn {
-        min-width: 9rem;
     }
 
     .form-actions .back-button {
@@ -181,12 +196,13 @@
         display: block;
     }
 
+    /* ── UPDATED: scope mobile overrides to student-signup-form ── */
     @media (max-width: 575.98px) {
-        .form-actions {
+        .student-signup-form .form-actions {
             flex-direction: column-reverse;
         }
 
-        .form-actions .btn {
+        .student-signup-form .form-actions .btn {
             width: 100%;
         }
 
@@ -199,25 +215,47 @@
 
 {% block content %}
 <section class="account-stage">
-    <div class="col-12 col-lg-8 col-xl-6 mx-auto">
-        <article class="account-card card">
+    <!-- CHANGED: col-lg-9 col-xl-8 to match teacher; added student-signup-card class -->
+    <div class="col-12 col-lg-9 col-xl-8 mx-auto">
+        <article class="account-card card student-signup-card mx-auto">
             <div class="card-body p-4 p-md-5">
                 <span class="modern-chip mb-2">Student Account</span>
                 <h1 class="h4">Create a Student Account</h1>
                 <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
-                <form id="studentSignupForm" method="post" class="row g-3">
+                <!-- CHANGED: added student-signup-form class to match teacher form spacing -->
+                <form id="studentSignupForm" method="post" class="row g-3 student-signup-form">
                     {% csrf_token %}
                     <div class="col-12">
                         <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
                     </div>
-                    <div class="col-md-6">
+
+                    <!-- CHANGED: name row now matches teacher col layout 4/2/4/2 -->
+                    <div class="col-md-4">
                         <label class="form-label">First name</label>
                         <input class="form-control" type="text" name="first_name" placeholder="Enter first name" required>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-2">
+                        <label class="form-label">Middle Initial</label>
+                        <input class="form-control" type="text" name="middle_initial" maxlength="1" placeholder="M">
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">Last name</label>
                         <input class="form-control" type="text" name="last_name" placeholder="Enter last name" required>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Suffix</label>
+                        <select class="form-select" name="suffix">
+                            <option value="">None</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                            <option value="V">V</option>
+                        </select>
+                    </div>
+
+                    <!-- All fields below are unchanged from original -->
                     <div class="col-md-4">
                         <label class="form-label">Birth month</label>
                         <select class="form-select" name="birth_month" required>
@@ -284,11 +322,13 @@
                             </ul>
                         </div>
                     </div>
+                    <!-- CHANGED: added student-signup-form's form-actions class scope via parent form -->
                     <div class="col-12 d-flex justify-content-between form-actions">
                         <a class="btn back-button" href="{% url 'signup' %}">Back</a>
                         <button class="btn btn-primary" id="submitBtn" type="submit" disabled>Create Account</button>
                     </div>
                 </form>
+
                 <div id="studentOtpStage" class="card mt-4 d-none">
                     <div class="card-body p-4">
                         <span class="modern-chip mb-2">OTP Verification</span>
@@ -308,13 +348,18 @@
                                 <button class="btn btn-outline-secondary" type="button" id="backToSignupBtn">Back to signup</button>
                                 <button class="btn btn-primary" id="verifyOtpBtn" type="submit">Verify OTP</button>
                             </div>
-                            <div class="col-12 d-flex justify-content-between align-items-center">
-                                <span class="small text-secondary">Didn't get the code?</span>
-                                <button class="btn btn-link p-0" type="button" id="resendOtpBtn">Resend OTP</button>
+                            <div class="col-12 text-center">
+                                <button
+                                    class="btn btn-link text-decoration-none"
+                                    type="button"
+                                    id="resendOtpBtn">
+                                    Didn't get the code? Resend OTP
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
+
                 <div class="generated-pabasa-id" id="studentGeneratedPabasaId" aria-live="polite">
                     <span class="small fw-bold text-uppercase">Generated PABASA ID</span>
                     <code data-pabasa-id-output></code>

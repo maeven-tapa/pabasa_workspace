@@ -163,7 +163,19 @@
                 
                 if (data.success) {
                     localStorage.setItem("pabasaCurrentUserId", data.custom_id);
-                    // Redirect to appropriate dashboard
+
+                    // Clear old teacher class cache before switching accounts
+                    localStorage.removeItem("pabasa_teacher_classes");
+
+                    if (data.email) {
+                        localStorage.removeItem(`pabasa_teacher_classes_${data.email}`);
+                    }
+
+                    // Save current user email
+                    if (data.email) {
+                        localStorage.setItem("pabasaUserEmail", data.email);
+                    }
+
                     window.location.href = data.redirect_url;
                 } else {
                     errorMessage.textContent = data.error || 'Login failed. Please try again.';

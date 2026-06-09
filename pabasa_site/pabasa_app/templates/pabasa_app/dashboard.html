@@ -556,6 +556,10 @@
 </div>
 
 <script>
+    window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
+</script>
+
+<script>
     document.addEventListener("DOMContentLoaded", () => {
         const dashboard = document.querySelector("[data-student-dashboard]");
         const form = document.querySelector("[data-class-code-form]");
@@ -570,7 +574,8 @@
         const classJoinedKey = "pabasaStudentClassJoined";
         const classCodesKey = "pabasaStudentClassCodes";
         const legacyClassCodeKey = "pabasaStudentClassCode";
-        const teacherClassesKey = "pabasa_teacher_classes";
+        const teacherClassesKey = null;
+
         let pendingUnenrollCode = "";
 
         if (!dashboard || !form || !classCodeInput || !classList) {
@@ -594,9 +599,33 @@
 
         const getTeacherClasses = () => {
             try {
-                const parsed = JSON.parse(window.localStorage.getItem(teacherClassesKey) || "[]");
-                return Array.isArray(parsed) ? parsed.filter((classData) => classData && classData.code) : [];
+                const classes = [];
+
+                Object.keys(localStorage).forEach((key) => {
+                    if (key.startsWith('pabasa_teacher_classes_')) {
+                        try {
+                            const parsed = JSON.parse(
+                                localStorage.getItem(key) || '[]'
+                            );
+
+                            if (Array.isArray(parsed)) {
+                                classes.push(
+                                    ...parsed.filter(
+                                        (classData) =>
+                                            classData &&
+                                            classData.code
+                                    )
+                                );
+                            }
+                        } catch (e) {
+                            console.error('Error reading class key:', key, e);
+                        }
+                    }
+                });
+
+                return classes;
             } catch (error) {
+                console.error('Error loading teacher classes:', error);
                 return [];
             }
         };
@@ -882,6 +911,9 @@
             classCodeInput.setCustomValidity("");
             classCodeInput.value = "";
             setJoinedState(codes);
+            showSuccessToast(
+            `Successfully joined ${teacherClass.name}!`
+        );
         });
 
         classList.addEventListener("click", (event) => {
@@ -924,6 +956,6 @@
         });
 
         // Removed: This event listener caused infinite recursion by calling setJoinedState, which itself dispatches this event.
-    })();
+    });
 </script>
 {% endblock %}

@@ -1453,6 +1453,11 @@
 {% endblock %}
 
 {% block content %}
+
+<script>
+    window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
+</script>
+
 <script>
     // Set teacher name, role, and profile photo from Django context for JavaScript to use
     window.TEACHER_NAME = "{{ user_full_name|escapejs }}";
@@ -1688,8 +1693,10 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
                                 <div class="modal-body">
+                                <form id="addMaterialForm">
+                                    <div id="amValidationError" class="alert alert-danger d-none mb-3" role="alert"></div>
                                     <div class="mb-3">
-                                        <label class="form-label fw-600">Material Title</label>
+                                        <label class="form-label fw-600">Material Title <span class="text-danger">*</span></label>
                                         <input type="text" id="materialTitle" class="form-control" placeholder="e.g., Filipino Consonants Set A" style="border-radius: 8px;">
                                     </div>
                                     <div class="mb-3">
@@ -1721,6 +1728,7 @@
                                             <input type="datetime-local" id="scheduleDateTime" class="form-control" style="border-radius: 8px;">
                                         </div>
                                     </div>
+                                    </form> 
                                 </div>
                                 <div class="modal-footer border-0">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -2017,7 +2025,8 @@
     // Get classes from localStorage (synced with dashboard_teacher.html)
     let classes_from_storage = [];
     try {
-        const stored = localStorage.getItem("pabasa_teacher_classes");
+        const email = (window.PABASA_USER_EMAIL || '').trim();
+        const stored = email ? localStorage.getItem(`pabasa_teacher_classes_${email}`) : null;
         if (stored) {
             classes_from_storage = JSON.parse(stored);
             // Remove hardcoded/sample classes
@@ -2026,7 +2035,7 @@
                 return !sampleCodes.includes(cls.code);
             });
             // Update localStorage to remove sample classes
-            localStorage.setItem("pabasa_teacher_classes", JSON.stringify(classes_from_storage));
+            if (email) localStorage.setItem(`pabasa_teacher_classes_${email}`, JSON.stringify(classes_from_storage));
             console.log("✓ Loaded classes from localStorage:", classes_from_storage.length, "classes");
         }
     } catch (e) {
@@ -2038,7 +2047,8 @@
     
     // Listen for localStorage changes (when classes are created in another tab)
     window.addEventListener('storage', function(e) {
-        if ((e.key === 'pabasa_teacher_classes' || e.key === 'pabasa_added_students') && e.newValue) {
+        const scopedKey = `pabasa_teacher_classes_${(window.PABASA_USER_EMAIL||'').trim()}`;
+        if ((e.key === scopedKey || e.key === 'pabasa_added_students') && e.newValue) {
             try {
                 const updatedClasses = JSON.parse(e.newValue);
                 console.log('✓ Classes updated from another tab, reloading...');
@@ -2084,6 +2094,7 @@
         overviewStats.materialsPosted = flatMaterials.length;
         localStorage.setItem(overviewStatsStorageKey, JSON.stringify(overviewStats));
     }
+
 
     async function notifyStudentsOfMaterial(classCode, material, readingType) {
         const classData = teacherClasses.find(c => c.code === classCode);
@@ -2247,7 +2258,8 @@
 
     function deleteClass(classCode) {
         teacherClasses = teacherClasses.filter(cls => cls.code !== classCode);
-        localStorage.setItem('pabasa_teacher_classes', JSON.stringify(teacherClasses));
+        const _email = (window.PABASA_USER_EMAIL || '').trim();
+        if (_email) localStorage.setItem(`pabasa_teacher_classes_${_email}`, JSON.stringify(teacherClasses));
         renderClasses();
         showSuccessModal('Class Deleted', 'The class has been successfully deleted.');
     }
@@ -2325,7 +2337,7 @@
                 return `
                     <div class="material-card-modern" data-material-id="${reading.id}" data-reading-type="${type}" 
                          data-full-content="${(reading.content || '').replace(/"/g, '&quot;')}"
-                         data-status="${status}"
+                         data-status="${reading.status || 'published'}"
                          data-schedule="${reading.schedule || ''}"
                          data-usage="${reading.type || 'practice'}">
                         <div class="material-info">
@@ -2707,548 +2719,6 @@
         return photoUrl ? `background: url('${photoUrl}') center/cover; color: transparent;` : '';
     }
 
-    // ===== READINGS TAB HANDLERS =====
-    function setupReadingsHandlers() {
-        let currentMaterialType = '';
-        let editingCard = null;
-        
-        // Add schedule toggle for Add modal
-        const statusSelect = document.getElementById('publicationStatus');
-        const scheduleField = document.getElementById('scheduleField');
-        if (statusSelect && scheduleField) {
-            statusSelect.addEventListener('change', function() {
-                scheduleField.classList.toggle('d-none', this.value !== 'scheduled');
-            });
-        }
-
-        // Add schedule toggle for Edit modal
-        const editStatusSelect = document.getElementById('editPublicationStatus');
-        const editScheduleField = document.getElementById('editScheduleField');
-        if (editStatusSelect && editScheduleField) {
-            editStatusSelect.addEventListener('change', function() {
-                editScheduleField.classList.toggle('d-none', this.value !== 'scheduled');
-            });
-        }
-
-        const readingsContainer = document.getElementById('readingsContainer');
-        if (readingsContainer && !readingsContainer.dataset.bound) {
-            readingsContainer.dataset.bound = 'true';
-            readingsContainer.addEventListener('click', function(e) {
-                // Add material button
-                if (e.target.closest('[data-add-reading]')) {
-                    const btn = e.target.closest('[data-add-reading]');
-                    currentMaterialType = btn.dataset.addReading;
-                    const modal = new bootstrap.Modal(document.getElementById('addMaterialModal'));
-                    toggleAddScheduleField(); // Reset schedule field visibility when opening add modal
-                    modal.show();
-                }
-                
-                // View material button
-                if (e.target.closest('[data-action="view"]')) {
-                    const btn = e.target.closest('[data-action="view"]');
-                    const card = btn.closest('.material-card-modern');
-                    const title = card.querySelector('.material-title').textContent;
-                    const content = card.dataset.fullContent;
-                    
-                    // Show content in a modal
-                    const viewModal = new bootstrap.Modal(document.createElement('div'));
-                    const modalDiv = document.createElement('div');
-                    modalDiv.className = 'modal fade';
-                    modalDiv.id = 'viewMaterialModal_' + Date.now();
-                    modalDiv.innerHTML = `
-                        <div class="modal-dialog modal-lg modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header border-0">
-                                    <h5 class="modal-title">${title}</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding: 2rem;">
-                                    <div style="white-space: normal; word-break: break-word; overflow-wrap: break-word; line-height: 1.8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; padding: 1.5rem; background: linear-gradient(135deg, #f8f9fa 0%, #f0f4f3 100%); border-radius: 12px; border: 1px solid rgba(31, 111, 139, 0.1);">
-                                        ${content}
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(modalDiv);
-                    const modal = new bootstrap.Modal(modalDiv);
-                    modal.show();
-                    
-                    // Clean up modal after it's hidden
-                    modalDiv.addEventListener('hidden.bs.modal', function() {
-                        modalDiv.remove();
-                    });
-                }
-                
-                // Edit material button
-                if (e.target.closest('[data-action="edit"]')) {
-                    const btn = e.target.closest('[data-action="edit"]');
-                    editingCard = btn.closest('.material-card-modern');
-                    const materialId = Number(editingCard.dataset.materialId);
-                    const readingType = editingCard.dataset.readingType;
-                    const material = ensureClassReadings(currentClassCode)[readingType].find(m => m.id === materialId);
-
-                    if (!material) return;
-
-                    editMaterialTitleInput.value = material.title;
-                    editMaterialContentInput.value = material.content;
-                    editMaterialTypeSelect.value = material.type || 'practice';
-                    editPublicationStatusSelect.value = material.status || 'published';
-                    
-                    toggleEditScheduleField(); // Update visibility based on loaded status
-
-                    if (material.status === 'scheduled' && material.schedule) {
-                        const date = new Date(material.schedule);
-                        const year = date.getFullYear();
-                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                        const day = date.getDate().toString().padStart(2, '0');
-                        const hours = date.getHours().toString().padStart(2, '0');
-                        const minutes = date.getMinutes().toString().padStart(2, '0');
-                        editScheduleDateTimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
-                    } else {
-                        editScheduleDateTimeInput.value = '';
-                    }
-                    const modal = new bootstrap.Modal(document.getElementById('editMaterialModal'));
-                    modal.show();
-                }
-                
-                // Delete material button
-                if (e.target.closest('[data-action="delete"]')) {
-                    const btn = e.target.closest('[data-action="delete"]');
-                    const card = btn.closest('.material-card-modern');
-                    const title = card.querySelector('.material-title').textContent;
-                    showDeleteConfirmModal(`Delete "${title}"?`, () => {
-                        const materialId = Number(card.dataset.materialId);
-                        const readingType = card.dataset.readingType;
-                        if (currentClassCode && readingType && materialId) {
-                            const readings = ensureClassReadings(currentClassCode);
-                            readings[readingType] = readings[readingType].filter(reading => reading.id !== materialId);
-                            saveStoredReadings();
-                        }
-                        card.style.opacity = '0.5';
-                        card.style.pointerEvents = 'none';
-                        setTimeout(() => loadReadings(currentClassCode), 300);
-                    });
-                }
-            });
-        }
-        
-        // Submit edit
-        const submitEditBtn = document.getElementById('submitEditMaterial');
-        if (submitEditBtn && !submitEditBtn.dataset.bound) {
-            submitEditBtn.dataset.bound = 'true'; // Mark as bound to prevent multiple listeners
-            submitEditBtn.addEventListener('click', function() {
-                const newTitle = document.getElementById('editMaterialTitle').value;
-                const newContent = document.getElementById('editMaterialContent').value;
-                if (newTitle.trim() && newContent.trim() && editingCard) {
-                    const materialId = Number(editingCard.dataset.materialId);
-                    const readingType = editingCard.dataset.readingType;
-                    
-                    if (currentClassCode && readingType && materialId) {
-                        const readings = ensureClassReadings(currentClassCode);
-                        const material = readings[readingType].find(reading => reading.id === materialId);
-                        if (material) {
-                            material.title = editMaterialTitleInput.value.trim();
-                            material.content = editMaterialContentInput.value.trim();
-                            material.items = editMaterialContentInput.value.trim().split(/\s+/).filter(Boolean).length;
-                            material.status = editPublicationStatusSelect.value;
-                            material.schedule = editScheduleDateTimeInput.value;
-                            material.type = editMaterialTypeSelect.value;
-                            saveStoredReadings();
-                            loadReadings(currentClassCode);
-                        }
-                    }
-                    
-                    bootstrap.Modal.getInstance(document.getElementById('editMaterialModal')).hide();
-                    showSuccessModal('Updated', `"${newTitle}" has been updated`);
-                } else if (!newTitle.trim() || !newContent.trim()) {
-                    showSuccessModal('Error', 'Title and content cannot be empty');
-                }
-            });
-        }
-        
-        // Submit material
-        const submitMaterialBtn = document.getElementById('submitMaterial');
-        if (submitMaterialBtn && !submitMaterialBtn.dataset.bound) {
-            submitMaterialBtn.dataset.bound = 'true';
-            submitMaterialBtn.addEventListener('click', function() { // Use submitMaterialBtn
-                const title = materialTitleInput.value;
-                const content = materialContentInput.value;
-                const type = materialTypeSelect.value;
-                const status = publicationStatusSelect.value;
-                const schedule = scheduleDateTimeInput.value;
-                
-                if (title.trim() && content.trim()) {
-                    if (!currentClassCode || !currentMaterialType) {
-                        showSuccessModal('Missing Class', 'Open a class and choose a reading type first.');
-                        return;
-                    }
-
-                    const readings = ensureClassReadings(currentClassCode);
-                    const newMaterial = {
-                        id: Date.now(),
-                        title: title.trim(),
-                        content: content.trim(),
-                        type,
-                        items: content.trim().split(/\s+/).filter(Boolean).length,
-                        status,
-                        schedule
-                    };
-                    readings[currentMaterialType].push(newMaterial);
-                    notifyStudentsOfMaterial(currentClassCode, newMaterial, currentMaterialType); // Notify students
-                    saveStoredReadings();
-                    loadReadings(currentClassCode);
-                    renderClasses();
-                    
-                    // Reset form and close
-                    addMaterialModal.querySelector('form').reset(); // Reset the form
-                    scheduleFieldDiv.classList.add('d-none'); // Hide schedule field
-                    bootstrap.Modal.getInstance(document.getElementById('addMaterialModal')).hide();
-                    showSuccessModal('Added', `"${title}" added successfully`);
-                }
-            });
-        }
-    }
-
-    // ===== ASSESSMENT TAB HANDLERS =====
-    function setupAssessmentHandlers() {
-        let editingAssessmentId = null;
-        const container = document.getElementById('assessmentsContainer');
-        const modalEl = document.getElementById('assessmentModal');
-        const submitBtn = document.getElementById('submitAssessment');
-
-        function resetAssessmentForm() {
-            editingAssessmentId = null;
-            document.getElementById('assessmentModalTitle').textContent = 'Add Assessment';
-            document.getElementById('assessmentTitle').value = '';
-            document.getElementById('assessmentLevel').value = 'Word';
-            document.getElementById('assessmentItems').value = '10';
-            document.getElementById('assessmentMinutes').value = '15';
-            document.getElementById('assessmentDueDate').value = '';
-        }
-
-        function openAssessmentModal(assessment) {
-            resetAssessmentForm();
-            if (assessment) {
-                editingAssessmentId = assessment.id;
-                document.getElementById('assessmentModalTitle').textContent = 'Edit Assessment';
-                document.getElementById('assessmentTitle').value = assessment.title;
-                document.getElementById('assessmentLevel').value = assessment.level;
-                document.getElementById('assessmentItems').value = assessment.items;
-                document.getElementById('assessmentMinutes').value = assessment.minutes;
-                document.getElementById('assessmentDueDate').value = assessment.dueDate || '';
-            }
-            new bootstrap.Modal(modalEl).show();
-        }
-
-        if (container && !container.dataset.bound) {
-            container.dataset.bound = 'true';
-            container.addEventListener('click', function(e) {
-                const addBtn = e.target.closest('[data-add-assessment]');
-                if (addBtn) {
-                    openAssessmentModal();
-                    return;
-                }
-
-                const actionBtn = e.target.closest('[data-assessment-action]');
-                if (!actionBtn) return;
-
-                const card = actionBtn.closest('.assessment-card');
-                const assessmentId = Number(card.dataset.assessmentId);
-                const assessments = classAssessments[currentClassCode] || [];
-                const assessment = assessments.find(item => item.id === assessmentId);
-                if (!assessment) return;
-
-                if (actionBtn.dataset.assessmentAction === 'preview') {
-                    showSuccessModal('Assessment Preview', `${assessment.title} has ${assessment.items} items and a ${assessment.minutes}-minute limit.`);
-                    return;
-                }
-
-                if (actionBtn.dataset.assessmentAction === 'edit') {
-                    openAssessmentModal(assessment);
-                    return;
-                }
-
-                if (actionBtn.dataset.assessmentAction === 'delete') {
-                    showDeleteConfirmModal(`Delete "${assessment.title}"?`, () => {
-                        classAssessments[currentClassCode] = assessments.filter(item => item.id !== assessmentId);
-                        loadAssessments(currentClassCode);
-                    });
-                }
-            });
-        }
-
-        if (submitBtn && !submitBtn.dataset.bound) {
-            submitBtn.dataset.bound = 'true';
-            submitBtn.addEventListener('click', function() {
-                const title = document.getElementById('assessmentTitle').value.trim();
-                const level = document.getElementById('assessmentLevel').value;
-                const items = Number(document.getElementById('assessmentItems').value);
-                const minutes = Number(document.getElementById('assessmentMinutes').value);
-                const dueDate = document.getElementById('assessmentDueDate').value;
-
-                if (!title || items < 1 || minutes < 1 || !currentClassCode) {
-                    showSuccessModal('Missing Details', 'Add a title, item count, and time limit.');
-                    return;
-                }
-
-                if (!classAssessments[currentClassCode]) {
-                    classAssessments[currentClassCode] = [];
-                }
-
-                if (editingAssessmentId) {
-                    const assessment = classAssessments[currentClassCode].find(item => item.id === editingAssessmentId);
-                    if (assessment) {
-                        assessment.title = title;
-                        assessment.level = level;
-                        assessment.items = items;
-                        assessment.minutes = minutes;
-                        assessment.dueDate = dueDate;
-                    }
-                    showSuccessModal('Updated', `"${title}" was updated.`);
-                } else {
-                    classAssessments[currentClassCode].push({
-                        id: Date.now(),
-                        title,
-                        level,
-                        items,
-                        minutes,
-                        dueDate,
-                        completed: 0,
-                        average: 0
-                    });
-                    showSuccessModal('Added', `"${title}" was added.`);
-                }
-
-                bootstrap.Modal.getInstance(modalEl).hide();
-                loadAssessments(currentClassCode);
-            });
-        }
-    }
-
-    // ===== STUDENTS TAB HANDLERS =====
-    function setupStudentsHandlers() {
-        const filterBtns = document.querySelectorAll('.filter-btn');
-        filterBtns.forEach(btn => {
-            if (btn.dataset.bound) return;
-            btn.dataset.bound = 'true';
-            btn.addEventListener('click', function() {
-                // Remove active class from all buttons
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                // Add active class to clicked button
-                this.classList.add('active');
-                
-                const filter = this.dataset.filter;
-                const cards = document.querySelectorAll('.student-card-modern');
-                
-                // Simple filter demo - in real app would filter actual data
-                cards.forEach(card => {
-                    card.style.display = '';
-                });
-                
-                showSuccessModal('Filtered', `Showing: ${filter.charAt(0).toUpperCase() + filter.slice(1)}`);
-            });
-        });
-    }
-
-    function setupReportActions() {
-        const exportExcelBtn = document.getElementById("exportExcel");
-        const emailReportToAllBtn = document.getElementById("emailReportToAll");
-        
-        if (emailReportToAllBtn && !emailReportToAllBtn.dataset.bound) {
-            emailReportToAllBtn.dataset.bound = 'true';
-            emailReportToAllBtn.addEventListener("click", function(e) {
-                e.preventDefault();
-                document.getElementById("updateFormAnchor")?.scrollIntoView({ behavior: 'smooth' });
-            });
-        }
-
-        if (exportExcelBtn && !exportExcelBtn.dataset.bound) {
-            exportExcelBtn.dataset.bound = 'true';
-            exportExcelBtn.addEventListener("click", function(e) {
-                e.preventDefault();
-                const classData = teacherClasses.find(c => c.code === currentClassCode);
-                const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-                const classStudents = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park");
-                
-                if (classStudents.length === 0) {
-                    alert("No data available to export for this class.");
-                    return;
-                }
-
-                const levelScoreMap = { 
-                    "Low Emerging Readers": 1, 
-                    "High Emerging Readers": 2, 
-                    "Developing Readers": 3, 
-                    "Transitioning Readers": 4, 
-                    "Readers at Grade Level": 5 
-                };
-
-                let csv = "Class Name,Student Name,Accuracy (%),Clarity (1-5),Speed (WPM),Remarks\n";
-                classStudents.forEach((s, index) => {
-                    const clarity = levelScoreMap[s.level] || 3;
-                    let remark = "No Change";
-                    // Simulated progress distribution to match dashboard overview cards
-                    if (index < classStudents.length * 0.6) remark = "Improved";
-                    else if (index < classStudents.length * 0.7) remark = "Declined";
-
-                    csv += `"${classData.name}","${s.name}","${s.accuracy}%",${clarity},"${s.wpm} WPM","${remark}"\n`;
-                });
-
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                link.setAttribute("href", URL.createObjectURL(blob));
-                link.setAttribute("download", `PABASA_${classData.name}_Report_${new Date().toISOString().split('T')[0]}.csv`);
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                showSuccessModal('Export Successful', 'Excel/CSV report has been downloaded.');
-            });
-        }
-    }
-
-    function setupUpdateActions() {
-        const form = document.getElementById("parentUpdateTabForm");
-        if (!form || form.dataset.bound) return;
-        form.dataset.bound = 'true';
-        
-        form.addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const rawMessage = document.getElementById("parentUpdateMessage").value;
-            const classData = teacherClasses.find(c => c.code === currentClassCode);
-            if (!classData) return;
-
-            const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-            const classStudents = allStudents.filter(s => 
-                s.class && classData.name && 
-                s.class.trim().toLowerCase() === classData.name.trim().toLowerCase() && 
-                s.name !== "Jay Park"
-            );
-            
-            const selectedIds = Array.from(document.querySelectorAll(".student-checkbox:checked")).map(cb => String(cb.value).trim());
-            const recipients = classStudents.filter(s => 
-                selectedIds.includes(String(s.id || s.name).trim()) && s.email && (JSON.parse(localStorage.getItem("pabasa_profile_settings_" + s.name.toLowerCase().replace(/ /g, "_")) || "{}").emailNotifications !== false)
-            );
-
-            if (recipients.length === 0) {
-                alert("Error: No recipients with email addresses found in this selection.");
-                return;
-            }
-
-            const personalizedEmails = recipients.map(s => {
-                const levelScoreMap = { "Low Emerging Readers": 1, "High Emerging Readers": 2, "Developing Readers": 3, "Transitioning Readers": 4, "Readers at Grade Level": 5 };
-                const clarityScore = levelScoreMap[s.level] || 3;
-                const htmlMessage = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 25px; border-radius: 12px; color: #333;">
-                    <h1 style="color: #1f6f8b; text-align: center; border-bottom: 2px solid #1f6f8b; padding-bottom: 10px; font-size: 1.5rem;">READING ASSESSMENT REPORT</h1>
-                    <h2 style="font-size: 1.1rem; margin-top: 20px; color: #444;">Student Information</h2>
-                    <p><strong>Student Name:</strong> ${s.name}</p>
-                    <p><strong>Grade Level:</strong> Grade 2</p>
-                    <p><strong>Assessment Date:</strong> ${new Date().toLocaleDateString()}</p>
-                    <p><strong>Reading Passage:</strong> ${classData.name} Evaluation</p>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                    <h2 style="font-size: 1.1rem; color: #444;">Reading Performance Results</h2>
-                    <p><strong>Accuracy:</strong> ${s.accuracy}%</p>
-                    <p><strong>Clarity:</strong> ${clarityScore} / 5</p>
-                    <p><strong>Speed:</strong> ${s.wpm} WPM</p>
-                    <p><strong>CRLA Reading Level:</strong> ${s.level}</p>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                    <h2 style="font-size: 1.1rem; color: #444;">Performance Summary</h2>
-                    <p style="line-height: 1.6;">The student achieved an accuracy score of ${s.accuracy}%, a clarity rating of ${clarityScore}, and a reading speed of ${s.wpm} WPM. Based on the assessment results, the student's reading proficiency was classified as <strong>${s.level}</strong> according to the CRLA Reading Level classification.</p>
-                    <h2 style="font-size: 1.1rem; color: #444;">Strengths</h2>
-                    <ul><li>Demonstrates consistency in word recognition.</li><li>Strong engagement during oral reading sessions.</li></ul>
-                    <h2 style="font-size: 1.1rem; color: #444;">Areas for Improvement</h2>
-                    <ul><li>Increase reading speed through daily fluency drills.</li><li>Work on expression during paragraph reading.</li></ul>
-                    <h2 style="font-size: 1.1rem; color: #444;">Recommendations</h2>
-                    <ul>
-                        <li>Practice reading aloud regularly to improve fluency and confidence.</li>
-                        <li>Focus on accurate word recognition and pronunciation.</li>
-                        <li>Read grade-appropriate passages consistently to improve reading speed and clarity.</li>
-                        <li>Seek guidance from teachers, parents, or guardians when encountering unfamiliar words.</li>
-                    </ul>
-                    <h2 style="font-size: 1.1rem; color: #444;">Overall Remarks</h2>
-                    <p style="background: #f4f7f6; padding: 15px; border-radius: 8px; border-left: 4px solid #1f6f8b;">${rawMessage.replace(/{name}/g, s.name) || "Keep up the consistent practice!"}</p>
-                    <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; font-size: 0.9rem; color: #666;">
-                        <p><strong>Assessed Reading Level:</strong> ${s.level}</p>
-                        <p><strong>Evaluator:</strong> ${CURRENT_TEACHER_NAME}</p>
-                        <p><strong>Date Generated:</strong> ${new Date().toLocaleString()}</p>
-                    </div>
-                </div>`;
-                return { student: s.name, contact: s.email, html_message: htmlMessage, plain_message: `Reading Assessment Report for ${s.name} is ready. Log in to your dashboard to view.` };
-            });
-
-            if (confirm(`Send report for ${recipients.length} student(s) as an email? Note: This will be sent as a high-quality HTML report mimicking the PDF layout.`)) {
-                const sendBtn = document.getElementById("btnSendParentUpdate");
-                const originalBtnHtml = sendBtn.innerHTML;
-                sendBtn.disabled = true;
-                sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
-
-                const emailPromises = personalizedEmails.map(log => 
-                    fetch('/students/send-email/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value
-                        },
-                        body: JSON.stringify({
-                            email: log.contact,
-                            subject: `PABASA: Reading Update for ${log.student}`,
-                            message: log.plain_message,
-                            html_message: log.html_message
-                        })
-                    })
-                    .then(async res => {
-                        if (!res.ok) {
-                            try {
-                                const errorData = await res.json();
-                                throw new Error(errorData.error || `Server error (Status: ${res.status})`);
-                            } catch (jsonError) {
-                                const errorText = await res.text();
-                                console.error("Server Error Response:", errorText);
-                                throw new Error(`URL Not Found or Server Error (Status: ${res.status}). Check your urls.py configuration.`);
-                            }
-                        }
-                        return res.json();
-                    })
-                    .catch(err => ({ success: false, error: err.message || err }))
-                );
-
-                Promise.all(emailPromises).then(results => {
-                    const sent = results.filter(r => r.success).length;
-                    if (sent > 0) alert(`Success: ${sent} report(s) sent successfully.`);
-                    
-                    // Save to history
-                    const history = JSON.parse(localStorage.getItem("pabasa_parent_notice_history") || "[]");
-                    localStorage.setItem("pabasa_parent_notice_history", JSON.stringify([...personalizedEmails, ...history]));
-                }).catch(err => {
-                    alert("System Error: Could not connect to the email server.");
-                }).finally(() => {
-                    sendBtn.disabled = false;
-                    sendBtn.innerHTML = originalBtnHtml;
-                });
-            }
-        });
-    }
-
-    // Setup all handlers when modal content changes
-    function setupAllHandlers() {
-        setupReadingsHandlers();
-        setupAssessmentHandlers();
-        setupStudentsHandlers();
-        setupReportActions();
-        setupUpdateActions();
-    }
-
-    // Override openClassDetail to setup handlers
-    const originalOpenClassDetail = window.openClassDetail;
-    window.openClassDetail = function(classCode) {
-        originalOpenClassDetail(classCode);
-        setTimeout(setupAllHandlers, 300);
-    };
-
     document.addEventListener('DOMContentLoaded', function() {
         // Global variables for current class and material being edited/added
         let currentMaterialType = '';
@@ -3452,43 +2922,117 @@
             }
             
             // Submit material
+// Submit material
             const submitMaterialBtn = document.getElementById('submitMaterial');
             if (submitMaterialBtn && !submitMaterialBtn.dataset.bound) {
                 submitMaterialBtn.dataset.bound = 'true';
-                submitMaterialBtn.addEventListener('click', function() { // Use submitMaterialBtn
-                    const title = materialTitleInput.value;
-                    const content = materialContentInput.value;
-                    const type = materialTypeSelect.value;
-                    const status = publicationStatusSelect.value;
-                    const schedule = scheduleDateTimeInput.value;
-                    
-                    if (title.trim() && content.trim()) {
-                        if (!currentClassCode || !currentMaterialType) {
-                            showSuccessModal('Missing Class', 'Open a class and choose a reading type first.');
-                            return;
-                        }
+                submitMaterialBtn.addEventListener('click', function () {
+                    const title   = materialTitleInput   ? materialTitleInput.value.trim()   : '';
+                    const content = materialContentInput ? materialContentInput.value.trim() : '';
+                    const type    = materialTypeSelect    ? materialTypeSelect.value           : 'practice';
+                    const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
+                    const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
+                    const errorBanner = document.getElementById('amValidationError');
 
+                    // ── Clear previous validation state ──────────────────────
+                    if (errorBanner) errorBanner.classList.add('d-none');
+                    [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
+                        if (el) el.classList.remove('is-invalid');
+                    });
+
+                    // ── Validate ─────────────────────────────────────────────
+                    const errors = [];
+                    if (!title) {
+                        errors.push('Material title is required.');
+                        if (materialTitleInput) materialTitleInput.classList.add('is-invalid');
+                    }
+                    if (!content) {
+                        errors.push('Reading content is required.');
+                        if (materialContentInput) materialContentInput.classList.add('is-invalid');
+                    }
+                    if (status === 'scheduled' && !schedule) {
+                        errors.push('Schedule date & time is required when status is Scheduled.');
+                        if (scheduleDateTimeInput) scheduleDateTimeInput.classList.add('is-invalid');
+                    }
+
+                    if (errors.length > 0) {
+                        if (errorBanner) {
+                            errorBanner.textContent = errors.join(' ');
+                            errorBanner.classList.remove('d-none');
+                        }
+                        const firstInvalid = document.querySelector('#addMaterialModal .is-invalid');
+                        if (firstInvalid) firstInvalid.focus();
+                        console.warn('[AddMaterial] Validation failed:', errors);
+                        return;
+                    }
+
+                    if (!currentClassCode || !currentMaterialType) {
+                        if (errorBanner) {
+                            errorBanner.textContent = 'Open a class and choose a reading type (Word / Sentence / Paragraph) first.';
+                            errorBanner.classList.remove('d-none');
+                        }
+                        return;
+                    }
+
+                    // ── Disable button / loading state ───────────────────────
+                    submitMaterialBtn.disabled = true;
+                    submitMaterialBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Creating...';
+                    console.log('[AddMaterial] Saving:', { title, type, status, currentClassCode, currentMaterialType });
+
+                    try {
                         const readings = ensureClassReadings(currentClassCode);
                         const newMaterial = {
                             id: Date.now(),
-                            title: title.trim(),
-                            content: content.trim(),
+                            title,
+                            content,
                             type,
-                            items: content.trim().split(/\s+/).filter(Boolean).length,
+                            items: content.split(/\s+/).filter(Boolean).length,
                             status,
                             schedule
                         };
                         readings[currentMaterialType].push(newMaterial);
-                        notifyStudentsOfMaterial(currentClassCode, newMaterial, currentMaterialType); // Notify students
+                        notifyStudentsOfMaterial(currentClassCode, newMaterial, currentMaterialType);
                         saveStoredReadings();
                         loadReadings(currentClassCode);
                         renderClasses();
-                        
-                        // Reset form and close
-                        addMaterialModal.querySelector('form').reset(); // Reset the form
-                        scheduleFieldDiv.classList.add('d-none'); // Hide schedule field
+
+                        // ── Reset form ────────────────────────────────────────
+                        const addMaterialFormEl = document.getElementById('addMaterialForm');
+                        if (addMaterialFormEl) addMaterialFormEl.reset();
+                        if (scheduleFieldDiv)   scheduleFieldDiv.classList.add('d-none');
+                        [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
+                            if (el) el.classList.remove('is-invalid', 'is-valid');
+                        });
+                        if (errorBanner) errorBanner.classList.add('d-none');
+
                         bootstrap.Modal.getInstance(document.getElementById('addMaterialModal')).hide();
-                        showSuccessModal('Added', `"${title}" added successfully`);
+
+                        // ── Status-specific success message ───────────────────
+                        let successMsg;
+                        if (status === 'published') {
+                            successMsg = '\u2705 Material published successfully.';
+                        } else if (status === 'draft') {
+                            successMsg = '\uD83D\uDCDD Material saved as draft.';
+                        } else if (status === 'scheduled' && schedule) {
+                            const dt  = new Date(schedule);
+                            const fmt = dt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+                            successMsg = '\uD83D\uDD50 Material scheduled for ' + fmt + '.';
+                        } else {
+                            successMsg = '"' + title + '" added successfully.';
+                        }
+
+                        console.log('[AddMaterial] Save success:', successMsg);
+                        showSuccessModal('Material Added', successMsg);
+
+                    } catch (err) {
+                        console.error('[AddMaterial] Save failed:', err);
+                        if (errorBanner) {
+                            errorBanner.textContent = 'An error occurred while saving. Please try again.';
+                            errorBanner.classList.remove('d-none');
+                        }
+                    } finally {
+                        submitMaterialBtn.disabled = false;
+                        submitMaterialBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Material';
                     }
                 });
             }
@@ -3822,13 +3366,6 @@
             setupReportActions();
             setupUpdateActions();
         }
-
-        // Override openClassDetail to setup handlers
-        const originalOpenClassDetail = window.openClassDetail;
-        window.openClassDetail = function(classCode) {
-            originalOpenClassDetail(classCode);
-            setTimeout(setupAllHandlers, 300);
-        };
 
         // Initial setup when DOM is ready
         setupAllHandlers();

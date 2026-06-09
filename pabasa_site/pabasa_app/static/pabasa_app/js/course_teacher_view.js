@@ -224,6 +224,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     toggleQuizUnlockRows();
+    function getTeacherClasses() {
+        try {
+            // Prefer the teacher-scoped key; fall back to the legacy key.
+            const email = (window.PABASA_USER_EMAIL || '').trim();
+            const scopedKey = email ? `pabasa_teacher_classes_${email}` : null;
+            const raw = (scopedKey && localStorage.getItem(scopedKey))
+                || localStorage.getItem('pabasa_teacher_classes')
+                || '[]';
+            const saved = JSON.parse(raw);
+            return Array.isArray(saved) ? saved : [];
+        } catch (error) {
+            return [];
+        }
+    }
 
     function toggleEditQuizUnlockRows() {
         const useAfterLesson = editUnlockAfterLesson && editUnlockAfterLesson.checked;

@@ -82,6 +82,8 @@ def _store_pending_teacher_signup(request, data):
         'last_name': data.get('last_name'),
         'email': data.get('email'),
         'sex': data.get('sex'),
+        'middle_initial': data.get('middle_initial', ''),
+        'suffix': data.get('suffix', ''),
         'birth_month': int(data.get('birth_month', 0)),
         'birth_day': int(data.get('birth_day', 0)),
         'birth_year': int(data.get('birth_year', 0)),
@@ -96,12 +98,15 @@ def _store_pending_teacher_signup(request, data):
     request.session.modified = True
     return otp
 
+# REPLACE
 def _store_pending_student_signup(request, data):
     otp = generate_otp()
     request.session['pending_student_signup'] = {
         'first_name': data.get('first_name'),
         'last_name': data.get('last_name'),
         'email': data.get('email'),
+        'middle_initial': data.get('middle_initial', ''),
+        'suffix': data.get('suffix', ''),
         'sex': data.get('sex'),
         'birth_month': int(data.get('birth_month', 0)),
         'birth_day': int(data.get('birth_day', 0)),
@@ -452,6 +457,7 @@ def verify_teacher_otp(request):
         if not otp:
             return JsonResponse({'success': False, 'error': 'OTP is required'}, status=400)
 
+
         pending = request.session.get('pending_teacher_signup')
         expected_otp = request.session.get('pending_teacher_signup_otp')
         otp_created = request.session.get('pending_teacher_signup_otp_created')
@@ -477,6 +483,8 @@ def verify_teacher_otp(request):
             first_name=pending['first_name'],
             last_name=pending['last_name'],
             email=pending['email'],
+            middle_initial=pending.get('middle_initial', ''),
+            suffix=pending.get('suffix', ''),
             sex=pending['sex'],
             birth_month=pending['birth_month'],
             birth_day=pending['birth_day'],
@@ -561,6 +569,8 @@ def verify_student_otp(request):
             first_name=pending['first_name'],
             last_name=pending['last_name'],
             email=pending['email'],
+            middle_initial=pending.get('middle_initial', ''),   
+            suffix=pending.get('suffix', ''),                  
             sex=pending['sex'],
             birth_month=pending['birth_month'],
             birth_day=pending['birth_day'],
@@ -650,7 +660,6 @@ def login_user(request):
         request.session['last_name'] = user.last_name
         request.session['email'] = user.email
         
-        # Determine redirect URL based on role
         redirect_url = '/dashboard/teacher/' if user.role == 'teacher' else '/dashboard/'
         
         return JsonResponse({
@@ -658,9 +667,10 @@ def login_user(request):
             'message': 'Login successful',
             'role': user.role,
             'redirect_url': redirect_url,
-            'custom_id': user.custom_id
+            'custom_id': user.custom_id,
+            'email': user.email,
         })
-    
+        
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
@@ -674,14 +684,19 @@ def _check_auth(request):
     return 'user_id' in request.session
 
 
+# REPLACE the entire _dashboard_context function:
 def _dashboard_context(request, nav_role=None, extra=None):
     first_name = request.session.get('first_name', '')
     last_name = request.session.get('last_name', '')
-    full_name = f"{first_name} {last_name}".strip() or request.session.get('custom_id', 'User')
     user = User.objects.filter(id=request.session.get('user_id')).first()
+    _mi = user.middle_initial if user else ''
+    _sx = user.suffix if user else ''
+    _name_parts = [first_name, _mi, last_name, _sx]
+    full_name = ' '.join(p for p in _name_parts if p).strip() or request.session.get('custom_id', 'User')
     teacher_role = ''
     initials = "".join(part[:1] for part in full_name.split()[:2]).upper() or "PA"
     profile_photo_url = None
+    username = ''
 
     if user:
         if user.role == 'teacher':
@@ -694,7 +709,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
             for file in PROFILE_PHOTOS_DIR.glob(f'profile_photo_{username}.*'):
                 profile_photo_url = f'/static/pabasa_app/uploads/profiles/{file.name}'
                 break
-    
+
     joined_classes = []
     if user and user.role == 'student':
         student_profile = StudentProfile.objects.filter(user=user).first()
@@ -702,7 +717,6 @@ def _dashboard_context(request, nav_role=None, extra=None):
             enrollments = ClassEnrollment.objects.filter(student=student_profile, is_active=True)
             for enrollment in enrollments:
                 cls = enrollment.reading_class
-                # Real-time student count from database
                 student_count = ClassEnrollment.objects.filter(reading_class=cls, is_active=True).count()
                 joined_classes.append({
                     'code': cls.class_code,
@@ -716,7 +730,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'first_name': first_name,
         'last_name': last_name,
         'user_full_name': full_name,
-        'email': request.session.get('email'),
+        'email': request.session.get('email', ''),
         'teacher_role': teacher_role,
         'role_display': teacher_role or (nav_role or request.session.get('user_role', 'student')).title(),
         'profile_photo_url': profile_photo_url,
@@ -799,7 +813,12 @@ def practice_sentence_page(request):
 def practice_para_page(request):
     return render(request, 'pabasa_app/practice_para_page.html', _dashboard_context(request))
 
+# REPLACE the entire course_teacher_view function:
 def course_teacher_view(request):
+    if not _check_auth(request):
+        return redirect('auth')
+    if request.session.get('user_role') != 'teacher':
+        return redirect('auth')
     return render(request, 'pabasa_app/course_tecaher_view.html', _dashboard_context(request, 'teacher'))
 
 def course_student_view(request):
@@ -834,7 +853,13 @@ def profile(request):
         return redirect('auth')
 
     nav_role = user.role
-    full_name = f"{user.first_name} {user.last_name}".strip()
+    name_parts = [
+        user.first_name,
+        user.middle_initial if user.middle_initial else '',
+        user.last_name,
+        user.suffix if user.suffix else '',
+    ]
+    full_name = ' '.join(part for part in name_parts if part).strip()
     username = f"{user.first_name}_{user.last_name}".lower().replace(" ", "_")
     pabasa_id = user.custom_id
     role_display = "Teacher"
@@ -966,7 +991,9 @@ def profile(request):
         'username': username,
         'full_name': full_name,
         'first_name': user.first_name,
+        'middle_name': user.middle_initial,
         'last_name': user.last_name,
+        'suffix': user.suffix,
         'email': user.email,
         'pabasa_id': pabasa_id,
         'role_display': role_display,
@@ -1096,12 +1123,8 @@ def create_reading_class(request):
         
         if not teacher_profile:
             return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
-
-        # Uniqueness Verification: Generate a code that doesn't exist in DB
-        # This fulfills the requirement to check for duplicates before saving
         unique_code = generate_unique_class_code()
 
-        # Persistent storage - ReadingClass model has unique=True on class_code for final safety
         new_class = ReadingClass.objects.create(
             teacher=teacher_profile,
             class_code=unique_code,
@@ -1109,7 +1132,8 @@ def create_reading_class(request):
             grade_level=grade_level,
             section=section,
             header=header,
-            description=description
+            description=description,
+            subject=data.get('subject', '').strip(),   
         )
 
         return JsonResponse({
@@ -1121,3 +1145,177 @@ def create_reading_class(request):
     except Exception as e:
         logger.error(f"Class creation error: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_teacher_classes(request):
+
+    user_id = request.session.get('user_id')  # ← this is already the session-bound user
+    teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
+    if not teacher_profile:
+        return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
+
+    classes = ReadingClass.objects.filter(
+        teacher=teacher_profile,  # ← correct, already present
+        is_active=True
+    ).order_by('class_name')
+
+    class_list = []
+    for cls in classes:
+        student_count = ClassEnrollment.objects.filter(
+            reading_class=cls, is_active=True
+        ).count()
+        class_list.append({
+            'code': cls.class_code,
+            'name': cls.class_name,
+            'subject': cls.subject,
+            'grade_level': cls.grade_level,
+            'section': cls.section,
+            'description': cls.description,
+            'header': cls.header,
+            'students': str(student_count),
+            'teacher_email': request.session.get('email', ''),
+        })
+
+    return JsonResponse({'success': True, 'classes': class_list})
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def add_reading_material(request):
+    """
+    Creates a new reading material (Assessment) linked to a class.
+    Expects JSON: { title, reading_type, content, status, class_code, scheduled_at? }
+    """
+    try:
+        data = json.loads(request.body)
+        title        = data.get('title', '').strip()
+        reading_type = data.get('reading_type', '').strip()   # word | sentence | paragraph
+        content      = data.get('content', '').strip()
+        status       = data.get('status', '').strip()          # published | draft | scheduled
+        class_code   = data.get('class_code', '').strip()
+        scheduled_at = data.get('scheduled_at', '').strip()
+
+        # ── server-side validation ──────────────────────────────────────────
+        errors = {}
+        if not title:
+            errors['title'] = 'Material title is required.'
+        if reading_type not in ('word', 'sentence', 'paragraph'):
+            errors['reading_type'] = 'Reading type is required.'
+        if not content:
+            errors['content'] = 'Material content is required.'
+        if status not in ('published', 'draft', 'scheduled'):
+            errors['status'] = 'Status is required.'
+        if status == 'scheduled' and not scheduled_at:
+            errors['scheduled_at'] = 'Scheduled date & time is required.'
+
+        if errors:
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        # ── resolve teacher & class ─────────────────────────────────────────
+        user_id = request.session.get('user_id')
+        teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
+        if not teacher_profile:
+            return JsonResponse({'success': False, 'error': 'Teacher profile not found.'}, status=404)
+
+        reading_class = None
+        if class_code:
+            reading_class = ReadingClass.objects.filter(
+                class_code=class_code,
+                teacher=teacher_profile,
+                is_active=True
+            ).first()
+            if not reading_class:
+                return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
+
+        # ── generate unique assessment code ─────────────────────────────────
+        import uuid as _uuid
+        assessment_code = f"MAT-{reading_type[:3].upper()}-{_uuid.uuid4().hex[:6].upper()}"
+        while Assessment.objects.filter(code=assessment_code).exists():
+            assessment_code = f"MAT-{reading_type[:3].upper()}-{_uuid.uuid4().hex[:6].upper()}"
+
+        assessment = Assessment.objects.create(
+            title=title,
+            code=assessment_code,
+            assessment_type=reading_type,
+            teacher=teacher_profile,
+            reading_class=reading_class,
+            is_active=(status == 'published'),
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Reading material created successfully.',
+            'code': assessment_code,
+            'title': title,
+            'status': status,
+            'scheduled_at': scheduled_at if status == 'scheduled' else None,
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload.'}, status=400)
+    except Exception as e:
+        logger.error(f"add_reading_material error: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Internal server error.'}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='student')
+def record_assessment_completion(request):
+    """Handles notification when student completes reading material."""
+    try:
+        data = json.loads(request.body)
+        assessment_id = data.get('assessment_id')
+        student_user = User.objects.get(id=request.session.get('user_id'))
+        assessment = Assessment.objects.select_related('teacher__user').get(id=assessment_id)
+        teacher_user = assessment.teacher.user
+
+        notif_msg = f"{student_user.first_name} {student_user.last_name} completed {assessment.title}"
+        Notification.objects.create(
+            recipient=teacher_user,
+            created_by=student_user,
+            title="Reading Material Completed",
+            message=notif_msg,
+            notification_type="assessment",
+            action_url=f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}"
+        )
+        send_mail(
+            "Reading Material Completed", notif_msg,
+            settings.DEFAULT_FROM_EMAIL, [teacher_user.email],
+            fail_silently=True
+        )
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+@login_required()
+def get_notifications(request):
+    """API: Fetch latest notifications for the user."""
+    user = User.objects.get(id=request.session.get('user_id'))
+    notifs = Notification.objects.filter(recipient=user).values(
+        'id', 'title', 'message', 'notification_type', 'is_read', 'action_url', 'created_at'
+    )
+    return JsonResponse({'success': True, 'notifications': list(notifs)})
+
+@require_http_methods(["GET"])
+@login_required()
+def get_unread_notification_count(request):
+    """API: Get unread count for badge."""
+    user = User.objects.get(id=request.session.get('user_id'))
+    count = Notification.objects.filter(recipient=user, is_read=False).count()
+    return JsonResponse({'success': True, 'unread_count': count})
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required()
+def mark_notification_read(request):
+    """API: Mark a notification as read."""
+    try:
+        data = json.loads(request.body)
+        notif_id = data.get('notification_id')
+        user = User.objects.get(id=request.session.get('user_id'))
+        Notification.objects.filter(id=notif_id, recipient=user).update(is_read=True)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

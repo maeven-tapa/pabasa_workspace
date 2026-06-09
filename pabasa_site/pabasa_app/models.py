@@ -7,6 +7,8 @@ class User(models.Model):
         ("student", "Student"),
     ]
 
+    middle_initial = models.CharField(max_length=1, blank=True)
+    suffix = models.CharField(max_length=10, blank=True)
     id = models.BigAutoField(primary_key=True)
     custom_id = models.CharField(max_length=20, unique=True, editable=False)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
