@@ -50,5 +50,3 @@ Thumbs.db
 
 __pycache__/
 *.pyc
-db.sqlite3
-pabasa_site/db.sqlite3
