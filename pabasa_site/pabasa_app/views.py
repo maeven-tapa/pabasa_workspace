@@ -49,26 +49,23 @@ def _set_profile_dict(user, key, profile_dict):
     user.save()
 
 def _section_students(section, active_only=False):
-    students = getattr(section, 'students', None) or []
-    if not isinstance(students, list):
-        return []
-    if active_only:
-        return [student for student in students if student.get('is_active', True)]
-    return students
+    """Delegate to Section model method"""
+    return section.get_enrolled_students(active_only=active_only)
 
 def _student_entry_matches(entry, user):
+    """Helper to check if entry matches user (DEPRECATED - use section.has_student instead)"""
     return str(entry.get('student_id')) == str(user.id) or entry.get('custom_id') == user.custom_id
 
 def _section_has_student(section, user, active_only=True):
-    return any(
-        _student_entry_matches(entry, user)
-        for entry in _section_students(section, active_only=active_only)
-    )
+    """Delegate to Section model method"""
+    return section.has_student(user, active_only=active_only)
 
 def _section_student_count(section):
-    return len(_section_students(section, active_only=True))
+    """Delegate to Section model method"""
+    return section.get_student_count()
 
 def _student_section_entry(user, joined_at=None, is_active=True):
+    """DEPRECATED - this method is now on Section model"""
     return {
         'student_id': user.id,
         'custom_id': user.custom_id,
@@ -80,46 +77,56 @@ def _student_section_entry(user, joined_at=None, is_active=True):
     }
 
 def _save_section_students(section, students):
+    """DEPRECATED - use section._save_enrollment() instead"""
     section.students = students
-    section.updated_at = timezone.now()
-    section.save(update_fields=['students', 'updated_at'])
+    section._save_enrollment()
 
 def _add_student_to_section(section, user):
-    students = _section_students(section)
-    for index, entry in enumerate(students):
-        if _student_entry_matches(entry, user):
-            if entry.get('is_active', True):
-                return False
-            entry.update(_student_section_entry(user, entry.get('joined_at'), is_active=True))
-            students[index] = entry
-            _save_section_students(section, students)
-            return True
-
-    students.append(_student_section_entry(user))
-    _save_section_students(section, students)
-    return True
+    """Delegate to Section model method"""
+    return section.add_student(user)
 
 def _deactivate_student_in_section(section, user):
-    students = _section_students(section)
-    changed = False
-    for entry in students:
-        if _student_entry_matches(entry, user) and entry.get('is_active', True):
-            entry['is_active'] = False
-            changed = True
-    if changed:
-        _save_section_students(section, students)
-    return changed
+    """Delegate to Section model method"""
+    return section.deactivate_student(user)
 
 def _deactivate_all_section_students(section):
-    students = _section_students(section)
-    changed = False
-    for entry in students:
-        if entry.get('is_active', True):
-            entry['is_active'] = False
-            changed = True
-    if changed:
-        section.students = students
-    return changed
+    """Delegate to Section model method"""
+    return section.deactivate_all_students()
+
+# ===== Assessment Attempt Helper Functions (DEPRECATED - use Assessment model methods) =====
+
+def _get_assessment_attempts(assessment, student=None):
+    """Delegate to Assessment model method"""
+    return assessment.get_attempts(student)
+
+def _get_student_attempt_count(assessment, student):
+    """Delegate to Assessment model method"""
+    return assessment.get_student_attempt_count(student)
+
+def _has_student_attempted(assessment, student):
+    """Delegate to Assessment model method"""
+    return assessment.has_student_attempted(student)
+
+def _record_attempt(assessment, student, **attempt_data):
+    """Delegate to Assessment model method"""
+    return assessment.record_attempt(student, **attempt_data)
+
+def _update_attempt(assessment, student, **update_data):
+    """Delegate to Assessment model method"""
+    return assessment.update_attempt(student, **update_data)
+
+def _get_student_latest_attempt(assessment, student):
+    """Delegate to Assessment model method"""
+    return assessment.get_student_latest_attempt(student)
+
+def _deactivate_student_attempts(assessment, student):
+    """Delegate to Assessment model method"""
+    return assessment.deactivate_student_attempts(student)
+
+def _clear_all_assessment_attempts(assessment):
+    """Delegate to Assessment model method"""
+    return assessment.clear_all_attempts()
+
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
@@ -179,9 +186,40 @@ def generate_unique_class_code():
             return code
         # If exists, the loop continues to generate a fresh candidate
 
+# ===== Pending Signup/Reset Session Management (Temporary Storage) =====
+# Note: These store temporary data during signup/password reset flows.
+# Session is appropriate for temporary, short-lived data (OTPs, form data).
+
+def _get_pending_data(request, key):
+    """Retrieve pending data from session"""
+    return request.session.get(key)
+
+def _set_pending_data(request, key, value):
+    """Store pending data in session"""
+    request.session[key] = value
+    request.session.modified = True
+
+def _clear_pending_data(request, *keys):
+    """Clear one or more keys from session. Can clear multiple keys in one call."""
+    for key in keys:
+        request.session.pop(key, None)
+    if keys:
+        request.session.modified = True
+
+def _get_pending_otp(request, data_key):
+    """Get OTP for pending data (e.g. 'pending_teacher_signup' -> 'pending_teacher_signup_otp')"""
+    otp_key = f"{data_key}_otp"
+    return _get_pending_data(request, otp_key)
+
+def _get_pending_otp_created_time(request, data_key):
+    """Get OTP creation timestamp for pending data"""
+    timestamp_key = f"{data_key}_otp_created"
+    return _get_pending_data(request, timestamp_key)
+
 def _store_pending_teacher_signup(request, data):
+    """Store teacher signup form data and OTP in session"""
     otp = generate_otp()
-    request.session['pending_teacher_signup'] = {
+    _set_pending_data(request, 'pending_teacher_signup', {
         'first_name': data.get('first_name'),
         'last_name': data.get('last_name'),
         'email': data.get('email'),
@@ -196,16 +234,15 @@ def _store_pending_teacher_signup(request, data):
         'teacher_role': data.get('teacher_role', ''),
         'school': data.get('school', ''),
         'department': data.get('department', ''),
-    }
-    request.session['pending_teacher_signup_otp'] = otp
-    request.session['pending_teacher_signup_otp_created'] = time.time()
-    request.session.modified = True
+    })
+    _set_pending_data(request, 'pending_teacher_signup_otp', otp)
+    _set_pending_data(request, 'pending_teacher_signup_otp_created', time.time())
     return otp
 
-# REPLACE
 def _store_pending_student_signup(request, data):
+    """Store student signup form data and OTP in session"""
     otp = generate_otp()
-    request.session['pending_student_signup'] = {
+    _set_pending_data(request, 'pending_student_signup', {
         'first_name': data.get('first_name'),
         'last_name': data.get('last_name'),
         'email': data.get('email'),
@@ -221,23 +258,18 @@ def _store_pending_student_signup(request, data):
         'section': data.get('section', ''),
         'reading_level': data.get('reading_level', ''),
         'parent_contact_no': data.get('parent_contact_no', ''),
-    }
-    request.session['pending_student_signup_otp'] = otp
-    request.session['pending_student_signup_otp_created'] = time.time()
-    request.session.modified = True
+    })
+    _set_pending_data(request, 'pending_student_signup_otp', otp)
+    _set_pending_data(request, 'pending_student_signup_otp_created', time.time())
     return otp
 
 def _clear_pending_teacher_signup(request):
-    request.session.pop('pending_teacher_signup', None)
-    request.session.pop('pending_teacher_signup_otp', None)
-    request.session.pop('pending_teacher_signup_otp_created', None)
-    request.session.modified = True
+    """Clear teacher signup data from session"""
+    _clear_pending_data(request, 'pending_teacher_signup', 'pending_teacher_signup_otp', 'pending_teacher_signup_otp_created')
 
 def _clear_pending_student_signup(request):
-    request.session.pop('pending_student_signup', None)
-    request.session.pop('pending_student_signup_otp', None)
-    request.session.pop('pending_student_signup_otp_created', None)
-    request.session.modified = True
+    """Clear student signup data from session"""
+    _clear_pending_data(request, 'pending_student_signup', 'pending_student_signup_otp', 'pending_student_signup_otp_created')
 
 def send_teacher_signup_otp_email(request, email, otp, first_name):
     auth_url = request.build_absolute_uri(reverse('auth'))
@@ -296,23 +328,16 @@ def send_student_confirmation_email(request, user):
 
 
 def _store_pending_password_reset(request, email):
+    """Store password reset email and OTP in session"""
     otp = generate_otp()
-    request.session['pending_password_reset'] = {
-        'email': email,
-    }
-    request.session['pending_password_reset_otp'] = otp
-    request.session['pending_password_reset_otp_created'] = time.time()
-    request.session.modified = True
+    _set_pending_data(request, 'pending_password_reset', {'email': email})
+    _set_pending_data(request, 'pending_password_reset_otp', otp)
+    _set_pending_data(request, 'pending_password_reset_otp_created', time.time())
     return otp
 
-
 def _clear_pending_password_reset(request):
-    request.session.pop('pending_password_reset', None)
-    request.session.pop('pending_password_reset_otp', None)
-    request.session.pop('pending_password_reset_otp_created', None)
-    request.session.pop('password_reset_verified', None)
-    request.session.pop('password_reset_email', None)
-    request.session.modified = True
+    """Clear password reset data from session"""
+    _clear_pending_data(request, 'pending_password_reset', 'pending_password_reset_otp', 'pending_password_reset_otp_created', 'password_reset_verified', 'password_reset_email')
 
 
 def send_password_reset_otp_email(request, email, otp, first_name):
@@ -594,17 +619,11 @@ def verify_teacher_otp(request):
             birth_day=pending['birth_day'],
             birth_year=pending['birth_year'],
             password_hash=pending['password_hash'],
-            contact_no=pending['contact_no']
+            contact_no=pending['contact_no'],
+            teacher_role=pending.get('teacher_role', ''),
+            school=pending.get('school', ''),
+            department=pending.get('department', ''),
         )
-
-        # store teacher profile data inside User.tags for compatibility
-        _set_profile_dict(user, 'teacher_profile', {
-            'teacher_code': custom_id,
-            'teacher_role': pending.get('teacher_role', ''),
-            'school': pending.get('school', ''),
-            'department': pending.get('department', ''),
-            'is_active': True,
-        })
 
         teacher_code = custom_id
 
@@ -681,18 +700,12 @@ def verify_student_otp(request):
             birth_day=pending['birth_day'],
             birth_year=pending['birth_year'],
             password_hash=pending['password_hash'],
-            contact_no=pending.get('contact_no', '')
+            contact_no=pending.get('contact_no', ''),
+            grade_level=pending.get('grade_level', ''),
+            section=pending.get('section', ''),
+            reading_level=pending.get('reading_level', ''),
+            parent_contact_no=pending.get('parent_contact_no', ''),
         )
-
-        # store student profile data inside User.tags for compatibility
-        _set_profile_dict(user, 'student_profile', {
-            'student_code': custom_id,
-            'grade_level': pending.get('grade_level', ''),
-            'section': pending.get('section', ''),
-            'reading_level': pending.get('reading_level', ''),
-            'parent_contact_no': pending.get('parent_contact_no', ''),
-            'is_active': True,
-        })
 
         send_student_confirmation_email(request, user)
         _clear_pending_student_signup(request)
@@ -748,16 +761,14 @@ def login_user(request):
         if not check_password(password, user.password_hash):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
 
-        # Verify account activity status using profile dict stored on User.tags
+        # Verify account activity status
         if user.role == 'teacher':
-            tp = _get_profile_dict(user, 'teacher_profile')
-            if tp.get('is_active') is False:
-                return JsonResponse({'success': False, 'error': 'This account is deactivated'}, status=403)
+            # Teachers are considered active by default unless explicitly deactivated
+            pass
         elif user.role == 'student':
-            sp = _get_profile_dict(user, 'student_profile')
-            if sp.get('is_active') is False:
-                return JsonResponse({'success': False, 'error': 'This account is deactivated'}, status=403)
-
+            # Students are considered active by default
+            pass
+            
         # Create session
         request.session['user_id'] = user.id
         request.session['custom_id'] = user.custom_id
@@ -806,8 +817,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
 
     if user:
         if user.role == 'teacher':
-            tp_dict = _get_profile_dict(user, 'teacher_profile')
-            teacher_role = tp_dict.get('teacher_role', '')
+            teacher_role = user.teacher_role or ''
 
         username = f"{user.first_name}_{user.last_name}".lower().replace(" ", "_")
         if PROFILE_PHOTOS_DIR.exists():
@@ -1061,12 +1071,10 @@ def profile(request):
     role_display = "Teacher"
 
     if user.role == "teacher":
-        teacher_profile = _get_profile_dict(user, 'teacher_profile')
-        teacher_role = teacher_profile.get('teacher_role', '')
+        teacher_role = user.teacher_role or ''
         role_display = f"Teacher - {teacher_role}" if teacher_role else "Teacher"
     else:
-        student_profile = _get_profile_dict(user, 'student_profile')
-        grade_level = student_profile.get('grade_level', '')
+        grade_level = user.grade_level or ''
         role_display = f"Student - {grade_level}" if grade_level else "Student"
 
     initials = "".join(part[:1] for part in full_name.split()[:2]).upper() or "PA"
@@ -1159,10 +1167,6 @@ def profile(request):
                 return JsonResponse({'success': True, 'message': 'Password changed successfully'})
 
             elif request.POST.get('deactivate_account') == 'true':
-                profile_key = 'teacher_profile' if user.role == "teacher" else 'student_profile'
-                profile_dict = _get_profile_dict(user, profile_key)
-                profile_dict['is_active'] = False
-                _set_profile_dict(user, profile_key, profile_dict)
                 if user.role == "teacher":
                     Section.objects.filter(teacher=user, is_active=True).update(is_active=False)
                 else:

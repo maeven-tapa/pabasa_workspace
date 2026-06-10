@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+from datetime import datetime
 
 
 class User(models.Model):
@@ -23,6 +25,15 @@ class User(models.Model):
     password_hash = models.CharField(max_length=255)
     profile_picture = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=list, blank=True)
+    # Teacher-specific fields
+    teacher_role = models.CharField(max_length=50, blank=True, null=True)
+    school = models.CharField(max_length=150, blank=True, null=True)
+    department = models.CharField(max_length=100, blank=True, null=True)
+    # Student-specific fields
+    grade_level = models.CharField(max_length=20, blank=True, null=True)
+    section = models.CharField(max_length=50, blank=True, null=True)
+    reading_level = models.CharField(max_length=50, blank=True, null=True)
+    parent_contact_no = models.CharField(max_length=20, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -57,6 +68,93 @@ class Section(models.Model):
 
     def __str__(self):
         return f"{self.class_code} - {self.class_name}"
+    
+    # Enrollment Management Methods
+    def get_enrolled_students(self, active_only=False):
+        """Get list of enrolled students, optionally filtering by active status"""
+        students = getattr(self, 'students', None) or []
+        if not isinstance(students, list):
+            return []
+        if active_only:
+            return [student for student in students if student.get('is_active', True)]
+        return students
+    
+    def has_student(self, user, active_only=True):
+        """Check if user is enrolled in this section"""
+        for entry in self.get_enrolled_students(active_only=active_only):
+            if (str(entry.get('student_id')) == str(user.id) or 
+                entry.get('custom_id') == user.custom_id):
+                return True
+        return False
+    
+    def get_student_count(self):
+        """Get count of actively enrolled students"""
+        return len(self.get_enrolled_students(active_only=True))
+    
+    def _get_student_entry(self, user, joined_at=None, is_active=True):
+        """Create a student entry dict for enrollment"""
+        return {
+            'student_id': user.id,
+            'custom_id': user.custom_id,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'email': user.email,
+            'joined_at': joined_at or timezone.now().isoformat(),
+            'is_active': is_active,
+        }
+    
+    def _save_enrollment(self):
+        """Save updated students list to database"""
+        self.updated_at = timezone.now()
+        self.save(update_fields=['students', 'updated_at'])
+    
+    def add_student(self, user):
+        """Enroll a student in this section. Returns True if successful, False if already enrolled."""
+        students = self.get_enrolled_students()
+        for index, entry in enumerate(students):
+            if (str(entry.get('student_id')) == str(user.id) or 
+                entry.get('custom_id') == user.custom_id):
+                if entry.get('is_active', True):
+                    return False  # Already enrolled
+                # Re-activate if previously deactivated
+                entry.update(self._get_student_entry(user, entry.get('joined_at'), is_active=True))
+                students[index] = entry
+                self.students = students
+                self._save_enrollment()
+                return True
+        
+        # Add new enrollment
+        students.append(self._get_student_entry(user))
+        self.students = students
+        self._save_enrollment()
+        return True
+    
+    def deactivate_student(self, user):
+        """Deactivate a student's enrollment in this section. Returns True if changed."""
+        students = self.get_enrolled_students()
+        changed = False
+        for entry in students:
+            if ((str(entry.get('student_id')) == str(user.id) or 
+                 entry.get('custom_id') == user.custom_id) and 
+                entry.get('is_active', True)):
+                entry['is_active'] = False
+                changed = True
+        if changed:
+            self.students = students
+            self._save_enrollment()
+        return changed
+    
+    def deactivate_all_students(self):
+        """Deactivate all student enrollments in this section. Returns True if changed."""
+        students = self.get_enrolled_students()
+        changed = False
+        for entry in students:
+            if entry.get('is_active', True):
+                entry['is_active'] = False
+                changed = True
+        if changed:
+            self.students = students
+        return changed
 
 class Assessment(models.Model):
     ASSESSMENT_TYPE_CHOICES = [
@@ -83,6 +181,89 @@ class Assessment(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.title}"
+    
+    # Attempt Management Methods
+    def get_attempts(self, student=None):
+        """Get all attempts, optionally filtered by student"""
+        attempts = getattr(self, 'attempts', None) or []
+        if not isinstance(attempts, list):
+            return []
+        if student:
+            return [a for a in attempts if a.get('student_id') == student.id]
+        return attempts
+    
+    def get_student_attempt_count(self, student):
+        """Get count of attempts for a specific student"""
+        return len(self.get_attempts(student))
+    
+    def has_student_attempted(self, student):
+        """Check if a student has attempted this assessment"""
+        return any(a.get('student_id') == student.id for a in self.get_attempts())
+    
+    def _get_attempt_entry(self, student, status='started', started_at=None, **kwargs):
+        """Create an attempt entry dict"""
+        entry = {
+            'student_id': student.id,
+            'started_at': started_at or timezone.now().isoformat(),
+            'status': status,
+        }
+        # Add optional fields if provided
+        for key in ['completed_at', 'device_info', 'mic_used', 'accuracy', 'wpm', 'total_score', 'passed', 'remarks']:
+            if key in kwargs:
+                entry[key] = kwargs[key]
+        return entry
+    
+    def _save_attempts(self):
+        """Save updated attempts list to database"""
+        self.updated_at = timezone.now()
+        self.save(update_fields=['attempts', 'updated_at'])
+    
+    def record_attempt(self, student, **attempt_data):
+        """Record a student's assessment attempt. Returns the attempt entry."""
+        attempts = self.get_attempts()
+        entry = self._get_attempt_entry(student, **attempt_data)
+        attempts.append(entry)
+        self.attempts = attempts
+        self._save_attempts()
+        return entry
+    
+    def update_attempt(self, student, **update_data):
+        """Update the most recent attempt for a student. Returns True if updated."""
+        attempts = self.get_attempts()
+        for i in range(len(attempts) - 1, -1, -1):  # Search from latest to earliest
+            if attempts[i].get('student_id') == student.id:
+                attempts[i].update(update_data)
+                attempts[i]['updated_at'] = timezone.now().isoformat()
+                self.attempts = attempts
+                self._save_attempts()
+                return True
+        return False
+    
+    def get_student_latest_attempt(self, student):
+        """Get the most recent attempt for a student"""
+        student_attempts = self.get_attempts(student)
+        return student_attempts[-1] if student_attempts else None
+    
+    def deactivate_student_attempts(self, student):
+        """Mark all attempts for a student as inactive (soft delete). Returns True if changed."""
+        attempts = self.get_attempts()
+        changed = False
+        for attempt in attempts:
+            if attempt.get('student_id') == student.id and attempt.get('status') != 'cancelled':
+                attempt['status'] = 'cancelled'
+                changed = True
+        if changed:
+            self.attempts = attempts
+            self._save_attempts()
+        return changed
+    
+    def clear_all_attempts(self):
+        """Clear all attempts (hard delete). Used when assessment is deleted."""
+        if self.attempts:
+            self.attempts = []
+            self._save_attempts()
+            return True
+        return False
 
 
 class Material(models.Model):
