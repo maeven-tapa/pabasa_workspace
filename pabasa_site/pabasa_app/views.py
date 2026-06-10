@@ -803,9 +803,9 @@ def _check_auth(request):
 
 # REPLACE the entire _dashboard_context function:
 def _dashboard_context(request, nav_role=None, extra=None):
-    first_name = request.session.get('first_name', '')
-    last_name = request.session.get('last_name', '')
     user = User.objects.filter(id=request.session.get('user_id')).first()
+    first_name = user.first_name if user else request.session.get('first_name', '')
+    last_name = user.last_name if user else request.session.get('last_name', '')
     _mi = user.middle_initial if user else ''
     _sx = user.suffix if user else ''
     _name_parts = [first_name, _mi, last_name, _sx]
@@ -1219,12 +1219,16 @@ def profile(request):
                     user.middle_initial = middle_initial if middle_initial else ''
                     user.suffix = suffix if suffix else ''
                     user.email = email
+                    request.session['first_name'] = user.first_name
+                    request.session['last_name'] = user.last_name
+                    request.session['email'] = user.email
                     
                     # Store bio in tags for profile information (for now)
                     if bio:
                         _set_profile_dict(user, 'profile_info', {'bio': bio})
                     
                     user.save()
+                    request.session.modified = True
                     
                     return JsonResponse({
                         'success': True,

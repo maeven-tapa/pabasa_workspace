@@ -184,8 +184,10 @@ function initProfilePage() {
         return fetch(window.location.pathname, {
             method: "POST",
             body: formData,
+            credentials: "same-origin",
             headers: {
-                "X-Requested-With": "XMLHttpRequest"
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRFToken": getCsrfToken()
             }
         }).then(function (response) {
             return response.json();
@@ -263,6 +265,24 @@ function initProfilePage() {
                 });
                 return out;
             } catch (e) {
+
+                const fieldMap = {
+                    firstName: fields.first_name,
+                    middleName: fields.middle_initial,
+                    lastName: fields.last_name,
+                    suffix: fields.suffix,
+                    email: fields.email,
+                    bio: fields.bio
+                };
+
+                Object.entries(fieldMap).forEach(function ([id, value]) {
+                    if (value === undefined) return;
+                    const element = document.getElementById(id);
+                    if (!element) return;
+                    element.value = value;
+                    element.defaultValue = value;
+                });
+
                 return [];
             }
         })();
