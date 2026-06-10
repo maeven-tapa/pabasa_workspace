@@ -1323,6 +1323,7 @@ def join_class(request):
             return JsonResponse({'success': False, 'error': 'Invalid class code.'}, status=404)
 
         if _section_has_student(section, student_user):
+            student_user.add_tag(section.get_tag_label())
             return JsonResponse({'success': False, 'error': 'You have already joined this class.'}, status=409)
 
         _add_student_to_section(section, student_user)
@@ -1432,6 +1433,8 @@ def create_reading_class(request):
             description=description,
             subject=data.get('subject', '').strip(),
         )
+
+        teacher_user.add_tag(new_class.get_tag_label())
 
         return JsonResponse({
             'success': True,
@@ -1550,6 +1553,7 @@ def delete_reading_class(request):
             _deactivate_all_section_students(section)
             section.is_active = False
             section.save()
+            teacher_user.remove_tag(section.get_tag_label())
 
             # Deactivate assessments tied to this section
             Assessment.objects.filter(section=section, is_active=True).update(is_active=False)

@@ -44,6 +44,34 @@ class User(models.Model):
     def __str__(self):
         return f"{self.custom_id} - {self.last_name}, {self.first_name}"
 
+    def _get_tags_list(self):
+        tags = getattr(self, 'tags', None) or []
+        if isinstance(tags, list):
+            return tags
+        return [tags]
+
+    def add_tag(self, tag):
+        if not tag:
+            return False
+
+        tags = self._get_tags_list()
+        if tag in tags:
+            return False
+
+        tags.append(tag)
+        self.tags = tags
+        self.save(update_fields=['tags', 'updated_at'])
+        return True
+
+    def remove_tag(self, tag):
+        tags = self._get_tags_list()
+        if tag not in tags:
+            return False
+
+        self.tags = [entry for entry in tags if entry != tag]
+        self.save(update_fields=['tags', 'updated_at'])
+        return True
+
 
 class Section(models.Model):
     class_code = models.CharField(max_length=20, unique=True)
@@ -68,6 +96,9 @@ class Section(models.Model):
 
     def __str__(self):
         return f"{self.class_code} - {self.class_name}"
+
+    def get_tag_label(self):
+        return f"{self.class_name} ({self.class_code})"
     
     # Enrollment Management Methods
     def get_enrolled_students(self, active_only=False):
@@ -111,27 +142,32 @@ class Section(models.Model):
     def add_student(self, user):
         """Enroll a student in this section. Returns True if successful, False if already enrolled."""
         students = self.get_enrolled_students()
+        tag_label = self.get_tag_label()
         for index, entry in enumerate(students):
             if (str(entry.get('student_id')) == str(user.id) or 
                 entry.get('custom_id') == user.custom_id):
                 if entry.get('is_active', True):
+                    user.add_tag(tag_label)
                     return False  # Already enrolled
                 # Re-activate if previously deactivated
                 entry.update(self._get_student_entry(user, entry.get('joined_at'), is_active=True))
                 students[index] = entry
                 self.students = students
                 self._save_enrollment()
+                user.add_tag(tag_label)
                 return True
         
         # Add new enrollment
         students.append(self._get_student_entry(user))
         self.students = students
         self._save_enrollment()
+        user.add_tag(tag_label)
         return True
     
     def deactivate_student(self, user):
         """Deactivate a student's enrollment in this section. Returns True if changed."""
         students = self.get_enrolled_students()
+        tag_label = self.get_tag_label()
         changed = False
         for entry in students:
             if ((str(entry.get('student_id')) == str(user.id) or 
@@ -142,18 +178,25 @@ class Section(models.Model):
         if changed:
             self.students = students
             self._save_enrollment()
+            user.remove_tag(tag_label)
         return changed
     
     def deactivate_all_students(self):
         """Deactivate all student enrollments in this section. Returns True if changed."""
         students = self.get_enrolled_students()
+        tag_label = self.get_tag_label()
         changed = False
+        affected_student_ids = set()
         for entry in students:
             if entry.get('is_active', True):
                 entry['is_active'] = False
                 changed = True
+                if entry.get('student_id'):
+                    affected_student_ids.add(entry.get('student_id'))
         if changed:
             self.students = students
+            for student_user in User.objects.filter(id__in=affected_student_ids):
+                student_user.remove_tag(tag_label)
         return changed
 
 class Assessment(models.Model):
