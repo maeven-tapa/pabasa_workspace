@@ -19,7 +19,38 @@ import traceback
 import ssl
 import time
 import uuid
-from .models import User, TeacherProfile, StudentProfile, ReadingClass, ClassEnrollment, Assessment, AssessmentAttempt, Notification, TeacherNote
+from .models import User, Section, Enrollment, Assessment, Material, Note, Notification
+
+# Compatibility aliases: some code still expects TeacherProfile/StudentProfile names
+TeacherProfile = User
+StudentProfile = User
+
+# Utilities for profile-like data now stored on `User.tags` (JSONField)
+def _get_profile_dict(user, key):
+    if not user:
+        return {}
+    tags = getattr(user, 'tags', None) or []
+    if isinstance(tags, dict):
+        return tags.get(key, {})
+    for entry in tags:
+        if isinstance(entry, dict) and key in entry:
+            return entry.get(key) or {}
+    return {}
+
+def _set_profile_dict(user, key, profile_dict):
+    tags = getattr(user, 'tags', None) or []
+    if not isinstance(tags, list):
+        tags = [tags]
+    replaced = False
+    for i, entry in enumerate(tags):
+        if isinstance(entry, dict) and key in entry:
+            tags[i] = {key: profile_dict}
+            replaced = True
+            break
+    if not replaced:
+        tags.append({key: profile_dict})
+    user.tags = tags
+    user.save()
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
@@ -75,7 +106,7 @@ def generate_unique_class_code():
         
         # Uniqueness Check: Ensure this code does not already exist in the database
         # This prevents duplicate classrooms even across different teachers
-        if not ReadingClass.objects.filter(class_code=code).exists():
+        if not Section.objects.filter(class_code=code).exists():
             return code
         # If exists, the loop continues to generate a fresh candidate
 
@@ -497,13 +528,14 @@ def verify_teacher_otp(request):
             contact_no=pending['contact_no']
         )
 
-        TeacherProfile.objects.create(
-            user=user,
-            teacher_code=custom_id,
-            teacher_role=pending['teacher_role'],
-            school=pending['school'],
-            department=pending['department']
-        )
+        # store teacher profile data inside User.tags for compatibility
+        _set_profile_dict(user, 'teacher_profile', {
+            'teacher_code': custom_id,
+            'teacher_role': pending.get('teacher_role', ''),
+            'school': pending.get('school', ''),
+            'department': pending.get('department', ''),
+            'is_active': True,
+        })
 
         teacher_code = custom_id
 
@@ -583,14 +615,15 @@ def verify_student_otp(request):
             contact_no=pending.get('contact_no', '')
         )
 
-        StudentProfile.objects.create(
-            user=user,
-            student_code=custom_id,
-            grade_level=pending.get('grade_level', ''),
-            section=pending.get('section', ''),
-            reading_level=pending.get('reading_level', ''),
-            parent_contact_no=pending.get('parent_contact_no', '')
-        )
+        # store student profile data inside User.tags for compatibility
+        _set_profile_dict(user, 'student_profile', {
+            'student_code': custom_id,
+            'grade_level': pending.get('grade_level', ''),
+            'section': pending.get('section', ''),
+            'reading_level': pending.get('reading_level', ''),
+            'parent_contact_no': pending.get('parent_contact_no', ''),
+            'is_active': True,
+        })
 
         send_student_confirmation_email(request, user)
         _clear_pending_student_signup(request)
@@ -646,14 +679,14 @@ def login_user(request):
         if not check_password(password, user.password_hash):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
 
-        # Verify account activity status before proceeding to 2FA
+        # Verify account activity status using profile dict stored on User.tags
         if user.role == 'teacher':
-            teacher_profile = TeacherProfile.objects.filter(user=user).first()
-            if teacher_profile and not teacher_profile.is_active:
+            tp = _get_profile_dict(user, 'teacher_profile')
+            if tp.get('is_active') is False:
                 return JsonResponse({'success': False, 'error': 'This account is deactivated'}, status=403)
         elif user.role == 'student':
-            student_profile = StudentProfile.objects.filter(user=user).first()
-            if student_profile and not student_profile.is_active:
+            sp = _get_profile_dict(user, 'student_profile')
+            if sp.get('is_active') is False:
                 return JsonResponse({'success': False, 'error': 'This account is deactivated'}, status=403)
 
         # Create session
@@ -704,9 +737,8 @@ def _dashboard_context(request, nav_role=None, extra=None):
 
     if user:
         if user.role == 'teacher':
-            teacher_profile = TeacherProfile.objects.filter(user=user).first()
-            if teacher_profile:
-                teacher_role = teacher_profile.teacher_role
+            tp_dict = _get_profile_dict(user, 'teacher_profile')
+            teacher_role = tp_dict.get('teacher_role', '')
 
         username = f"{user.first_name}_{user.last_name}".lower().replace(" ", "_")
         if PROFILE_PHOTOS_DIR.exists():
@@ -716,13 +748,13 @@ def _dashboard_context(request, nav_role=None, extra=None):
 
     joined_classes = []
     if user and user.role == 'student':
-        student_profile = StudentProfile.objects.filter(user=user).first()
-        if student_profile:
-            enrollments = ClassEnrollment.objects.filter(student=student_profile, is_active=True)
-            for enrollment in enrollments:
-                cls = enrollment.reading_class
-                student_count = ClassEnrollment.objects.filter(reading_class=cls, is_active=True).count()
-                joined_classes.append({
+        student_user = user
+        sp_dict = _get_profile_dict(student_user, 'student_profile')
+        enrollments = Enrollment.objects.filter(student=student_user, is_active=True)
+        for enrollment in enrollments:
+            cls = enrollment.section
+            student_count = Enrollment.objects.filter(section=cls, is_active=True).count()
+            joined_classes.append({
                     'code': cls.class_code,
                     'name': cls.class_name,
                     'student_count': student_count,
@@ -751,47 +783,40 @@ def _dashboard_context(request, nav_role=None, extra=None):
             last_activity = None
             has_activity = False
             if user.role == 'teacher':
-                tp = TeacherProfile.objects.filter(user=user).first()
-                if tp:
-                    # Check for classes, materials, enrollments, attempts
-                    has_classes = ReadingClass.objects.filter(teacher=tp, is_active=True).exists()
-                    has_materials = Assessment.objects.filter(teacher=tp, is_active=True).exists()
-                    has_enrollments = ClassEnrollment.objects.filter(reading_class__teacher=tp, is_active=True).exists()
-                    has_attempts = AssessmentAttempt.objects.filter(assessment__teacher=tp).exists()
-                    has_activity = has_classes or has_materials or has_enrollments or has_attempts
+                tp_user = user
+                # Check for classes, materials, enrollments
+                has_classes = Section.objects.filter(teacher=tp_user, is_active=True).exists()
+                has_materials = Assessment.objects.filter(teacher=tp_user, is_active=True).exists()
+                has_enrollments = Enrollment.objects.filter(section__teacher=tp_user, is_active=True).exists()
+                has_attempts = Assessment.objects.filter(teacher=tp_user).exists()
+                has_activity = has_classes or has_materials or has_enrollments or has_attempts
 
-                    # Get latest timestamps
-                    candidate_dates = []
-                    if tp.updated_at:
-                        candidate_dates.append(tp.updated_at)
-                    cls_max = ReadingClass.objects.filter(teacher=tp).aggregate(m=Max('updated_at'))['m']
-                    if cls_max:
-                        candidate_dates.append(cls_max)
-                    asm_max = Assessment.objects.filter(teacher=tp).aggregate(m=Max('updated_at'))['m']
-                    if asm_max:
-                        candidate_dates.append(asm_max)
-                    enr_max = ClassEnrollment.objects.filter(reading_class__teacher=tp).aggregate(m=Max('joined_at'))['m']
-                    if enr_max:
-                        candidate_dates.append(enr_max)
-                    att_max = AssessmentAttempt.objects.filter(assessment__teacher=tp).aggregate(m=Max('started_at'))['m']
-                    if att_max:
-                        candidate_dates.append(att_max)
+                # Get latest timestamps
+                candidate_dates = []
+                if getattr(tp_user, 'updated_at', None):
+                    candidate_dates.append(tp_user.updated_at)
+                cls_max = Section.objects.filter(teacher=tp_user).aggregate(m=Max('updated_at'))['m']
+                if cls_max:
+                    candidate_dates.append(cls_max)
+                asm_max = Assessment.objects.filter(teacher=tp_user).aggregate(m=Max('updated_at'))['m']
+                if asm_max:
+                    candidate_dates.append(asm_max)
+                enr_max = Enrollment.objects.filter(section__teacher=tp_user).aggregate(m=Max('joined_at'))['m']
+                if enr_max:
+                    candidate_dates.append(enr_max)
 
-                    if candidate_dates:
-                        last_activity = max(candidate_dates)
+                if candidate_dates:
+                    last_activity = max(candidate_dates)
 
             else:
-                # For students, use student profile updated or enrollment/attempt timestamps
-                sp = StudentProfile.objects.filter(user=user).first()
-                if sp:
+                # For students, use student user updated or enrollment timestamps
+                sp_user = user
+                if sp_user:
                     has_activity = True
-                    candidate_dates = [d for d in [sp.updated_at, sp.created_at] if d]
-                    enr_max = ClassEnrollment.objects.filter(student=sp, is_active=True).aggregate(m=Max('joined_at'))['m']
+                    candidate_dates = [d for d in [getattr(sp_user, 'updated_at', None), getattr(sp_user, 'created_at', None)] if d]
+                    enr_max = Enrollment.objects.filter(student=sp_user, is_active=True).aggregate(m=Max('joined_at'))['m']
                     if enr_max:
                         candidate_dates.append(enr_max)
-                    att_max = AssessmentAttempt.objects.filter(student=sp).aggregate(m=Max('started_at'))['m']
-                    if att_max:
-                        candidate_dates.append(att_max)
                     if candidate_dates:
                         last_activity = max(candidate_dates)
 
@@ -1158,30 +1183,22 @@ def join_class(request):
         if not class_code:
             return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
 
+
         user_id = request.session.get('user_id')
-        student_profile = StudentProfile.objects.filter(user__id=user_id, is_active=True).first()
+        student_user = User.objects.filter(id=user_id).first()
 
-        if not student_profile:
-            return JsonResponse({'success': False, 'error': 'Student profile not found or inactive'}, status=404)
+        if not student_user:
+            return JsonResponse({'success': False, 'error': 'Student not found or inactive'}, status=404)
 
-        reading_class = ReadingClass.objects.filter(class_code=class_code, is_active=True).first()
+        section = Section.objects.filter(class_code=class_code, is_active=True).first()
 
-        if not reading_class:
-            return JsonResponse(
-                {'success': False, 'error': 'Invalid class code.'},
-                status=404
-    )
-        if ClassEnrollment.objects.filter(
-            student=student_profile,
-            reading_class=reading_class,
-            is_active=True
-        ).exists():
-            return JsonResponse(
-                {'success': False, 'error': 'You have already joined this class.'},
-                status=409
-            )
+        if not section:
+            return JsonResponse({'success': False, 'error': 'Invalid class code.'}, status=404)
 
-        ClassEnrollment.objects.create(student=student_profile, reading_class=reading_class, is_active=True)
+        if Enrollment.objects.filter(student=student_user, section=section, is_active=True).exists():
+            return JsonResponse({'success': False, 'error': 'You have already joined this class.'}, status=409)
+
+        Enrollment.objects.create(student=student_user, section=section, is_active=True)
 
         return JsonResponse({'success': True, 'message': f'Successfully joined class {class_code}'})
 
@@ -1204,15 +1221,15 @@ def unenroll_class(request):
             return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
 
         user_id = request.session.get('user_id')
-        student_profile = StudentProfile.objects.filter(user__id=user_id, is_active=True).first()
-        if not student_profile:
-            return JsonResponse({'success': False, 'error': 'Student profile not found'}, status=404)
+        student_user = User.objects.filter(id=user_id).first()
+        if not student_user:
+            return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
 
-        reading_class = ReadingClass.objects.filter(class_code=class_code).first()
-        if not reading_class:
+        section = Section.objects.filter(class_code=class_code).first()
+        if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
-        enrollment = ClassEnrollment.objects.filter(student=student_profile, reading_class=reading_class, is_active=True).first()
+        enrollment = Enrollment.objects.filter(student=student_user, section=section, is_active=True).first()
         if not enrollment:
             return JsonResponse({'success': False, 'error': 'Enrollment not found'}, status=404)
 
@@ -1221,10 +1238,9 @@ def unenroll_class(request):
             enrollment.save()
 
             # Create an in-app notification for the teacher
-            teacher_user = reading_class.teacher.user
-            student_user = student_profile.user
+            teacher_user = section.teacher
             title = 'Student unenrolled'
-            message = f"{student_user.first_name} {student_user.last_name} has unenrolled from your class {reading_class.class_name}."
+            message = f"{student_user.first_name} {student_user.last_name} has unenrolled from your class {section.class_name}."
             Notification.objects.create(
                 recipient=teacher_user,
                 created_by=student_user,
@@ -1235,7 +1251,7 @@ def unenroll_class(request):
 
             # Send email to teacher (best-effort)
             try:
-                subject = f"Student unenrolled from {reading_class.class_name}"
+                subject = f"Student unenrolled from {section.class_name}"
                 send_mail(subject, message, getattr(settings, 'DEFAULT_FROM_EMAIL', None), [teacher_user.email], fail_silently=True)
             except Exception:
                 logger.exception('Failed to send unenroll email')
@@ -1273,23 +1289,23 @@ def create_reading_class(request):
         if not class_name:
             return JsonResponse({'success': False, 'error': 'Class name is required'}, status=400)
 
-        # Retrieve the teacher profile for the logged-in user
+        # Retrieve the teacher user for the logged-in user
         user_id = request.session.get('user_id')
-        teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
-        
-        if not teacher_profile:
-            return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
         unique_code = generate_unique_class_code()
 
-        new_class = ReadingClass.objects.create(
-            teacher=teacher_profile,
+        new_class = Section.objects.create(
+            teacher=teacher_user,
             class_code=unique_code,
             class_name=class_name,
             grade_level=grade_level,
             section=section,
             header=header,
             description=description,
-            subject=data.get('subject', '').strip(),   
+            subject=data.get('subject', '').strip(),
         )
 
         return JsonResponse({
@@ -1307,19 +1323,19 @@ def create_reading_class(request):
 def get_teacher_classes(request):
 
     user_id = request.session.get('user_id')  # ← this is already the session-bound user
-    teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
-    if not teacher_profile:
-        return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
+    teacher_user = User.objects.filter(id=user_id).first()
+    if not teacher_user or teacher_user.role != 'teacher':
+        return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-    classes = ReadingClass.objects.filter(
-        teacher=teacher_profile,  # ← correct, already present
+    classes = Section.objects.filter(
+        teacher=teacher_user,
         is_active=True
     ).order_by('class_name')
 
     class_list = []
     for cls in classes:
-        student_count = ClassEnrollment.objects.filter(
-            reading_class=cls, is_active=True
+        student_count = Enrollment.objects.filter(
+            section=cls, is_active=True
         ).count()
         class_list.append({
             'code': cls.class_code,
@@ -1345,14 +1361,14 @@ def get_teacher_overview(request):
     """
     try:
         user_id = request.session.get('user_id')
-        teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
-        if not teacher_profile:
-            return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        classes_count = ReadingClass.objects.filter(teacher=teacher_profile, is_active=True).count()
-        total_students = ClassEnrollment.objects.filter(reading_class__teacher=teacher_profile, is_active=True).count()
-        materials_posted = Assessment.objects.filter(teacher=teacher_profile, is_active=True).count()
-        reports_generated = TeacherNote.objects.filter(teacher=teacher_profile).count()
+        classes_count = Section.objects.filter(teacher=teacher_user, is_active=True).count()
+        total_students = Enrollment.objects.filter(section__teacher=teacher_user, is_active=True).count()
+        materials_posted = Assessment.objects.filter(teacher=teacher_user, is_active=True).count()
+        reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
         return JsonResponse({
             'success': True,
@@ -1380,47 +1396,43 @@ def delete_reading_class(request):
         if not class_code:
             return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
 
-        # Retrieve the teacher profile for the logged-in user
+        # Retrieve the teacher user for the logged-in user
         user_id = request.session.get('user_id')
-        teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
-        
-        if not teacher_profile:
-            return JsonResponse({'success': False, 'error': 'Teacher profile not found'}, status=404)
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        # Find the class
-        reading_class = ReadingClass.objects.filter(
-            teacher=teacher_profile,
+        # Find the section
+        section = Section.objects.filter(
+            teacher=teacher_user,
             class_code=class_code,
             is_active=True
         ).first()
 
-        if not reading_class:
+        if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
-        # Soft delete by setting is_active to False and deactivate related data
-        # Capture affected students before deactivating so we can notify them
-        affected_enrollments = list(ClassEnrollment.objects.filter(reading_class=reading_class, is_active=True).select_related('student__user'))
+        # Soft delete: capture affected students before deactivating
+        affected_enrollments = list(Enrollment.objects.filter(section=section, is_active=True).select_related('student'))
         affected_students = [en.student for en in affected_enrollments]
 
         with transaction.atomic():
-            reading_class.is_active = False
-            reading_class.save()
+            section.is_active = False
+            section.save()
 
-            # Deactivate class enrollments
-            ClassEnrollment.objects.filter(reading_class=reading_class, is_active=True).update(is_active=False)
+            # Deactivate enrollments
+            Enrollment.objects.filter(section=section, is_active=True).update(is_active=False)
 
-            # Deactivate assessments tied to this class
-            Assessment.objects.filter(reading_class=reading_class, is_active=True).update(is_active=False)
+            # Deactivate assessments tied to this section
+            Assessment.objects.filter(section=section, is_active=True).update(is_active=False)
 
             # Notify affected students (in-app + email)
-            teacher_user = teacher_profile.user
             teacher_name = f"{teacher_user.first_name} {teacher_user.last_name}" if teacher_user else 'Your teacher'
-            for student_profile in affected_students:
+            for student_user in affected_students:
                 try:
-                    student_user = student_profile.user
                     title = 'Class removed by teacher'
                     message = (
-                        f"{teacher_name} has removed the class '{reading_class.class_name}'. "
+                        f"{teacher_name} has removed the class '{section.class_name}'. "
                         "Visit your account to completely remove the class."
                     )
                     Notification.objects.create(
@@ -1433,7 +1445,7 @@ def delete_reading_class(request):
 
                     # Best-effort email to student
                     try:
-                        subject = f"Class removed: {reading_class.class_name}"
+                        subject = f"Class removed: {section.class_name}"
                         send_mail(subject, message, getattr(settings, 'DEFAULT_FROM_EMAIL', None), [student_user.email], fail_silently=True)
                     except Exception:
                         logger.exception('Failed to send class-deleted email to student %s', student_user.email)
@@ -1484,18 +1496,18 @@ def add_reading_material(request):
 
         # ── resolve teacher & class ─────────────────────────────────────────
         user_id = request.session.get('user_id')
-        teacher_profile = TeacherProfile.objects.filter(user__id=user_id).first()
-        if not teacher_profile:
-            return JsonResponse({'success': False, 'error': 'Teacher profile not found.'}, status=404)
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=404)
 
-        reading_class = None
+        section = None
         if class_code:
-            reading_class = ReadingClass.objects.filter(
+            section = Section.objects.filter(
                 class_code=class_code,
-                teacher=teacher_profile,
+                teacher=teacher_user,
                 is_active=True
             ).first()
-            if not reading_class:
+            if not section:
                 return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
 
         # ── generate unique assessment code ─────────────────────────────────
@@ -1508,8 +1520,8 @@ def add_reading_material(request):
             title=title,
             code=assessment_code,
             assessment_type=reading_type,
-            teacher=teacher_profile,
-            reading_class=reading_class,
+            teacher=teacher_user,
+            section=section,
             is_active=(status == 'published'),
         )
 
@@ -1537,8 +1549,8 @@ def record_assessment_completion(request):
         data = json.loads(request.body)
         assessment_id = data.get('assessment_id')
         student_user = User.objects.get(id=request.session.get('user_id'))
-        assessment = Assessment.objects.select_related('teacher__user').get(id=assessment_id)
-        teacher_user = assessment.teacher.user
+        assessment = Assessment.objects.select_related('teacher').get(id=assessment_id)
+        teacher_user = assessment.teacher
 
         notif_msg = f"{student_user.first_name} {student_user.last_name} completed {assessment.title}"
         Notification.objects.create(
