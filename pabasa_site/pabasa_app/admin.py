@@ -2,7 +2,6 @@ from django.contrib import admin
 from .models import (
 	User,
 	Section,
-	Enrollment,
 	Assessment,
 	Material,
 	Note,
@@ -23,23 +22,13 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
-	list_display = ("class_code", "class_name", "teacher", "is_active", "created_at")
+	list_display = ("class_code", "class_name", "teacher", "student_count", "is_active", "created_at")
 	list_filter = ("is_active", "created_at")
 	search_fields = ("class_code", "class_name", "teacher__custom_id", "teacher__last_name")
 	ordering = ("class_name",)
 
-
-@admin.register(Enrollment)
-class EnrollmentAdmin(admin.ModelAdmin):
-	list_display = ("student", "section", "is_active", "joined_at")
-	list_filter = ("is_active", "joined_at")
-	search_fields = (
-		"student__custom_id",
-		"student__last_name",
-		"section__class_code",
-		"section__class_name",
-	)
-	ordering = ("-joined_at",)
+	def student_count(self, obj):
+		return len([student for student in (obj.students or []) if student.get("is_active", True)])
 
 
 @admin.register(Assessment)

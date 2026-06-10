@@ -47,8 +47,9 @@ class Section(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     subject = models.CharField(max_length=50)
 
-    # many-to-many convenience relationship: User.enrolled_sections via Enrollment
-    students = models.ManyToManyField(User, through="Enrollment", related_name="enrolled_sections")
+    # Stores joined students as JSON entries:
+    # {"student_id": ..., "custom_id": ..., "first_name": ..., "last_name": ..., "email": ..., "joined_at": ..., "is_active": ...}
+    students = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "sections"
@@ -56,24 +57,6 @@ class Section(models.Model):
 
     def __str__(self):
         return f"{self.class_code} - {self.class_name}"
-
-
-class Enrollment(models.Model):
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="enrollments")
-    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="enrollments")
-    joined_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        db_table = "class_enrollments"
-        ordering = ["-joined_at"]
-        constraints = [
-            models.UniqueConstraint(fields=["student", "section"], name="unique_student_section_enrollment"),
-        ]
-
-    def __str__(self):
-        return f"{self.student} -> {self.section}"
-    
 
 class Assessment(models.Model):
     ASSESSMENT_TYPE_CHOICES = [

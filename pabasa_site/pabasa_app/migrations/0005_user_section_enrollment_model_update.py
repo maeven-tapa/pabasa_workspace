@@ -54,7 +54,6 @@ def copy_profiles_to_users(apps, schema_editor):
             },
         )
 
-    # Keep static analysis quiet for historical apps import paths.
     User.objects.exists()
 
 

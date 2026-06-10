@@ -19,11 +19,7 @@ import traceback
 import ssl
 import time
 import uuid
-from .models import User, Section, Enrollment, Assessment, Material, Note, Notification
-
-# Compatibility aliases: some code still expects TeacherProfile/StudentProfile names
-TeacherProfile = User
-StudentProfile = User
+from .models import User, Section, Assessment, Material, Note, Notification
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -51,6 +47,79 @@ def _set_profile_dict(user, key, profile_dict):
         tags.append({key: profile_dict})
     user.tags = tags
     user.save()
+
+def _section_students(section, active_only=False):
+    students = getattr(section, 'students', None) or []
+    if not isinstance(students, list):
+        return []
+    if active_only:
+        return [student for student in students if student.get('is_active', True)]
+    return students
+
+def _student_entry_matches(entry, user):
+    return str(entry.get('student_id')) == str(user.id) or entry.get('custom_id') == user.custom_id
+
+def _section_has_student(section, user, active_only=True):
+    return any(
+        _student_entry_matches(entry, user)
+        for entry in _section_students(section, active_only=active_only)
+    )
+
+def _section_student_count(section):
+    return len(_section_students(section, active_only=True))
+
+def _student_section_entry(user, joined_at=None, is_active=True):
+    return {
+        'student_id': user.id,
+        'custom_id': user.custom_id,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'joined_at': joined_at or timezone.now().isoformat(),
+        'is_active': is_active,
+    }
+
+def _save_section_students(section, students):
+    section.students = students
+    section.updated_at = timezone.now()
+    section.save(update_fields=['students', 'updated_at'])
+
+def _add_student_to_section(section, user):
+    students = _section_students(section)
+    for index, entry in enumerate(students):
+        if _student_entry_matches(entry, user):
+            if entry.get('is_active', True):
+                return False
+            entry.update(_student_section_entry(user, entry.get('joined_at'), is_active=True))
+            students[index] = entry
+            _save_section_students(section, students)
+            return True
+
+    students.append(_student_section_entry(user))
+    _save_section_students(section, students)
+    return True
+
+def _deactivate_student_in_section(section, user):
+    students = _section_students(section)
+    changed = False
+    for entry in students:
+        if _student_entry_matches(entry, user) and entry.get('is_active', True):
+            entry['is_active'] = False
+            changed = True
+    if changed:
+        _save_section_students(section, students)
+    return changed
+
+def _deactivate_all_section_students(section):
+    students = _section_students(section)
+    changed = False
+    for entry in students:
+        if entry.get('is_active', True):
+            entry['is_active'] = False
+            changed = True
+    if changed:
+        section.students = students
+    return changed
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
@@ -749,16 +818,15 @@ def _dashboard_context(request, nav_role=None, extra=None):
     joined_classes = []
     if user and user.role == 'student':
         student_user = user
-        sp_dict = _get_profile_dict(student_user, 'student_profile')
-        enrollments = Enrollment.objects.filter(student=student_user, is_active=True)
-        for enrollment in enrollments:
-            cls = enrollment.section
-            student_count = Enrollment.objects.filter(section=cls, is_active=True).count()
+        classes = Section.objects.filter(is_active=True).order_by('class_name')
+        for cls in classes:
+            if not _section_has_student(cls, student_user):
+                continue
             joined_classes.append({
-                    'code': cls.class_code,
-                    'name': cls.class_name,
-                    'student_count': student_count,
-                })
+                'code': cls.class_code,
+                'name': cls.class_name,
+                'student_count': _section_student_count(cls),
+            })
 
     context = {
         'nav_role': nav_role or request.session.get('user_role', 'student'),
@@ -784,12 +852,15 @@ def _dashboard_context(request, nav_role=None, extra=None):
             has_activity = False
             if user.role == 'teacher':
                 tp_user = user
-                # Check for classes, materials, enrollments
+                # Check for classes, materials, and joined students stored in sections
                 has_classes = Section.objects.filter(teacher=tp_user, is_active=True).exists()
                 has_materials = Assessment.objects.filter(teacher=tp_user, is_active=True).exists()
-                has_enrollments = Enrollment.objects.filter(section__teacher=tp_user, is_active=True).exists()
+                has_joined_students = any(
+                    _section_student_count(cls) > 0
+                    for cls in Section.objects.filter(teacher=tp_user, is_active=True)
+                )
                 has_attempts = Assessment.objects.filter(teacher=tp_user).exists()
-                has_activity = has_classes or has_materials or has_enrollments or has_attempts
+                has_activity = has_classes or has_materials or has_joined_students or has_attempts
 
                 # Get latest timestamps
                 candidate_dates = []
@@ -801,10 +872,6 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 asm_max = Assessment.objects.filter(teacher=tp_user).aggregate(m=Max('updated_at'))['m']
                 if asm_max:
                     candidate_dates.append(asm_max)
-                enr_max = Enrollment.objects.filter(section__teacher=tp_user).aggregate(m=Max('joined_at'))['m']
-                if enr_max:
-                    candidate_dates.append(enr_max)
-
                 if candidate_dates:
                     last_activity = max(candidate_dates)
 
@@ -814,9 +881,13 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 if sp_user:
                     has_activity = True
                     candidate_dates = [d for d in [getattr(sp_user, 'updated_at', None), getattr(sp_user, 'created_at', None)] if d]
-                    enr_max = Enrollment.objects.filter(student=sp_user, is_active=True).aggregate(m=Max('joined_at'))['m']
-                    if enr_max:
-                        candidate_dates.append(enr_max)
+                    joined_sections = [
+                        cls for cls in Section.objects.filter(is_active=True)
+                        if _section_has_student(cls, sp_user)
+                    ]
+                    candidate_dates.extend(
+                        cls.updated_at for cls in joined_sections if getattr(cls, 'updated_at', None)
+                    )
                     if candidate_dates:
                         last_activity = max(candidate_dates)
 
@@ -988,19 +1059,15 @@ def profile(request):
     username = f"{user.first_name}_{user.last_name}".lower().replace(" ", "_")
     pabasa_id = user.custom_id
     role_display = "Teacher"
-    teacher_profile = None
-    student_profile = None
 
     if user.role == "teacher":
-        teacher_profile = TeacherProfile.objects.filter(user=user).first()
-        if teacher_profile:
-            pabasa_id = teacher_profile.teacher_code
-            role_display = f"Teacher - {teacher_profile.teacher_role}" if teacher_profile.teacher_role else "Teacher"
+        teacher_profile = _get_profile_dict(user, 'teacher_profile')
+        teacher_role = teacher_profile.get('teacher_role', '')
+        role_display = f"Teacher - {teacher_role}" if teacher_role else "Teacher"
     else:
-        student_profile = StudentProfile.objects.filter(user=user).first()
-        if student_profile:
-            pabasa_id = student_profile.student_code
-            role_display = f"Student - {student_profile.grade_level}" if student_profile.grade_level else "Student"
+        student_profile = _get_profile_dict(user, 'student_profile')
+        grade_level = student_profile.get('grade_level', '')
+        role_display = f"Student - {grade_level}" if grade_level else "Student"
 
     initials = "".join(part[:1] for part in full_name.split()[:2]).upper() or "PA"
     
@@ -1092,10 +1159,15 @@ def profile(request):
                 return JsonResponse({'success': True, 'message': 'Password changed successfully'})
 
             elif request.POST.get('deactivate_account') == 'true':
+                profile_key = 'teacher_profile' if user.role == "teacher" else 'student_profile'
+                profile_dict = _get_profile_dict(user, profile_key)
+                profile_dict['is_active'] = False
+                _set_profile_dict(user, profile_key, profile_dict)
                 if user.role == "teacher":
-                    TeacherProfile.objects.filter(user=user).update(is_active=False)
+                    Section.objects.filter(teacher=user, is_active=True).update(is_active=False)
                 else:
-                    StudentProfile.objects.filter(user=user).update(is_active=False)
+                    for class_section in Section.objects.filter(is_active=True):
+                        _deactivate_student_in_section(class_section, user)
                 request.session.flush()
                 return JsonResponse({'success': True, 'redirect_url': reverse('auth')})
 
@@ -1173,7 +1245,7 @@ def send_parent_email(request):
 @login_required(role='student') # Only students can join classes
 def join_class(request):
     """
-    Allows a student to join a class by creating a ClassEnrollment record.
+    Allows a student to join a class by storing membership in Section.students.
     Expects a JSON payload with 'class_code'.
     """
     try:
@@ -1195,10 +1267,10 @@ def join_class(request):
         if not section:
             return JsonResponse({'success': False, 'error': 'Invalid class code.'}, status=404)
 
-        if Enrollment.objects.filter(student=student_user, section=section, is_active=True).exists():
+        if _section_has_student(section, student_user):
             return JsonResponse({'success': False, 'error': 'You have already joined this class.'}, status=409)
 
-        Enrollment.objects.create(student=student_user, section=section, is_active=True)
+        _add_student_to_section(section, student_user)
 
         return JsonResponse({'success': True, 'message': f'Successfully joined class {class_code}'})
 
@@ -1213,7 +1285,7 @@ def join_class(request):
 @require_http_methods(["POST"])
 @login_required(role='student')
 def unenroll_class(request):
-    """Student unenroll endpoint: deactivates the ClassEnrollment and notifies the teacher."""
+    """Student unenroll endpoint: deactivates the student entry inside Section.students."""
     try:
         data = json.loads(request.body)
         class_code = data.get('class_code', '').strip().upper()
@@ -1229,13 +1301,11 @@ def unenroll_class(request):
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
-        enrollment = Enrollment.objects.filter(student=student_user, section=section, is_active=True).first()
-        if not enrollment:
-            return JsonResponse({'success': False, 'error': 'Enrollment not found'}, status=404)
+        if not _section_has_student(section, student_user):
+            return JsonResponse({'success': False, 'error': 'Class membership not found'}, status=404)
 
         with transaction.atomic():
-            enrollment.is_active = False
-            enrollment.save()
+            _deactivate_student_in_section(section, student_user)
 
             # Create an in-app notification for the teacher
             teacher_user = section.teacher
@@ -1334,9 +1404,7 @@ def get_teacher_classes(request):
 
     class_list = []
     for cls in classes:
-        student_count = Enrollment.objects.filter(
-            section=cls, is_active=True
-        ).count()
+        student_count = _section_student_count(cls)
         class_list.append({
             'code': cls.class_code,
             'name': cls.class_name,
@@ -1366,7 +1434,10 @@ def get_teacher_overview(request):
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
         classes_count = Section.objects.filter(teacher=teacher_user, is_active=True).count()
-        total_students = Enrollment.objects.filter(section__teacher=teacher_user, is_active=True).count()
+        total_students = sum(
+            _section_student_count(cls)
+            for cls in Section.objects.filter(teacher=teacher_user, is_active=True)
+        )
         materials_posted = Assessment.objects.filter(teacher=teacher_user, is_active=True).count()
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
@@ -1413,15 +1484,17 @@ def delete_reading_class(request):
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
 
         # Soft delete: capture affected students before deactivating
-        affected_enrollments = list(Enrollment.objects.filter(section=section, is_active=True).select_related('student'))
-        affected_students = [en.student for en in affected_enrollments]
+        affected_student_ids = [
+            entry.get('student_id')
+            for entry in _section_students(section, active_only=True)
+            if entry.get('student_id')
+        ]
+        affected_students = list(User.objects.filter(id__in=affected_student_ids))
 
         with transaction.atomic():
+            _deactivate_all_section_students(section)
             section.is_active = False
             section.save()
-
-            # Deactivate enrollments
-            Enrollment.objects.filter(section=section, is_active=True).update(is_active=False)
 
             # Deactivate assessments tied to this section
             Assessment.objects.filter(section=section, is_active=True).update(is_active=False)
