@@ -494,6 +494,7 @@
                     <div class="d-grid gap-3">
                         <form class="d-grid gap-3" action="#" method="post" id="accountDetailsForm">
                             {% csrf_token %}
+                            <input type="hidden" name="save_account_details" value="true">
                             <div class="profile-edit-grid">
                                 <div class="full">
                                     <label class="form-label" for="profilePhoto">Profile Photo</label>
