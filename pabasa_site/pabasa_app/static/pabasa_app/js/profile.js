@@ -84,6 +84,50 @@ function initProfilePage() {
                 setEditMode(false);
             }, 0);
         });
+
+        form.addEventListener("submit", function (event) {
+            event.preventDefault();
+            const submitBtn = form.querySelector("button[type='submit']");
+            const originalText = submitBtn ? submitBtn.textContent : "";
+            
+            if (submitBtn) {
+                submitBtn.textContent = "Saving...";
+                submitBtn.disabled = true;
+            }
+
+            const fields = {
+                first_name: document.getElementById("firstName")?.value || "",
+                last_name: document.getElementById("lastName")?.value || "",
+                middle_initial: document.getElementById("middleName")?.value || "",
+                suffix: document.getElementById("suffix")?.value || "",
+                email: document.getElementById("email")?.value || "",
+                bio: document.getElementById("bio")?.value || ""
+            };
+
+            postProfileAction("save_account_details", fields).then(function (data) {
+                if (!data.success) {
+                    showToast(data.error || "Could not update profile", "error");
+                    return;
+                }
+
+                showToast(data.message || "Profile updated successfully", "success");
+                setEditMode(false);
+                form.reset();
+                
+                // Update the display with new values
+                const fullNameDisplay = document.querySelector(".profile-main-content h2");
+                if (fullNameDisplay && data.full_name) {
+                    fullNameDisplay.textContent = data.full_name;
+                }
+            }).catch(function (error) {
+                showToast("Error updating profile: " + error.message, "error");
+            }).finally(function () {
+                if (submitBtn) {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+        });
     }
 
     function showToast(message, type = "success") {
@@ -97,13 +141,14 @@ function initProfilePage() {
         }
 
         const toastId = "toast-" + Date.now();
-        const bgClass = type === "success" ? "bg-success" : "bg-primary";
+        const bgClass = type === "success" ? "bg-success" : type === "error" ? "bg-danger" : "bg-primary";
+        const iconClass = type === "success" ? "bi-check-circle" : type === "error" ? "bi-exclamation-circle" : "bi-info-circle";
         
         const html = `
             <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="d-flex">
                     <div class="toast-body">
-                        <i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-info-circle'} me-2"></i>
+                        <i class="bi ${iconClass} me-2"></i>
                         ${message}
                     </div>
                     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>

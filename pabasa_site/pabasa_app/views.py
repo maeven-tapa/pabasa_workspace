@@ -1087,6 +1087,12 @@ def profile(request):
             profile_photo_url = f'/static/pabasa_app/uploads/profiles/{file.name}'
             break
     
+    # Get user bio from tags (profile information)
+    bio = ''
+    if user.role == 'teacher':
+        profile_info = _get_profile_dict(user, 'profile_info')
+        bio = profile_info.get('bio', 'Creates reading materials, manages class codes, and monitors student reading levels.')
+    
     if request.method == 'POST':
         # Handle AJAX requests for photo upload/removal
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1185,6 +1191,50 @@ def profile(request):
                     return JsonResponse({'success': True, 'redirect_url': reverse('home')})
                 except Exception as e:
                     return JsonResponse({'success': False, 'error': str(e)})
+            
+            elif request.POST.get('save_account_details') == 'true':
+                try:
+                    # Update basic user information
+                    first_name = request.POST.get('first_name', '').strip()
+                    last_name = request.POST.get('last_name', '').strip()
+                    middle_initial = request.POST.get('middle_initial', '').strip()
+                    suffix = request.POST.get('suffix', '').strip()
+                    email = request.POST.get('email', '').strip()
+                    bio = request.POST.get('bio', '').strip()
+                    
+                    # Validate required fields
+                    if not first_name or not last_name:
+                        return JsonResponse({'success': False, 'error': 'First name and last name are required'})
+                    
+                    if not email:
+                        return JsonResponse({'success': False, 'error': 'Email is required'})
+                    
+                    # Check if email is already used by another user
+                    if email != user.email and User.objects.filter(email=email).exists():
+                        return JsonResponse({'success': False, 'error': 'This email is already in use'})
+                    
+                    # Update user fields
+                    user.first_name = first_name
+                    user.last_name = last_name
+                    user.middle_initial = middle_initial if middle_initial else ''
+                    user.suffix = suffix if suffix else ''
+                    user.email = email
+                    
+                    # Store bio in tags for profile information (for now)
+                    if bio:
+                        _set_profile_dict(user, 'profile_info', {'bio': bio})
+                    
+                    user.save()
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Profile updated successfully',
+                        'full_name': f"{first_name} {middle_initial} {last_name} {suffix}".replace('  ', ' ').strip()
+                    })
+                except IntegrityError as e:
+                    return JsonResponse({'success': False, 'error': 'Email is already in use'})
+                except Exception as e:
+                    return JsonResponse({'success': False, 'error': str(e)})
     
     return render(request, 'pabasa_app/profile.html', {
         'nav_role': nav_role,
@@ -1199,6 +1249,7 @@ def profile(request):
         'pabasa_id': pabasa_id,
         'role_display': role_display,
         'initials': initials,
+        'bio': bio,
     })
 
 def notifications(request):
