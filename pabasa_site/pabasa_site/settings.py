@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,13 +26,34 @@ SECRET_KEY = 'django-insecure-c8tcixn4vam*#z1*^d+9x6ddm89ph_+z%5+jce14vgdr@#*y5t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
+def _csv_env(name):
+    value = os.environ.get(name, '')
+    return [item.strip() for item in value.split(',') if item.strip()]
+
+
+def _dedupe(items):
+    seen = set()
+    output = []
+    for item in items:
+        if item and item not in seen:
+            seen.add(item)
+            output.append(item)
+    return output
+
+
+ALLOWED_HOSTS = _dedupe(_csv_env('ALLOWED_HOSTS') + [
     'tupcpabasa.app',
     'www.tupcpabasa.app',
     'pabasa-workspace.onrender.com',
     '127.0.0.1',
-    'localhost'
-]
+    'localhost',
+])
+
+CSRF_TRUSTED_ORIGINS = _dedupe(_csv_env('CSRF_TRUSTED_ORIGINS') + [
+    'https://tupcpabasa.app',
+    'https://www.tupcpabasa.app',
+    'https://pabasa-workspace.onrender.com',
+])
 
 
 # Application definition
@@ -123,6 +145,14 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+if os.environ.get('DJANGO_ENV', '').lower() == 'production':
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
 
 # Email settings for Gmail
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
