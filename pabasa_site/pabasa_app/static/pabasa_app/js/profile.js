@@ -104,6 +104,17 @@ function initProfilePage() {
                 bio: document.getElementById("bio")?.value || ""
             };
 
+            const displayFullName = [
+                fields.first_name,
+                fields.middle_initial,
+                fields.last_name,
+                fields.suffix
+            ].filter(Boolean).join(" ").trim();
+
+            const displayUsername = (fields.first_name + "_" + fields.last_name)
+                .toLowerCase()
+                .replace(/\s+/g, "_");
+
             postProfileAction("save_account_details", fields).then(function (data) {
                 if (!data.success) {
                     showToast(data.error || "Could not update profile", "error");
@@ -111,14 +122,61 @@ function initProfilePage() {
                 }
 
                 showToast(data.message || "Profile updated successfully", "success");
-                setEditMode(false);
-                form.reset();
-                
-                // Update the display with new values
+                Object.entries({
+                    firstName: fields.first_name,
+                    middleName: fields.middle_initial,
+                    lastName: fields.last_name,
+                    suffix: fields.suffix,
+                    email: fields.email,
+                    bio: fields.bio
+                }).forEach(function ([id, value]) {
+                    const element = document.getElementById(id);
+                    if (!element) return;
+                    element.value = value;
+                    if ("defaultValue" in element) {
+                        element.defaultValue = value;
+                    }
+                    if (element.tagName === "SELECT") {
+                        Array.from(element.options).forEach(function (option) {
+                            option.defaultSelected = option.value === value;
+                        });
+                    }
+                });
+
                 const fullNameDisplay = document.querySelector(".profile-main-content h2");
-                if (fullNameDisplay && data.full_name) {
-                    fullNameDisplay.textContent = data.full_name;
+                if (fullNameDisplay) {
+                    fullNameDisplay.textContent = data.full_name || displayFullName;
                 }
+
+                const profileRows = document.querySelectorAll(".profile-details-mini > div");
+                profileRows.forEach(function (row) {
+                    const label = row.querySelector(".label");
+                    const value = row.querySelector(".value");
+                    if (!label || !value) return;
+                    const labelText = (label.textContent || "").toLowerCase();
+                    if (labelText.includes("username")) {
+                        value.textContent = displayUsername;
+                    } else if (labelText.includes("email")) {
+                        value.textContent = fields.email;
+                    }
+                });
+
+                const profileFullNameNode = document.getElementById("profileFullName");
+                if (profileFullNameNode) {
+                    profileFullNameNode.textContent = JSON.stringify(data.full_name || displayFullName);
+                }
+
+                const profileEmailNode = document.getElementById("profileEmail");
+                if (profileEmailNode) {
+                    profileEmailNode.textContent = JSON.stringify(fields.email);
+                }
+
+                const profileUsernameNode = document.getElementById("profileUsername");
+                if (profileUsernameNode) {
+                    profileUsernameNode.textContent = JSON.stringify(displayUsername);
+                }
+
+                setEditMode(false);
             }).catch(function (error) {
                 showToast("Error updating profile: " + error.message, "error");
             }).finally(function () {
