@@ -1386,7 +1386,7 @@ def join_class(request):
         if not student_user:
             return JsonResponse({'success': False, 'error': 'Student not found or inactive'}, status=404)
 
-        section = Section.objects.filter(class_code=class_code, is_active=True).first()
+        section = Section.objects.filter(class_code__iexact=class_code, is_active=True).first()
 
         if not section:
             return JsonResponse({'success': False, 'error': 'Invalid class code.'}, status=404)
