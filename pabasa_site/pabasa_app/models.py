@@ -112,10 +112,30 @@ class Section(models.Model):
     
     def has_student(self, user, active_only=True):
         """Check if user is enrolled in this section"""
+        if not user or not user.id:
+            return False
+        
         for entry in self.get_enrolled_students(active_only=active_only):
-            if (str(entry.get('student_id')) == str(user.id) or 
-                entry.get('custom_id') == user.custom_id):
-                return True
+            if not entry:
+                continue
+            
+            # Try multiple matching strategies
+            student_id = entry.get('student_id')
+            custom_id = entry.get('custom_id')
+            
+            # Match by student_id (more reliable - explicit int conversion)
+            if student_id is not None:
+                try:
+                    if int(student_id) == int(user.id):
+                        return True
+                except (ValueError, TypeError):
+                    pass
+            
+            # Match by custom_id (backup - only if non-empty)
+            if custom_id and str(custom_id).strip():
+                if str(custom_id).strip() == str(user.custom_id).strip():
+                    return True
+        
         return False
     
     def get_student_count(self):
@@ -154,6 +174,10 @@ class Section(models.Model):
                 students[index] = entry
                 self.students = students
                 self._save_enrollment()
+                # VERIFY the save committed to database
+                self.refresh_from_db()
+                if not self.has_student(user, active_only=True):
+                    raise Exception(f"Failed to re-enroll student {user.id} in section {self.class_code}")
                 user.add_tag(tag_label)
                 return True
         
@@ -161,6 +185,10 @@ class Section(models.Model):
         students.append(self._get_student_entry(user))
         self.students = students
         self._save_enrollment()
+        # VERIFY the save committed to database
+        self.refresh_from_db()
+        if not self.has_student(user, active_only=True):
+            raise Exception(f"Failed to enroll student {user.id} in section {self.class_code}")
         user.add_tag(tag_label)
         return True
     

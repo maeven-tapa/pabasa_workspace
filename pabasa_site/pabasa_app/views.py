@@ -1371,6 +1371,7 @@ def join_class(request):
     """
     Allows a student to join a class by storing membership in Section.students.
     Expects a JSON payload with 'class_code'.
+    Returns full class data so frontend can render immediately from database.
     """
     try:
         data = json.loads(request.body)
@@ -1378,7 +1379,6 @@ def join_class(request):
 
         if not class_code:
             return JsonResponse({'success': False, 'error': 'Class code is required'}, status=400)
-
 
         user_id = request.session.get('user_id')
         student_user = User.objects.filter(id=user_id).first()
@@ -1395,15 +1395,41 @@ def join_class(request):
             student_user.add_tag(section.get_tag_label())
             return JsonResponse({'success': False, 'error': 'You have already joined this class.'}, status=409)
 
+        # Attempt to add student (will raise exception if verification fails)
         _add_student_to_section(section, student_user)
+        
+        # Refresh section from database to ensure we have latest data
+        section.refresh_from_db()
+        
+        # Verify student was actually added
+        if not section.has_student(student_user, active_only=True):
+            raise Exception(f"Student {student_user.id} was not enrolled in section {class_code}")
 
-        return JsonResponse({'success': True, 'message': f'Successfully joined class {class_code}'})
+        # Prepare full class data for frontend
+        class_data = {
+            'code': section.class_code,
+            'name': section.class_name,
+            'subject': section.subject or '',
+            'grade_level': section.grade_level or '',
+            'description': section.description or '',
+            'header': section.header or section.class_code[:4],
+            'teacher_id': section.teacher.custom_id,
+            'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}",
+        }
+
+        logger.info(f"Student {student_user.custom_id} successfully joined class {class_code}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Successfully joined class {class_code}',
+            'class_data': class_data
+        })
 
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
     except Exception as e:
         logger.error(f"Error joining class: {e}", exc_info=True)
-        return JsonResponse({'success': False, 'error': 'An unexpected error occurred'}, status=500)
+        return JsonResponse({'success': False, 'error': 'Failed to join class. Please try again.'}, status=500)
 
 
 @csrf_protect
@@ -1545,6 +1571,52 @@ def get_teacher_classes(request):
         })
 
     return JsonResponse({'success': True, 'classes': class_list})
+
+
+@require_http_methods(["GET"])
+@login_required(role='student')
+def get_student_joined_classes(request):
+    """
+    Return all classes the student has joined by querying the database directly.
+    This provides the authoritative source of truth for enrolled classes.
+    """
+    try:
+        user_id = request.session.get('user_id')
+        student_user = User.objects.filter(id=user_id).first()
+        
+        if not student_user:
+            return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
+        
+        if student_user.role != 'student':
+            return JsonResponse({'success': False, 'error': 'Not a student account'}, status=403)
+        
+        # Get all active sections where this student is enrolled
+        sections = Section.objects.filter(is_active=True).order_by('class_name')
+        joined_classes = []
+        
+        for section in sections:
+            # Check if student is actively enrolled in this section
+            if section.has_student(student_user, active_only=True):
+                joined_classes.append({
+                    'code': section.class_code,
+                    'name': section.class_name,
+                    'subject': section.subject or '',
+                    'grade_level': section.grade_level or '',
+                    'description': section.description or '',
+                    'header': section.header or section.class_code[:4],
+                    'teacher_id': section.teacher.custom_id,
+                    'teacher_name': f"{section.teacher.first_name} {section.teacher.last_name}",
+                    'student_count': section.get_student_count(),
+                    'created_at': section.created_at.isoformat(),
+                })
+        
+        logger.debug(f"Retrieved {len(joined_classes)} joined classes for student {student_user.custom_id}")
+        
+        return JsonResponse({'success': True, 'classes': joined_classes})
+    
+    except Exception as e:
+        logger.error(f"Error getting student joined classes: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Failed to retrieve classes'}, status=500)
 
 
 @require_http_methods(["GET"])

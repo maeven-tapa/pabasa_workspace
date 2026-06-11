@@ -48,6 +48,7 @@ urlpatterns = [
     path('about/', views.about, name='about'),
     path('dashboard/teacher/classes/', views.get_teacher_classes, name='get_teacher_classes'),
     path('dashboard/teacher/overview/', views.get_teacher_overview, name='get_teacher_overview'),
+    path('dashboard/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes'),
     path('students/send-email/', views.send_parent_email, name='send_parent_email'),
     path('dashboard/student/unenroll/', views.unenroll_class, name='unenroll_class'),
     path('dashboard/teacher/add-material/', views.add_reading_material, name='add_reading_material'),
