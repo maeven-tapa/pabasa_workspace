@@ -1858,7 +1858,7 @@ def add_reading_material(request):
             # Convert to Django timezone-aware datetime
             try:
                 # datetime-local format doesn't include timezone, so add 'Z' for UTC
-                if 'T' in scheduled_at_str and scheduled_at_str.count(':') >= 2:
+                if 'T' in scheduled_at_str and scheduled_at_str.count(':') >= 1:
                     # Format: "2026-06-15T14:30" or "2026-06-15T14:30:00"
                     scheduled_at = parse_datetime(scheduled_at_str + ':00' if scheduled_at_str.count(':') == 1 else scheduled_at_str)
                     if not scheduled_at:
