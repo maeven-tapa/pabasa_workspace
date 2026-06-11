@@ -233,10 +233,19 @@ class Assessment(models.Model):
         ("sentence", "Sentence"),
         ("paragraph", "Paragraph"),
     ]
+    
+    STATUS_CHOICES = [
+        ("published", "Published"),
+        ("draft", "Draft"),
+        ("scheduled", "Scheduled"),
+    ]
 
     title = models.CharField(max_length=150)
     code = models.CharField(max_length=30, unique=True)
     assessment_type = models.CharField(max_length=20, choices=ASSESSMENT_TYPE_CHOICES)
+    content = models.TextField(blank=True, default='')  # The actual reading material text
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
+    scheduled_at = models.DateTimeField(null=True, blank=True)  # When material becomes published
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assessments")
     section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="assessments", null=True, blank=True)
     is_active = models.BooleanField(default=True)

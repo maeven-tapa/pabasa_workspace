@@ -3061,122 +3061,158 @@
                 });
             }
             
-            // Submit material
-// Submit material
-            const submitMaterialBtn = document.getElementById('submitMaterial');
-            if (submitMaterialBtn && !submitMaterialBtn.dataset.bound) {
-                submitMaterialBtn.dataset.bound = 'true';
-                submitMaterialBtn.addEventListener('click', function () {
-                    const title   = materialTitleInput   ? materialTitleInput.value.trim()   : '';
-                    const content = materialContentInput ? materialContentInput.value.trim() : '';
-                    const type    = materialTypeSelect    ? materialTypeSelect.value           : 'practice';
-                    const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
-                    const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
-                    const errorBanner = document.getElementById('amValidationError');
+                const submitMaterialBtn = document.getElementById('submitMaterial');
+                const materialTitleInput = document.getElementById('materialTitle');
+                const materialContentInput = document.getElementById('materialContent');
+                
+                if (submitMaterialBtn && !submitMaterialBtn.dataset.bound) {
+                    submitMaterialBtn.dataset.bound = 'true';
+                    submitMaterialBtn.addEventListener('click', async function () {
+                        const title   = materialTitleInput   ? materialTitleInput.value.trim()   : '';
+                        const content = materialContentInput ? materialContentInput.value.trim() : '';
+                        // NOTE: Don't use materialTypeSelect - the reading type is already set in currentMaterialType
+                        const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
+                        const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
+                        const errorBanner = document.getElementById('amValidationError');
 
-                    // ── Clear previous validation state ──────────────────────
-                    if (errorBanner) errorBanner.classList.add('d-none');
-                    [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
-                        if (el) el.classList.remove('is-invalid');
-                    });
-
-                    // ── Validate ─────────────────────────────────────────────
-                    const errors = [];
-                    if (!title) {
-                        errors.push('Material title is required.');
-                        if (materialTitleInput) materialTitleInput.classList.add('is-invalid');
-                    }
-                    if (!content) {
-                        errors.push('Reading content is required.');
-                        if (materialContentInput) materialContentInput.classList.add('is-invalid');
-                    }
-                    if (status === 'scheduled' && !schedule) {
-                        errors.push('Schedule date & time is required when status is Scheduled.');
-                        if (scheduleDateTimeInput) scheduleDateTimeInput.classList.add('is-invalid');
-                    }
-
-                    if (errors.length > 0) {
-                        if (errorBanner) {
-                            errorBanner.textContent = errors.join(' ');
-                            errorBanner.classList.remove('d-none');
-                        }
-                        const firstInvalid = document.querySelector('#addMaterialModal .is-invalid');
-                        if (firstInvalid) firstInvalid.focus();
-                        console.warn('[AddMaterial] Validation failed:', errors);
-                        return;
-                    }
-
-                    if (!currentClassCode || !currentMaterialType) {
-                        if (errorBanner) {
-                            errorBanner.textContent = 'Open a class and choose a reading type (Word / Sentence / Paragraph) first.';
-                            errorBanner.classList.remove('d-none');
-                        }
-                        return;
-                    }
-
-                    // ── Disable button / loading state ───────────────────────
-                    submitMaterialBtn.disabled = true;
-                    submitMaterialBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Creating...';
-                    console.log('[AddMaterial] Saving:', { title, type, status, currentClassCode, currentMaterialType });
-
-                    try {
-                        const readings = ensureClassReadings(currentClassCode);
-                        const newMaterial = {
-                            id: Date.now(),
-                            title,
-                            content,
-                            type,
-                            items: content.split(/\s+/).filter(Boolean).length,
-                            status,
-                            schedule
-                        };
-                        readings[currentMaterialType].push(newMaterial);
-                        notifyStudentsOfMaterial(currentClassCode, newMaterial, currentMaterialType);
-                        saveStoredReadings();
-                        loadReadings(currentClassCode);
-                        renderClasses();
-
-                        // ── Reset form ────────────────────────────────────────
-                        const addMaterialFormEl = document.getElementById('addMaterialForm');
-                        if (addMaterialFormEl) addMaterialFormEl.reset();
-                        if (scheduleFieldDiv)   scheduleFieldDiv.classList.add('d-none');
-                        [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
-                            if (el) el.classList.remove('is-invalid', 'is-valid');
-                        });
+                        // ── Clear previous validation state ──────────────────────
                         if (errorBanner) errorBanner.classList.add('d-none');
+                        [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
+                            if (el) el.classList.remove('is-invalid');
+                        });
 
-                        bootstrap.Modal.getInstance(document.getElementById('addMaterialModal')).hide();
-
-                        // ── Status-specific success message ───────────────────
-                        let successMsg;
-                        if (status === 'published') {
-                            successMsg = '\u2705 Material published successfully.';
-                        } else if (status === 'draft') {
-                            successMsg = '\uD83D\uDCDD Material saved as draft.';
-                        } else if (status === 'scheduled' && schedule) {
-                            const dt  = new Date(schedule);
-                            const fmt = dt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-                            successMsg = '\uD83D\uDD50 Material scheduled for ' + fmt + '.';
-                        } else {
-                            successMsg = '"' + title + '" added successfully.';
+                        // ── Validate ─────────────────────────────────────────────
+                        const errors = [];
+                        if (!title) {
+                            errors.push('Material title is required.');
+                            if (materialTitleInput) materialTitleInput.classList.add('is-invalid');
+                        }
+                        if (!content) {
+                            errors.push('Reading content is required.');
+                            if (materialContentInput) materialContentInput.classList.add('is-invalid');
+                        }
+                        if (status === 'scheduled' && !schedule) {
+                            errors.push('Schedule date & time is required when status is Scheduled.');
+                            if (scheduleDateTimeInput) scheduleDateTimeInput.classList.add('is-invalid');
                         }
 
-                        console.log('[AddMaterial] Save success:', successMsg);
-                        showSuccessModal('Material Added', successMsg);
-
-                    } catch (err) {
-                        console.error('[AddMaterial] Save failed:', err);
-                        if (errorBanner) {
-                            errorBanner.textContent = 'An error occurred while saving. Please try again.';
-                            errorBanner.classList.remove('d-none');
+                        if (errors.length > 0) {
+                            if (errorBanner) {
+                                errorBanner.textContent = errors.join(' ');
+                                errorBanner.classList.remove('d-none');
+                            }
+                            const firstInvalid = document.querySelector('#addMaterialModal .is-invalid');
+                            if (firstInvalid) firstInvalid.focus();
+                            console.warn('[AddMaterial] Validation failed:', errors);
+                            return;
                         }
-                    } finally {
-                        submitMaterialBtn.disabled = false;
-                        submitMaterialBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Material';
-                    }
-                });
+
+                        if (!currentClassCode || !currentMaterialType) {
+                            if (errorBanner) {
+                                errorBanner.textContent = 'Open a class and choose a reading type (Word / Sentence / Paragraph) first.';
+                                errorBanner.classList.remove('d-none');
+                            }
+                            return;
+                        }
+
+                        // ── Disable button / loading state ───────────────────────
+                        submitMaterialBtn.disabled = true;
+                        submitMaterialBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Creating...';
+                        console.log('[AddMaterial] Saving to database:', { title, reading_type: currentMaterialType, status, class_code: currentClassCode });
+
+                        try {
+                            // ── Step 1: Save to backend database via API ──────────
+                            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
+                            const apiResponse = await fetch('/dashboard/teacher/add-material/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({
+                                    title: title,
+                                    reading_type: currentMaterialType,
+                                    content: content,
+                                    status: status,
+                                    class_code: currentClassCode,
+                                    scheduled_at: schedule || null
+                                })
+                            });
+
+                            if (!apiResponse.ok) {
+                                const errorData = await apiResponse.json();
+                                throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`);
+                            }
+
+                            const apiData = await apiResponse.json();
+                            if (!apiData.success) {
+                                throw new Error(apiData.error || 'API returned success=false');
+                            }
+
+                            console.log('[AddMaterial] Database save successful:', apiData);
+
+                            // ── Step 2: Also save to localStorage for offline cache ──
+                            const readings = ensureClassReadings(currentClassCode);
+                            const newMaterial = {
+                                id: apiData.assessment_id || Date.now(),
+                                title: title,
+                                content: content,
+                                type: currentMaterialType,
+                                items: content.split(/\s+/).filter(Boolean).length,
+                                status: status,
+                                schedule: schedule || null,
+                                code: apiData.code,
+                                created_at: apiData.created_at
+                            };
+                            readings[currentMaterialType].push(newMaterial);
+                            saveStoredReadings();
+
+                            // ── Step 3: Refresh UI ────────────────────────────────
+                            await loadReadings(currentClassCode);
+                            await renderClasses();
+
+                            // ── Step 4: Reset form ────────────────────────────────
+                            const addMaterialFormEl = document.getElementById('addMaterialForm');
+                            if (addMaterialFormEl) addMaterialFormEl.reset();
+                            if (scheduleFieldDiv)   scheduleFieldDiv.classList.add('d-none');
+                            [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
+                                if (el) el.classList.remove('is-invalid', 'is-valid');
+                            });
+                            if (errorBanner) errorBanner.classList.add('d-none');
+
+                            bootstrap.Modal.getInstance(document.getElementById('addMaterialModal')).hide();
+
+                            // ── Step 5: Show success message ──────────────────────
+                            let successMsg;
+                            if (status === 'published') {
+                                successMsg = '\u2705 Material published successfully.';
+                            } else if (status === 'draft') {
+                                successMsg = '\uD83D\uDCDD Material saved as draft.';
+                            } else if (status === 'scheduled' && schedule) {
+                                const dt  = new Date(schedule);
+                                const fmt = dt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+                                successMsg = '\uD83D\uDD50 Material scheduled for ' + fmt + '.';
+                            } else {
+                                successMsg = '"' + title + '" added successfully.';
+                            }
+
+                            console.log('[AddMaterial] Save success:', successMsg);
+                            showSuccessModal('Material Added', successMsg);
+
+                        } catch (err) {
+                            console.error('[AddMaterial] Save failed:', err);
+                            if (errorBanner) {
+                                errorBanner.textContent = 'An error occurred while saving: ' + err.message;
+                                errorBanner.classList.remove('d-none');
+                            }
+                        } finally {
+                            submitMaterialBtn.disabled = false;
+                            submitMaterialBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Material';
+                        }
+                    });
+                }
             }
-        }
 
         // ===== ASSESSMENT TAB HANDLERS =====
         function setupAssessmentHandlers() {

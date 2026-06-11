@@ -1693,6 +1693,10 @@ def get_class_materials(request):
                 'code': assessment.code,
                 'title': assessment.title,
                 'type': assessment.assessment_type,
+                'content': assessment.content,
+                'status': assessment.status,
+                'schedule': assessment.scheduled_at.isoformat() if assessment.scheduled_at else None,
+                'items': len(assessment.content.split()) if assessment.content else 0,
                 'created_at': assessment.created_at.isoformat(),
                 'attempt_count': len(assessment.get_attempts()),
             }
@@ -1856,6 +1860,9 @@ def add_reading_material(request):
             title=title,
             code=assessment_code,
             assessment_type=reading_type,
+            content=content,
+            status=status,
+            scheduled_at=scheduled_at if status == 'scheduled' else None,
             teacher=teacher_user,
             section=section,
             is_active=(status == 'published'),
@@ -1868,9 +1875,10 @@ def add_reading_material(request):
             'code': assessment_code,
             'title': title,
             'type': reading_type,
+            'content': content,
             'status': status,
             'is_active': (status == 'published'),
-            'scheduled_at': scheduled_at if status == 'scheduled' else None,
+            'scheduled_at': assessment.scheduled_at.isoformat() if assessment.scheduled_at else None,
             'created_at': assessment.created_at.isoformat(),
         })
 
