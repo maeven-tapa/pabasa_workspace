@@ -938,13 +938,16 @@
             // Always query backend API to validate class code against database
             let teacherClass = null;
             try {
+                // Get CSRF token from cookies (same method as unenroll)
+                const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
+                
                 const response = await fetch('/api/join-class/', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': getCsrfToken ? getCsrfToken() : document.querySelector('[name="csrfmiddlewaretoken"]')?.value || ''
+                        'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify({ class_code: code })
                 });
