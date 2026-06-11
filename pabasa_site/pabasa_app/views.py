@@ -129,6 +129,7 @@ def _clear_all_assessment_attempts(assessment):
 
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from datetime import timedelta
 from django.db.models import Max, Count
 
@@ -1816,7 +1817,7 @@ def add_reading_material(request):
         content      = data.get('content', '').strip()
         status       = data.get('status', '').strip()          # published | draft | scheduled
         class_code   = data.get('class_code', '').strip()
-        scheduled_at = data.get('scheduled_at', '').strip()
+        scheduled_at_str = data.get('scheduled_at', '').strip()
 
         # ── server-side validation ──────────────────────────────────────────
         errors = {}
@@ -1828,7 +1829,7 @@ def add_reading_material(request):
             errors['content'] = 'Material content is required.'
         if status not in ('published', 'draft', 'scheduled'):
             errors['status'] = 'Status is required.'
-        if status == 'scheduled' and not scheduled_at:
+        if status == 'scheduled' and not scheduled_at_str:
             errors['scheduled_at'] = 'Scheduled date & time is required.'
 
         if errors:
@@ -1850,6 +1851,26 @@ def add_reading_material(request):
             if not section:
                 return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
 
+        # ── parse scheduled_at datetime if provided ─────────────────────────
+        scheduled_at = None
+        if status == 'scheduled' and scheduled_at_str:
+            # Frontend sends ISO format from datetime-local: "2026-06-15T14:30"
+            # Convert to Django timezone-aware datetime
+            try:
+                # datetime-local format doesn't include timezone, so add 'Z' for UTC
+                if 'T' in scheduled_at_str and scheduled_at_str.count(':') >= 2:
+                    # Format: "2026-06-15T14:30" or "2026-06-15T14:30:00"
+                    scheduled_at = parse_datetime(scheduled_at_str + ':00' if scheduled_at_str.count(':') == 1 else scheduled_at_str)
+                    if not scheduled_at:
+                        # If parse_datetime fails, try adding Z for UTC
+                        scheduled_at = parse_datetime(scheduled_at_str + ':00Z' if scheduled_at_str.count(':') == 1 else scheduled_at_str + 'Z')
+                    if scheduled_at and not timezone.is_aware(scheduled_at):
+                        # Make it timezone-aware using default timezone
+                        scheduled_at = timezone.make_aware(scheduled_at)
+            except Exception as e:
+                logger.warning(f"Failed to parse scheduled_at: {scheduled_at_str}, error: {e}")
+                return JsonResponse({'success': False, 'error': 'Invalid scheduled date & time format.'}, status=400)
+
         # ── generate unique assessment code ─────────────────────────────────
         import uuid as _uuid
         assessment_code = f"MAT-{reading_type[:3].upper()}-{_uuid.uuid4().hex[:6].upper()}"
@@ -1862,7 +1883,7 @@ def add_reading_material(request):
             assessment_type=reading_type,
             content=content,
             status=status,
-            scheduled_at=scheduled_at if status == 'scheduled' else None,
+            scheduled_at=scheduled_at,
             teacher=teacher_user,
             section=section,
             is_active=(status == 'published'),
