@@ -1094,151 +1094,216 @@ def profile(request):
         bio = profile_info.get('bio', 'Creates reading materials, manages class codes, and monitors student reading levels.')
     
     if request.method == 'POST':
-        # Handle AJAX requests for photo upload/removal
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # Handle photo upload
-            if 'profile_photo' in request.FILES:
-                try:
-                    photo_file = request.FILES['profile_photo']
-                    
-                    # Validate file size (max 5MB)
-                    if photo_file.size > 5 * 1024 * 1024:
-                        return JsonResponse({'success': False, 'error': 'File size must be less than 5MB'})
-                    
-                    # Validate file type
-                    allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-                    file_ext = photo_file.name.split('.')[-1].lower()
-                    if file_ext not in allowed_extensions:
-                        return JsonResponse({'success': False, 'error': 'Only image files are allowed'})
-                    
-                    # Create photos directory if it doesn't exist
-                    photos_dir = PROFILE_PHOTOS_DIR
-                    photos_dir.mkdir(parents=True, exist_ok=True)
-                    
-                    filename = f"profile_photo_{username}.{file_ext}"
-                    filepath = photos_dir / filename
-                    
-                    # Delete any previous photos with different extensions
-                    for file in photos_dir.glob(f'profile_photo_{username}.*'):
-                        try:
-                            file.unlink()
-                        except:
-                            pass
-                    
-                    # Save the file
-                    with open(filepath, 'wb') as f:
-                        for chunk in photo_file.chunks():
-                            f.write(chunk)
-                    
-                    photo_url = f'/static/pabasa_app/uploads/profiles/{filename}'
-                    return JsonResponse({'success': True, 'message': 'Photo uploaded successfully', 'photo_url': photo_url})
+        # Check for profile save first (most common action)
+        if request.POST.get('save_account_details') == 'true':
+            try:
+                # Update basic user information
+                first_name = request.POST.get('first_name', '').strip()
+                last_name = request.POST.get('last_name', '').strip()
+                middle_initial = request.POST.get('middle_initial', '').strip()
+                suffix = request.POST.get('suffix', '').strip()
+                email = request.POST.get('email', '').strip()
+                bio = request.POST.get('bio', '').strip()
                 
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
-            
-            # Handle photo removal
-            elif request.POST.get('remove_photo') == 'true':
-                try:
-                    photos_dir = PROFILE_PHOTOS_DIR
-                    
-                    # Find and delete any profile photo for this user
-                    if photos_dir.exists():
-                        for file in photos_dir.glob(f'profile_photo_{username}.*'):
-                            file.unlink()
-                    
-                    return JsonResponse({'success': True, 'message': 'Photo removed successfully'})
+                # Validate required fields
+                if not first_name or not last_name:
+                    return JsonResponse({'success': False, 'error': 'First name and last name are required'})
                 
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
-
-            elif request.POST.get('change_password') == 'true':
-                current_password = request.POST.get('current_password', '')
-                new_password = request.POST.get('new_password', '')
-                confirm_password = request.POST.get('confirm_password', '')
-
-                if not current_password or not new_password or not confirm_password:
-                    return JsonResponse({'success': False, 'error': 'All password fields are required'})
-
-                if not check_password(current_password, user.password_hash):
-                    return JsonResponse({'success': False, 'error': 'Current password is incorrect'})
-
-                if new_password != confirm_password:
-                    return JsonResponse({'success': False, 'error': 'New passwords do not match'})
-
-                if len(new_password) < 8:
-                    return JsonResponse({'success': False, 'error': 'Password must be at least 8 characters'})
-
-                user.password_hash = make_password(new_password)
+                if not email:
+                    return JsonResponse({'success': False, 'error': 'Email is required'})
+                
+                # Check if email is already used by another user
+                if email != user.email and User.objects.filter(email=email).exists():
+                    return JsonResponse({'success': False, 'error': 'This email is already in use'})
+                
+                # Update user fields
+                user.first_name = first_name
+                user.last_name = last_name
+                user.middle_initial = middle_initial if middle_initial else ''
+                user.suffix = suffix if suffix else ''
+                user.email = email
+                request.session['first_name'] = user.first_name
+                request.session['last_name'] = user.last_name
+                request.session['email'] = user.email
+                
+                # Store bio in tags for profile information
+                if bio:
+                    _set_profile_dict(user, 'profile_info', {'bio': bio})
+                
                 user.save()
-                return JsonResponse({'success': True, 'message': 'Password changed successfully'})
+                request.session.modified = True
+                
+                logger.info(f"Profile updated for user {user.custom_id}: {first_name} {last_name} ({email})")
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Profile updated successfully',
+                    'full_name': f"{first_name} {middle_initial} {last_name} {suffix}".replace('  ', ' ').strip()
+                })
+            except IntegrityError as e:
+                logger.error(f"IntegrityError saving profile for {user.custom_id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': 'Email is already in use'})
+            except Exception as e:
+                logger.error(f"Error saving profile for {user.custom_id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': str(e)})
+        
+        # Handle password change
+        elif request.POST.get('change_password') == 'true':
+            current_password = request.POST.get('current_password', '')
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
 
-            elif request.POST.get('deactivate_account') == 'true':
+            if not current_password or not new_password or not confirm_password:
+                return JsonResponse({'success': False, 'error': 'All password fields are required'})
+
+            if not check_password(current_password, user.password_hash):
+                return JsonResponse({'success': False, 'error': 'Current password is incorrect'})
+
+            if new_password != confirm_password:
+                return JsonResponse({'success': False, 'error': 'New passwords do not match'})
+
+            if len(new_password) < 8:
+                return JsonResponse({'success': False, 'error': 'Password must be at least 8 characters'})
+
+            user.password_hash = make_password(new_password)
+            user.save()
+            logger.info(f"Password changed for user {user.custom_id}")
+            return JsonResponse({'success': True, 'message': 'Password changed successfully'})
+
+        # Handle account deactivation
+        elif request.POST.get('deactivate_account') == 'true':
+            try:
                 if user.role == "teacher":
                     Section.objects.filter(teacher=user, is_active=True).update(is_active=False)
                 else:
                     for class_section in Section.objects.filter(is_active=True):
                         _deactivate_student_in_section(class_section, user)
+                logger.info(f"Account deactivated for user {user.custom_id}")
                 request.session.flush()
                 return JsonResponse({'success': True, 'redirect_url': reverse('auth')})
+            except Exception as e:
+                logger.error(f"Error deactivating account for {user.custom_id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': str(e)})
 
-            elif request.POST.get('delete_account') == 'true':
-                try:
-                    if photos_dir.exists():
-                        for file in photos_dir.glob(f'profile_photo_{username}.*'):
+        # Handle account deletion
+        elif request.POST.get('delete_account') == 'true':
+            try:
+                photos_dir = PROFILE_PHOTOS_DIR
+                if photos_dir.exists():
+                    for file in photos_dir.glob(f'profile_photo_{username}.*'):
+                        try:
                             file.unlink()
-                    user.delete()
-                    request.session.flush()
-                    return JsonResponse({'success': True, 'redirect_url': reverse('home')})
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
+                        except:
+                            pass
+                custom_id = user.custom_id
+                user.delete()
+                logger.info(f"Account deleted for user {custom_id}")
+                request.session.flush()
+                return JsonResponse({'success': True, 'redirect_url': reverse('home')})
+            except Exception as e:
+                logger.error(f"Error deleting account: {str(e)}")
+                return JsonResponse({'success': False, 'error': str(e)})
+        
+        # Handle photo removal
+        elif request.POST.get('remove_photo') == 'true':
+            try:
+                photos_dir = PROFILE_PHOTOS_DIR
+                
+                # Find and delete any profile photo for this user
+                if photos_dir.exists():
+                    for file in photos_dir.glob(f'profile_photo_{username}.*'):
+                        file.unlink()
+                
+                logger.info(f"Profile photo removed for user {user.custom_id}")
+                return JsonResponse({'success': True, 'message': 'Photo removed successfully'})
             
-            elif request.POST.get('save_account_details') == 'true':
-                try:
-                    # Update basic user information
-                    first_name = request.POST.get('first_name', '').strip()
-                    last_name = request.POST.get('last_name', '').strip()
-                    middle_initial = request.POST.get('middle_initial', '').strip()
-                    suffix = request.POST.get('suffix', '').strip()
-                    email = request.POST.get('email', '').strip()
-                    bio = request.POST.get('bio', '').strip()
-                    
-                    # Validate required fields
-                    if not first_name or not last_name:
-                        return JsonResponse({'success': False, 'error': 'First name and last name are required'})
-                    
-                    if not email:
-                        return JsonResponse({'success': False, 'error': 'Email is required'})
-                    
-                    # Check if email is already used by another user
-                    if email != user.email and User.objects.filter(email=email).exists():
-                        return JsonResponse({'success': False, 'error': 'This email is already in use'})
-                    
-                    # Update user fields
-                    user.first_name = first_name
-                    user.last_name = last_name
-                    user.middle_initial = middle_initial if middle_initial else ''
-                    user.suffix = suffix if suffix else ''
-                    user.email = email
-                    request.session['first_name'] = user.first_name
-                    request.session['last_name'] = user.last_name
-                    request.session['email'] = user.email
-                    
-                    # Store bio in tags for profile information (for now)
-                    if bio:
-                        _set_profile_dict(user, 'profile_info', {'bio': bio})
-                    
-                    user.save()
-                    request.session.modified = True
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'message': 'Profile updated successfully',
-                        'full_name': f"{first_name} {middle_initial} {last_name} {suffix}".replace('  ', ' ').strip()
-                    })
-                except IntegrityError as e:
-                    return JsonResponse({'success': False, 'error': 'Email is already in use'})
-                except Exception as e:
-                    return JsonResponse({'success': False, 'error': str(e)})
+            except Exception as e:
+                logger.error(f"Error removing photo for {user.custom_id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': str(e)})
+        
+        # Handle photo upload
+        elif request.POST.get('upload_photo') == 'true' and 'profile_photo' in request.FILES:
+            try:
+                photo_file = request.FILES['profile_photo']
+                
+                # Validate file size (max 5MB)
+                if photo_file.size > 5 * 1024 * 1024:
+                    return JsonResponse({'success': False, 'error': 'File size must be less than 5MB'})
+                
+                # Validate file type
+                allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+                file_ext = photo_file.name.split('.')[-1].lower()
+                if file_ext not in allowed_extensions:
+                    return JsonResponse({'success': False, 'error': 'Only image files are allowed'})
+                
+                # Create photos directory if it doesn't exist
+                photos_dir = PROFILE_PHOTOS_DIR
+                photos_dir.mkdir(parents=True, exist_ok=True)
+                
+                filename = f"profile_photo_{username}.{file_ext}"
+                filepath = photos_dir / filename
+                
+                # Delete any previous photos with different extensions
+                for file in photos_dir.glob(f'profile_photo_{username}.*'):
+                    try:
+                        file.unlink()
+                    except:
+                        pass
+                
+                # Save the file
+                with open(filepath, 'wb') as f:
+                    for chunk in photo_file.chunks():
+                        f.write(chunk)
+                
+                photo_url = f'/static/pabasa_app/uploads/profiles/{filename}'
+                logger.info(f"Profile photo uploaded for user {user.custom_id}: {filename}")
+                return JsonResponse({'success': True, 'message': 'Photo uploaded successfully', 'photo_url': photo_url})
+            
+            except Exception as e:
+                logger.error(f"Error uploading photo for {user.custom_id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': str(e)})
+        
+        # Handle photo upload via XMLHttpRequest with file in request.FILES (for direct file submission)
+        elif request.headers.get('X-Requested-With') == 'XMLHttpRequest' and 'profile_photo' in request.FILES:
+            try:
+                photo_file = request.FILES['profile_photo']
+                
+                # Validate file size (max 5MB)
+                if photo_file.size > 5 * 1024 * 1024:
+                    return JsonResponse({'success': False, 'error': 'File size must be less than 5MB'})
+                
+                # Validate file type
+                allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+                file_ext = photo_file.name.split('.')[-1].lower()
+                if file_ext not in allowed_extensions:
+                    return JsonResponse({'success': False, 'error': 'Only image files are allowed'})
+                
+                # Create photos directory if it doesn't exist
+                photos_dir = PROFILE_PHOTOS_DIR
+                photos_dir.mkdir(parents=True, exist_ok=True)
+                
+                filename = f"profile_photo_{username}.{file_ext}"
+                filepath = photos_dir / filename
+                
+                # Delete any previous photos with different extensions
+                for file in photos_dir.glob(f'profile_photo_{username}.*'):
+                    try:
+                        file.unlink()
+                    except:
+                        pass
+                
+                # Save the file
+                with open(filepath, 'wb') as f:
+                    for chunk in photo_file.chunks():
+                        f.write(chunk)
+                
+                photo_url = f'/static/pabasa_app/uploads/profiles/{filename}'
+                logger.info(f"Profile photo uploaded (AJAX) for user {user.custom_id}: {filename}")
+                return JsonResponse({'success': True, 'message': 'Photo uploaded successfully', 'photo_url': photo_url})
+            
+            except Exception as e:
+                logger.error(f"Error uploading photo (AJAX) for {user.custom_id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': str(e)})
     
     return render(request, 'pabasa_app/profile.html', {
         'nav_role': nav_role,
