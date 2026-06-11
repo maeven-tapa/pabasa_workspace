@@ -940,6 +940,7 @@
             try {
                 const response = await fetch('/api/join-class/', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
