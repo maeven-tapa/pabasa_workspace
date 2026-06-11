@@ -1812,12 +1812,12 @@ def add_reading_material(request):
     """
     try:
         data = json.loads(request.body)
-        title        = data.get('title', '').strip()
-        reading_type = data.get('reading_type', '').strip()   # word | sentence | paragraph
-        content      = data.get('content', '').strip()
-        status       = data.get('status', '').strip()          # published | draft | scheduled
-        class_code   = data.get('class_code', '').strip()
-        scheduled_at_str = data.get('scheduled_at', '').strip()
+        title        = (data.get('title') or '').strip()
+        reading_type = (data.get('reading_type') or '').strip()   # word | sentence | paragraph
+        content      = (data.get('content') or '').strip()
+        status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
+        class_code   = (data.get('class_code') or '').strip()
+        scheduled_at_str = (data.get('scheduled_at') or '').strip()
 
         logger.debug(f"add_reading_material received: title={title}, reading_type={reading_type}, status={status}, class_code={class_code}")
 
