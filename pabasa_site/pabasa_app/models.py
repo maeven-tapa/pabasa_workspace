@@ -223,6 +223,7 @@ class Section(models.Model):
                     affected_student_ids.add(entry.get('student_id'))
         if changed:
             self.students = students
+            self._save_enrollment()
             for student_user in User.objects.filter(id__in=affected_student_ids):
                 student_user.remove_tag(tag_label)
         return changed
