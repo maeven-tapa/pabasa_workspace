@@ -1819,6 +1819,8 @@ def add_reading_material(request):
         class_code   = data.get('class_code', '').strip()
         scheduled_at_str = data.get('scheduled_at', '').strip()
 
+        logger.debug(f"add_reading_material received: title={title}, reading_type={reading_type}, status={status}, class_code={class_code}")
+
         # ── server-side validation ──────────────────────────────────────────
         errors = {}
         if not title:
@@ -1833,6 +1835,7 @@ def add_reading_material(request):
             errors['scheduled_at'] = 'Scheduled date & time is required.'
 
         if errors:
+            logger.warning(f"add_reading_material validation failed: {errors}")
             return JsonResponse({'success': False, 'errors': errors}, status=400)
 
         # ── resolve teacher & class ─────────────────────────────────────────
@@ -1903,11 +1906,14 @@ def add_reading_material(request):
             'created_at': assessment.created_at.isoformat(),
         })
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.error(f"add_reading_material JSON decode error: {e}")
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload.'}, status=400)
     except Exception as e:
-        logger.error(f"add_reading_material error: {e}", exc_info=True)
-        return JsonResponse({'success': False, 'error': 'Internal server error.'}, status=500)
+        logger.error(f"add_reading_material error: {type(e).__name__}: {str(e)}", exc_info=True)
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return JsonResponse({'success': False, 'error': f'Error: {str(e)}'}, status=500)
 
 @csrf_protect
 @require_http_methods(["POST"])
