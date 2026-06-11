@@ -653,10 +653,34 @@
             window.alert("This code does not match any class created by a teacher.");
         };
 
-        const renderClassCards = (codes) => {
-            const teacherClasses = getTeacherClasses();
+        // Fetch class details from database API instead of localStorage
+        const fetchClassDetailsFromDatabase = async (codes) => {
+            try {
+                const response = await fetch('/dashboard/student/classes/', {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                });
+                const data = await response.json();
+                if (data.success && Array.isArray(data.classes)) {
+                    // Create map of code -> class details from database
+                    const classMap = {};
+                    data.classes.forEach(cls => {
+                        classMap[String(cls.code).toUpperCase()] = cls;
+                    });
+                    return classMap;
+                }
+                return {};
+            } catch (error) {
+                console.error('Error fetching class details from database:', error);
+                return {};
+            }
+        };
+
+        const renderClassCards = async (codes) => {
+            const classDetailsMap = await fetchClassDetailsFromDatabase(codes);
             const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
-            const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]"); // Define allStudents here
             const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
 
             // Create normalized map for case-insensitive class code lookups
@@ -665,22 +689,22 @@
 
             const validClasses = codes
                 .map((code) => {
-                    let classData = teacherClasses.find((item) => String(item.code || "").toUpperCase() === code);
+                    let classData = classDetailsMap[String(code).toUpperCase()];
                     if (!classData) {
-                        // Not found among teacher classes — could have been removed by the teacher
+                        // Not found in database — could have been removed by the teacher
                         const upperCode = String(code).toUpperCase();
                         if (!readingsMap[upperCode]) return null; // If no readings for this code, treat as invalid
                         classData = {
                             code: upperCode,
                             name: `Removed class ${upperCode}`,
                             subject: "Reading",
-                            students: "N/A",
+                            student_count: 0,
                             header: upperCode.substring(0,3),
                             removedByTeacher: true
                         };
                     }
 
-                    classData.students = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park").length; // This line now has allStudents defined
+                    classData.students = classData.student_count || 0; // Use database student count
                     
                     let pCount = 0;
                     let aCount = 0;
@@ -793,19 +817,19 @@
 
             // Attach handlers for Remove buttons on classes removed by their teacher
             classList.querySelectorAll('.remove-deleted-class-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', async function() {
                     const code = btn.getAttribute('data-code');
                     if (!code) return;
                     if (!confirm('Remove this deleted class from your dashboard?')) return;
                     const saved = getSavedCodes().map(c => String(c).toUpperCase());
                     const filtered = saved.filter(c => c !== String(code).toUpperCase());
                     saveCodes(filtered);
-                    renderClassCards(filtered);
+                    await renderClassCards(filtered);
                 });
             });
         };
 
-        const setJoinedState = (codes = []) => {
+        const setJoinedState = async (codes = []) => {
             let validCodes = [];
             // Determine validation method based on user role or available data
             if (window.PABASA_USER_ROLE === 'teacher') {
@@ -824,7 +848,7 @@
                 // If codes is meant to be filtered against a master list of *all* available classes,
                 // that logic would need to be implemented. For now, we assume getStudentClassData()
                 // provides the correct list of classes the student is joined to.
-                renderClassCards(validCodes);
+                await renderClassCards(validCodes);
                 saveCodes(validCodes);
             } else {
                 classList.innerHTML = "";
@@ -836,15 +860,45 @@
             window.dispatchEvent(new Event("pabasa:student-class-updated"));
         };
 
-        // The getSavedCodes function is local to this IIFE, but getStudentClassData is global.
-        // We should use getStudentClassData for consistency and its legacy handling.
-        const legacyCode = window.localStorage.getItem(legacyClassCodeKey);
-        let initialCodes = getStudentClassData(); // Use the global function
-        if (!initialCodes.length && legacyCode) { // Add legacy if not already included
-            initialCodes.push(legacyCode.toUpperCase());
-            initialCodes = [...new Set(initialCodes)]; // Deduplicate
-        }
-        setJoinedState(initialCodes);
+        // Fetch student's enrolled classes directly from database API
+        const fetchStudentClassesFromDatabase = async () => {
+            try {
+                const response = await fetch('/dashboard/student/classes/', {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                });
+                const data = await response.json();
+                if (data.success && Array.isArray(data.classes)) {
+                    // Convert class objects to just codes for backward compatibility
+                    return data.classes.map(cls => cls.code);
+                }
+                return [];
+            } catch (error) {
+                console.error('Error fetching student classes from database:', error);
+                // Fallback: try localStorage as last resort
+                const saved = localStorage.getItem(classCodesKey);
+                try {
+                    return JSON.parse(saved || "[]").filter(Boolean);
+                } catch (e) {
+                    return [];
+                }
+            }
+        };
+
+        // Initialize with database classes
+        fetchStudentClassesFromDatabase().then(initialCodes => {
+            const legacyCode = window.localStorage.getItem(legacyClassCodeKey);
+            if (!initialCodes.length && legacyCode) {
+                initialCodes.push(legacyCode.toUpperCase());
+                initialCodes = [...new Set(initialCodes)];
+            }
+            return setJoinedState(initialCodes);
+        }).catch(error => {
+            console.error('Failed to initialize student classes:', error);
+            return setJoinedState([]);
+        });
 
         // Remove redundant input event listeners for auto-dashing, as base_dashboard.js will handle it.
         classCodeInput.addEventListener("input", (e) => { // Keep this listener to clear custom validity
@@ -901,14 +955,12 @@
                     return;
                 }
 
-                // Backend accepted the code - create local class object for UI purposes
-                teacherClass = {
-                    code: code,
-                    name: data.message || `Class ${code}`,
-                    header: code.split('-')[0]
-                };
-
-                console.log(`Successfully validated class ${code} via backend API`);
+                // Backend accepted the code - use complete class data from API
+                if (!data.class_data) {
+                    throw new Error('Server did not return class data');
+                }
+                teacherClass = data.class_data;
+                console.log(`Successfully joined class ${code} via backend API`, teacherClass);
             } catch (error) {
                 console.error('Error validating class via API:', error);
                 classCodeInput.value = "";
@@ -917,63 +969,9 @@
             }
 
             codes.push(code);
-
-            // SIMULATE ENROLLMENT: Add student to the teacher's list
-            try {
-                let allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-                const studentId = localStorage.getItem("pabasaCurrentUserId") || Date.now();
-                const studentName = "{{ user_full_name|escapejs }}" || "Student User";
-                const studentEmail = "{{ email|escapejs }}";
-
-                const isEnrolled = allStudents.some(
-                    s => s.name === studentName && s.class === teacherClass.name
-                );
-
-                if (!isEnrolled) {
-                    allStudents.push({
-                        id: studentId,
-                        name: studentName,
-                        email: studentEmail,
-                        class: teacherClass.name,
-                        level: "Developing Readers",
-                        wpm: "0",
-                        accuracy: "0"
-                    });
-
-                    localStorage.setItem(
-                        "pabasa_added_students",
-                        JSON.stringify(allStudents)
-                    );
-
-                    // Notify teacher
-                    let notifications = JSON.parse(
-                        localStorage.getItem("pabasa_notifications") || "[]"
-                    );
-
-                    notifications.unshift({
-                        id: Date.now() + Math.random(),
-                        classCode: code,
-                        title: "New Student Joined",
-                        message: `Hi, Teacher! ${studentName} has joined your class ${teacherClass.name}`,
-                        timestamp: Date.now(),
-                        read: false,
-                        role: "teacher"
-                    });
-
-                    localStorage.setItem(
-                        "pabasa_notifications",
-                        JSON.stringify(notifications.slice(0, 100))
-                    );
-
-                    window.dispatchEvent(new Event("pabasa:notifications-updated"));
-                }
-            } catch (e) {
-                console.error("Enrollment failed:", e);
-            }
-
             classCodeInput.setCustomValidity("");
             classCodeInput.value = "";
-            setJoinedState(codes);
+            await setJoinedState(codes);
             showSuccessToast(
             `Successfully joined ${teacherClass.name}!`
         );
@@ -1036,7 +1034,7 @@
 
                 // Remove from local saved codes and update UI
                 const remainingCodes = getSavedCodes().filter((savedCode) => savedCode !== pendingUnenrollCode);
-                setJoinedState(remainingCodes);
+                await setJoinedState(remainingCodes);
 
                 // Cleanup simulated teacher student list in localStorage if present
                 try {
