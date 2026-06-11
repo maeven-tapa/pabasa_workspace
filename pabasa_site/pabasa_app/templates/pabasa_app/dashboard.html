@@ -851,8 +851,8 @@
             e.target.setCustomValidity("");
         });
 
-        // Original form submission logic
-        form.addEventListener("submit", (event) => {
+        // Form submission logic - MODIFIED: Skip localStorage, always validate via backend API
+        form.addEventListener("submit", async (event) => {
             event.preventDefault();
 
             const code = classCodeInput.value.trim().toUpperCase();
@@ -862,16 +862,9 @@
                 return;
             }
 
-            const teacherClass = findTeacherClass(code);
-            if (!teacherClass) {
-                classCodeInput.value = "";
-                showInvalidClassCodeMessage();
-                return;
-            }
-
             const codes = getSavedCodes();
 
-            // Check if student already joined this class
+            // Check if student already joined this class locally
             if (codes.includes(code)) {
                 if (invalidClassCodeModalElement && window.bootstrap) {
                     document.getElementById("invalidClassCodeModalLabel").textContent =
@@ -885,6 +878,41 @@
                     alert("You have already joined this class.");
                 }
 
+                return;
+            }
+
+            // Always query backend API to validate class code against database
+            let teacherClass = null;
+            try {
+                const response = await fetch('/api/join-class/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCsrfToken ? getCsrfToken() : document.querySelector('[name="csrfmiddlewaretoken"]')?.value || ''
+                    },
+                    body: JSON.stringify({ class_code: code })
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    classCodeInput.value = "";
+                    showInvalidClassCodeMessage();
+                    return;
+                }
+
+                // Backend accepted the code - create local class object for UI purposes
+                teacherClass = {
+                    code: code,
+                    name: data.message || `Class ${code}`,
+                    header: code.split('-')[0]
+                };
+
+                console.log(`Successfully validated class ${code} via backend API`);
+            } catch (error) {
+                console.error('Error validating class via API:', error);
+                classCodeInput.value = "";
+                showInvalidClassCodeMessage();
                 return;
             }
 
