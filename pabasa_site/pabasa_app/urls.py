@@ -53,6 +53,7 @@ urlpatterns = [
     path('students/send-email/', views.send_parent_email, name='send_parent_email'),
     path('dashboard/student/unenroll/', views.unenroll_class, name='unenroll_class'),
     path('dashboard/teacher/add-material/', views.add_reading_material, name='add_reading_material'),
+    path('api/class/materials/', views.get_class_materials, name='get_class_materials'),
     path(
     'dashboard/teacher/create-class/',
     views.create_reading_class,

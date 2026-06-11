@@ -1651,6 +1651,69 @@ def get_teacher_overview(request):
         logger.error('Error computing teacher overview: %s', e, exc_info=True)
         return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
 
+
+@require_http_methods(["GET"])
+def get_class_materials(request):
+    """
+    Returns all materials (assessments) for a class, organized by reading type.
+    Accessible by both teachers (owners) and students (enrolled in class).
+    Query params: class_code (required)
+    Returns: { 'success': True, 'materials': { word: [...], sentence: [...], paragraph: [...] } }
+    """
+    try:
+        class_code = request.GET.get('class_code', '').strip()
+        if not class_code:
+            return JsonResponse({'success': False, 'error': 'class_code parameter required'}, status=400)
+        
+        # Get the section (class) by code
+        section = Section.objects.filter(
+            class_code__iexact=class_code,
+            is_active=True
+        ).first()
+        
+        if not section:
+            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+        
+        # Get all active assessments for this class
+        assessments = Assessment.objects.filter(
+            section=section,
+            is_active=True
+        ).order_by('-created_at')
+        
+        # Organize materials by type
+        materials = {
+            'word': [],
+            'sentence': [],
+            'paragraph': []
+        }
+        
+        for assessment in assessments:
+            material = {
+                'id': assessment.id,
+                'code': assessment.code,
+                'title': assessment.title,
+                'type': assessment.assessment_type,
+                'created_at': assessment.created_at.isoformat(),
+                'attempt_count': len(assessment.get_attempts()),
+            }
+            
+            # Add to appropriate type bucket
+            if assessment.assessment_type in materials:
+                materials[assessment.assessment_type].append(material)
+        
+        logger.debug(f"Retrieved materials for class {class_code}: {sum(len(m) for m in materials.values())} total")
+        
+        return JsonResponse({
+            'success': True,
+            'materials': materials,
+            'class_code': section.class_code,
+            'class_name': section.class_name,
+        })
+    
+    except Exception as e:
+        logger.error(f"Error getting class materials: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Failed to retrieve materials'}, status=500)
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -1801,10 +1864,14 @@ def add_reading_material(request):
         return JsonResponse({
             'success': True,
             'message': 'Reading material created successfully.',
+            'assessment_id': assessment.id,
             'code': assessment_code,
             'title': title,
+            'type': reading_type,
             'status': status,
+            'is_active': (status == 'published'),
             'scheduled_at': scheduled_at if status == 'scheduled' else None,
+            'created_at': assessment.created_at.isoformat(),
         })
 
     except json.JSONDecodeError:

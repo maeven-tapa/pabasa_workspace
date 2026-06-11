@@ -2109,6 +2109,31 @@
         }
     }
 
+    // Fetch materials from database API instead of localStorage
+    async function fetchMaterialsFromDatabase(classCode) {
+        try {
+            const response = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(classCode)}`);
+            if (!response.ok) {
+                console.warn(`Failed to fetch materials for class ${classCode}:`, response.status);
+                return null;
+            }
+            const data = await response.json();
+            if (data.success && data.materials) {
+                // Convert API response to localStorage format for compatibility
+                const materials = {
+                    word: data.materials.word || [],
+                    sentence: data.materials.sentence || [],
+                    paragraph: data.materials.paragraph || []
+                };
+                return materials;
+            }
+            return null;
+        } catch (error) {
+            console.warn(`Error fetching materials for class ${classCode}:`, error);
+            return null;
+        }
+    }
+
     function saveStoredReadings() {
         localStorage.setItem(readingsStorageKey, JSON.stringify(classReadings));
 
@@ -2217,7 +2242,7 @@
     }
 
     // Render classes grid
-    function renderClasses() {
+    async function renderClasses() {
         const grid = document.getElementById('classesGrid');
         
         if (teacherClasses.length === 0) {
@@ -2231,6 +2256,7 @@
             return;
         }
 
+        // First render with localStorage counts
         grid.innerHTML = teacherClasses.map(cls => `
             <article class="class-card-full" data-class-code="${cls.code}">
                 <button class="class-card-delete-btn" type="button" data-class-code="${cls.code}" title="Delete class" onclick="event.stopPropagation();"><i class="bi bi-trash3"></i></button>
@@ -2244,7 +2270,7 @@
                         <strong>${getStudentCountForClass(cls.name)}</strong>
                         <span>Students</span>
                     </div>
-                    <div class="class-stat">
+                    <div class="class-stat" data-readings-count="${cls.code}">
                         <strong>${getClassReadingCount(cls.code)}</strong>
                         <span>Readings</span>
                     </div>
@@ -2259,6 +2285,18 @@
         
         // Add event listeners to delete buttons
         attachDeleteListeners();
+        
+        // Update reading counts from database for each class asynchronously
+        for (const cls of teacherClasses) {
+            const materials = await fetchMaterialsFromDatabase(cls.code);
+            if (materials) {
+                const totalCount = materials.word.length + materials.sentence.length + materials.paragraph.length;
+                const countElement = document.querySelector(`[data-readings-count="${cls.code}"] strong`);
+                if (countElement) {
+                    countElement.textContent = totalCount;
+                }
+            }
+        }
     }
 
     function getClassReadingCount(classCode) {
@@ -2377,7 +2415,7 @@
         document.getElementById('classDetailModalLabel').textContent = classData.name;
         document.getElementById('classDetailInfo').textContent = `${classData.code} - ${studentCount} students enrolled`;
 
-        // Load all content
+        // Load all content (loadReadings is now async)
         loadReadings(classCode);
         loadAssessments(classCode);
         loadStudents(classCode, studentCount);
@@ -2389,8 +2427,20 @@
         modal.show();
     };
 
-    function loadReadings(classCode) {
-        const readings = ensureClassReadings(classCode);
+    async function loadReadings(classCode) {
+        let readings = { word: [], sentence: [], paragraph: [] };
+        
+        // First, try to fetch from database API
+        const dbMaterials = await fetchMaterialsFromDatabase(classCode);
+        if (dbMaterials) {
+            readings = dbMaterials;
+            console.log(`✓ Loaded materials from database for class ${classCode}`);
+        } else {
+            // Fallback to localStorage if API fails
+            const stored = ensureClassReadings(classCode);
+            readings = stored;
+            console.warn(`⚠ Using localStorage materials for class ${classCode} (database fetch failed)`);
+        }
 
         function renderReadingsList(readingsArray, containerId, type) {
             const container = document.getElementById(containerId);
