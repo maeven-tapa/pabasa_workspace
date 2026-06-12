@@ -2134,6 +2134,23 @@
         }
     }
 
+    // Ensure CSRF token exists; optionally refresh it by doing a safe GET
+    async function ensureCsrfToken(forceRefresh = false) {
+        function getCookie(name) {
+            const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return v ? v.pop() : null;
+        }
+        let token = document.querySelector("[name=csrfmiddlewaretoken]")?.value || getCookie('csrftoken') || '';
+        if (token && !forceRefresh) return token;
+        try {
+            // Make a safe GET to refresh CSRF cookie if server sets it on GET
+            await fetch(window.location.pathname, { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        } catch (e) {
+            console.warn('Failed to refresh CSRF token via GET', e);
+        }
+        return getCookie('csrftoken') || '';
+    }
+
     function saveStoredReadings() {
         localStorage.setItem(readingsStorageKey, JSON.stringify(classReadings));
 
@@ -3122,19 +3139,20 @@
 
                         try {
                             // ── Step 1: Save to backend database via API ──────────
-                            // CSRF token: prefer hidden input, fall back to cookie
-                            function getCookie(name) {
-                                const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-                                return v ? v.pop() : null;
+                            // Acquire CSRF token (refresh if necessary) and POST with retry on 403
+                            const csrfToken = await ensureCsrfToken();
+                            if (!csrfToken) {
+                                throw new Error('CSRF token missing. Please reload and sign in.');
                             }
-                            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value || getCookie('csrftoken') || "";
-                            const apiResponse = await fetch('/dashboard/teacher/add-material/', {
+
+                            const postOpts = {
                                 method: 'POST',
+                                credentials: 'same-origin',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrfToken
+                                    'X-CSRFToken': csrfToken,
+                                    'X-Requested-With': 'XMLHttpRequest'
                                 },
-                                credentials: 'same-origin',
                                 body: JSON.stringify({
                                     title: title,
                                     reading_type: currentMaterialType,
@@ -3143,7 +3161,25 @@
                                     class_code: currentClassCode,
                                     scheduled_at: schedule || null
                                 })
-                            });
+                            };
+
+                            let apiResponse = await fetch('/dashboard/teacher/add-material/', postOpts);
+                            if (apiResponse.status === 403) {
+                                // Try refreshing CSRF token and retry once
+                                const refreshed = await ensureCsrfToken(true);
+                                if (refreshed && refreshed !== csrfToken) {
+                                    postOpts.headers['X-CSRFToken'] = refreshed;
+                                    apiResponse = await fetch('/dashboard/teacher/add-material/', postOpts);
+                                } else {
+                                    const text = await apiResponse.text();
+                                    try {
+                                        const errorData = JSON.parse(text);
+                                        throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`);
+                                    } catch (e) {
+                                        throw new Error(`API error: ${apiResponse.status} - ${text.slice(0,200)}`);
+                                    }
+                                }
+                            }
 
                             if (!apiResponse.ok) {
                                 const text = await apiResponse.text();
@@ -3151,7 +3187,6 @@
                                     const errorData = JSON.parse(text);
                                     throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`);
                                 } catch (e) {
-                                    // Non-JSON response (likely an HTML error page such as CSRF/login redirect)
                                     throw new Error(`API error: ${apiResponse.status} - ${text.slice(0,200)}`);
                                 }
                             }

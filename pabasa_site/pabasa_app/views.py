@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.hashers import make_password, check_password
@@ -151,6 +151,19 @@ def login_required(role=None):
             return view_func(request, *args, **kwargs)
         return wrapper
     return decorator
+
+
+def csrf_failure(request, reason=''):
+    """Custom CSRF failure handler that returns JSON for AJAX/JSON requests."""
+    try:
+        accept = request.META.get('HTTP_ACCEPT', '') or ''
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or accept.startswith('application/json')
+    except Exception:
+        is_ajax = False
+
+    if is_ajax:
+        return JsonResponse({'success': False, 'error': 'CSRF token missing or invalid.'}, status=403)
+    return HttpResponseForbidden('<h1>403 Forbidden</h1>')
 
 # Authentication functions
 def generate_custom_id(role):

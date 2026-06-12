@@ -162,3 +162,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'pabasa.tupc@gmail.com'
 EMAIL_HOST_PASSWORD = 'sfsy zplk rmku bdxt'
 DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
+
+# When a CSRF failure occurs, prefer a JSON response for AJAX requests so frontend can handle it.
+CSRF_FAILURE_VIEW = 'pabasa_app.views.csrf_failure'
