@@ -3167,27 +3167,62 @@
                                 throw new Error(apiData.error || 'API returned success=false');
                             }
 
+
                             console.log('[AddMaterial] Database save successful:', apiData);
 
-                            // ── Step 2: Also save to localStorage for offline cache ──
-                            const readings = ensureClassReadings(currentClassCode);
-                            const newMaterial = {
-                                id: apiData.material_id || apiData.assessment_id || Date.now(),
-                                title: title,
-                                content: content,
-                                type: currentMaterialType,
-                                items: content.split(/\s+/).filter(Boolean).length,
-                                status: status,
-                                schedule: schedule || null,
-                                code: apiData.code,
-                                created_at: apiData.created_at
-                            };
-                            readings[currentMaterialType].push(newMaterial);
-                            saveStoredReadings();
+                            // ── Step 2: Store returned per-item materials locally (avoid full reload)
+                            const createdIds = Array.isArray(apiData.material_ids) ? apiData.material_ids : (apiData.material_id ? [apiData.material_id] : []);
 
-                            // ── Step 3: Refresh UI ────────────────────────────────
-                            await loadReadings(currentClassCode);
-                            await renderClasses();
+                            function splitContentClient(text, rtype) {
+                                if (!text) return [];
+                                if (rtype === 'word') {
+                                    const m = text.match(/\b[\w']+\b/g);
+                                    return m ? m : [];
+                                }
+                                if (rtype === 'sentence') {
+                                    // Split sentences by punctuation followed by whitespace
+                                    return text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+                                }
+                                if (rtype === 'paragraph') {
+                                    return text.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+                                }
+                                return [text];
+                            }
+
+                            if (createdIds.length > 0) {
+                                const tokens = splitContentClient(content, currentMaterialType);
+                                // If token count doesn't match created IDs, fall back to reloading from server
+                                if (tokens.length === createdIds.length) {
+                                    const readings = ensureClassReadings(currentClassCode);
+                                    for (let i = 0; i < createdIds.length; i++) {
+                                        const token = tokens[i];
+                                        const mid = createdIds[i];
+                                        const itemTitle = title || (token && token.length > 50 ? token.slice(0, 50) + '...' : token || 'Material');
+                                        const newMaterial = {
+                                            id: mid,
+                                            title: itemTitle,
+                                            content: token,
+                                            type: currentMaterialType,
+                                            items: 1,
+                                            status: status,
+                                            schedule: schedule || null,
+                                            code: apiData.code || null,
+                                            created_at: (apiData.created_at && apiData.created_count === 1) ? apiData.created_at : new Date().toISOString(),
+                                        };
+                                        readings[currentMaterialType].push(newMaterial);
+                                    }
+                                    saveStoredReadings();
+                                    await renderClasses();
+                                } else {
+                                    // Mismatch: reload authoritative data from server
+                                    await loadReadings(currentClassCode);
+                                    await renderClasses();
+                                }
+                            } else {
+                                // No ids returned; reload authoritative data from server
+                                await loadReadings(currentClassCode);
+                                await renderClasses();
+                            }
 
                             // ── Step 4: Reset form ────────────────────────────────
                             const addMaterialFormEl = document.getElementById('addMaterialForm');

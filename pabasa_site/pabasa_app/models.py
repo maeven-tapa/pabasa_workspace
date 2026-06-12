@@ -369,9 +369,9 @@ class Material(models.Model):
 
     class Meta:
         db_table = "materials"
-        ordering = ["assessment", "order_index"]
+        ordering = ["section", "order_index"]
         constraints = [
-            models.UniqueConstraint(fields=["assessment", "order_index"], name="unique_assessment_item_order")
+            models.UniqueConstraint(fields=["section", "item_type", "order_index"], name="unique_section_item_order")
         ]
 
     def __str__(self):

@@ -1880,38 +1880,62 @@ def add_reading_material(request):
                 logger.warning(f"Failed to parse scheduled_at: {scheduled_at_str}, error: {e}")
                 return JsonResponse({'success': False, 'error': 'Invalid scheduled date & time format.'}, status=400)
 
-        # Create a Material row directly (no Assessment created)
+        # Split the submitted content into individual items (words/sentences/paragraphs)
         try:
-            # compute next order index for this section+type
+            import re
             from django.db.models import Max
+
+            def split_content(text, rtype):
+                if not text:
+                    return []
+                if rtype == 'word':
+                    # Match word-like tokens (letters, numbers, apostrophes)
+                    return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
+                if rtype == 'sentence':
+                    parts = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+                    return parts
+                if rtype == 'paragraph':
+                    parts = [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
+                    return parts
+                return [text]
+
+            tokens = split_content(content, reading_type)
+            if not tokens:
+                return JsonResponse({'success': False, 'error': 'No items found in content to create.'}, status=400)
+
+            # compute starting order index for this section+type
             max_idx = Material.objects.filter(section=section, item_type=reading_type).aggregate(m=Max('order_index'))['m'] or 0
             next_index = int(max_idx) + 1
 
-            material = Material.objects.create(
-                assessment=None,
-                section=section,
-                item_type=reading_type,
-                prompt_text=content,
-                order_index=next_index,
-                expected_answer=None,
-                difficulty_level='',
-                audio_url=None,
-                is_active=(status == 'published')
-            )
+            created_ids = []
+            with transaction.atomic():
+                for token in tokens:
+                    m = Material.objects.create(
+                        assessment=None,
+                        section=section,
+                        item_type=reading_type,
+                        prompt_text=token,
+                        order_index=next_index,
+                        expected_answer=None,
+                        difficulty_level='',
+                        audio_url=None,
+                        is_active=(status == 'published')
+                    )
+                    created_ids.append(m.id)
+                    next_index += 1
+
         except Exception as e:
-            logger.exception('Failed to create Material row: %s', str(e))
-            return JsonResponse({'success': False, 'error': 'Failed to create material'}, status=500)
+            logger.exception('Failed to create Material rows: %s', str(e))
+            return JsonResponse({'success': False, 'error': 'Failed to create materials'}, status=500)
 
         return JsonResponse({
             'success': True,
-            'message': 'Reading material created successfully.',
-            'material_id': material.id,
+            'message': 'Reading material(s) created successfully.',
+            'material_ids': created_ids,
+            'created_count': len(created_ids),
             'title': title,
             'type': reading_type,
-            'content': content,
             'status': status,
-            'is_active': (status == 'published'),
-            'created_at': material.created_at.isoformat() if getattr(material, 'created_at', None) else None,
         })
 
     except json.JSONDecodeError as e:
