@@ -3122,7 +3122,12 @@
 
                         try {
                             // ── Step 1: Save to backend database via API ──────────
-                            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
+                            // CSRF token: prefer hidden input, fall back to cookie
+                            function getCookie(name) {
+                                const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+                                return v ? v.pop() : null;
+                            }
+                            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value || getCookie('csrftoken') || "";
                             const apiResponse = await fetch('/dashboard/teacher/add-material/', {
                                 method: 'POST',
                                 headers: {
@@ -3141,11 +3146,23 @@
                             });
 
                             if (!apiResponse.ok) {
-                                const errorData = await apiResponse.json();
-                                throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`);
+                                const text = await apiResponse.text();
+                                try {
+                                    const errorData = JSON.parse(text);
+                                    throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`);
+                                } catch (e) {
+                                    // Non-JSON response (likely an HTML error page such as CSRF/login redirect)
+                                    throw new Error(`API error: ${apiResponse.status} - ${text.slice(0,200)}`);
+                                }
                             }
 
-                            const apiData = await apiResponse.json();
+                            let apiData = null;
+                            try {
+                                apiData = await apiResponse.json();
+                            } catch (e) {
+                                const text = await apiResponse.text();
+                                throw new Error('Invalid JSON response from API: ' + text.slice(0,200));
+                            }
                             if (!apiData.success) {
                                 throw new Error(apiData.error || 'API returned success=false');
                             }
