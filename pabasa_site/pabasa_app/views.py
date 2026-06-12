@@ -1892,6 +1892,21 @@ def add_reading_material(request):
             is_active=(status == 'published'),
         )
 
+        # Create a Material row for this standalone reading material
+        try:
+            Material.objects.create(
+                assessment=assessment,
+                item_type=reading_type,
+                prompt_text=content,
+                order_index=1,
+                expected_answer=None,
+                difficulty_level='',
+                audio_url=None,
+                is_active=(status == 'published')
+            )
+        except Exception as e:
+            logger.exception('Failed to create Material row for assessment %s: %s', assessment.id, str(e))
+
         return JsonResponse({
             'success': True,
             'message': 'Reading material created successfully.',
