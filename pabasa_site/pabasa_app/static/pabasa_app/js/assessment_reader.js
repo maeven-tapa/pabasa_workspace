@@ -217,7 +217,7 @@
                 fetch('/record-assessment-completion/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
-                    body: JSON.stringify({ assessment_id: materialId })
+                    body: JSON.stringify({ material_id: materialId })
                 }).then(r => r.json()).then(d => {
                     if (d.success) console.log("PABASA: Completion notified.");
                 }).catch(e => console.error("PABASA: Completion error", e));

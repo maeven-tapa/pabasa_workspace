@@ -865,7 +865,9 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 tp_user = user
                 # Check for classes, materials, and joined students stored in sections
                 has_classes = Section.objects.filter(teacher=tp_user, is_active=True).exists()
-                has_materials = Assessment.objects.filter(teacher=tp_user, is_active=True).exists()
+                # Materials are now stored in the `materials` table. Detect
+                # posted materials by checking the Section->Material relation.
+                has_materials = Material.objects.filter(section__teacher=tp_user, is_active=True).exists()
                 has_joined_students = any(
                     _section_student_count(cls) > 0
                     for cls in Section.objects.filter(teacher=tp_user, is_active=True)
@@ -883,6 +885,10 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 asm_max = Assessment.objects.filter(teacher=tp_user).aggregate(m=Max('updated_at'))['m']
                 if asm_max:
                     candidate_dates.append(asm_max)
+                # Include latest material timestamp for teacher (if any)
+                mat_max = Material.objects.filter(section__teacher=tp_user).aggregate(m=Max('updated_at'))['m']
+                if mat_max:
+                    candidate_dates.append(mat_max)
                 if candidate_dates:
                     last_activity = max(candidate_dates)
 
@@ -1638,7 +1644,7 @@ def get_teacher_overview(request):
             _section_student_count(cls)
             for cls in Section.objects.filter(teacher=teacher_user, is_active=True)
         )
-        materials_posted = Assessment.objects.filter(teacher=teacher_user, is_active=True).count()
+        materials_posted = Material.objects.filter(section__teacher=teacher_user, is_active=True).count()
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
         return JsonResponse({
@@ -1675,36 +1681,35 @@ def get_class_materials(request):
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         
-        # Get all active assessments for this class
-        assessments = Assessment.objects.filter(
+        # Get all active materials for this class (materials table is primary)
+        mats = Material.objects.filter(
             section=section,
             is_active=True
-        ).order_by('-created_at')
-        
+        ).order_by('order_index')
+
         # Organize materials by type
         materials = {
             'word': [],
             'sentence': [],
             'paragraph': []
         }
-        
-        for assessment in assessments:
+
+        for m in mats:
             material = {
-                'id': assessment.id,
-                'code': assessment.code,
-                'title': assessment.title,
-                'type': assessment.assessment_type,
-                'content': assessment.content,
-                'status': assessment.status,
-                'schedule': assessment.scheduled_at.isoformat() if assessment.scheduled_at else None,
-                'items': len(assessment.content.split()) if assessment.content else 0,
-                'created_at': assessment.created_at.isoformat(),
-                'attempt_count': len(assessment.get_attempts()),
+                'id': m.id,
+                'code': m.assessment.code if m.assessment else None,
+                'title': (m.prompt_text[:150] + '...') if m.prompt_text and len(m.prompt_text) > 150 else (m.prompt_text or ''),
+                'type': m.item_type,
+                'content': m.prompt_text,
+                'status': 'published' if m.is_active else 'inactive',
+                'schedule': None,
+                'items': 1,
+                'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+                'attempt_count': 0,
             }
-            
-            # Add to appropriate type bucket
-            if assessment.assessment_type in materials:
-                materials[assessment.assessment_type].append(material)
+
+            if m.item_type in materials:
+                materials[m.item_type].append(material)
         
         logger.debug(f"Retrieved materials for class {class_code}: {sum(len(m) for m in materials.values())} total")
         
@@ -1764,8 +1769,9 @@ def delete_reading_class(request):
             section.save()
             teacher_user.remove_tag(section.get_tag_label())
 
-            # Deactivate assessments tied to this section
+            # Deactivate assessments and materials tied to this section
             Assessment.objects.filter(section=section, is_active=True).update(is_active=False)
+            Material.objects.filter(section=section, is_active=True).update(is_active=False)
 
             # Notify affected students (in-app + email)
             teacher_name = f"{teacher_user.first_name} {teacher_user.last_name}" if teacher_user else 'Your teacher'
@@ -1874,51 +1880,38 @@ def add_reading_material(request):
                 logger.warning(f"Failed to parse scheduled_at: {scheduled_at_str}, error: {e}")
                 return JsonResponse({'success': False, 'error': 'Invalid scheduled date & time format.'}, status=400)
 
-        # ── generate unique assessment code ─────────────────────────────────
-        import uuid as _uuid
-        assessment_code = f"MAT-{reading_type[:3].upper()}-{_uuid.uuid4().hex[:6].upper()}"
-        while Assessment.objects.filter(code=assessment_code).exists():
-            assessment_code = f"MAT-{reading_type[:3].upper()}-{_uuid.uuid4().hex[:6].upper()}"
-
-        assessment = Assessment.objects.create(
-            title=title,
-            code=assessment_code,
-            assessment_type=reading_type,
-            content=content,
-            status=status,
-            scheduled_at=scheduled_at,
-            teacher=teacher_user,
-            section=section,
-            is_active=(status == 'published'),
-        )
-
-        # Create a Material row for this standalone reading material
+        # Create a Material row directly (no Assessment created)
         try:
-            Material.objects.create(
-                assessment=assessment,
+            # compute next order index for this section+type
+            from django.db.models import Max
+            max_idx = Material.objects.filter(section=section, item_type=reading_type).aggregate(m=Max('order_index'))['m'] or 0
+            next_index = int(max_idx) + 1
+
+            material = Material.objects.create(
+                assessment=None,
+                section=section,
                 item_type=reading_type,
                 prompt_text=content,
-                order_index=1,
+                order_index=next_index,
                 expected_answer=None,
                 difficulty_level='',
                 audio_url=None,
                 is_active=(status == 'published')
             )
         except Exception as e:
-            logger.exception('Failed to create Material row for assessment %s: %s', assessment.id, str(e))
+            logger.exception('Failed to create Material row: %s', str(e))
+            return JsonResponse({'success': False, 'error': 'Failed to create material'}, status=500)
 
         return JsonResponse({
             'success': True,
             'message': 'Reading material created successfully.',
-            'assessment_id': assessment.id,
-            'code': assessment_code,
+            'material_id': material.id,
             'title': title,
             'type': reading_type,
             'content': content,
             'status': status,
             'is_active': (status == 'published'),
-            'scheduled_at': assessment.scheduled_at.isoformat() if assessment.scheduled_at else None,
-            'created_at': assessment.created_at.isoformat(),
+            'created_at': material.created_at.isoformat() if getattr(material, 'created_at', None) else None,
         })
 
     except json.JSONDecodeError as e:
@@ -1938,11 +1931,29 @@ def record_assessment_completion(request):
     try:
         data = json.loads(request.body)
         assessment_id = data.get('assessment_id')
+        material_id = data.get('material_id')
         student_user = User.objects.get(id=request.session.get('user_id'))
-        assessment = Assessment.objects.select_related('teacher').get(id=assessment_id)
-        teacher_user = assessment.teacher
 
-        notif_msg = f"{student_user.first_name} {student_user.last_name} completed {assessment.title}"
+        assessment = None
+        teacher_user = None
+        title_text = None
+
+        if assessment_id:
+            assessment = Assessment.objects.select_related('teacher').get(id=assessment_id)
+            teacher_user = assessment.teacher
+            title_text = assessment.title
+        elif material_id:
+            material = Material.objects.select_related('assessment', 'section__teacher').get(id=material_id)
+            if material.assessment:
+                assessment = material.assessment
+                teacher_user = material.assessment.teacher
+            elif material.section:
+                teacher_user = material.section.teacher
+            title_text = material.prompt_text or material.item_type
+        else:
+            return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
+
+        notif_msg = f"{student_user.first_name} {student_user.last_name} completed {title_text}"
         Notification.objects.create(
             recipient=teacher_user,
             created_by=student_user,

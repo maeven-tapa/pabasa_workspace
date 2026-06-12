@@ -3155,7 +3155,7 @@
                             // ── Step 2: Also save to localStorage for offline cache ──
                             const readings = ensureClassReadings(currentClassCode);
                             const newMaterial = {
-                                id: apiData.assessment_id || Date.now(),
+                                id: apiData.material_id || apiData.assessment_id || Date.now(),
                                 title: title,
                                 content: content,
                                 type: currentMaterialType,

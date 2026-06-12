@@ -353,7 +353,10 @@ class Material(models.Model):
         ("sentence", "Sentence"),
         ("paragraph", "Paragraph"),
     ]
-    assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="materials")
+    # Materials may be standalone (not tied to an Assessment record) so allow
+    # a nullable FK to Assessment and also attach directly to a Section.
+    assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="materials", null=True, blank=True)
+    section = models.ForeignKey("Section", on_delete=models.SET_NULL, related_name="materials", null=True, blank=True)
     item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES)
     prompt_text = models.TextField()
     order_index = models.PositiveIntegerField()
@@ -361,6 +364,8 @@ class Material(models.Model):
     difficulty_level = models.CharField(max_length=50, blank=True)
     audio_url = models.URLField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "materials"
@@ -370,7 +375,8 @@ class Material(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.assessment.code} - {self.item_type} #{self.order_index}"
+        parent = self.assessment.code if self.assessment else (self.section.class_code if self.section else 'UNLINKED')
+        return f"{parent} - {self.item_type} #{self.order_index}"
 
 
 # Note: AssessmentAttempt and AssessmentResult tables removed. Attempts/results
