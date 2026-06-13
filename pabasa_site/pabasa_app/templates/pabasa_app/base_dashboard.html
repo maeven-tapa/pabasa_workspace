@@ -8,7 +8,8 @@
     <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans:wght@400;700&family=Coiny&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -36,7 +37,7 @@
                 linear-gradient(245deg, rgba(247, 231, 207, 0.72), transparent 38%),
                 linear-gradient(180deg, #fbfbf8 0%, #f4f3ed 58%, #edf5f4 100%);
             color: var(--dash-text);
-            font-family: "Sora", "Segoe UI", sans-serif;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         }
 
         body.dashboard-body::before {
@@ -55,29 +56,34 @@
         .dashboard-sidebar {
             width: var(--sidebar-width);
             height: 100vh; /* Changed from min-height to height to ensure it always fills the viewport */
-            border-right: 0;
+            border-right: 1px solid rgba(31, 182, 255, 0.12);
             background:
-                linear-gradient(165deg, rgba(31, 111, 139, 0.12), transparent 34%),
-                linear-gradient(25deg, rgba(247, 231, 207, 0.86), transparent 42%),
-                linear-gradient(180deg, #fffdf7 0%, #f7f4ea 100%);
-            box-shadow: 18px 0 46px rgba(27, 26, 23, 0.1);
-            backdrop-filter: blur(18px);
+                radial-gradient(circle at top left, rgba(31, 182, 255, 0.08), transparent 40%),
+                rgba(255, 255, 255, 0.55);
+            box-shadow: 10px 0 40px rgba(15, 182, 255, 0.04);
+            backdrop-filter: blur(24px) saturate(180%);
             position: fixed; /* Changed from sticky to fixed to keep it in place */
             top: 0;
             left: 0; /* Ensure it's fixed to the left edge */
             transition: width 0.2s ease;
             overflow-y: auto; /* Allow internal scrolling for sidebar content if it overflows */
+            overflow-x: hidden;
             z-index: 1030; /* Ensure it's above main content but below modals */
         }
+    
+    h1, h2, h3, h4, h5, h6, .btn, .dash-link, .sidebar-role-card strong, .modal-title {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+    }
 
         .dashboard-sidebar::after {
             content: "pa";
             position: absolute;
             right: -12px;
             bottom: 66px;
-            color: rgba(31, 111, 139, 0.07);
-            font-size: 7rem;
-            font-weight: 700;
+        font-family: "Coiny", cursive;
+            color: rgba(31, 182, 255, 0.05);
+            font-size: 8rem;
+            font-weight: 800;
             line-height: 1;
             pointer-events: none;
         }
@@ -301,37 +307,52 @@
         .dash-brand-mark {
             width: 46px;
             height: 46px;
-            border-radius: 16px;
+            border-radius: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             color: #fff;
+            border: 2px solid #fff;
             background-size: cover !important;
             background-position: center !important;
             background-repeat: no-repeat !important;
             background-image: {% if profile_photo_url %}url('{{ profile_photo_url }}'){% else %}
-                linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 48%),
-                linear-gradient(145deg, var(--dash-primary) 0%, #5a9fb5 100%)
+                linear-gradient(135deg, #54C2F0 0%, #10466E 100%)
             {% endif %};
             background-color: var(--dash-primary);
-            box-shadow: 0 12px 24px rgba(31, 111, 139, 0.24);
+            box-shadow: 0 8px 16px rgba(16, 70, 110, 0.12);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .dash-brand-mark:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 12px 24px rgba(16, 70, 110, 0.2);
         }
 
         .dash-brand-mark i {
             display: {% if profile_photo_url %}none{% else %}inline-flex{% endif %};
+            font-size: 1.15rem;
         }
 
         .dashboard-sidebar .sidebar-inner {
             position: relative;
             z-index: 1;
+            padding: 1.25rem 1rem !important;
         }
 
         .sidebar-brand-row {
-            background: rgba(255, 255, 255, 0.58);
-            border: 1px solid rgba(27, 26, 23, 0.08);
-            border-radius: 20px;
-            box-shadow: 0 16px 30px rgba(27, 26, 23, 0.08);
-            padding: 0.7rem;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 22px;
+            box-shadow: 0 8px 32px rgba(31, 182, 255, 0.04);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            padding: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         .sidebar-brand-row a {
@@ -343,16 +364,20 @@
         }
 
         [data-sidebar-brand-id] {
-            max-width: 180px;
-            overflow-wrap: anywhere;
-            white-space: normal;
+            color: #0F172A;
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            line-height: 1.1;
+            display: block;
+            margin-bottom: 0.1rem;
         }
 
         .brand-note {
-            color: var(--dash-muted);
-            font-size: 0.72rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
+            color: #54C2F0;
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
         }
 
@@ -370,23 +395,24 @@
 
         .sidebar-role-card {
             background:
-                linear-gradient(135deg, rgba(31, 111, 139, 0.12), transparent 58%),
-                rgba(255, 255, 255, 0.72);
-            border: 1px solid rgba(31, 111, 139, 0.14);
-            border-radius: 18px;
-            color: var(--dash-ink-soft);
+                linear-gradient(135deg, rgba(31, 182, 255, 0.08), transparent 58%),
+                rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(31, 182, 255, 0.1);
+            border-radius: 22px;
+            color: #475569;
             display: grid;
             gap: 0.25rem;
             padding: 0.85rem;
         }
 
         .sidebar-role-card strong {
-            color: var(--dash-text);
+            color: #0F172A;
             font-size: 0.92rem;
+            font-weight: 700;
         }
 
         .sidebar-section-label {
-            color: var(--dash-muted);
+            color: #94A3B8;
             font-size: 0.68rem;
             font-weight: 800;
             letter-spacing: 0.12em;
@@ -395,14 +421,14 @@
         }
 
         .dash-link {
-            color: var(--dash-text) !important;
+            color: #475569 !important;
             border: 1px solid transparent;
-            border-radius: 16px;
+            border-radius: 14px;
             font-weight: 600;
             min-height: 46px;
             padding: 0.72rem 0.82rem;
             position: relative;
-            transition: all 0.2s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .dash-link i {
@@ -412,23 +438,24 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(31, 111, 139, 0.1);
-            color: var(--dash-primary-deep);
+            background: rgba(31, 182, 255, 0.08);
+            color: #1FB6FF;
             font-size: 0.95rem;
-            transition: background 0.2s ease, color 0.2s ease;
+            transition: all 0.25s ease;
         }
 
         .dash-link:hover,
         .dash-link.is-active {
-            color: var(--dash-primary-deep) !important;
-            background: rgba(255, 255, 255, 0.76);
-            border-color: rgba(31, 111, 139, 0.16);
-            box-shadow: 0 12px 24px rgba(27, 26, 23, 0.08), inset 4px 0 0 var(--dash-primary);
+            color: #1FB6FF !important;
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(31, 182, 255, 0.15);
+            box-shadow: 0 8px 20px rgba(15, 182, 255, 0.08);
+            transform: translateX(4px);
         }
 
         .dash-link:hover i,
         .dash-link.is-active i {
-            background: var(--dash-primary);
+            background: #1FB6FF;
             color: #fff;
         }
 
@@ -451,18 +478,18 @@
         }
 
         .dashboard-sidebar .btn-outline-danger {
-            background: rgba(255, 255, 255, 0.62);
-            border-color: rgba(185, 95, 68, 0.24);
-            border-radius: 16px;
-            color: #8f432f;
+            background: rgba(255, 255, 255, 0.65);
+            border-color: rgba(255, 122, 89, 0.2);
+            border-radius: 14px;
+            color: #FF7A59;
             font-weight: 700;
             min-height: 46px;
+            transition: all 0.2s ease;
         }
 
         .dashboard-sidebar .btn-outline-danger:hover {
-            background: #fff0e6;
-            border-color: rgba(185, 95, 68, 0.36);
-            color: #8f432f;
+            background: rgba(255, 122, 89, 0.1);
+            color: #E05A3D;
         }
 
         .dash-top-btn {
@@ -874,8 +901,11 @@
         body.dark-theme .notif-item,
         body.dark-theme .profile-pane-card,
         body.dark-theme .profile-pane-meta div {
-            background: #111827 !important;
-            border-color: rgba(255, 255, 255, 0.1) !important;
+            background: rgba(30, 41, 59, 0.6) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            backdrop-filter: blur(12px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
         }
         body.dark-theme .dash-link { color: #cbd5e1 !important; }
         body.dark-theme .dash-link i { background: rgba(255, 255, 255, 0.05); color: #38bdf8; }
@@ -884,6 +914,11 @@
             background: rgba(255, 255, 255, 0.05);
             color: #38bdf8 !important;
         }
+
+        body.dark-theme [data-sidebar-brand-id] {
+            color: #F1F5F9 !important;
+        }
+        body.dark-theme .brand-note { color: #38bdf8 !important; }
 
         body.dark-theme .dashboard-topbar {
             background: rgba(30, 41, 59, 0.8) !important;
@@ -927,8 +962,6 @@
         body.dark-theme .course-sidebar,
         body.dark-theme .course-tab-content,
         body.dark-theme .workspace-hero,
-        body.dark-theme .student-studio,
-        body.dark-theme .join-desk,
         body.dark-theme .code-input-shell,
         body.dark-theme .class-detail-list li,
         body.dark-theme .practice-hero,
@@ -1037,9 +1070,19 @@
 <body class="dashboard-body">
     <script>
         (function() {
-            if (localStorage.getItem('pabasa_theme') === 'dark') {
-                document.body.classList.add('dark-theme');
-            }
+            const applyTheme = () => {
+                let theme = localStorage.getItem('pabasa_theme');
+                try { theme = JSON.parse(theme); } catch(e) {}
+                if (theme === 'dark') {
+                    document.body.classList.add('dark-theme');
+                } else {
+                    document.body.classList.remove('dark-theme');
+                }
+            };
+            applyTheme();
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'pabasa_theme') applyTheme();
+            });
         })();
     </script>
     <div class="d-flex">
