@@ -9,6 +9,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
 from django.db import IntegrityError
+from django.db.models import Q
 from functools import wraps
 import logging
 import json
@@ -1270,13 +1271,148 @@ def _admin_archive_user(request, user_id, role):
 
 @admin_required
 def admin_classes(request):
-    return render(request, 'pabasa_app/admin_classes.html', _admin_context(request, 'Classes', [
+    """List all classes with search and filter options."""
+    return render(request, 'pabasa_app/admin_classes.html', _admin_sections_context(request, 'Classes'))
+
+def _get_managed_section(section_id):
+    """Retrieve a section by ID. Returns None if not found."""
+    try:
+        return Section.objects.get(id=section_id)
+    except Section.DoesNotExist:
+        return None
+
+def _admin_sections_context(request, page_title):
+    """
+    Build context for admin class list view with search and filter.
+    Supports search by class_code, class_name, subject, and teacher name.
+    Supports filter by status (active, archived, all).
+    """
+    search_query = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', 'all').strip().lower()
+
+    sections = Section.objects.all()
+    
+    if search_query:
+        sections = sections.filter(
+            Q(class_code__icontains=search_query) |
+            Q(class_name__icontains=search_query) |
+            Q(subject__icontains=search_query) |
+            Q(teacher__first_name__icontains=search_query) |
+            Q(teacher__last_name__icontains=search_query)
+        )
+    
+    if status_filter == 'active':
+        sections = sections.filter(is_active=True)
+    elif status_filter == 'archived':
+        sections = sections.filter(is_active=False)
+
+    context = _admin_context(request, page_title, [
         'Class Code',
         'Class Name',
         'Teacher',
-        'Students',
+        'Student Count',
         'Status',
-    ]))
+        'Actions',
+    ])
+    context.update({
+        'sections': sections.order_by('class_name'),
+        'search_query': search_query,
+        'status_filter': status_filter,
+    })
+    return context
+
+def _admin_section_template_context(request, section, page_title):
+    """Build context for section detail and edit templates."""
+    student_count = section.get_student_count()
+    enrolled_students = section.get_enrolled_students(active_only=True)
+    
+    context = _admin_context(request, page_title, [])
+    context.update({
+        'section': section,
+        'teacher': section.teacher,
+        'student_count': student_count,
+        'enrolled_students': enrolled_students,
+        'status': 'Active' if section.is_active else 'Archived',
+    })
+    return context
+
+@admin_required
+def admin_class_detail(request, section_id):
+    """View class details including enrolled students."""
+    section = _get_managed_section(section_id)
+    if not section:
+        return redirect('admin_classes')
+    return render(request, 'pabasa_app/admin_class_detail.html', 
+                  _admin_section_template_context(request, section, 'Class Details'))
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_class_edit(request, section_id):
+    """Edit class information."""
+    return _admin_edit_section(request, section_id)
+
+def _admin_edit_section(request, section_id):
+    """Handle GET/POST for section edit view."""
+    section = _get_managed_section(section_id)
+    if not section:
+        return redirect('admin_classes')
+
+    if request.method == 'POST':
+        class_name = request.POST.get('class_name', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        grade_level = request.POST.get('grade_level', '').strip()
+        section_field = request.POST.get('section', '').strip()
+        header = request.POST.get('header', '').strip()
+        description = request.POST.get('description', '').strip()
+
+        # Validation
+        if not class_name:
+            context = _admin_section_template_context(request, section, 'Edit Class')
+            context['error_message'] = 'Class name is required.'
+            return render(request, 'pabasa_app/admin_class_edit.html', context, status=400)
+        
+        if not subject:
+            context = _admin_section_template_context(request, section, 'Edit Class')
+            context['error_message'] = 'Subject is required.'
+            return render(request, 'pabasa_app/admin_class_edit.html', context, status=400)
+
+        # Update section
+        section.class_name = class_name
+        section.subject = subject
+        section.grade_level = grade_level
+        section.section = section_field
+        section.header = header
+        section.description = description
+        section.save()
+        
+        return redirect('admin_class_detail', section_id=section.id)
+
+    return render(request, 'pabasa_app/admin_class_edit.html', 
+                  _admin_section_template_context(request, section, 'Edit Class'))
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_class_deactivate(request, section_id):
+    """Deactivate a class (soft delete with status flag)."""
+    return _admin_deactivate_section(request, section_id)
+
+def _admin_deactivate_section(request, section_id):
+    """Handle POST for section deactivate action."""
+    section = _get_managed_section(section_id)
+    if not section:
+        return redirect('admin_classes')
+
+    action = request.POST.get('action', 'deactivate').strip().lower()
+    
+    if action == 'deactivate' and section.is_active:
+        section.is_active = False
+        section.deactivate_all_students()
+        section.save()
+    elif action == 'reactivate' and not section.is_active:
+        section.is_active = True
+        section.save()
+
+    return redirect('admin_classes')
 
 @admin_required
 def admin_courses(request):
