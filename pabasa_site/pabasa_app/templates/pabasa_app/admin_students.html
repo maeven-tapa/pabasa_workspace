@@ -1,0 +1,24 @@
+{% extends "pabasa_app/admin_base.html" %}
+
+{% block content %}
+<div class="admin-panel">
+    <div class="table-responsive">
+        <table class="table placeholder-table align-middle">
+            <thead>
+                <tr>
+                    {% for header in table_headers %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="{{ table_headers|length }}" class="text-center text-secondary py-5">
+                        Student records placeholder. CRUD is not implemented yet.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

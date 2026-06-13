@@ -5,6 +5,7 @@ from datetime import datetime
 
 class User(models.Model):
     ROLE_CHOICES = [
+        ("admin", "Admin"),
         ("teacher", "Teacher"),
         ("student", "Student"),
     ]
@@ -25,6 +26,8 @@ class User(models.Model):
     password_hash = models.CharField(max_length=255)
     profile_picture = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=list, blank=True)
+    is_archived = models.BooleanField(default=False)
+    archived_at = models.DateTimeField(null=True, blank=True)
     # Teacher-specific fields
     teacher_role = models.CharField(max_length=50, blank=True, null=True)
     school = models.CharField(max_length=150, blank=True, null=True)

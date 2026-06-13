@@ -10,8 +10,8 @@ from .models import (
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-	list_display = ("custom_id", "first_name", "last_name", "email", "role", "created_at", "tags")
-	list_filter = ("role", "sex", "created_at")
+	list_display = ("custom_id", "first_name", "last_name", "email", "role", "is_archived", "created_at", "tags")
+	list_filter = ("role", "is_archived", "sex", "created_at")
 	search_fields = ("custom_id", "first_name", "last_name", "email")
 	ordering = ("last_name", "first_name")
 

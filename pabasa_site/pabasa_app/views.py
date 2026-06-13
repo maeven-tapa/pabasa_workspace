@@ -131,7 +131,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from datetime import timedelta
-from django.db.models import Max, Count
+from django.db.models import Max, Count, Q
 
 
 logger = logging.getLogger(__name__)
@@ -168,7 +168,9 @@ def csrf_failure(request, reason=''):
 # Authentication functions
 def generate_custom_id(role):
     """Generate unique custom ID based on role"""
-    if role == 'teacher':
+    if role == 'admin':
+        prefix = 'ADM'
+    elif role == 'teacher':
         prefix = 'TCH'
     else:  # student
         prefix = 'G2'
@@ -775,8 +777,14 @@ def login_user(request):
         if not check_password(password, user.password_hash):
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
 
+        if getattr(user, 'is_archived', False):
+            return JsonResponse({'success': False, 'error': 'This account has been archived. Please contact an administrator.'}, status=403)
+
         # Verify account activity status
-        if user.role == 'teacher':
+        if user.role == 'admin':
+            # Admins are considered active by default.
+            pass
+        elif user.role == 'teacher':
             # Teachers are considered active by default unless explicitly deactivated
             pass
         elif user.role == 'student':
@@ -791,7 +799,12 @@ def login_user(request):
         request.session['last_name'] = user.last_name
         request.session['email'] = user.email
         
-        redirect_url = '/dashboard/teacher/' if user.role == 'teacher' else '/dashboard/'
+        if user.role == 'admin':
+            redirect_url = '/dashboard/admin/'
+        elif user.role == 'teacher':
+            redirect_url = '/dashboard/teacher/'
+        else:
+            redirect_url = '/dashboard/'
         
         return JsonResponse({
             'success': True,
@@ -1010,6 +1023,289 @@ def dashboard_teacher(request):
         return redirect('auth')
     
     return render(request, 'pabasa_app/dashboard_teacher.html', _dashboard_context(request, 'teacher'))
+
+def dashboard_admin(request):
+    if not _check_auth(request):
+        return redirect('auth')
+    if request.session.get('user_role') != 'admin':
+        return redirect('auth')
+
+    context = _admin_context(request, 'Dashboard', [])
+    dashboard_data = _get_dashboard_data()
+    context.update(dashboard_data)
+    
+    return render(request, 'pabasa_app/admin_dashboard.html', context)
+
+def _admin_context(request, page_title, table_headers):
+    return {
+        'admin_username': request.session.get('custom_id', ''),
+        'first_name': request.session.get('first_name', ''),
+        'last_name': request.session.get('last_name', ''),
+        'page_title': page_title,
+        'table_headers': table_headers,
+    }
+
+def _get_dashboard_data():
+    """
+    Compute dashboard statistics and recent activities.
+    Returns a dictionary with 'stats' and 'activities' keys.
+    All queries use verified field names from models.
+    Querysets are passed directly to template (no list conversion for efficiency).
+    """
+    dashboard_data = {
+        'stats': {
+            # User statistics (verified fields: role, is_archived)
+            'active_students': User.objects.filter(role='student', is_archived=False).count(),
+            'active_teachers': User.objects.filter(role='teacher', is_archived=False).count(),
+            'archived_users': User.objects.filter(is_archived=True).count(),
+            
+            # Section statistics (verified fields: is_active)
+            'active_classes': Section.objects.filter(is_active=True).count(),
+            
+            # Material statistics (verified fields: is_active, status, item_type)
+            'active_materials': Material.objects.filter(is_active=True).count(),
+            'published_materials': Material.objects.filter(status='published', is_active=True).count(),
+            'draft_materials': Material.objects.filter(status='draft', is_active=True).count(),
+            'word_count': Material.objects.filter(item_type='word', is_active=True).count(),
+            'sentence_count': Material.objects.filter(item_type='sentence', is_active=True).count(),
+            'paragraph_count': Material.objects.filter(item_type='paragraph', is_active=True).count(),
+            
+            # Assessment statistics (verified fields: is_active, status)
+            'active_assessments': Assessment.objects.filter(is_active=True).count(),
+            'published_assessments': Assessment.objects.filter(status='published', is_active=True).count(),
+        },
+        
+        'activities': {
+            # Last 5 students (fields: custom_id, first_name, last_name, created_at)
+            'recent_students': User.objects.filter(role='student', is_archived=False)
+                .order_by('-created_at')
+                .values('custom_id', 'first_name', 'last_name', 'created_at')[:5],
+            
+            # Last 5 teachers (fields: custom_id, first_name, last_name, created_at)
+            'recent_teachers': User.objects.filter(role='teacher', is_archived=False)
+                .order_by('-created_at')
+                .values('custom_id', 'first_name', 'last_name', 'created_at')[:5],
+            
+            # Last 5 classes (fields: class_code, class_name, created_at)
+            'recent_classes': Section.objects.filter(is_active=True)
+                .order_by('-created_at')
+                .values('class_code', 'class_name', 'created_at')[:5],
+            
+            # Last 5 materials (fields: title, item_type, status, created_at)
+            'recent_materials': Material.objects.filter(is_active=True)
+                .order_by('-created_at')
+                .values('title', 'item_type', 'status', 'created_at')[:5],
+        }
+    }
+    
+    return dashboard_data
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not _check_auth(request):
+            return redirect('auth')
+        if request.session.get('user_role') != 'admin':
+            return redirect('auth')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+@admin_required
+def admin_students(request):
+    return render(request, 'pabasa_app/admin_students.html', _admin_users_context(request, 'student', 'Students'))
+
+@admin_required
+def admin_teachers(request):
+    return render(request, 'pabasa_app/admin_teachers.html', _admin_users_context(request, 'teacher', 'Teachers'))
+
+def _admin_user_status(user):
+    return 'Archived' if getattr(user, 'is_archived', False) else 'Active'
+
+def _admin_user_full_name(user):
+    return ' '.join(part for part in [
+        user.first_name,
+        user.middle_initial,
+        user.last_name,
+        user.suffix,
+    ] if part).strip()
+
+def _admin_users_context(request, role, page_title):
+    search_query = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', 'all').strip().lower()
+
+    users = User.objects.filter(role=role)
+    if search_query:
+        users = users.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(custom_id__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    if status_filter == 'active':
+        users = users.filter(is_archived=False)
+    elif status_filter == 'archived':
+        users = users.filter(is_archived=True)
+
+    context = _admin_context(request, page_title, [
+        'Name',
+        'ID',
+        'Username',
+        'Email',
+        'Status',
+        'Actions',
+    ])
+    context.update({
+        'managed_role': role,
+        'users': users.order_by('last_name', 'first_name'),
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'status_options': [
+            ('all', 'All Statuses'),
+            ('active', 'Active'),
+            ('archived', 'Archived'),
+        ],
+    })
+    return context
+
+def _admin_user_redirect_name(role):
+    return 'admin_students' if role == 'student' else 'admin_teachers'
+
+def _admin_user_template_context(request, user, page_title):
+    context = _admin_context(request, page_title, [])
+    context.update({
+        'managed_user': user,
+        'managed_user_name': _admin_user_full_name(user),
+        'managed_user_status': _admin_user_status(user),
+        'managed_role': user.role,
+        'back_url_name': _admin_user_redirect_name(user.role),
+    })
+    return context
+
+def _get_managed_user(user_id, role):
+    return User.objects.filter(id=user_id, role=role).first()
+
+@admin_required
+def admin_student_detail(request, user_id):
+    user = _get_managed_user(user_id, 'student')
+    if not user:
+        return redirect('admin_students')
+    return render(request, 'pabasa_app/admin_user_detail.html', _admin_user_template_context(request, user, 'Student Details'))
+
+@admin_required
+def admin_teacher_detail(request, user_id):
+    user = _get_managed_user(user_id, 'teacher')
+    if not user:
+        return redirect('admin_teachers')
+    return render(request, 'pabasa_app/admin_user_detail.html', _admin_user_template_context(request, user, 'Teacher Details'))
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_student_edit(request, user_id):
+    return _admin_edit_user(request, user_id, 'student')
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_teacher_edit(request, user_id):
+    return _admin_edit_user(request, user_id, 'teacher')
+
+def _admin_edit_user(request, user_id, role):
+    user = _get_managed_user(user_id, role)
+    if not user:
+        return redirect(_admin_user_redirect_name(role))
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        if email and User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
+            context = _admin_user_template_context(request, user, f'Edit {role.title()}')
+            context['error_message'] = 'Email is already used by another account.'
+            return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
+
+        user.first_name = request.POST.get('first_name', '').strip()
+        user.middle_initial = request.POST.get('middle_initial', '').strip()[:1]
+        user.last_name = request.POST.get('last_name', '').strip()
+        user.suffix = request.POST.get('suffix', '').strip()
+        user.email = email
+        user.contact_no = request.POST.get('contact_no', '').strip()
+        user.sex = request.POST.get('sex', '').strip()
+
+        if role == 'student':
+            user.grade_level = request.POST.get('grade_level', '').strip()
+            user.section = request.POST.get('section', '').strip()
+            user.reading_level = request.POST.get('reading_level', '').strip()
+            user.parent_contact_no = request.POST.get('parent_contact_no', '').strip()
+        else:
+            user.teacher_role = request.POST.get('teacher_role', '').strip()
+            user.school = request.POST.get('school', '').strip()
+            user.department = request.POST.get('department', '').strip()
+
+        user.save()
+        return redirect('admin_student_detail' if role == 'student' else 'admin_teacher_detail', user_id=user.id)
+
+    return render(request, 'pabasa_app/admin_user_edit.html', _admin_user_template_context(request, user, f'Edit {role.title()}'))
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_student_archive(request, user_id):
+    return _admin_archive_user(request, user_id, 'student')
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_teacher_archive(request, user_id):
+    return _admin_archive_user(request, user_id, 'teacher')
+
+def _admin_archive_user(request, user_id, role):
+    user = _get_managed_user(user_id, role)
+    if not user:
+        return redirect(_admin_user_redirect_name(role))
+
+    if user.id == request.session.get('user_id'):
+        return redirect(_admin_user_redirect_name(role))
+
+    if not user.is_archived:
+        user.is_archived = True
+        user.archived_at = timezone.now()
+        user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
+
+    return redirect(_admin_user_redirect_name(role))
+
+@admin_required
+def admin_classes(request):
+    return render(request, 'pabasa_app/admin_classes.html', _admin_context(request, 'Classes', [
+        'Class Code',
+        'Class Name',
+        'Teacher',
+        'Students',
+        'Status',
+    ]))
+
+@admin_required
+def admin_courses(request):
+    return render(request, 'pabasa_app/admin_courses.html', _admin_context(request, 'Courses', [
+        'Course',
+        'Grade Level',
+        'Classes',
+        'Materials',
+        'Status',
+    ]))
+
+@admin_required
+def admin_practice_assessment(request):
+    return render(request, 'pabasa_app/admin_practice_assessment.html', _admin_context(request, 'Practice Assessment', [
+        'Assessment',
+        'Type',
+        'Assigned Class',
+        'Attempts',
+        'Status',
+    ]))
+
+@admin_required
+def admin_settings(request):
+    return render(request, 'pabasa_app/admin_settings.html', _admin_context(request, 'Settings', [
+        'Setting',
+        'Current Value',
+        'Description',
+        'Status',
+    ]))
 
 def courses(request):
     if not _check_auth(request):
