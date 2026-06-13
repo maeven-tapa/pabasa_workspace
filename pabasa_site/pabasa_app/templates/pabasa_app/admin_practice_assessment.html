@@ -2,6 +2,58 @@
 
 {% block content %}
 <div class="admin-panel">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h2 class="h4 fw-bold mb-1">Practice Content</h2>
+            <p class="text-secondary mb-0">Manage standalone Practice Mode items by difficulty.</p>
+        </div>
+        <a class="btn btn-primary" href="{% url 'admin_practice_create' %}">
+            <i class="bi bi-plus-lg me-1"></i>Add Practice Content
+        </a>
+    </div>
+
+    <form class="row g-2 align-items-end mb-3" method="get">
+        <div class="col-12 col-lg-3">
+            <label class="form-label small fw-bold text-secondary" for="practiceSearch">Search</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input class="form-control" id="practiceSearch" type="search" name="q" value="{{ search_query }}" placeholder="Title">
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label class="form-label small fw-bold text-secondary" for="difficultyFilter">Difficulty</label>
+            <select class="form-select" id="difficultyFilter" name="difficulty">
+                {% for value, label in difficulty_options %}
+                <option value="{{ value }}" {% if difficulty_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2">
+            <label class="form-label small fw-bold text-secondary" for="typeFilter">Type</label>
+            <select class="form-select" id="typeFilter" name="type">
+                {% for value, label in type_options %}
+                <option value="{{ value }}" {% if type_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <label class="form-label small fw-bold text-secondary" for="statusFilter">Status</label>
+            <select class="form-select" id="statusFilter" name="status">
+                {% for value, label in status_options %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-2 d-flex gap-2">
+            <button class="btn btn-primary flex-fill" type="submit">
+                <i class="bi bi-funnel me-1"></i>Apply
+            </button>
+            <a class="btn btn-outline-secondary" href="{% url 'admin_practice_assessment' %}" aria-label="Clear filters">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        </div>
+    </form>
+
     <div class="table-responsive">
         <table class="table placeholder-table align-middle">
             <thead>
@@ -12,11 +64,56 @@
                 </tr>
             </thead>
             <tbody>
+                {% for item in practice_items %}
                 <tr>
-                    <td colspan="{{ table_headers|length }}" class="text-center text-secondary py-5">
-                        Practice assessment records placeholder. CRUD is not implemented yet.
+                    <td>
+                        <span class="fw-bold d-block">{{ item.title }}</span>
+                        {% if item.prompt_text %}
+                        <span class="small text-secondary">{{ item.prompt_text|truncatechars:70 }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.difficulty_level|title }}</td>
+                    <td>{{ item.get_item_type_display }}</td>
+                    <td>
+                        {% if item.is_active %}
+                        <span class="badge rounded-pill text-bg-success">{{ item.get_status_display }}</span>
+                        {% else %}
+                        <span class="badge rounded-pill text-bg-secondary">Archived</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.created_at|date:"M d, Y g:i A" }}</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_practice_detail' item.id %}">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin_practice_edit' item.id %}">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </a>
+                            <form method="post" action="{% url 'admin_practice_archive' item.id %}">
+                                {% csrf_token %}
+                                {% if item.is_active %}
+                                <input type="hidden" name="action" value="archive">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">
+                                    <i class="bi bi-archive me-1"></i>Archive
+                                </button>
+                                {% else %}
+                                <input type="hidden" name="action" value="restore">
+                                <button class="btn btn-sm btn-outline-success" type="submit">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+                                </button>
+                                {% endif %}
+                            </form>
+                        </div>
                     </td>
                 </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ table_headers|length }}" class="text-center text-secondary py-5">
+                        No practice content found.
+                    </td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>

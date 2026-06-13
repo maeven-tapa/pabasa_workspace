@@ -1,0 +1,80 @@
+{% extends "pabasa_app/admin_base.html" %}
+
+{% block content %}
+<div class="admin-panel">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_practice_detail' practice.id %}">
+                <i class="bi bi-arrow-left me-1"></i>Back to practice content
+            </a>
+            <h2 class="h4 fw-bold mb-1">Edit {{ practice.title }}</h2>
+            <p class="text-secondary mb-0">{{ practice_status }}</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_practice_assessment' %}">
+            <i class="bi bi-journal-check me-1"></i>Practice
+        </a>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label fw-bold" for="{{ form.title.id_for_label }}">Title</label>
+                <input class="form-control {% if form.title.errors %}is-invalid{% endif %}" id="{{ form.title.id_for_label }}" type="text" name="{{ form.title.html_name }}" value="{{ form.title.value|default_if_none:'' }}" required>
+                {% for error in form.title.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-bold" for="{{ form.difficulty_level.id_for_label }}">Difficulty</label>
+                <select class="form-select {% if form.difficulty_level.errors %}is-invalid{% endif %}" id="{{ form.difficulty_level.id_for_label }}" name="{{ form.difficulty_level.html_name }}" required>
+                    {% for value, label in form.fields.difficulty_level.choices %}
+                    <option value="{{ value }}" {% if form.difficulty_level.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                {% for error in form.difficulty_level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-bold" for="{{ form.item_type.id_for_label }}">Practice Type</label>
+                <select class="form-select {% if form.item_type.errors %}is-invalid{% endif %}" id="{{ form.item_type.id_for_label }}" name="{{ form.item_type.html_name }}" required>
+                    {% for value, label in form.fields.item_type.choices %}
+                    <option value="{{ value }}" {% if form.item_type.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                {% for error in form.item_type.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-bold" for="{{ form.status.id_for_label }}">Status</label>
+                <select class="form-select {% if form.status.errors %}is-invalid{% endif %}" id="{{ form.status.id_for_label }}" name="{{ form.status.html_name }}" required>
+                    {% for value, label in form.fields.status.choices %}
+                    <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                {% for error in form.status.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" for="{{ form.prompt_text.id_for_label }}">Prompt</label>
+                <textarea class="form-control {% if form.prompt_text.errors %}is-invalid{% endif %}" id="{{ form.prompt_text.id_for_label }}" name="{{ form.prompt_text.html_name }}" rows="3">{{ form.prompt_text.value|default_if_none:'' }}</textarea>
+                {% for error in form.prompt_text.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" for="{{ form.content_text.id_for_label }}">Content</label>
+                <textarea class="form-control {% if form.content_text.errors %}is-invalid{% endif %}" id="{{ form.content_text.id_for_label }}" name="{{ form.content_text.html_name }}" rows="8" required>{{ form.content_text.value|default_if_none:'' }}</textarea>
+                {% for error in form.content_text.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
+            <a class="btn btn-outline-secondary" href="{% if practice %}{% url 'admin_practice_detail' practice.id %}{% else %}{% url 'admin_practice_assessment' %}{% endif %}">Cancel</a>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check2 me-1"></i>Save Practice Content
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

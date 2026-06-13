@@ -3,11 +3,8 @@
 
 {% block extra_head %}
 <style>
-    /* Ensure main content area handles sidebar transition correctly on mobile */
     @media (max-width: 991.98px) {
-        .dashboard-main {
-            margin-left: 0 !important;
-        }
+        .dashboard-main { margin-left: 0 !important; }
     }
 
     body.dashboard-body {
@@ -18,43 +15,28 @@
             url("{% static 'pabasa_app/images/student_bg.jpg' %}") center / cover fixed no-repeat !important;
     }
 
-    /* Dark mode background */
-    body.dark-theme.dashboard-body {
-        background:
-            radial-gradient(circle at 10% 20%, rgba(31, 182, 255, 0.04), transparent 40%),
-            radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.05), transparent 40%),
-            linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.85)),
-            url("{% static 'pabasa_app/images/student_bg.jpg' %}") center / cover fixed no-repeat !important;
-    }
-
-    /* Dark mode glassmorphism overrides */
-    body.dark-theme .practice-hero,
-    body.dark-theme .subject-card {
-        background: rgba(30, 41, 59, 0.45) !important;
-        border-color: rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(12px) saturate(160%) !important;
-        -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
-    }
-
     .practice-board {
         display: grid;
         gap: 1.15rem;
     }
 
-    .practice-hero {
-        background: rgba(255, 255, 255, 0.25);
+    .practice-hero,
+    .subject-card {
+        background: rgba(255, 255, 255, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 32px;
         backdrop-filter: blur(12px) saturate(160%);
         -webkit-backdrop-filter: blur(12px) saturate(160%);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
+    }
+
+    .practice-hero {
+        border-radius: 32px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 0.85rem;
+        overflow: hidden;
         padding: 1.5rem 2rem;
         position: relative;
-        overflow: hidden;
-        transition: min-height 0.25s ease, grid-template-columns 0.25s ease, padding 0.25s ease;
     }
 
     .practice-hero::after {
@@ -108,7 +90,7 @@
         border-radius: inherit;
         display: block;
         height: 100%;
-        width: 36%;
+        width: 0;
     }
 
     .subject-grid {
@@ -119,15 +101,9 @@
     }
 
     .subject-card {
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.5);
         border-radius: 28px;
-        backdrop-filter: blur(12px) saturate(160%);
-        -webkit-backdrop-filter: blur(12px) saturate(160%);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
         display: flex;
         flex-direction: column;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         gap: 0.85rem;
         overflow: hidden;
         padding: 1.25rem;
@@ -142,50 +118,34 @@
         position: absolute;
         right: 0;
         top: 0;
-        background: var(--sky);
     }
 
+    .subject-card[data-difficulty="easy"]::before { background: #16a34a; }
+    .subject-card[data-difficulty="medium"]::before { background: #f59e0b; }
+    .subject-card[data-difficulty="hard"]::before { background: #b95f44; }
+
     .subject-info {
+        align-items: flex-start;
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
         margin-bottom: 0.5rem;
     }
 
     .subject-info h3 {
+        color: var(--dash-text);
         font-size: 1.25rem;
         font-weight: 800;
         margin: 0;
-        color: var(--dash-text);
     }
 
     .subject-code {
+        background: var(--sky-soft);
+        border-radius: 6px;
+        color: var(--sky);
         font-size: 0.75rem;
         font-weight: 800;
-        color: var(--sky);
-        background: var(--sky-soft);
         padding: 2px 8px;
-        border-radius: 6px;
         text-transform: uppercase;
-    }
-
-    .step-number {
-        color: rgba(27, 26, 23, 0.1);
-        font-size: 1.35rem;
-        font-weight: 700;
-        line-height: 0.85;
-    }
-
-    .step-icon {
-        align-items: center;
-        background: #f6f5f2;
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 16px;
-        color: var(--dash-primary-deep);
-        display: inline-flex;
-        height: 48px;
-        justify-content: center;
-        width: 48px;
     }
 
     .practice-type-link {
@@ -193,12 +153,12 @@
         background: #f8f9fa;
         border: 1px solid rgba(27, 26, 23, 0.05);
         border-radius: 16px;
+        color: var(--dash-text);
         display: flex;
+        justify-content: space-between;
         padding: 0.75rem 1rem;
         text-decoration: none;
         transition: all 0.2s ease;
-        color: var(--dash-text);
-        justify-content: space-between;
     }
 
     .practice-type-link:hover {
@@ -208,35 +168,27 @@
         transform: translateX(4px);
     }
 
-    .practice-type-link.is-done {
-        border-color: #16a34a;
-        background: #f0fdf4;
-    }
-    .practice-type-link.is-done:hover {
-        box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
-    }
-
     .practice-type-link.is-disabled {
+        filter: grayscale(1);
         opacity: 0.5;
         pointer-events: none;
-        filter: grayscale(1);
     }
 
     .type-meta {
-        display: flex;
         align-items: center;
+        display: flex;
         gap: 0.75rem;
     }
 
     .type-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 10px;
-        display: flex;
         align-items: center;
-        justify-content: center;
+        border-radius: 10px;
         color: white;
+        display: flex;
         font-size: 0.9rem;
+        height: 32px;
+        justify-content: center;
+        width: 32px;
     }
 
     .type-word .type-icon { background: #1f6f8b; }
@@ -250,52 +202,27 @@
     }
 
     .type-info span {
-        font-size: 0.78rem;
         color: var(--dash-muted);
+        font-size: 0.78rem;
+    }
+
+    .practice-empty-state,
+    .practice-tip-strip {
+        border-radius: 22px;
     }
 
     .practice-empty-state {
         background: white;
         border: 1px dashed var(--line);
-        border-radius: 20px;
-        padding: 3rem;
-        text-align: center;
         color: var(--dash-muted);
         grid-column: 1 / -1;
-    }
-
-    .practice-class-type {
-        display: grid;
-        gap: 0.4rem;
-    }
-
-    .practice-class-type strong {
-        color: var(--dash-muted);
-        font-size: 0.74rem;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-    }
-
-    .practice-class-type ul {
-        display: grid;
-        gap: 0.35rem;
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-
-    .practice-class-type li {
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid rgba(27, 26, 23, 0.06);
-        border-radius: 12px;
-        font-size: 0.8rem;
-        padding: 0.45rem 0.55rem;
+        padding: 3rem;
+        text-align: center;
     }
 
     .practice-tip-strip {
         align-items: center;
         background: #1b1a17;
-        border-radius: 22px;
         color: rgba(255, 253, 247, 0.78);
         display: grid;
         grid-template-columns: auto 1fr auto;
@@ -303,9 +230,7 @@
         padding: 1rem;
     }
 
-    .practice-tip-strip strong {
-        color: #fffdf7;
-    }
+    .practice-tip-strip strong { color: #fffdf7; }
 
     .tip-mark {
         align-items: center;
@@ -325,9 +250,8 @@
         }
 
         .practice-meter {
-            width: 100%;
             min-width: 0;
-            margin-top: 1rem;
+            width: 100%;
         }
     }
 </style>
@@ -342,11 +266,11 @@
     <div class="practice-hero">
         <div>
             <span class="dash-pill mb-3"><i class="bi bi-stars"></i> Reading warm-up</span>
-            <h2>Build fluency in small, clear steps.</h2>
-            <p>Start with words, move into sentences, then stretch into short passages. Each mode is designed as a quiet warm-up before class assessments arrive.</p>
+            <h2>Choose a difficulty, then start a focused practice set.</h2>
+            <p>Practice content comes from the active Admin Practice library. Pick Easy, Medium, or Hard, then choose words, sentences, or paragraphs.</p>
         </div>
         <aside class="practice-meter">
-            <p class="small mb-1" style="color: rgba(255,255,255,.62);">Today</p>
+            <p class="small mb-1" style="color: rgba(255,255,255,.62);">Available</p>
             <strong id="practiceMeterCount">0 practice sets</strong>
             <div class="meter-track" aria-hidden="true"><span></span></div>
         </aside>
@@ -363,31 +287,12 @@
     </div>
 </section>
 
+{{ practice_materials|json_script:"practiceMaterialsData" }}
 <script>
     (() => {
-        const studentClassCodesKey = "pabasaStudentClassCodes";
-        const legacyStudentClassCodeKey = "pabasaStudentClassCode";
-        const teacherClassesKey = "pabasa_teacher_classes";
-        const readingsStorageKey = "pabasa_class_readings";
+        const practiceMaterials = JSON.parse(document.getElementById("practiceMaterialsData")?.textContent || "[]");
         const materialTypes = ["word", "sentence", "paragraph"];
-
-        const getStoredArray = (key) => {
-            try {
-                const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (error) {
-                return [];
-            }
-        };
-
-        const getStoredObject = (key) => {
-            try {
-                const parsed = JSON.parse(window.localStorage.getItem(key) || "{}");
-                return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-            } catch (error) {
-                return {};
-            }
-        };
+        const difficultyLabels = { easy: "Easy", medium: "Medium", hard: "Hard" };
 
         const escapeHtml = (value) => {
             const div = document.createElement("div");
@@ -395,127 +300,66 @@
             return div.innerHTML;
         };
 
-        const getJoinedCodes = () => {
-            const codes = getStoredArray(studentClassCodesKey).filter(Boolean);
-            const legacyCode = window.localStorage.getItem(legacyStudentClassCodeKey);
-            if (!codes.length && legacyCode) {
-                codes.push(legacyCode);
-            }
-            return codes.map((code) => String(code).toUpperCase());
-        };
-
-        const getPracticeMaterials = () => {
-            const joinedCodes = getJoinedCodes();
-            const teacherClasses = getStoredArray(teacherClassesKey);
-            const readingsByClass = getStoredObject(readingsStorageKey);
-
-            return joinedCodes.map((code) => {
-                const classData = teacherClasses.find((item) => String(item.code || "").toUpperCase() === code) || { code, name: "Reading Class" };
-                const readings = readingsByClass[code] || {};
-                const materials = {};
-
-                materialTypes.forEach((type) => {
-                    // Support both singular and plural forms (word/words) for broader compatibility
-                    const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
-                    
-                    materials[type] = list
-                        .filter((material) => material && (String(material.type).toLowerCase() === "practice" || String(material.type).toLowerCase() === "both"))
-                        .filter((material) => {
-                            // Check if material is live (published or scheduled time passed)
-                            if (!material.status || material.status === 'published') return true;
-                            if (material.status === 'scheduled' && material.schedule) {
-                                return new Date(material.schedule).getTime() <= Date.now();
-                            }
-                            return false;
-                        });
-                });
-
-                return { classData, materials };
-            });
-        };
+        const byDifficulty = (difficulty) => practiceMaterials.filter((item) => item && item.difficulty === difficulty);
+        const countItems = (materials) => materials.reduce((total, item) => total + (Array.isArray(item.items) ? item.items.length : 0), 0);
+        const countSets = (materials, type) => materials.filter((item) => item.type === type).length;
 
         const renderPracticeHub = () => {
             const grid = document.getElementById("subjectGrid");
             if (!grid) return;
 
-            const classMaterials = getPracticeMaterials();
-            const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
-            
-            // Calculate totals for the meter
-            let totalSets = 0;
-            let completedSets = 0;
-
-            classMaterials.forEach(({ materials }) => {
-                materialTypes.forEach(type => {
-                    materials[type].forEach(m => {
-                        totalSets++;
-                        const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
-                        if (mId && seenIds.includes(mId)) completedSets++;
-                    });
-                });
-            });
-
+            const totalSets = practiceMaterials.length;
             const meterCount = document.getElementById("practiceMeterCount");
-            if (meterCount) meterCount.textContent = `${totalSets} practice set${totalSets !== 1 ? 's' : ''}`;
+            if (meterCount) meterCount.textContent = `${totalSets} practice set${totalSets !== 1 ? "s" : ""}`;
             const meterProgress = document.querySelector(".meter-track span");
-            if (meterProgress) meterProgress.style.width = (totalSets > 0 ? (completedSets / totalSets) * 100 : 0) + "%";
-            
-            if (!classMaterials.length) {
+            if (meterProgress) meterProgress.style.width = (totalSets > 0 ? 100 : 0) + "%";
+
+            if (!practiceMaterials.length) {
                 grid.innerHTML = `
                     <div class="practice-empty-state">
                         <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
-                        <h3>No classes joined yet</h3>
-                        <p>Join a class from your dashboard to start practicing assigned materials.</p>
+                        <h3>No practice content yet</h3>
+                        <p>No practice content available for this difficulty.</p>
                     </div>`;
                 return;
             }
 
-            grid.innerHTML = classMaterials.map(({ classData, materials }) => {
-                const itemsToRender = [];
-                materialTypes.forEach(type => {
-                    materials[type].forEach(m => {
-                        itemsToRender.push({ ...m, category: type });
-                    });
-                });
+            grid.innerHTML = Object.entries(difficultyLabels).map(([difficulty, label]) => {
+                const materials = byDifficulty(difficulty);
+                const itemCount = countItems(materials);
 
                 return `
-                <div class="subject-card">
+                <div class="subject-card" data-difficulty="${difficulty}">
                     <div class="subject-info">
                         <div>
-                            <h3>${escapeHtml(classData.name)}</h3>
-                            <p class="small text-secondary mb-0">${escapeHtml(classData.subject || "Reading")}</p>
+                            <h3>${escapeHtml(label)}</h3>
+                            <p class="small text-secondary mb-0">${itemCount ? `${itemCount} practice item${itemCount !== 1 ? "s" : ""}` : "No practice content available for this difficulty."}</p>
                         </div>
-                        <span class="subject-code">${escapeHtml(classData.code)}</span>
+                        <span class="subject-code">${materials.length} sets</span>
                     </div>
-                    
-                    ${itemsToRender.map(m => {
+
+                    ${materialTypes.map(type => {
                         const urlMap = { word: "{% url 'practice_word_page' %}", sentence: "{% url 'practice_sentence_page' %}", paragraph: "{% url 'practice_para_page' %}" };
-                        const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text' };
-                        const labelMap = { word: 'Words', sentence: 'Sentences', paragraph: 'Stories' };
-                        const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
-                        const isDone = mId && seenIds.includes(mId);
+                        const iconMap = { word: "bi-type", sentence: "bi-chat-left-text", paragraph: "bi-card-text" };
+                        const labelMap = { word: "Words", sentence: "Sentences", paragraph: "Paragraphs" };
+                        const setCount = countSets(materials, type);
+                        const href = `${urlMap[type]}?difficulty=${encodeURIComponent(difficulty)}`;
+                        const disabled = setCount === 0 ? "is-disabled" : "";
 
                         return `
-                        <a href="${urlMap[m.category]}?code=${classData.code}&test=${encodeURIComponent(m.title)}&id=${m.id}" class="practice-type-link type-${m.category} ${isDone ? 'is-done' : ''}">
+                        <a href="${href}" class="practice-type-link type-${type} ${disabled}">
                             <div class="type-meta">
-                                <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
-                                <div class="type-info"><strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-2" style="font-size: 0.6rem;">DONE</span>' : ''}</strong><span>${labelMap[m.category]} • ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span></div>
+                                <span class="type-icon"><i class="bi ${iconMap[type]}"></i></span>
+                                <div class="type-info"><strong>${labelMap[type]}</strong><span>${setCount ? `${setCount} set${setCount !== 1 ? "s" : ""}` : "No content available"}</span></div>
                             </div>
-                            <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-play-circle-fill text-primary'}"></i>
+                            <i class="bi ${setCount ? "bi-play-circle-fill text-primary" : "bi-lock text-secondary"}"></i>
                         </a>`;
-                    }).join("") || '<p class="text-center text-muted small my-3">No practice materials assigned for this class.</p>'}
+                    }).join("")}
                 </div>`;
             }).join("");
         };
 
         renderPracticeHub();
-
-        window.addEventListener("pabasa:student-class-updated", renderPracticeHub);
-        window.addEventListener("storage", (event) => {
-            if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey, "pabasa_seen_material_ids"].includes(event.key)) {
-                renderPracticeHub();
-            }
-        });
     })();
 </script>
 {% endblock %}

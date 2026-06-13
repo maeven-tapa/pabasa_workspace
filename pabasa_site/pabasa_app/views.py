@@ -20,6 +20,7 @@ import traceback
 import ssl
 import time
 import uuid
+from .forms import AdminPracticeMaterialForm
 from .models import User, Section, Assessment, Material, Note, Notification
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
@@ -1580,13 +1581,169 @@ def admin_course_archive(request, material_id):
 
 @admin_required
 def admin_practice_assessment(request):
-    return render(request, 'pabasa_app/admin_practice_assessment.html', _admin_context(request, 'Practice Assessment', [
-        'Assessment',
-        'Type',
-        'Assigned Class',
-        'Attempts',
+    return render(request, 'pabasa_app/admin_practice_assessment.html', _admin_practice_context(request, 'Practice'))
+
+def _practice_difficulty_values():
+    return [value for value, _label in AdminPracticeMaterialForm.DIFFICULTY_CHOICES]
+
+def _admin_practice_queryset():
+    return Material.objects.filter(
+        assessment__isnull=True,
+        section__isnull=True,
+        difficulty_level__in=_practice_difficulty_values(),
+    )
+
+def _get_admin_practice_material(practice_id):
+    return _admin_practice_queryset().filter(id=practice_id).first()
+
+def _admin_practice_status(material):
+    return 'Archived' if not material.is_active else material.get_status_display()
+
+def _admin_practice_context(request, page_title):
+    search_query = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', 'all').strip().lower()
+    difficulty_filter = request.GET.get('difficulty', 'all').strip().lower()
+    type_filter = request.GET.get('type', 'all').strip().lower()
+
+    practice_items = _admin_practice_queryset()
+
+    if search_query:
+        practice_items = practice_items.filter(title__icontains=search_query)
+
+    if status_filter == 'active':
+        practice_items = practice_items.filter(is_active=True)
+    elif status_filter == 'archived':
+        practice_items = practice_items.filter(is_active=False)
+    elif status_filter in {value for value, _label in AdminPracticeMaterialForm.STATUS_CHOICES}:
+        practice_items = practice_items.filter(status=status_filter, is_active=True)
+
+    if difficulty_filter in _practice_difficulty_values():
+        practice_items = practice_items.filter(difficulty_level=difficulty_filter)
+
+    valid_types = {choice[0] for choice in Material.ITEM_TYPE_CHOICES}
+    if type_filter in valid_types:
+        practice_items = practice_items.filter(item_type=type_filter)
+
+    context = _admin_context(request, page_title, [
+        'Title',
+        'Difficulty',
+        'Practice Type',
         'Status',
-    ]))
+        'Created At',
+        'Actions',
+    ])
+    context.update({
+        'practice_items': practice_items.order_by('difficulty_level', '-created_at'),
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'difficulty_filter': difficulty_filter,
+        'type_filter': type_filter,
+        'status_options': [('all', 'All Statuses'), ('active', 'Active')] + AdminPracticeMaterialForm.STATUS_CHOICES + [('archived', 'Archived')],
+        'difficulty_options': [('all', 'All Difficulties')] + AdminPracticeMaterialForm.DIFFICULTY_CHOICES,
+        'type_options': [('all', 'All Types')] + list(Material.ITEM_TYPE_CHOICES),
+    })
+    return context
+
+def _admin_practice_template_context(request, material=None, page_title='Practice'):
+    initial = {}
+    if material:
+        initial = {
+            'title': material.title,
+            'difficulty_level': material.difficulty_level,
+            'item_type': material.item_type,
+            'status': material.status if material.status in dict(AdminPracticeMaterialForm.STATUS_CHOICES) else 'draft',
+            'prompt_text': material.prompt_text,
+            'content_text': material.content_text,
+        }
+
+    form = AdminPracticeMaterialForm(initial=initial)
+    context = _admin_context(request, page_title, [])
+    context.update({
+        'form': form,
+        'practice': material,
+        'practice_status': _admin_practice_status(material) if material else '',
+        'practice_item_count': len((material.content_json or {}).get('items', [])) if material and isinstance(material.content_json, dict) else 0,
+    })
+    return context
+
+def _save_admin_practice_material(form, material=None):
+    items = form.practice_items()
+    cleaned = form.cleaned_data
+    material = material or Material(assessment=None, section=None)
+    material.title = cleaned['title']
+    material.item_type = cleaned['item_type']
+    material.prompt_text = cleaned.get('prompt_text', '')
+    material.content_text = cleaned['content_text']
+    material.status = cleaned['status']
+    material.difficulty_level = cleaned['difficulty_level']
+    material.scheduled_at = None
+    material.content_json = {
+        'source': 'admin_practice',
+        'difficulty': cleaned['difficulty_level'],
+        'items': items,
+    }
+    material.save()
+    material.assigned_sections.clear()
+    return material
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_practice_create(request):
+    if request.method == 'POST':
+        form = AdminPracticeMaterialForm(request.POST)
+        if form.is_valid():
+            material = _save_admin_practice_material(form)
+            return redirect('admin_practice_detail', practice_id=material.id)
+        context = _admin_context(request, 'Add Practice Content', [])
+        context.update({'form': form, 'practice': None})
+        return render(request, 'pabasa_app/admin_practice_create.html', context, status=400)
+
+    return render(request, 'pabasa_app/admin_practice_create.html',
+                  _admin_practice_template_context(request, None, 'Add Practice Content'))
+
+@admin_required
+def admin_practice_detail(request, practice_id):
+    material = _get_admin_practice_material(practice_id)
+    if not material:
+        return redirect('admin_practice_assessment')
+    return render(request, 'pabasa_app/admin_practice_detail.html',
+                  _admin_practice_template_context(request, material, 'Practice Details'))
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_practice_edit(request, practice_id):
+    material = _get_admin_practice_material(practice_id)
+    if not material:
+        return redirect('admin_practice_assessment')
+
+    if request.method == 'POST':
+        form = AdminPracticeMaterialForm(request.POST)
+        if form.is_valid():
+            _save_admin_practice_material(form, material)
+            return redirect('admin_practice_detail', practice_id=material.id)
+        context = _admin_context(request, 'Edit Practice Content', [])
+        context.update({'form': form, 'practice': material, 'practice_status': _admin_practice_status(material)})
+        return render(request, 'pabasa_app/admin_practice_edit.html', context, status=400)
+
+    return render(request, 'pabasa_app/admin_practice_edit.html',
+                  _admin_practice_template_context(request, material, 'Edit Practice Content'))
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_practice_archive(request, practice_id):
+    material = _get_admin_practice_material(practice_id)
+    if not material:
+        return redirect('admin_practice_assessment')
+
+    action = request.POST.get('action', 'archive').strip().lower()
+    if action == 'archive' and material.is_active:
+        material.is_active = False
+        material.save(update_fields=['is_active', 'updated_at'])
+    elif action == 'restore' and not material.is_active:
+        material.is_active = True
+        material.save(update_fields=['is_active', 'updated_at'])
+
+    return redirect('admin_practice_assessment')
 
 @admin_required
 def admin_settings(request):
@@ -1616,14 +1773,51 @@ def reading_sentence_page(request):
 def reading_para_page(request):
     return render(request, 'pabasa_app/reading_para_page.html', _dashboard_context(request))
 
+def _student_practice_queryset():
+    return Material.objects.filter(
+        assessment__isnull=True,
+        section__isnull=True,
+        difficulty_level__in=_practice_difficulty_values(),
+        is_active=True,
+    ).order_by('difficulty_level', 'item_type', 'title')
+
+def _serialize_student_practice_material(material):
+    content_json = material.content_json if isinstance(material.content_json, dict) else {}
+    items = content_json.get('items') if isinstance(content_json.get('items'), list) else []
+    if not items:
+        items = [entry.strip() for entry in (material.content_text or '').splitlines() if entry.strip()]
+
+    return {
+        'id': material.id,
+        'title': material.title,
+        'difficulty': material.difficulty_level,
+        'type': material.item_type,
+        'status': material.status,
+        'prompt': material.prompt_text,
+        'content': material.content_text,
+        'items': items,
+        'created_at': material.created_at.isoformat() if material.created_at else '',
+    }
+
+def _student_practice_context(request, mode=None):
+    context = _dashboard_context(request, 'student')
+    materials = [_serialize_student_practice_material(material) for material in _student_practice_queryset()]
+    context.update({
+        'practice_materials': materials,
+        'practice_difficulties': AdminPracticeMaterialForm.DIFFICULTY_CHOICES,
+        'selected_practice_mode': mode or '',
+        'selected_practice_difficulty': request.GET.get('difficulty', '').strip().lower(),
+    })
+    return context
+
 def practice_word_page(request):
-    return render(request, 'pabasa_app/practice_word_page.html', _dashboard_context(request))
+    return render(request, 'pabasa_app/practice_word_page.html', _student_practice_context(request, 'word'))
 
 def practice_sentence_page(request):
-    return render(request, 'pabasa_app/practice_sentence_page.html', _dashboard_context(request))
+    return render(request, 'pabasa_app/practice_sentence_page.html', _student_practice_context(request, 'sentence'))
 
 def practice_para_page(request):
-    return render(request, 'pabasa_app/practice_para_page.html', _dashboard_context(request))
+    return render(request, 'pabasa_app/practice_para_page.html', _student_practice_context(request, 'paragraph'))
 
 # REPLACE the entire course_teacher_view function:
 def course_teacher_view(request):
@@ -1650,7 +1844,7 @@ def settings_view(request):
     return render(request, 'pabasa_app/settings.html', _dashboard_context(request, nav_role))
 
 def practice(request):
-    return render(request, 'pabasa_app/practice.html', _dashboard_context(request, 'student'))
+    return render(request, 'pabasa_app/practice.html', _student_practice_context(request))
 
 @csrf_protect
 @require_http_methods(["GET", "POST"])

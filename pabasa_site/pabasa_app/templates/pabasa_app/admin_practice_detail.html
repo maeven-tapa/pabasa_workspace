@@ -1,0 +1,93 @@
+{% extends "pabasa_app/admin_base.html" %}
+
+{% block content %}
+<div class="admin-panel">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_practice_assessment' %}">
+                <i class="bi bi-arrow-left me-1"></i>Back to practice
+            </a>
+            <h2 class="h4 fw-bold mb-1">{{ practice.title }}</h2>
+            <p class="text-secondary mb-0">{{ practice.difficulty_level|title }} &middot; {{ practice.get_item_type_display }}</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" href="{% url 'admin_practice_edit' practice.id %}">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <form method="post" action="{% url 'admin_practice_archive' practice.id %}">
+                {% csrf_token %}
+                {% if practice.is_active %}
+                <input type="hidden" name="action" value="archive">
+                <button class="btn btn-outline-danger" type="submit">
+                    <i class="bi bi-archive me-1"></i>Archive
+                </button>
+                {% else %}
+                <input type="hidden" name="action" value="restore">
+                <button class="btn btn-outline-success" type="submit">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+                </button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-3">
+            <div class="border rounded-3 p-3 h-100 bg-white">
+                <span class="small text-secondary text-uppercase fw-bold">Difficulty</span>
+                <strong class="d-block">{{ practice.difficulty_level|title }}</strong>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="border rounded-3 p-3 h-100 bg-white">
+                <span class="small text-secondary text-uppercase fw-bold">Type</span>
+                <strong class="d-block">{{ practice.get_item_type_display }}</strong>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="border rounded-3 p-3 h-100 bg-white">
+                <span class="small text-secondary text-uppercase fw-bold">Items</span>
+                <strong class="d-block fs-4">{{ practice_item_count }}</strong>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="border rounded-3 p-3 h-100 bg-white">
+                <span class="small text-secondary text-uppercase fw-bold">Status</span>
+                <div class="mt-2">
+                    {% if practice.is_active %}
+                    <span class="badge rounded-pill text-bg-success">{{ practice.get_status_display }}</span>
+                    {% else %}
+                    <span class="badge rounded-pill text-bg-secondary">Archived</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="border rounded-3 p-3 h-100 bg-white">
+                <h3 class="h6 fw-bold mb-3">Practice Content</h3>
+                <dl class="mb-0">
+                    <dt class="text-secondary">Prompt</dt>
+                    <dd>{{ practice.prompt_text|default:"-"|linebreaksbr }}</dd>
+                    <dt class="text-secondary">Content</dt>
+                    <dd class="mb-0">{{ practice.content_text|linebreaksbr }}</dd>
+                </dl>
+            </div>
+        </div>
+        <div class="col-12 col-lg-5">
+            <div class="border rounded-3 p-3 h-100 bg-white">
+                <h3 class="h6 fw-bold mb-3">Student Practice Preparation</h3>
+                <p class="text-secondary mb-3">This content is stored as standalone practice material and grouped by difficulty for the future student difficulty picker.</p>
+                <dl class="mb-0">
+                    <dt class="text-secondary">Created</dt>
+                    <dd>{{ practice.created_at|date:"M d, Y g:i A" }}</dd>
+                    <dt class="text-secondary">Last updated</dt>
+                    <dd class="mb-0">{{ practice.updated_at|date:"M d, Y g:i A" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
