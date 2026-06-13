@@ -8,15 +8,29 @@
         gap: 1rem;
     }
 
+    /* Reset margin for main content area when sidebar is hidden on mobile/tablet */
+    @media (max-width: 991.98px) {
+        .dashboard-main {
+            margin-left: 0 !important;
+        }
+    }
+    
+    body {
+        background: url("{% static 'pabasa_app/images/teacher_bg.jpg' %}") no-repeat center center fixed !important;
+        background-size: cover !important;
+    }
+
     .classes-grid {
         display: grid;
         gap: 1.5rem;
-        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
     }
 
     .class-card-full {
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 253, 247, 0.94));
-        border: 1px solid rgba(27, 26, 23, 0.08);
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 20px;
         box-shadow: var(--dash-shadow);
         cursor: pointer;
@@ -183,14 +197,16 @@
     }
 
     .course-modal-content {
-        background: linear-gradient(135deg, #f6f8f7 0%, #f0f4f3 100%);
-        border: 1px solid rgba(31, 111, 139, 0.1);
+        background: rgba(255, 255, 255, 0.75) !important;
+        backdrop-filter: blur(20px) saturate(160%);
+        -webkit-backdrop-filter: blur(20px) saturate(160%);
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
         border-radius: 16px;
         box-shadow: 0 20px 60px rgba(27, 26, 23, 0.15);
     }
 
     .course-modal-header {
-        background: linear-gradient(135deg, #ffffff 0%, #f9fbfa 100%);
+        background: transparent !important;
         border-bottom: 2px solid rgba(31, 111, 139, 0.08);
         padding: 1.5rem 2rem;
         position: relative;
@@ -224,7 +240,7 @@
     }
 
     .course-sidebar {
-        background: #ffffff;
+        background: rgba(255, 255, 255, 0.4);
         border-right: 1px solid rgba(27, 26, 23, 0.08);
         overflow-y: auto;
         padding: 1rem;
@@ -239,6 +255,7 @@
     }
 
     .course-tab-content {
+        background: transparent;
         overflow-y: auto;
         padding: 1.5rem;
     }
@@ -250,8 +267,10 @@
 
     .workspace-hero {
         align-items: center;
-        background: #ffffff;
-        border: 1px solid rgba(27, 26, 23, 0.08);
+        background: rgba(255, 255, 255, 0.5) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
         border-radius: 8px;
         display: flex;
         justify-content: space-between;
@@ -519,8 +538,10 @@
 
     /* ===== READINGS TAB STYLES ===== */
     .readings-section {
-        background: #ffffff;
-        border: 1px solid rgba(27, 26, 23, 0.08);
+        background: rgba(255, 255, 255, 0.6) !important;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 8px;
         display: flex;
         flex-direction: column;
@@ -888,8 +909,10 @@
     }
 
     .assessment-card {
-        background: #ffffff;
-        border: 1px solid rgba(27, 26, 23, 0.08);
+        background: rgba(255, 255, 255, 0.6) !important;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 8px;
         display: grid;
         gap: 1rem;
@@ -1593,65 +1616,23 @@
                                     <h5><i class="bi bi-book-half me-2"></i>Reading Materials</h5>
                                     <p>Add reading materials and choose whether each one appears in practice mode, assessment mode, or both.</p>
                                 </div>
+                                <button class="btn btn-primary readings-add-btn" type="button" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
+                                    <i class="bi bi-plus-lg"></i> Add New Material
+                                </button>
                             </div>
-                            <div class="reading-category-grid">
-                            <!-- Word Readings -->
                             <div class="readings-section">
                                 <div class="readings-section-header">
-                                    <div class="readings-section-icon word">
-                                        <i class="bi bi-spellcheck"></i>
+                                    <div class="readings-section-icon all">
+                                        <i class="bi bi-collection"></i>
                                     </div>
                                     <div class="readings-section-copy">
-                                        <h6 class="readings-section-title">Word Materials</h6>
-                                        <p>Short words, syllables, and decoding drills.</p>
+                                        <h6 class="readings-section-title">All Materials</h6>
+                                        <p>Browse all reading materials regardless of type.</p>
                                     </div>
-                                    <span class="readings-count-badge" data-word-count="0">0 items</span>
-                                    <button class="btn btn-outline-primary readings-add-btn" type="button" data-add-reading="word">
-                                        <i class="bi bi-plus-lg"></i> Add
-                                    </button>
+                                    <span class="readings-count-badge" id="allReadingsCountBadge">0 items</span>
                                 </div>
-                                <div id="wordReadings" class="readings-list">
-                                    <!-- Word readings will appear here -->
-                                </div>
-                            </div>
-
-                            <!-- Sentence Readings -->
-                            <div class="readings-section">
-                                <div class="readings-section-header">
-                                    <div class="readings-section-icon sentence">
-                                        <i class="bi bi-chat-left-text"></i>
-                                    </div>
-                                    <div class="readings-section-copy">
-                                        <h6 class="readings-section-title">Sentence Materials</h6>
-                                        <p>Sentence fluency and comprehension lines.</p>
-                                    </div>
-                                    <span class="readings-count-badge" data-sentence-count="0">0 items</span>
-                                    <button class="btn btn-outline-primary readings-add-btn" type="button" data-add-reading="sentence">
-                                        <i class="bi bi-plus-lg"></i> Add
-                                    </button>
-                                </div>
-                                <div id="sentenceReadings" class="readings-list">
-                                    <!-- Sentence readings will appear here -->
-                                </div>
-                            </div>
-
-                            <!-- Paragraph Readings -->
-                            <div class="readings-section">
-                                <div class="readings-section-header">
-                                    <div class="readings-section-icon paragraph">
-                                        <i class="bi bi-file-text"></i>
-                                    </div>
-                                    <div class="readings-section-copy">
-                                        <h6 class="readings-section-title">Paragraph Materials</h6>
-                                        <p>Longer passages for connected reading.</p>
-                                    </div>
-                                    <span class="readings-count-badge" data-paragraph-count="0">0 items</span>
-                                    <button class="btn btn-outline-primary readings-add-btn" type="button" data-add-reading="paragraph">
-                                        <i class="bi bi-plus-lg"></i> Add
-                                    </button>
-                                </div>
-                                <div id="paragraphReadings" class="readings-list">
-                                    <!-- Paragraph readings will appear here -->
+                                <div id="allReadingsList" class="readings-list">
+                                    <!-- All materials will appear here -->
                                 </div>
                             </div>
                             </div>
@@ -2604,7 +2585,7 @@
         const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
         const classStudents = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park");
 
-        if (studentCount === 0) {
+            if (classStudents.length === 0) { // Use classStudents.length for accurate count
             container.innerHTML = `
                 <div class="students-empty">
                     <i class="bi bi-people"></i>
@@ -2878,7 +2859,6 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         // Global variables for current class and material being edited/added
-        let currentMaterialType = '';
         let editingCard = null;
 
         // Add Material Modal elements
@@ -2887,6 +2867,7 @@
         const materialContentInput = document.getElementById('materialContent');
         const materialTypeSelect = document.getElementById('materialType');
         const publicationStatusSelect = document.getElementById('publicationStatus');
+        const addMaterialValidationError = document.getElementById('amValidationError');
         const scheduleFieldDiv = document.getElementById('scheduleField');
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
@@ -2937,15 +2918,122 @@
         renderClasses();
 
         // ===== READINGS TAB HANDLERS =====
+        // New function to render all materials in a single list
+        function renderAllReadingsList(allMaterials, containerId) {
+            const container = document.getElementById(containerId);
+            const countBadge = document.getElementById('allReadingsCountBadge');
+
+            if (!container) return;
+
+            // Sort materials by creation date, newest first
+            allMaterials.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+            if (allMaterials.length === 0) {
+                container.innerHTML = `
+                    <div class="readings-empty">
+                        <i class="bi bi-inbox"></i>
+                        <p>No materials yet</p>
+                    </div>
+                `;
+                if (countBadge) countBadge.textContent = '0 items';
+                return;
+            }
+
+            if (countBadge) countBadge.textContent = `${allMaterials.length} item${allMaterials.length !== 1 ? 's' : ''}`;
+
+            container.innerHTML = allMaterials.map(reading => {
+                const typeMap = {
+                    'practice': 'practice',
+                    'assessment': 'assessment',
+                    'both': 'both'
+                };
+                const badgeType = typeMap[reading.type] || reading.type;
+
+                // Determine the display status: if scheduled and time has passed, show as published
+                let displayStatus = reading.status || 'published';
+                if (displayStatus === 'scheduled' && reading.schedule) {
+                    const scheduledTime = new Date(reading.schedule).getTime();
+                    if (scheduledTime <= Date.now()) displayStatus = 'published';
+                }
+
+                const iconMap = { word: 'bi-spellcheck', sentence: 'bi-chat-left-text', paragraph: 'bi-file-text' };
+
+                return `
+                    <div class="material-card-modern" data-material-id="${reading.id}" data-reading-type="${reading.item_type}"
+                         data-full-content="${(reading.content_text || '').replace(/"/g, '&quot;')}"
+                         data-status="${reading.status || 'published'}"
+                         data-schedule="${reading.schedule || ''}"
+                         data-usage="${reading.type || 'practice'}">
+                        <div class="material-info">
+                            <div class="material-leading-icon">
+                                <i class="bi ${iconMap[reading.item_type]}"></i>
+                            </div>
+                            <div>
+                                <p class="material-title">${reading.title}</p>
+                                <p class="material-preview">${reading.content_text || ''}</p>
+                                <p class="material-meta">
+                                    <span>${reading.items} item${reading.items !== 1 ? 's' : ''}</span>
+                                    <span class="material-type-badge ${badgeType}">${reading.type}</span>
+                                    <span class="material-type-badge status-${displayStatus}">${displayStatus.toUpperCase()}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="material-actions">
+                            <button class="material-btn" title="View" data-action="view">
+                                <i class="bi bi-eye" style="color: #00bcd4;"></i>
+                            </button>
+                            <button class="material-btn" title="Edit" data-action="edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="material-btn delete" title="Delete" data-action="delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadReadings(classCode) {
+            let readings = { word: [], sentence: [], paragraph: [] };
+            
+            // First, try to fetch from database API
+            const dbMaterials = await fetchMaterialsFromDatabase(classCode);
+            if (dbMaterials) {
+                readings = dbMaterials;
+                console.log(`✓ Loaded materials from database for class ${classCode}`);
+            } else {
+                // Fallback to localStorage if API fails
+                const stored = ensureClassReadings(classCode);
+                readings = stored;
+                console.warn(`⚠ Using localStorage materials for class ${classCode} (database fetch failed)`);
+            }
+
+            // Combine all materials into a single array
+            const allMaterials = [
+                ...(readings.word || []),
+                ...(readings.sentence || []),
+                ...(readings.paragraph || [])
+            ];
+
+            renderAllReadingsList(allMaterials, 'allReadingsList');
+        }
+
         function setupReadingsHandlers() {
             const readingsContainer = document.getElementById('readingsContainer');
             if (readingsContainer && !readingsContainer.dataset.bound) {
                 readingsContainer.dataset.bound = 'true';
                 readingsContainer.addEventListener('click', function(e) {
                     // Add material button
-                    if (e.target.closest('[data-add-reading]')) {
-                        const btn = e.target.closest('[data-add-reading]');
-                        currentMaterialType = btn.dataset.addReading;
+                    if (e.target.closest('.readings-add-btn')) {
+                        // Reset the form and validation state
+                        const addMaterialFormEl = document.getElementById('addMaterialForm');
+                        if (addMaterialFormEl) addMaterialFormEl.reset();
+                        if (addMaterialValidationError) addMaterialValidationError.classList.add('d-none');
+                        [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
+                            if (el) el.classList.remove('is-invalid');
+                        });
+
                         const modal = new bootstrap.Modal(document.getElementById('addMaterialModal'));
                         toggleAddScheduleField(); // Reset schedule field visibility when opening add modal
                         modal.show();
@@ -2956,7 +3044,7 @@
                         const btn = e.target.closest('[data-action="view"]');
                         const card = btn.closest('.material-card-modern');
                         const title = card.querySelector('.material-title').textContent;
-                        const content = card.dataset.fullContent;
+                        const content = card.dataset.fullContent; // This now comes from content_text
                         
                         // Show content in a modal
                         const viewModal = new bootstrap.Modal(document.createElement('div'));
@@ -3002,7 +3090,7 @@
                         if (!material) return;
 
                         editMaterialTitleInput.value = material.title;
-                        editMaterialContentInput.value = material.content;
+                        editMaterialContentInput.value = material.content_text; // Use content_text
                         editMaterialTypeSelect.value = material.type || 'practice';
                         editPublicationStatusSelect.value = material.status || 'published';
                         
@@ -3060,7 +3148,7 @@
                             const material = readings[readingType].find(reading => reading.id === materialId);
                             if (material) {
                                 material.title = editMaterialTitleInput.value.trim();
-                                material.content = editMaterialContentInput.value.trim();
+                                material.content_text = editMaterialContentInput.value.trim(); // Update content_text
                                 material.items = editMaterialContentInput.value.trim().split(/\s+/).filter(Boolean).length;
                                 material.status = editPublicationStatusSelect.value;
                                 material.schedule = editScheduleDateTimeInput.value;
@@ -3081,13 +3169,14 @@
                 const submitMaterialBtn = document.getElementById('submitMaterial');
                 const materialTitleInput = document.getElementById('materialTitle');
                 const materialContentInput = document.getElementById('materialContent');
+                const materialTypeSelect = document.getElementById('materialType'); // Get from modal select
                 
                 if (submitMaterialBtn && !submitMaterialBtn.dataset.bound) {
                     submitMaterialBtn.dataset.bound = 'true';
                     submitMaterialBtn.addEventListener('click', async function () {
                         const title   = materialTitleInput   ? materialTitleInput.value.trim()   : '';
-                        const content = materialContentInput ? materialContentInput.value.trim() : '';
-                        // NOTE: Don't use materialTypeSelect - the reading type is already set in currentMaterialType
+                        const content = materialContentInput ? materialContentInput.value.trim() : ''; // Use content_text
+                        const readingType = materialTypeSelect ? materialTypeSelect.value : 'word'; // Get reading type from modal select
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const errorBanner = document.getElementById('amValidationError');
@@ -3137,7 +3226,7 @@
                         submitMaterialBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Creating...';
                         console.log('[AddMaterial] Saving to database:', { title, reading_type: currentMaterialType, status, class_code: currentClassCode });
 
-                        try {
+                        try { // Use readingType from modal select
                             // ── Step 1: Save to backend database via API ──────────
                             // Acquire CSRF token (refresh if necessary) and POST with retry on 403
                             const csrfToken = await ensureCsrfToken();
@@ -3155,7 +3244,7 @@
                                 },
                                 body: JSON.stringify({
                                     title: title,
-                                    reading_type: currentMaterialType,
+                                    reading_type: readingType,
                                     content: content,
                                     status: status,
                                     class_code: currentClassCode,
@@ -3226,10 +3315,10 @@
 
                             if (createdIds.length > 0 && apiData.material) {
                                 const readings = ensureClassReadings(currentClassCode);
-                                readings[currentMaterialType].push({
+                                readings[readingType].push({ // Use readingType from modal select
                                     id: apiData.material.id,
                                     title: apiData.material.title || title,
-                                    content: apiData.material.content,
+                                    content_text: apiData.material.content_text, // Use content_text
                                     type: apiData.material.type,
                                     items: apiData.material.items || 1,
                                     status: apiData.material.status,
@@ -3238,7 +3327,7 @@
                                     created_at: apiData.material.created_at || new Date().toISOString(),
                                     assigned_sections: apiData.material.assigned_sections || [],
                                 });
-                                saveStoredReadings();
+                                saveStoredReadings(); // This will update the localStorage for the current class
                                 await renderClasses();
                             } else {
                                 // Fallback: reload authoritative data from server
@@ -3272,7 +3361,7 @@
                             }
 
                             console.log('[AddMaterial] Save success:', successMsg);
-                            showSuccessModal('Material Added', successMsg);
+                            showSuccessModal('Material Added', successMsg); // Show success modal
 
                         } catch (err) {
                             console.error('[AddMaterial] Save failed:', err);

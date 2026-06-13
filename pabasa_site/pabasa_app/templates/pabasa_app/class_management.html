@@ -1,0 +1,204 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    body {
+        background: url("{% static 'pabasa_app/images/teacher_bg.jpg' %}") no-repeat center center fixed !important;
+        background-size: cover !important;
+    }
+
+    .management-grid { 
+        display: grid; 
+        gap: 1.5rem; 
+        grid-template-columns: 1fr; 
+    }
+    .manage-card { 
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 22px; 
+        box-shadow: var(--dash-shadow); 
+        padding: 1.5rem; 
+    }
+    .manage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .student-table-container { 
+        overflow-x: auto; 
+        border-radius: 12px; 
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        background: rgba(255, 255, 255, 0.5) !important;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    .student-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    .student-table th { background: #f8faff; color: var(--dash-muted); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; padding: 1rem; text-align: left; border-bottom: 1px solid var(--dash-border); }
+    .student-table td { padding: 1rem; border-bottom: 1px solid rgba(27, 26, 23, 0.04); font-size: 0.9rem; word-break: break-word; vertical-align: middle; }
+    .pabasa-id-pill { background: var(--dash-primary-soft); color: var(--dash-primary-deep); padding: 0.25rem 0.6rem; border-radius: 6px; font-family: monospace; font-weight: 700; font-size: 0.85rem; }
+    
+    @media (max-width: 768px) {
+        .manage-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+        .dash-page-head { flex-direction: column; gap: 1rem; align-items: flex-start !important; }
+        .class-switcher-pill { width: 100%; }
+        .manage-card { padding: 1rem; }
+        .student-table { min-width: 500px; }
+        .student-table th, .student-table td { padding: 0.75rem 0.5rem; font-size: 0.85rem; }
+    }
+
+    .class-switcher-pill {
+        background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,0.6));
+        border: 1px solid rgba(31,111,139,0.15);
+        border-radius: 999px;
+        padding: 0.35rem 1rem;
+        font-weight: 800;
+        color: var(--dash-primary-deep);
+        cursor: pointer;
+        outline: none;
+        font-size: 0.85rem;
+        transition: border-color 0.2s;
+    }
+    .class-switcher-pill:hover { border-color: var(--dash-primary); }
+</style>
+{% endblock %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Class Management" %}
+{% endblock %}
+
+{% block content %}
+<div class="management-grid">
+    <div class="dash-page-head d-flex justify-content-between align-items-center">
+        <a href="{% url 'dashboard_teacher' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+        <div class="d-flex align-items-center gap-2">
+            <span class="small text-muted fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.05em;">Viewing Class:</span>
+            <select class="class-switcher-pill" onchange="location.href='?code=' + this.value" aria-label="Switch Class">
+                {% for s in sections %}
+                <option value="{{ s.class_code }}" {% if s.class_code == section.class_code %}selected{% endif %}>{{ s.class_code }} ({{ s.class_name }})</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <article class="manage-card">
+        <div class="manage-header">
+            <h2 class="h5 mb-0"><i class="bi bi-pencil-square me-2 text-primary"></i>Class Details</h2>
+            <button type="submit" form="updateClassForm" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i> Save Changes</button>
+        </div>
+        <form id="updateClassForm" class="row g-3">
+            {% csrf_token %}
+            <input type="hidden" name="class_code" value="{{ section.class_code }}">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold">Title / Class Name</label>
+                <input type="text" class="form-control" name="class_name" value="{{ section.class_name }}" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Grade Level</label>
+                <input type="text" class="form-control" name="grade_level" value="{{ section.grade_level }}" placeholder="e.g. Grade 2">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Section</label>
+                <input type="text" class="form-control" name="section" value="{{ section.section }}" placeholder="e.g. Sampaguita">
+            </div>
+            <div class="col-md-12">
+                <label class="form-label small fw-bold">Description</label>
+                <textarea class="form-control" name="description" rows="2" maxlength="100" style="resize: none;" placeholder="Short description (max 100 characters)">{{ section.description }}</textarea>
+            </div>
+        </form>
+    </article>
+
+    <article class="manage-card">
+        <div class="manage-header">
+            <h2 class="h5 mb-0"><i class="bi bi-people me-2 text-primary"></i>Enrolled Students</h2>
+            <div class="d-flex align-items-center gap-2">
+                <span class="item-badge">{{ students_table|length }} Enrolled</span>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus-fill me-1"></i> Add Student</button>
+            </div>
+        </div>
+        <div class="student-table-container">
+            <table class="student-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>PABASA ID</th>
+                        <th>Email</th>
+                        <th>Reading Level</th>
+                        <th>Joined Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students_table %}
+                    <tr>
+                        <td><strong>{{ student.name }}</strong></td>
+                        <td><span class="pabasa-id-pill">{{ student.pabasa_id }}</span></td>
+                        <td>{{ student.email }}</td>
+                        <td><span class="level-chip level-developing">{{ student.reading_level }}</span></td>
+                        <td><small class="text-muted">{{ student.joined_at }}</small></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4 text-muted">No students have joined yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</div>
+
+<!-- Add Student Modal -->
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px; background: rgba(255, 255, 255, 0.75) !important;
+        backdrop-filter: blur(20px) saturate(160%);
+        -webkit-backdrop-filter: blur(20px) saturate(160%);
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2 text-primary"></i>Manual Enrollment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-md-8">
+                        <input type="text" id="studentSearch" class="form-control bg-light" placeholder="Enter Student Name or PABASA ID">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <select id="studentFilter" class="form-select fw-bold">
+                            <option value="all">Filter: All Fields</option>
+                            <option value="name">Filter: Name</option>
+                            <option value="pabasa_id">Filter: PABASA ID</option>
+                            <option value="grade">Filter: Grade</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="noStudentsFoundMessage" class="alert alert-warning d-none" role="alert">
+                    No matching students found.
+                </div>
+                <div class="student-table-container" style="max-height: 400px; overflow-y: auto; border-radius: 14px;">
+                    <table class="student-table" id="availableStudentsTable">
+                        <thead class="sticky-top">
+                            <tr>
+                                <th>Name</th>
+                                <th>PABASA ID</th>
+                                <th>Grade</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in available_students %}
+                            <tr data-name="{{ s.name|lower }}" data-id="{{ s.pabasa_id|lower }}" data-grade="{{ s.grade|lower }}">
+                                <td><strong>{{ s.name }}</strong></td>
+                                <td><span class="pabasa-id-pill">{{ s.pabasa_id }}</span></td>
+                                <td>{{ s.grade }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-primary add-student-btn px-3" data-student-id="{{ s.id }}" style="border-radius: 8px;">Add to Class</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'pabasa_app/js/class_management.js' %}"></script>
+{% endblock %}

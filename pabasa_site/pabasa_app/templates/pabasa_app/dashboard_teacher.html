@@ -13,6 +13,18 @@
         --dash-ink-soft: #58676f;
     }
 
+    /* Reset margin for main content area when sidebar is hidden on mobile/tablet */
+    @media (max-width: 991.98px) {
+        .dashboard-main {
+            margin-left: 0 !important;
+        }
+    }
+    
+    body {
+        background: url("{% static 'pabasa_app/images/teacher_bg.jpg' %}") no-repeat center center fixed !important;
+        background-size: cover !important;
+    }
+
     /* Polished pill and button styles */
     .dash-pill {
         display: inline-flex;
@@ -40,7 +52,12 @@
     .btn.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(15,78,100,0.12); }
 
     /* Improve teacher-stat-card visuals */
-    .teacher-stat-card { background: linear-gradient(180deg,#ffffff,#fbfdff); border-radius: 18px; }
+    .teacher-stat-card { 
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 18px; 
+    }
     .teacher-stat-card small { color: var(--dash-ink-soft); }
 
     /* Slight elevation for active class workspace */
@@ -60,10 +77,10 @@
     }
 
     .teacher-hero {
-        background:
-            linear-gradient(135deg, rgba(31, 111, 139, 0.18), transparent 36%),
-            linear-gradient(245deg, rgba(122, 139, 95, 0.14), transparent 42%),
-            #fffdf7;
+        background: rgba(255, 255, 255, 0.6) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border: 1px solid var(--dash-border);
         border-radius: 26px;
         box-shadow: var(--dash-shadow);
@@ -150,7 +167,9 @@
     }
 
     .create-class-card {
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(27, 26, 23, 0.08);
         border-radius: 24px;
         box-shadow: 0 24px 48px rgba(27, 26, 23, 0.12);
@@ -224,11 +243,13 @@
     .teacher-stat-grid {
         display: grid;
         gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
     }
 
     .teacher-stat-card {
-        background: #fff;
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         border: 1px solid var(--dash-border);
         border-radius: 20px;
         box-shadow: var(--dash-shadow);
@@ -273,11 +294,17 @@
     .teacher-board {
         display: grid;
         gap: 1rem;
-        grid-template-columns: minmax(320px, 0.75fr) minmax(0, 1.25fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    }
+
+    @media (max-width: 1100px) {
+        .teacher-board { grid-template-columns: 1fr; }
     }
 
     .teacher-panel {
-        background: #fff;
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid var(--dash-border);
         border-radius: 22px;
         box-shadow: var(--dash-shadow);
@@ -308,7 +335,9 @@
     }
 
     .class-card {
-        background: #fffdf7;
+        background: rgba(255, 253, 247, 0.6) !important;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         border: 1px solid rgba(27, 26, 23, 0.08);
         border-radius: 18px;
         cursor: pointer;
@@ -394,10 +423,9 @@
     }
 
     .class-banner {
-        background:
-            linear-gradient(135deg, rgba(31, 111, 139, 0.18), transparent 42%),
-            linear-gradient(245deg, rgba(247, 231, 207, 0.9), transparent 44%),
-            #fffdf7;
+        background: rgba(255, 255, 255, 0.6) !important;
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
         border: 1px solid var(--dash-border);
         border-radius: 22px;
         display: grid;
@@ -428,6 +456,7 @@
         font-size: clamp(1.5rem, 3vw, 2.45rem);
         font-weight: 700;
         margin: 0;
+        word-break: break-word;
     }
 
     .class-meta-row,
@@ -435,14 +464,17 @@
     .post-row {
         display: grid;
         gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .class-meta-row {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
     }
 
     .mini-metric {
-        background: rgba(255, 255, 255, 0.76);
+        background: rgba(255, 255, 255, 0.5) !important;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
         border: 1px solid rgba(27, 26, 23, 0.08);
         border-radius: 16px;
         padding: 0.75rem;
@@ -477,7 +509,9 @@
 
     .student-card,
     .post-card {
-        background: #fff;
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         border: 1px solid var(--dash-border);
         border-radius: 18px;
         padding: 0.85rem;
@@ -565,7 +599,8 @@
             <h2>Create classes, monitor reading levels, and post reading work.</h2>
             <p>Use this dashboard to create a class code, manage joined students, prepare materials, and monitor how students move across reading levels.</p>
             <div class="teacher-quick-links">
-                <a class="primary" href="{% url 'courses' %}"><i class="bi bi-folder2-open"></i> Class</a>
+                <a class="primary" href="{% url 'courses' %}"><i class="bi bi-folder2-open"></i> Course</a>
+                <a href="{% url 'dashboard_teacher' %}"><i class="bi bi-door-open"></i> Class</a>
                 <a href="{% url 'students' %}"><i class="bi bi-people"></i> Student Records</a>
             </div>
         </div>
@@ -581,34 +616,16 @@
                 {% csrf_token %}
 
                 <div class="teacher-field">
+                    <label for="titleInput">Title</label>
+                    <input type="text" class="form-control" id="titleInput" placeholder="Enter class title" required>
+                </div>
+
+                <div class="teacher-field">
                     <label for="subjectInput">Subject</label>
                     <select class="form-control" id="subjectInput" required>
                         <option value="">Select Subject</option>
                         <option value="English">English</option>
                         <option value="Tagalog">Tagalog</option>
-                    </select>
-                </div>
-
-                <div class="teacher-field">
-                    <label for="gradeLevelInput">Grade Level</label>
-                    <select class="form-control" id="gradeLevelInput" required>
-                        <option value="">Select Grade Level</option>
-                        <option value="Grade 1">Grade 1</option>
-                        <option value="Grade 2">Grade 2</option>
-                        <option value="Grade 3">Grade 3</option>
-                        <option value="Grade 4">Grade 4</option>
-                        <option value="Grade 5">Grade 5</option>
-                        <option value="Grade 6">Grade 6</option>
-                    </select>
-                </div>
-
-                <div class="teacher-field">
-                    <label for="sectionInput">Section</label>
-                    <select class="form-control" id="sectionInput" required>
-                        <option value="">Select Section</option>
-                        <option value="Sampaguita">Sampaguita</option>
-                        <option value="Camia">Camia</option>
-                        <option value="Rose">Rose</option>
                     </select>
                 </div>
 
@@ -680,9 +697,9 @@
     </div>
 
     <div class="teacher-stat-grid" aria-label="Teacher dashboard statistics">
-        <article class="teacher-stat-card" data-mark="C">
-            <span>Classes</span>
-            <strong id="classCount">0</strong>
+        <article class="teacher-stat-card" data-mark="Cl">
+            <span>Class</span>
+            <strong id="classCountMirror">0</strong>
             <small class="text-secondary">Active class spaces</small>
         </article>
         <article class="teacher-stat-card" data-mark="L">
@@ -716,11 +733,10 @@
         <aside class="teacher-panel">
             <div class="teacher-panel-head">
                 <div>
-                    <h3>Classes</h3>
+                    <h3>Class</h3>
                     <p class="small text-secondary mb-0">Select a class to view students and materials.</p>
                 </div>
             </div>
-
             <div class="class-list" id="classList">
                 <!-- Classes will be loaded from localStorage by JavaScript -->
             </div>
@@ -730,7 +746,10 @@
             <article class="class-banner" id="classBanner" data-header="">
                 <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
                     <span class="dash-pill"><i class="bi bi-door-open"></i> Class code <strong id="activeClassCode">—</strong></span>
-                    <button class="btn btn-sm btn-light border fw-bold" type="button" id="copyClassCodeBtn" style="display: none;"><i class="bi bi-copy me-1"></i>Copy Code</button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-light border fw-bold" type="button" id="copyClassCodeBtn" style="display: none;"><i class="bi bi-copy me-1"></i>Copy Code</button>
+                        <a id="manageClassLink" class="btn btn-sm btn-primary fw-bold" href="#" style="display: none;"><i class="bi bi-gear-fill me-1"></i>Manage Class</a>
+                    </div>
                 </div>
                 <div>
                     <p class="teacher-kicker mb-2" id="activeClassSubject"></p>
@@ -850,10 +869,10 @@ function updateDashboardStatistics() {
     if (elGrade) animateNumber(elGrade, Number(levelCounts["Readers at Grade Level"] || 0));
 
     // Ensure Classes count is dynamic: prefer server-filled value, otherwise compute from localStorage teacher classes
-    const classCountEl = document.getElementById('classCount');
-    if (classCountEl) {
+    const classCountMirrorEl = document.getElementById('classCountMirror'); // Target the 'Class' stat card
+    if (classCountMirrorEl) {
         // If server hasn't populated it yet (value is 0), compute local fallback
-        const currentVal = parseInt(classCountEl.textContent || "0", 10) || 0;
+        const currentVal = parseInt(classCountMirrorEl.textContent || "0", 10) || 0;
         if (currentVal <= 0) {
             // Aggregate any pabasa_teacher_classes* keys
             let count = 0;
@@ -868,7 +887,7 @@ function updateDashboardStatistics() {
                     }
                 });
             } catch (e) {}
-            classCountEl.textContent = String(count || 0);
+            classCountMirrorEl.textContent = String(count || 0);
         }
     }
 }
@@ -991,11 +1010,11 @@ function animateNumber(el, target, duration = 800) {
 // Hook into existing updates to animate counts
 document.addEventListener("DOMContentLoaded", function() {
     try {
-        const classCountEl = document.getElementById('classCount');
+        const classCountMirrorEl = document.getElementById('classCountMirror'); // Target the 'Class' stat card
         const materialsEl = document.getElementById('profileMaterialsPostedCount');
         const studentsEl = document.getElementById('profileTotalStudentsCount');
         // animate small dashboard numbers if present
-        if (classCountEl) animateNumber(classCountEl, Number(classCountEl.textContent || 0));
+        if (classCountMirrorEl) animateNumber(classCountMirrorEl, Number(classCountMirrorEl.textContent || 0));
         if (studentsEl) animateNumber(studentsEl, Number(studentsEl.textContent || 0));
         if (materialsEl) animateNumber(materialsEl, Number(materialsEl.textContent || 0));
     } catch (e) { console.warn('Animate numbers error', e); }

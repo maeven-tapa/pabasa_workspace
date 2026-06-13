@@ -1518,17 +1518,12 @@ def create_reading_class(request):
         class_name = data.get('class_name', '').strip()
         header = data.get('header', '').strip() or "Reading Class"
         description = data.get('description', '').strip()
-        grade_level = data.get('grade_level', '').strip()
-        section = data.get('section', '').strip()
-
-        if not grade_level:
-            return JsonResponse({'success': False, 'error': 'Grade level is required'}, status=400)
-
-        if not section:
-            return JsonResponse({'success': False, 'error': 'Section is required'}, status=400)
+        # Defaulting these as they are removed from the frontend UI
+        grade_level = data.get('grade_level', '').strip() or "N/A"
+        section = data.get('section', '').strip() or "N/A"
 
         if not class_name:
-            return JsonResponse({'success': False, 'error': 'Class name is required'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
 
         # Retrieve the teacher user for the logged-in user
         user_id = request.session.get('user_id')
@@ -1560,6 +1555,108 @@ def create_reading_class(request):
     except Exception as e:
         logger.error(f"Class creation error: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
+
+@login_required(role='teacher')
+def class_management_view(request):
+    """View to manage specific class details and student enrollment"""
+    class_code = request.GET.get('code', '').strip()
+    if not class_code:
+        return redirect('dashboard_teacher')
+
+    user_id = request.session.get('user_id')
+    teacher_user = User.objects.filter(id=user_id).first()
+    if not teacher_user:
+        return redirect('auth')
+
+    section = Section.objects.filter(class_code=class_code, teacher=teacher_user, is_active=True).first()
+    if not section:
+        return redirect('dashboard_teacher')
+
+    # Fetch all active classes for the switcher dropdown
+    all_sections = Section.objects.filter(teacher=teacher_user, is_active=True).order_by('class_name')
+
+    # Get students enrolled in this section and enrich from User model
+    enrolled_entries = section.get_enrolled_students(active_only=True)
+    student_ids = [s.get('student_id') for s in enrolled_entries if s.get('student_id')]
+    users_data = User.objects.filter(id__in=student_ids).in_bulk()
+    
+    students_table = []
+    for entry in enrolled_entries:
+        user = users_data.get(entry.get('student_id'))
+        if not user: continue
+        
+        students_table.append({
+            'name': f"{user.first_name} {user.last_name}",
+            'pabasa_id': user.custom_id,
+            'email': user.email,
+            'reading_level': user.reading_level or "Developing",
+            'joined_at': entry.get('joined_at', section.created_at.isoformat())
+        })
+        
+    # Fetch all students for the "Add Student" popup
+    # We exclude students who are already actively enrolled in this class
+    enrolled_pabasa_ids = [s['pabasa_id'] for s in students_table]
+    available_students_qs = User.objects.filter(role='student').exclude(custom_id__in=enrolled_pabasa_ids).order_by('last_name', 'first_name')
+    
+    available_students = []
+    for s in available_students_qs:
+        available_students.append({
+            'id': s.id,
+            'name': f"{s.first_name} {s.last_name}",
+            'pabasa_id': s.custom_id,
+            'grade': s.grade_level or "N/A"
+        })
+
+    extra = {
+        'section': section,
+        'sections': all_sections,
+        'available_students': available_students,
+        'students_table': students_table,
+        'page_title': f"Manage {section.class_name}"
+    }
+    return render(request, 'pabasa_app/class_management.html', _dashboard_context(request, 'teacher', extra))
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def update_class_info(request):
+    """API to update class metadata"""
+    try:
+        data = json.loads(request.body)
+        section = Section.objects.filter(class_code=data.get('class_code'), teacher_id=request.session.get('user_id')).first()
+        if not section: return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+        section.class_name = data.get('class_name', '').strip()
+        section.grade_level = data.get('grade_level', '').strip()
+        section.section = data.get('section', '').strip()
+        section.description = data.get('description', '').strip()
+        section.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_add_student(request):
+    """Backend endpoint for teachers to manually enroll a student"""
+    try:
+        data = json.loads(request.body)
+        class_code = data.get('class_code')
+        student_id = data.get('student_id')
+        
+        user_id = request.session.get('user_id')
+        section = Section.objects.filter(class_code=class_code, teacher_id=user_id).first()
+        student = User.objects.filter(id=student_id, role='student').first()
+        
+        if not section or not student:
+            return JsonResponse({'success': False, 'error': 'Class or Student not found'}, status=404)
+        
+        if section.add_student(student):
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Student is already enrolled.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @require_http_methods(["GET"])
 @login_required(role='teacher')

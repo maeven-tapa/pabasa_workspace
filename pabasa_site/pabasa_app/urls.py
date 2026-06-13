@@ -64,4 +64,19 @@ urlpatterns = [
     views.delete_reading_class,
     name='delete_reading_class'
 ),
+    path(
+        'dashboard/teacher/manage/',
+        views.class_management_view,
+        name='class_management'
+    ),
+    path(
+        'dashboard/teacher/update-class/',
+        views.update_class_info,
+        name='update_class_info'
+    ),
+    path(
+        'dashboard/teacher/add-student-to-class/',
+        views.teacher_add_student,
+        name='teacher_add_student'
+    ),
 ]

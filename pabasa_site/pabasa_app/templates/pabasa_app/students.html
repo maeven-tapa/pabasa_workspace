@@ -8,6 +8,18 @@
         gap: 1rem;
     }
 
+    /* Reset margin for main content area when sidebar is hidden on mobile/tablet */
+    @media (max-width: 991.98px) {
+        .dashboard-main {
+            margin-left: 0 !important;
+        }
+    }
+    
+    body {
+        background: url("{% static 'pabasa_app/images/teacher_bg.jpg' %}") no-repeat center center fixed !important;
+        background-size: cover !important;
+    }
+
     .students-overview {
         display: grid;
         gap: 1.5rem;
@@ -22,8 +34,10 @@
 
     .student-stat,
     .students-panel {
-        background: #fff;
-        border: 1px solid var(--dash-border);
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 20px;
         box-shadow: var(--dash-shadow);
     }
@@ -92,8 +106,10 @@
     }
 
     .students-chart-panel {
-        background: #fff;
-        border: 1px solid var(--dash-border);
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 20px;
         box-shadow: var(--dash-shadow);
         padding: 1.5rem;
@@ -116,8 +132,10 @@
     }
 
     .secondary-metric {
-        background: linear-gradient(135deg, rgba(31, 111, 139, 0.08), transparent 42%);
-        border: 1px solid rgba(31, 111, 139, 0.16);
+        background: rgba(255, 255, 255, 0.7) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 14px;
         padding: 1rem;
         text-align: center;
@@ -164,8 +182,10 @@
 
     .student-card-row {
         align-items: start;
-        background: #fffdf7;
-        border: 1px solid rgba(27, 26, 23, 0.08);
+        background: rgba(255, 253, 247, 0.6) !important;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
         border-radius: 18px;
         display: grid;
         gap: 0.8rem;

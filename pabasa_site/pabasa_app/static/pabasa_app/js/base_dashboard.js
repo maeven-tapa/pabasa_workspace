@@ -108,6 +108,28 @@ var getStudentClassData = window.getStudentClassData = function() {
         });
     }
 
+    // Accordion behavior for help sections: Opening one closes others
+    const helpLinkBtns = helpPanel.querySelectorAll(".help-link-btn");
+    helpLinkBtns.forEach(btn => {
+        btn.addEventListener("click", function () {
+            const targetId = this.getAttribute("aria-controls");
+            const targetContent = document.getElementById(targetId);
+            if (!targetContent) return;
+            
+            const isCurrentlyOpen = targetContent.style.display === "block";
+
+            // Mutually exclusive: Close all other sections first
+            helpPanel.querySelectorAll(".help-content").forEach(content => {
+                content.style.display = "none";
+            });
+
+            // If the clicked one was previously closed, open it now
+            if (!isCurrentlyOpen) {
+                targetContent.style.display = "block";
+            }
+        });
+    });
+
     document.addEventListener("keydown", function (event) {
         if (event.key === "Escape" && document.body.classList.contains("help-panel-open")) {
             setHelpPanel(false);

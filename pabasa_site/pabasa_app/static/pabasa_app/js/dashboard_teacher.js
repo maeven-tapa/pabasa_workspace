@@ -1,15 +1,16 @@
 (function () {
     document.addEventListener('DOMContentLoaded', function () {
         const createClassForm = document.getElementById("createClassForm");
+        const titleInput = document.getElementById("titleInput");
         const subjectInput = document.getElementById("subjectInput");
         const classDescriptionInput = document.getElementById("classDescriptionInput");
-        const gradeLevelInput = document.getElementById("gradeLevelInput");
-        const sectionInput = document.getElementById("sectionInput");
-        const generatedClassCode = document.getElementById("generatedClassCode");
+        const generatedClassCode = document.getElementById("generatedClassCode"); // This is for the create class form, not the stat card
         const regenerateCodeBtn = document.getElementById("regenerateCodeBtn");
         const classList = document.getElementById("classList");
-        const classCount = document.getElementById("classCount");
+        const classCountMirror = document.getElementById("classCountMirror"); // Renamed from classCount to target the 'Class' stat card
         const copyClassCodeBtn = document.getElementById("copyClassCodeBtn");
+        const manageClassLink = document.getElementById("manageClassLink");
+        const sidebarClassLink = document.getElementById("sidebarClassLink");
 
         const activeClassName = document.getElementById("activeClassName");
         const activeClassSubject = document.getElementById("activeClassSubject");
@@ -42,8 +43,9 @@
         }
 
         function updateClassCount() {
-            if (classCount) {
-                classCount.textContent = String(classList.querySelectorAll(".class-card").length);
+            const count = String(classList.querySelectorAll(".class-card").length);
+            if (classCountMirror) { // Use the renamed variable
+                classCountMirror.textContent = count;
             }
         }
 
@@ -188,6 +190,14 @@
             if (copyClassCodeBtn) {
                 copyClassCodeBtn.style.display = "block";
             }
+            if (manageClassLink) {
+                manageClassLink.href = `/dashboard/teacher/manage/?code=${code}`;
+                manageClassLink.style.display = "inline-flex";
+            }
+            // Also update the sidebar link to point to the management page
+            if (sidebarClassLink) {
+                sidebarClassLink.href = `/dashboard/teacher/manage/?code=${code}`;
+            }
             // Refresh student directory to show students for the selected class (if present)
             try {
                 if (typeof loadPersistedStudents === 'function') {
@@ -262,17 +272,16 @@
         createClassForm.addEventListener("submit", function (event) {
             event.preventDefault();
 
+            const title = titleInput.value.trim();
             const subject = subjectInput.value;
-            const gradeLevel = gradeLevelInput.value;
-            const section = sectionInput.value;
 
-            if (!subject || !gradeLevel || !section) {
-                alert("Please select Subject, Grade Level, and Section.");
+            if (!title || !subject) {
+                alert("Please provide a Title and select a Subject.");
                 return;
             }
 
             const description = classDescriptionInput.value.trim() || "Reading class workspace.";
-            const name = `${gradeLevel} - ${section} (${subject})`;
+            const name = title;
 
             fetch('/dashboard/teacher/create-class/', {
                 method: 'POST',
@@ -283,8 +292,6 @@
                 body: JSON.stringify({
                     class_name: name,
                     subject: subject,
-                    grade_level: gradeLevel,
-                    section: section,
                     description: description
                 })
             })
@@ -329,8 +336,8 @@
                         code: data.class_code,
                         name: data.class_name,
                         subject: subject,
-                        grade_level: gradeLevel,
-                        section: section,
+                        grade_level: 'N/A',
+                        section: 'N/A',
                         description: description,
                         header: 'READ',
                         students: '0',

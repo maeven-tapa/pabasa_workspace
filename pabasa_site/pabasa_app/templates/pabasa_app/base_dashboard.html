@@ -140,6 +140,13 @@
             transition: margin-left 0.2s ease; /* Smooth transition for margin when sidebar collapses */
         }
 
+        /* Reset margin for main content area when sidebar is hidden on mobile/tablet */
+        @media (max-width: 991.98px) {
+            .dashboard-main {
+                margin-left: 0 !important;
+            }
+        }
+
         .dashboard-topbar {
             /* The topbar is inside dashboard-main, so it will scroll with the main content.
                No changes are needed here for the fixed sidebar. */
@@ -263,7 +270,7 @@
             background: rgba(31, 111, 139, 0.02);
             font-size: 0.85rem;
             line-height: 1.5;
-            animation: slideDown 0.2s ease;
+            /* animation: slideDown 0.2s ease; */
         }
 
         .help-content p {
@@ -1193,7 +1200,7 @@
                 <div class="help-panel-body">
                     <ul class="help-links">
                         <li>
-                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-materials').style.display = document.getElementById('help-materials').style.display === 'none' ? 'block' : 'none'">
+                            <button type="button" class="help-link-btn" aria-controls="help-materials">
                                 <i class="bi bi-file-earmark-text"></i> How to create materials
                             </button>
                             <div id="help-materials" class="help-content" style="display: none;">
@@ -1201,7 +1208,7 @@
                             </div>
                         </li>
                         <li>
-                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-invite').style.display = document.getElementById('help-invite').style.display === 'none' ? 'block' : 'none'">
+                            <button type="button" class="help-link-btn" aria-controls="help-invite">
                                 <i class="bi bi-person-plus"></i> How to invite students
                             </button>
                             <div id="help-invite" class="help-content" style="display: none;">
@@ -1209,7 +1216,7 @@
                             </div>
                         </li>
                         <li>
-                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-assign').style.display = document.getElementById('help-assign').style.display === 'none' ? 'block' : 'none'">
+                            <button type="button" class="help-link-btn" aria-controls="help-assign">
                                 <i class="bi bi-list-check"></i> How to assign practice
                             </button>
                             <div id="help-assign" class="help-content" style="display: none;">
@@ -1217,7 +1224,7 @@
                             </div>
                         </li>
                         <li>
-                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-reports').style.display = document.getElementById('help-reports').style.display === 'none' ? 'block' : 'none'">
+                            <button type="button" class="help-link-btn" aria-controls="help-reports">
                                 <i class="bi bi-graph-up"></i> How to view reports
                             </button>
                             <div id="help-reports" class="help-content" style="display: none;">
@@ -1225,7 +1232,7 @@
                             </div>
                         </li>
                         <li>
-                            <button type="button" class="help-link-btn" onclick="document.getElementById('help-notify').style.display = document.getElementById('help-notify').style.display === 'none' ? 'block' : 'none'">
+                            <button type="button" class="help-link-btn" aria-controls="help-notify">
                                 <i class="bi bi-bell"></i> How to manage notifications
                             </button>
                             <div id="help-notify" class="help-content" style="display: none;">

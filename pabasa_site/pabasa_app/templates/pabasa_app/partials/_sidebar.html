@@ -27,7 +27,8 @@
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'practice' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Practice Mode" data-unlocked-title="Start your reading practice"><i class="bi bi-mic"></i><span class="sidebar-text">Practice Mode</span></a>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'assessment' %}" data-nav-tooltip data-student-class-required title="Join a class to unlock Reading Assessment" data-unlocked-title="Take your reading assessment"><i class="bi bi-journal-check"></i><span class="sidebar-text">Reading Assessment</span></a>
         {% else %}
-        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Classes"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Class</span></a>
+        <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'courses' %}" data-nav-tooltip title="Course"><i class="bi bi-folder2-open"></i><span class="sidebar-text">Course</span></a>
+        <a id="sidebarClassLink" class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'dashboard_teacher' %}" data-nav-tooltip title="Class"><i class="bi bi-door-open"></i><span class="sidebar-text">Class</span></a>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'students' %}" data-nav-tooltip title="Students"><i class="bi bi-people"></i><span class="sidebar-text">Students</span></a>
         {% endif %}
     </nav>
