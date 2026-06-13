@@ -1,0 +1,61 @@
+{% extends "pabasa_app/admin_base.html" %}
+
+{% block content %}
+<div class="admin-panel">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_class_detail' section.id %}">
+                <i class="bi bi-arrow-left me-1"></i>Back to class
+            </a>
+            <h2 class="h4 fw-bold mb-1">Edit {{ section.class_name }}</h2>
+            <p class="text-secondary mb-0">{{ section.class_code }}</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_classes' %}">
+            <i class="bi bi-door-open me-1"></i>Classes
+        </a>
+    </div>
+
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-12 col-lg-6">
+                <label class="form-label fw-bold" for="className">Class name</label>
+                <input class="form-control" id="className" type="text" name="class_name" value="{{ section.class_name }}" required>
+            </div>
+            <div class="col-12 col-lg-6">
+                <label class="form-label fw-bold" for="subject">Subject</label>
+                <input class="form-control" id="subject" type="text" name="subject" value="{{ section.subject }}" required>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="gradeLevel">Grade level</label>
+                <input class="form-control" id="gradeLevel" type="text" name="grade_level" value="{{ section.grade_level }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="sectionName">Section</label>
+                <input class="form-control" id="sectionName" type="text" name="section" value="{{ section.section }}">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" for="header">Header</label>
+                <input class="form-control" id="header" type="text" name="header" value="{{ section.header }}">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" for="description">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="5">{{ section.description }}</textarea>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
+            <a class="btn btn-outline-secondary" href="{% url 'admin_class_detail' section.id %}">Cancel</a>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check2 me-1"></i>Save changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

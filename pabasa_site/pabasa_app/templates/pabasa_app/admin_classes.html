@@ -2,6 +2,32 @@
 
 {% block content %}
 <div class="admin-panel">
+    <form class="row g-2 align-items-end mb-3" method="get">
+        <div class="col-12 col-lg-6">
+            <label class="form-label small fw-bold text-secondary" for="classSearch">Search classes</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input class="form-control" id="classSearch" type="search" name="q" value="{{ search_query }}" placeholder="Class code, name, subject, or teacher">
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <label class="form-label small fw-bold text-secondary" for="statusFilter">Status</label>
+            <select class="form-select" id="statusFilter" name="status">
+                <option value="all" {% if status_filter == "all" %}selected{% endif %}>All classes</option>
+                <option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option>
+                <option value="archived" {% if status_filter == "archived" %}selected{% endif %}>Archived</option>
+            </select>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3 d-flex gap-2">
+            <button class="btn btn-primary flex-fill" type="submit">
+                <i class="bi bi-funnel me-1"></i>Apply
+            </button>
+            <a class="btn btn-outline-secondary" href="{% url 'admin_classes' %}" aria-label="Clear filters">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        </div>
+    </form>
+
     <div class="table-responsive">
         <table class="table placeholder-table align-middle">
             <thead>
@@ -12,11 +38,61 @@
                 </tr>
             </thead>
             <tbody>
+                {% for section in sections %}
                 <tr>
-                    <td colspan="{{ table_headers|length }}" class="text-center text-secondary py-5">
-                        Class records placeholder. CRUD is not implemented yet.
+                    <td><span class="fw-bold">{{ section.class_code }}</span></td>
+                    <td>
+                        <span class="fw-bold d-block">{{ section.class_name }}</span>
+                        <span class="small text-secondary">{{ section.subject }}</span>
+                    </td>
+                    <td>
+                        {% if section.teacher %}
+                        <span class="d-block">{{ section.teacher.first_name }} {{ section.teacher.last_name }}</span>
+                        <span class="small text-secondary">{{ section.teacher.custom_id }}</span>
+                        {% else %}
+                        <span class="text-secondary">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ section.get_student_count }}</td>
+                    <td>
+                        {% if section.is_active %}
+                        <span class="badge rounded-pill text-bg-success">Active</span>
+                        {% else %}
+                        <span class="badge rounded-pill text-bg-secondary">Archived</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_class_detail' section.id %}">
+                                <i class="bi bi-eye me-1"></i>View
+                            </a>
+                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin_class_edit' section.id %}">
+                                <i class="bi bi-pencil me-1"></i>Edit
+                            </a>
+                            <form method="post" action="{% url 'admin_class_deactivate' section.id %}">
+                                {% csrf_token %}
+                                {% if section.is_active %}
+                                <input type="hidden" name="action" value="deactivate">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">
+                                    <i class="bi bi-archive me-1"></i>Archive
+                                </button>
+                                {% else %}
+                                <input type="hidden" name="action" value="reactivate">
+                                <button class="btn btn-sm btn-outline-success" type="submit">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivate
+                                </button>
+                                {% endif %}
+                            </form>
+                        </div>
                     </td>
                 </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ table_headers|length }}" class="text-center text-secondary py-5">
+                        No classes found.
+                    </td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>

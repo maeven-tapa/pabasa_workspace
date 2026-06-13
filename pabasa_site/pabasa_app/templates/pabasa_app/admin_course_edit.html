@@ -1,0 +1,82 @@
+{% extends "pabasa_app/admin_base.html" %}
+
+{% block content %}
+<div class="admin-panel">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_course_detail' material.id %}">
+                <i class="bi bi-arrow-left me-1"></i>Back to material
+            </a>
+            <h2 class="h4 fw-bold mb-1">Edit {{ material.title|default:"Untitled material" }}</h2>
+            <p class="text-secondary mb-0">{{ material.get_item_type_display }}</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'admin_courses' %}">
+            <i class="bi bi-folder2-open me-1"></i>Courses
+        </a>
+    </div>
+
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label fw-bold" for="title">Title</label>
+                <input class="form-control" id="title" type="text" name="title" value="{{ material.title }}" required>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="itemType">Type</label>
+                <select class="form-select" id="itemType" name="item_type" required>
+                    {% for value, label in type_options %}
+                    <option value="{{ value }}" {% if material.item_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="status">Status</label>
+                <select class="form-select" id="status" name="status" required>
+                    {% for value, label in status_options %}
+                    <option value="{{ value }}" {% if material.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="sectionId">Section/Class</label>
+                <select class="form-select" id="sectionId" name="section_id">
+                    <option value="">Unassigned</option>
+                    {% for option in sections %}
+                    <option value="{{ option.id }}" {% if material.section_id == option.id %}selected{% endif %}>{{ option.class_name }} ({{ option.class_code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold" for="scheduledAt">Scheduled at</label>
+                <input class="form-control" id="scheduledAt" type="datetime-local" name="scheduled_at" value="{{ material.scheduled_at|date:'Y-m-d\\TH:i' }}">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" for="difficultyLevel">Difficulty</label>
+                <input class="form-control" id="difficultyLevel" type="text" name="difficulty_level" value="{{ material.difficulty_level }}">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" for="promptText">Prompt</label>
+                <textarea class="form-control" id="promptText" name="prompt_text" rows="3">{{ material.prompt_text }}</textarea>
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-bold" for="contentText">Content</label>
+                <textarea class="form-control" id="contentText" name="content_text" rows="8">{{ material.content_text }}</textarea>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
+            <a class="btn btn-outline-secondary" href="{% url 'admin_course_detail' material.id %}">Cancel</a>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-check2 me-1"></i>Save changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1416,13 +1416,167 @@ def _admin_deactivate_section(request, section_id):
 
 @admin_required
 def admin_courses(request):
-    return render(request, 'pabasa_app/admin_courses.html', _admin_context(request, 'Courses', [
-        'Course',
-        'Grade Level',
-        'Classes',
-        'Materials',
+    return render(request, 'pabasa_app/admin_courses.html', _admin_materials_context(request, 'Courses'))
+
+def _get_managed_material(material_id):
+    """Retrieve a material by ID. Returns None if not found."""
+    return Material.objects.select_related('section', 'section__teacher', 'assessment').filter(id=material_id).first()
+
+def _admin_material_status(material):
+    return 'Archived' if not getattr(material, 'is_active', False) else material.get_status_display()
+
+def _admin_materials_context(request, page_title):
+    """
+    Build context for admin course/material list view.
+    Supports search by title, status filtering, and material type filtering.
+    """
+    search_query = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', 'all').strip().lower()
+    type_filter = request.GET.get('type', 'all').strip().lower()
+
+    materials = Material.objects.select_related('section', 'section__teacher', 'assessment').all()
+
+    if search_query:
+        materials = materials.filter(title__icontains=search_query)
+
+    valid_statuses = {choice[0] for choice in Material.STATUS_CHOICES}
+    if status_filter in valid_statuses:
+        materials = materials.filter(status=status_filter, is_active=True)
+    elif status_filter == 'archived':
+        materials = materials.filter(is_active=False)
+    elif status_filter == 'active':
+        materials = materials.filter(is_active=True)
+
+    valid_types = {choice[0] for choice in Material.ITEM_TYPE_CHOICES}
+    if type_filter in valid_types:
+        materials = materials.filter(item_type=type_filter)
+
+    context = _admin_context(request, page_title, [
+        'Title',
+        'Type',
+        'Section/Class',
         'Status',
-    ]))
+        'Created At',
+        'Actions',
+    ])
+    context.update({
+        'materials': materials.order_by('-created_at', 'title'),
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'type_filter': type_filter,
+        'status_options': [('all', 'All Statuses'), ('active', 'Active')] + list(Material.STATUS_CHOICES) + [('archived', 'Archived')],
+        'type_options': [('all', 'All Types')] + list(Material.ITEM_TYPE_CHOICES),
+    })
+    return context
+
+def _admin_material_template_context(request, material, page_title):
+    context = _admin_context(request, page_title, [])
+    context.update({
+        'material': material,
+        'material_status': _admin_material_status(material),
+        'section': material.section,
+        'assessment': material.assessment,
+        'sections': Section.objects.filter(is_active=True).order_by('class_name', 'class_code'),
+        'status_options': Material.STATUS_CHOICES,
+        'type_options': Material.ITEM_TYPE_CHOICES,
+    })
+    return context
+
+@admin_required
+def admin_course_detail(request, material_id):
+    material = _get_managed_material(material_id)
+    if not material:
+        return redirect('admin_courses')
+    return render(request, 'pabasa_app/admin_course_detail.html',
+                  _admin_material_template_context(request, material, 'Course Details'))
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_course_edit(request, material_id):
+    material = _get_managed_material(material_id)
+    if not material:
+        return redirect('admin_courses')
+
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        item_type = request.POST.get('item_type', '').strip()
+        status = request.POST.get('status', '').strip()
+        section_id = request.POST.get('section_id', '').strip()
+        prompt_text = request.POST.get('prompt_text', '').strip()
+        content_text = request.POST.get('content_text', '').strip()
+        difficulty_level = request.POST.get('difficulty_level', '').strip()
+        scheduled_at_value = request.POST.get('scheduled_at', '').strip()
+
+        valid_types = {choice[0] for choice in Material.ITEM_TYPE_CHOICES}
+        valid_statuses = {choice[0] for choice in Material.STATUS_CHOICES}
+        error_message = ''
+
+        if not title:
+            error_message = 'Title is required.'
+        elif item_type not in valid_types:
+            error_message = 'Material type is required.'
+        elif status not in valid_statuses:
+            error_message = 'Status is required.'
+
+        section = None
+        if not error_message and section_id:
+            section = Section.objects.filter(id=section_id).first()
+            if not section:
+                error_message = 'Selected section was not found.'
+
+        scheduled_at = None
+        if not error_message and status == 'scheduled':
+            if not scheduled_at_value:
+                error_message = 'Scheduled date and time is required.'
+            else:
+                scheduled_at = parse_datetime(scheduled_at_value)
+                if not scheduled_at:
+                    scheduled_at = parse_datetime(f'{scheduled_at_value}:00')
+                if scheduled_at and not timezone.is_aware(scheduled_at):
+                    scheduled_at = timezone.make_aware(scheduled_at)
+                if not scheduled_at:
+                    error_message = 'Scheduled date and time is invalid.'
+
+        if error_message:
+            context = _admin_material_template_context(request, material, 'Edit Course')
+            context['error_message'] = error_message
+            return render(request, 'pabasa_app/admin_course_edit.html', context, status=400)
+
+        material.title = title
+        material.item_type = item_type
+        material.status = status
+        material.section = section
+        material.prompt_text = prompt_text
+        material.content_text = content_text
+        material.difficulty_level = difficulty_level
+        material.scheduled_at = scheduled_at if status == 'scheduled' else None
+        material.save()
+
+        material.assigned_sections.clear()
+        if section:
+            material.assigned_sections.add(section)
+
+        return redirect('admin_course_detail', material_id=material.id)
+
+    return render(request, 'pabasa_app/admin_course_edit.html',
+                  _admin_material_template_context(request, material, 'Edit Course'))
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_course_archive(request, material_id):
+    material = _get_managed_material(material_id)
+    if not material:
+        return redirect('admin_courses')
+
+    action = request.POST.get('action', 'archive').strip().lower()
+    if action == 'archive' and material.is_active:
+        material.is_active = False
+        material.save(update_fields=['is_active', 'updated_at'])
+    elif action == 'restore' and not material.is_active:
+        material.is_active = True
+        material.save(update_fields=['is_active', 'updated_at'])
+
+    return redirect('admin_courses')
 
 @admin_required
 def admin_practice_assessment(request):
