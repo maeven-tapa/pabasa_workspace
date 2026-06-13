@@ -3224,37 +3224,24 @@
                                 return [text];
                             }
 
-                            if (createdIds.length > 0) {
-                                const tokens = splitContentClient(content, currentMaterialType);
-                                // If token count doesn't match created IDs, fall back to reloading from server
-                                if (tokens.length === createdIds.length) {
-                                    const readings = ensureClassReadings(currentClassCode);
-                                    for (let i = 0; i < createdIds.length; i++) {
-                                        const token = tokens[i];
-                                        const mid = createdIds[i];
-                                        const itemTitle = title || (token && token.length > 50 ? token.slice(0, 50) + '...' : token || 'Material');
-                                        const newMaterial = {
-                                            id: mid,
-                                            title: itemTitle,
-                                            content: token,
-                                            type: currentMaterialType,
-                                            items: 1,
-                                            status: status,
-                                            schedule: schedule || null,
-                                            code: apiData.code || null,
-                                            created_at: (apiData.created_at && apiData.created_count === 1) ? apiData.created_at : new Date().toISOString(),
-                                        };
-                                        readings[currentMaterialType].push(newMaterial);
-                                    }
-                                    saveStoredReadings();
-                                    await renderClasses();
-                                } else {
-                                    // Mismatch: reload authoritative data from server
-                                    await loadReadings(currentClassCode);
-                                    await renderClasses();
-                                }
+                            if (createdIds.length > 0 && apiData.material) {
+                                const readings = ensureClassReadings(currentClassCode);
+                                readings[currentMaterialType].push({
+                                    id: apiData.material.id,
+                                    title: apiData.material.title || title,
+                                    content: apiData.material.content,
+                                    type: apiData.material.type,
+                                    items: apiData.material.items || 1,
+                                    status: apiData.material.status,
+                                    schedule: apiData.material.schedule || null,
+                                    code: apiData.material.code || apiData.code || null,
+                                    created_at: apiData.material.created_at || new Date().toISOString(),
+                                    assigned_sections: apiData.material.assigned_sections || [],
+                                });
+                                saveStoredReadings();
+                                await renderClasses();
                             } else {
-                                // No ids returned; reload authoritative data from server
+                                // Fallback: reload authoritative data from server
                                 await loadReadings(currentClassCode);
                                 await renderClasses();
                             }

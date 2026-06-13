@@ -353,12 +353,25 @@ class Material(models.Model):
         ("sentence", "Sentence"),
         ("paragraph", "Paragraph"),
     ]
+
+    STATUS_CHOICES = [
+        ("published", "Published"),
+        ("draft", "Draft"),
+        ("scheduled", "Scheduled"),
+    ]
+
     # Materials may be standalone (not tied to an Assessment record) so allow
     # a nullable FK to Assessment and also attach directly to a Section.
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="materials", null=True, blank=True)
     section = models.ForeignKey("Section", on_delete=models.SET_NULL, related_name="materials", null=True, blank=True)
+    assigned_sections = models.ManyToManyField("Section", related_name="assigned_materials", blank=True)
+    title = models.CharField(max_length=150, blank=True, default='')
     item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES)
-    prompt_text = models.TextField()
+    prompt_text = models.TextField(blank=True, default='')
+    content_text = models.TextField(blank=True, default='')
+    content_json = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
+    scheduled_at = models.DateTimeField(null=True, blank=True)
     order_index = models.PositiveIntegerField()
     expected_answer = models.TextField(blank=True, null=True)
     difficulty_level = models.CharField(max_length=50, blank=True)
@@ -376,7 +389,8 @@ class Material(models.Model):
 
     def __str__(self):
         parent = self.assessment.code if self.assessment else (self.section.class_code if self.section else 'UNLINKED')
-        return f"{parent} - {self.item_type} #{self.order_index}"
+        title_part = f" - {self.title}" if self.title else ''
+        return f"{parent} - {self.item_type} #{self.order_index}{title_part}"
 
 
 # Note: AssessmentAttempt and AssessmentResult tables removed. Attempts/results

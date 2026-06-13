@@ -1694,13 +1694,13 @@ def get_class_materials(request):
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         
-        # Get all active materials for this class (materials table is primary)
-        mats = Material.objects.filter(
-            section=section,
-            is_active=True
-        ).order_by('order_index')
+        # Include published materials for students and all class materials for the teacher owner.
+        mats = Material.objects.filter(section=section).order_by('order_index')
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first() if user_id else None
+        if not teacher_user or teacher_user.role != 'teacher' or section.teacher_id != teacher_user.id:
+            mats = mats.filter(is_active=True)
 
-        # Organize materials by type
         materials = {
             'word': [],
             'sentence': [],
@@ -1708,17 +1708,24 @@ def get_class_materials(request):
         }
 
         for m in mats:
+            content_value = m.content_text or m.prompt_text or ''
+            title_value = m.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
+            items_count = 1
+            if isinstance(m.content_json, dict) and isinstance(m.content_json.get('items'), list):
+                items_count = len(m.content_json.get('items'))
+
             material = {
                 'id': m.id,
                 'code': m.assessment.code if m.assessment else None,
-                'title': (m.prompt_text[:150] + '...') if m.prompt_text and len(m.prompt_text) > 150 else (m.prompt_text or ''),
+                'title': title_value,
                 'type': m.item_type,
-                'content': m.prompt_text,
-                'status': 'published' if m.is_active else 'inactive',
-                'schedule': None,
-                'items': 1,
+                'content': content_value,
+                'status': m.status or ('published' if m.is_active else 'inactive'),
+                'schedule': m.scheduled_at.isoformat() if getattr(m, 'scheduled_at', None) else None,
+                'items': items_count,
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                 'attempt_count': 0,
+                'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
             }
 
             if m.item_type in materials:
@@ -1920,22 +1927,38 @@ def add_reading_material(request):
             max_idx = Material.objects.filter(section=section, item_type=reading_type).aggregate(m=Max('order_index'))['m'] or 0
             next_index = int(max_idx) + 1
 
-            created_ids = []
             with transaction.atomic():
-                for token in tokens:
-                    m = Material.objects.create(
-                        assessment=None,
-                        section=section,
-                        item_type=reading_type,
-                        prompt_text=token,
-                        order_index=next_index,
-                        expected_answer=None,
-                        difficulty_level='',
-                        audio_url=None,
-                        is_active=(status == 'published')
-                    )
-                    created_ids.append(m.id)
-                    next_index += 1
+                m = Material.objects.create(
+                    assessment=None,
+                    section=section,
+                    item_type=reading_type,
+                    title=title,
+                    prompt_text=(tokens[0] if tokens else title) or title,
+                    content_text=content,
+                    content_json={'items': tokens},
+                    status=status,
+                    scheduled_at=scheduled_at if status == 'scheduled' else None,
+                    order_index=next_index,
+                    expected_answer=None,
+                    difficulty_level='',
+                    audio_url=None,
+                    is_active=(status == 'published')
+                )
+                if section is not None:
+                    m.assigned_sections.add(section)
+                created_ids = [m.id]
+                material_payload = {
+                    'id': m.id,
+                    'code': None,
+                    'title': m.title,
+                    'type': m.item_type,
+                    'content': m.content_text,
+                    'status': m.status,
+                    'schedule': m.scheduled_at.isoformat() if m.scheduled_at else None,
+                    'items': len(tokens),
+                    'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+                    'assigned_sections': [section.class_code] if section else [],
+                }
 
         except Exception as e:
             logger.exception('Failed to create Material rows: %s', str(e))
@@ -1946,9 +1969,11 @@ def add_reading_material(request):
             'message': 'Reading material(s) created successfully.',
             'material_ids': created_ids,
             'created_count': len(created_ids),
+            'material': material_payload,
             'title': title,
             'type': reading_type,
             'status': status,
+            'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
         })
 
     except json.JSONDecodeError as e:
@@ -1986,7 +2011,7 @@ def record_assessment_completion(request):
                 teacher_user = material.assessment.teacher
             elif material.section:
                 teacher_user = material.section.teacher
-            title_text = material.prompt_text or material.item_type
+            title_text = material.title or material.content_text or material.prompt_text or material.item_type
         else:
             return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
 
