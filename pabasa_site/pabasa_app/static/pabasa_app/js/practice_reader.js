@@ -27,6 +27,7 @@
     const materialId = urlParams.get("id");
     const testTitle = urlParams.get("test");
     const viewMode = urlParams.get("viewMode");
+    const selectedDifficulty = (urlParams.get("difficulty") || "").trim().toLowerCase();
 
     function getStoredArray(key) {
         try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { return []; }
@@ -34,6 +35,27 @@
 
     function getStoredObject(key) {
         try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; }
+    }
+
+    function shuffleItems(sourceItems) {
+        const shuffled = sourceItems.slice();
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    function getServerPracticeMaterials() {
+        const dataElement = document.getElementById("practiceMaterialsData");
+        if (!dataElement) return [];
+
+        try {
+            return JSON.parse(dataElement.textContent || "[]");
+        } catch (e) {
+            console.warn("PABASA [Practice]: Unable to parse server practice materials.", e);
+            return [];
+        }
     }
 
     function parseItems(material, currentMode) {
@@ -47,7 +69,36 @@
         return [];
     }
 
+    function loadServerPracticeItems() {
+        const serverMaterials = getServerPracticeMaterials();
+        if (!serverMaterials.length) return [];
+
+        return serverMaterials.reduce((aggregatedItems, material) => {
+            if (!material || material.type !== mode) return aggregatedItems;
+            if (selectedDifficulty && material.difficulty !== selectedDifficulty) return aggregatedItems;
+
+            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+            const matchesTarget = !materialId && !testTitle
+                || (materialId && mId === String(materialId).trim())
+                || (testTitle && material.title === testTitle);
+
+            if (matchesTarget) {
+                aggregatedItems.push(...parseItems(material, mode));
+            }
+
+            return aggregatedItems;
+        }, []);
+    }
+
     function loadItems() {
+        const serverItems = loadServerPracticeItems();
+        if (serverItems.length > 0) {
+            items = shuffleItems(serverItems);
+            currentIndex = 0;
+            render();
+            return;
+        }
+
         const params = new URLSearchParams(window.location.search);
         const urlCode = params.get("code");
 
@@ -95,7 +146,7 @@
             });
         });
 
-        items = aggregatedItems;
+        items = shuffleItems(aggregatedItems);
         console.log(`PABASA [Practice]: Found ${items.length} items.`);
 
         if (items.length === 0) {

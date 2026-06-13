@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import User
+from .models import Material, User
 
 
 class ProfileUpdateTests(TestCase):
@@ -59,3 +59,48 @@ class ProfileUpdateTests(TestCase):
         self.assertEqual(self.user.suffix, "Jr.")
         self.assertEqual(self.user.email, "new@example.com")
         self.assertIn({"profile_info": {"bio": "Updated bio"}}, self.user.tags)
+
+
+class PracticeReaderMaterialTests(TestCase):
+    def test_word_reader_receives_active_published_practice_items(self):
+        Material.objects.create(
+            title="Easy syllables",
+            item_type="word",
+            content_text="HA\nhe\nhi\nho\nhu",
+            content_json={"source": "admin_practice", "difficulty": "easy", "items": ["HA", "he", "hi", "ho", "hu"]},
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+        Material.objects.create(
+            title="Draft syllables",
+            item_type="word",
+            content_text="draft",
+            content_json={"items": ["draft"]},
+            status="draft",
+            difficulty_level="easy",
+            is_active=True,
+        )
+
+        response = self.client.get(reverse("practice_word_page"), {"difficulty": "easy"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="practiceMaterialsData"', html=False)
+        self.assertContains(response, '"items": ["HA", "he", "hi", "ho", "hu"]', html=False)
+        self.assertNotContains(response, "Draft syllables")
+
+    def test_word_reader_parses_comma_separated_content_text_when_json_items_missing(self):
+        Material.objects.create(
+            title="Comma syllables",
+            item_type="word",
+            content_text="HA, he, hi, ho, hu",
+            content_json={},
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+
+        response = self.client.get(reverse("practice_word_page"), {"difficulty": "easy"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '"items": ["HA", "he", "hi", "ho", "hu"]', html=False)

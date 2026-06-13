@@ -20,7 +20,7 @@ import traceback
 import ssl
 import time
 import uuid
-from .forms import AdminPracticeMaterialForm
+from .forms import AdminPracticeMaterialForm, parse_practice_items
 from .models import User, Section, Assessment, Material, Note, Notification
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
@@ -1778,6 +1778,7 @@ def _student_practice_queryset():
         assessment__isnull=True,
         section__isnull=True,
         difficulty_level__in=_practice_difficulty_values(),
+        status='published',
         is_active=True,
     ).order_by('difficulty_level', 'item_type', 'title')
 
@@ -1785,7 +1786,7 @@ def _serialize_student_practice_material(material):
     content_json = material.content_json if isinstance(material.content_json, dict) else {}
     items = content_json.get('items') if isinstance(content_json.get('items'), list) else []
     if not items:
-        items = [entry.strip() for entry in (material.content_text or '').splitlines() if entry.strip()]
+        items = parse_practice_items(material.content_text, material.item_type)
 
     return {
         'id': material.id,

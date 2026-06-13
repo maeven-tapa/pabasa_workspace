@@ -5,6 +5,17 @@ from django import forms
 from .models import Material
 
 
+def parse_practice_items(content, item_type):
+    content = (content or "").strip()
+    if item_type == "word":
+        return re.findall(r"\b[\w']+\b", content, flags=re.UNICODE)
+    if item_type == "sentence":
+        return [part.strip() for part in re.split(r"(?<=[.!?])\s+", content) if part.strip()]
+    if item_type == "paragraph":
+        return [part.strip() for part in re.split(r"\n{2,}", content) if part.strip()]
+    return [content] if content else []
+
+
 class AdminPracticeMaterialForm(forms.Form):
     DIFFICULTY_CHOICES = [
         ("easy", "Easy"),
@@ -32,13 +43,7 @@ class AdminPracticeMaterialForm(forms.Form):
     def practice_items(self):
         content = self.cleaned_data.get("content_text", "")
         item_type = self.cleaned_data.get("item_type")
-        if item_type == "word":
-            return re.findall(r"\b[\w']+\b", content, flags=re.UNICODE)
-        if item_type == "sentence":
-            return [part.strip() for part in re.split(r"(?<=[.!?])\s+", content) if part.strip()]
-        if item_type == "paragraph":
-            return [part.strip() for part in re.split(r"\n{2,}", content) if part.strip()]
-        return [content] if content else []
+        return parse_practice_items(content, item_type)
 
     def clean(self):
         cleaned_data = super().clean()
