@@ -50,19 +50,20 @@
                 <tr>
                     <td>
                         <span class="fw-bold d-block">{{ material.title|default:"Untitled material" }}</span>
-                        {% if material.prompt_text %}
-                        <span class="small text-secondary">{{ material.prompt_text|truncatechars:70 }}</span>
-                        {% endif %}
                     </td>
-                    <td>{{ material.get_item_type_display }}</td>
                     <td>
-                        {% if material.section %}
-                        <span class="fw-bold d-block">{{ material.section.class_name }}</span>
-                        <span class="small text-secondary">{{ material.section.class_code }}</span>
+                        {% if material.section and material.section.teacher %}
+                        <span class="d-block">{{ material.section.teacher.first_name }} {{ material.section.teacher.last_name }}</span>
+                        <span class="small text-secondary">{{ material.section.teacher.custom_id }}</span>
+                        {% elif material.assessment and material.assessment.teacher %}
+                        <span class="d-block">{{ material.assessment.teacher.first_name }} {{ material.assessment.teacher.last_name }}</span>
+                        <span class="small text-secondary">{{ material.assessment.teacher.custom_id }}</span>
                         {% else %}
-                        <span class="text-secondary">Unassigned</span>
+                        <span class="text-secondary">-</span>
                         {% endif %}
                     </td>
+                    <td>{{ material.created_at|date:"M d, Y g:i A" }}</td>
+                    <td>{{ material.updated_at|date:"M d, Y g:i A" }}</td>
                     <td>
                         {% if material.is_active %}
                         <span class="badge rounded-pill text-bg-success">{{ material.get_status_display }}</span>
@@ -70,7 +71,6 @@
                         <span class="badge rounded-pill text-bg-secondary">Archived</span>
                         {% endif %}
                     </td>
-                    <td>{{ material.created_at|date:"M d, Y g:i A" }}</td>
                     <td>
                         <div class="d-flex flex-wrap gap-2">
                             <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_course_detail' material.id %}">

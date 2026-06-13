@@ -1047,6 +1047,30 @@ def _admin_context(request, page_title, table_headers):
         'table_headers': table_headers,
     }
 
+def _notification_settings_defaults(user):
+    return {
+        'push_enabled': True,
+        'email_notifications': True,
+        'new_materials': True,
+        'reading_reminders': getattr(user, 'role', '') == 'student',
+        'progress_updates': True,
+    }
+
+def _notification_settings_for_user(user):
+    return {
+        **_notification_settings_defaults(user),
+        **_get_profile_dict(user, 'notification_settings'),
+    }
+
+def _posted_notification_settings(request):
+    return {
+        'push_enabled': request.POST.get('push_enabled') == 'on',
+        'email_notifications': request.POST.get('email_notifications') == 'on',
+        'new_materials': request.POST.get('new_materials') == 'on',
+        'reading_reminders': request.POST.get('reading_reminders') == 'on',
+        'progress_updates': request.POST.get('progress_updates') == 'on',
+    }
+
 def _get_dashboard_data():
     """
     Compute dashboard statistics and recent activities.
@@ -1217,28 +1241,26 @@ def _admin_edit_user(request, user_id, role):
 
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
+        username = request.POST.get('custom_id', '').strip()
+        if not username:
+            context = _admin_user_template_context(request, user, f'Edit {role.title()}')
+            context['error_message'] = 'Username is required.'
+            return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
+        if User.objects.filter(custom_id__iexact=username).exclude(id=user.id).exists():
+            context = _admin_user_template_context(request, user, f'Edit {role.title()}')
+            context['error_message'] = 'Username is already used by another account.'
+            return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
         if email and User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
             context = _admin_user_template_context(request, user, f'Edit {role.title()}')
             context['error_message'] = 'Email is already used by another account.'
             return render(request, 'pabasa_app/admin_user_edit.html', context, status=400)
 
+        user.custom_id = username
         user.first_name = request.POST.get('first_name', '').strip()
         user.middle_initial = request.POST.get('middle_initial', '').strip()[:1]
         user.last_name = request.POST.get('last_name', '').strip()
         user.suffix = request.POST.get('suffix', '').strip()
         user.email = email
-        user.contact_no = request.POST.get('contact_no', '').strip()
-        user.sex = request.POST.get('sex', '').strip()
-
-        if role == 'student':
-            user.grade_level = request.POST.get('grade_level', '').strip()
-            user.section = request.POST.get('section', '').strip()
-            user.reading_level = request.POST.get('reading_level', '').strip()
-            user.parent_contact_no = request.POST.get('parent_contact_no', '').strip()
-        else:
-            user.teacher_role = request.POST.get('teacher_role', '').strip()
-            user.school = request.POST.get('school', '').strip()
-            user.department = request.POST.get('department', '').strip()
 
         user.save()
         return redirect('admin_student_detail' if role == 'student' else 'admin_teacher_detail', user_id=user.id)
@@ -1308,8 +1330,9 @@ def _admin_sections_context(request, page_title):
         sections = sections.filter(is_active=False)
 
     context = _admin_context(request, page_title, [
-        'Class Code',
         'Class Name',
+        'Subject',
+        'Grade Level',
         'Teacher',
         'Student Count',
         'Status',
@@ -1435,7 +1458,7 @@ def _admin_materials_context(request, page_title):
     status_filter = request.GET.get('status', 'all').strip().lower()
     type_filter = request.GET.get('type', 'all').strip().lower()
 
-    materials = Material.objects.select_related('section', 'section__teacher', 'assessment').all()
+    materials = Material.objects.select_related('section', 'section__teacher', 'assessment', 'assessment__teacher').all()
 
     if search_query:
         materials = materials.filter(title__icontains=search_query)
@@ -1454,10 +1477,10 @@ def _admin_materials_context(request, page_title):
 
     context = _admin_context(request, page_title, [
         'Title',
-        'Type',
-        'Section/Class',
-        'Status',
+        'Created By',
         'Created At',
+        'Updated At',
+        'Status',
         'Actions',
     ])
     context.update({
@@ -1746,13 +1769,48 @@ def admin_practice_archive(request, practice_id):
     return redirect('admin_practice_assessment')
 
 @admin_required
+@csrf_protect
+@require_http_methods(["GET", "POST"])
 def admin_settings(request):
-    return render(request, 'pabasa_app/admin_settings.html', _admin_context(request, 'Settings', [
-        'Setting',
-        'Current Value',
-        'Description',
-        'Status',
-    ]))
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not user:
+        request.session.flush()
+        return redirect('auth')
+
+    notification_settings = _notification_settings_for_user(user)
+    context = _admin_context(request, 'Settings', [])
+
+    if request.method == 'POST':
+        action = request.POST.get('settings_action', '').strip()
+
+        if action == 'change_password':
+            current_password = request.POST.get('current_password', '')
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+
+            if not current_password or not new_password or not confirm_password:
+                context['settings_error'] = 'All password fields are required.'
+            elif not check_password(current_password, user.password_hash):
+                context['settings_error'] = 'Current password is incorrect.'
+            elif new_password != confirm_password:
+                context['settings_error'] = 'New passwords do not match.'
+            elif len(new_password) < 8:
+                context['settings_error'] = 'Password must be at least 8 characters.'
+            else:
+                user.password_hash = make_password(new_password)
+                user.save(update_fields=['password_hash', 'updated_at'])
+                context['settings_success'] = 'Password changed successfully.'
+
+        elif action == 'save_notifications':
+            notification_settings = _posted_notification_settings(request)
+            _set_profile_dict(user, 'notification_settings', notification_settings)
+            context['settings_success'] = 'Push notification preferences saved.'
+
+        else:
+            context['settings_error'] = 'Unknown settings action.'
+
+    context['notification_settings'] = notification_settings
+    return render(request, 'pabasa_app/admin_settings.html', context)
 
 def courses(request):
     if not _check_auth(request):
@@ -1840,9 +1898,52 @@ def student_detail(request):
 def calendar(request):
     return render(request, 'pabasa_app/calendar.html', _dashboard_context(request))
 
+@csrf_protect
+@require_http_methods(["GET", "POST"])
 def settings_view(request):
-    nav_role = request.GET.get('role', 'student')
-    return render(request, 'pabasa_app/settings.html', _dashboard_context(request, nav_role))
+    if not _check_auth(request):
+        return redirect('auth')
+
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not user:
+        request.session.flush()
+        return redirect('auth')
+
+    nav_role = user.role
+    notification_settings = _notification_settings_for_user(user)
+    context = _dashboard_context(request, nav_role)
+
+    if request.method == 'POST':
+        action = request.POST.get('settings_action', '').strip()
+
+        if action == 'change_password':
+            current_password = request.POST.get('current_password', '')
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+
+            if not current_password or not new_password or not confirm_password:
+                context['settings_error'] = 'All password fields are required.'
+            elif not check_password(current_password, user.password_hash):
+                context['settings_error'] = 'Current password is incorrect.'
+            elif new_password != confirm_password:
+                context['settings_error'] = 'New passwords do not match.'
+            elif len(new_password) < 8:
+                context['settings_error'] = 'Password must be at least 8 characters.'
+            else:
+                user.password_hash = make_password(new_password)
+                user.save(update_fields=['password_hash', 'updated_at'])
+                context['settings_success'] = 'Password changed successfully.'
+
+        elif action == 'save_notifications':
+            notification_settings = _posted_notification_settings(request)
+            _set_profile_dict(user, 'notification_settings', notification_settings)
+            context['settings_success'] = 'Push notification preferences saved.'
+
+        else:
+            context['settings_error'] = 'Unknown settings action.'
+
+    context['notification_settings'] = notification_settings
+    return render(request, 'pabasa_app/settings.html', context)
 
 def practice(request):
     return render(request, 'pabasa_app/practice.html', _student_practice_context(request))

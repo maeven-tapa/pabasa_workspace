@@ -40,11 +40,12 @@
             <tbody>
                 {% for section in sections %}
                 <tr>
-                    <td><span class="fw-bold">{{ section.class_code }}</span></td>
                     <td>
                         <span class="fw-bold d-block">{{ section.class_name }}</span>
-                        <span class="small text-secondary">{{ section.subject }}</span>
+                        <span class="small text-secondary">{{ section.class_code }}</span>
                     </td>
+                    <td>{{ section.subject|default:"-" }}</td>
+                    <td>{{ section.grade_level|default:"-" }}</td>
                     <td>
                         {% if section.teacher %}
                         <span class="d-block">{{ section.teacher.first_name }} {{ section.teacher.last_name }}</span>

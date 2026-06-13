@@ -37,29 +37,66 @@
 {% block content %}
 <section>
     <div class="dash-page-head">
-        <p class="small text-secondary mb-1">{% if nav_role == 'teacher' %}Adjust teacher workspace behavior and reporting preferences. All notifications are sent via email and in-app.{% else %}Adjust student reading reminders and preferences. All notifications are sent via email and in-app.{% endif %}</p>
-        <p class="small mb-0"><strong>Note:</strong> PABASA uses dual-channel delivery (Email & In-App) for all alerts.</p>
+        <p class="small text-secondary mb-1">{% if nav_role == 'teacher' %}Adjust teacher workspace behavior, password access, and notification preferences.{% else %}Adjust student reading reminders, password access, and notification preferences.{% endif %}</p>
+        <p class="small mb-0"><strong>Note:</strong> Account deletion is not available from Settings.</p>
     </div>
+
+    {% if settings_success %}
+        <div class="alert alert-success" role="alert">{{ settings_success }}</div>
+    {% endif %}
+    {% if settings_error %}
+        <div class="alert alert-danger" role="alert">{{ settings_error }}</div>
+    {% endif %}
 
     <div class="settings-grid">
         <article class="settings-card">
-            <h2>Display</h2>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label small">Theme</label>
-                    <select class="form-select">
-                        <option selected>Light</option>
-                        <option>System</option>
-                    </select>
+            <h2>Push Notifications</h2>
+            <form method="post" class="d-grid gap-3">
+                {% csrf_token %}
+                <input type="hidden" name="settings_action" value="save_notifications">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="pushEnabled" name="push_enabled" {% if notification_settings.push_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="pushEnabled">Enable Notifications</label>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label small">Language</label>
-                    <select class="form-select">
-                        <option selected>English</option>
-                        <option>Filipino</option>
-                    </select>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" {% if notification_settings.email_notifications %}checked{% endif %}>
+                    <label class="form-check-label" for="emailNotifications">Email Notifications</label>
                 </div>
-            </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="newMaterials" name="new_materials" {% if notification_settings.new_materials %}checked{% endif %}>
+                    <label class="form-check-label" for="newMaterials">New materials and assignments</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="readingReminders" name="reading_reminders" {% if notification_settings.reading_reminders %}checked{% endif %}>
+                    <label class="form-check-label" for="readingReminders">Reading reminders</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="progressUpdates" name="progress_updates" {% if notification_settings.progress_updates %}checked{% endif %}>
+                    <label class="form-check-label" for="progressUpdates">Progress updates</label>
+                </div>
+                <button class="btn btn-primary btn-sm w-auto" type="submit">Save Preferences</button>
+            </form>
+        </article>
+
+        <article class="settings-card">
+            <h2>Change Password</h2>
+            <form method="post" class="d-grid gap-3">
+                {% csrf_token %}
+                <input type="hidden" name="settings_action" value="change_password">
+                <div>
+                    <label class="form-label small" for="currentPassword">Current Password</label>
+                    <input class="form-control" id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
+                </div>
+                <div>
+                    <label class="form-label small" for="newPassword">New Password</label>
+                    <input class="form-control" id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" required>
+                </div>
+                <div>
+                    <label class="form-label small" for="confirmPassword">Confirm Password</label>
+                    <input class="form-control" id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+                </div>
+                <button class="btn btn-primary btn-sm w-auto" type="submit">Update Password</button>
+            </form>
         </article>
 
         {% if nav_role == 'teacher' %}
@@ -115,7 +152,5 @@
         </article>
         {% endif %}
     </div>
-
-    <button class="btn btn-primary btn-sm mt-3" type="button">Save Settings</button>
 </section>
 {% endblock %}

@@ -2,23 +2,63 @@
 
 {% block content %}
 <div class="admin-panel">
-    <div class="table-responsive">
-        <table class="table placeholder-table align-middle">
-            <thead>
-                <tr>
-                    {% for header in table_headers %}
-                    <th>{{ header }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td colspan="{{ table_headers|length }}" class="text-center text-secondary py-5">
-                        Settings placeholder. CRUD is not implemented yet.
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    {% if settings_success %}
+        <div class="alert alert-success" role="alert">{{ settings_success }}</div>
+    {% endif %}
+    {% if settings_error %}
+        <div class="alert alert-danger" role="alert">{{ settings_error }}</div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <section class="border rounded-3 p-3 h-100">
+                <h2 class="h5 fw-bold mb-3">Push Notifications</h2>
+                <form method="post" class="d-grid gap-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="settings_action" value="save_notifications">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="pushEnabled" name="push_enabled" {% if notification_settings.push_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="pushEnabled">Enable Notifications</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" {% if notification_settings.email_notifications %}checked{% endif %}>
+                        <label class="form-check-label" for="emailNotifications">Email Notifications</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="newMaterials" name="new_materials" {% if notification_settings.new_materials %}checked{% endif %}>
+                        <label class="form-check-label" for="newMaterials">New materials and assignments</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="progressUpdates" name="progress_updates" {% if notification_settings.progress_updates %}checked{% endif %}>
+                        <label class="form-check-label" for="progressUpdates">Progress updates</label>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-auto" type="submit">Save Preferences</button>
+                </form>
+            </section>
+        </div>
+
+        <div class="col-lg-6">
+            <section class="border rounded-3 p-3 h-100">
+                <h2 class="h5 fw-bold mb-3">Change Password</h2>
+                <form method="post" class="d-grid gap-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="settings_action" value="change_password">
+                    <div>
+                        <label class="form-label small" for="currentPassword">Current Password</label>
+                        <input class="form-control" id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
+                    </div>
+                    <div>
+                        <label class="form-label small" for="newPassword">New Password</label>
+                        <input class="form-control" id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" required>
+                    </div>
+                    <div>
+                        <label class="form-label small" for="confirmPassword">Confirm Password</label>
+                        <input class="form-control" id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+                    </div>
+                    <button class="btn btn-primary btn-sm w-auto" type="submit">Update Password</button>
+                </form>
+            </section>
+        </div>
     </div>
 </div>
 {% endblock %}
