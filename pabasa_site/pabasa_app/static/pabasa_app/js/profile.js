@@ -169,6 +169,68 @@ function initProfilePage() {
         }
     }
 
+    function showProfileSuccessModal(title, message, type = "success") {
+        const modalEl = document.getElementById("profileSuccessModal");
+        const titleEl = document.getElementById("profileSuccessTitle");
+        const messageEl = document.getElementById("profileSuccessMessage");
+        const iconContainer = document.getElementById("profileModalIcon");
+        const btnEl = document.getElementById("profileModalBtn");
+        
+        if (modalEl && titleEl && messageEl && iconContainer) {
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+
+            // Set icon and color based on type
+            if (type === "success") {
+                iconContainer.style.color = "#16a34a";
+                iconContainer.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+                if (btnEl) btnEl.textContent = "Perfect, thanks!";
+            } else if (type === "info") {
+                iconContainer.style.color = "#1fb6ff";
+                iconContainer.innerHTML = '<i class="bi bi-info-circle-fill"></i>';
+                if (btnEl) btnEl.textContent = "Got it";
+            } else if (type === "error") {
+                iconContainer.style.color = "#dc3545";
+                iconContainer.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i>';
+                if (btnEl) btnEl.textContent = "Try again";
+            }
+
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        } else {
+            alert(message);
+        }
+    }
+
+    function showProfileConfirmModal(title, message, confirmText, onConfirm) {
+        const modalEl = document.getElementById("profileConfirmModal");
+        const titleEl = document.getElementById("profileConfirmTitle");
+        const messageEl = document.getElementById("profileConfirmMessage");
+        const btnEl = document.getElementById("profileConfirmBtn");
+        
+        if (modalEl && titleEl && messageEl && btnEl) {
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            btnEl.textContent = confirmText;
+            
+            // Clean up previous listeners and attach new one
+            const newBtn = btnEl.cloneNode(true);
+            btnEl.parentNode.replaceChild(newBtn, btnEl);
+            
+            newBtn.addEventListener("click", function() {
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+                if (typeof onConfirm === "function") onConfirm();
+            });
+
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        } else {
+            if (confirm(message)) {
+                if (typeof onConfirm === "function") onConfirm();
+            }
+        }
+    }
+
     function getCsrfToken() {
         return document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
     }
@@ -709,7 +771,7 @@ function initProfilePage() {
                 if (modalEl) {
                     bootstrap.Modal.getInstance(modalEl)?.hide();
                 }
-                alert("Password changed successfully.");
+                showProfileSuccessModal("Password Changed", "Your password has been updated successfully.");
             }).catch(function (error) {
                 alert("Error changing password: " + error.message);
             }).finally(function () {
@@ -748,46 +810,69 @@ function initProfilePage() {
     const deactivateAccountBtn = document.getElementById("deactivateAccountBtn");
     if (deactivateAccountBtn) {
         deactivateAccountBtn.addEventListener("click", function () {
-            if (!confirm("Deactivate this account and sign out?")) return;
+            showProfileConfirmModal(
+                "Deactivate Account?",
+                "Are you sure you want to deactivate your account? You will be signed out immediately.",
+                "Yes, Deactivate",
+                executeDeactivate
+            );
+        });
+
+        function executeDeactivate() {
             const originalText = deactivateAccountBtn.textContent;
             deactivateAccountBtn.textContent = "Deactivating...";
             deactivateAccountBtn.disabled = true;
             postProfileAction("deactivate_account").then(function (data) {
                 if (!data.success) {
-                    alert(data.error || "Could not deactivate account");
+                    showToast(data.error || "Could not deactivate account", "error");
                     return;
                 }
                 window.location.href = data.redirect_url || "/";
             }).catch(function (error) {
-                alert("Error deactivating account: " + error.message);
+                showToast("Error deactivating account: " + error.message, "error");
             }).finally(function () {
                 deactivateAccountBtn.textContent = originalText;
                 deactivateAccountBtn.disabled = false;
             });
-        });
+        }
     }
 
     const deleteAccountBtn = document.getElementById("deleteAccountBtn");
-    if (deleteAccountBtn) {
+    const deleteModalEl = document.getElementById("profileDeleteModal");
+    const deleteConfirmInput = document.getElementById("deleteConfirmInput");
+    const deleteFinalBtn = document.getElementById("profileDeleteFinalBtn");
+
+    if (deleteAccountBtn && deleteModalEl && deleteConfirmInput && deleteFinalBtn) {
         deleteAccountBtn.addEventListener("click", function () {
-            if (!confirm("Delete this account permanently? This cannot be undone.")) return;
-            const typed = prompt("Type DELETE to confirm account deletion.");
-            if (typed !== "DELETE") return;
-            const originalText = deleteAccountBtn.textContent;
-            deleteAccountBtn.textContent = "Deleting...";
-            deleteAccountBtn.disabled = true;
+            deleteConfirmInput.value = "";
+            deleteFinalBtn.disabled = true;
+            new bootstrap.Modal(deleteModalEl).show();
+        });
+
+        deleteConfirmInput.addEventListener("input", function() {
+            deleteFinalBtn.disabled = this.value !== "DELETE";
+        });
+
+        deleteFinalBtn.addEventListener("click", function() {
+            const originalText = deleteFinalBtn.textContent;
+            deleteFinalBtn.textContent = "Deleting...";
+            deleteFinalBtn.disabled = true;
+            
             postProfileAction("delete_account").then(function (data) {
                 if (!data.success) {
-                    alert(data.error || "Could not delete account");
+                    showToast(data.error || "Could not delete account", "error");
+                    bootstrap.Modal.getInstance(deleteModalEl)?.hide();
                     return;
                 }
                 localStorage.removeItem(profileStorageKey);
                 window.location.href = data.redirect_url || "/";
             }).catch(function (error) {
-                alert("Error deleting account: " + error.message);
+                showToast("Error deleting account: " + error.message, "error");
+                bootstrap.Modal.getInstance(deleteModalEl)?.hide();
             }).finally(function () {
-                deleteAccountBtn.textContent = originalText;
-                deleteAccountBtn.disabled = false;
+                if (deleteFinalBtn) {
+                    deleteFinalBtn.textContent = originalText;
+                }
             });
         });
     }
@@ -879,7 +964,7 @@ function initProfilePage() {
         uploadPhotoBtn.addEventListener("click", function () {
             const file = profilePhotoInput.files[0];
             if (!file) {
-                alert("Please select a photo first");
+                showProfileSuccessModal("Action Required", "Please select a photo first.", "info");
                 return;
             }
 
@@ -902,7 +987,7 @@ function initProfilePage() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert("Photo uploaded successfully!");
+                    showProfileSuccessModal("Photo Updated", "Your profile picture has been successfully updated.");
                     // Update avatar display with the new photo URL
                     const profileAvatarDisplay = document.getElementById("profileAvatarDisplay");
                     if (profileAvatarDisplay && data.photo_url) {
@@ -916,7 +1001,7 @@ function initProfilePage() {
                     setEditMode(false);
                     profilePhotoInput.value = "";
                 } else {
-                    alert("Error uploading photo: " + (data.error || "Unknown error"));
+                    showProfileSuccessModal("Upload Failed", data.error || "Could not upload photo.", "error");
                 }
             })
             .catch(error => {
@@ -930,10 +1015,15 @@ function initProfilePage() {
 
         // Handle remove photo button
         removePhotoBtn.addEventListener("click", function () {
-            if (!confirm("Are you sure you want to remove your profile photo?")) {
-                return;
-            }
+            showProfileConfirmModal(
+                "Remove Photo?",
+                "Are you sure you want to remove your profile photo? This will reset your avatar to your initials.",
+                "Yes, Remove Photo",
+                executeRemovePhoto
+            );
+        });
 
+        function executeRemovePhoto() {
             const formData = new FormData();
             formData.append("remove_photo", "true");
             
@@ -958,7 +1048,7 @@ function initProfilePage() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert("Photo removed successfully!");
+                    showProfileSuccessModal("Photo Removed", "Your profile picture has been removed.");
                     // Reset avatar to initials
                     const profileAvatarDisplay = document.getElementById("profileAvatarDisplay");
                     if (profileAvatarDisplay) {
@@ -981,7 +1071,7 @@ function initProfilePage() {
                 removePhotoBtn.textContent = originalText;
                 removePhotoBtn.disabled = false;
             });
-        });
+        }
     }
 
     function initMicSettings() {

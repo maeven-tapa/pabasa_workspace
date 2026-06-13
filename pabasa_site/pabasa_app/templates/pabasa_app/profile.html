@@ -3,6 +3,40 @@
 
 {% block extra_head %}
 <style>
+    /* Ensure main content area handles sidebar transition correctly on mobile */
+    @media (max-width: 991.98px) {
+        .dashboard-main {
+            margin-left: 0 !important;
+        }
+    }
+
+    body.dashboard-body {
+        background:
+            radial-gradient(circle at 10% 20%, rgba(31, 182, 255, 0.06), transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.08), transparent 40%),
+            linear-gradient(rgba(248, 250, 252, 0.45), rgba(248, 250, 252, 0.35)),
+            url("{% static 'pabasa_app/images/student_bg.jpg' %}") center / cover fixed no-repeat !important;
+    }
+
+    /* Dark mode background */
+    body.dark-theme.dashboard-body {
+        background:
+            radial-gradient(circle at 10% 20%, rgba(31, 182, 255, 0.04), transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.05), transparent 40%),
+            linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.85)),
+            url("{% static 'pabasa_app/images/student_bg.jpg' %}") center / cover fixed no-repeat !important;
+    }
+
+    /* Dark mode glassmorphism overrides */
+    body.dark-theme .profile-summary,
+    body.dark-theme .profile-section-card {
+        background: rgba(30, 41, 59, 0.45) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(12px) saturate(160%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
+        background-image: none !important;
+    }
+
     /* Tighten the bottom of the page to eliminate dead space */
     section {
         padding-bottom: 2rem !important;
@@ -29,11 +63,13 @@
         position: relative;
         overflow: hidden;
         width: 100%;
-        background: linear-gradient(135deg, #fffdf7 0%, #f8fafc 100%);
-        border: 1px solid rgba(31, 111, 139, 0.1);
+        background: rgba(255, 255, 255, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.5);
         border-radius: 20px;
-        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.04);
-        transition: all 0.3s ease;
+        backdrop-filter: blur(12px) saturate(160%);
+        -webkit-backdrop-filter: blur(12px) saturate(160%);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .profile-summary:hover {
@@ -111,7 +147,10 @@
     .profile-details-mini .value {
         color: var(--dash-text);
         font-weight: 700;
+        word-break: break-word;
         overflow-wrap: anywhere;
+        max-width: 100%;
+        display: inline-block;
     }
 
     .profile-status-badge {
@@ -191,16 +230,20 @@
     }
 
     .profile-section-card {
-        background: linear-gradient(135deg, #fffdf7 0%, #f8fafc 100%);
-        border: 1px solid rgba(31, 111, 139, 0.08);
-        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 24px;
+        backdrop-filter: blur(12px) saturate(160%);
+        -webkit-backdrop-filter: blur(12px) saturate(160%);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
         padding: 1.4rem;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
         flex-direction: column;
         position: relative;
         height: 100%;
-        overflow: hidden;
+        overflow: visible; /* Changed from hidden to avoid cropping child element focus states */
+        min-width: 0; /* Important for grid item content overflow */
         box-shadow: 0 4px 12px rgba(31, 111, 139, 0.05);
     }
 
@@ -254,6 +297,7 @@
         gap: 1rem;
         padding: 0.7rem 0;
         border-bottom: 1px solid rgba(27, 26, 23, 0.04);
+        min-width: 0;
     }
 
     .profile-info-row:last-child {
@@ -265,12 +309,16 @@
         color: var(--dash-muted);
         font-size: 0.86rem;
         flex: 1;
+        min-width: 0;
     }
 
     .profile-info-value {
         font-weight: 700;
         color: var(--dash-text);
         font-size: 0.93rem;
+        word-break: break-word;
+        text-align: right;
+        max-width: 60%;
     }
 
     .profile-stat-grid {
@@ -283,7 +331,7 @@
         background: #ffffff;
         border: 1px solid rgba(31, 111, 139, 0.1);
         border-radius: 12px;
-        padding: 1.15rem 0.5rem;
+        padding: 1rem 0.5rem;
         text-align: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
@@ -321,7 +369,7 @@
     .mic-settings-grid {
         display: grid;
         grid-template-columns: 1fr 1.2fr;
-        gap: 2.5rem;
+        gap: 1.5rem 2.5rem;
         align-items: center;
     }
 
@@ -401,7 +449,7 @@
         transform: translateY(-1px);
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 991.98px) {
         .profile-main {
             grid-template-columns: 1fr;
         }
@@ -416,7 +464,12 @@
 
         .mic-settings-grid {
             grid-template-columns: 1fr;
-            gap: 1.5rem;
+            gap: 2rem;
+        }
+        
+        .profile-summary {
+            position: static !important;
+            top: 0 !important;
         }
     }
 
@@ -790,6 +843,66 @@
                     <button type="submit" class="btn btn-primary">Save Password</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Refined Success Modal for Profile Updates -->
+<div class="modal fade" id="profileSuccessModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius: 28px; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="modal-body text-center p-4 p-md-5">
+                <div id="profileModalIcon" class="mb-4" style="font-size: 3.5rem; color: #16a34a;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <h4 class="fw-bold mb-2" id="profileSuccessTitle">Success!</h4>
+                <p id="profileSuccessMessage" class="text-muted mb-4"></p>
+                <div class="d-grid">
+                    <button type="button" class="btn btn-primary rounded-pill py-3 fw-bold shadow-sm" id="profileModalBtn" data-bs-dismiss="modal">Perfect, thanks!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Refined Confirmation Modal for destructive actions -->
+<div class="modal fade" id="profileConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius: 28px; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="modal-body text-center p-4 p-md-5">
+                <div class="mb-4" style="font-size: 3.5rem; color: #dc3545;">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                </div>
+                <h4 class="fw-bold mb-2" id="profileConfirmTitle">Are you sure?</h4>
+                <p id="profileConfirmMessage" class="text-muted mb-4"></p>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-danger rounded-pill py-3 fw-bold shadow-sm" id="profileConfirmBtn">Confirm</button>
+                    <button type="button" class="btn btn-light rounded-pill py-3 fw-bold text-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Refined Delete Account Modal with extra safety -->
+<div class="modal fade" id="profileDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius: 28px; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="modal-body text-center p-4 p-md-5">
+                <div class="mb-4" style="font-size: 3.5rem; color: #dc3545;">
+                    <i class="bi bi-trash-fill"></i>
+                </div>
+                <h4 class="fw-bold mb-2">Delete Account?</h4>
+                <p class="text-muted mb-4">This action is permanent and cannot be undone. All your data will be lost.</p>
+                <div class="mb-4 text-start">
+                    <label class="form-label small fw-bold text-uppercase" style="letter-spacing: 0.05em; font-size: 0.7rem;">Type <span class="text-danger">DELETE</span> to confirm</label>
+                    <input type="text" id="deleteConfirmInput" class="form-control text-center fw-bold" placeholder="DELETE" autocomplete="off">
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-danger rounded-pill py-3 fw-bold shadow-sm" id="profileDeleteFinalBtn" disabled>Permanently Delete</button>
+                    <button type="button" class="btn btn-light rounded-pill py-3 fw-bold text-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
