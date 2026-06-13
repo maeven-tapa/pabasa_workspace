@@ -10,6 +10,9 @@ def parse_practice_items(content, item_type):
     if item_type == "word":
         return re.findall(r"\b[\w']+\b", content, flags=re.UNICODE)
     if item_type == "sentence":
+        lines = [line.strip() for line in content.splitlines() if line.strip()]
+        if len(lines) > 1:
+            return lines
         return [part.strip() for part in re.split(r"(?<=[.!?])\s+", content) if part.strip()]
     if item_type == "paragraph":
         return [part.strip() for part in re.split(r"\n{2,}", content) if part.strip()]

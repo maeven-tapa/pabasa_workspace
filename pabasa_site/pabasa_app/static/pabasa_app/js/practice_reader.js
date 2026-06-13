@@ -19,32 +19,11 @@
     const completeItems = document.getElementById("completeItems");
     const practiceAgainBtn = document.getElementById("practiceAgainBtn");
 
-    const studentClassCodesKey = "pabasaStudentClassCodes";
-    const legacyStudentClassCodeKey = "pabasaStudentClassCode";
-    const readingsStorageKey = "pabasa_class_readings";
-
     const urlParams = new URLSearchParams(window.location.search);
     const materialId = urlParams.get("id");
     const testTitle = urlParams.get("test");
     const viewMode = urlParams.get("viewMode");
     const selectedDifficulty = (urlParams.get("difficulty") || "").trim().toLowerCase();
-
-    function getStoredArray(key) {
-        try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { return []; }
-    }
-
-    function getStoredObject(key) {
-        try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; }
-    }
-
-    function shuffleItems(sourceItems) {
-        const shuffled = sourceItems.slice();
-        for (let i = shuffled.length - 1; i > 0; i -= 1) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }
 
     function getServerPracticeMaterials() {
         const dataElement = document.getElementById("practiceMaterialsData");
@@ -93,70 +72,17 @@
     function loadItems() {
         const serverItems = loadServerPracticeItems();
         if (serverItems.length > 0) {
-            items = shuffleItems(serverItems);
+            items = serverItems.slice();
             currentIndex = 0;
             render();
             return;
         }
 
-        const params = new URLSearchParams(window.location.search);
-        const urlCode = params.get("code");
-
-        let codes = urlCode 
-            ? [urlCode.toUpperCase()] 
-            : getStoredArray(studentClassCodesKey).filter(Boolean);
-
-        const legacyCode = localStorage.getItem(legacyStudentClassCodeKey);
-        if (!urlCode && codes.length === 0 && legacyCode) {
-            codes.push(legacyCode);
-        }
-
-        const readings = getStoredObject(readingsStorageKey);
-        console.log(`PABASA [Practice]: Loading for codes:`, codes);
-        
-        let aggregatedItems = [];
-        const storageKeys = [mode, mode + 's'];
-
-        codes.forEach(code => {
-            const classReadings = readings[code.toUpperCase()];
-            if (!classReadings) {
-                console.warn(`PABASA: No practice readings for code: ${code}`);
-                return;
-            }
-
-            storageKeys.forEach(m => {
-                if (Array.isArray(classReadings[m])) {
-                    classReadings[m].forEach(material => {
-                        // If it's a raw string, we can't filter by ID/Title, so we only add if no specific target is set
-                        if (typeof material === 'string' && !materialId && !testTitle) {
-                            aggregatedItems.push(material);
-                        } else if (material && material.type) {
-                            const type = material.type.toLowerCase();
-                            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
-                            
-                            // Filter by ID (preferred) or Title
-                            const matchesTarget = (materialId && mId === String(materialId).trim()) || (testTitle && material.title === testTitle);
-
-                            if ((type.includes("practice") || type === "both") && matchesTarget) {
-                                aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
-                            }
-                        }
-                    });
-                }
-            });
-        });
-
-        items = shuffleItems(aggregatedItems);
-        console.log(`PABASA [Practice]: Found ${items.length} items.`);
-
-        if (items.length === 0) {
-            if (practiceText) practiceText.textContent = "No materials available.";
-            if (nextBtn) nextBtn.disabled = true;
-            return;
-        }
-
-        currentIndex = 0;
-        render();
+        items = [];
+        if (practiceText) practiceText.textContent = "No materials available.";
+        if (practiceCounter) practiceCounter.textContent = "No items";
+        if (practiceProgress) practiceProgress.style.width = "0%";
+        if (nextBtn) nextBtn.disabled = true;
     }
 
     function render() {

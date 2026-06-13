@@ -1274,50 +1274,39 @@
         window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
     </script>
     <script>
-        function updateInAppNotifications() {
+        function getNotificationCsrfToken() {
+            const cookieToken = document.cookie.split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            return cookieToken || document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
+        }
+
+        function escapeNotificationHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        async function updateInAppNotifications() {
             const container = document.getElementById('notifContainer');
             const badge = document.getElementById('notifBadge');
             if (!container) return;
 
-            // Check user preferences for In-App (push) alerts
-            const username = (window.PABASA_USER_NAME || "user").toLowerCase().replace(/ /g, "_");
-            const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
-            
-            if (settings.pushNotifications === false) {
-                if (badge) badge.style.display = 'none';
-                container.innerHTML = `
-                    <div class="p-5 text-center text-muted small">
-                        <i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i>
-                        In-app alerts are disabled in preferences
-                    </div>`;
+            let notifications = [];
+            try {
+                const response = await fetch("{% url 'get_notifications' %}", {
+                    headers: { "Accept": "application/json" },
+                    credentials: "same-origin"
+                });
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error || "Unable to load notifications.");
+                notifications = Array.isArray(data.notifications) ? data.notifications : [];
+            } catch (error) {
+                container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-wifi-off d-block fs-1 mb-3 opacity-25"></i> Notifications are unavailable right now.</div>';
                 return;
             }
-
-            const userRole = "{{ nav_role }}";
-            const userId = localStorage.getItem("pabasaCurrentUserId") || "";
-
-            let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
-
-            if (userRole === 'student') {
-                let joinedCodes = [];
-                try {
-                    joinedCodes = JSON.parse(localStorage.getItem("pabasaStudentClassCodes") || "[]").map(c => c.toUpperCase());
-                    const legacy = localStorage.getItem("pabasaStudentClassCode");
-                    if (legacy) joinedCodes.push(legacy.toUpperCase());
-                } catch(e) {}
-                
-                notifications = notifications.filter(n => 
-                    n.role === 'student' && 
-                    joinedCodes.includes(n.classCode.toUpperCase()) &&
-                    (n.recipientId === userId || !n.recipientId)
-                );
-            } else {
-                const teacherClasses = JSON.parse(localStorage.getItem('pabasa_teacher_classes') || '[]');
-                const myCodes = teacherClasses.map(c => c.code.toUpperCase());
-                notifications = notifications.filter(n => n.role === 'teacher' && myCodes.includes(n.classCode.toUpperCase()));
-            }
             
-            const unreadCount = notifications.filter(n => !n.read).length;
+            const unreadCount = notifications.filter(n => !n.is_read).length;
             if (badge) {
                 if (unreadCount > 0) {
                     badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
@@ -1334,34 +1323,43 @@
 
             container.innerHTML = `
                 <div class="notif-list">
-                    ${notifications.map(n => `
-                        <div class="notif-item mb-2 p-3 border rounded-3 ${n.read ? 'bg-light' : 'bg-white border-primary shadow-sm'}" style="cursor: pointer;" onclick="markNotifRead('${n.id}')">
-                            <p class="mb-1 fw-bold small">${n.title}</p>
-                            <p class="small text-secondary mb-1" style="line-height: 1.4;">${n.message}</p>
-                            <span class="notif-time text-muted" style="font-size: 0.7rem;">${new Date(n.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    ${notifications.map(n => {
+                        const url = n.action_url || '';
+                        const classes = n.is_read ? 'bg-light' : 'bg-white border-primary shadow-sm';
+                        const createdAt = n.created_at ? new Date(n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }) : '';
+                        return `
+                        <div class="notif-item mb-2 p-3 border rounded-3 ${classes}" style="cursor: pointer;" onclick="markNotifRead('${n.id}', '${escapeNotificationHtml(url)}')">
+                            <p class="mb-1 fw-bold small">${escapeNotificationHtml(n.title)}</p>
+                            <p class="small text-secondary mb-1" style="line-height: 1.4;">${escapeNotificationHtml(n.message)}</p>
+                            <span class="notif-time text-muted" style="font-size: 0.7rem;">${escapeNotificationHtml(createdAt)}</span>
                         </div>
-                    `).join('')}
-                    <button class="btn btn-sm btn-link w-100 mt-2 text-decoration-none" onclick="localStorage.setItem('pabasa_notifications', '[]'); updateInAppNotifications();">Clear All</button>
+                    `}).join('')}
                 </div>
             `;
         }
 
-        window.markNotifRead = function(id) {
-            const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
-            const index = notifications.findIndex(n => n.id.toString() === id.toString());
-            if (index !== -1) {
-                notifications[index].read = true;
-                localStorage.setItem('pabasa_notifications', JSON.stringify(notifications));
-                updateInAppNotifications();
+        window.markNotifRead = async function(id, actionUrl) {
+            try {
+                await fetch("{% url 'mark_notification_read' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getNotificationCsrfToken(),
+                        "Accept": "application/json"
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ notification_id: id })
+                });
+            } finally {
+                await updateInAppNotifications();
+                if (actionUrl) window.location.href = actionUrl;
             }
         };
 
         document.addEventListener('DOMContentLoaded', updateInAppNotifications);
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'pabasa_notifications') updateInAppNotifications();
-        });
         window.addEventListener('pabasa:notifications-updated', updateInAppNotifications);
         window.addEventListener('pabasa:preferences-updated', updateInAppNotifications);
+        window.setInterval(updateInAppNotifications, 30000);
     </script>
 </body>
 </html>

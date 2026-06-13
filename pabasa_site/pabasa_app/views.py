@@ -167,6 +167,39 @@ def csrf_failure(request, reason=''):
         return JsonResponse({'success': False, 'error': 'CSRF token missing or invalid.'}, status=403)
     return HttpResponseForbidden('<h1>403 Forbidden</h1>')
 
+def _current_user(request):
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return None
+    return User.objects.filter(id=user_id).first()
+
+def _admin_users():
+    return User.objects.filter(role='admin', is_archived=False)
+
+def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None):
+    if not recipient:
+        return None
+    return Notification.objects.create(
+        recipient=recipient,
+        created_by=created_by,
+        title=title,
+        message=message,
+        notification_type=notification_type,
+        action_url=action_url or '',
+    )
+
+def _notify_admins(title, message, notification_type='info', action_url='', created_by=None):
+    for admin_user in _admin_users():
+        _create_notification(admin_user, title, message, notification_type, action_url, created_by)
+
+def _section_active_students(section):
+    student_ids = [
+        entry.get('student_id')
+        for entry in _section_students(section, active_only=True)
+        if entry.get('student_id')
+    ]
+    return User.objects.filter(id__in=student_ids, role='student', is_archived=False)
+
 # Authentication functions
 def generate_custom_id(role):
     """Generate unique custom ID based on role"""
@@ -646,6 +679,13 @@ def verify_teacher_otp(request):
         teacher_code = custom_id
 
         send_teacher_confirmation_email(request, user, custom_id)
+        _notify_admins(
+            'New teacher account',
+            f'{user.first_name} {user.last_name} created a teacher account.',
+            'success',
+            reverse('admin_teacher_detail', args=[user.id]),
+            user,
+        )
         _clear_pending_teacher_signup(request)
 
         return JsonResponse({
@@ -726,6 +766,13 @@ def verify_student_otp(request):
         )
 
         send_student_confirmation_email(request, user)
+        _notify_admins(
+            'New student account',
+            f'{user.first_name} {user.last_name} created a student account.',
+            'success',
+            reverse('admin_student_detail', args=[user.id]),
+            user,
+        )
         _clear_pending_student_signup(request)
 
         return JsonResponse({
@@ -1442,9 +1489,21 @@ def _admin_deactivate_section(request, section_id):
 def admin_courses(request):
     return render(request, 'pabasa_app/admin_courses.html', _admin_materials_context(request, 'Courses'))
 
+def _admin_course_queryset():
+    return Material.objects.select_related(
+        'section',
+        'section__teacher',
+        'assessment',
+        'assessment__teacher',
+    ).filter(
+        Q(section__isnull=False) |
+        Q(assessment__isnull=False) |
+        Q(assigned_sections__isnull=False)
+    ).distinct()
+
 def _get_managed_material(material_id):
     """Retrieve a material by ID. Returns None if not found."""
-    return Material.objects.select_related('section', 'section__teacher', 'assessment').filter(id=material_id).first()
+    return _admin_course_queryset().filter(id=material_id).first()
 
 def _admin_material_status(material):
     return 'Archived' if not getattr(material, 'is_active', False) else material.get_status_display()
@@ -1458,7 +1517,7 @@ def _admin_materials_context(request, page_title):
     status_filter = request.GET.get('status', 'all').strip().lower()
     type_filter = request.GET.get('type', 'all').strip().lower()
 
-    materials = Material.objects.select_related('section', 'section__teacher', 'assessment', 'assessment__teacher').all()
+    materials = _admin_course_queryset()
 
     if search_query:
         materials = materials.filter(title__icontains=search_query)
@@ -1579,6 +1638,15 @@ def admin_course_edit(request, material_id):
         material.assigned_sections.clear()
         if section:
             material.assigned_sections.add(section)
+            for student_user in _section_active_students(section):
+                _create_notification(
+                    student_user,
+                    'Assigned content updated',
+                    f'"{material.title}" was updated for {section.class_name}.',
+                    'info',
+                    f"{reverse('course_student_view')}?class_code={section.class_code}",
+                    request.user if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False) else _current_user(request),
+                )
 
         return redirect('admin_course_detail', material_id=material.id)
 
@@ -1596,6 +1664,16 @@ def admin_course_archive(request, material_id):
     if action == 'archive' and material.is_active:
         material.is_active = False
         material.save(update_fields=['is_active', 'updated_at'])
+        if material.section:
+            for student_user in _section_active_students(material.section):
+                _create_notification(
+                    student_user,
+                    'Assigned content removed',
+                    f'"{material.title}" is no longer available in {material.section.class_name}.',
+                    'warning',
+                    reverse('course_student_view'),
+                    _current_user(request),
+                )
     elif action == 'restore' and not material.is_active:
         material.is_active = True
         material.save(update_fields=['is_active', 'updated_at'])
@@ -1621,6 +1699,11 @@ def _get_admin_practice_material(practice_id):
 
 def _admin_practice_status(material):
     return 'Archived' if not material.is_active else material.get_status_display()
+
+def _practice_material_items(material):
+    if not material:
+        return []
+    return parse_practice_items(material.content_text, material.item_type)
 
 def _admin_practice_context(request, page_title):
     search_query = request.GET.get('q', '').strip()
@@ -1685,12 +1768,11 @@ def _admin_practice_template_context(request, material=None, page_title='Practic
         'form': form,
         'practice': material,
         'practice_status': _admin_practice_status(material) if material else '',
-        'practice_item_count': len((material.content_json or {}).get('items', [])) if material and isinstance(material.content_json, dict) else 0,
+        'practice_item_count': len(_practice_material_items(material)),
     })
     return context
 
 def _save_admin_practice_material(form, material=None):
-    items = form.practice_items()
     cleaned = form.cleaned_data
     material = material or Material(assessment=None, section=None)
     material.title = cleaned['title']
@@ -1700,6 +1782,7 @@ def _save_admin_practice_material(form, material=None):
     material.status = cleaned['status']
     material.difficulty_level = cleaned['difficulty_level']
     material.scheduled_at = None
+    items = _practice_material_items(material)
     material.content_json = {
         'source': 'admin_practice',
         'difficulty': cleaned['difficulty_level'],
@@ -1841,11 +1924,6 @@ def _student_practice_queryset():
     ).order_by('difficulty_level', 'item_type', 'title')
 
 def _serialize_student_practice_material(material):
-    content_json = material.content_json if isinstance(material.content_json, dict) else {}
-    items = content_json.get('items') if isinstance(content_json.get('items'), list) else []
-    if not items:
-        items = parse_practice_items(material.content_text, material.item_type)
-
     return {
         'id': material.id,
         'title': material.title,
@@ -1854,7 +1932,7 @@ def _serialize_student_practice_material(material):
         'status': material.status,
         'prompt': material.prompt_text,
         'content': material.content_text,
-        'items': items,
+        'items': _practice_material_items(material),
         'created_at': material.created_at.isoformat() if material.created_at else '',
     }
 
@@ -2320,6 +2398,23 @@ def join_class(request):
         }
 
         logger.info(f"Student {student_user.custom_id} successfully joined class {class_code}")
+        student_name = f"{student_user.first_name} {student_user.last_name}"
+        class_url = f"{reverse('class_management')}?code={section.class_code}"
+        _create_notification(
+            section.teacher,
+            'Student joined your class',
+            f'{student_name} joined {section.class_name}.',
+            'success',
+            class_url,
+            student_user,
+        )
+        _notify_admins(
+            'Student joined a class',
+            f'{student_name} joined {section.class_name} ({section.class_code}).',
+            'info',
+            reverse('admin_class_detail', args=[section.id]),
+            student_user,
+        )
         
         return JsonResponse({
             'success': True,
@@ -2369,7 +2464,15 @@ def unenroll_class(request):
                 created_by=student_user,
                 title=title,
                 message=message,
-                notification_type='info'
+                notification_type='info',
+                action_url=f"{reverse('class_management')}?code={section.class_code}",
+            )
+            _notify_admins(
+                'Student unenrolled from a class',
+                f"{student_user.first_name} {student_user.last_name} unenrolled from {section.class_name} ({section.class_code}).",
+                'warning',
+                reverse('admin_class_detail', args=[section.id]),
+                student_user,
             )
 
             # Send email to teacher (best-effort)
@@ -2534,6 +2637,30 @@ def teacher_add_student(request):
             return JsonResponse({'success': False, 'error': 'Class or Student not found'}, status=404)
         
         if section.add_student(student):
+            student_name = f"{student.first_name} {student.last_name}"
+            _create_notification(
+                student,
+                'Added to class',
+                f'You were added to {section.class_name}.',
+                'success',
+                reverse('dashboard'),
+                section.teacher,
+            )
+            _create_notification(
+                section.teacher,
+                'Student added to class',
+                f'{student_name} was added to {section.class_name}.',
+                'success',
+                f"{reverse('class_management')}?code={section.class_code}",
+                section.teacher,
+            )
+            _notify_admins(
+                'Student joined a class',
+                f'{student_name} was added to {section.class_name} ({section.class_code}).',
+                'info',
+                reverse('admin_class_detail', args=[section.id]),
+                section.teacher,
+            )
             return JsonResponse({'success': True})
         else:
             return JsonResponse({'success': False, 'error': 'Student is already enrolled.'})
@@ -2786,7 +2913,8 @@ def delete_reading_class(request):
                         created_by=teacher_user,
                         title=title,
                         message=message,
-                        notification_type='warning'
+                        notification_type='warning',
+                        action_url=reverse('dashboard'),
                     )
 
                     # Best-effort email to student
@@ -2797,6 +2925,13 @@ def delete_reading_class(request):
                         logger.exception('Failed to send class-deleted email to student %s', student_user.email)
                 except Exception:
                     logger.exception('Failed to notify a student for class deletion')
+            _notify_admins(
+                'Teacher removed a class',
+                f"{teacher_user.first_name} {teacher_user.last_name} removed {section.class_name} ({section.class_code}).",
+                'warning',
+                reverse('admin_classes'),
+                teacher_user,
+            )
 
         return JsonResponse({
             'success': True,
@@ -2918,6 +3053,26 @@ def add_reading_material(request):
                 )
                 if section is not None:
                     m.assigned_sections.add(section)
+                    action_url = f"{reverse('course_student_view')}?class_code={section.class_code}"
+                    title_prefix = 'New assessment published' if status == 'published' else 'New material assigned'
+                    for student_user in _section_active_students(section):
+                        _create_notification(
+                            student_user,
+                            title_prefix,
+                            f'{teacher_user.first_name} {teacher_user.last_name} posted "{m.title}" for {section.class_name}.',
+                            'assessment' if status == 'published' else 'info',
+                            action_url,
+                            teacher_user,
+                        )
+                else:
+                    action_url = reverse('courses')
+                _notify_admins(
+                    'Teacher created a new material',
+                    f'{teacher_user.first_name} {teacher_user.last_name} created "{m.title}".',
+                    'info',
+                    reverse('admin_course_detail', args=[m.id]),
+                    teacher_user,
+                )
                 created_ids = [m.id]
                 material_payload = {
                     'id': m.id,
@@ -2966,11 +3121,13 @@ def record_assessment_completion(request):
         data = json.loads(request.body)
         assessment_id = data.get('assessment_id')
         material_id = data.get('material_id')
+        activity_type = data.get('activity_type', 'assessment')
         student_user = User.objects.get(id=request.session.get('user_id'))
 
         assessment = None
         teacher_user = None
         title_text = None
+        material = None
 
         if assessment_id:
             assessment = Assessment.objects.select_related('teacher').get(id=assessment_id)
@@ -2987,20 +3144,45 @@ def record_assessment_completion(request):
         else:
             return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
 
-        notif_msg = f"{student_user.first_name} {student_user.last_name} completed {title_text}"
-        Notification.objects.create(
-            recipient=teacher_user,
-            created_by=student_user,
-            title="Reading Material Completed",
-            message=notif_msg,
-            notification_type="assessment",
-            action_url=f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}"
+        student_name = f"{student_user.first_name} {student_user.last_name}"
+        is_practice = activity_type == 'practice' or (material and material.section is None and material.assessment is None)
+        title = "Practice Material Completed" if is_practice else "Reading Material Completed"
+        notif_msg = f"{student_name} completed {title_text}"
+        teacher_recipients = []
+        if teacher_user:
+            teacher_recipients.append(teacher_user)
+        elif is_practice:
+            for section in Section.objects.filter(is_active=True).select_related('teacher'):
+                if section.has_student(student_user, active_only=True) and section.teacher:
+                    teacher_recipients.append(section.teacher)
+
+        seen_teacher_ids = set()
+        for recipient in teacher_recipients:
+            if recipient.id in seen_teacher_ids:
+                continue
+            seen_teacher_ids.add(recipient.id)
+            _create_notification(
+                recipient,
+                title,
+                notif_msg,
+                "assessment",
+                f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
+                student_user,
+            )
+
+        _notify_admins(
+            title,
+            notif_msg,
+            "assessment",
+            reverse('admin_students'),
+            student_user,
         )
-        send_mail(
-            "Reading Material Completed", notif_msg,
-            settings.DEFAULT_FROM_EMAIL, [teacher_user.email],
-            fail_silently=True
-        )
+        if teacher_user:
+            send_mail(
+                title, notif_msg,
+                settings.DEFAULT_FROM_EMAIL, [teacher_user.email],
+                fail_silently=True
+            )
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
