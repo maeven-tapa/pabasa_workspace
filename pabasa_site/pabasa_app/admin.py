@@ -41,10 +41,24 @@ class AssessmentAdmin(admin.ModelAdmin):
 
 @admin.register(Material)
 class MaterialAdmin(admin.ModelAdmin):
-	list_display = ("section", "order_index", "item_type", "difficulty_level", "is_active", "created_at")
-	list_filter = ("item_type", "is_active", "created_at")
-	search_fields = ("assessment__code", "section__class_code", "prompt_text", "expected_answer")
-	ordering = ("section", "order_index")
+	list_display = (
+  		"section",
+  		"title",
+		"status",
+		"item_type",
+		"content_preview",
+		"created_at",
+		"updated_at",
+	)
+	list_filter = ("item_type", "status", "is_active", "created_at")
+	search_fields = ("assessment__code", "section__class_code", "prompt_text", "content_text", "title")
+	ordering = ("section", "created_at")
+
+	def content_preview(self, obj):
+		if not obj.content_text:
+			return ""
+		return obj.content_text[:80] + ("..." if len(obj.content_text) > 80 else "")
+	content_preview.short_description = "Content"
 
 
 # AssessmentAttempt and AssessmentResult removed; attempts stored inside Assessment.attempts JSONField

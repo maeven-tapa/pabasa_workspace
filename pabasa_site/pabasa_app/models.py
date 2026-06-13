@@ -372,25 +372,19 @@ class Material(models.Model):
     content_json = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     scheduled_at = models.DateTimeField(null=True, blank=True)
-    order_index = models.PositiveIntegerField()
-    expected_answer = models.TextField(blank=True, null=True)
     difficulty_level = models.CharField(max_length=50, blank=True)
-    audio_url = models.URLField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "materials"
-        ordering = ["section", "order_index"]
-        constraints = [
-            models.UniqueConstraint(fields=["section", "item_type", "order_index"], name="unique_section_item_order")
-        ]
+        ordering = ["section", "created_at"]
 
     def __str__(self):
         parent = self.assessment.code if self.assessment else (self.section.class_code if self.section else 'UNLINKED')
         title_part = f" - {self.title}" if self.title else ''
-        return f"{parent} - {self.item_type} #{self.order_index}{title_part}"
+        return f"{parent} - {self.item_type}{title_part}"
 
 
 # Note: AssessmentAttempt and AssessmentResult tables removed. Attempts/results

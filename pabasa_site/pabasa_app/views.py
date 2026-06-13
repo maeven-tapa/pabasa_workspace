@@ -1695,7 +1695,7 @@ def get_class_materials(request):
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         
         # Include published materials for students and all class materials for the teacher owner.
-        mats = Material.objects.filter(section=section).order_by('order_index')
+        mats = Material.objects.filter(section=section).order_by('created_at')
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
         if not teacher_user or teacher_user.role != 'teacher' or section.teacher_id != teacher_user.id:
@@ -1923,10 +1923,6 @@ def add_reading_material(request):
             if not tokens:
                 return JsonResponse({'success': False, 'error': 'No items found in content to create.'}, status=400)
 
-            # compute starting order index for this section+type
-            max_idx = Material.objects.filter(section=section, item_type=reading_type).aggregate(m=Max('order_index'))['m'] or 0
-            next_index = int(max_idx) + 1
-
             with transaction.atomic():
                 m = Material.objects.create(
                     assessment=None,
@@ -1938,10 +1934,7 @@ def add_reading_material(request):
                     content_json={'items': tokens},
                     status=status,
                     scheduled_at=scheduled_at if status == 'scheduled' else None,
-                    order_index=next_index,
-                    expected_answer=None,
                     difficulty_level='',
-                    audio_url=None,
                     is_active=(status == 'published')
                 )
                 if section is not None:
