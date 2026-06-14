@@ -17,23 +17,68 @@ var getStudentClassData = window.getStudentClassData = function() {
 };
 
 (function () {
-    // Persist session-injected user info to localStorage for background scripts
-    if (window.PABASA_USER_ROLE) localStorage.setItem("pabasaUserRole", window.PABASA_USER_ROLE);
-    if (window.PABASA_USER_EMAIL) localStorage.setItem("pabasaUserEmail", window.PABASA_USER_EMAIL);
-    if (window.PABASA_USER_NAME) localStorage.setItem("pabasaUserName", window.PABASA_USER_NAME);
+    function getRole() {
+        let role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '').toLowerCase();
+        if (!role) {
+            // Heuristic fallback: check the URL if variables haven't loaded yet
+            const path = window.location.pathname;
+            if (path.includes('/teacher/') || path.includes('/courses/')) role = 'teacher';
+            else if (path.includes('/admin/')) role = 'admin';
+        }
+        // Persist found role for reliability on subsequent loads
+        if (role && role !== window.localStorage.getItem('pabasaUserRole')) {
+            window.localStorage.setItem('pabasaUserRole', role);
+        }
+        return role;
+    }
 
-    // If this page shows the teacher classCount stat, fetch authoritative classes from server
+    function updateTeacherSidebar() {
+        const sidebarClassLink = document.getElementById("sidebarClassLink");
+        const role = getRole();
+        if (sidebarClassLink && (role === 'teacher' || role === 'admin')) {
+            // Redirect to the Class Management page instead of the Courses (Materials) page
+            const lastCode = localStorage.getItem("pabasa_last_active_class_code");
+            if (lastCode) {
+                sidebarClassLink.href = `/dashboard/teacher/manage/?code=${lastCode}`;
+            } else {
+                sidebarClassLink.href = '/dashboard/teacher/manage/';
+            }
+        }
+    }
+
+    // Ensure sidebar is updated on page load
+    function initSidebarLink() {
+        // Persist session-injected user info to localStorage for background scripts
+        if (window.PABASA_USER_ROLE) localStorage.setItem("pabasaUserRole", window.PABASA_USER_ROLE);
+        if (window.PABASA_USER_EMAIL) localStorage.setItem("pabasaUserEmail", window.PABASA_USER_EMAIL);
+        if (window.PABASA_USER_NAME) localStorage.setItem("pabasaUserName", window.PABASA_USER_NAME);
+        updateTeacherSidebar();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSidebarLink);
+    } else {
+        initSidebarLink();
+    }
+
+    // Listen for class selection events from other scripts
+    window.addEventListener("pabasa:teacher-class-selected", function() {
+        updateTeacherSidebar();
+    });
+
+    // Fetch authoritative stats and class info from server
     try {
-        const classCountEl = document.getElementById('classCount');
-        const role = window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '';
-        if (classCountEl && role === 'teacher') {
+        const role = getRole();
+        if (role === 'teacher') {
             fetch('/dashboard/teacher/classes/', {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             }).then(r => r.json()).then(function(data) {
                 if (data && data.success && Array.isArray(data.classes)) {
-                    classCountEl.textContent = String(data.classes.length);
+                    const classCountEl = document.getElementById('classCount') || document.getElementById('classCountMirror');
+                    if (classCountEl) classCountEl.textContent = String(data.classes.length);
+                    updateTeacherSidebar();
                 }
             }).catch(function() {
                 // ignore
@@ -154,6 +199,10 @@ var getStudentClassData = window.getStudentClassData = function() {
     const classJoinedKey = "pabasaStudentClassJoined";
 
     function classIsJoined() {
+        // Teachers and Admins should always bypass the "student class required" lock
+        const userRole = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '').toLowerCase();
+        if (userRole === 'teacher' || userRole === 'admin') return true;
+
         return window.localStorage.getItem(classJoinedKey) === "1";
     }
 
@@ -227,7 +276,14 @@ var getStudentClassData = window.getStudentClassData = function() {
                     }
                 }
                 
-                link.setAttribute("href", targetHref);
+                // Only restore href from lockedHref for students. 
+                // Teachers/Admins manage dynamic URLs (like class codes) in their own scripts,
+                // so we don't want to overwrite their specific URLs.
+                const userRole = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '').toLowerCase();
+                const isStaff = userRole === 'teacher' || userRole === 'admin';
+                if (!isStaff || !link.getAttribute("href") || link.getAttribute("href") === "#") {
+                    link.setAttribute("href", targetHref);
+                }
                 link.removeAttribute("tabindex");
             } else {
                 link.removeAttribute("href");

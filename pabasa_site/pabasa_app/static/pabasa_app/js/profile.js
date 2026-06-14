@@ -98,7 +98,7 @@ function initProfilePage() {
             const fields = {
                 first_name: document.getElementById("firstName")?.value || "",
                 last_name: document.getElementById("lastName")?.value || "",
-                middle_initial: document.getElementById("middleName")?.value || "",
+                middle_initial: document.getElementById("middleInitial")?.value || "",
                 suffix: document.getElementById("suffix")?.value || "",
                 email: document.getElementById("email")?.value || "",
                 bio: document.getElementById("bio")?.value || ""
@@ -330,7 +330,7 @@ function initProfilePage() {
 
                 const fieldMap = {
                     firstName: fields.first_name,
-                    middleName: fields.middle_initial,
+                    middleInitial: fields.middle_initial,
                     lastName: fields.last_name,
                     suffix: fields.suffix,
                     email: fields.email,

@@ -225,7 +225,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">First name</label>
-                        <input class="form-control" type="text" name="first_name" required>
+                        <input class="form-control" type="text" name="first_name" placeholder="Enter First Name" required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Middle Initial</label>
@@ -233,7 +233,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Last name</label>
-                        <input class="form-control" type="text" name="last_name" required>
+                        <input class="form-control" type="text" name="last_name" placeholder="Enter Last Name" required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Suffix</label>
@@ -276,11 +276,11 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Birth day</label>
-                        <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" required>
+                        <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" oninput="if(this.value.length > 2) this.value = this.value.slice(0, 2);" required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Birth year</label>
-                        <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" required>
+                        <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Email address</label>

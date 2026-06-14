@@ -106,4 +106,9 @@ urlpatterns = [
         views.teacher_add_student,
         name='teacher_add_student'
     ),
+    path(
+        'dashboard/teacher/remove-student-from-class/',
+        views.teacher_remove_student,
+        name='teacher_remove_student'
+    ),
 ]

@@ -2,6 +2,16 @@ document.addEventListener("DOMContentLoaded", function () {
     // Inject hover styles for material cards
     const style = document.createElement('style');
     style.textContent = `
+        #wordReadings, #sentenceReadings, #paragraphReadings {
+            padding: 12px 8px !important;
+            overflow: visible !important;
+        }
+        .tab-content, .tab-pane {
+            padding-top: 32px !important; /* Extra space to prevent heading clipping */
+            height: auto !important;
+            min-height: auto !important;
+            overflow: visible !important;
+        }
         .material-card-modern:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 24px rgba(31, 111, 139, 0.12) !important;
@@ -80,18 +90,18 @@ document.addEventListener("DOMContentLoaded", function () {
                          data-material-title="${item.title}"
                          data-usage-type="${item.type}"
                          style="border-radius: 12px; padding: 1.1rem; display: flex; align-items: center; border-color: rgba(31, 111, 139, 0.1); transition: all 0.2s ease; cursor: pointer;">
-                        <div class="material-leading-icon me-3" style="width: 42px; height: 42px; background: #eaf7fd; color: #2ea8e5; display: flex; align-items: center; justify-content: center; border-radius: 10px;">
+                        <div class="material-leading-icon me-3" style="flex-shrink: 0; width: 42px; height: 42px; background: #eaf7fd; color: #2ea8e5; display: flex; align-items: center; justify-content: center; border-radius: 10px;">
                             <i class="bi ${type === 'word' ? 'bi-spellcheck' : type === 'sentence' ? 'bi-chat-left-text' : 'bi-file-text'}"></i>
                         </div>
-                        <div style="flex: 1;">
-                            <h6 class="mb-0 fw-bold d-flex align-items-center">
+                        <div style="flex: 1; min-width: 0;">
+                            <h6 class="mb-0 fw-bold d-flex align-items-center text-truncate" title="${item.title}">
                                 ${item.title}
                                 ${isNew ? '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.6rem; padding: 0.25em 0.5em;">NEW</span>' : ''}
                                 ${isDone ? '<span class="badge bg-success ms-2" style="font-size: 0.6rem; padding: 0.25em 0.5em;">DONE</span>' : ''}
                             </h6>
                             <p class="mb-0 text-muted small">${Array.isArray(item.items) ? item.items.length : item.items} items</p>
                         </div>
-                        <button class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-primary'} rounded-pill px-3">${isDone ? 'Review' : 'Start'}</button>
+                        <button class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-primary'} rounded-pill px-3" style="flex-shrink: 0;">${isDone ? 'Review' : 'Start'}</button>
                     </div>
                 `;
             }).join('');

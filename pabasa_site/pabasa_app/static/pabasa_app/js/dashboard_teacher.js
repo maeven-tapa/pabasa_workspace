@@ -43,34 +43,8 @@
         }
 
         function updateClassCount() {
-            const count = String(classList.querySelectorAll(".class-card").length);
-            if (classCountMirror) { // Use the renamed variable
-                classCountMirror.textContent = count;
-            }
-        }
-
-        function getStudentCountForClass(className) {
-            try {
-                const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-                // Filter to target class and exclude placeholder name
-                const matched = allStudents.filter(s => s.class === className && s.name !== "Jay Park");
-
-                // Deduplicate by email when available, otherwise by name
-                const seen = new Set();
-                const unique = [];
-                matched.forEach(s => {
-                    const key = (s.email || s.name || "").toString().trim().toLowerCase();
-                    if (!key) return;
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        unique.push(s);
-                    }
-                });
-
-                return unique.length;
-            } catch (e) {
-                console.error("Error getting student count for class:", e);
-                return 0;
+            if (classCountMirror && classList) {
+                classCountMirror.textContent = String(classList.querySelectorAll('.class-card').length);
             }
         }
 
@@ -145,14 +119,17 @@
                         classData.description || '',
                         classData.code,
                         classData.subject || '',
-                        classData.students || '0',
+                        classData.students || '0', // Use accurate count from server
                         classTeacherEmail
                     );
 
                     classList.appendChild(card);
                 });
 
-                updateClassCount();
+                // Update total class count stat
+                if (classCountMirror) {
+                    classCountMirror.textContent = String(data.classes.length);
+                }
 
                 const firstCard = classList.querySelector('.class-card');
                 if (firstCard && activeClassName) {
@@ -177,7 +154,7 @@
             const code = card.getAttribute("data-code") || "READ-000";
             const header = card.getAttribute("data-header") || "READ";
             const description = card.getAttribute("data-description") || "Class reading workspace.";
-            const actualStudentCount = getStudentCountForClass(name);
+            const actualStudentCount = card.getAttribute("data-students") || "0";
 
             activeClassName.textContent = name;
             activeClassSubject.textContent = subject;
@@ -190,14 +167,20 @@
             if (copyClassCodeBtn) {
                 copyClassCodeBtn.style.display = "block";
             }
-            if (manageClassLink) {
-                manageClassLink.href = `/dashboard/teacher/manage/?code=${code}`;
-                manageClassLink.style.display = "inline-flex";
-            }
-            // Also update the sidebar link to point to the management page
-            if (sidebarClassLink) {
-                sidebarClassLink.href = `/dashboard/teacher/manage/?code=${code}`;
-            }
+
+            // Update all "Manage Class" or "Class" buttons in the dashboard and workspace card
+            const classManagementUrls = document.querySelectorAll('#manageClassLink, .workspace-card .btn-class, [data-manage-class-btn]');
+            classManagementUrls.forEach(link => {
+                if (link.tagName === 'A') {
+                    link.href = `/dashboard/teacher/manage/?code=${code}`;
+                    link.style.display = "inline-flex";
+                }
+            });
+
+            // Persist the active class so the sidebar stays updated on other pages
+            localStorage.setItem("pabasa_last_active_class_code", code);
+            window.dispatchEvent(new Event("pabasa:teacher-class-selected"));
+
             // Refresh student directory to show students for the selected class (if present)
             try {
                 if (typeof loadPersistedStudents === 'function') {
@@ -222,8 +205,7 @@
             const email = teacherEmailArg || window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || "";
             card.setAttribute("data-teacher-email", email);
 
-            const actualStudentCount = getStudentCountForClass(name);
-            card.setAttribute("data-students", actualStudentCount);
+            card.setAttribute("data-students", students);
 
             const head = document.createElement("span");
             head.className = "class-card-head";
@@ -250,7 +232,7 @@
 
             const meta = document.createElement("span");
             meta.className = "small text-secondary";
-            meta.textContent = (subject || name) + " • " + actualStudentCount + " students";
+            meta.textContent = (subject || name) + " • " + students + " students";
 
             head.appendChild(title);
             head.appendChild(codePill);
@@ -298,24 +280,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    document.getElementById("createdClassName").textContent = data.class_name;
-                    document.getElementById("createdClassCode").textContent = data.class_code;
-
-                    const successModal = new bootstrap.Modal(
-                        document.getElementById("classCreatedModal"),
-                        { backdrop: false, keyboard: true }
-                    );
-                    successModal.show();
-
-                    document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
-                    document.body.classList.remove("modal-open");
-                    document.body.style.overflow = "auto";
-                    document.body.style.paddingRight = "0";
-
-                    const currentTeacherEmail = window.PABASA_USER_EMAIL
-                        || localStorage.getItem("pabasaUserEmail")
-                        || "";
-
+                    const currentTeacherEmail = window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || "";
+                    const description = classDescriptionInput.value.trim() || "Reading class workspace.";
+                    
+                    // Update the dashboard UI in the background
                     const card = createClassCard(
                         data.class_name,
                         "READ",
@@ -325,10 +293,59 @@
                         "0",
                         currentTeacherEmail
                     );
-
                     classList.prepend(card);
                     selectClass(card);
                     updateClassCount();
+
+                    // Apply refined styling to the success popup content
+                    const nameDisplay = document.getElementById("createdClassName");
+                    if (nameDisplay) {
+                        nameDisplay.textContent = data.class_name;
+                        nameDisplay.style.color = '#64748b';
+                        nameDisplay.style.fontWeight = '600';
+                        nameDisplay.style.fontSize = '1.25rem';
+                    }
+                    
+                    const codeDisplay = document.getElementById("createdClassCode");
+                    if (codeDisplay) {
+                        codeDisplay.textContent = data.class_code;
+                        codeDisplay.style.letterSpacing = '8px';
+                        codeDisplay.style.fontFamily = "'JetBrains Mono', monospace";
+                        codeDisplay.style.fontSize = '3.5rem';
+                        codeDisplay.style.fontWeight = '800';
+                        codeDisplay.style.color = '#1e293b';
+                        codeDisplay.style.background = '#f8fafc';
+                        codeDisplay.style.padding = '30px 45px';
+                        codeDisplay.style.borderRadius = '24px';
+                        codeDisplay.style.display = 'inline-block';
+                        codeDisplay.style.margin = '25px 0';
+                        codeDisplay.style.border = '2px solid #e2e8f0';
+                        codeDisplay.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                    }
+
+                    // Handle modal transition reliably
+                    const createModalEl = document.getElementById("createClassModal");
+                    const successModalEl = document.getElementById("classCreatedModal");
+
+                    if (createModalEl && successModalEl) {
+                        console.log("PABASA: Class created, transitioning modals...");
+                        const createModal = bootstrap.Modal.getOrCreateInstance(createModalEl);
+                        const successModal = bootstrap.Modal.getOrCreateInstance(successModalEl, { 
+                            backdrop: 'static', 
+                            keyboard: true 
+                        });
+
+                        if (createModalEl.classList.contains('show')) {
+                            createModalEl.addEventListener('hidden.bs.modal', function () {
+                                // Force removal of any lingering backdrops before showing the next modal
+                                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                                successModal.show();
+                            }, { once: true });
+                            createModal.hide();
+                        } else {
+                            successModal.show();
+                        }
+                    }
 
                     const currentScopedKey = `pabasa_teacher_classes_${currentTeacherEmail}`;
                     const existing = JSON.parse(localStorage.getItem(currentScopedKey) || '[]');
@@ -433,6 +450,9 @@
                 document.body.classList.remove("modal-open");
                 document.body.style.overflow = "";
                 document.body.style.paddingRight = "";
+                
+                // Trigger page refresh to update all dashboard stats and sidebar links
+                window.location.reload();
             });
         }
 
@@ -440,12 +460,39 @@
         const copyCreatedBtn = document.getElementById("copyCreatedClassCode");
         if (copyCreatedBtn) {
             copyCreatedBtn.addEventListener("click", function () {
-                const code = document.getElementById("createdClassCode").textContent;
-                navigator.clipboard.writeText(code);
-                this.innerHTML = '<i class="bi bi-check2 me-2"></i>Copied!';
-                setTimeout(() => {
-                    this.innerHTML = '<i class="bi bi-copy me-2"></i>Copy Code';
-                }, 1500);
+                const codeEl = document.getElementById("createdClassCode");
+                const code = codeEl ? codeEl.textContent : "";
+                if (navigator.clipboard && code) {
+                    navigator.clipboard.writeText(code).then(() => {
+                        const btn = this;
+                        const originalHTML = btn.innerHTML;
+                        
+                        btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Copied!';
+                        btn.classList.replace('btn-primary', 'btn-success');
+                        btn.style.transform = 'translateY(-2px)';
+                        btn.style.transition = 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        btn.style.boxShadow = '0 10px 15px -3px rgba(22, 163, 74, 0.3)';
+                        
+                        if (codeEl) {
+                            codeEl.style.color = '#15803d';
+                            codeEl.style.borderColor = '#22c55e';
+                            codeEl.style.transition = 'all 0.2s ease';
+                        }
+                        
+                        setTimeout(() => {
+                            btn.innerHTML = originalHTML;
+                            btn.classList.replace('btn-success', 'btn-primary');
+                            btn.style.transform = '';
+                            btn.style.boxShadow = '';
+                            if (codeEl) {
+                                codeEl.style.color = '#1e293b';
+                                codeEl.style.borderColor = '#94a3b8';
+                            }
+                        }, 2000);
+                    }).catch(() => {
+                        alert('Failed to copy. Please try again.');
+                    });
+                }
             });
         }
 

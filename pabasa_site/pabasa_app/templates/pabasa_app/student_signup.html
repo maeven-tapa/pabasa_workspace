@@ -230,7 +230,7 @@
                     </div>                    
                     <div class="col-md-4">
                         <label class="form-label">First name</label>
-                        <input class="form-control" type="text" name="first_name" placeholder="Enter first name" required>
+                        <input class="form-control" type="text" name="first_name" placeholder="Enter First name" required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Middle Initial</label>
@@ -238,7 +238,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Last name</label>
-                        <input class="form-control" type="text" name="last_name" placeholder="Enter last name" required>
+                        <input class="form-control" type="text" name="last_name" placeholder="Enter Last name" required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Suffix</label>
@@ -273,11 +273,11 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Birth day</label>
-                        <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" required>
+                        <input class="form-control" type="number" name="birth_day" placeholder="Day" min="1" max="31" oninput="if(this.value.length > 2) this.value = this.value.slice(0, 2);" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Birth year</label>
-                        <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" required>
+                        <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Sex</label>
@@ -294,7 +294,14 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Grade level</label>
-                        <input class="form-control" type="text" name="grade_level" placeholder="e.g., Grade 2">
+                        <select class="form-select" name="grade_level" required>
+                            <option value="" selected disabled>Select Grade Level</option>
+                            <option value="Grade 2">Grade 2</option>
+                            <option value="Grade 3">Grade 3</option>
+                            <option value="Grade 4">Grade 4</option>
+                            <option value="Grade 5">Grade 5</option>
+                            <option value="Grade 6">Grade 6</option>
+                        </select>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Parent contact number</label>

@@ -902,6 +902,9 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 break
 
     joined_classes = []
+    user_role = user.role if user else request.session.get('user_role', 'student')
+    effective_role = nav_role or user_role
+
     if user and user.role == 'student':
         student_user = user
         classes = Section.objects.filter(is_active=True).order_by('class_name')
@@ -912,6 +915,17 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 'code': cls.class_code,
                 'name': cls.class_name,
                 'student_count': _section_student_count(cls),
+            })
+    # Catch anyone who is not a student (Teachers and Admins) so they can see 
+    # the sections they have created/own in the sidebar and dashboard.
+    elif user and (user.role in ['teacher', 'admin'] or effective_role in ['teacher', 'admin']):
+        classes = Section.objects.filter(teacher=user, is_active=True).order_by('class_name')
+        for cls in classes:
+            joined_classes.append({
+                'code': cls.class_code,
+                'name': cls.class_name,
+                'student_count': _section_student_count(cls),
+                'subject': cls.subject,
             })
 
     context = {
@@ -1898,7 +1912,15 @@ def admin_settings(request):
 def courses(request):
     if not _check_auth(request):
         return redirect('auth')
-    return render(request, 'pabasa_app/courses.html', _dashboard_context(request, 'teacher'))
+    
+    role = str(request.session.get('user_role', 'student')).lower()
+    
+    if role in ['teacher', 'admin']:
+        return course_teacher_view(request)
+    elif role == 'student':
+        return course_student_view(request)
+    
+    return redirect('dashboard')
 
 def assessment(request):
     if not _check_auth(request):
@@ -1960,9 +1982,9 @@ def practice_para_page(request):
 def course_teacher_view(request):
     if not _check_auth(request):
         return redirect('auth')
-    if request.session.get('user_role') != 'teacher':
+    if request.session.get('user_role') not in ['teacher', 'admin']:
         return redirect('auth')
-    return render(request, 'pabasa_app/course_tecaher_view.html', _dashboard_context(request, 'teacher'))
+    return render(request, 'pabasa_app/courses.html', _dashboard_context(request, 'teacher'))
 
 def course_student_view(request):
     return render(request, 'pabasa_app/course_student_view.html', _dashboard_context(request))
@@ -2291,7 +2313,7 @@ def profile(request):
         'username': username,
         'full_name': full_name,
         'first_name': user.first_name,
-        'middle_name': user.middle_initial,
+        'middle_initial': user.middle_initial,
         'last_name': user.last_name,
         'suffix': user.suffix,
         'email': user.email,
@@ -2570,12 +2592,16 @@ def class_management_view(request):
         user = users_data.get(entry.get('student_id'))
         if not user: continue
         
+        # Extract only the date part (YYYY-MM-DD) from the ISO timestamp string
+        joined_raw = entry.get('joined_at', section.created_at.isoformat())
+        joined_date = joined_raw.split('T')[0] if 'T' in joined_raw else joined_raw
+        
         students_table.append({
             'name': f"{user.first_name} {user.last_name}",
             'pabasa_id': user.custom_id,
             'email': user.email,
             'reading_level': user.reading_level or "Developing",
-            'joined_at': entry.get('joined_at', section.created_at.isoformat())
+            'joined_at': joined_date
         })
         
     # Fetch all students for the "Add Student" popup
@@ -2665,6 +2691,45 @@ def teacher_add_student(request):
         else:
             return JsonResponse({'success': False, 'error': 'Student is already enrolled.'})
     except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_remove_student(request):
+    """Backend endpoint for teachers to remove a student from a class"""
+    try:
+        data = json.loads(request.body)
+        class_code = data.get('class_code')
+        student_id_val = data.get('student_id')
+        
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
+        section = Section.objects.filter(class_code=class_code, teacher=teacher_user, is_active=True).first()
+        
+        if not section:
+            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
+        
+        # Match by internal database ID or the custom Pabasa ID
+        student = User.objects.filter(Q(id=student_id_val) | Q(custom_id=student_id_val), role='student').first()
+        
+        if not student:
+            return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
+
+        if section.deactivate_student(student):
+            _create_notification(
+                student,
+                'Removed from class',
+                f'You were removed from {section.class_name} by your teacher.',
+                'warning',
+                reverse('dashboard'),
+                teacher_user,
+            )
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Student is not enrolled or already removed.'})
+    except Exception as e:
+        logger.error(f"Error removing student from class: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @require_http_methods(["GET"])
@@ -2956,6 +3021,7 @@ def add_reading_material(request):
         reading_type = (data.get('reading_type') or '').strip()   # word | sentence | paragraph
         content      = (data.get('content') or '').strip()
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
+        usage_type   = (data.get('usage_type') or 'practice').strip()        # practice | assessment | both
         class_code   = (data.get('class_code') or '').strip()
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
 
@@ -3046,6 +3112,7 @@ def add_reading_material(request):
                     prompt_text=(tokens[0] if tokens else title) or title,
                     content_text=content,
                     content_json={'items': tokens},
+                    type=usage_type,
                     status=status,
                     scheduled_at=scheduled_at if status == 'scheduled' else None,
                     difficulty_level='',
@@ -3078,7 +3145,8 @@ def add_reading_material(request):
                     'id': m.id,
                     'code': None,
                     'title': m.title,
-                    'type': m.item_type,
+                    'item_type': m.item_type,
+                    'type': m.type,
                     'content': m.content_text,
                     'status': m.status,
                     'schedule': m.scheduled_at.isoformat() if m.scheduled_at else None,
@@ -3216,5 +3284,66 @@ def mark_notification_read(request):
         user = User.objects.get(id=request.session.get('user_id'))
         Notification.objects.filter(id=notif_id, recipient=user).update(is_read=True)
         return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_teacher_students_api(request):
+    """
+    Authority source for all students associated with a teacher.
+    Aggregates students from all active sections owned by the teacher.
+    """
+    try:
+        user_id = request.session.get('user_id')
+        teacher = User.objects.get(id=user_id)
+        
+        # Get all active sections for this teacher
+        sections = Section.objects.filter(teacher=teacher, is_active=True)
+        
+        student_map = {}
+        for section in sections:
+            enrolled = section.get_enrolled_students(active_only=True)
+            for entry in enrolled:
+                sid = entry.get('student_id')
+                if not sid: continue
+                
+                if sid not in student_map:
+                    student_map[sid] = {
+                        'id': sid,
+                        'name': f"{entry.get('first_name')} {entry.get('last_name')}",
+                        'email': entry.get('email', ''),
+                        'custom_id': entry.get('custom_id', ''),
+                        'classes': [section.class_name],
+                        'class_codes': [section.class_code]
+                    }
+                else:
+                    if section.class_name not in student_map[sid]['classes']:
+                        student_map[sid]['classes'].append(section.class_name)
+                        student_map[sid]['class_codes'].append(section.class_code)
+        
+        user_ids = list(student_map.keys())
+        users = User.objects.filter(id__in=user_ids).in_bulk()
+        
+        results = []
+        for sid, sdata in student_map.items():
+            user = users.get(sid)
+            if user:
+                # Extract metrics from profile tags
+                profile = {}
+                if isinstance(user.tags, list):
+                    for tag in user.tags:
+                        if isinstance(tag, dict) and 'student_profile' in tag:
+                            profile = tag['student_profile']
+                            break
+                
+                sdata.update({
+                    'level': user.reading_level or profile.get('reading_level', 'Developing Readers'),
+                    'accuracy': profile.get('accuracy', '0'),
+                    'wpm': profile.get('wpm', '0'),
+                })
+                results.append(sdata)
+        
+        return JsonResponse({'success': True, 'students': results})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)

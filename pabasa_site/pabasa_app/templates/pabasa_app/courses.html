@@ -235,29 +235,36 @@
         display: grid;
         flex: 1;
         grid-template-columns: 220px minmax(0, 1fr);
-        overflow: hidden;
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+        min-height: 0;
         padding: 0;
     }
 
     .course-sidebar {
-        background: rgba(255, 255, 255, 0.4);
-        border-right: 1px solid rgba(27, 26, 23, 0.08);
-        overflow-y: auto;
-        padding: 1rem;
+        background: transparent;
+        border-right: none;
+        padding: 2rem 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
     }
 
     .course-tabs {
         display: grid;
-        gap: 0.45rem;
+        gap: 0.65rem;
         list-style: none;
         margin: 0;
         padding: 0;
     }
 
     .course-tab-content {
-        background: transparent;
-        overflow-y: auto;
-        padding: 1.5rem;
+        background: transparent !important;
+        overflow: visible !important; /* Prevent content clipping and double scrollbars */
+        padding: 1.5rem !important;
+        padding-top: 32px !important; /* Fix: ensures headings aren't cut off at the top */
+        height: auto !important;
+        min-height: unset !important;
     }
 
     .workspace-shell {
@@ -377,33 +384,59 @@
     }
 
     .vertical-nav-link {
-        border: none;
-        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.3);
         color: var(--dash-muted);
-        border-radius: 8px;
+        border-radius: 18px;
         font-weight: 700;
-        transition: all 0.25s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
-        border-left: 3px solid transparent;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        font-size: 0.95rem;
-        min-height: 44px;
-        padding: 0.75rem 0.9rem;
+        gap: 0.85rem;
+        font-size: 0.92rem;
+        min-height: 54px;
+        padding: 0.8rem 1rem;
         width: 100%;
+        text-align: left;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .vertical-nav-link i {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(31, 111, 139, 0.05);
+        color: var(--dash-primary);
+        font-size: 1.1rem;
+        transition: all 0.25s ease;
     }
 
     .vertical-nav-link:hover {
-        background: rgba(31, 111, 139, 0.08);
+        background: rgba(255, 255, 255, 0.6);
         color: var(--dash-primary);
+        border-color: rgba(31, 111, 139, 0.2);
+        transform: translateX(4px);
     }
 
     .vertical-nav-link.active {
-        background: rgba(31, 111, 139, 0.12);
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(10px) saturate(180%);
+        -webkit-backdrop-filter: blur(10px) saturate(180%);
         color: var(--dash-primary-deep);
-        border-left-color: var(--dash-primary);
+        border: 1.5px solid var(--dash-primary);
+        box-shadow: 0 10px 25px rgba(31, 111, 139, 0.12);
         font-weight: 800;
+        transform: scale(1.02);
+    }
+
+    .vertical-nav-link.active i {
+        background: var(--dash-primary);
+        color: #ffffff;
+        box-shadow: 0 4px 10px rgba(31, 111, 139, 0.2);
     }
 
     /* Inline Comment Input */
@@ -808,8 +841,6 @@
         display: grid;
         gap: 0.5rem;
         margin: 0;
-        max-height: 280px;
-        overflow-y: auto;
         padding: 0.75rem;
     }
 
@@ -1205,8 +1236,6 @@
         border-radius: 12px;
         padding: 0.85rem;
         background: #fffdf7;
-        max-height: 250px;
-        overflow-y: auto;
     }
 
     .action-preview-list {
@@ -1478,6 +1507,7 @@
 {% block content %}
 
 <script>
+    window.PABASA_USER_ROLE = "teacher";
     window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
 </script>
 
@@ -1575,7 +1605,7 @@
 
 <!-- Class Detail Modal -->
 <div class="modal fade" id="classDetailModal" tabindex="-1" aria-labelledby="classDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+    <div class="modal-dialog modal-fullscreen">
         <div class="modal-content course-modal-content">
             <div class="modal-header course-modal-header">
                 <div>
@@ -1616,7 +1646,7 @@
                                     <h5><i class="bi bi-book-half me-2"></i>Reading Materials</h5>
                                     <p>Add reading materials and choose whether each one appears in practice mode, assessment mode, or both.</p>
                                 </div>
-                                <button class="btn btn-primary readings-add-btn" type="button" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
+                                <button class="btn btn-primary readings-add-btn" type="button">
                                     <i class="bi bi-plus-lg"></i> Add New Material
                                 </button>
                             </div>
@@ -1635,10 +1665,8 @@
                                     <!-- All materials will appear here -->
                                 </div>
                             </div>
-                            </div>
                         </div>
                     </div>
-
                     <!-- Students Tab -->
                     <div class="tab-pane fade" id="studentsContent" role="tabpanel" aria-labelledby="students-tab">
                         <div class="workspace-shell">
@@ -1661,151 +1689,6 @@
                             </div>
                             <div id="studentsContainer" class="students-grid">
                                 <!-- Students will appear here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Modal for Adding Materials -->
-                    <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header border-0">
-                                    <h5 class="modal-title">Add Reading Material</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                <form id="addMaterialForm">
-                                    <div id="amValidationError" class="alert alert-danger d-none mb-3" role="alert"></div>
-                                    <div class="mb-3">
-                                        <label class="form-label fw-600">Material Title <span class="text-danger">*</span></label>
-                                        <input type="text" id="materialTitle" class="form-control" placeholder="e.g., Filipino Consonants Set A" style="border-radius: 8px;">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label fw-600">Reading Content/Text</label>
-                                        <textarea id="materialContent" class="form-control" rows="5" placeholder="Paste or type the reading material that students will read..." style="border-radius: 8px; resize: vertical;"></textarea>
-                                        <small class="text-muted d-block mt-2">This is what students will read and practice with</small>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <label class="form-label fw-600">Type</label>
-                                            <select id="materialType" class="form-select" style="border-radius: 8px;">
-                                                <option value="practice">Practice Only</option>
-                                                <option value="assessment">Assessment Only</option>
-                                                <option value="both">Both (Practice + Assessment)</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label fw-600">Publication Status</label>
-                                            <select id="publicationStatus" class="form-select" style="border-radius: 8px;">
-                                                <option value="published" selected>Published</option>
-                                                <option value="draft">Draft</option>
-                                                <option value="scheduled">Custom Schedule</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="row mt-3 d-none" id="scheduleField">
-                                        <div class="col-12">
-                                            <label class="form-label fw-600">Schedule Date & Time</label>
-                                            <input type="datetime-local" id="scheduleDateTime" class="form-control" style="border-radius: 8px;">
-                                        </div>
-                                    </div>
-                                    </form> 
-                                </div>
-                                <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-primary" id="submitMaterial"><i class="bi bi-plus-lg"></i> Add Material</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Modal for Editing Material -->
-                    <div class="modal fade" id="editMaterialModal" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header border-0">
-                                    <h5 class="modal-title">Edit Reading Material</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-600">Material Title</label>
-                                        <input type="text" id="editMaterialTitle" class="form-control" style="border-radius: 8px;">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label fw-600">Reading Content/Text</label>
-                                        <textarea id="editMaterialContent" class="form-control" rows="6" style="border-radius: 8px; resize: vertical;"></textarea>
-                                    </div>
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label fw-600">Type</label>
-                                            <select id="editMaterialType" class="form-select" style="border-radius: 8px;">
-                                                <option value="practice">Practice Only</option>
-                                                <option value="assessment">Assessment Only</option>
-                                                <option value="both">Both (Practice + Assessment)</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label fw-600">Publication Status</label>
-                                            <select id="editPublicationStatus" class="form-select" style="border-radius: 8px;">
-                                                <option value="published">Published</option>
-                                                <option value="draft">Draft</option>
-                                                <option value="scheduled">Custom Schedule</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="row mt-3 d-none" id="editScheduleField">
-                                        <div class="col-12">
-                                            <label class="form-label fw-600">Schedule Date & Time</label>
-                                            <input type="datetime-local" id="editScheduleDateTime" class="form-control" style="border-radius: 8px;">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-primary" id="submitEditMaterial">Save Changes</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Modal for Adding or Editing Assessments -->
-                    <div class="modal fade" id="assessmentModal" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header border-0">
-                                    <h5 class="modal-title" id="assessmentModalTitle">Add Assessment</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <input type="text" id="assessmentTitle" class="form-control mb-3" placeholder="Assessment title">
-                                    <div class="row g-3">
-                                        <div class="col-sm-6">
-                                            <label class="form-label">Reading Level</label>
-                                            <select id="assessmentLevel" class="form-select">
-                                                <option value="Word">Word</option>
-                                                <option value="Sentence">Sentence</option>
-                                                <option value="Paragraph">Paragraph</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label class="form-label">Number of Items</label>
-                                            <input type="number" id="assessmentItems" class="form-control" value="10" min="1">
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label class="form-label">Time Limit</label>
-                                            <input type="number" id="assessmentMinutes" class="form-control" value="15" min="1">
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label class="form-label">Due Date</label>
-                                            <input type="date" id="assessmentDueDate" class="form-control">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-0">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-primary" id="submitAssessment">Save Assessment</button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1881,7 +1764,7 @@
                                             </div>
                                         </div>
                                         <div class="card-body p-0">
-                                            <div id="unifiedStudentReportList" class="list-group list-group-flush" style="max-height: 500px; overflow-y: auto;">
+                                            <div id="unifiedStudentReportList" class="list-group list-group-flush">
                                                 <!-- Populated by JS -->
                                             </div>
                                         </div>
@@ -1929,6 +1812,85 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Modals moved to bottom to prevent nesting issues -->
+<!-- Modal for Adding Materials -->
+<div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Add Reading Material</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addMaterialForm">
+                    <div id="amValidationError" class="alert alert-danger d-none mb-3" role="alert"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Material Title <span class="text-danger">*</span></label>
+                        <input type="text" id="materialTitle" class="form-control" placeholder="e.g., Filipino Consonants Set A">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Reading Category <span class="text-danger">*</span></label>
+                        <select id="materialCategory" class="form-select">
+                            <option value="word">Words (Level 1)</option>
+                            <option value="sentence">Sentences (Level 2)</option>
+                            <option value="paragraph">Paragraphs (Level 3)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Add Material Items <span class="text-danger">*</span></label>
+                        <div class="input-group mb-2">
+                            <input type="text" id="itemInput" class="form-control" placeholder="Type a word, sentence, or paragraph...">
+                            <button class="btn btn-outline-primary px-3" type="button" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button>
+                        </div>
+                        <div class="table-responsive" style="max-height: 220px; border: 1px solid rgba(31, 111, 139, 0.1); border-radius: 12px; background: #fff;">
+                            <table class="table table-sm table-hover mb-0" id="addedItemsTable">
+                                <tbody id="addedItemsList">
+                                    <tr><td class="text-center text-muted py-3">One item at a time. Items will appear here.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Type</label>
+                            <select id="materialType" class="form-select">
+                                <option value="practice">Practice Only</option>
+                                <option value="assessment">Assessment Only</option>
+                                <option value="both">Both (Practice + Assessment)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Publication Status</label>
+                            <select id="publicationStatus" class="form-select">
+                                <option value="published" selected>Published</option>
+                                <option value="draft">Draft</option>
+                                <option value="scheduled">Custom Schedule</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-3 d-none" id="scheduleField">
+                        <div class="col-12">
+                            <label class="form-label fw-600">Schedule Date & Time</label>
+                            <input type="datetime-local" id="scheduleDateTime" class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitMaterial"><i class="bi bi-plus-lg"></i> Add Material</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assessment Modal moved to bottom -->
+<div class="modal fade" id="assessmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <!-- ... content ... -->
     </div>
 </div>
 
@@ -2226,6 +2188,42 @@
     // Reading materials for each class, persisted for dashboard/profile counts.
     const classReadings = loadStoredReadings();
 
+    window.removeStudentFromClass = function(studentId, studentName) {
+        if (!confirm(`Are you sure you want to remove ${studentName} from this class?`)) return;
+        
+        fetch('/dashboard/teacher/remove-student-from-class/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+            },
+            body: JSON.stringify({
+                class_code: currentClassCode,
+                student_id: studentId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`${studentName} removed from class.`, 'success');
+                const classData = teacherClasses.find(c => c.code === currentClassCode);
+                try {
+                    const students = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                    const updated = students.filter(s => !((s.pabasa_id === studentId || s.id === studentId || s.name === studentName) && s.class === classData.name));
+                    localStorage.setItem('pabasa_added_students', JSON.stringify(updated));
+                } catch(e) {}
+                loadStudents(currentClassCode, getStudentCountForClass(classData.name));
+                renderClasses();
+            } else {
+                showToast(data.error || 'Failed to remove student.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred.', 'error');
+        });
+    };
+
     const classAssessments = {};
 
     let currentClassCode = null;
@@ -2425,94 +2423,6 @@
         modal.show();
     };
 
-    async function loadReadings(classCode) {
-        let readings = { word: [], sentence: [], paragraph: [] };
-        
-        // First, try to fetch from database API
-        const dbMaterials = await fetchMaterialsFromDatabase(classCode);
-        if (dbMaterials) {
-            readings = dbMaterials;
-            console.log(`✓ Loaded materials from database for class ${classCode}`);
-        } else {
-            // Fallback to localStorage if API fails
-            const stored = ensureClassReadings(classCode);
-            readings = stored;
-            console.warn(`⚠ Using localStorage materials for class ${classCode} (database fetch failed)`);
-        }
-
-        function renderReadingsList(readingsArray, containerId, type) {
-            const container = document.getElementById(containerId);
-            const countBadge = document.querySelector(`[data-${type}-count]`);
-            
-            if (readingsArray.length === 0) {
-                container.innerHTML = `
-                    <div class="readings-empty">
-                        <i class="bi bi-inbox"></i>
-                        <p>No ${type} materials yet</p>
-                    </div>
-                `;
-                if (countBadge) countBadge.textContent = '0 items';
-                return;
-            }
-            
-            if (countBadge) countBadge.textContent = `${readingsArray.length} item${readingsArray.length !== 1 ? 's' : ''}`;
-            
-            container.innerHTML = readingsArray.map(reading => {
-                const typeMap = {
-                    'practice': 'practice',
-                    'assessment': 'assessment',
-                    'both': 'both'
-                };
-                const badgeType = typeMap[reading.type] || reading.type;
-                
-                // Determine the display status: if scheduled and time has passed, show as published
-                let displayStatus = reading.status || 'published';
-                if (displayStatus === 'scheduled' && reading.schedule) {
-                    const scheduledTime = new Date(reading.schedule).getTime();
-                    if (scheduledTime <= Date.now()) displayStatus = 'published';
-                }
-                
-                return `
-                    <div class="material-card-modern" data-material-id="${reading.id}" data-reading-type="${type}" 
-                         data-full-content="${(reading.content || '').replace(/"/g, '&quot;')}"
-                         data-status="${reading.status || 'published'}"
-                         data-schedule="${reading.schedule || ''}"
-                         data-usage="${reading.type || 'practice'}">
-                        <div class="material-info">
-                            <div class="material-leading-icon">
-                                <i class="bi ${type === 'word' ? 'bi-spellcheck' : type === 'sentence' ? 'bi-chat-left-text' : 'bi-file-text'}"></i>
-                            </div>
-                            <div>
-                                <p class="material-title">${reading.title}</p>
-                                <p class="material-preview">${(reading.content || '').substring(0, 100)}${(reading.content || '').length > 100 ? '...' : ''}</p>
-                                <p class="material-meta">
-                                    <span>${reading.items} item${reading.items !== 1 ? 's' : ''}</span>
-                                    <span class="material-type-badge ${badgeType}">${reading.type}</span>
-                                    <span class="material-type-badge status-${displayStatus}">${displayStatus.toUpperCase()}</span>
-                                </p>
-                            </div>
-                        </div>
-                        <div class="material-actions">
-                            <button class="material-btn" title="View" data-action="view">
-                                <i class="bi bi-eye" style="color: #00bcd4;"></i>
-                            </button>
-                            <button class="material-btn" title="Edit" data-action="edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="material-btn delete" title="Delete" data-action="delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        renderReadingsList(readings.word, 'wordReadings', 'word');
-        renderReadingsList(readings.sentence, 'sentenceReadings', 'sentence');
-        renderReadingsList(readings.paragraph, 'paragraphReadings', 'paragraph');
-    }
-
     function formatDueDate(value) {
         if (!value) return 'No due date';
         const date = new Date(`${value}T00:00:00`);
@@ -2603,7 +2513,13 @@
             const assessmentsPassed = student.wpm || "0";
 
             return `
-            <div class="student-card-modern">
+            <div class="student-card-modern position-relative">
+                <button class="btn btn-sm text-danger p-0 border-0 position-absolute" 
+                        style="top: 10px; right: 12px; z-index: 2;" 
+                        title="Remove student" 
+                        onclick="event.stopPropagation(); window.removeStudentFromClass('${student.pabasa_id || student.id || student.name}', '${student.name}')">
+                    <i class="bi bi-person-x-fill" style="font-size: 1.1rem;"></i>
+                </button>
                 <div class="student-card-head">
                     <div class="student-avatar-large">${initials}</div>
                     <div class="student-identity">
@@ -2860,17 +2776,65 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Global variables for current class and material being edited/added
         let editingCard = null;
+        let currentItemsList = [];
 
         // Add Material Modal elements
         const addMaterialModal = document.getElementById('addMaterialModal');
         const materialTitleInput = document.getElementById('materialTitle');
-        const materialContentInput = document.getElementById('materialContent');
+        const materialCategorySelect = document.getElementById('materialCategory');
+        const itemInput = document.getElementById('itemInput');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const addedItemsList = document.getElementById('addedItemsList');
         const materialTypeSelect = document.getElementById('materialType');
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const addMaterialValidationError = document.getElementById('amValidationError');
         const scheduleFieldDiv = document.getElementById('scheduleField');
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
+
+        // Logic for adding items to the temporary list in Add Material modal
+        function renderAddedItemsTable() {
+            if (!addedItemsList) return;
+            if (currentItemsList.length === 0) {
+                addedItemsList.innerHTML = '<tr><td class="text-center text-muted py-3">One item at a time. Items will appear here.</td></tr>';
+                return;
+            }
+            addedItemsList.innerHTML = currentItemsList.map((item, index) => `
+                <tr>
+                    <td class="align-middle" style="padding: 0.6rem;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-truncate" style="max-width: 400px;">${index + 1}. ${item}</span>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="window.removeItemFromAddList(${index})">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.removeItemFromAddList = function(index) {
+            currentItemsList.splice(index, 1);
+            renderAddedItemsTable();
+        };
+
+        if (addItemBtn && itemInput) {
+            addItemBtn.addEventListener('click', function() {
+                const val = itemInput.value.trim();
+                if (val) {
+                    currentItemsList.push(val);
+                    itemInput.value = '';
+                    itemInput.focus();
+                    renderAddedItemsTable();
+                }
+            });
+            itemInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addItemBtn.click();
+                }
+            });
+        }
 
         // Edit Material Modal elements
         const editMaterialModal = document.getElementById('editMaterialModal');
@@ -2994,7 +2958,8 @@
             }).join('');
         }
 
-        async function loadReadings(classCode) {
+        // Fix: Make global so Open Class logic can see the unified version
+        window.loadReadings = async function(classCode) {
             let readings = { word: [], sentence: [], paragraph: [] };
             
             // First, try to fetch from database API
@@ -3029,10 +2994,13 @@
                         // Reset the form and validation state
                         const addMaterialFormEl = document.getElementById('addMaterialForm');
                         if (addMaterialFormEl) addMaterialFormEl.reset();
+                        currentItemsList = [];
+                        renderAddedItemsTable();
                         if (addMaterialValidationError) addMaterialValidationError.classList.add('d-none');
-                        [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
+                        [materialTitleInput, scheduleDateTimeInput].forEach(function (el) {
                             if (el) el.classList.remove('is-invalid');
                         });
+                        if (itemInput) itemInput.classList.remove('is-invalid');
 
                         const modal = new bootstrap.Modal(document.getElementById('addMaterialModal'));
                         toggleAddScheduleField(); // Reset schedule field visibility when opening add modal
@@ -3166,26 +3134,23 @@
                 });
             }
             
-                const submitMaterialBtn = document.getElementById('submitMaterial');
-                const materialTitleInput = document.getElementById('materialTitle');
-                const materialContentInput = document.getElementById('materialContent');
-                const materialTypeSelect = document.getElementById('materialType'); // Get from modal select
-                
                 if (submitMaterialBtn && !submitMaterialBtn.dataset.bound) {
                     submitMaterialBtn.dataset.bound = 'true';
                     submitMaterialBtn.addEventListener('click', async function () {
                         const title   = materialTitleInput   ? materialTitleInput.value.trim()   : '';
-                        const content = materialContentInput ? materialContentInput.value.trim() : ''; // Use content_text
-                        const readingType = materialTypeSelect ? materialTypeSelect.value : 'word'; // Get reading type from modal select
+                        const readingType = materialCategorySelect ? materialCategorySelect.value : 'word';
+                        const content = currentItemsList.join(readingType === 'paragraph' ? '\n\n' : '\n');
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
+                        const usageType = materialTypeSelect ? materialTypeSelect.value : 'practice';
                         const errorBanner = document.getElementById('amValidationError');
 
                         // ── Clear previous validation state ──────────────────────
                         if (errorBanner) errorBanner.classList.add('d-none');
-                        [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
+                        [materialTitleInput, scheduleDateTimeInput].forEach(function (el) {
                             if (el) el.classList.remove('is-invalid');
                         });
+                        if (itemInput) itemInput.classList.remove('is-invalid');
 
                         // ── Validate ─────────────────────────────────────────────
                         const errors = [];
@@ -3193,9 +3158,9 @@
                             errors.push('Material title is required.');
                             if (materialTitleInput) materialTitleInput.classList.add('is-invalid');
                         }
-                        if (!content) {
-                            errors.push('Reading content is required.');
-                            if (materialContentInput) materialContentInput.classList.add('is-invalid');
+                        if (currentItemsList.length === 0) {
+                            errors.push('Please add at least one reading item to the table.');
+                            if (itemInput) itemInput.classList.add('is-invalid');
                         }
                         if (status === 'scheduled' && !schedule) {
                             errors.push('Schedule date & time is required when status is Scheduled.');
@@ -3209,22 +3174,13 @@
                             }
                             const firstInvalid = document.querySelector('#addMaterialModal .is-invalid');
                             if (firstInvalid) firstInvalid.focus();
-                            console.warn('[AddMaterial] Validation failed:', errors);
-                            return;
-                        }
-
-                        if (!currentClassCode || !currentMaterialType) {
-                            if (errorBanner) {
-                                errorBanner.textContent = 'Open a class and choose a reading type (Word / Sentence / Paragraph) first.';
-                                errorBanner.classList.remove('d-none');
-                            }
                             return;
                         }
 
                         // ── Disable button / loading state ───────────────────────
                         submitMaterialBtn.disabled = true;
                         submitMaterialBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Creating...';
-                        console.log('[AddMaterial] Saving to database:', { title, reading_type: currentMaterialType, status, class_code: currentClassCode });
+                        console.log('[AddMaterial] Saving to database:', { title, reading_type: readingType, status, class_code: currentClassCode });
 
                         try { // Use readingType from modal select
                             // ── Step 1: Save to backend database via API ──────────
@@ -3247,6 +3203,7 @@
                                     reading_type: readingType,
                                     content: content,
                                     status: status,
+                                    usage_type: usageType,
                                     class_code: currentClassCode,
                                     scheduled_at: schedule || null
                                 })
@@ -3339,7 +3296,7 @@
                             const addMaterialFormEl = document.getElementById('addMaterialForm');
                             if (addMaterialFormEl) addMaterialFormEl.reset();
                             if (scheduleFieldDiv)   scheduleFieldDiv.classList.add('d-none');
-                            [materialTitleInput, materialContentInput, scheduleDateTimeInput].forEach(function (el) {
+                            [materialTitleInput, scheduleDateTimeInput].forEach(function (el) {
                                 if (el) el.classList.remove('is-invalid', 'is-valid');
                             });
                             if (errorBanner) errorBanner.classList.add('d-none');

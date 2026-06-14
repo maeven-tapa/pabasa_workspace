@@ -573,15 +573,15 @@
                                     <label class="form-label" for="firstName">First Name</label>
                                     <input class="form-control" id="firstName" name="first_name" type="text" value="{{ first_name }}" data-account-details-field disabled>
                                 </div>
-                                {% if middle_name %}
+                                {% if middle_initial %}
                                 <div>
-                                    <label class="form-label" for="middleName">Middle Name</label>
-                                    <input class="form-control" id="middleName" name="middle_initial" type="text" value="{{ middle_name }}" maxlength="1" data-account-details-field disabled>
+                                    <label class="form-label" for="middleInitial">Middle Initial</label>
+                                    <input class="form-control" id="middleInitial" name="middle_initial" type="text" value="{{ middle_initial }}" maxlength="1" data-account-details-field disabled>
                                 </div>
                                 {% else %}
                                 <div>
-                                    <label class="form-label" for="middleName">Middle Name <span class="text-muted fw-normal" style="text-transform:none;">(optional)</span></label>
-                                    <input class="form-control" id="middleName" name="middle_initial" type="text" value="" maxlength="1" placeholder="M" data-account-details-field disabled>
+                                    <label class="form-label" for="middleInitial">Middle Initial <span class="text-muted fw-normal" style="text-transform:none;">(optional)</span></label>
+                                    <input class="form-control" id="middleInitial" name="middle_initial" type="text" value="" maxlength="1" placeholder="M" data-account-details-field disabled>
                                 </div>
                                 {% endif %}
                                 <div>
