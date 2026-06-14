@@ -53,7 +53,9 @@
         if (!serverMaterials.length) return [];
 
         return serverMaterials.reduce((aggregatedItems, material) => {
-            if (!material || material.type !== mode) return aggregatedItems;
+            // Fix: Check item_type (word/sentence/para) and type (practice/both)
+            const mItemType = material.item_type || material.type; // Fallback for various JSON structures
+            if (!material || mItemType !== mode) return aggregatedItems;
             if (selectedDifficulty && material.difficulty !== selectedDifficulty) return aggregatedItems;
 
             const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
@@ -123,7 +125,45 @@
                 seenIds.push(mId);
                 localStorage.setItem("pabasa_seen_material_ids", JSON.stringify(seenIds));
                 window.dispatchEvent(new CustomEvent('pabasa:student-class-updated'));
+                window.dispatchEvent(new Event('storage')); // Sync sidebar badges immediately
             }
+        }
+
+        // Notify teacher that practice activity finished
+        const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
+        const tTitle = urlParams.get("test") || "Practice Material";
+        const tCode = urlParams.get("code") || "GENERAL";
+        
+        const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
+        const classInfo = metadata[tCode.toUpperCase()] || {};
+        const className = classInfo.name || "your class";
+
+        const studentClasses = JSON.parse(localStorage.getItem("pabasa_student_joined_classes") || "[]");
+        const clsInfo = studentClasses.find(c => c.code.toUpperCase() === tCode.toUpperCase());
+        const teacherEmail = clsInfo ? clsInfo.teacher_email || clsInfo.teacherEmail : null;
+
+        let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+        notifications.unshift({
+            id: Date.now() + Math.random(),
+            classCode: tCode,
+            title: "📖 Student Read a Practice Material",
+            message: `• ${studentName} read "${tTitle}" in ${className}.`,
+            timestamp: Date.now(),
+            read: false,
+            role: 'teacher',
+            recipientEmail: teacherEmail
+        });
+        localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
+        window.dispatchEvent(new Event('pabasa:notifications-updated'));
+        
+        // Notify via API as well
+        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        if (materialId && token) {
+            fetch('/record-assessment-completion/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+                body: JSON.stringify({ material_id: materialId, activity_type: 'practice' })
+            }).catch(e => console.warn("PABASA: Practice completion API error", e));
         }
     }
 

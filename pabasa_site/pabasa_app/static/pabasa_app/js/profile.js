@@ -45,18 +45,23 @@ function initProfilePage() {
         const themeKey = "pabasa_theme";
         const updateThemeUI = (theme) => {
             if (theme === "dark") {
+                document.documentElement.classList.add("dark-theme");
                 document.body.classList.add("dark-theme");
                 themeIcon.className = "bi bi-moon-stars";
             } else {
+                document.documentElement.classList.remove("dark-theme");
                 document.body.classList.remove("dark-theme");
                 themeIcon.className = "bi bi-sun";
             }
         };
         updateThemeUI(window.pabasaStore.get(themeKey, "light"));
         themeToggle.addEventListener("click", () => {
-            const newTheme = document.body.classList.contains("dark-theme") ? "light" : "dark";
+            const isDark = document.body.classList.contains("dark-theme");
+            const newTheme = isDark ? "light" : "dark";
             window.pabasaStore.set(themeKey, newTheme);
             updateThemeUI(newTheme);
+            // Dispatch event so the assessment reader knows to adapt immediately
+            window.dispatchEvent(new CustomEvent('pabasa:preferences-updated', { detail: { theme: newTheme } }));
         });
     }
 

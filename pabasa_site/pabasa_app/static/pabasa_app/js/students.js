@@ -62,27 +62,50 @@ function initStudentsPage() {
 
     filterStudents();
 
-    function renderStudentDirectory() {
+    async function renderStudentDirectory() {
         const studentDirectory = document.querySelector(".student-directory");
-        if (!studentDirectory) return;
+        const modalStudentList = document.querySelector("#studentListSection .modal-student-checkbox-list");
+        
+        if (!studentDirectory && !modalStudentList) return;
         
         // Clear current rows to re-render consolidated list
-        studentDirectory.querySelectorAll(".student-card-row").forEach(row => row.remove());
+        if (studentDirectory) {
+            studentDirectory.querySelectorAll(".student-card-row").forEach(row => row.remove());
+        }
         
-        let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-        const filteredStudents = students.filter(student => student.name !== "Jay Park");
-        if (filteredStudents.length !== students.length) {
-            localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
-            students = filteredStudents;
+        // 1. Fetch Authoritative Data from Server
+        let serverStudents = [];
+        try {
+            const response = await fetch('/dashboard/teacher/students-api/');
+            const data = await response.json();
+            if (data.success) {
+                serverStudents = data.students.map(s => ({
+                    name: s.name,
+                    email: s.email,
+                    class: s.classes.join(", "),
+                    level: s.level,
+                    wpm: s.wpm || "0",
+                    accuracy: s.accuracy || "0",
+                    pabasa_id: s.custom_id,
+                    isServer: true
+                }));
+            }
+        } catch (e) {
+            console.error("PABASA: Failed to fetch students from server", e);
         }
 
+        // 2. Load Local Students (Legacy/Manual)
+        let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        
+        // Combine server and local, prioritizing server data for duplicate IDs/Emails
+        const allStudents = [...serverStudents, ...students];
+
         // Group students to aggregate multiple classes
-        const consolidated = [];
-        students.forEach(s => {
+        let consolidated = [];
+        allStudents.forEach(s => {
             const found = consolidated.find(c => {
-                const namesMatch = c.name.toLowerCase().trim() === s.name.toLowerCase().trim();
-                const emailsConflict = c.email && s.email && c.email.toLowerCase().trim() !== s.email.toLowerCase().trim();
-                return namesMatch && !emailsConflict;
+                return (c.pabasa_id && s.pabasa_id && c.pabasa_id === s.pabasa_id) || 
+                       (c.email && s.email && c.email.toLowerCase().trim() === s.email.toLowerCase().trim());
             });
             if (found) {
                 if (s.class && !found.allClasses.includes(s.class)) {
@@ -118,47 +141,66 @@ function initStudentsPage() {
         // Reconstruct consolidated preserving scored first then pending
         consolidated = withScore.concat(pending);
 
-        const emptyState = studentDirectory.querySelector(".student-empty-state");
+        if (studentDirectory) {
+            const emptyState = studentDirectory.querySelector(".student-empty-state");
 
-        consolidated.forEach(studentData => {
-            const levelClass = getLevelClass(studentData.level);
-            const initials = studentData.name
-                .split(" ")
-                .map(n => n.charAt(0).toUpperCase())
-                .join("")
-                .substring(0, 2);
-            
-            const studentCard = document.createElement("div");
-            studentCard.className = "student-card-row";
-            studentCard.setAttribute("data-student-name", studentData.name);
-            studentCard.setAttribute("data-reading-level", studentData.level);
-            const classDisplay = studentData.allClasses.join(", ");
-            studentCard.setAttribute("data-class-name", classDisplay);
-            
-            studentCard.innerHTML = `
-                <span class="student-avatar">${initials}</span>
-                <div class="student-row-main">
-                    <div class="student-name-line">
-                        <strong>${studentData.name}</strong>
-                        <span class="small text-muted">${studentData.email || ''}</span>
-                        <span class="level-chip ${levelClass}">${studentData.level}</span>
+            consolidated.forEach(studentData => {
+                const levelClass = getLevelClass(studentData.level);
+                const initials = studentData.name
+                    .split(" ")
+                    .map(n => n.charAt(0).toUpperCase())
+                    .join("")
+                    .substring(0, 2);
+                
+                const studentCard = document.createElement("div");
+                studentCard.className = "student-card-row";
+                studentCard.setAttribute("data-student-name", studentData.name);
+                studentCard.setAttribute("data-reading-level", studentData.level);
+                const classDisplay = studentData.allClasses.join(", ");
+                studentCard.setAttribute("data-class-name", classDisplay);
+                
+                studentCard.innerHTML = `
+                    <span class="student-avatar">${initials}</span>
+                    <div class="student-row-main">
+                        <div class="student-name-line">
+                            <strong>${studentData.name}</strong>
+                            <span class="small text-muted">${studentData.email || ''}</span>
+                            <span class="level-chip ${levelClass}">${studentData.level}</span>
+                        </div>
+                        <div class="student-meta">
+                            <div class="student-meta-box"><span>Joined Classes</span><strong>${classDisplay}</strong></div>
+                            <div class="student-meta-box"><span>WPM</span><strong>${studentData.wpm}</strong></div>
+                            <div class="student-meta-box"><span>Accuracy</span><strong>${studentData.accuracy}%</strong></div>
+                        </div>
+                        <div class="reading-band mt-2"><span style="width: ${studentData.wpm}%;"></span></div>
                     </div>
-                    <div class="student-meta">
-                        <div class="student-meta-box"><span>Joined Classes</span><strong>${classDisplay}</strong></div>
-                        <div class="student-meta-box"><span>WPM</span><strong>${studentData.wpm}</strong></div>
-                        <div class="student-meta-box"><span>Accuracy</span><strong>${studentData.accuracy}%</strong></div>
-                    </div>
-                    <div class="reading-band mt-2"><span style="width: ${studentData.wpm}%;"></span></div>
-                </div>
-            `;
-            
-            if (emptyState) {
-                studentDirectory.insertBefore(studentCard, emptyState);
-            } else {
-                studentDirectory.appendChild(studentCard);
-            }
-        });
+                `;
+                
+                if (emptyState) {
+                    studentDirectory.insertBefore(studentCard, emptyState);
+                } else {
+                    studentDirectory.appendChild(studentCard);
+                }
+            });
+        }
         
+        // 3. Populate the "Update & Report" Modal Student List
+        if (modalStudentList) {
+            if (consolidated.length === 0) {
+                modalStudentList.innerHTML = '<div class="text-center text-muted py-3 small">No students found for this class.</div>';
+            } else {
+                modalStudentList.innerHTML = consolidated.map(s => `
+                <div class="form-check mb-2">
+                    <input class="form-check-input student-report-checkbox" type="checkbox" value="${s.email}" id="chk_${s.pabasa_id || s.id}">
+                    <label class="form-check-label d-flex justify-content-between w-100" for="chk_${s.pabasa_id || s.id}">
+                        <span>${s.name}</span>
+                        <span class="badge bg-light text-dark border">${s.level}</span>
+                    </label>
+                </div>
+            `).join('');
+            }
+        }
+
         // Re-run filter to ensure proper visibility
         filterStudents();
     }
@@ -171,28 +213,41 @@ function initStudentsPage() {
     (function() {
         const parentUpdateGroupType = document.getElementById("parentUpdateGroupType");
         const studentListSection = document.getElementById("studentListSection");
+        const selectAllBtn = document.getElementById("selectAllStudents");
         
-        if (!parentUpdateGroupType || !studentListSection) {
-            console.warn("Parent update modal elements not found");
-            return;
-        }
+        if (!parentUpdateGroupType || !studentListSection) return;
 
         function showHideStudents() {
-            console.log("Current value:", parentUpdateGroupType.value);
             if (parentUpdateGroupType.value === "custom") {
                 studentListSection.style.display = "block";
-                console.log("Showing students");
+                // Refresh the list to ensure it's up to date
+                if (window.refreshStudentDirectory) window.refreshStudentDirectory();
             } else {
                 studentListSection.style.display = "none";
-                console.log("Hiding students");
             }
+        }
+
+        // Select/Deselect All Logic
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener("click", function() {
+                const checkboxes = studentListSection.querySelectorAll(".student-report-checkbox");
+                const anyUnchecked = Array.from(checkboxes).some(cb => !cb.checked);
+                
+                checkboxes.forEach(cb => cb.checked = anyUnchecked);
+                this.textContent = anyUnchecked ? "Deselect All" : "Select All";
+            });
         }
 
         // Change event listener
         parentUpdateGroupType.addEventListener("change", showHideStudents);
+        
+        // Reset "Select All" text when modal opens
+        const modal = document.getElementById("parentUpdateModal");
+        if (modal && selectAllBtn) {
+            modal.addEventListener("show.bs.modal", () => selectAllBtn.textContent = "Select All");
+        }
 
         // Also trigger on modal open
-        const modal = document.getElementById("parentUpdateModal");
         if (modal) {
             modal.addEventListener("show.bs.modal", showHideStudents);
         }

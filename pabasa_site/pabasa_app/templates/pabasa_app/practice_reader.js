@@ -132,6 +132,19 @@
         // Persist stars to total progress
         const currentTotal = parseInt(localStorage.getItem("pabasa_total_stars") || "0");
         localStorage.setItem("pabasa_total_stars", currentTotal + starsEarned);
+
+        // Mark material as seen to sync with listing page UI and badges
+        if (materialId) {
+            const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+            const mId = String(materialId).trim();
+            
+            if (!seenIds.includes(mId)) {
+                seenIds.push(mId);
+                localStorage.setItem("pabasa_seen_material_ids", JSON.stringify(seenIds));
+                window.dispatchEvent(new CustomEvent('pabasa:student-class-updated', { bubbles: true }));
+                window.dispatchEvent(new Event('storage')); // Trigger global badge/UI updates
+            }
+        }
     }
 
     listenBtn?.addEventListener("click", () => {

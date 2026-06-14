@@ -182,7 +182,7 @@ def _admin_users():
 def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None):
     if not recipient:
         return None
-    return Notification.objects.create(
+    notification = Notification.objects.create(
         recipient=recipient,
         created_by=created_by,
         title=title,
@@ -190,6 +190,22 @@ def _create_notification(recipient, title, message, notification_type='info', ac
         notification_type=notification_type,
         action_url=action_url or '',
     )
+
+    # REAL-TIME EMAIL DISPATCH: Send email immediately if user preference allows
+    try:
+        settings_dict = _notification_settings_for_user(recipient)
+        if settings_dict.get('email_notifications') is True:
+            send_mail(
+                title,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [recipient.email],
+                fail_silently=True
+            )
+    except Exception as e:
+        logger.error(f"Failed to send real-time notification email: {e}")
+
+    return notification
 
 def _notify_admins(title, message, notification_type='info', action_url='', created_by=None):
     for admin_user in _admin_users():
@@ -1650,6 +1666,7 @@ def admin_course_edit(request, material_id):
         material.content_text = content_text
         material.difficulty_level = difficulty_level
         material.scheduled_at = scheduled_at if status == 'scheduled' else None
+        material.is_active = (status in ['published', 'scheduled'])
         material.save()
 
         material.assigned_sections.clear()
@@ -2427,8 +2444,8 @@ def join_class(request):
         class_url = f"{reverse('class_management')}?code={section.class_code}"
         _create_notification(
             section.teacher,
-            'Student joined your class',
-            f'{student_name} joined {section.class_name}.',
+            '📚 Student Joined a Class',
+            f'• {student_name} joined {section.class_name}.',
             'success',
             class_url,
             student_user,
@@ -2482,8 +2499,8 @@ def unenroll_class(request):
 
             # Create an in-app notification for the teacher
             teacher_user = section.teacher
-            title = 'Student unenrolled'
-            message = f"{student_user.first_name} {student_user.last_name} has unenrolled from your class {section.class_name}."
+            title = '🚪 Student Unenrolled from a Class'
+            message = f"• {student_user.first_name} {student_user.last_name} unenrolled from {section.class_name}."
             Notification.objects.create(
                 recipient=teacher_user,
                 created_by=student_user,
@@ -2677,8 +2694,8 @@ def teacher_add_student(request):
             )
             _create_notification(
                 section.teacher,
-                'Student added to class',
-                f'{student_name} was added to {section.class_name}.',
+                '📚 Student Joined a Class',
+                f'• {student_name} joined {section.class_name}.',
                 'success',
                 f"{reverse('class_management')}?code={section.class_code}",
                 section.teacher,
@@ -2827,10 +2844,16 @@ def get_teacher_overview(request):
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
         classes_count = Section.objects.filter(teacher=teacher_user, is_active=True).count()
-        total_students = sum(
-            _section_student_count(cls)
-            for cls in Section.objects.filter(teacher=teacher_user, is_active=True)
-        )
+        
+        # Authoritative unique student count
+        active_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
+        unique_student_ids = set()
+        for section in active_sections:
+            for entry in section.get_enrolled_students(active_only=True):
+                if entry.get('student_id'):
+                    unique_student_ids.add(entry.get('student_id'))
+        total_students = len(unique_student_ids)
+
         materials_posted = Material.objects.filter(section__teacher=teacher_user, is_active=True).count()
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
@@ -2897,7 +2920,8 @@ def get_class_materials(request):
                 'type': m.type,
                 'content': content_value,
                 'status': m.status or ('published' if m.is_active else 'inactive'),
-                'schedule': m.scheduled_at.isoformat() if getattr(m, 'scheduled_at', None) else None,
+                # Format specifically for datetime-local input (YYYY-MM-DDTHH:mm) in local time
+                'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(m, 'scheduled_at', None) else None,
                 'items': items_count,
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                 'attempt_count': 0,
@@ -2916,6 +2940,7 @@ def get_class_materials(request):
             'all_materials': all_materials_flat,
             'class_code': section.class_code,
             'class_name': section.class_name,
+            'subject': section.subject or 'Reading',
         })
     
     except Exception as e:
@@ -3129,21 +3154,23 @@ def add_reading_material(request):
                 status=status,
                 scheduled_at=scheduled_at if status == 'scheduled' else None,
                 difficulty_level='',
-                is_active=(status == 'published')
+                is_active=(status in ['published', 'scheduled'])
             )
             if section is not None:
                 m.assigned_sections.add(section)
-                action_url = f"{reverse('course_student_view')}?class_code={section.class_code}"
-                title_prefix = 'New assessment published' if status == 'published' else 'New material assigned'
-                for student_user in _section_active_students(section):
-                    _create_notification(
-                        student_user,
-                        title_prefix,
-                        f'{teacher_user.first_name} {teacher_user.last_name} posted "{m.title}" for {section.class_name}.',
-                        'assessment' if status == 'published' else 'info',
-                        action_url,
-                        teacher_user,
-                    )
+                # Only notify students via database immediately if the material is live.
+                # Scheduled materials will trigger notifications via JS once the time is reached.
+                if status == 'published':
+                    action_url = f"{reverse('course_student_view')}?class_code={section.class_code}"
+                    for student_user in _section_active_students(section):
+                        _create_notification(
+                            student_user,
+                            'New assessment published',
+                            f'{teacher_user.first_name} {teacher_user.last_name} posted "{m.title}" for {section.class_name}.',
+                            'assessment',
+                            action_url,
+                            teacher_user,
+                        )
             else:
                 action_url = reverse('courses')
             _notify_admins(
@@ -3162,7 +3189,7 @@ def add_reading_material(request):
                 'type': m.type,
                 'content': m.content_text,
                 'status': m.status,
-                'schedule': m.scheduled_at.isoformat() if m.scheduled_at else None,
+                'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if m.scheduled_at else None,
                 'items': len(tokens),
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                 'assigned_sections': [section.class_code] if section else [],
@@ -3208,6 +3235,24 @@ def teacher_update_material(request):
         material.status = data.get('status', material.status)
         material.type = data.get('usage_type', material.type)
         
+        material.is_active = (material.status in ['published', 'scheduled'])
+
+        # Handle schedule update
+        if material.status == 'scheduled':
+            scheduled_at_str = data.get('scheduled_at')
+            if scheduled_at_str:
+                try:
+                    # Logic to parse browser datetime-local format and make it timezone-aware
+                    dt_str = scheduled_at_str + ':00' if scheduled_at_str.count(':') == 1 else scheduled_at_str
+                    dt = parse_datetime(dt_str)
+                    if dt and not timezone.is_aware(dt):
+                        dt = timezone.make_aware(dt)
+                    material.scheduled_at = dt
+                except Exception:
+                    pass
+        else:
+            material.scheduled_at = None
+
         if content != material.content_text:
             material.content_text = content
             # Re-detect type and tokens if content changed
@@ -3288,8 +3333,20 @@ def record_assessment_completion(request):
 
         student_name = f"{student_user.first_name} {student_user.last_name}"
         is_practice = activity_type == 'practice' or (material and material.section is None and material.assessment is None)
-        title = "Practice Material Completed" if is_practice else "Reading Material Completed"
-        notif_msg = f"{student_name} completed {title_text}"
+        
+        class_name = "a class"
+        if material and material.section:
+            class_name = material.section.class_name
+        elif assessment and assessment.section:
+            class_name = assessment.section.class_name
+
+        if is_practice:
+            title = "📖 Student Read a Practice Material"
+            notif_msg = f'• {student_name} read "{title_text}" in {class_name}.'
+        else:
+            title = "📝 Student Read an Assessment"
+            notif_msg = f'• {student_name} completed the assessment "{title_text}" in {class_name}.'
+            
         teacher_recipients = []
         if teacher_user:
             teacher_recipients.append(teacher_user)

@@ -36,6 +36,43 @@
         -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
     }
 
+    /* Enhanced Dark Mode overrides for Assessment Hub */
+    body.dark-theme .assessment-prep,
+    body.dark-theme .assessment-empty-state {
+        background: rgba(30, 41, 59, 0.6) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .subject-info h3,
+    body.dark-theme .type-info strong,
+    body.dark-theme .assessment-stage h2 {
+        color: #f8fafc !important;
+    }
+
+    body.dark-theme .assessment-stage p,
+    body.dark-theme .subject-info p,
+    body.dark-theme .type-info span,
+    body.dark-theme .assessment-prep p {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .assessment-type-link {
+        background: rgba(15, 23, 42, 0.3) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .assessment-type-link:hover {
+        background: rgba(46, 168, 229, 0.1) !important;
+        border-color: #2ea8e5 !important;
+    }
+
+    body.dark-theme .prep-icon {
+        background: rgba(31, 111, 139, 0.2) !important;
+        color: #1fb6ff !important;
+    }
+
     .assessment-dock {
         display: grid;
         gap: 1.15rem;
@@ -94,6 +131,36 @@
         padding: 1rem;
         position: relative;
         z-index: 1;
+    }
+    
+    /* Status Ticket Dynamic Enhancements */
+    .ticket-progress {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 0.4rem 0;
+    }
+
+    .ticket-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #2ea8e5, #4ade80);
+        width: 0%;
+        transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .ticket-metrics {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .ticket-metrics span.highlight {
+        color: #fffdf7;
     }
 
     .status-ticket::before,
@@ -310,7 +377,7 @@
         <aside class="status-ticket">
             <span class="ticket-label">Class status</span>
             <strong id="classStatusTitle">Waiting for class</strong>
-            <p id="classStatusText" class="small mb-0" style="color: rgba(255,255,255,.64);">Join a class from the dashboard to receive assigned tests.</p>
+            <div id="classStatusText" class="small mb-0" style="color: rgba(255,255,255,.64);">Join a class from the dashboard to receive assigned tests.</div>
         </aside>
     </div>
 
@@ -410,10 +477,11 @@
         subjectGrid.addEventListener('click', handleAssessmentClick);
     }
 
-    (() => {
+    (async () => {
         const studentClassCodesKey = "pabasaStudentClassCodes";
         const legacyStudentClassCodeKey = "pabasaStudentClassCode";
         const teacherClassesKey = "pabasa_teacher_classes";
+        const studentClassesKey = "pabasa_student_joined_classes";
         const readingsStorageKey = "pabasa_class_readings";
         const materialTypes = ["word", "sentence", "paragraph"];
 
@@ -437,6 +505,32 @@
             } catch (error) { return {}; }
         };
 
+        const fetchMaterialsFromDatabase = async (classCode) => {
+            try {
+                const response = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(classCode)}`);
+                const data = await response.json();
+                if (data.success) {
+                    // Sync to localStorage for components like sidebar badges
+                    const readings = getStoredObject(readingsStorageKey);
+                    readings[classCode.toUpperCase()] = data.materials;
+                    localStorage.setItem(readingsStorageKey, JSON.stringify(readings));
+
+                    // Store class metadata to ensure titles match what the teacher set
+                    const metadata = getStoredObject("pabasa_class_metadata");
+                    metadata[classCode.toUpperCase()] = { 
+                        name: data.class_name || "Reading Class", 
+                        subject: data.subject || "Reading" 
+                    };
+                    localStorage.setItem("pabasa_class_metadata", JSON.stringify(metadata));
+                    
+                    return data.materials;
+                }
+            } catch (error) {
+                console.error(`Error syncing materials for ${classCode}:`, error);
+            }
+            return null;
+        };
+
         const getJoinedCodes = () => {
             const codes = getStoredArray(studentClassCodesKey).filter(Boolean);
             const legacyCode = window.localStorage.getItem(legacyStudentClassCodeKey);
@@ -446,9 +540,19 @@
             return codes.map((code) => String(code).toUpperCase());
         };
 
-        const getAssessmentMaterials = () => {
+        const getAssessmentMaterials = async () => {
             const joinedCodes = getJoinedCodes();
+            
+            // Autoritative sync: Fetch materials from DB for each joined class
+            for (const code of joinedCodes) {
+                await fetchMaterialsFromDatabase(code);
+            }
+
             const teacherClasses = getStoredArray(teacherClassesKey);
+            const studentClasses = getStoredArray(studentClassesKey);
+            const allKnownClasses = [...teacherClasses, ...studentClasses];
+            const metadataMap = getStoredObject("pabasa_class_metadata");
+
             const readingsByClass = getStoredObject(readingsStorageKey);
 
             const readingsMap = {};
@@ -458,7 +562,16 @@
 
             return joinedCodes.map((code) => {
                 const upperCode = String(code).toUpperCase();
-                const classData = teacherClasses.find((item) => String(item.code || "").toUpperCase() === upperCode) || { code: upperCode, name: "Reading Class" };
+                const meta = metadataMap[upperCode] || {};
+                
+                // Find the class details from synchronized joined classes or cached metadata
+                const foundClass = allKnownClasses.find((item) => String(item.code || "").toUpperCase() === upperCode);
+                const classData = foundClass || { 
+                    code: upperCode, 
+                    name: meta.name || "Reading Class", 
+                    subject: meta.subject || "Reading" 
+                };
+                
                 const readings = readingsMap[upperCode] || {};
                 const materials = {};
 
@@ -480,7 +593,7 @@
             });
         };
 
-        function updateClassStatus() {
+        async function updateClassStatus() {
             const title = document.getElementById("classStatusTitle");
             const text = document.getElementById("classStatusText");
 
@@ -490,70 +603,70 @@
 
             if (!joinedCodes.length) {
                 title.textContent = "Waiting for class";
-                text.textContent =
-                    "Join a class from the dashboard to receive assigned tests.";
+                text.innerHTML = "Join a class from the dashboard to receive assigned tests.";
                 return;
             }
 
-            const code = joinedCodes[0];
-
-            const teacherClasses = getStoredArray(teacherClassesKey);
-
-            const currentClass = teacherClasses.find(
-                c => String(c.code || "").toUpperCase() === code
-            );
-
-            const className = currentClass?.name || "Unknown Class";
-
             const readingsByClass = getStoredObject(readingsStorageKey);
-
             const readingsMap = {};
             Object.keys(readingsByClass).forEach(key => {
                 readingsMap[key.toUpperCase()] = readingsByClass[key];
             });
 
-            const readings = readingsMap[code.toUpperCase()] || {};
+            let totalAssigned = 0;
+            const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+            let totalCompleted = 0;
 
-            const assigned =
-                (readings.words?.length || readings.word?.length || 0) +
-                (readings.sentences?.length || readings.sentence?.length || 0) +
-                (readings.paragraphs?.length || readings.paragraph?.length || 0);
+            joinedCodes.forEach(code => {
+                const readings = readingsMap[code] || {};
+                materialTypes.forEach(type => {
+                    const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
+                    list.forEach(m => {
+                        if (m && m.type && (m.type.toLowerCase() === "assessment" || m.type.toLowerCase() === "both")) {
+                             let isLive = !m.status || m.status === 'published';
+                             if (m.status === 'scheduled' && m.schedule) {
+                                 isLive = new Date(m.schedule).getTime() <= Date.now();
+                             }
+                             if (isLive) {
+                                 totalAssigned++;
+                                 const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                                 if (mId && seenIds.includes(mId)) {
+                                     totalCompleted++;
+                                 }
+                             }
+                        }
+                    });
+                });
+            });
 
-            const completed =
-                JSON.parse(
-                    localStorage.getItem("pabasa_seen_material_ids") || "[]"
-                ).length;
+            const progress = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
+            const remaining = Math.max(0, totalAssigned - totalCompleted);
 
-            const progress =
-                assigned > 0
-                    ? Math.round((completed / assigned) * 100)
-                    : 0;
-
-        title.textContent = "Classrooms Active";
-
-        const remaining = Math.max(0, assigned - completed);
-
-        let summary = `You have joined 1 class. `;
-        summary += `There are ${assigned} assigned assessments. `;
-
-        if (assigned === 0) {
-            summary += "No assessments assigned yet.";
-        } else if (remaining === 0) {
-            summary += "All assigned assessments are completed.";
-        } else {
-            summary += `You have ${remaining} assessment${remaining === 1 ? "" : "s"} remaining.`;
+            title.textContent = joinedCodes.length === 1 ? "Classroom Active" : "Classrooms Active";
+            
+            text.innerHTML = `
+                <div class="ticket-progress">
+                    <div class="ticket-progress-bar" style="width: ${progress}%"></div>
+                </div>
+                <div class="ticket-metrics mb-2">
+                    <span><span class="highlight">${progress}%</span> Progress</span>
+                    <span><span class="highlight">${totalCompleted}/${totalAssigned}</span> Completed</span>
+                </div>
+                <p class="small mb-0" style="color: rgba(255,255,255,.64); line-height: 1.4;">
+                    ${totalAssigned === 0 
+                        ? "No assessments assigned yet." 
+                        : (remaining === 0 
+                            ? "<strong>Mission Accomplished!</strong> All assessments are finished." 
+                            : `You have <strong>${remaining}</strong> assessment${remaining === 1 ? "" : "s"} left to complete.`)}
+                </p>
+            `;
         }
 
-        text.innerHTML = `
-            <div class="class-status-summary">${summary}</div>
-        `;
-        }
-
-        function updateAssessmentHub() {
+        async function updateAssessmentHub() {
             const grid = document.getElementById("subjectGrid");
             if (!grid) return;
 
-            const classMaterials = getAssessmentMaterials();
+            const classMaterials = await getAssessmentMaterials();
             const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
             
             if (!classMaterials.length) {
@@ -604,7 +717,7 @@
             }).join("");
         }
 
-        updateAssessmentHub();
+        await updateAssessmentHub();
         updateClassStatus();
         window.addEventListener("pabasa:student-class-updated", () => {
             updateAssessmentHub();

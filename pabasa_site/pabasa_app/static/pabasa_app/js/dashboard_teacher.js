@@ -8,6 +8,7 @@
         const regenerateCodeBtn = document.getElementById("regenerateCodeBtn");
         const classList = document.getElementById("classList");
         const classCountMirror = document.getElementById("classCountMirror"); // Renamed from classCount to target the 'Class' stat card
+        const studentCountMirror = document.getElementById("studentCountMirror") || document.getElementById("profileTotalStudentsCount") || document.getElementById("totalStudentsJoined");
         const copyClassCodeBtn = document.getElementById("copyClassCodeBtn");
         const manageClassLink = document.getElementById("manageClassLink");
         const sidebarClassLink = document.getElementById("sidebarClassLink");
@@ -119,7 +120,7 @@
                         classData.description || '',
                         classData.code,
                         classData.subject || '',
-                        classData.students || '0', // Use accurate count from server
+                        String(classData.students || '0'), // Use accurate count from server
                         classTeacherEmail
                     );
 
@@ -130,6 +131,24 @@
                 if (classCountMirror) {
                     classCountMirror.textContent = String(data.classes.length);
                 }
+
+                // Update total student count stat card immediately from aggregated class data
+                const totalStudents = data.classes.reduce((sum, cls) => sum + (parseInt(cls.students) || 0), 0);
+                if (studentCountMirror) {
+                    studentCountMirror.textContent = String(totalStudents);
+                }
+                
+                // Request authoritative overview for counts
+                fetch('/dashboard/teacher/overview/', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.json())
+                .then(overviewData => {
+                    if (overviewData.success) {
+                        const countEl = document.getElementById("profileTotalStudentsCount");
+                        if (countEl) countEl.textContent = String(overviewData.total_students);
+                    }
+                });
 
                 const firstCard = classList.querySelector('.class-card');
                 if (firstCard && activeClassName) {

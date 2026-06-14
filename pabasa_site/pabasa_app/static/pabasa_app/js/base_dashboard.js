@@ -16,6 +16,120 @@ var getStudentClassData = window.getStudentClassData = function() {
     return [...new Set(codes.filter(Boolean).map(c => String(c).toUpperCase()))];
 };
 
+/**
+ * THEME INITIALIZATION & READER STYLES
+ * Ensures the dark theme is applied immediately to prevent UI flashing and 
+ * provides robust styles for reading/practice interfaces.
+ */
+(function() {
+    const theme = localStorage.getItem("pabasa_theme");
+    if (theme === "dark") {
+        document.documentElement.classList.add("dark-theme");
+    }
+
+    const applyBodyTheme = () => {
+        if (localStorage.getItem("pabasa_theme") === "dark") {
+            document.body.classList.add("dark-theme");
+        }
+    };
+
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", applyBodyTheme);
+    else applyBodyTheme();
+
+    // Global listener to sync theme changes across tabs and within the current page
+    const syncTheme = () => {
+        const isDark = localStorage.getItem("pabasa_theme") === "dark";
+        document.documentElement.classList.toggle("dark-theme", isDark);
+        document.body.classList.toggle("dark-theme", isDark);
+    };
+
+    window.addEventListener("storage", (e) => {
+        if (e.key === "pabasa_theme") syncTheme();
+    });
+
+    window.addEventListener("pabasa:preferences-updated", () => {
+        syncTheme();
+    });
+
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Global Dark Mode Overrides */
+        body.dark-theme {
+            background-color: #0f172a !important;
+            background-image: none !important;
+            color: #f8fafc !important;
+        }
+        /* Specialized Reader UI (Word, Sentence, Paragraph) Overrides */
+        body.dark-theme .reader-shell, 
+        body.dark-theme .practice-shell,
+        body.dark-theme .reader-background,
+        body.dark-theme .reader-container {
+            background: #0f172a !important;
+            background-image: none !important;
+            color: #f8fafc !important;
+        }
+        body.dark-theme .reader-card, 
+        body.dark-theme .completion-card, 
+        body.dark-theme .practice-card,
+        body.dark-theme .reader-start-screen {
+            background: #1e293b !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(12px) !important;
+            color: #f8fafc !important;
+        }
+        body.dark-theme #readingWord, 
+        body.dark-theme #practiceText, 
+        body.dark-theme .reading-text-display, 
+        body.dark-theme .word-display {
+            color: #ffffff !important;
+        }
+        body.dark-theme .pause-menu-content, 
+        body.dark-theme .reader-pause-menu,
+        body.dark-theme .pause-menu {
+            background: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        body.dark-theme .modal-content {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+        }
+        body.dark-theme .reader-controls, 
+        body.dark-theme .reader-footer,
+        body.dark-theme .reader-header {
+            background: #0f172a !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        body.dark-theme .btn-outline-dark {
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .btn-outline-dark:hover {
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: #fff !important;
+        }
+        body.dark-theme .progress {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        body.dark-theme .text-secondary, body.dark-theme .text-muted {
+            color: #94a3b8 !important;
+        }
+        body.dark-theme #testMeta, 
+        body.dark-theme #counter, 
+        body.dark-theme #practiceCounter,
+        body.dark-theme .reader-meta {
+            color: #cbd5e1 !important;
+        }
+        body.dark-theme #pauseOverlay {
+            background: rgba(0, 0, 0, 0.7) !important;
+        }
+        body.dark-theme .completion-card h1, body.dark-theme .completion-card h2 {
+            color: #f8fafc !important;
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
 (function () {
     function getRole() {
         let role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '').toLowerCase();
@@ -72,6 +186,108 @@ var getStudentClassData = window.getStudentClassData = function() {
         updateTeacherSidebar();
     });
 
+    /**
+     * Global Toast Notification Function
+     * Displays a small, temporary notification at the top-right of the screen.
+     * @param {string} message The message to display.
+     * @param {'success'|'error'|'info'|'warning'} type The type of toast (determines color and icon).
+     * @param {number} duration How long the toast should be visible in milliseconds.
+     */
+    window.showToast = function(message, type = "info", duration = 3000) {
+        let toastContainer = document.getElementById("pabasaToastContainer");
+        if (!toastContainer) {
+            toastContainer = document.createElement("div");
+            toastContainer.id = "pabasaToastContainer";
+            toastContainer.className = "toast-container position-fixed top-0 end-0 p-3";
+            toastContainer.style.zIndex = "9999";
+            document.body.appendChild(toastContainer);
+        }
+
+        const toastId = "toast-" + Date.now();
+        const bgClass = type === "success" ? "bg-success" : type === "error" ? "bg-danger" : type === "warning" ? "bg-warning text-dark" : "bg-info";
+        const iconClass = type === "success" ? "bi-check-circle" : type === "error" ? "bi-exclamation-circle" : type === "warning" ? "bi-exclamation-triangle" : "bi-info-circle";
+        
+        const html = `
+            <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi ${iconClass} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', html);
+        const toastEl = document.getElementById(toastId);
+        
+        if (window.bootstrap && bootstrap.Toast) {
+            const bsToast = new bootstrap.Toast(toastEl, { delay: duration });
+            bsToast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        } else {
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.remove(), duration);
+        }
+    };
+
+    /**
+     * Global Dialog/Modal Function
+     * Displays a centered acknowledgment modal with an icon and "OK" button.
+     * @param {string} title The header of the dialog.
+     * @param {string} message The body text (supports newlines).
+     * @param {'success'|'error'|'info'|'warning'} type The type of dialog.
+     */
+    window.showDialog = function(title, message, type = "info") {
+        if (!window.bootstrap || !bootstrap.Modal) {
+            console.error("PABASA: Bootstrap Modal (bootstrap.Modal) not found. Cannot show custom dialog. Falling back to alert.");
+            alert(title + "\n\n" + message);
+            return;
+        }
+        const modalId = "dialog-" + Date.now();
+        const iconMap = {
+            success: "bi-check-circle-fill",
+            error: "bi-exclamation-octagon-fill",
+            info: "bi-info-circle-fill",
+            warning: "bi-exclamation-triangle-fill"
+        };
+        const colorMap = {
+            success: "#16a34a",
+            error: "#dc3545",
+            info: "#2ea8e5",
+            warning: "#f59e0b"
+        };
+        
+        const html = `
+            <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+                    <div class="modal-content border-0 shadow-lg" style="border-radius: 28px; overflow: hidden;">
+                        <div class="modal-body p-4 text-center">
+                            <div class="mb-3" style="font-size: 3.5rem; color: ${colorMap[type] || colorMap.info};">
+                                <i class="bi ${iconMap[type] || iconMap.info}"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3" style="letter-spacing: -0.02em;">${title}</h4>
+                            <div class="text-muted mb-4" style="font-size: 0.95rem; line-height: 1.6;">
+                                ${message.replace(/\n/g, '<br>')}
+                            </div>
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-primary rounded-pill py-2 fw-bold" data-bs-dismiss="modal" style="letter-spacing: 0.02em;">OK</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', html);
+        const modalEl = document.getElementById(modalId);
+        const bsModal = new bootstrap.Modal(modalEl);
+        bsModal.show();
+        
+        modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+    };
+
     // Fetch authoritative stats and class info from server
     try {
         const role = getRole();
@@ -85,11 +301,70 @@ var getStudentClassData = window.getStudentClassData = function() {
                     const classCountEl = document.getElementById('classCount') || document.getElementById('classCountMirror');
                     if (classCountEl) classCountEl.textContent = String(data.classes.length);
                     
+                    // Update authoritative student count across all classes globally
+                    const totalStudents = data.classes.reduce((sum, cls) => sum + (parseInt(cls.students) || 0), 0);
+                    const studentCountEl = document.getElementById('studentCount') || document.getElementById('studentCountMirror') || document.getElementById('profileTotalStudentsCount') || document.getElementById('totalStudentsJoined');
+                    if (studentCountEl) studentCountEl.textContent = String(totalStudents);
+                    
                     // If no class is currently active in storage, use the first one from the server
                     if (data.classes.length > 0 && !localStorage.getItem("pabasa_last_active_class_code")) {
                         localStorage.setItem("pabasa_last_active_class_code", data.classes[0].code);
                     }
                     updateTeacherSidebar(localStorage.getItem("pabasa_last_active_class_code"));
+                    
+                    // Authoritative sync for stats cards
+                    fetch('/dashboard/teacher/overview/')
+                        .then(r => r.json())
+                        .then(overviewData => {
+                            if (overviewData.success) {
+                                const totalEl = document.getElementById('profileTotalStudentsCount') || document.getElementById('studentCountMirror') || document.getElementById('totalStudentsJoined');
+                                if (totalEl) totalEl.textContent = String(overviewData.total_students);
+                            }
+                        });
+                }
+            }).catch(function(error) {
+                console.error('Error fetching teacher classes:', error);
+            });
+        } else if (role === 'student') {
+            fetch('/api/student/classes/', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(r => r.json()).then(async function(data) {
+                if (data && data.success && Array.isArray(data.classes)) {
+                    const studentClassCodes = data.classes.map(cls => cls.code);
+                    localStorage.setItem("pabasaStudentClassCodes", JSON.stringify(studentClassCodes));
+                    localStorage.setItem("pabasa_student_joined_classes", JSON.stringify(data.classes));
+                    localStorage.setItem("pabasaStudentClassJoined", studentClassCodes.length > 0 ? "1" : "0");
+
+                    // Update class metadata to ensure names are available for dynamic alerts
+                    const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
+                    data.classes.forEach(cls => {
+                        metadata[cls.code.toUpperCase()] = { 
+                            name: cls.name || "Reading Class", 
+                            subject: cls.subject || "Reading" 
+                        };
+                    });
+                    localStorage.setItem("pabasa_class_metadata", JSON.stringify(metadata));
+
+                    // Fetch materials for each joined class to keep pabasa_class_readings up-to-date
+                    const readings = {};
+                    for (const cls of data.classes) {
+                        try {
+                            const materialResponse = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(cls.code)}`);
+                            const materialData = await materialResponse.json();
+                            if (materialData.success) {
+                                readings[cls.code.toUpperCase()] = materialData.materials;
+                            }
+                        } catch (e) {
+                            console.error(`Error fetching materials for class ${cls.code}:`, e);
+                        }
+                    }
+                    localStorage.setItem("pabasa_class_readings", JSON.stringify(readings));
+                    
+                    // Trigger updates for any components relying on these local storage keys
+                    window.dispatchEvent(new CustomEvent('pabasa:student-class-updated', { bubbles: true }));
+                    window.dispatchEvent(new Event('storage')); // Simulate storage event for other listeners
                 }
             }).catch(function() {
                 // ignore
@@ -349,12 +624,19 @@ var getStudentClassData = window.getStudentClassData = function() {
         const readingsMap = {};
         Object.keys(readings).forEach(key => readingsMap[key.toUpperCase()] = readings[key]);
 
+        const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
+        const metadataMap = {};
+        Object.keys(metadata).forEach(key => metadataMap[key.toUpperCase()] = metadata[key]);
+
         const notifiedIds = JSON.parse(localStorage.getItem("pabasa_notified_scheduled_ids") || "[]");
         let notificationsAdded = false;
 
         studentCodes.forEach(code => {
             const classData = readingsMap[code];
             if (!classData) return;
+
+            const classInfo = metadataMap[code] || {};
+            const className = classInfo.name || "Reading Class";
 
             ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
                 const keys = [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean);
@@ -366,15 +648,17 @@ var getStudentClassData = window.getStudentClassData = function() {
                         if (!mId || notifiedIds.includes(mId)) return;
 
                         if (new Date(m.schedule).getTime() <= Date.now()) {
+                            const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "Student";
                             const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
                             notifications.unshift({
                                 id: Date.now() + Math.random(),
                                 classCode: code,
-                                title: "New Material Available",
-                                message: `"${m.title}" is now active and ready for you to read.`,
+                                title: `🔔 ${className} has a new reading: "${m.title || 'New Reading'}"`,
+                                message: `Hello ${studentName},\n\nA new reading material has just been added to PABASA and is ready for you to explore!\n\nTitle: ${m.title || 'New Reading'}\n\nTake a few moments to log in and check it out. Every word you read helps you build confidence,\nimprove your skills, and discover something new.\n\nHappy reading, and enjoy learning with PABASA!\n\nWarm regards,\n\nThe PABASA Team`,
                                 timestamp: Date.now(),
                                 read: false,
-                                role: 'student'
+                                role: 'student',
+                                action_url: (m.type === 'assessment' || m.type === 'both') ? '/dashboard/assessment/' : '/dashboard/practice/'
                             });
                             localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
                             notifiedIds.push(mId);
@@ -388,6 +672,8 @@ var getStudentClassData = window.getStudentClassData = function() {
         if (notificationsAdded) {
             localStorage.setItem("pabasa_notified_scheduled_ids", JSON.stringify(notifiedIds));
             window.dispatchEvent(new Event('pabasa:notifications-updated'));
+            // Real-time: trigger email sync immediately without waiting for interval
+            if (typeof syncNotificationToEmail === 'function') syncNotificationToEmail();
         }
     }
 
@@ -411,8 +697,8 @@ var getStudentClassData = window.getStudentClassData = function() {
             notifications.unshift({
                 id: Date.now() + Math.random(),
                 classCode: student.class || "General",
-                title: "New Student Joined",
-                message: `${student.name} has joined your class directory.`,
+                                title: "📚 Student Joined a Class",
+                                message: `• ${student.name} joined ${student.class || "your class"}.`,
                 timestamp: Date.now(),
                 read: false,
                 role: 'teacher'
@@ -425,11 +711,26 @@ var getStudentClassData = window.getStudentClassData = function() {
         if (notificationsAdded) {
             localStorage.setItem("pabasa_notified_student_ids", JSON.stringify(notifiedStudentIds));
             window.dispatchEvent(new Event('pabasa:notifications-updated'));
+            // Real-time: trigger email sync immediately
+            if (typeof syncNotificationToEmail === 'function') syncNotificationToEmail();
         }
     }
 
     // Sidebar Badge Logic for Reading Materials
     function updateSidebarBadges() {
+        // Preference Sync: Check if In-App alerts are enabled
+        const username = (window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "user").toLowerCase().replace(/ /g, "_");
+        const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + username) || "{}");
+        const pushEnabled = settings.pushNotifications !== false;
+
+        // If push is disabled, hide all notification markers immediately
+        if (!pushEnabled) {
+            updateLinkBadge('/dashboard/practice', 0);
+            updateLinkBadge('/dashboard/assessment', 0);
+            updateLinkBadge('/dashboard/notifications', 0);
+            return;
+        }
+
         checkScheduledNotifications();
         checkStudentJoinNotifications();
 
@@ -458,7 +759,7 @@ var getStudentClassData = window.getStudentClassData = function() {
 
             ['word', 'sentence', 'paragraph', 'story'].forEach(type => {
                 // Check both singular and plural keys (e.g., 'word' and 'words')
-                const keys = [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean);
+                const keys = [type, type + 's', type === 'story' ? 'stories' : null, 'item_type'].filter(Boolean);
                 keys.forEach(key => {
                     (classData[key] || []).forEach(m => {
                         if (!m) return;
@@ -515,8 +816,8 @@ var getStudentClassData = window.getStudentClassData = function() {
 
     updateSidebarBadges();
 
-    // Check for materials reaching their schedule every 30 seconds
-    setInterval(updateSidebarBadges, 30000);
+    // REAL-TIME: Check for updates every 5 seconds
+    setInterval(updateSidebarBadges, 5000);
 
     window.addEventListener("storage", function (event) {
         const badgeKeys = ['pabasa_class_readings', 'pabasa_seen_material_ids', 'pabasaStudentClassCodes'];
@@ -531,7 +832,81 @@ var getStudentClassData = window.getStudentClassData = function() {
 
     window.addEventListener("pabasa:student-class-updated", updateSidebarBadges);
     window.addEventListener("pabasa:notifications-updated", updateSidebarBadges); // Listen for general notification updates
+    window.addEventListener("pabasa:preferences-updated", updateSidebarBadges); // Refresh badges when settings change
     window.addEventListener("studentAdded", checkStudentJoinNotifications); // Immediate check for teachers
+})();
+
+(function () {
+    /**
+     * GLOBAL MATERIAL STATUS SYNC
+     * Automatically marks cards as "Done" across all student dashboards (Practice, Assessment, Course View)
+     */
+    function markCompletedMaterials() {
+        const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+        if (seenIds.length === 0) return;
+
+        // Find any element with data-material-id (used in both practice and assessment cards)
+        const cards = document.querySelectorAll('[data-material-id]');
+        cards.forEach(card => {
+            const mId = String(card.dataset.materialId).trim();
+            if (seenIds.includes(mId)) {
+                // Apply visual completion states
+                card.classList.add('is-done', 'material-card-done');
+                
+                // Add "DONE" badge if heading exists and badge is missing
+                const titleContainer = card.querySelector('h3, h4, h5, h6, strong, .type-info strong');
+                if (titleContainer && !card.querySelector('.badge-done-marker')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-success ms-2 badge-done-marker';
+                    badge.style.fontSize = '0.62rem';
+                    badge.style.padding = '0.25em 0.5em';
+                    badge.textContent = 'DONE';
+                    titleContainer.appendChild(badge);
+                }
+
+                // Update icons and action buttons
+                const icon = card.querySelector('.bi-play-circle-fill, .bi-play-fill, .bi-play');
+                if (icon) {
+                    icon.className = 'bi bi-check-circle-fill text-success ms-auto';
+                }
+                
+                const btn = card.querySelector('button, .btn');
+                if (btn && (btn.textContent.trim() === 'Start' || btn.textContent.trim() === 'Begin')) {
+                    btn.textContent = 'Review';
+                    btn.classList.replace('btn-primary', 'btn-outline-success');
+                }
+            }
+        });
+    }
+
+    // Ensure "Done" styles are available globally
+    function injectGlobalStyles() {
+        if (document.getElementById('pabasa-global-done-css')) return;
+        const style = document.createElement('style');
+        style.id = 'pabasa-global-done-css';
+        style.textContent = `
+            .material-card-done, .assessment-type-link.is-done {
+                background: #f0fdf4 !important;
+                border-color: rgba(22, 163, 74, 0.2) !important;
+                opacity: 0.95;
+            }
+            .material-card-done:hover, .assessment-type-link.is-done:hover {
+                box-shadow: 0 4px 15px rgba(22, 163, 74, 0.1) !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Initialize and listen for updates
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { injectGlobalStyles(); markCompletedMaterials(); });
+    } else {
+        injectGlobalStyles();
+        markCompletedMaterials();
+    }
+    window.addEventListener('focus', markCompletedMaterials);
+    window.addEventListener('pabasa:student-class-updated', markCompletedMaterials);
+    window.addEventListener('storage', (e) => { if (e.key === 'pabasa_seen_material_ids') markCompletedMaterials(); });
 })();
 
 (function () {
@@ -657,6 +1032,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     }
 
     window.addEventListener('pabasa:notifications-updated', syncNotificationToEmail);
+    window.addEventListener('pabasa:preferences-updated', syncNotificationToEmail); // Trigger immediate sync when settings change
     // Check on initial load
     syncNotificationToEmail();
     syncWeeklyDigest();

@@ -27,6 +27,10 @@ document.addEventListener("DOMContentLoaded", function () {
             border-color: rgba(22, 163, 74, 0.2) !important;
             opacity: 0.85;
         }
+        body.dark-theme .material-card-modern {
+            background: rgba(30, 41, 59, 0.4) !important;
+            color: #f8fafc !important;
+        }
     `;
     document.head.appendChild(style);
 
@@ -175,6 +179,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // Refresh highlights if storage updates (e.g., student finishes an activity)
     window.addEventListener("pabasa:student-class-updated", loadReadings);
     window.addEventListener("pabasa:preferences-updated", loadReadings);
+    // Refresh list if user returns from a reader tab
+    window.addEventListener("focus", loadReadings);
     
     // Refresh list if a scheduled material is activated and triggers a notification
     window.addEventListener("pabasa:notifications-updated", loadReadings);
@@ -182,4 +188,7 @@ document.addEventListener("DOMContentLoaded", function () {
     window.addEventListener("storage", (e) => {
         if (e.key === 'pabasa_seen_material_ids' || e.key === 'pabasa_class_readings') loadReadings();
     });
+
+    // REAL-TIME: Auto-refresh the list every 5 seconds to catch scheduled materials becoming live
+    setInterval(loadReadings, 5000);
 });

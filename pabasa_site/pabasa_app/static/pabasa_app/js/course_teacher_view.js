@@ -357,10 +357,26 @@ document.addEventListener("DOMContentLoaded", function () {
                 legacyLevel.closest('.mb-3').style.display = 'none';
             }
 
-            // Reset publication status to default when opening the modal
-            if (addItemStatus) {
-                addItemStatus.value = "published";
-                toggleItemPublishDate();
+            const mId = trigger ? trigger.getAttribute("data-material-id") : null;
+            const mStatus = trigger ? trigger.getAttribute("data-material-status") : "published";
+            const mSchedule = trigger ? trigger.getAttribute("data-material-schedule") : "";
+
+            if (mId) {
+                // Populate existing data for Edit
+                if (addItemStatus) addItemStatus.value = mStatus;
+                if (itemPublishDate) itemPublishDate.value = mSchedule || "";
+                addItemModal.dataset.editId = mId;
+            } else {
+                // Reset for New Item
+                if (addItemStatus) addItemStatus.value = "published";
+                if (itemPublishDate) itemPublishDate.value = "";
+                delete addItemModal.dataset.editId;
+            }
+
+            if (itemPublishDateRow) {
+                const isScheduled = (addItemStatus ? addItemStatus.value : "published") === "scheduled";
+                itemPublishDateRow.classList.toggle("d-none", !isScheduled);
+                if (itemPublishDate) itemPublishDate.required = isScheduled;
             }
         });
     }

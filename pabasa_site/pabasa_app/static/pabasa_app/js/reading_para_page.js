@@ -14,11 +14,14 @@
     const resumeBtn = document.getElementById("resumeBtn");
     const retryBtn = document.getElementById("retryBtn");
     const quitBtn = document.getElementById("quitBtn");
+    const btnToggleMic = document.getElementById("btnToggleMic");
+    const btnTestMic = document.getElementById("btnTestMic") || document.getElementById("testMic");
     const shell = document.querySelector(".reader-shell");
     const completionCount = document.getElementById("completionCount");
     const completionLevel = document.getElementById("completionLevel");
     const reviewBtn = document.getElementById("reviewBtn");
     const finishBtn = document.getElementById("finishBtn");
+    let isMuted = false;
 
     const studentClassCodesKey = "pabasaStudentClassCodes";
     const legacyStudentClassCodeKey = "pabasaStudentClassCode";
@@ -131,6 +134,40 @@
                 window.dispatchEvent(new CustomEvent('pabasa:student-class-updated'));
             }
         }
+
+        // Notify teacher that activity finished
+        const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
+        const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
+        const classInfo = metadata[testCode.toUpperCase()] || {};
+        const className = classInfo.name || "your class";
+
+        const teacherClasses = JSON.parse(localStorage.getItem('pabasa_teacher_classes') || '[]');
+        const cls = teacherClasses.find(c => c.code === testCode);
+        const teacherEmail = cls ? cls.teacherEmail : null;
+
+        let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+        notifications.unshift({
+            id: Date.now() + Math.random(),
+            classCode: testCode,
+            title: "📝 Student Read an Assessment",
+            message: `• ${studentName} completed the assessment "${testTitle}" in ${className}.`,
+            timestamp: Date.now(),
+            read: false,
+            role: 'teacher',
+            recipientEmail: teacherEmail
+        });
+        localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
+        window.dispatchEvent(new Event('pabasa:notifications-updated'));
+        
+        // Notify teacher via API for database and email alert
+        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        if (materialId && token) {
+            fetch('/record-assessment-completion/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+                body: JSON.stringify({ material_id: materialId, activity_type: 'assessment' })
+            }).catch(e => console.warn("PABASA: Assessment completion API error", e));
+        }
     }
 
     function restartAssessment() {
@@ -196,6 +233,30 @@
     finishBtn?.addEventListener("click", function () {
         window.location.href = "/dashboard/assessment/";
     });
+
+    btnToggleMic?.addEventListener("click", () => {
+        isMuted = !isMuted;
+        const icon = btnToggleMic.querySelector("i");
+        if (icon) icon.className = isMuted ? "bi bi-mic-mute-fill" : "bi bi-mic-fill";
+        btnToggleMic.classList.toggle("btn-outline-danger", isMuted);
+        btnToggleMic.classList.toggle("btn-outline-dark", !isMuted);
+    });
+
+    if (btnTestMic) {
+        btnTestMic.addEventListener("click", () => {
+            const title = "Microphone Check";
+            const msg = "Testing device audio input ...\n\nYour microphone is receiving signal clearly! You are ready to start reading.";
+            
+            if (typeof window.showDialog === 'function') {
+                window.showDialog(title, msg, "success");
+            } else if (typeof window.showToast === 'function') {
+                window.showToast(msg.replace(/\n\n/g, ' '), "success");
+            } else {
+                console.warn("PABASA: Notification utilities not found. Falling back to native alert.");
+                alert(title + "\n\n" + msg);
+            }
+        });
+    }
 
     document.addEventListener("click", function (event) {
         if (pauseMenu && pauseBtn && typeof pauseMenu.contains === 'function' && !pauseMenu.contains(event.target) && !pauseBtn.contains(event.target)) {

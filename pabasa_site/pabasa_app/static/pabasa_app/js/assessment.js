@@ -73,72 +73,64 @@ document.addEventListener("DOMContentLoaded", function () {
         if (activeCodes.length === 0) {
             classStatusTitle.textContent = "Waiting for class";
             classStatusTitle.className = "fw-bold text-muted";
-            classStatusText.textContent =
-                "Join a class from the dashboard to receive assigned tests.";
+            classStatusText.innerHTML = '<p class="small mb-0" style="color: rgba(255,255,255,.64);">Join a class from the dashboard to receive assigned tests.</p>';
             return;
         }
 
-        const classCode = activeCodes[0];
+        const readingsByClass = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+        const readingsMap = {};
+        Object.keys(readingsByClass).forEach(key => { readingsMap[key.toUpperCase()] = readingsByClass[key]; });
 
-        const teacherClasses = JSON.parse(
-            localStorage.getItem("pabasa_teacher_classes") || "[]"
-        );
+        const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
 
-        const currentClass = teacherClasses.find(
-            c => String(c.code).toUpperCase() === String(classCode).toUpperCase()
-        );
+        let totalAssigned = 0;
+        let totalCompleted = 0;
 
-        const className =
-            currentClass?.name ||
-            currentClass?.subject ||
-            "Unknown Class";
+        activeCodes.forEach(rawCode => {
+            const code = String(rawCode).toUpperCase();
+            const readings = readingsMap[code] || {};
+            ["word", "sentence", "paragraph"].forEach(type => {
+                const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
+                list.forEach(m => {
+                    if (m && m.type && (m.type.toLowerCase() === "assessment" || m.type.toLowerCase() === "both")) {
+                         let isLive = !m.status || m.status === 'published';
+                         if (m.status === 'scheduled' && m.schedule) {
+                             isLive = new Date(m.schedule).getTime() <= Date.now();
+                         }
+                         if (isLive) {
+                             totalAssigned++;
+                             const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
+                             if (mId && seenIds.includes(mId)) {
+                                 totalCompleted++;
+                             }
+                         }
+                    }
+                });
+            });
+        });
 
-        const readings = JSON.parse(
-            localStorage.getItem("pabasa_class_readings") || "{}"
-        );
+        const progress = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
+        const remaining = Math.max(0, totalAssigned - totalCompleted);
 
-        const classReadings =
-            readings[classCode] ||
-            readings[classCode.toUpperCase()] ||
-            {};
+        classStatusTitle.textContent = activeCodes.length === 1 ? "Classroom Active" : "Classrooms Active";
+        classStatusTitle.className = "class-status-title";
 
-        const assignedAssessments =
-            (classReadings.words?.length || classReadings.word?.length || 0) +
-            (classReadings.sentences?.length || classReadings.sentence?.length || 0) +
-            (classReadings.paragraphs?.length || classReadings.paragraph?.length || 0);
-
-        const completedAssessments = parseInt(
-            localStorage.getItem("pabasa_assessments_completed") || "0"
-        );
-
-        const progress =
-            assignedAssessments > 0
-                ? Math.round(
-                    (completedAssessments / assignedAssessments) * 100
-                )
-                : 0;
-
-    const classCount = activeCodes.length;
-    const remaining = Math.max(0, assignedAssessments - completedAssessments);
-
-    classStatusTitle.textContent = "Classrooms Active";
-    classStatusTitle.className = "class-status-title";
-
-    let summary = `You have joined ${classCount} class${classCount === 1 ? '' : 'es'}. `;
-    summary += `There are ${assignedAssessments} assigned assessments. `;
-
-    if (assignedAssessments === 0) {
-        summary += "No assessments assigned yet.";
-    } else if (remaining === 0) {
-        summary += "All assigned assessments are completed.";
-    } else {
-        summary += `You have ${remaining} assessment${remaining === 1 ? '' : 's'} remaining.`;
-    }
-
-    classStatusText.innerHTML = `
-        <span class="class-status-label">CLASS STATUS</span>
-        <div class="class-status-summary">${summary}</div>
-    `;
+        classStatusText.innerHTML = `
+            <div class="ticket-progress">
+                <div class="ticket-progress-bar" style="width: ${progress}%"></div>
+            </div>
+            <div class="ticket-metrics mb-2">
+                <span><span class="highlight">${progress}%</span> Progress</span>
+                <span><span class="highlight">${totalCompleted}/${totalAssigned}</span> Completed</span>
+            </div>
+            <p class="small mb-0" style="color: rgba(255,255,255,.64); line-height: 1.4;">
+                ${totalAssigned === 0 
+                    ? "No assessments assigned yet." 
+                    : (remaining === 0 
+                        ? "<strong>Mission Accomplished!</strong> All assessments are finished." 
+                        : `You have <strong>${remaining}</strong> assessment${remaining === 1 ? "" : "s"} left to complete.`)}
+            </p>
+        `;
     }
 
     function toggleSectionOnlyRow() {
@@ -243,10 +235,22 @@ document.addEventListener("DOMContentLoaded", function () {
                 legacyLevel.closest('.mb-3').style.display = 'none';
             }
 
-            // Reset publication status to default when opening the modal
-            if (addItemStatus) {
-                addItemStatus.value = "published";
-                toggleItemPublishDate();
+            const mId = trigger ? trigger.getAttribute("data-material-id") : null;
+            const mStatus = trigger ? trigger.getAttribute("data-material-status") : "published";
+            const mSchedule = trigger ? trigger.getAttribute("data-material-schedule") : "";
+
+            if (mId) {
+                if (addItemStatus) addItemStatus.value = mStatus;
+                if (itemPublishDate) itemPublishDate.value = mSchedule || "";
+            } else {
+                if (addItemStatus) addItemStatus.value = "published";
+                if (itemPublishDate) itemPublishDate.value = "";
+            }
+
+            if (itemPublishDateRow) {
+                const isScheduled = (addItemStatus ? addItemStatus.value : "published") === "scheduled";
+                itemPublishDateRow.classList.toggle("d-none", !isScheduled);
+                if (itemPublishDate) itemPublishDate.required = isScheduled;
             }
         });
     }

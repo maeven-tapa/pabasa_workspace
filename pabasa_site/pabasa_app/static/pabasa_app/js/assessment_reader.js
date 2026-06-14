@@ -28,7 +28,7 @@
         const btnStartReading = document.getElementById("btnStartReading");
         const btnStopReading = document.getElementById("btnStopReading");
         const btnToggleMic = document.getElementById("btnToggleMic");
-        const btnTestMic = document.getElementById("btnTestMic");
+        const btnTestMic = document.getElementById("btnTestMic") || document.getElementById("testMic");
 
         const urlParams = new URLSearchParams(window.location.search);
         const testTitle = urlParams.get("test") || "Assessment";
@@ -193,7 +193,11 @@
             }
 
             // Notify teacher that activity finished
-            const studentName = window.PABASA_USER_NAME || "A student";
+            const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
+            const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
+            const classInfo = metadata[testCode.toUpperCase()] || {};
+            const className = classInfo.name || "your class";
+
             const teacherClasses = JSON.parse(localStorage.getItem('pabasa_teacher_classes') || '[]');
             const cls = teacherClasses.find(c => c.code === testCode);
             const teacherEmail = cls ? cls.teacherEmail : null;
@@ -202,8 +206,8 @@
             notifications.unshift({
                 id: Date.now() + Math.random(),
                 classCode: testCode,
-                title: "Activity Update",
-                message: `${studentName} finished reading "${testTitle}"`,
+                title: "📝 Student Read an Assessment",
+                message: `• ${studentName} completed the assessment "${testTitle}" in ${className}.`,
                 timestamp: Date.now(),
                 read: false,
                 role: 'teacher',
@@ -250,9 +254,22 @@
             btnToggleMic.classList.toggle("btn-outline-dark", !isMuted);
         });
 
-        btnTestMic?.addEventListener("click", () => {
-            alert("🎧 Microphone Check\n\nTesting device audio input... \n\nYour microphone is receiving signal clearly! You are ready to start reading.");
-        });
+        if (btnTestMic) {
+            btnTestMic.addEventListener("click", () => {
+                const title = "Microphone Check";
+                const msg = "Testing device audio input ...\n\nYour microphone is receiving signal clearly! You are ready to start reading.";
+                
+                // Prioritize showDialog (styled modal) as it mimics the original alert behavior best
+                if (typeof window.showDialog === 'function') {
+                    window.showDialog(title, msg, "success");
+                } else if (typeof window.showToast === 'function') {
+                    window.showToast(msg.replace(/\n\n/g, ' '), "success");
+                } else {
+                    console.warn("PABASA: Notification utilities not found. Falling back to native alert.");
+                    alert(title + "\n\n" + msg);
+                }
+            });
+        }
 
         function closePauseMenu() {
             pauseMenu?.classList.add("d-none");
