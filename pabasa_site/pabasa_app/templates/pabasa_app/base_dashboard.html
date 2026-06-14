@@ -485,18 +485,26 @@
         }
 
         .dashboard-sidebar .btn-outline-danger {
-            background: rgba(255, 255, 255, 0.65);
-            border-color: rgba(255, 122, 89, 0.2);
-            border-radius: 14px;
-            color: #FF7A59;
-            font-weight: 700;
-            min-height: 46px;
-            transition: all 0.2s ease;
+            background: rgba(239, 68, 68, 0.05);
+            border: 1.5px solid rgba(239, 68, 68, 0.15);
+            border-radius: 16px;
+            color: #ef4444;
+            font-weight: 800;
+            min-height: 50px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            width: 100%;
         }
 
         .dashboard-sidebar .btn-outline-danger:hover {
-            background: rgba(255, 122, 89, 0.1);
-            color: #E05A3D;
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #fff !important;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.25);
+            transform: translateY(-2px);
         }
 
         .dash-top-btn {
@@ -557,6 +565,46 @@
             font-weight: 600;
             border: 1px solid rgba(31, 111, 139, 0.18);
             box-shadow: 0 8px 18px rgba(27, 26, 23, 0.06);
+        }
+
+        /* System Modals Base Styling */
+        .system-modal {
+            border: 0;
+            border-radius: 16px;
+            box-shadow: 0 30px 90px rgba(20, 24, 28, 0.3);
+            overflow: hidden;
+            background: linear-gradient(135deg, #ffffff 0%, #f9fbfa 100%);
+            border: 1px solid rgba(31, 111, 139, 0.1);
+        }
+        .system-modal-accent {
+            height: 4px;
+            background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
+        }
+        .system-modal-accent.danger { background: linear-gradient(90deg, #dc2626, #ef4444); }
+        .system-modal-icon {
+            align-items: center;
+            background: linear-gradient(135deg, rgba(31, 111, 139, 0.12), rgba(31, 111, 139, 0.08));
+            border-radius: 12px;
+            color: var(--dash-primary-deep);
+            display: inline-flex;
+            font-size: 1.8rem;
+            height: 56px;
+            justify-content: center;
+            width: 56px;
+            border: 2px solid rgba(31, 111, 139, 0.15);
+            box-shadow: 0 4px 16px rgba(31, 111, 139, 0.1);
+        }
+        .system-modal-icon.danger {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.12), rgba(220, 38, 38, 0.08));
+            color: #dc2626;
+            border-color: rgba(220, 38, 38, 0.15);
+            box-shadow: 0 4px 16px rgba(220, 38, 38, 0.1);
+        }
+        .system-modal .modal-title {
+            color: var(--dash-ink);
+            font-weight: 800;
+            font-size: 1.35rem;
+            margin-bottom: 0.5rem;
         }
 
         .dash-card {
@@ -1034,6 +1082,31 @@
             color: #38bdf8 !important;
         }
 
+        body.dark-theme .system-modal {
+            background: #1e293b !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        body.dark-theme .system-modal .modal-title { color: #f1f5f9 !important; }
+        body.dark-theme .system-modal .modal-body,
+        body.dark-theme .system-modal .text-muted { color: #94a3b8 !important; }
+        body.dark-theme .system-modal-icon {
+            background: rgba(31, 111, 139, 0.2) !important;
+            color: #38bdf8 !important;
+        }
+        body.dark-theme .system-modal-icon.danger {
+            background: rgba(220, 38, 38, 0.2) !important;
+            color: #f87171 !important;
+        }
+        body.dark-theme .btn-outline-danger {
+            background: rgba(239, 68, 68, 0.1) !important;
+            border-color: rgba(239, 68, 68, 0.2) !important;
+            color: #f87171 !important;
+        }
+        body.dark-theme .btn-outline-danger:hover {
+            background: #ef4444 !important;
+            color: #ffffff !important;
+        }
+
         body.dark-theme .btn-light,
         body.dark-theme .teacher-quick-links a:not(.primary) {
             background: #334155 !important;
@@ -1167,24 +1240,25 @@
 
                     <div class="profile-pane-links">
                         <a href="{% url 'profile' %}?role={% if nav_role == 'teacher' %}teacher{% else %}student{% endif %}" class="btn btn-primary">View Profile</a>
-                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#logoutConfirmModal">Log Out</button>
+                        <button class="btn btn-outline-danger w-100 mt-2 d-flex align-items-center justify-content-center gap-2" type="button" data-bs-toggle="modal" data-bs-target="#logoutConfirmModal" style="border-radius: 14px; font-weight: 700; min-height: 46px;"><i class="bi bi-box-arrow-right"></i> Log Out</button>
                     </div>
                 </div>
             </div>
 
             <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-labelledby="logoutConfirmModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header border-0 pb-0">
-                            <h5 class="modal-title" id="logoutConfirmModalLabel">Confirm Logout</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-content system-modal">
+                        <div class="system-modal-accent danger"></div>
+                        <div class="modal-body text-center pt-5 pb-4">
+                            <div class="system-modal-icon danger mb-3">
+                                <i class="bi bi-box-arrow-right"></i>
+                            </div>
+                            <h5 class="modal-title mb-2">Ready to leave?</h5>
+                            <p class="text-muted px-3">Ending your session will return you to the home page.</p>
                         </div>
-                        <div class="modal-body pt-2">
-                            Are you sure you want to end your session?
-                        </div>
-                        <div class="modal-footer border-0 pt-0">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <a class="btn btn-primary" href="{% url 'home' %}">Yes, Logout</a>
+                        <div class="modal-footer border-0 justify-content-center pb-4">
+                            <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Stay Here</button>
+                            <a class="btn btn-danger px-4" href="{% url 'home' %}">Yes, Logout</a>
                         </div>
                     </div>
                 </div>

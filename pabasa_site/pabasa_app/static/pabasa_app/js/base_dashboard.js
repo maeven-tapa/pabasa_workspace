@@ -32,18 +32,24 @@ var getStudentClassData = window.getStudentClassData = function() {
         return role;
     }
 
-    function updateTeacherSidebar() {
-        const sidebarClassLink = document.getElementById("sidebarClassLink");
+    function updateTeacherSidebar(overrideCode = null) {
         const role = getRole();
-        if (sidebarClassLink && (role === 'teacher' || role === 'admin')) {
-            // Redirect to the Class Management page instead of the Courses (Materials) page
-            const lastCode = localStorage.getItem("pabasa_last_active_class_code");
-            if (lastCode) {
-                sidebarClassLink.href = `/dashboard/teacher/manage/?code=${lastCode}`;
-            } else {
-                sidebarClassLink.href = '/dashboard/teacher/manage/';
-            }
+        if (role !== 'teacher' && role !== 'admin') return;
+
+        // Determine the best available class code
+        let code = overrideCode || localStorage.getItem("pabasa_last_active_class_code");
+        if (!code) {
+            const activeCodeEl = document.getElementById('activeClassCode');
+            if (activeCodeEl && activeCodeEl.textContent !== '—') code = activeCodeEl.textContent.trim();
         }
+
+        if (!code || code === '—') return;
+
+        // Target all possible management links (Sidebar, Quick Links, Workspace Buttons)
+        const targets = document.querySelectorAll('#sidebarClassLink, #quickLinkClass, #manageClassLink, .btn-class-manage');
+        targets.forEach(link => {
+            link.href = `/dashboard/teacher/manage/?code=${code}`;
+        });
     }
 
     // Ensure sidebar is updated on page load
@@ -78,7 +84,12 @@ var getStudentClassData = window.getStudentClassData = function() {
                 if (data && data.success && Array.isArray(data.classes)) {
                     const classCountEl = document.getElementById('classCount') || document.getElementById('classCountMirror');
                     if (classCountEl) classCountEl.textContent = String(data.classes.length);
-                    updateTeacherSidebar();
+                    
+                    // If no class is currently active in storage, use the first one from the server
+                    if (data.classes.length > 0 && !localStorage.getItem("pabasa_last_active_class_code")) {
+                        localStorage.setItem("pabasa_last_active_class_code", data.classes[0].code);
+                    }
+                    updateTeacherSidebar(localStorage.getItem("pabasa_last_active_class_code"));
                 }
             }).catch(function() {
                 // ignore

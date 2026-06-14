@@ -169,7 +169,7 @@
             }
 
             // Update all "Manage Class" or "Class" buttons in the dashboard and workspace card
-            const classManagementUrls = document.querySelectorAll('#manageClassLink, .workspace-card .btn-class, [data-manage-class-btn]');
+            const classManagementUrls = document.querySelectorAll('#sidebarClassLink, #manageClassLink, #quickLinkClass, .workspace-card .btn-class, [data-manage-class-btn]');
             classManagementUrls.forEach(link => {
                 if (link.tagName === 'A') {
                     link.href = `/dashboard/teacher/manage/?code=${code}`;
@@ -297,75 +297,24 @@
                     selectClass(card);
                     updateClassCount();
 
-                    // Apply refined styling to the success popup content
+                    // TRIGGER THE SUCCESS MODAL
                     const nameDisplay = document.getElementById("createdClassName");
-                    if (nameDisplay) {
-                        nameDisplay.textContent = data.class_name;
-                        nameDisplay.style.color = '#64748b';
-                        nameDisplay.style.fontWeight = '600';
-                        nameDisplay.style.fontSize = '1.25rem';
-                    }
+                    if (nameDisplay) nameDisplay.textContent = data.class_name;
                     
                     const codeDisplay = document.getElementById("createdClassCode");
-                    if (codeDisplay) {
-                        codeDisplay.textContent = data.class_code;
-                        codeDisplay.style.letterSpacing = '8px';
-                        codeDisplay.style.fontFamily = "'JetBrains Mono', monospace";
-                        codeDisplay.style.fontSize = '3.5rem';
-                        codeDisplay.style.fontWeight = '800';
-                        codeDisplay.style.color = '#1e293b';
-                        codeDisplay.style.background = '#f8fafc';
-                        codeDisplay.style.padding = '30px 45px';
-                        codeDisplay.style.borderRadius = '24px';
-                        codeDisplay.style.display = 'inline-block';
-                        codeDisplay.style.margin = '25px 0';
-                        codeDisplay.style.border = '2px solid #e2e8f0';
-                        codeDisplay.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
-                    }
+                    if (codeDisplay) codeDisplay.textContent = data.class_code;
 
-                    // Handle modal transition reliably
-                    const createModalEl = document.getElementById("createClassModal");
-                    const successModalEl = document.getElementById("classCreatedModal");
-
-                    if (createModalEl && successModalEl) {
-                        console.log("PABASA: Class created, transitioning modals...");
-                        const createModal = bootstrap.Modal.getOrCreateInstance(createModalEl);
-                        const successModal = bootstrap.Modal.getOrCreateInstance(successModalEl, { 
-                            backdrop: 'static', 
-                            keyboard: true 
-                        });
-
-                        if (createModalEl.classList.contains('show')) {
-                            createModalEl.addEventListener('hidden.bs.modal', function () {
-                                // Force removal of any lingering backdrops before showing the next modal
-                                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
-                                successModal.show();
-                            }, { once: true });
-                            createModal.hide();
-                        } else {
-                            successModal.show();
+                    setTimeout(() => {
+                        const successModalEl = document.getElementById('classCreatedModal');
+                        if (successModalEl) {
+                            const modal = bootstrap.Modal.getOrCreateInstance(successModalEl);
+                            modal.show();
                         }
-                    }
-
-                    const currentScopedKey = `pabasa_teacher_classes_${currentTeacherEmail}`;
-                    const existing = JSON.parse(localStorage.getItem(currentScopedKey) || '[]');
-                    existing.unshift({
-                        code: data.class_code,
-                        name: data.class_name,
-                        subject: subject,
-                        grade_level: 'N/A',
-                        section: 'N/A',
-                        description: description,
-                        header: 'READ',
-                        students: '0',
-                        teacher_email: currentTeacherEmail,
-                    });
-                    localStorage.setItem(currentScopedKey, JSON.stringify(existing));
+                    }, 100);
 
                     createClassForm.reset();
-
                 } else {
-                    alert("Creation failed: " + data.error);
+                    alert("Creation failed: " + (data.error || "Unknown error"));
                 }
             })
             .catch(error => {
@@ -374,73 +323,6 @@
             });
         });
         }
-
-        if (regenerateCodeBtn) {
-            regenerateCodeBtn.addEventListener("click", setGeneratedCode);
-        }
-
-        if (copyClassCodeBtn) {
-            copyClassCodeBtn.addEventListener("click", function () {
-                const code = activeClassCode.textContent.trim();
-                if (navigator.clipboard && code) {
-                    navigator.clipboard.writeText(code);
-                }
-                copyClassCodeBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied';
-                window.setTimeout(function () {
-                    copyClassCodeBtn.innerHTML = '<i class="bi bi-copy me-1"></i>Copy Code';
-                }, 1400);
-            });
-        }
-
-        // Load and display persisted students from localStorage
-        (function () {
-            const studentRow = document.querySelector(".student-row");
-            if (!studentRow) return;
-
-            let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-
-            const filteredStudents = students.filter(student => student.name !== "Jay Park");
-            if (filteredStudents.length !== students.length) {
-                localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
-                students = filteredStudents;
-            }
-
-            students.forEach(studentData => {
-                const exists = Array.from(studentRow.querySelectorAll(".student-card"))
-                    .some(card => card.textContent.includes(studentData.name));
-                if (exists) return;
-
-                const levelClass = {
-                    "Low Emerging Readers": "level-low",
-                    "High Emerging Readers": "level-high",
-                    "Developing Readers": "level-developing",
-                    "Transitioning Readers": "level-transitioning",
-                    "Readers at Grade Level": "level-grade"
-                }[studentData.level] || "level-high";
-
-                const initials = studentData.name
-                    .split(" ")
-                    .map(n => n.charAt(0).toUpperCase())
-                    .join("")
-                    .substring(0, 2);
-
-                const studentCard = document.createElement("div");
-                studentCard.className = "student-card";
-                studentCard.innerHTML = `
-                    <span class="student-avatar">${initials}</span>
-                    <div>
-                        <strong>${studentData.name}</strong>
-                        <div class="small text-secondary">
-                            WPM ${studentData.wpm} • ${studentData.accuracy}%
-                        </div>
-                    </div>
-                    <span class="level-chip ${levelClass}">
-                        ${studentData.level}
-                    </span>
-                `;
-                studentRow.appendChild(studentCard);
-            });
-        })();
 
         // Success modal cleanup
         const classCreatedModalEl = document.getElementById("classCreatedModal");

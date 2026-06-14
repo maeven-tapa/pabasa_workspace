@@ -102,6 +102,16 @@ urlpatterns = [
         name='update_class_info'
     ),
     path(
+        'dashboard/teacher/update-material/',
+        views.teacher_update_material,
+        name='teacher_update_material'
+    ),
+    path(
+        'dashboard/teacher/delete-material/',
+        views.delete_reading_material,
+        name='delete_reading_material'
+    ),
+    path(
         'dashboard/teacher/add-student-to-class/',
         views.teacher_add_student,
         name='teacher_add_student'

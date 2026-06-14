@@ -363,6 +363,12 @@ class Material(models.Model):
         ("scheduled", "Scheduled"),
     ]
 
+    USAGE_TYPE_CHOICES = [
+        ("practice", "Practice"),
+        ("assessment", "Assessment"),
+        ("both", "Both"),
+    ]
+
     # Materials may be standalone (not tied to an Assessment record) so allow
     # a nullable FK to Assessment and also attach directly to a Section.
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="materials", null=True, blank=True)
@@ -373,6 +379,7 @@ class Material(models.Model):
     prompt_text = models.TextField(blank=True, default='')
     content_text = models.TextField(blank=True, default='')
     content_json = models.JSONField(default=dict, blank=True)
+    type = models.CharField(max_length=20, choices=USAGE_TYPE_CHOICES, default='practice')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     scheduled_at = models.DateTimeField(null=True, blank=True)
     difficulty_level = models.CharField(max_length=50, blank=True)

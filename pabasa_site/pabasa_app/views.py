@@ -21,6 +21,9 @@ import ssl
 import time
 import uuid
 from .forms import AdminPracticeMaterialForm, parse_practice_items
+from django.db import transaction
+import re
+import traceback
 from .models import User, Section, Assessment, Material, Note, Notification
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
@@ -2865,13 +2868,14 @@ def get_class_materials(request):
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         
-        # Include published materials for students and all class materials for the teacher owner.
-        mats = Material.objects.filter(section=section).order_by('created_at')
+        # Include all class materials for the teacher owner.
+        mats = Material.objects.filter(section=section).order_by('-created_at')
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
         if not teacher_user or teacher_user.role != 'teacher' or section.teacher_id != teacher_user.id:
             mats = mats.filter(is_active=True)
 
+        all_materials_flat = []
         materials = {
             'word': [],
             'sentence': [],
@@ -2889,7 +2893,8 @@ def get_class_materials(request):
                 'id': m.id,
                 'code': m.assessment.code if m.assessment else None,
                 'title': title_value,
-                'type': m.item_type,
+                'item_type': m.item_type,
+                'type': m.type,
                 'content': content_value,
                 'status': m.status or ('published' if m.is_active else 'inactive'),
                 'schedule': m.scheduled_at.isoformat() if getattr(m, 'scheduled_at', None) else None,
@@ -2901,12 +2906,14 @@ def get_class_materials(request):
 
             if m.item_type in materials:
                 materials[m.item_type].append(material)
+            all_materials_flat.append(material)
         
         logger.debug(f"Retrieved materials for class {class_code}: {sum(len(m) for m in materials.values())} total")
         
         return JsonResponse({
             'success': True,
             'materials': materials,
+            'all_materials': all_materials_flat,
             'class_code': section.class_code,
             'class_name': section.class_name,
         })
@@ -3018,23 +3025,22 @@ def add_reading_material(request):
     try:
         data = json.loads(request.body)
         title        = (data.get('title') or '').strip()
-        reading_type = (data.get('reading_type') or '').strip()   # word | sentence | paragraph
         content      = (data.get('content') or '').strip()
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
         usage_type   = (data.get('usage_type') or 'practice').strip()        # practice | assessment | both
         class_code   = (data.get('class_code') or '').strip()
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
 
-        logger.debug(f"add_reading_material received: title={title}, reading_type={reading_type}, status={status}, class_code={class_code}")
+        logger.debug(f"add_reading_material received: title={title}, status={status}, class_code={class_code}")
 
         # ── server-side validation ──────────────────────────────────────────
         errors = {}
         if not title:
             errors['title'] = 'Material title is required.'
-        if reading_type not in ('word', 'sentence', 'paragraph'):
-            errors['reading_type'] = 'Reading type is required.'
         if not content:
             errors['content'] = 'Material content is required.'
+        if usage_type not in ('practice', 'assessment', 'both'):
+            errors['usage_type'] = 'Valid usage type is required.'
         if status not in ('published', 'draft', 'scheduled'):
             errors['status'] = 'Status is required.'
         if status == 'scheduled' and not scheduled_at_str:
@@ -3043,6 +3049,33 @@ def add_reading_material(request):
         if errors:
             logger.warning(f"add_reading_material validation failed: {errors}")
             return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        # ── Auto-detect reading_type (Category) ──────────────────────────
+        # Since we removed the field, we determine it by analyzing the content
+        def detect_reading_type(text):
+            # If there are double newlines, it's likely a paragraph
+            if len(re.split(r'\n{2,}', text.strip())) > 1:
+                return 'paragraph'
+            # If there are sentence delimiters and more than 3 words, it's likely a sentence
+            if re.search(r'[.!?]', text) and len(text.split()) > 3:
+                return 'sentence'
+            # Otherwise, treat as a word list
+            return 'word'
+
+        reading_type = detect_reading_type(content)
+
+        def split_content(text, rtype):
+            if not text:
+                return []
+            if rtype == 'word':
+                return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
+            if rtype == 'sentence':
+                return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+            if rtype == 'paragraph':
+                return [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
+            return [text]
+        
+        tokens = split_content(content, reading_type)
 
         # ── resolve teacher & class ─────────────────────────────────────────
         user_id = request.session.get('user_id')
@@ -3080,84 +3113,60 @@ def add_reading_material(request):
                 logger.warning(f"Failed to parse scheduled_at: {scheduled_at_str}, error: {e}")
                 return JsonResponse({'success': False, 'error': 'Invalid scheduled date & time format.'}, status=400)
 
-        # Split the submitted content into individual items (words/sentences/paragraphs)
-        try:
-            import re
-            from django.db.models import Max
+        if not tokens:
+            return JsonResponse({'success': False, 'error': 'No items found in content to create.'}, status=400)
 
-            def split_content(text, rtype):
-                if not text:
-                    return []
-                if rtype == 'word':
-                    # Match word-like tokens (letters, numbers, apostrophes)
-                    return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
-                if rtype == 'sentence':
-                    parts = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
-                    return parts
-                if rtype == 'paragraph':
-                    parts = [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
-                    return parts
-                return [text]
-
-            tokens = split_content(content, reading_type)
-            if not tokens:
-                return JsonResponse({'success': False, 'error': 'No items found in content to create.'}, status=400)
-
-            with transaction.atomic():
-                m = Material.objects.create(
-                    assessment=None,
-                    section=section,
-                    item_type=reading_type,
-                    title=title,
-                    prompt_text=(tokens[0] if tokens else title) or title,
-                    content_text=content,
-                    content_json={'items': tokens},
-                    type=usage_type,
-                    status=status,
-                    scheduled_at=scheduled_at if status == 'scheduled' else None,
-                    difficulty_level='',
-                    is_active=(status == 'published')
-                )
-                if section is not None:
-                    m.assigned_sections.add(section)
-                    action_url = f"{reverse('course_student_view')}?class_code={section.class_code}"
-                    title_prefix = 'New assessment published' if status == 'published' else 'New material assigned'
-                    for student_user in _section_active_students(section):
-                        _create_notification(
-                            student_user,
-                            title_prefix,
-                            f'{teacher_user.first_name} {teacher_user.last_name} posted "{m.title}" for {section.class_name}.',
-                            'assessment' if status == 'published' else 'info',
-                            action_url,
-                            teacher_user,
-                        )
-                else:
-                    action_url = reverse('courses')
-                _notify_admins(
-                    'Teacher created a new material',
-                    f'{teacher_user.first_name} {teacher_user.last_name} created "{m.title}".',
-                    'info',
-                    reverse('admin_course_detail', args=[m.id]),
-                    teacher_user,
-                )
-                created_ids = [m.id]
-                material_payload = {
-                    'id': m.id,
-                    'code': None,
-                    'title': m.title,
-                    'item_type': m.item_type,
-                    'type': m.type,
-                    'content': m.content_text,
-                    'status': m.status,
-                    'schedule': m.scheduled_at.isoformat() if m.scheduled_at else None,
-                    'items': len(tokens),
-                    'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
-                    'assigned_sections': [section.class_code] if section else [],
-                }
-
-        except Exception as e:
-            logger.exception('Failed to create Material rows: %s', str(e))
-            return JsonResponse({'success': False, 'error': 'Failed to create materials'}, status=500)
+        with transaction.atomic():
+            m = Material.objects.create(
+                assessment=None,
+                section=section,
+                item_type=reading_type,
+                title=title,
+                prompt_text=(tokens[0] if tokens else title) or title,
+                content_text=content,
+                content_json={'items': tokens},
+                type=usage_type,
+                status=status,
+                scheduled_at=scheduled_at if status == 'scheduled' else None,
+                difficulty_level='',
+                is_active=(status == 'published')
+            )
+            if section is not None:
+                m.assigned_sections.add(section)
+                action_url = f"{reverse('course_student_view')}?class_code={section.class_code}"
+                title_prefix = 'New assessment published' if status == 'published' else 'New material assigned'
+                for student_user in _section_active_students(section):
+                    _create_notification(
+                        student_user,
+                        title_prefix,
+                        f'{teacher_user.first_name} {teacher_user.last_name} posted "{m.title}" for {section.class_name}.',
+                        'assessment' if status == 'published' else 'info',
+                        action_url,
+                        teacher_user,
+                    )
+            else:
+                action_url = reverse('courses')
+            _notify_admins(
+                'Teacher created a new material',
+                f'{teacher_user.first_name} {teacher_user.last_name} created "{m.title}".',
+                'info',
+                reverse('admin_course_detail', args=[m.id]),
+                teacher_user,
+            )
+            created_ids = [m.id]
+            material_payload = {
+                'id': m.id,
+                'code': None,
+                'title': m.title,
+                'item_type': m.item_type,
+                'type': m.type,
+                'content': m.content_text,
+                'status': m.status,
+                'schedule': m.scheduled_at.isoformat() if m.scheduled_at else None,
+                'items': len(tokens),
+                'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+                'assigned_sections': [section.class_code] if section else [],
+            }
 
         return JsonResponse({
             'success': True,
@@ -3176,9 +3185,74 @@ def add_reading_material(request):
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload.'}, status=400)
     except Exception as e:
         logger.error(f"add_reading_material error: {type(e).__name__}: {str(e)}", exc_info=True)
-        import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         return JsonResponse({'success': False, 'error': f'Error: {str(e)}'}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_update_material(request):
+    """API for teachers to update existing reading materials"""
+    try:
+        data = json.loads(request.body)
+        material_id = data.get('material_id')
+        
+        user_id = request.session.get('user_id')
+        material = Material.objects.filter(id=material_id, section__teacher_id=user_id).first()
+        
+        if not material:
+            return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+        material.title = data.get('title', material.title).strip()
+        content = data.get('content', material.content_text).strip()
+        material.status = data.get('status', material.status)
+        material.type = data.get('usage_type', material.type)
+        
+        if content != material.content_text:
+            material.content_text = content
+            # Re-detect type and tokens if content changed
+            def detect_type(text):
+                if len(re.split(r'\n{2,}', text.strip())) > 1: return 'paragraph'
+                if re.search(r'[.!?]', text) and len(text.split()) > 3: return 'sentence'
+                return 'word'
+            
+            material.item_type = detect_type(content)
+            material.content_json = {'items': content.split('\n') if material.item_type == 'word' else [content]}
+            
+        material.save()
+        return JsonResponse({'success': True, 'message': 'Material updated successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def delete_reading_material(request):
+    """API for teachers to permanently delete a reading material"""
+    try:
+        data = json.loads(request.body)
+        material_id = data.get('material_id')
+        
+        if not material_id:
+            return JsonResponse({'success': False, 'error': 'Material ID is required'}, status=400)
+            
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return JsonResponse({'success': False, 'error': 'Session expired. Please log in again.'}, status=401)
+
+        # Find the material. We check both the direct section link and assigned_sections
+        material = Material.objects.filter(
+            Q(id=material_id) & (Q(section__teacher_id=user_id) | Q(assigned_sections__teacher_id=user_id))
+        ).distinct().first()
+        
+        if not material:
+            return JsonResponse({'success': False, 'error': 'Material not found or access denied'}, status=404)
+
+        material.delete()
+        return JsonResponse({'success': True, 'message': 'Material deleted successfully'})
+    except Exception as e:
+        logger.error(f"Error deleting material: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @csrf_protect
 @require_http_methods(["POST"])

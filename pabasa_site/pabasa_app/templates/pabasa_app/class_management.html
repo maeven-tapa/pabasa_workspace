@@ -58,6 +58,39 @@
         transition: border-color 0.2s;
     }
     .class-switcher-pill:hover { border-color: var(--dash-primary); }
+
+    /* Dark Mode Overrides */
+    body.dark-theme .manage-card {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    body.dark-theme .student-table-container {
+        background: rgba(15, 23, 42, 0.5) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    body.dark-theme .student-table th {
+        background: #0f172a;
+        color: #94a3b8;
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    body.dark-theme .student-table td {
+        border-bottom-color: rgba(255, 255, 255, 0.05);
+        color: #f1f5f9;
+    }
+    body.dark-theme .class-switcher-pill {
+        background: linear-gradient(90deg, rgba(30, 41, 59, 0.8), rgba(30, 41, 59, 0.6));
+        border-color: rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+    }
+    body.dark-theme .pabasa-id-pill {
+        background: rgba(56, 189, 248, 0.1);
+        color: #38bdf8;
+    }
+    body.dark-theme .modal-content {
+        background: #1e293b !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
 </style>
 {% endblock %}
 
