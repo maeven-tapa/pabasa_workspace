@@ -33,8 +33,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const noStudentsFoundMessage = document.getElementById('noStudentsFoundMessage');
 
     function filterTable() {
-        const query = studentSearch.value.toLowerCase().trim();
-        const filterType = studentFilter.value;
+        const query = (studentSearch?.value || '').toLowerCase().trim();
+        const filterType = studentFilter?.value || '';
         let visibleRowCount = 0;
 
         tableRows.forEach(row => {
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function() {
             const studentId = this.dataset.studentId;
             const classCode = new URLSearchParams(window.location.search).get('code');
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 
             fetch('/dashboard/teacher/add-student-to-class/', {
                 method: 'POST',

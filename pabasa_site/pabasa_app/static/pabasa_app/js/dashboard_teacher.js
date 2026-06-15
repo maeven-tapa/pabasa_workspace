@@ -289,15 +289,15 @@
                 return;
             }
 
-            const title = titleEl.value.trim();
-            const subject = subjectEl.value;
+            const title = (titleEl?.value || '').trim();
+            const subject = subjectEl?.value || '';
 
             if (!title || !subject) {
                 alert("Please provide a Title and select a Subject.");
                 return;
             }
 
-            const description = (descEl ? descEl.value.trim() : "") || "Reading class workspace.";
+            const description = ((descEl?.value || '').trim()) || "Reading class workspace.";
             const name = title;
 
             fetch('/dashboard/teacher/create-class/', {
