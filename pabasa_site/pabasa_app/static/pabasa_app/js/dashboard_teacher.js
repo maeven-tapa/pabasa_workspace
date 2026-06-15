@@ -87,7 +87,13 @@
                 method: 'GET',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             })
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}...`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (!data.success) {
                     console.error('Failed to load classes:', data.error);
@@ -288,6 +294,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
                 },
                 body: JSON.stringify({
@@ -296,7 +303,13 @@
                     description: description
                 })
             })
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Server returned ${response.status}: ${text.substring(0, 100)}...`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     const currentTeacherEmail = window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || "";
