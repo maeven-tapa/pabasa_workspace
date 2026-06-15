@@ -124,14 +124,7 @@
                 <label class="form-label small fw-bold">Title / Class Name</label>
                 <input type="text" class="form-control" name="class_name" value="{{ section.class_name }}" required>
             </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-bold">Grade Level</label>
-                <input type="text" class="form-control" name="grade_level" value="{{ section.grade_level }}" placeholder="e.g. Grade 2">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-bold">Section</label>
-                <input type="text" class="form-control" name="section" value="{{ section.section }}" placeholder="e.g. Sampaguita">
-            </div>
+            <!-- Grade level and per-class 'section' removed from model; only title and description are editable -->
             <div class="col-md-12">
                 <label class="form-label small fw-bold">Description</label>
                 <textarea class="form-control" name="description" rows="2" maxlength="100" style="resize: none;" placeholder="Short description (max 100 characters)">{{ section.description }}</textarea>

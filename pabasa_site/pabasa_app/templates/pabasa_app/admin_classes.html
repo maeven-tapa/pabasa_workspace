@@ -45,7 +45,6 @@
                         <span class="small text-secondary">{{ section.class_code }}</span>
                     </td>
                     <td>{{ section.subject|default:"-" }}</td>
-                    <td>{{ section.grade_level|default:"-" }}</td>
                     <td>
                         {% if section.teacher %}
                         <span class="d-block">{{ section.teacher.first_name }} {{ section.teacher.last_name }}</span>

@@ -79,8 +79,6 @@ class User(models.Model):
 class Section(models.Model):
     class_code = models.CharField(max_length=20, unique=True)
     class_name = models.CharField(max_length=150)
-    grade_level = models.CharField(max_length=20)
-    section = models.CharField(max_length=50)
     header = models.CharField(max_length=100, default="Reading Class")
     description = models.TextField(blank=True)
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sections")

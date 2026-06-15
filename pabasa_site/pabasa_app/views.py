@@ -1412,7 +1412,6 @@ def _admin_sections_context(request, page_title):
     context = _admin_context(request, page_title, [
         'Class Name',
         'Subject',
-        'Grade Level',
         'Teacher',
         'Student Count',
         'Status',
@@ -1464,8 +1463,7 @@ def _admin_edit_section(request, section_id):
     if request.method == 'POST':
         class_name = request.POST.get('class_name', '').strip()
         subject = request.POST.get('subject', '').strip()
-        grade_level = request.POST.get('grade_level', '').strip()
-        section_field = request.POST.get('section', '').strip()
+        # Per-class `section` field removed from Section model — ignore any posted value
         header = request.POST.get('header', '').strip()
         description = request.POST.get('description', '').strip()
 
@@ -1483,8 +1481,6 @@ def _admin_edit_section(request, section_id):
         # Update section
         section.class_name = class_name
         section.subject = subject
-        section.grade_level = grade_level
-        section.section = section_field
         section.header = header
         section.description = description
         section.save()
@@ -2432,7 +2428,6 @@ def join_class(request):
             'code': section.class_code,
             'name': section.class_name,
             'subject': section.subject or '',
-            'grade_level': section.grade_level or '',
             'description': section.description or '',
             'header': section.header or section.class_code[:4],
             'teacher_id': section.teacher.custom_id,
@@ -2545,9 +2540,8 @@ def create_reading_class(request):
         class_name = data.get('class_name', '').strip()
         header = data.get('header', '').strip() or "Reading Class"
         description = data.get('description', '').strip()
-        # Defaulting these as they are removed from the frontend UI
-        grade_level = data.get('grade_level', '').strip() or "N/A"
-        section = data.get('section', '').strip() or "N/A"
+        # 'grade_level' removed from Section model; ignore any incoming value
+        section_name = data.get('section', '').strip() or "N/A"
 
         if not class_name:
             return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
@@ -2564,8 +2558,6 @@ def create_reading_class(request):
             teacher=teacher_user,
             class_code=unique_code,
             class_name=class_name,
-            grade_level=grade_level,
-            section=section,
             header=header,
             description=description,
             subject=data.get('subject', '').strip(),
@@ -2657,8 +2649,7 @@ def update_class_info(request):
         section = Section.objects.filter(class_code=data.get('class_code'), teacher_id=request.session.get('user_id')).first()
         if not section: return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         section.class_name = data.get('class_name', '').strip()
-        section.grade_level = data.get('grade_level', '').strip()
-        section.section = data.get('section', '').strip()
+        # 'grade_level' and per-class 'section' fields removed from the model; only update fields that remain
         section.description = data.get('description', '').strip()
         section.save()
         return JsonResponse({'success': True})
@@ -2812,7 +2803,6 @@ def get_student_joined_classes(request):
                     'code': section.class_code,
                     'name': section.class_name,
                     'subject': section.subject or '',
-                    'grade_level': section.grade_level or '',
                     'description': section.description or '',
                     'header': section.header or section.class_code[:4],
                     'teacher_id': section.teacher.custom_id,

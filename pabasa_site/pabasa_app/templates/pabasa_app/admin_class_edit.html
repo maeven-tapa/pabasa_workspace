@@ -24,22 +24,8 @@
     <form method="post">
         {% csrf_token %}
         <div class="row g-3">
-            <div class="col-12 col-lg-6">
-                <label class="form-label fw-bold" for="className">Class name</label>
-                <input class="form-control" id="className" type="text" name="class_name" value="{{ section.class_name }}" required>
-            </div>
-            <div class="col-12 col-lg-6">
-                <label class="form-label fw-bold" for="subject">Subject</label>
-                <input class="form-control" id="subject" type="text" name="subject" value="{{ section.subject }}" required>
-            </div>
-            <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="gradeLevel">Grade level</label>
-                <input class="form-control" id="gradeLevel" type="text" name="grade_level" value="{{ section.grade_level }}">
-            </div>
-            <div class="col-12 col-md-6">
-                <label class="form-label fw-bold" for="sectionName">Section</label>
-                <input class="form-control" id="sectionName" type="text" name="section" value="{{ section.section }}">
-            </div>
+            <!-- Grade level and per-class 'section' removed from model -->
+            <!-- per-class 'section' input removed -->
             <div class="col-12">
                 <label class="form-label fw-bold" for="header">Header</label>
                 <input class="form-control" id="header" type="text" name="header" value="{{ section.header }}">
