@@ -2885,46 +2885,73 @@ def get_class_materials(request):
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         
-        # Include all class materials for the teacher owner.
-        mats = Material.objects.filter(section=section).order_by('-created_at')
+        # Include all class materials and assessments for the teacher owner.
+        materials_qs = Material.objects.filter(section=section)
+        assessments_qs = Assessment.objects.filter(section=section)
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
-        if not teacher_user or teacher_user.role != 'teacher' or section.teacher_id != teacher_user.id:
-            mats = mats.filter(is_active=True)
+        # If requester is not the class owner teacher, only include active items
+        if not (teacher_user and teacher_user.role == 'teacher' and section.teacher_id == teacher_user.id):
+            materials_qs = materials_qs.filter(is_active=True)
+            assessments_qs = assessments_qs.filter(is_active=True)
+
+        # Build combined list sorted by created_at descending
+        combined = []
+        for mat in materials_qs:
+            combined.append(('material', mat))
+        for a in assessments_qs:
+            combined.append(('assessment', a))
+        combined.sort(key=lambda tup: getattr(tup[1], 'created_at', timezone.now()), reverse=True)
 
         all_materials_flat = []
-        materials = {
-            'word': [],
-            'sentence': [],
-            'paragraph': []
-        }
+        materials = {'word': [], 'sentence': [], 'paragraph': []}
 
-        for m in mats:
-            content_value = m.content_text or m.prompt_text or ''
-            title_value = m.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
-            items_count = 1
-            if isinstance(m.content_json, dict) and isinstance(m.content_json.get('items'), list):
-                items_count = len(m.content_json.get('items'))
+        for kind, obj in combined:
+            if kind == 'material':
+                m = obj
+                content_value = m.content_text or m.prompt_text or ''
+                title_value = m.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
+                items_count = 1
+                if isinstance(m.content_json, dict) and isinstance(m.content_json.get('items'), list):
+                    items_count = len(m.content_json.get('items'))
 
-            material = {
-                'id': m.id,
-                'code': m.assessment.code if m.assessment else None,
-                'title': title_value,
-                'item_type': m.item_type,
-                'type': m.type,
-                'content': content_value,
-                'status': m.status or ('published' if m.is_active else 'inactive'),
-                # Format specifically for datetime-local input (YYYY-MM-DDTHH:mm) in local time
-                'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(m, 'scheduled_at', None) else None,
-                'items': items_count,
-                'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
-                'attempt_count': 0,
-                'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
-            }
+                item = {
+                    'id': m.id,
+                    'code': m.assessment.code if m.assessment else None,
+                    'title': title_value,
+                    'item_type': m.item_type,
+                    'type': m.type,
+                    'content': content_value,
+                    'status': m.status or ('published' if m.is_active else 'inactive'),
+                    'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(m, 'scheduled_at', None) else None,
+                    'items': items_count,
+                    'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+                    'attempt_count': 0,
+                    'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
+                }
+            else:
+                a = obj
+                content_value = a.content or ''
+                title_value = a.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
+                items_count = 1
+                item = {
+                    'id': a.id,
+                    'code': a.code,
+                    'title': title_value,
+                    'item_type': a.assessment_type,
+                    'type': 'assessment',
+                    'content': content_value,
+                    'status': a.status or ('published' if a.is_active else 'inactive'),
+                    'schedule': timezone.localtime(a.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(a, 'scheduled_at', None) else None,
+                    'items': items_count,
+                    'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
+                    'attempt_count': 0,
+                    'assigned_sections': [a.section.class_code] if a.section else [],
+                }
 
-            if m.item_type in materials:
-                materials[m.item_type].append(material)
-            all_materials_flat.append(material)
+            if item.get('item_type') in materials:
+                materials[item.get('item_type')].append(item)
+            all_materials_flat.append(item)
         
         logger.debug(f"Retrieved materials for class {class_code}: {sum(len(m) for m in materials.values())} total")
         
