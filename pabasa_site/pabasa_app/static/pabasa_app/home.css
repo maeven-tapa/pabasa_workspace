@@ -134,7 +134,7 @@ h1, h2, h3, h4 {
 
 .hero-quote {
     position: absolute;
-    bottom: 5.5rem;
+    bottom: 4rem;
     left: 2.5rem;
     max-width: 420px;
     opacity: 0;
@@ -170,13 +170,13 @@ h1, h2, h3, h4 {
 
 @media (max-width: 768px) {
     .hero-image-section { height: 300px; }
-    .hero-quote { bottom: 4.5rem; left: 1.25rem; max-width: 280px; }
+    .hero-quote { bottom: 3rem; left: 1.25rem; max-width: 280px; }
     .hero-quote-text { font-size: 0.92rem; }
 }
 
 @media (max-width: 480px) {
     .hero-image-section { height: 240px; }
-    .hero-quote { bottom: 3.5rem; }
+    .hero-quote { bottom: 2rem; }
 }
 
 /* ============================================================
@@ -928,6 +928,14 @@ section.pb-md-5 h2::after {
     color: var(--pabasa-blue-deep);
     margin-bottom: 2.5rem;
     letter-spacing: -0.3px;
+}
+
+.full-bleed {
+    max-width: none;
+    width: 100vw;
+    margin: 0 calc(-50vw + 50%);
+    box-sizing: border-box;
+    padding: 0;
 }
 
 .turning-pages-container {
