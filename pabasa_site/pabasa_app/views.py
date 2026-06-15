@@ -24,7 +24,7 @@ from .forms import AdminPracticeMaterialForm, parse_practice_items
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Note, Notification
+from .models import User, Section, Assessment, Material, Practice, Note, Notification
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -1718,10 +1718,10 @@ def _practice_difficulty_values():
     return [value for value, _label in AdminPracticeMaterialForm.DIFFICULTY_CHOICES]
 
 def _admin_practice_queryset():
-    return Material.objects.filter(
-        assessment__isnull=True,
+    # Practices are standalone and managed via the Practice model
+    return Practice.objects.filter(
         section__isnull=True,
-        difficulty_level__in=_practice_difficulty_values(),
+        difficulty_type__in=_practice_difficulty_values(),
     )
 
 def _get_admin_practice_material(practice_id):
@@ -1754,11 +1754,11 @@ def _admin_practice_context(request, page_title):
         practice_items = practice_items.filter(status=status_filter, is_active=True)
 
     if difficulty_filter in _practice_difficulty_values():
-        practice_items = practice_items.filter(difficulty_level=difficulty_filter)
+        practice_items = practice_items.filter(difficulty_type=difficulty_filter)
 
     valid_types = {choice[0] for choice in Material.ITEM_TYPE_CHOICES}
     if type_filter in valid_types:
-        practice_items = practice_items.filter(item_type=type_filter)
+        practice_items = practice_items.filter(practice_type=type_filter)
 
     context = _admin_context(request, page_title, [
         'Title',
@@ -1769,7 +1769,7 @@ def _admin_practice_context(request, page_title):
         'Actions',
     ])
     context.update({
-        'practice_items': practice_items.order_by('difficulty_level', '-created_at'),
+        'practice_items': practice_items.order_by('difficulty_type', '-created_at'),
         'search_query': search_query,
         'status_filter': status_filter,
         'difficulty_filter': difficulty_filter,
@@ -1787,8 +1787,8 @@ def _admin_practice_template_context(request, material=None, page_title='Practic
             'title': material.title,
             'difficulty_level': material.difficulty_level,
             'item_type': material.item_type,
-            'status': material.status if material.status in dict(AdminPracticeMaterialForm.STATUS_CHOICES) else 'draft',
-            'prompt_text': material.prompt_text,
+            'status': material.status if getattr(material, 'status', None) in dict(AdminPracticeMaterialForm.STATUS_CHOICES) else 'draft',
+            'prompt_text': getattr(material, 'prompt_text', ''),
             'content_text': material.content_text,
         }
 
@@ -1802,25 +1802,42 @@ def _admin_practice_template_context(request, material=None, page_title='Practic
     })
     return context
 
-def _save_admin_practice_material(form, material=None):
+def _save_admin_practice_material(form, material=None, request=None):
     cleaned = form.cleaned_data
-    material = material or Material(assessment=None, section=None)
-    material.title = cleaned['title']
-    material.item_type = cleaned['item_type']
-    material.prompt_text = cleaned.get('prompt_text', '')
-    material.content_text = cleaned['content_text']
-    material.status = cleaned['status']
-    material.difficulty_level = cleaned['difficulty_level']
-    material.scheduled_at = None
-    items = _practice_material_items(material)
-    material.content_json = {
-        'source': 'admin_practice',
-        'difficulty': cleaned['difficulty_level'],
-        'items': items,
-    }
-    material.save()
-    material.assigned_sections.clear()
-    return material
+    # Save as a Practice record (admin practice library). We accept an existing
+    # Practice instance in `material` or create a new one.
+    practice = None
+    if material and isinstance(material, Practice):
+        practice = material
+    else:
+        practice = Practice()
+
+    practice.title = cleaned['title']
+    practice.practice_type = cleaned['item_type']
+    practice.prompt_text = cleaned.get('prompt_text', '')
+    # Keep canonical storage in `contents` and provide content_text alias on model
+    practice.contents = cleaned['content_text']
+    practice.status = cleaned['status']
+    # store difficulty into existing DB column difficulty_type
+    practice.difficulty_type = cleaned['difficulty_level']
+    practice.section = None
+    practice.is_active = (practice.status in ['published', 'scheduled'])
+
+    # Ensure a unique code
+    if not getattr(practice, 'code', None):
+        import uuid
+        code = 'PR' + uuid.uuid4().hex[:8].upper()
+        while Practice.objects.filter(code=code).exists():
+            code = 'PR' + uuid.uuid4().hex[:8].upper()
+        practice.code = code
+
+    # Attach current admin user as owner if available
+    admin_user = _current_user(request) if request is not None else None
+    if not getattr(practice, 'teacher', None) and admin_user:
+        practice.teacher = admin_user
+
+    practice.save()
+    return practice
 
 @admin_required
 @require_http_methods(["GET", "POST"])
@@ -1828,8 +1845,8 @@ def admin_practice_create(request):
     if request.method == 'POST':
         form = AdminPracticeMaterialForm(request.POST)
         if form.is_valid():
-            material = _save_admin_practice_material(form)
-            return redirect('admin_practice_detail', practice_id=material.id)
+            practice = _save_admin_practice_material(form, None, request)
+            return redirect('admin_practice_detail', practice_id=practice.id)
         context = _admin_context(request, 'Add Practice Content', [])
         context.update({'form': form, 'practice': None})
         return render(request, 'pabasa_app/admin_practice_create.html', context, status=400)
@@ -1855,8 +1872,8 @@ def admin_practice_edit(request, practice_id):
     if request.method == 'POST':
         form = AdminPracticeMaterialForm(request.POST)
         if form.is_valid():
-            _save_admin_practice_material(form, material)
-            return redirect('admin_practice_detail', practice_id=material.id)
+            practice = _save_admin_practice_material(form, material, request)
+            return redirect('admin_practice_detail', practice_id=practice.id)
         context = _admin_context(request, 'Edit Practice Content', [])
         context.update({'form': form, 'practice': material, 'practice_status': _admin_practice_status(material)})
         return render(request, 'pabasa_app/admin_practice_edit.html', context, status=400)
@@ -1953,13 +1970,12 @@ def reading_para_page(request):
     return render(request, 'pabasa_app/reading_para_page.html', _dashboard_context(request))
 
 def _student_practice_queryset():
-    return Material.objects.filter(
-        assessment__isnull=True,
+    return Practice.objects.filter(
         section__isnull=True,
-        difficulty_level__in=_practice_difficulty_values(),
+        difficulty_type__in=_practice_difficulty_values(),
         status='published',
         is_active=True,
-    ).order_by('difficulty_level', 'item_type', 'title')
+    ).order_by('difficulty_type', 'practice_type', 'title')
 
 def _serialize_student_practice_material(material):
     return {
@@ -2888,12 +2904,14 @@ def get_class_materials(request):
         # Include all class materials and assessments for the teacher owner.
         materials_qs = Material.objects.filter(section=section)
         assessments_qs = Assessment.objects.filter(section=section)
+        practices_qs = Practice.objects.filter(section__isnull=True)
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
         # If requester is not the class owner teacher, only include active items
         if not (teacher_user and teacher_user.role == 'teacher' and section.teacher_id == teacher_user.id):
             materials_qs = materials_qs.filter(is_active=True)
             assessments_qs = assessments_qs.filter(is_active=True)
+            practices_qs = practices_qs.filter(is_active=True, status='published')
 
         # Build combined list sorted by created_at descending
         combined = []
@@ -2901,6 +2919,8 @@ def get_class_materials(request):
             combined.append(('material', mat))
         for a in assessments_qs:
             combined.append(('assessment', a))
+        for p in practices_qs:
+            combined.append(('practice', p))
         combined.sort(key=lambda tup: getattr(tup[1], 'created_at', timezone.now()), reverse=True)
 
         all_materials_flat = []
@@ -2929,7 +2949,7 @@ def get_class_materials(request):
                     'attempt_count': 0,
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                 }
-            else:
+            elif kind == 'assessment':
                 a = obj
                 content_value = a.content or ''
                 title_value = a.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
@@ -2947,6 +2967,26 @@ def get_class_materials(request):
                     'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
                     'attempt_count': 0,
                     'assigned_sections': [a.section.class_code] if a.section else [],
+                }
+            else:
+                # practice
+                p = obj
+                content_value = p.content_text or ''
+                title_value = p.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
+                items_count = len(_practice_material_items(p))
+                item = {
+                    'id': p.id,
+                    'code': p.code,
+                    'title': title_value,
+                    'item_type': p.item_type,
+                    'type': 'practice',
+                    'content': content_value,
+                    'status': p.status or ('published' if p.is_active else 'inactive'),
+                    'schedule': None,
+                    'items': items_count,
+                    'created_at': p.created_at.isoformat() if getattr(p, 'created_at', None) else None,
+                    'attempt_count': 0,
+                    'assigned_sections': [],
                 }
 
             if item.get('item_type') in materials:

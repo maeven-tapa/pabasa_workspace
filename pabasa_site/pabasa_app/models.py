@@ -355,7 +355,13 @@ class Practice(models.Model):
     title = models.CharField(max_length=150)
     code = models.CharField(max_length=30, unique=True)
     practice_type = models.CharField(max_length=20, choices=PRACTICE_TYPE_CHOICES)
+    # Original difficulty field name kept for backwards compatibility
     difficulty_type = models.CharField(max_length=50, blank=True)
+    # Admin-facing prompt and status for publication control
+    prompt_text = models.TextField(blank=True, default='')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
+    # Primary content (kept as `contents` for historical reasons). Templates expect `content_text` so
+    # we provide a property alias below rather than duplicating data in DB.
     contents = models.TextField(blank=True, default='')  # practice content / materials
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="practices")
     section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="practices", null=True, blank=True)
@@ -435,6 +441,24 @@ class Practice(models.Model):
             self.attempts = attempts
             self._save_attempts()
         return changed
+
+    # Compatibility aliases so existing templates/helpers that expect Material-like
+    # attributes work without changing many call sites.
+    @property
+    def difficulty_level(self):
+        return getattr(self, 'difficulty_type', '')
+
+    @property
+    def content_text(self):
+        return getattr(self, 'contents', '')
+
+    @property
+    def item_type(self):
+        return getattr(self, 'practice_type', '')
+
+    def get_item_type_display(self):
+        # Provide same helper name as Material.get_item_type_display used in templates
+        return self.get_practice_type_display()
 
 class Material(models.Model):
     ITEM_TYPE_CHOICES = [
