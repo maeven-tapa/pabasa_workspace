@@ -33,4 +33,9 @@ class Migration(migrations.Migration):
             name='assessment',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='materials', to='pabasa_app.assessment'),
         ),
+        migrations.AddField(
+            model_name='material',
+            name='assigned_week',
+            field=models.CharField(blank=True, default='', max_length=20),
+        ),
     ]

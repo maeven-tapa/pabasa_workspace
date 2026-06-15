@@ -1956,61 +1956,97 @@
 <!-- Modal for Adding Materials -->
 <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title">Add Reading Material</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header px-4 pt-4 pb-0 border-0">
+                <div>
+                    <h4 class="fw-bold mb-1" style="color: #0f172a; letter-spacing: -0.02em;">Add Reading Material</h4>
+                    <p class="text-muted small mb-0">Create and assign new reading tasks for your students.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <form id="addMaterialForm">
-                    <div id="amValidationError" class="alert alert-danger d-none mb-3" role="alert"></div>
-                    <div class="mb-3">
-                        <label class="form-label fw-600">Material Title <span class="text-danger">*</span></label>
-                        <input type="text" id="materialTitle" class="form-control" placeholder="e.g., Filipino Consonants Set A">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-600">Add Material Items <span class="text-danger">*</span></label>
-                        <div class="input-group mb-2">
-                            <input type="text" id="itemInput" class="form-control" placeholder="Type a word, sentence, or paragraph...">
-                            <button class="btn btn-outline-primary px-3" type="button" id="addItemBtn"><i class="bi bi-plus-lg"></i> Add</button>
-                        </div>
-                        <div class="table-responsive" style="max-height: 220px; border: 1px solid rgba(31, 111, 139, 0.1); border-radius: 12px; background: #fff;">
-                            <table class="table table-sm table-hover mb-0" id="addedItemsTable">
-                                <tbody id="addedItemsList">
-                                    <tr><td class="text-center text-muted py-3">One item at a time. Items will appear here.</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label fw-600">Type</label>
-                            <select id="materialType" class="form-select">
-                                <option value="practice">Practice Only</option>
-                                <option value="assessment">Assessment Only</option>
-                                <option value="both">Both (Practice + Assessment)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-600">Publication Status</label>
-                            <select id="publicationStatus" class="form-select">
-                                <option value="published" selected>Published</option>
-                                <option value="draft">Draft</option>
-                                <option value="scheduled">Custom Schedule</option>
-                            </select>
+            <div class="modal-body px-4 pb-4">
+                <form id="addMaterialForm" class="row g-4 mt-1">
+                    <div id="amValidationError" class="col-12 alert alert-danger d-none mb-0 rounded-3" role="alert"></div>
+                    
+                    <!-- Content Section -->
+                    <div class="col-lg-7">
+                        <div class="d-flex flex-column gap-3 h-100 p-3 rounded-4 shadow-sm" style="background: rgba(248, 250, 252, 0.5); border: 1px solid #f1f5f9;">
+                            <h6 class="fw-bold text-uppercase small ls-1 mb-0 d-flex align-items-center gap-2" style="color: #64748b;">
+                                <i class="bi bi-file-earmark-text"></i> 1. Content
+                            </h6>
+                            
+                            <div class="teacher-field">
+                                <label class="form-label fw-bold small text-dark mb-1" for="materialTitle">Title <span class="text-danger">*</span></label>
+                                <input type="text" id="materialTitle" class="form-control border-light shadow-sm" placeholder="e.g., Filipino Consonants Set A" style="border-radius: 12px; min-height: 44px;">
+                            </div>
+
+                            <div class="teacher-field">
+                                <label class="form-label fw-bold small text-dark mb-1">Items <span class="text-danger">*</span></label>
+                                <div class="input-group mb-2">
+                                    <input type="text" id="itemInput" class="form-control border-light shadow-sm" placeholder="Add word or phrase..." style="border-radius: 12px 0 0 12px; min-height: 44px;">
+                                    <button class="btn btn-primary px-3" type="button" id="addItemBtn" style="border-radius: 0 12px 12px 0;">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                                <div id="itemChipsContainer" class="d-flex flex-wrap align-content-start gap-2 p-2 rounded-3 border bg-white shadow-sm" style="min-height: 140px; max-height: 200px; overflow-y: auto;">
+                                    <div class="text-center w-100 text-muted small py-4 mt-2 opacity-50">
+                                        No items added yet.
+                                    </div>
+                                </div>
+                                <div class="form-text small opacity-75">Added items will appear as removable tags above.</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="row mt-3 d-none" id="scheduleField">
-                        <div class="col-12">
-                            <label class="form-label fw-600">Schedule Date & Time</label>
-                            <input type="datetime-local" id="scheduleDateTime" class="form-control">
+
+                    <!-- Settings Section -->
+                    <div class="col-lg-5">
+                        <div class="d-flex flex-column gap-3 h-100 p-3 rounded-4 shadow-sm" style="background: rgba(248, 250, 252, 0.5); border: 1px solid #f1f5f9;">
+                            <h6 class="fw-bold text-uppercase small ls-1 mb-0 d-flex align-items-center gap-2" style="color: #64748b;">
+                                <i class="bi bi-gear-fill"></i> 2. Settings
+                            </h6>
+                            
+                            <div class="teacher-field">
+                                <label class="form-label fw-bold small text-dark mb-1" for="materialType">Assignment Type</label>
+                                <div class="position-relative">
+                                    <select id="materialType" class="form-select border-light shadow-sm" style="border-radius: 12px; appearance: none; padding-right: 2.5rem; min-height: 44px;">
+                                        <option value="practice">Practice Only</option>
+                                        <option value="assessment">Assessment Only</option>
+                                        <option value="both">Both (Practice + Assessment)</option>
+                                    </select>
+                                    <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-3 text-muted pointer-events-none" style="font-size: 0.8rem;"></i>
+                                </div>
+                            </div>
+
+                            <div class="teacher-field">
+                                <label class="form-label fw-bold small text-dark mb-1" for="publicationStatus">Status</label>
+                                <div class="position-relative">
+                                    <select id="publicationStatus" class="form-select border-light shadow-sm" style="border-radius: 12px; appearance: none; padding-right: 2.5rem; min-height: 44px;">
+                                        <option value="published" selected>Published</option>
+                                        <option value="draft">Draft</option>
+                                        <option value="scheduled">Custom Schedule</option>
+                                    </select>
+                                    <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-3 text-muted pointer-events-none" style="font-size: 0.8rem;"></i>
+                                </div>
+                            </div>
+
+                            <div class="teacher-field">
+                                <label class="form-label fw-bold small text-dark mb-1" for="assignedWeek">Assigned Week</label>
+                                <input type="text" id="assignedWeek" class="form-control border-light shadow-sm" placeholder="e.g., Week 1" style="border-radius: 12px; min-height: 44px;">
+                            </div>
+
+                            <div class="teacher-field d-none" id="scheduleField">
+                                <label class="form-label fw-bold small text-dark mb-1" for="scheduleDateTime">Go-Live Date & Time</label>
+                                <input type="datetime-local" id="scheduleDateTime" class="form-control border-light shadow-sm" style="border-radius: 12px; min-height: 44px;">
+                            </div>
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="submitMaterial"><i class="bi bi-plus-lg"></i> Add Material</button>
+            <div class="modal-footer px-4 pt-0 pb-4 border-0">
+                <button type="button" class="btn btn-link text-secondary text-decoration-none fw-bold small me-auto" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4 py-2 shadow-sm fw-bold" id="submitMaterial" style="border-radius: 12px; min-height: 48px;">
+                    <i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material
+                </button>
             </div>
         </div>
     </div>
@@ -3004,30 +3040,32 @@
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
 
-        // Logic for adding items to the temporary list in Add Material modal
-        function renderAddedItemsTable() {
-            if (!addedItemsList) return;
+        // Logic for adding items as chips in Add Material modal
+        function renderAddedItemsChips() {
+            const chipsContainer = document.getElementById('itemChipsContainer');
+            if (!chipsContainer) return;
+            
             if (currentItemsList.length === 0) {
-                addedItemsList.innerHTML = '<tr><td class="text-center text-muted py-3">One item at a time. Items will appear here.</td></tr>';
+                chipsContainer.innerHTML = `
+                    <div class="text-center w-100 text-muted small py-4 mt-2 opacity-50">
+                        No items added yet.
+                    </div>`;
                 return;
             }
-            addedItemsList.innerHTML = currentItemsList.map((item, index) => `
-                <tr>
-                    <td class="align-middle" style="padding: 0.6rem;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-truncate" style="max-width: 400px;">${index + 1}. ${item}</span>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="window.removeItemFromAddList(${index})">
-                                <i class="bi bi-x-circle"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
+
+            chipsContainer.innerHTML = currentItemsList.map((item, index) => `
+                <div class="badge d-flex align-items-center gap-2 p-2 px-3 shadow-sm border" 
+                     style="background: #fff; color: #1e293b; border-color: #e2e8f0; border-radius: 10px; font-weight: 700; font-size: 0.85rem; border-left: 3px solid var(--dash-primary) !important;">
+                    <span class="text-truncate" style="max-width: 150px;">${item}</span>
+                    <button type="button" class="btn-close" style="font-size: 0.6rem; filter: grayscale(1);" 
+                            onclick="window.removeItemFromAddList(${index})" aria-label="Remove"></button>
+                </div>
             `).join('');
         }
 
         window.removeItemFromAddList = function(index) {
             currentItemsList.splice(index, 1);
-            renderAddedItemsTable();
+            renderAddedItemsChips();
         };
 
         if (addItemBtn && itemInput) {
@@ -3037,7 +3075,7 @@
                     currentItemsList.push(val);
                     itemInput.value = '';
                     itemInput.focus();
-                    renderAddedItemsTable();
+                    renderAddedItemsChips();
                 }
             });
             itemInput.addEventListener('keydown', function(e) {
@@ -3101,9 +3139,6 @@
 
             if (!container) return;
 
-            // Sort materials by creation date, newest first
-            allMaterials.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
             if (allMaterials.length === 0) {
                 container.innerHTML = `
                     <div class="readings-empty">
@@ -3117,54 +3152,70 @@
 
             if (countBadge) countBadge.textContent = `${allMaterials.length} item${allMaterials.length !== 1 ? 's' : ''}`;
 
-            container.innerHTML = allMaterials.map(reading => {
-                const typeMap = {
-                    'practice': 'practice',
-                    'assessment': 'assessment',
-                    'both': 'both'
-                };
-                const badgeType = typeMap[reading.type] || reading.type;
+            // Group materials by week
+            const groups = allMaterials.reduce((acc, m) => {
+                const week = (m.assigned_week || 'Unassigned').trim();
+                if (!acc[week]) acc[week] = [];
+                acc[week].push(m);
+                return acc;
+            }, {});
 
-                // Determine the display status: if scheduled and time has passed, show as published
-                let displayStatus = reading.status || 'published';
-                if (displayStatus === 'scheduled' && reading.schedule) {
-                    const scheduledTime = new Date(reading.schedule).getTime();
-                    if (scheduledTime <= Date.now()) displayStatus = 'published';
-                }
+            // Sort weeks: Numbers first, then Unassigned
+            const sortedWeeks = Object.keys(groups).sort((a, b) => {
+                if (a === 'Unassigned') return 1;
+                if (b === 'Unassigned') return -1;
+                return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+            });
 
-                const iconMap = { word: 'bi-spellcheck', sentence: 'bi-chat-left-text', paragraph: 'bi-file-text' };
+            container.innerHTML = sortedWeeks.map(week => {
+                const weekItems = groups[week];
+                weekItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+                const itemsHtml = weekItems.map(reading => {
+                    const typeMap = { 'practice': 'practice', 'assessment': 'assessment', 'both': 'both' };
+                    const badgeType = typeMap[reading.type] || reading.type;
+                    let displayStatus = reading.status || 'published';
+                    if (displayStatus === 'scheduled' && reading.schedule) {
+                        if (new Date(reading.schedule).getTime() <= Date.now()) displayStatus = 'published';
+                    }
+                    const iconMap = { word: 'bi-spellcheck', sentence: 'bi-chat-left-text', paragraph: 'bi-file-text' };
+
+                    return `
+                        <div class="material-card-modern mb-2" data-material-id="${reading.id}" data-reading-type="${reading.item_type}"
+                             data-full-content="${(reading.content_text || '').replace(/"/g, '&quot;')}"
+                             data-status="${reading.status || 'published'}"
+                             data-schedule="${reading.schedule || ''}"
+                             data-usage="${reading.type || 'practice'}">
+                            <div class="material-info">
+                                <div class="material-leading-icon">
+                                    <i class="bi ${iconMap[reading.item_type]}"></i>
+                                </div>
+                                <div>
+                                    <p class="material-title">${reading.title}</p>
+                                    <p class="material-preview">${reading.content_text || ''}</p>
+                                    <p class="material-meta">
+                                        <span>${reading.items} item${reading.items !== 1 ? 's' : ''}</span>
+                                        <span class="material-type-badge ${badgeType}">${reading.type}</span>
+                                        <span class="material-type-badge status-${displayStatus}">${displayStatus.toUpperCase()}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="material-actions">
+                                <button class="material-btn" title="View" data-action="view"><i class="bi bi-eye" style="color: #00bcd4;"></i></button>
+                                <button class="material-btn" title="Edit" data-action="edit"><i class="bi bi-pencil"></i></button>
+                                <button class="material-btn delete" title="Delete" data-action="delete"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
                 return `
-                    <div class="material-card-modern" data-material-id="${reading.id}" data-reading-type="${reading.item_type}"
-                         data-full-content="${(reading.content_text || '').replace(/"/g, '&quot;')}"
-                         data-status="${reading.status || 'published'}"
-                         data-schedule="${reading.schedule || ''}"
-                         data-usage="${reading.type || 'practice'}">
-                        <div class="material-info">
-                            <div class="material-leading-icon">
-                                <i class="bi ${iconMap[reading.item_type]}"></i>
-                            </div>
-                            <div>
-                                <p class="material-title">${reading.title}</p>
-                                <p class="material-preview">${reading.content_text || ''}</p>
-                                <p class="material-meta">
-                                    <span>${reading.items} item${reading.items !== 1 ? 's' : ''}</span>
-                                    <span class="material-type-badge ${badgeType}">${reading.type}</span>
-                                    <span class="material-type-badge status-${displayStatus}">${displayStatus.toUpperCase()}</span>
-                                </p>
-                            </div>
+                    <div class="week-group mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-bottom: 2px dashed rgba(31, 111, 139, 0.1) !important;">
+                            <span class="badge rounded-pill px-3" style="background: var(--dash-primary); font-size: 0.75rem;">${week}</span>
+                            <span class="small text-muted fw-bold text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.05em;">${weekItems.length} items</span>
                         </div>
-                        <div class="material-actions">
-                            <button class="material-btn" title="View" data-action="view">
-                                <i class="bi bi-eye" style="color: #00bcd4;"></i>
-                            </button>
-                            <button class="material-btn" title="Edit" data-action="edit">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="material-btn delete" title="Delete" data-action="delete">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
+                        <div class="readings-list">${itemsHtml}</div>
                     </div>
                 `;
             }).join('');
@@ -3208,7 +3259,7 @@
                         // Search in all possible singular/plural keys
                         for (const key of ['word', 'sentence', 'paragraph', 'words', 'sentences', 'paragraphs']) {
                             if (readings[key]) {
-                                const found = readings[key].find(m => Number(m.id) === Number(materialId));
+                                const found = readings[key].find(m => String(m.id) === String(materialId));
                                 if (found) return found;
                             }
                         }
@@ -3221,7 +3272,7 @@
                         const addMaterialFormEl = document.getElementById('addMaterialForm');
                         if (addMaterialFormEl) addMaterialFormEl.reset();
                         currentItemsList = [];
-                        renderAddedItemsTable();
+                        renderAddedItemsChips();
                         if (addMaterialValidationError) addMaterialValidationError.classList.add('d-none');
                         [materialTitleInput, scheduleDateTimeInput].forEach(function (el) {
                             if (el) el.classList.remove('is-invalid');
@@ -3237,7 +3288,7 @@
                     if (e.target.closest('[data-action="view"]')) {
                         const btn = e.target.closest('[data-action="view"]');
                         const card = btn.closest('.material-card-modern');
-                        const materialId = Number(card.dataset.materialId);
+                        const materialId = card.dataset.materialId;
                         const material = getMaterialById(materialId);
                         
                         if (material) {
@@ -3261,7 +3312,7 @@
                     if (e.target.closest('[data-action="edit"]')) {
                         const btn = e.target.closest('[data-action="edit"]');
                         editingCard = btn.closest('.material-card-modern');
-                        const materialId = Number(editingCard.dataset.materialId);
+                        const materialId = editingCard.dataset.materialId;
                         const material = getMaterialById(materialId);
 
                         if (!material) return;
@@ -3298,9 +3349,9 @@
                         if (!card) return;
                         
                         const title = card.querySelector('.material-title').textContent;
-                        const materialId = Number(card.dataset.materialId);
+                        const materialId = card.dataset.materialId;
                         
-                        if (isNaN(materialId)) {
+                        if (!materialId) {
                             alert("Could not identify the material ID. Please refresh the page.");
                             return;
                         }
@@ -3324,11 +3375,11 @@
                                 const data = await response.json();
                                 if (data.success) {
                                     // Clear from local storage cache as well
-                                    if (currentClassCode && materialId) {
+                                    if (currentClassCode && String(materialId)) {
                                         const readings = ensureClassReadings(currentClassCode);
                                         for (const key in readings) {
                                             if (Array.isArray(readings[key])) {
-                                                readings[key] = readings[key].filter(m => Number(m.id) !== materialId);
+                                                readings[key] = readings[key].filter(m => String(m.id) !== String(materialId));
                                             }
                                         }
                                         saveStoredReadings();
@@ -3358,7 +3409,7 @@
                     const newTitle = document.getElementById('editMaterialTitle').value;
                     const newContent = document.getElementById('editMaterialItems').value;
                     if (newTitle.trim() && newContent.trim() && editingCard) {
-                        const materialId = Number(editingCard.dataset.materialId);
+                        const materialId = editingCard.dataset.materialId;
                         
                         try {
                             const response = await fetch('/dashboard/teacher/update-material/', {
@@ -3404,6 +3455,7 @@
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const usageType = materialTypeSelect ? materialTypeSelect.value : 'practice';
+                        const assignedWeek = document.getElementById('assignedWeek') ? document.getElementById('assignedWeek').value.trim() : '';
                         const errorBanner = document.getElementById('amValidationError');
 
                         // ── Clear previous validation state ──────────────────────
@@ -3466,7 +3518,8 @@
                                     status: status,
                                     usage_type: usageType,
                                     class_code: currentClassCode,
-                                    scheduled_at: schedule || null
+                                    scheduled_at: schedule || null,
+                                    assigned_week: assignedWeek
                                 })
                             };
 

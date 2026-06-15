@@ -53,6 +53,34 @@ def _set_profile_dict(user, key, profile_dict):
     user.tags = tags
     user.save()
 
+def _parse_prefixed_id(val):
+    """
+    Robustly extract an integer ID from a value that might be 
+    prefixed (e.g., 'material-123', 'assessment-45') or a raw ID.
+    Returns (prefix, integer_id).
+    """
+    if val is None:
+        return None, None
+    if isinstance(val, int):
+        return None, val
+    
+    s = str(val).strip()
+    if not s or s.lower() == 'null' or s.lower() == 'undefined':
+        return None, None
+        
+    if '-' in s:
+        parts = s.split('-', 1)
+        prefix = parts[0].lower()
+        try:
+            return prefix, int(parts[1])
+        except (ValueError, TypeError):
+            return prefix, None
+    
+    try:
+        return None, int(s)
+    except (ValueError, TypeError):
+        return None, None
+
 def _section_students(section, active_only=False):
     """Delegate to Section model method"""
     return section.get_enrolled_students(active_only=active_only)
@@ -2942,12 +2970,14 @@ def get_class_materials(request):
                     'item_type': m.item_type,
                     'type': m.type,
                     'content': content_value,
+                    'content_text': content_value,
                     'status': m.status or ('published' if m.is_active else 'inactive'),
                     'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(m, 'scheduled_at', None) else None,
                     'items': items_count,
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                     'attempt_count': 0,
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
+                    'assigned_week': m.assigned_week or '',
                 }
             elif kind == 'assessment':
                 a = obj
@@ -2961,12 +2991,14 @@ def get_class_materials(request):
                     'item_type': a.assessment_type,
                     'type': 'assessment',
                     'content': content_value,
+                    'content_text': content_value,
                     'status': a.status or ('published' if a.is_active else 'inactive'),
                     'schedule': timezone.localtime(a.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(a, 'scheduled_at', None) else None,
                     'items': items_count,
                     'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
                     'attempt_count': 0,
                     'assigned_sections': [a.section.class_code] if a.section else [],
+                    'assigned_week': getattr(a, 'assigned_week', ''),
                 }
             else:
                 # practice
@@ -2981,12 +3013,14 @@ def get_class_materials(request):
                     'item_type': p.item_type,
                     'type': 'practice',
                     'content': content_value,
+                    'content_text': content_value,
                     'status': p.status or ('published' if p.is_active else 'inactive'),
                     'schedule': None,
                     'items': items_count,
                     'created_at': p.created_at.isoformat() if getattr(p, 'created_at', None) else None,
                     'attempt_count': 0,
                     'assigned_sections': [],
+                    'assigned_week': '',
                 }
 
             if item.get('item_type') in materials:
@@ -3116,6 +3150,7 @@ def add_reading_material(request):
         usage_type   = (data.get('usage_type') or 'practice').strip()        # practice | assessment | both
         class_code   = (data.get('class_code') or '').strip()
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
+        assigned_week = (data.get('assigned_week') or '').strip()
 
         logger.debug(f"add_reading_material received: title={title}, status={status}, class_code={class_code}")
 
@@ -3214,7 +3249,8 @@ def add_reading_material(request):
                 type=usage_type,
                 status=status,
                 scheduled_at=scheduled_at if status == 'scheduled' else None,
-                difficulty_level='',
+                difficulty_level='', # This field is not set in this context, consider if it should be
+                assigned_week=assigned_week,
                 is_active=(status in ['published', 'scheduled'])
             )
             if section is not None:
@@ -3283,9 +3319,13 @@ def teacher_update_material(request):
     """API for teachers to update existing reading materials"""
     try:
         data = json.loads(request.body)
-        material_id = data.get('material_id')
+        raw_id = data.get('material_id')
+        _, material_id = _parse_prefixed_id(raw_id)
         
         user_id = request.session.get('user_id')
+        if not material_id:
+            return JsonResponse({'success': False, 'error': 'Invalid material ID'}, status=400)
+            
         material = Material.objects.filter(id=material_id, section__teacher_id=user_id).first()
         
         if not material:
@@ -3337,7 +3377,8 @@ def delete_reading_material(request):
     """API for teachers to permanently delete a reading material"""
     try:
         data = json.loads(request.body)
-        material_id = data.get('material_id')
+        raw_id = data.get('material_id')
+        _, material_id = _parse_prefixed_id(raw_id)
         
         if not material_id:
             return JsonResponse({'success': False, 'error': 'Material ID is required'}, status=400)
@@ -3378,26 +3419,8 @@ def record_assessment_completion(request):
         material = None
         practice_obj = None
 
-        # Helper: parse possible prefixed ids like 'assessment-12', 'practice-5', 'material-7'
-        def _parse_prefixed(val):
-            if val is None:
-                return None, None
-            if isinstance(val, int):
-                return None, int(val)
-            s = str(val)
-            if '-' in s:
-                prefix, num = s.split('-', 1)
-                try:
-                    return prefix.lower(), int(num)
-                except Exception:
-                    return prefix.lower(), None
-            try:
-                return None, int(s)
-            except Exception:
-                return None, None
-
-        a_prefix, a_id = _parse_prefixed(assessment_id)
-        m_prefix, m_id = _parse_prefixed(material_id)
+        a_prefix, a_id = _parse_prefixed_id(assessment_id)
+        m_prefix, m_id = _parse_prefixed_id(material_id)
 
         # Prefer explicit assessment identifier
         if a_id and (a_prefix is None or a_prefix.startswith('assessment')):

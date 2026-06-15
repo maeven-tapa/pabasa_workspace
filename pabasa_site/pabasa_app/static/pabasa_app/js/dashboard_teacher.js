@@ -20,7 +20,8 @@
         const activeStudentCount = document.getElementById("activeStudentCount");
         const classBanner = document.getElementById("classBanner");
 
-        if (!createClassForm || !classList || !generatedClassCode) {
+        // Fix: Do not exit early if only some elements are missing (banner might be on sub-pages)
+        if (!classList && !classBanner) {
             return;
         }
 
@@ -72,6 +73,8 @@
         }
 
         function loadSavedClasses() {
+            if (!classList) return;
+
             localStorage.removeItem('pabasa_teacher_classes');
 
             Object.keys(localStorage).forEach(function (key) {
@@ -167,10 +170,12 @@
         }
 
         function selectClass(card) {
+            if (!card) return;
+            
             // Defensive check for pages that list classes but don't have an "Active Class" detail area
             if (!activeClassName) return;
 
-            classList.querySelectorAll(".class-card").forEach(function (item) {
+            if (classList) classList.querySelectorAll(".class-card").forEach(function (item) {
                 item.classList.toggle("is-active", item === card);
             });
 
@@ -187,10 +192,12 @@
             activeClassCode.textContent = code;
             activeStudentCount.textContent = actualStudentCount;
             if (classBanner) classBanner.setAttribute("data-header", header);
-            if (generatedClassCode) generatedClassCode.textContent = code;
+            
+            const modalCodeDisplay = document.getElementById("generatedClassCode");
+            if (modalCodeDisplay) modalCodeDisplay.textContent = code;
 
-            if (copyClassCodeBtn) {
-                copyClassCodeBtn.style.display = "block";
+            if (classBanner) {
+                classBanner.querySelectorAll("#copyClassCodeBtn, .btn-copy-code, .copy-code-btn, [data-action='copy-code']").forEach(btn => btn.style.display = "block");
             }
 
             // Update all "Manage Class" or "Class" buttons in the dashboard and workspace card
@@ -268,12 +275,14 @@
             return card;
         }
 
-        classList.addEventListener("click", function (event) {
-            const card = event.target.closest(".class-card");
-            if (card) {
-                selectClass(card);
-            }
-        });
+        if (classList) {
+            classList.addEventListener("click", function (event) {
+                const card = event.target.closest(".class-card");
+                if (card) {
+                    selectClass(card);
+                }
+            });
+        }
 
         if (createClassForm) {
         createClassForm.addEventListener("submit", function (event) {
@@ -416,6 +425,53 @@
                         alert('Failed to copy. Please try again.');
                     });
                 }
+            });
+        }
+
+        // Copy code handler for the active class banner (using event delegation to handle multiple buttons)
+        if (classBanner) {
+            classBanner.addEventListener("click", function(e) {
+                const btn = e.target.closest("#copyClassCodeBtn, .btn-copy-code, .copy-code-btn, [data-action='copy-code']");
+                if (!btn) return;
+
+                const codeDisplay = document.getElementById("activeClassCode") || classBanner.querySelector(".active-class-code, .class-code");
+                const textFromBanner = codeDisplay ? codeDisplay.textContent : "";
+                const codeMatch = textFromBanner.match(/[A-Z]{4}-\d{3}/);
+                const code = codeMatch ? codeMatch[0] : textFromBanner.replace(/Class Code:/i, '').trim();
+                
+                if (!code || code === "—" || code.toLowerCase() === 'undefined') return;
+
+                const executeCopy = async (text) => {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        return await navigator.clipboard.writeText(text);
+                    } else {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = text;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-9999px";
+                        textArea.style.top = "0";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        const success = document.execCommand('copy');
+                        textArea.remove();
+                        if (!success) throw new Error('Copy command failed');
+                    }
+                };
+
+                executeCopy(code).then(() => {
+                    const originalHTML = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Copied!';
+                    btn.classList.add('btn-success');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.classList.remove('btn-success');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('PABASA: Failed to copy class code:', err);
+                    if (window.showToast) window.showToast('Unable to copy code', 'error');
+                });
             });
         }
 
