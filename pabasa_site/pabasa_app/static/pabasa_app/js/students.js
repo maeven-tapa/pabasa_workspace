@@ -268,13 +268,13 @@ function initStudentsPage() {
         addStudentForm.addEventListener("submit", function(e) {
             e.preventDefault();
             
-            // Get form values
-            const studentName = document.getElementById("studentName").value;
-            const studentClass = document.getElementById("studentClass").value;
-            const readingLevel = document.getElementById("studentReadingLevel").value;
-            const wpm = document.getElementById("studentWPM").value || "0";
-            const accuracy = document.getElementById("studentAccuracy").value || "0";
-            const studentEmail = document.getElementById("parentContact").value;
+            // Get form values (guard against missing elements)
+            const studentName = document.getElementById("studentName")?.value || "";
+            const studentClass = document.getElementById("studentClass")?.value || "";
+            const readingLevel = document.getElementById("studentReadingLevel")?.value || "";
+            const wpm = document.getElementById("studentWPM")?.value || "0";
+            const accuracy = document.getElementById("studentAccuracy")?.value || "0";
+            const studentEmail = document.getElementById("parentContact")?.value || "";
             
             // Create student data object
             const studentData = {

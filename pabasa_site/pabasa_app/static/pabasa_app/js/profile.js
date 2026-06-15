@@ -1152,7 +1152,7 @@ function initProfilePage() {
 
             try {
                 const constraints = {
-                    audio: micDeviceSelect.value ? { deviceId: { exact: micDeviceSelect.value } } : true
+                    audio: micDeviceSelect?.value ? { deviceId: { exact: micDeviceSelect?.value } } : true
                 };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 
@@ -1200,11 +1200,11 @@ function initProfilePage() {
                 });
         });
         speakerDeviceSelect?.addEventListener("change", () => {
-            window.pabasaStore.set("pabasa_speaker_device_id", speakerDeviceSelect.value);
+            window.pabasaStore.set("pabasa_speaker_device_id", speakerDeviceSelect?.value);
         });
 
         micDeviceSelect?.addEventListener("change", () => {
-            window.pabasaStore.set("pabasa_mic_device_id", micDeviceSelect.value);
+            window.pabasaStore.set("pabasa_mic_device_id", micDeviceSelect?.value);
         });
 
         speakerVolumeInput?.addEventListener("input", function() {
