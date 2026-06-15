@@ -3,6 +3,7 @@ from .models import (
 	User,
 	Section,
 	Assessment,
+	Practice,
 	Material,
 	Note,
 	Notification,
@@ -35,6 +36,14 @@ class SectionAdmin(admin.ModelAdmin):
 class AssessmentAdmin(admin.ModelAdmin):
 	list_display = ("code", "title", "assessment_type", "teacher", "section", "is_active", "created_at")
 	list_filter = ("assessment_type", "is_active", "created_at")
+	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")
+	ordering = ("-created_at",)
+
+
+@admin.register(Practice)
+class PracticeAdmin(admin.ModelAdmin):
+	list_display = ("title", "practice_type", "difficulty_type", "contents", "created_at")
+	list_filter = ("practice_type", "is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")
 	ordering = ("-created_at",)
 
