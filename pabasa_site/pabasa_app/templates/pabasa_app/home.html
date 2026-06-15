@@ -14,59 +14,106 @@
         <p class="hero-quote-author">- PABASA</p>
     </div>
 </div>
-
-<section class="fade-in-section section-container section-container-1">
+<section class="section-container-hero fade-in-section">
     <div class="section-wrapper">
-    <div class="modern-hero row g-4 align-items-center">
-        <div class="col-lg-7">
-            <span class="modern-chip mb-3">Reading Intelligence Platform</span>
-            <h1 class="display-6 fw-bold mb-3">Turn reading assessments into clear, usable progress data!</h1>
-            <p class="lead text-secondary">PABASA helps teachers run oral reading checks, review learner progress, and make better instructional decisions from one focused workspace.</p>
-            <div class="d-flex flex-wrap gap-2 mt-4">
-                <a class="btn btn-primary" href="{% url 'pabasa_info' %}">See How It Works</a>
-                <a class="btn btn-outline-primary" href="{% url 'about' %}">Explore PABASA</a>
-            </div>
-            <div class="hero-metrics">
-                <div>
-                    <strong>3</strong>
-                    <span>User roles supported</span>
-                </div>
-                <div>
-                    <strong>2</strong>
-                    <span>Reading languages</span>
-                </div>
-                <div>
-                    <strong>1</strong>
-                    <span>Focused progress view</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-5">
-            <div class="hero-product-visual flip-card" id="teachersFlipCard">
-                <div class="flip-card-inner">
-                    <div class="flip-card-front overflow-hidden">
-                        <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Why teachers choose PABASA" class="img-fluid w-100 h-100" style="object-fit: cover; display: block;">
+        <div class="modern-hero">
+            <div class="row align-items-center">
+                <!-- Left Side: Copy & Features -->
+                <div class="col-lg-6 hero-content-side">
+                    <span class="modern-chip">PABASA EdTech</span>
+                    <h1>Empower Every Reader with Data-Driven Insights</h1>
+                    <p class="hero-tagline">
+                        A modern platform for automated reading assessments, real-time progress tracking, and targeted literacy interventions.
+                    </p>
+                    
+                    <div class="hero-feature-grid">
+                        <div class="hero-feature-item">
+                            <div class="feature-dot blue"></div>
+                            <div>
+                                <strong>Reading Assessments</strong>
+                                <span>AI-powered speech evaluation</span>
+                            </div>
+                        </div>
+                        <div class="hero-feature-item">
+                            <div class="feature-dot yellow"></div>
+                            <div>
+                                <strong>Progress Analytics</strong>
+                                <span>Visual student growth charts</span>
+                            </div>
+                        </div>
+                        <div class="hero-feature-item">
+                            <div class="feature-dot deep"></div>
+                            <div>
+                                <strong>Targeted Interventions</strong>
+                                <span>Automated student grouping</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flip-card-back">
-                        <div class="text-center w-100">
-                            <h3 class="h5 mb-4">Why teachers choose PABASA</h3>
-                            <div class="d-grid gap-3" style="grid-template-columns: 1fr;">
-                                <div style="background: rgba(22, 78, 99, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #164e63;">
-                                    <p class="mb-0"><strong>Check Reading Fast</strong><br><small style="color: #666;">See how each student is doing in just a few minutes.</small></p>
+
+                    <div class="hero-cta-group">
+                        <a href="{% url 'signup' %}" class="btn btn-primary">Get Started for Free</a>
+                        <a href="{% url 'pabasa_info' %}" class="btn btn-outline-primary">Learn How it Works</a>
+                    </div>
+                </div>
+
+                <!-- Right Side: Product Mockup & Floating UI -->
+                <div class="col-lg-6 hero-visual-side">
+                    <div class="product-mockup-frame">
+                        <div class="mockup-browser-bar">
+                            <div class="mockup-dots"><span></span><span></span><span></span></div>
+                            <div class="mockup-url">pabasa.app/dashboard/analytics</div>
+                        </div>
+                        <div class="mockup-screen-content">
+                            <div class="mockup-dashboard-header"></div>
+                            <div class="mockup-row">
+                                <div class="mockup-card-lg">
+                                    <div style="height:10px; width:60%; background:#e2e8f0; margin-bottom:15px; border-radius:4px;"></div>
+                                    <div style="display:flex; align-items:flex-end; gap:8px; height:60px;">
+                                        <div style="height:40%; width:15%; background:var(--pabasa-blue); border-radius:4px 4px 0 0;"></div>
+                                        <div style="height:70%; width:15%; background:var(--pabasa-blue-mid); border-radius:4px 4px 0 0;"></div>
+                                        <div style="height:55%; width:15%; background:var(--pabasa-blue); border-radius:4px 4px 0 0;"></div>
+                                        <div style="height:90%; width:15%; background:var(--pabasa-yellow); border-radius:4px 4px 0 0;"></div>
+                                        <div style="height:65%; width:15%; background:var(--pabasa-blue-deep); border-radius:4px 4px 0 0;"></div>
+                                    </div>
                                 </div>
-                                <div style="background: rgba(22, 78, 99, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #164e63;">
-                                    <p class="mb-0"><strong>Spot Growth Instantly</strong><br><small style="color: #666;">Know who's improving and who needs a little extra help.</small></p>
+                                <div class="mockup-stack">
+                                    <div class="mockup-card-sm"></div>
+                                    <div class="mockup-card-sm"></div>
                                 </div>
-                                <div style="background: rgba(22, 78, 99, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #164e63;">
-                                    <p class="mb-0"><strong>Reports Without the Paperwork</strong><br><small style="color: #666;">Clear insights, ready when you are.</small></p>
-                                </div>
+                            </div>
+                            <div class="mockup-table">
+                                <div class="mockup-tr" style="width: 100%;"></div>
+                                <div class="mockup-tr" style="width: 85%;"></div>
+                                <div class="mockup-tr" style="width: 90%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Floating UI Elements -->
+                        <div class="floating-ui f-completion">
+                            <div class="f-icon success"><i class="bi bi-check2-circle"></i></div>
+                            <div>
+                                <strong>92%</strong>
+                                <span>Assessments Done</span>
+                            </div>
+                        </div>
+                        <div class="floating-ui f-improvement">
+                            <div class="f-icon primary"><i class="bi bi-graph-up-arrow"></i></div>
+                            <div>
+                                <strong>+15</strong>
+                                <span>Students Improved</span>
+                            </div>
+                        </div>
+                        <div class="floating-ui f-alert">
+                            <div class="f-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
+                            <div>
+                                <strong>3</strong>
+                                <span>Need Intervention</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
     </div>
 </section>
 
