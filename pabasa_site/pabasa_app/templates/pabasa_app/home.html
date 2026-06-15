@@ -17,82 +17,51 @@
 
 <section class="fade-in-section section-container section-container-1">
     <div class="section-wrapper">
-    <div class="modern-hero product-focused">
-        <div class="row align-items-center">
-            <!-- Content Column -->
-            <div class="col-lg-6 hero-content-side">
-                <span class="modern-chip">Reading Assessment Platform</span>
-                <h1><strong>Empower Every Reader with Automated Assessment</strong></h1>
-                <p class="hero-tagline">Identify reading gaps and track student progress in real-time with our speech-enabled platform built for modern classrooms.</p>
-                
-                <div class="hero-feature-grid">
-                    <div class="hero-feature-item">
-                        <div class="feature-dot blue"></div>
-                        <div>
-                            <strong>Reading Assessments</strong>
-                            <span>Automated speech analysis</span>
-                        </div>
-                    </div>
-                    <div class="hero-feature-item">
-                        <div class="feature-dot yellow"></div>
-                        <div>
-                            <strong>Progress Analytics</strong>
-                            <span>Visual growth tracking</span>
-                        </div>
-                    </div>
-                    <div class="hero-feature-item">
-                        <div class="feature-dot deep"></div>
-                        <div>
-                            <strong>Targeted Interventions</strong>
-                            <span>Data-driven support</span>
-                        </div>
-                    </div>
+    <div class="modern-hero row g-4 align-items-center">
+        <div class="col-lg-7">
+            <span class="modern-chip mb-3">Reading Intelligence Platform</span>
+            <h1 class="display-6 fw-bold mb-3">Turn reading assessments into clear, usable progress data.</h1>
+            <p class="lead text-secondary">PABASA helps teachers run oral reading checks, review learner progress, and make better instructional decisions from one focused workspace.</p>
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <a class="btn btn-primary" href="{% url 'pabasa_info' %}">See How It Works</a>
+                <a class="btn btn-outline-primary" href="{% url 'about' %}">Explore PABASA</a>
+            </div>
+            <div class="hero-metrics">
+                <div>
+                    <strong>3</strong>
+                    <span>User roles supported</span>
                 </div>
-
-                <div class="hero-cta-group">
-                    <a href="{% url 'auth' %}" class="btn btn-primary">Get Started Now!</a>
-                    <a href="{% url 'pabasa_info' %}" class="btn btn-outline-primary">Learn More</a>
+                <div>
+                    <strong>2</strong>
+                    <span>Reading languages</span>
+                </div>
+                <div>
+                    <strong>1</strong>
+                    <span>Focused progress view</span>
                 </div>
             </div>
-
-            <!-- Visual Column (Dashboard Mockup) -->
-            <div class="col-lg-6 hero-visual-side">
-                <div class="product-mockup-frame">
-                    <div class="mockup-browser-bar">
-                        <div class="mockup-dots"><span></span><span></span><span></span></div>
-                        <div class="mockup-url">pabasa.app/teacher/dashboard</div>
+        </div>
+        <div class="col-lg-5">
+            <div class="hero-product-visual flip-card" id="teachersFlipCard">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front overflow-hidden">
+                        <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Why teachers choose PABASA" class="img-fluid w-100 h-100" style="object-fit: cover; display: block;">
                     </div>
-                    <div class="mockup-screen-content">
-                        <div class="mockup-dashboard-header"></div>
-                        <div class="mockup-row">
-                            <div class="mockup-card-lg">
-                                <div class="mockup-line-chart">
-                                    <svg viewBox="0 0 100 40"><path d="M0 35 Q 25 35, 40 15 T 70 20 T 100 5" fill="none" stroke="#2ea8e5" stroke-width="2" /></svg>
+                    <div class="flip-card-back">
+                        <div class="text-center w-100">
+                            <h3 class="h5 mb-4">Why teachers choose PABASA</h3>
+                            <div class="d-grid gap-3" style="grid-template-columns: 1fr;">
+                                <div style="background: rgba(22, 78, 99, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #164e63;">
+                                    <p class="mb-0"><strong>Check Reading Fast</strong><br><small style="color: #666;">See how each student is doing in just a few minutes.</small></p>
+                                </div>
+                                <div style="background: rgba(22, 78, 99, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #164e63;">
+                                    <p class="mb-0"><strong>Spot Growth Instantly</strong><br><small style="color: #666;">Know who's improving and who needs a little extra help.</small></p>
+                                </div>
+                                <div style="background: rgba(22, 78, 99, 0.08); border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #164e63;">
+                                    <p class="mb-0"><strong>Reports Without the Paperwork</strong><br><small style="color: #666;">Clear insights, ready when you are.</small></p>
                                 </div>
                             </div>
-                            <div class="mockup-stack">
-                                <div class="mockup-card-sm"></div>
-                                <div class="mockup-card-sm"></div>
-                            </div>
                         </div>
-                        <div class="mockup-table">
-                            <div class="mockup-tr"></div>
-                            <div class="mockup-tr"></div>
-                        </div>
-                    </div>
-
-                    <!-- Floating UI elements -->
-                    <div class="floating-ui f-completion">
-                        <div class="f-icon success"><i class="bi bi-graph-up"></i></div>
-                        <div><strong>92%</strong><span>Completion Rate</span></div>
-                    </div>
-                    <div class="floating-ui f-improvement">
-                        <div class="f-icon primary"><i class="bi bi-stars"></i></div>
-                        <div><strong>15</strong><span>Students Improved</span></div>
-                    </div>
-                    <div class="floating-ui f-alert">
-                        <div class="f-icon warning"><i class="bi bi-exclamation-circle"></i></div>
-                        <div><strong>3</strong><span>Needs Intervention</span></div>
                     </div>
                 </div>
             </div>
@@ -244,7 +213,7 @@
         <h2 class="turning-pages-title">#TurningPagesTogether</h2>
         <p class="turning-pages-subtitle">Reading Forward with PABASA</p>
     </div>
-    <div class="turning-pages-container full-bleed">
+    <div class="turning-pages-container" style="max-width:none; width:100vw; margin:0 calc(-50vw + 50%);">
         <div style="position:relative; width:100%; display:flex; align-items:center;">
             <button class="turning-pages-arrow" id="sliderLeftBtn" aria-label="Scroll left" style="position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:2;">
                 <span>&#8249;</span>
