@@ -297,11 +297,24 @@ var getStudentClassData = window.getStudentClassData = function() {
                 credentials: 'same-origin',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             }).then(async r => {
+                if (!r.ok) {
+                    const bodyText = await r.text();
+                    console.error('Failed to fetch teacher classes, status', r.status, bodyText);
+                    return;
+                }
+
+                // Read body once and attempt JSON.parse to avoid double-reading the stream
                 const text = await r.text();
-                // Try to parse JSON; if response is HTML (error page) this will throw and we log the body
+                let data = null;
                 try {
-                    const data = JSON.parse(text);
-                    if (data && data.success && Array.isArray(data.classes)) {
+                    data = JSON.parse(text || '{}');
+                } catch (parseErr) {
+                    console.error('Non-JSON response when fetching teacher classes (status ' + r.status + '):');
+                    console.error(text);
+                    return;
+                }
+
+                if (data && data.success && Array.isArray(data.classes)) {
                         const classCountEl = document.getElementById('classCount') || document.getElementById('classCountMirror');
                         if (classCountEl) classCountEl.textContent = String(data.classes.length);
 
@@ -328,10 +341,6 @@ var getStudentClassData = window.getStudentClassData = function() {
                     } else {
                         console.error('Unexpected JSON structure for teacher classes:', data);
                     }
-                } catch (parseErr) {
-                    console.error('Non-JSON response when fetching teacher classes (status ' + r.status + '):');
-                    console.error(text);
-                }
             }).catch(function(error) {
                 console.error('Error fetching teacher classes:', error);
             });

@@ -76,22 +76,41 @@ function initStudentsPage() {
         // 1. Fetch Authoritative Data from Server
         let serverStudents = [];
         try {
-            const response = await fetch('/dashboard/teacher/students-api/');
-            const data = await response.json();
-            if (data.success) {
-                serverStudents = data.students.map(s => ({
-                    name: s.name,
-                    email: s.email,
-                    class: s.classes.join(", "),
-                    level: s.level,
-                    wpm: s.wpm || "0",
-                    accuracy: s.accuracy || "0",
-                    pabasa_id: s.custom_id,
-                    isServer: true
-                }));
+            const response = await fetch('/dashboard/teacher/students-api/', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            if (response && response.ok) {
+                // Read body once and attempt to parse as JSON
+                const text = await response.text();
+                let data = null;
+                try {
+                    data = JSON.parse(text || '{}');
+                } catch (e) {
+                    console.error('PABASA: Invalid JSON response when fetching students:', e);
+                    console.error(text);
+                }
+
+                if (data && data.success && Array.isArray(data.students)) {
+                    serverStudents = data.students.map(s => ({
+                        name: s.name,
+                        email: s.email,
+                        "class": Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
+                        level: s.level,
+                        wpm: s.wpm || '0',
+                        accuracy: s.accuracy || '0',
+                        pabasa_id: s.custom_id,
+                        isServer: true
+                    }));
+                }
+            } else {
+                const bodyText = response ? await response.text() : '';
+                console.error('PABASA: Failed to fetch students from server (status ' + (response && response.status) + ')', bodyText);
             }
         } catch (e) {
-            console.error("PABASA: Failed to fetch students from server", e);
+            console.error('PABASA: Failed to fetch students from server', e);
         }
 
         // 2. Load Local Students (Legacy/Manual)
