@@ -149,9 +149,28 @@ def login_required(role=None):
     def decorator(view_func):
         @wraps(view_func)
         def wrapper(request, *args, **kwargs):
+            # Detect AJAX/JSON requests so we can return JSON responses
+            is_ajax = False
+            try:
+                accept = request.META.get('HTTP_ACCEPT', '') or ''
+                # Prefer the standardized request.headers when available, fall back to META
+                x_requested = None
+                try:
+                    x_requested = request.headers.get('X-Requested-With')
+                except Exception:
+                    x_requested = request.META.get('HTTP_X_REQUESTED_WITH')
+
+                is_ajax = (x_requested == 'XMLHttpRequest') or accept.startswith('application/json')
+            except Exception:
+                is_ajax = False
+
             if 'user_id' not in request.session:
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
                 return redirect('auth')
             if role and request.session.get('user_role') != role:
+                if is_ajax:
+                    return JsonResponse({'success': False, 'error': 'Forbidden: insufficient role'}, status=403)
                 return redirect('auth')
             return view_func(request, *args, **kwargs)
         return wrapper
