@@ -2954,6 +2954,9 @@ def get_class_materials(request):
         practices_qs = Practice.objects.filter(section__isnull=True)
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
+        # Requesting user (could be student or teacher) used to compute attempt counts
+        request_user = User.objects.filter(id=user_id).first() if user_id else None
+        is_requesting_student = bool(request_user and request_user.role == 'student')
         # If requester is not the class owner teacher, only include active items
         if not (teacher_user and teacher_user.role == 'teacher' and section.teacher_id == teacher_user.id):
             materials_qs = materials_qs.filter(is_active=True)
@@ -2982,6 +2985,14 @@ def get_class_materials(request):
                 if isinstance(m.content_json, dict) and isinstance(m.content_json.get('items'), list):
                     items_count = len(m.content_json.get('items'))
 
+                # compute attempt count: for materials linked to an Assessment use that Assessment's attempts
+                attempt_count = 0
+                if m.assessment:
+                    if is_requesting_student and request_user:
+                        attempt_count = m.assessment.get_student_attempt_count(request_user)
+                    else:
+                        attempt_count = len(m.assessment.get_attempts())
+
                 item = {
                     'id': f"material-{m.id}",
                     'code': m.assessment.code if m.assessment else None,
@@ -2994,7 +3005,7 @@ def get_class_materials(request):
                     'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(m, 'scheduled_at', None) else None,
                     'items': items_count,
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
-                    'attempt_count': 0,
+                    'attempt_count': attempt_count,
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week or '',
                 }
@@ -3003,6 +3014,12 @@ def get_class_materials(request):
                 content_value = a.content or ''
                 title_value = a.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
                 items_count = 1
+                # compute attempt count for this assessment
+                if is_requesting_student and request_user:
+                    attempt_count = a.get_student_attempt_count(request_user)
+                else:
+                    attempt_count = len(a.get_attempts())
+
                 item = {
                     'id': f"assessment-{a.id}",
                     'code': a.code,
@@ -3015,7 +3032,7 @@ def get_class_materials(request):
                     'schedule': timezone.localtime(a.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(a, 'scheduled_at', None) else None,
                     'items': items_count,
                     'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
-                    'attempt_count': 0,
+                    'attempt_count': attempt_count,
                     'assigned_sections': [a.section.class_code] if a.section else [],
                     'assigned_week': getattr(a, 'assigned_week', ''),
                 }
@@ -3025,6 +3042,12 @@ def get_class_materials(request):
                 content_value = p.content_text or ''
                 title_value = p.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
                 items_count = len(_practice_material_items(p))
+                # compute attempt count for practice
+                if is_requesting_student and request_user:
+                    attempt_count = len(p.get_attempts(request_user))
+                else:
+                    attempt_count = len(p.get_attempts())
+
                 item = {
                     'id': f"practice-{p.id}",
                     'code': p.code,
@@ -3037,7 +3060,7 @@ def get_class_materials(request):
                     'schedule': None,
                     'items': items_count,
                     'created_at': p.created_at.isoformat() if getattr(p, 'created_at', None) else None,
-                    'attempt_count': 0,
+                    'attempt_count': attempt_count,
                     'assigned_sections': [],
                     'assigned_week': '',
                 }
@@ -3476,6 +3499,25 @@ def record_assessment_completion(request):
 
         if not assessment and not material and not practice_obj:
             return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
+
+        # Record attempt server-side (authoritative). We mark attempts as completed
+        # because this endpoint is called when the student finishes the reading flow.
+        try:
+            device_info = {
+                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+                'remote_addr': request.META.get('REMOTE_ADDR', ''),
+            }
+            if assessment:
+                assessment.record_attempt(student_user, status='completed', completed_at=timezone.now().isoformat(), device_info=device_info)
+            elif practice_obj:
+                practice_obj.record_attempt(student_user, replace=True, status='completed', completed_at=timezone.now().isoformat(), device_info=device_info)
+            elif material and getattr(material, 'assessment', None):
+                # Material linked to an Assessment
+                material.assessment.record_attempt(student_user, status='completed', completed_at=timezone.now().isoformat(), device_info=device_info)
+            # Note: standalone Material objects that are not linked to Assessment do not
+            # currently have an attempts schema; they are handled by client-side notifications.
+        except Exception as e:
+            logger.exception('Failed to persist assessment/practice attempt: %s', e)
 
         student_name = f"{student_user.first_name} {student_user.last_name}"
         is_practice = activity_type == 'practice' or (practice_obj is not None) or (material and material.section is None and material.assessment is None)

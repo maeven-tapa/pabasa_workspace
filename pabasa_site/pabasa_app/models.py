@@ -400,7 +400,7 @@ class Practice(models.Model):
         student_attempts = self.get_attempts(student)
         return student_attempts[-1] if student_attempts else None
 
-    def _get_attempt_entry(self, student, status='completed', started_at=None, **kwargs):
+    def _get_attempt_entry(self, student, status='started', started_at=None, **kwargs):
         entry = {
             'student_id': student.id,
             'started_at': started_at or timezone.now().isoformat(),
