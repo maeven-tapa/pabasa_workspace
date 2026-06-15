@@ -1979,7 +1979,7 @@ def _student_practice_queryset():
 
 def _serialize_student_practice_material(material):
     return {
-        'id': material.id,
+        'id': f"practice-{material.id}",
         'title': material.title,
         'difficulty': material.difficulty_level,
         'type': material.item_type,
@@ -2936,7 +2936,7 @@ def get_class_materials(request):
                     items_count = len(m.content_json.get('items'))
 
                 item = {
-                    'id': m.id,
+                    'id': f"material-{m.id}",
                     'code': m.assessment.code if m.assessment else None,
                     'title': title_value,
                     'item_type': m.item_type,
@@ -2955,7 +2955,7 @@ def get_class_materials(request):
                 title_value = a.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
                 items_count = 1
                 item = {
-                    'id': a.id,
+                    'id': f"assessment-{a.id}",
                     'code': a.code,
                     'title': title_value,
                     'item_type': a.assessment_type,
@@ -2975,7 +2975,7 @@ def get_class_materials(request):
                 title_value = p.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
                 items_count = len(_practice_material_items(p))
                 item = {
-                    'id': p.id,
+                    'id': f"practice-{p.id}",
                     'code': p.code,
                     'title': title_value,
                     'item_type': p.item_type,
@@ -3243,7 +3243,7 @@ def add_reading_material(request):
             )
             created_ids = [m.id]
             material_payload = {
-                'id': m.id,
+                'id': f"material-{m.id}",
                 'code': None,
                 'title': m.title,
                 'item_type': m.item_type,
@@ -3376,24 +3376,67 @@ def record_assessment_completion(request):
         teacher_user = None
         title_text = None
         material = None
+        practice_obj = None
 
-        if assessment_id:
-            assessment = Assessment.objects.select_related('teacher').get(id=assessment_id)
-            teacher_user = assessment.teacher
-            title_text = assessment.title
-        elif material_id:
-            material = Material.objects.select_related('assessment', 'section__teacher').get(id=material_id)
-            if material.assessment:
-                assessment = material.assessment
-                teacher_user = material.assessment.teacher
-            elif material.section:
-                teacher_user = material.section.teacher
-            title_text = material.title or material.content_text or material.prompt_text or material.item_type
-        else:
+        # Helper: parse possible prefixed ids like 'assessment-12', 'practice-5', 'material-7'
+        def _parse_prefixed(val):
+            if val is None:
+                return None, None
+            if isinstance(val, int):
+                return None, int(val)
+            s = str(val)
+            if '-' in s:
+                prefix, num = s.split('-', 1)
+                try:
+                    return prefix.lower(), int(num)
+                except Exception:
+                    return prefix.lower(), None
+            try:
+                return None, int(s)
+            except Exception:
+                return None, None
+
+        a_prefix, a_id = _parse_prefixed(assessment_id)
+        m_prefix, m_id = _parse_prefixed(material_id)
+
+        # Prefer explicit assessment identifier
+        if a_id and (a_prefix is None or a_prefix.startswith('assessment')):
+            assessment = Assessment.objects.select_related('teacher').filter(id=a_id).first()
+            if assessment:
+                teacher_user = assessment.teacher
+                title_text = assessment.title
+        # material_id may refer to an Assessment (prefixed), Material, or Practice record
+        if not assessment and m_id and m_prefix and m_prefix.startswith('assessment'):
+            assessment = Assessment.objects.select_related('teacher').filter(id=m_id).first()
+            if assessment:
+                teacher_user = assessment.teacher
+                title_text = assessment.title
+
+        if not assessment and m_id and (m_prefix is None or m_prefix.startswith('material')):
+            material = Material.objects.select_related('assessment', 'section__teacher').filter(id=m_id).first()
+            if material:
+                if material.assessment:
+                    assessment = material.assessment
+                    teacher_user = material.assessment.teacher
+                elif material.section:
+                    teacher_user = material.section.teacher
+                title_text = material.title or material.content_text or material.prompt_text or material.item_type
+        # support practice ids (practice-<id>) that map to Practice model
+        if not assessment and m_id and m_prefix and m_prefix.startswith('practice'):
+            try:
+                from .models import Practice as PracticeModel
+                practice_obj = PracticeModel.objects.select_related('teacher').filter(id=m_id).first()
+                if practice_obj:
+                    title_text = practice_obj.title or practice_obj.content_text or practice_obj.prompt_text
+                    teacher_user = getattr(practice_obj, 'teacher', None)
+            except Exception:
+                practice_obj = None
+
+        if not assessment and not material and not practice_obj:
             return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
 
         student_name = f"{student_user.first_name} {student_user.last_name}"
-        is_practice = activity_type == 'practice' or (material and material.section is None and material.assessment is None)
+        is_practice = activity_type == 'practice' or (practice_obj is not None) or (material and material.section is None and material.assessment is None)
         
         class_name = "a class"
         if material and material.section:
