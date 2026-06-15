@@ -350,6 +350,94 @@ class Assessment(models.Model):
         return False
 
 
+class Practice(models.Model):
+    PRACTICE_TYPE_CHOICES = Assessment.ASSESSMENT_TYPE_CHOICES
+    STATUS_CHOICES = Assessment.STATUS_CHOICES
+
+    title = models.CharField(max_length=150)
+    code = models.CharField(max_length=30, unique=True)
+    practice_type = models.CharField(max_length=20, choices=PRACTICE_TYPE_CHOICES)
+    difficulty_type = models.CharField(max_length=50, blank=True)
+    contents = models.TextField(blank=True, default='')  # practice content / materials
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="practices")
+    section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="practices", null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    # store attempts as JSON; we will keep one attempt per student (latest) by default
+    attempts = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        db_table = "practices"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+
+    def get_attempts(self, student=None):
+        """Return attempts. If student is given return that student's attempts.
+        Without a student, returns one (latest) attempt per student."""
+        attempts = getattr(self, 'attempts', None) or []
+        if not isinstance(attempts, list):
+            return []
+        if student:
+            return [a for a in attempts if a.get('student_id') == student.id]
+        # deduplicate: keep latest by `started_at` (ISO strings compare lexically)
+        latest = {}
+        for a in attempts:
+            sid = a.get('student_id')
+            if sid is None:
+                continue
+            if sid not in latest or a.get('started_at', '') >= latest[sid].get('started_at', ''):
+                latest[sid] = a
+        return list(latest.values())
+
+    def get_student_latest_attempt(self, student):
+        student_attempts = self.get_attempts(student)
+        return student_attempts[-1] if student_attempts else None
+
+    def _get_attempt_entry(self, student, status='completed', started_at=None, **kwargs):
+        entry = {
+            'student_id': student.id,
+            'started_at': started_at or timezone.now().isoformat(),
+            'status': status,
+        }
+        for key in ['completed_at', 'device_info', 'mic_used', 'accuracy', 'wpm', 'total_score', 'passed', 'remarks']:
+            if key in kwargs:
+                entry[key] = kwargs[key]
+        return entry
+
+    def _save_attempts(self):
+        self.updated_at = timezone.now()
+        self.save(update_fields=['attempts', 'updated_at'])
+
+    def record_attempt(self, student, replace=True, **attempt_data):
+        """Record a practice attempt.
+        If `replace` is True (default) any existing attempts by the student are removed
+        so the stored list keeps only the latest attempt per student."""
+        attempts = getattr(self, 'attempts', None) or []
+        entry = self._get_attempt_entry(student, **attempt_data)
+        if replace:
+            attempts = [a for a in attempts if a.get('student_id') != student.id]
+            attempts.append(entry)
+        else:
+            attempts.append(entry)
+        self.attempts = attempts
+        self._save_attempts()
+        return entry
+
+    def deactivate_student_attempts(self, student):
+        attempts = getattr(self, 'attempts', None) or []
+        changed = False
+        for attempt in attempts:
+            if attempt.get('student_id') == student.id and attempt.get('status') != 'cancelled':
+                attempt['status'] = 'cancelled'
+                changed = True
+        if changed:
+            self.attempts = attempts
+            self._save_attempts()
+        return changed
+
 class Material(models.Model):
     ITEM_TYPE_CHOICES = [
         ("word", "Word"),
