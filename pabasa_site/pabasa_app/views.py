@@ -2746,33 +2746,37 @@ def teacher_remove_student(request):
 @require_http_methods(["GET"])
 @login_required(role='teacher')
 def get_teacher_classes(request):
+    try:
+        user_id = request.session.get('user_id')  # ← this is already the session-bound user
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-    user_id = request.session.get('user_id')  # ← this is already the session-bound user
-    teacher_user = User.objects.filter(id=user_id).first()
-    if not teacher_user or teacher_user.role != 'teacher':
-        return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+        classes = Section.objects.filter(
+            teacher=teacher_user,
+            is_active=True
+        ).order_by('class_name')
 
-    classes = Section.objects.filter(
-        teacher=teacher_user,
-        is_active=True
-    ).order_by('class_name')
+        class_list = []
+        for cls in classes:
+            student_count = _section_student_count(cls)
+            class_list.append({
+                'code': cls.class_code,
+                'name': cls.class_name,
+                'subject': cls.subject,
+                'grade_level': getattr(cls, 'grade_level', '') if hasattr(cls, 'grade_level') else '',
+                'section': getattr(cls, 'section', '') if hasattr(cls, 'section') else '',
+                'description': cls.description,
+                'header': cls.header,
+                'students': str(student_count),
+                'teacher_email': request.session.get('email', ''),
+            })
 
-    class_list = []
-    for cls in classes:
-        student_count = _section_student_count(cls)
-        class_list.append({
-            'code': cls.class_code,
-            'name': cls.class_name,
-            'subject': cls.subject,
-            'grade_level': cls.grade_level,
-            'section': cls.section,
-            'description': cls.description,
-            'header': cls.header,
-            'students': str(student_count),
-            'teacher_email': request.session.get('email', ''),
-        })
-
-    return JsonResponse({'success': True, 'classes': class_list})
+        return JsonResponse({'success': True, 'classes': class_list})
+    except Exception as e:
+        # Log full traceback and return JSON so client-side can inspect error details
+        logger.exception("Unhandled error in get_teacher_classes")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @require_http_methods(["GET"])

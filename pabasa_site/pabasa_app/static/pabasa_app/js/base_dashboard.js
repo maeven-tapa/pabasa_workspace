@@ -296,31 +296,41 @@ var getStudentClassData = window.getStudentClassData = function() {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            }).then(r => r.json()).then(function(data) {
-                if (data && data.success && Array.isArray(data.classes)) {
-                    const classCountEl = document.getElementById('classCount') || document.getElementById('classCountMirror');
-                    if (classCountEl) classCountEl.textContent = String(data.classes.length);
-                    
-                    // Update authoritative student count across all classes globally
-                    const totalStudents = data.classes.reduce((sum, cls) => sum + (parseInt(cls.students) || 0), 0);
-                    const studentCountEl = document.getElementById('studentCount') || document.getElementById('studentCountMirror') || document.getElementById('profileTotalStudentsCount') || document.getElementById('totalStudentsJoined');
-                    if (studentCountEl) studentCountEl.textContent = String(totalStudents);
-                    
-                    // If no class is currently active in storage, use the first one from the server
-                    if (data.classes.length > 0 && !localStorage.getItem("pabasa_last_active_class_code")) {
-                        localStorage.setItem("pabasa_last_active_class_code", data.classes[0].code);
+            }).then(async r => {
+                const text = await r.text();
+                // Try to parse JSON; if response is HTML (error page) this will throw and we log the body
+                try {
+                    const data = JSON.parse(text);
+                    if (data && data.success && Array.isArray(data.classes)) {
+                        const classCountEl = document.getElementById('classCount') || document.getElementById('classCountMirror');
+                        if (classCountEl) classCountEl.textContent = String(data.classes.length);
+
+                        // Update authoritative student count across all classes globally
+                        const totalStudents = data.classes.reduce((sum, cls) => sum + (parseInt(cls.students) || 0), 0);
+                        const studentCountEl = document.getElementById('studentCount') || document.getElementById('studentCountMirror') || document.getElementById('profileTotalStudentsCount') || document.getElementById('totalStudentsJoined');
+                        if (studentCountEl) studentCountEl.textContent = String(totalStudents);
+
+                        // If no class is currently active in storage, use the first one from the server
+                        if (data.classes.length > 0 && !localStorage.getItem("pabasa_last_active_class_code")) {
+                            localStorage.setItem("pabasa_last_active_class_code", data.classes[0].code);
+                        }
+                        updateTeacherSidebar(localStorage.getItem("pabasa_last_active_class_code"));
+
+                        // Authoritative sync for stats cards
+                        fetch('/dashboard/teacher/overview/')
+                            .then(r => r.json())
+                            .then(overviewData => {
+                                if (overviewData.success) {
+                                    const totalEl = document.getElementById('profileTotalStudentsCount') || document.getElementById('studentCountMirror') || document.getElementById('totalStudentsJoined');
+                                    if (totalEl) totalEl.textContent = String(overviewData.total_students);
+                                }
+                            });
+                    } else {
+                        console.error('Unexpected JSON structure for teacher classes:', data);
                     }
-                    updateTeacherSidebar(localStorage.getItem("pabasa_last_active_class_code"));
-                    
-                    // Authoritative sync for stats cards
-                    fetch('/dashboard/teacher/overview/')
-                        .then(r => r.json())
-                        .then(overviewData => {
-                            if (overviewData.success) {
-                                const totalEl = document.getElementById('profileTotalStudentsCount') || document.getElementById('studentCountMirror') || document.getElementById('totalStudentsJoined');
-                                if (totalEl) totalEl.textContent = String(overviewData.total_students);
-                            }
-                        });
+                } catch (parseErr) {
+                    console.error('Non-JSON response when fetching teacher classes (status ' + r.status + '):');
+                    console.error(text);
                 }
             }).catch(function(error) {
                 console.error('Error fetching teacher classes:', error);
