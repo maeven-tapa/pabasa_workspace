@@ -671,7 +671,8 @@
                     const parts = m.split('-', 2);
                     if (parts.length === 2 && parts[1]) candidates.push(parts[1]);
                 }
-                return candidates.some(cid => seenIds.includes(String(cid).trim()));
+                const storedSeenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+                return candidates.some(cid => storedSeenIds.includes(String(cid).trim()));
             };
 
             async function updateAssessmentHub() {
