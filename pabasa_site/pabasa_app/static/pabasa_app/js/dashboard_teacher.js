@@ -279,15 +279,25 @@
         createClassForm.addEventListener("submit", function (event) {
             event.preventDefault();
 
-            const title = titleInput.value.trim();
-            const subject = subjectInput.value;
+            // Re-query form fields here to avoid stale/null references
+            const titleEl = document.getElementById("titleInput");
+            const subjectEl = document.getElementById("subjectInput");
+            const descEl = document.getElementById("classDescriptionInput");
+
+            if (!titleEl || !subjectEl) {
+                alert("Form elements missing — please refresh the page and try again.");
+                return;
+            }
+
+            const title = titleEl.value.trim();
+            const subject = subjectEl.value;
 
             if (!title || !subject) {
                 alert("Please provide a Title and select a Subject.");
                 return;
             }
 
-            const description = classDescriptionInput.value.trim() || "Reading class workspace.";
+            const description = (descEl ? descEl.value.trim() : "") || "Reading class workspace.";
             const name = title;
 
             fetch('/dashboard/teacher/create-class/', {
@@ -313,8 +323,7 @@
             .then(data => {
                 if (data.success) {
                     const currentTeacherEmail = window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || "";
-                    const description = classDescriptionInput.value.trim() || "Reading class workspace.";
-                    
+                    // reuse the `description` captured from the form above
                     // Update the dashboard UI in the background
                     const card = createClassCard(
                         data.class_name,
