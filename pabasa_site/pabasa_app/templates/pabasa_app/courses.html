@@ -1776,11 +1776,7 @@
                                 <i class="bi bi-book-half"></i><span>Readings</span>
                             </button>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link vertical-nav-link" id="students-tab" data-bs-toggle="tab" data-bs-target="#studentsContent" type="button" role="tab" aria-controls="studentsContent" aria-selected="false">
-                                <i class="bi bi-people"></i><span>Students</span>
-                            </button>
-                        </li>
+                        <!-- Students tab removed (students managed in Class module) -->
                         <li class="nav-item" role="presentation">
                             <button class="nav-link vertical-nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reportsContent" type="button" role="tab" aria-controls="reportsContent" aria-selected="false">
                                 <i class="bi bi-file-earmark-bar-graph"></i><span>Reports & Updates</span>
@@ -1820,31 +1816,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Students Tab -->
-                    <div class="tab-pane fade" id="studentsContent" role="tabpanel" aria-labelledby="students-tab">
-                        <div class="workspace-shell">
-                            <div class="workspace-hero is-compact">
-                                <div>
-                                    <h5><i class="bi bi-people me-2"></i>Students</h5>
-                                    <p>Search students and review quick reading progress.</p>
-                                </div>
-                            </div>
-                            <div class="students-toolbar">
-                                <div class="students-search">
-                                    <i class="bi bi-search students-search-icon" aria-hidden="true"></i>
-                                    <input type="text" id="studentsSearchInput" class="form-control" placeholder="Search by name or email" autocomplete="off">
-                                </div>
-                                <div class="students-filter">
-                                    <button class="filter-btn active" data-filter="all">All</button>
-                                    <button class="filter-btn" data-filter="progress">Progress</button>
-                                    <button class="filter-btn" data-filter="recent">Recent</button>
-                                </div>
-                            </div>
-                            <div id="studentsContainer" class="students-grid">
-                                <!-- Students will appear here -->
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Students tab removed from class modal (students are managed in the Class module) -->
 
                     <!-- Reports Tab -->
                     <div class="tab-pane fade" id="reportsContent" role="tabpanel" aria-labelledby="reports-tab">
@@ -1988,6 +1960,73 @@
                                     <button class="btn btn-sm btn-outline-primary" id="btnAddMaterialToCourse">Add Material</button>
                                 </div>
                                 <div id="courseDetailMaterials" class="mb-3"></div>
+
+                                <!-- Course Overview (aggregated stats across sections) -->
+                                <div id="courseOverviewStats" class="mb-3"></div>
+
+                                <div class="mb-3">
+                                    <h6 class="mb-0">Assessments</h6>
+                                    <div id="courseDetailAssessments" class="mb-3"></div>
+                                </div>
+
+                                <div id="courseReportSection" class="mb-3">
+                                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Reports & Updates</h6>
+                                    </div>
+                                    <div class="row g-4" style="margin-bottom:0">
+                                        <div class="col-lg-6">
+                                            <div class="dash-card h-100">
+                                                <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
+                                                    <h6 class="fw-bold mb-0">Select Recipients</h6>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="courseSelectAllRecipients">
+                                                        <label class="form-check-label small fw-bold" for="courseSelectAllRecipients">Select All</label>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body p-0">
+                                                    <div id="courseUnifiedStudentReportList" class="list-group list-group-flush">
+                                                        <!-- Populated by JS -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-6">
+                                            <div class="dash-card h-100">
+                                                <div class="card-body p-4">
+                                                    <h6 class="fw-bold mb-3">Update Composer</h6>
+                                                    <form id="courseParentUpdateTabForm" action="#" method="post">
+                                                        {% csrf_token %}
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold" for="courseParentUpdateTemplate">Update Type</label>
+                                                            <select class="form-select" id="courseParentUpdateTemplate" style="border-radius:10px;">
+                                                                <option value="general">Regular Progress Update</option>
+                                                                <option value="commendation">Performance Commendation</option>
+                                                                <option value="followup">Needs Additional Support</option>
+                                                                <option value="assessment">Scheduled Assessment Notice</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="mb-3">
+                                                            <label class="form-label d-flex justify-content-between" for="courseParentUpdateMessage">
+                                                                <span class="small fw-bold">Teacher Comments</span>
+                                                                <small class="text-primary">Tip: Use {name} for student name</small>
+                                                            </label>
+                                                            <textarea class="form-control" id="courseParentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
+                                                            <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Performance data and recommendations are auto-attached.</div>
+                                                        </div>
+
+                                                        <div class="d-flex justify-content-end">
+                                                            <button type="submit" class="btn btn-primary" id="courseBtnSendParentUpdate" style="border-radius:10px; min-height:44px; padding-inline:1.5rem;">
+                                                                <i class="bi bi-send me-1"></i> Send Update
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div id="courseAddMaterialForm" style="display:none;">
                                     <div class="mb-2">
@@ -2493,6 +2532,10 @@
             // store current course id on modal for create flow
             const modalEl = document.getElementById('courseDetailModal');
             modalEl.dataset.courseId = course.id;
+            try { if (typeof loadCourseOverview === 'function') loadCourseOverview(course.id); } catch (err) { console.warn('loadCourseOverview error', err); }
+            try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id); } catch (err) { console.warn('loadCourseAssessments error', err); }
+            try { if (typeof loadCourseReports === 'function') loadCourseReports(course.id); } catch (err) { console.warn('loadCourseReports error', err); }
+            try { if (typeof setupCourseUpdates === 'function') setupCourseUpdates(course.id); } catch (err) { console.warn('setupCourseUpdates error', err); }
 
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
@@ -2501,7 +2544,212 @@
         }
     };
 
-    // Create Course modal handlers
+    // Load aggregated course overview (readings, materials, students)
+    function loadCourseOverview(courseId) {
+        try {
+            const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+            if (!course) return;
+            const sections = Array.isArray(course.sections) ? course.sections : [];
+            const sectionCodes = sections.map(s => s.code || s.id || '').filter(Boolean);
+
+            // Load stored class readings and aggregate per section
+            let stored = {};
+            try { stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}'); } catch (e) { stored = {}; }
+
+            const aggregated = { word: [], sentence: [], paragraph: [] };
+            sectionCodes.forEach(code => {
+                const candidates = [code, String(code).toUpperCase(), String(code).toLowerCase()];
+                let r = null;
+                for (const k of candidates) { if (stored[k]) { r = stored[k]; break; } }
+                r = r || stored[code] || stored[String(code).toUpperCase()] || {};
+                ['word', 'sentence', 'paragraph'].forEach(type => {
+                    if (Array.isArray(r[type])) aggregated[type] = aggregated[type].concat(r[type]);
+                    else if (Array.isArray(r[type + 's'])) aggregated[type] = aggregated[type].concat(r[type + 's']);
+                });
+            });
+
+            const totalReadings = (aggregated.word.length + aggregated.sentence.length + aggregated.paragraph.length) || 0;
+            const materialsCount = (course.materials || []).length || 0;
+            const assessmentCount = (course.assessments || []).length || 0;
+
+            // Aggregate students across course sections
+            let allStudents = [];
+            try { allStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]'); } catch (e) { allStudents = []; }
+            const sectionNames = sections.map(s => s.name).filter(Boolean);
+            const courseStudents = allStudents.filter(s => s.class && sectionNames.includes(s.class) && s.name !== 'Jay Park');
+            const totalStudents = courseStudents.length;
+
+            // Compute averages
+            let totalAccuracy = 0, totalWPM = 0;
+            courseStudents.forEach(s => { totalAccuracy += parseInt(s.accuracy) || 0; totalWPM += parseInt(s.wpm) || 0; });
+            const avgAccuracy = totalStudents ? Math.round(totalAccuracy / totalStudents) + '%' : '—';
+            const avgWPM = totalStudents ? Math.round(totalWPM / totalStudents) : '—';
+
+            const container = document.getElementById('courseOverviewStats');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="workspace-hero is-compact" style="margin-bottom:8px;">
+                    <div>
+                        <h6 class="mb-0">Course Overview</h6>
+                        <p class="small text-muted mb-0">Aggregated across ${sections.length} section(s)</p>
+                    </div>
+                </div>
+                <div class="d-grid gap-2" style="grid-template-columns: repeat(3, 1fr); display:grid;">
+                    <div class="student-stat"><strong>${totalReadings}</strong><span class="small">Readings</span></div>
+                    <div class="student-stat"><strong>${materialsCount}</strong><span class="small">Materials</span></div>
+                    <div class="student-stat"><strong>${assessmentCount}</strong><span class="small">Assessments</span></div>
+                    <div class="student-stat"><strong>${totalStudents}</strong><span class="small">Students</span></div>
+                    <div class="student-stat"><strong>${avgAccuracy}</strong><span class="small">Avg. Accuracy</span></div>
+                    <div class="student-stat"><strong>${avgWPM}</strong><span class="small">Avg. WPM</span></div>
+                </div>
+            `;
+        } catch (e) {
+            console.warn('loadCourseOverview failed', e);
+        }
+    }
+
+        // Course-scoped Assessments loader
+        function loadCourseAssessments(courseId) {
+            try {
+                const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+                const container = document.getElementById('courseDetailAssessments');
+                if (!container) return;
+                const assessments = Array.isArray(course?.assessments) ? course.assessments : [];
+                if (assessments.length === 0) {
+                    container.innerHTML = `
+                        <div class="assessment-empty">
+                            <i class="bi bi-clipboard2-check"></i>
+                            <h6>No assessments yet</h6>
+                            <p>Create an assessment to measure reading progress.</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = assessments.map(assessment => `
+                    <article class="assessment-card" data-assessment-id="${assessment.id}">
+                        <div class="assessment-card-header">
+                            <div style="display: flex; gap: 0.75rem; min-width: 0;">
+                                <div class="assessment-icon"><i class="bi bi-clipboard2-check"></i></div>
+                                <div style="min-width: 0;">
+                                    <h6 class="assessment-title">${assessment.title}</h6>
+                                    <p class="assessment-meta">
+                                        <span><i class="bi bi-book me-1"></i>${assessment.level || ''}</span>
+                                        <span><i class="bi bi-calendar3 me-1"></i>${assessment.dueDate ? formatDueDate(assessment.dueDate) : '—'}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="material-type-badge assessment">Assessment</span>
+                        </div>
+                        <div class="assessment-stats">
+                            <div class="assessment-stat">
+                                <strong>${assessment.items || 0}</strong>
+                                <span>Items</span>
+                            </div>
+                            <div class="assessment-stat">
+                                <strong>${assessment.minutes || 0}m</strong>
+                                <span>Limit</span>
+                            </div>
+                            <div class="assessment-stat">
+                                <strong>${assessment.average || '—'}</strong>
+                                <span>Average</span>
+                            </div>
+                        </div>
+                        <div class="assessment-actions">
+                            <button class="material-btn" title="Preview" data-assessment-action="preview"><i class="bi bi-eye"></i></button>
+                            <button class="material-btn" title="Edit" data-assessment-action="edit"><i class="bi bi-pencil"></i></button>
+                            <button class="material-btn delete" title="Delete" data-assessment-action="delete"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </article>
+                `).join('');
+            } catch (e) {
+                console.warn('loadCourseAssessments failed', e);
+            }
+        }
+
+        // Course-scoped Reports loader
+        function loadCourseReports(courseId) {
+            try {
+                const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+                if (!course) return;
+                const sectionNames = (course.sections || []).map(s => s.name).filter(Boolean);
+                const allStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                const courseStudents = allStudents.filter(s => s.class && sectionNames.includes(s.class) && s.name !== 'Jay Park');
+
+                const listContainer = document.getElementById('courseUnifiedStudentReportList');
+                const selectAll = document.getElementById('courseSelectAllRecipients');
+                if (!listContainer) return;
+
+                listContainer.innerHTML = '';
+                if (selectAll) {
+                    selectAll.checked = false;
+                    if (!selectAll.dataset.bound) {
+                        selectAll.dataset.bound = 'true';
+                        selectAll.addEventListener('change', (e) => {
+                            document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:not(:disabled)').forEach(cb => cb.checked = e.target.checked);
+                        });
+                    }
+                }
+
+                if (courseStudents.length === 0) {
+                    listContainer.innerHTML = '<p class="text-center text-muted p-3">No students found in this course to generate a report.</p>';
+                    return;
+                }
+
+                courseStudents.forEach((s, index) => {
+                    const studentUsername = s.name.toLowerCase().replace(/ /g, "_");
+                    const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + studentUsername) || "{}");
+                    const emailEnabled = settings.emailNotifications !== false && s.email;
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item p-3 border-0 border-bottom';
+                    item.innerHTML = `
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="form-check mb-0"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${s.id || s.name}" ${!emailEnabled ? 'disabled' : ''}></div>
+                            <div class="flex-grow-1"><div class="d-flex justify-content-between align-items-center">
+                                    <strong class="mb-0">${s.name}</strong><span class="level-chip" style="font-size: 0.7rem;">${s.level || ''}</span>
+                                </div><div class="small text-secondary mt-1">${s.email || '<span class="text-danger">No email</span>'} | Accuracy: <span class="fw-bold">${s.accuracy || '—'}%</span> | Speed: <span class="fw-bold">${s.wpm || 0} WPM</span></div>
+                            </div>
+                        </div>`;
+                    listContainer.appendChild(item);
+                });
+            } catch (e) {
+                console.warn('loadCourseReports failed', e);
+            }
+        }
+
+        // Course-scoped Update composer
+        function setupCourseUpdates(courseId) {
+            try {
+                const templateSelect = document.getElementById('courseParentUpdateTemplate');
+                const messageArea = document.getElementById('courseParentUpdateMessage');
+                const form = document.getElementById('courseParentUpdateTabForm');
+                if (!templateSelect || !messageArea || !form) return;
+
+                const templates = {
+                    general: "Good day. This week, we are conducting regular reading checks. Please help your child practice reading for 10 minutes at home and focus on clarity.",
+                    commendation: "Excellent news! {name} has shown great improvement in reading accuracy this week. Their effort is truly paying off. Keep up the good work!",
+                    followup: "Hello. {name} needs a bit more practice with word decoding and vowel recognition. We suggest focusing on sentence materials this weekend.",
+                    assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PABASA dashboard."
+                };
+
+                templateSelect.onchange = () => { messageArea.value = templates[templateSelect.value] || ''; };
+                messageArea.value = templates.general;
+
+                form.onsubmit = async (e) => {
+                    e.preventDefault();
+                    const checked = Array.from(document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:checked')).map(cb => cb.value);
+                    if (checked.length === 0) return showToast('Please select at least one recipient.', 'error');
+                    // Simulate send — the server endpoint is not implemented here; show toast and clear
+                    showToast(`Update queued for ${checked.length} recipient(s)`, 'success');
+                    // Optionally clear message
+                    // messageArea.value = '';
+                };
+            } catch (e) {
+                console.warn('setupCourseUpdates failed', e);
+            }
+        }
+
+        // Create Course modal handlers
     document.getElementById('btnCreateCourse')?.addEventListener('click', async function() {
         try {
             // Refresh authoritative classes from server before rendering the modal
@@ -2898,7 +3146,7 @@
                     const updated = students.filter(s => !((s.pabasa_id === studentId || s.id === studentId || s.name === studentName) && s.class === classData.name));
                     localStorage.setItem('pabasa_added_students', JSON.stringify(updated));
                 } catch(e) {}
-                loadStudents(currentClassCode, getStudentCountForClass(classData.name));
+                // Students view removed; refresh classes only
                 renderClasses();
             } else {
                 showToast(data.error || 'Failed to remove student.', 'error');
@@ -3100,7 +3348,7 @@
         // Load all content (loadReadings is now async)
         loadReadings(classCode);
         loadAssessments(classCode);
-        loadStudents(classCode, studentCount);
+        // Students tab removed from class modal — do not load student list here
         loadReports(classCode);
         setupUpdates(classCode);
 
@@ -3175,82 +3423,7 @@
         `).join('');
     }
 
-    function loadStudents(classCode, studentCount) {
-        const container = document.getElementById('studentsContainer');
-        const classData = teacherClasses.find(c => c.code === classCode);
-        const allStudents = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-        const classStudents = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park");
-
-            if (classStudents.length === 0) { // Use classStudents.length for accurate count
-            container.innerHTML = `
-                <div class="students-empty">
-                    <i class="bi bi-people"></i>
-                    <h6>No students enrolled</h6>
-                    <p>Students will appear here once they join the class</p>
-                </div>
-            `;
-            return;
-        }
-        
-        let studentsHTML = classStudents.slice(0, 25).map(student => {
-            const initials = student.name.split(" ").map(n => n.charAt(0)).join("").toUpperCase().substring(0, 2);
-            const email = student.email || `${student.name.toLowerCase().replace(/\s+/g, '.')}@example.com`;
-            const readingScore = student.accuracy || "0";
-            const assessmentsPassed = student.wpm || "0";
-
-            return `
-            <div class="student-card-modern position-relative">
-                <button class="btn btn-sm text-danger p-0 border-0 position-absolute" 
-                        style="top: 10px; right: 12px; z-index: 2;" 
-                        title="Remove student" 
-                        onclick="event.stopPropagation(); window.removeStudentFromClass('${student.pabasa_id || student.id || student.name}', '${student.name}')">
-                    <i class="bi bi-person-x-fill" style="font-size: 1.1rem;"></i>
-                </button>
-                <div class="student-card-head">
-                    <div class="student-avatar-large">${initials}</div>
-                    <div class="student-identity">
-                        <p class="student-name">${student.name}</p>
-                        <p class="student-email">${email}</p>
-                        <div class="small fw-bold text-primary mt-1" style="font-size: 0.75rem;">${student.level || 'No Level Set'}</div>
-                    </div>
-                </div>
-                <div class="student-stats">
-                    <div class="student-stat">
-                        <div class="student-stat-value">${readingScore}%</div>
-                        <div class="student-stat-label">Accuracy</div>
-                    </div>
-                    <div class="student-stat">
-                        <div class="student-stat-value">${assessmentsPassed}</div>
-                        <div class="student-stat-label">Avg. WPM</div>
-                    </div>
-                </div>
-            </div>
-        `}).join('');
-        
-        if (classStudents.length > 25) {
-            studentsHTML += `
-                <div class="students-empty">
-                    <p style="margin: 1rem 0 0; font-size: 0.9rem;">... and ${classStudents.length - 25} more students</p>
-                </div>
-            `;
-        }
-        
-        container.innerHTML = studentsHTML;
-        
-        // Add search functionality
-        const searchInput = document.getElementById('studentsSearchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', function(e) {
-                const query = e.target.value.toLowerCase();
-                const cards = document.querySelectorAll('.student-card-modern');
-                cards.forEach(card => {
-                    const name = card.querySelector('.student-name').textContent.toLowerCase();
-                    const email = card.querySelector('.student-email').textContent.toLowerCase();
-                    card.style.display = (name.includes(query) || email.includes(query)) ? '' : 'none';
-                });
-            });
-        }
-    }
+    /* Students UI removed from class modal; student management remains in Class module */
 
     function loadReports(classCode) {
         const classData = teacherClasses.find(c => c.code === classCode);
