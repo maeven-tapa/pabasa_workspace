@@ -226,13 +226,23 @@ document.addEventListener("DOMContentLoaded", function () {
     toggleQuizUnlockRows();
     function getTeacherClasses() {
         try {
-            // Prefer the teacher-scoped key; fall back to the legacy key.
-            const email = (window.PABASA_USER_EMAIL || '').trim();
-            const scopedKey = email ? `pabasa_teacher_classes_${email}` : null;
-            const raw = (scopedKey && localStorage.getItem(scopedKey))
-                || localStorage.getItem('pabasa_teacher_classes')
-                || '[]';
-            const saved = JSON.parse(raw);
+            // Prefer the teacher-scoped key and migrate legacy data when possible.
+            const email = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
+            const scopedKey = email ? `pabasa_teacher_classes_${email}` : 'pabasa_teacher_classes';
+            // Try scoped key first, then legacy unscoped key as a fallback.
+            let raw = localStorage.getItem(scopedKey);
+            if (!raw) raw = localStorage.getItem('pabasa_teacher_classes') || '[]';
+            const saved = JSON.parse(raw || '[]');
+
+            // If we pulled data from the legacy unscoped key and we have an email-scoped key, migrate it.
+            try {
+                if (email && localStorage.getItem(scopedKey) === null) {
+                    localStorage.setItem(scopedKey, JSON.stringify(saved || []));
+                }
+            } catch (e) {
+                // ignore storage errors
+            }
+
             return Array.isArray(saved) ? saved : [];
         } catch (error) {
             return [];

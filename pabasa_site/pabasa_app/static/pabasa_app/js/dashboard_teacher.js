@@ -75,8 +75,23 @@
         function loadSavedClasses() {
             if (!classList) return;
 
-            localStorage.removeItem('pabasa_teacher_classes');
+            // Migrate legacy unscoped classes into the teacher-scoped key when possible
+            try {
+                if (teacherEmail) {
+                    const legacy = localStorage.getItem('pabasa_teacher_classes');
+                    const scopedKey = `pabasa_teacher_classes_${teacherEmail}`;
+                    if (legacy && !localStorage.getItem(scopedKey)) {
+                        localStorage.setItem(scopedKey, legacy);
+                    }
+                }
+            } catch (e) {
+                // ignore storage errors
+            }
 
+            // Remove global unscoped key to avoid ambiguity
+            try { localStorage.removeItem('pabasa_teacher_classes'); } catch (e) {}
+
+            // Remove any other teacher-scoped keys that do not belong to the current user
             Object.keys(localStorage).forEach(function (key) {
                 if (
                     key.startsWith('pabasa_teacher_classes_') &&

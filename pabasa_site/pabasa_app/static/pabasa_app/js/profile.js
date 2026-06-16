@@ -313,45 +313,41 @@ function initProfilePage() {
 
     function getTeacherOverviewStats() {
         const sampleClassCodes = ["RRG-9154", "AFC-7302", "ESL-5601"];
-        // Aggregate teacher classes from any pabasa_teacher_classes_{email} key for robustness
-        const classes = (function() {
+        // Prefer scoped server-backed classes cache: pabasa_teacher_classes_{email}
+        const emailForCache = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
+        const scopedClassesKey = emailForCache ? `pabasa_teacher_classes_${emailForCache}` : 'pabasa_teacher_classes';
+        let classes = [];
+        try {
+            const parsed = JSON.parse(localStorage.getItem(scopedClassesKey) || '[]');
+            if (Array.isArray(parsed)) classes = parsed.filter(function(c){ return c && c.code && !sampleClassCodes.includes(c.code); });
+        } catch (e) {
+            classes = [];
+        }
+
+        // Refresh authoritative classes asynchronously and update cache/UI when available
+        (function refreshTeacherClasses() {
             try {
-                const out = [];
-                Object.keys(localStorage).forEach(function(key) {
-                    if (!key || typeof key !== 'string') return;
-                    if (key.startsWith('pabasa_teacher_classes')) {
-                        try {
-                            const parsed = JSON.parse(localStorage.getItem(key) || '[]');
-                            if (Array.isArray(parsed)) {
-                                parsed.forEach(function(c) { if (c && c.code && !sampleClassCodes.includes(c.code)) out.push(c); });
-                            }
-                        } catch (e) {
-                            // ignore parse errors
-                        }
-                    }
-                });
-                return out;
-            } catch (e) {
+                fetch('/dashboard/teacher/classes/', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                }).then(function(r) {
+                    if (!r.ok) return null;
+                    return r.json();
+                }).then(function(data) {
+                    if (!data || !data.success || !Array.isArray(data.classes)) return;
+                    try {
+                        localStorage.setItem(scopedClassesKey, JSON.stringify(data.classes));
+                    } catch (e) {}
+                    try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { classes: data.classes } })); } catch (e) {}
 
-                const fieldMap = {
-                    firstName: fields.first_name,
-                    middleInitial: fields.middle_initial,
-                    lastName: fields.last_name,
-                    suffix: fields.suffix,
-                    email: fields.email,
-                    bio: fields.bio
-                };
-
-                Object.entries(fieldMap).forEach(function ([id, value]) {
-                    if (value === undefined) return;
-                    const element = document.getElementById(id);
-                    if (!element) return;
-                    element.value = value;
-                    element.defaultValue = value;
-                });
-
-                return [];
-            }
+                    // Update UI counts if elements exist (best-effort)
+                    try {
+                        const activeClassesCount = document.getElementById("profileActiveClassesCount");
+                        if (activeClassesCount) activeClassesCount.textContent = String(data.classes.length || classes.length);
+                    } catch (e) {}
+                }).catch(function () {});
+            } catch (e) {}
         })();
         const students = getStoredArray("pabasa_added_students").filter(function (student) {
             return student.name !== "Jay Park";
