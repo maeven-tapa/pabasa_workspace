@@ -1022,7 +1022,10 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 has_classes = Section.objects.filter(teacher=tp_user, is_active=True).exists()
                 # Materials are now stored in the `materials` table. Detect
                 # posted materials by checking the Section->Material relation.
-                has_materials = Material.objects.filter(section__teacher=tp_user, is_active=True).exists()
+                has_materials = Material.objects.filter(
+                        Q(section__teacher=tp_user) | Q(assigned_sections__teacher=tp_user) | Q(assessment__teacher=tp_user),
+                        is_active=True
+                    ).distinct().exists()
                 has_joined_students = any(
                     _section_student_count(cls) > 0
                     for cls in Section.objects.filter(teacher=tp_user, is_active=True)
@@ -1041,7 +1044,9 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 if asm_max:
                     candidate_dates.append(asm_max)
                 # Include latest material timestamp for teacher (if any)
-                mat_max = Material.objects.filter(section__teacher=tp_user).aggregate(m=Max('updated_at'))['m']
+                mat_max = Material.objects.filter(
+                    Q(section__teacher=tp_user) | Q(assigned_sections__teacher=tp_user) | Q(assessment__teacher=tp_user),
+                ).aggregate(m=Max('updated_at'))['m']
                 if mat_max:
                     candidate_dates.append(mat_max)
                 if candidate_dates:
@@ -2831,7 +2836,7 @@ def get_teacher_classes(request):
                 'section': getattr(cls, 'section', '') if hasattr(cls, 'section') else '',
                 'description': cls.description,
                 'header': cls.header,
-                'students': str(student_count),
+                'students': student_count,
                 'teacher_email': request.session.get('email', ''),
             })
 
@@ -2911,7 +2916,10 @@ def get_teacher_overview(request):
                     unique_student_ids.add(entry.get('student_id'))
         total_students = len(unique_student_ids)
 
-        materials_posted = Material.objects.filter(section__teacher=teacher_user, is_active=True).count()
+        materials_posted = Material.objects.filter(
+            Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user) | Q(assessment__teacher=teacher_user),
+            is_active=True
+        ).distinct().count()
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
         return JsonResponse({
