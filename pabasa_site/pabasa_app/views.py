@@ -3307,8 +3307,8 @@ def add_reading_material(request):
                     action_url = f"{reverse('course_student_view')}?class_code={section.class_code}"
                     for student_user in _section_active_students(section):
                         # In-app notification content
-                        in_app_title = f'📚 New material available: {m.title} has been published for {section.class_name}.'
-                        in_app_message = in_app_title # For in-app, message can be same as title if not specified otherwise
+                        in_app_title = '📚 Ready to read?'
+                        in_app_message = f'"{m.title}" is now available in {section.class_name}.'
 
                         # Email notification content
                         email_subject = f'Start Reading: {m.title} Is Now Available'
@@ -3556,14 +3556,9 @@ def record_assessment_completion(request):
         elif is_practice:
             title = "📖 Student Read a Practice Material"
             notif_msg = f'• {student_name} read "{title_text}" in {class_name}.'
-
-        if is_practice:
-            title = "📖 Student Read a Practice Material"
-            notif_msg = f'• {student_name} read "{title_text}" in {class_name}.'
         else:
             title = "📝 Student Read an Assessment"
             notif_msg = f'• {student_name} completed the assessment "{title_text}" in {class_name}.'
-            
         teacher_recipients = []
         if teacher_user:
             teacher_recipients.append(teacher_user)
