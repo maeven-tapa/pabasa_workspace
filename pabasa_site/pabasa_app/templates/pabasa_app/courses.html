@@ -1968,6 +1968,55 @@
     </div>
 </div>
 
+            <!-- Course Detail Modal -->
+            <div class="modal fade" id="courseDetailModal" tabindex="-1" aria-labelledby="courseDetailModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content course-modal-content">
+                        <div class="modal-header course-modal-header">
+                            <h5 class="modal-title" id="courseDetailTitle">Course</h5>
+                            <small class="text-muted ms-3" id="courseDetailCode"></small>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body course-modal-body">
+                            <div class="course-sidebar">
+                                <strong>Sections</strong>
+                                <div id="courseDetailSections" class="mt-2 small text-muted"></div>
+                            </div>
+                            <div class="course-tab-content">
+                                <div class="mb-3 d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">Assigned Materials</h6>
+                                    <button class="btn btn-sm btn-outline-primary" id="btnAddMaterialToCourse">Add Material</button>
+                                </div>
+                                <div id="courseDetailMaterials" class="mb-3"></div>
+
+                                <div id="courseAddMaterialForm" style="display:none;">
+                                    <div class="mb-2">
+                                        <label class="form-label">Title</label>
+                                        <input type="text" id="courseNewMaterialTitle" class="form-control" placeholder="Title">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Content</label>
+                                        <textarea id="courseNewMaterialContent" class="form-control" rows="4" placeholder="Paste words, sentences, or paragraphs here"></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Usage</label>
+                                        <select id="courseNewMaterialUsage" class="form-select">
+                                            <option value="practice">Practice</option>
+                                            <option value="assessment" selected>Assessment</option>
+                                            <option value="both">Practice & Assessment</option>
+                                        </select>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-primary" id="courseCreateMaterialBtn">Create & Attach</button>
+                                        <button class="btn btn-outline-secondary" id="courseCancelCreateMaterial">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 <!-- Modals moved to bottom to prevent nesting issues -->
 <!-- Modal for Adding Materials -->
 <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
@@ -2396,8 +2445,57 @@
         try {
             const course = (teacherCourses || []).find(c => c.id === Number(courseId));
             if (!course) return showToast('Course not found', 'error');
-            // For now show a simple info toast; a full modal view can be implemented later
-            showToast(`Course: ${course.title} — Sections: ${course.sections?.length || 0}`, 'info');
+
+            // Populate modal fields
+            document.getElementById('courseDetailTitle').textContent = course.title || '';
+            document.getElementById('courseDetailCode').textContent = course.code || '';
+
+            // Sections
+            const sectionsContainer = document.getElementById('courseDetailSections');
+            sectionsContainer.innerHTML = (course.sections || []).map(s => `<div class="small text-muted mb-1">${s.name} <span class="text-secondary">(${s.code})</span></div>`).join('') || '<div class="small text-muted">No sections added</div>';
+
+            // Materials list
+            const materialsContainer = document.getElementById('courseDetailMaterials');
+            materialsContainer.innerHTML = '';
+            (course.materials || []).forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'd-flex align-items-center justify-content-between mb-2';
+                item.innerHTML = `<div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div><div><button class="btn btn-sm btn-outline-danger btn-remove-course-material" data-mid="${m.id}">Remove</button></div>`;
+                materialsContainer.appendChild(item);
+            });
+
+            // attach remove handlers
+            materialsContainer.querySelectorAll('.btn-remove-course-material').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const mid = this.getAttribute('data-mid');
+                    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                    try {
+                        const r = await fetch('/dashboard/teacher/course/remove-material/', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify({ course_id: course.id, material_id: Number(mid) }) });
+                        const data = await r.json();
+                        if (r.ok && data.success) {
+                            // update local cache
+                            course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
+                            const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                            renderCourses();
+                            // re-open detail to refresh
+                            openCourseDetail(course.id);
+                            showToast('Material removed from course', 'success');
+                        } else {
+                            showToast('Could not remove material: ' + (data.error || 'Unknown'), 'error');
+                        }
+                    } catch (err) {
+                        console.error('remove material error', err);
+                        showToast('Failed to remove material', 'error');
+                    }
+                });
+            });
+
+            // store current course id on modal for create flow
+            const modalEl = document.getElementById('courseDetailModal');
+            modalEl.dataset.courseId = course.id;
+
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
         } catch (e) {
             console.warn('openCourseDetail error', e);
         }
@@ -2469,6 +2567,60 @@
         }
     });
 
+    // Show add material form inside course detail
+    document.getElementById('btnAddMaterialToCourse')?.addEventListener('click', function() {
+        const form = document.getElementById('courseAddMaterialForm');
+        if (!form) return;
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.getElementById('courseCancelCreateMaterial')?.addEventListener('click', function() {
+        const form = document.getElementById('courseAddMaterialForm');
+        if (form) form.style.display = 'none';
+    });
+
+    document.getElementById('courseCreateMaterialBtn')?.addEventListener('click', async function() {
+        const title = (document.getElementById('courseNewMaterialTitle')?.value || '').trim();
+        const content = (document.getElementById('courseNewMaterialContent')?.value || '').trim();
+        const usage = (document.getElementById('courseNewMaterialUsage')?.value || 'assessment');
+        if (!title || !content) return showToast('Title and content are required', 'error');
+
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        const modalEl = document.getElementById('courseDetailModal');
+        const courseId = modalEl?.dataset?.courseId;
+        if (!courseId) return showToast('Course not found', 'error');
+
+        try {
+            // 1) create material (no class_code)
+            const resp = await fetch('/dashboard/teacher/add-material/', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify({ title, content, usage_type: usage, status: 'published' }) });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) return showToast('Failed to create material: ' + (data.error || 'Unknown'), 'error');
+
+            const createdId = (data.material_ids && data.material_ids[0]) || (data.material && data.material.id) || null;
+            if (!createdId) return showToast('Created material id not returned', 'error');
+
+            // 2) attach material to course
+            const attach = await fetch('/dashboard/teacher/course/add-material/', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify({ course_id: Number(courseId), material_id: Number(createdId) }) });
+            const attachData = await attach.json();
+            if (!attach.ok || !attachData.success) return showToast('Failed to attach material: ' + (attachData.error || 'Unknown'), 'error');
+
+            // update local cache and UI
+            const course = (teacherCourses || []).find(c => c.id === Number(courseId));
+            if (course) {
+                course.materials = course.materials || [];
+                course.materials.push({ id: createdId, title: title, item_type: attachData.material?.item_type || '' });
+                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+            }
+            renderCourses();
+            openCourseDetail(Number(courseId));
+            document.getElementById('courseAddMaterialForm').style.display = 'none';
+            showToast('Material created and attached to course', 'success');
+        } catch (err) {
+            console.error('Create+attach material error', err);
+            showToast('Failed to create material', 'error');
+        }
+    });
+
     async function refreshTeacherData() {
         await loadTeacherClassesFromServer();
         // also load teacher-created courses
@@ -2493,6 +2645,13 @@
         // Call renderClasses (not refreshTeacherData) to avoid recursion
         if (typeof renderClasses === 'function') await renderClasses();
         if (typeof renderCourses === 'function') await renderCourses();
+    }
+
+    // Ensure courses load on first paint
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on load', e); }
+    } else {
+        document.addEventListener('DOMContentLoaded', function() { try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on DOMContentLoaded', e); } });
     }
     
     // Toast notification function

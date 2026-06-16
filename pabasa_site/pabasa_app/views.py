@@ -2810,6 +2810,87 @@ def create_course(request):
 
 
 
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def add_material_to_course(request):
+    """Attach an existing Material (and its Assessment, if any) to a Course owned by the teacher."""
+    try:
+        data = json.loads(request.body)
+        course_id = data.get('course_id')
+        material_id = data.get('material_id')
+
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
+        if not course:
+            return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
+
+        material = Material.objects.filter(id=material_id).first()
+        if not material:
+            return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+        # Basic ownership check: allow if material is unassigned (section=None) or belongs to one of the teacher's sections
+        if material.section and material.section.teacher_id != teacher_user.id:
+            # Also allow if the underlying assessment (if any) belongs to the teacher
+            if not (getattr(material, 'assessment', None) and material.assessment.teacher_id == teacher_user.id):
+                return JsonResponse({'success': False, 'error': 'You do not have permission to use this material'}, status=403)
+
+        course.materials.add(material)
+        # If material has an attached Assessment, also link it for convenience
+        if getattr(material, 'assessment', None):
+            try:
+                course.assessments.add(material.assessment)
+            except Exception:
+                pass
+
+        return JsonResponse({'success': True, 'material': {'id': material.id, 'title': material.title, 'item_type': getattr(material, 'item_type', '' )}})
+    except Exception as e:
+        logger.exception('Error adding material to course')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def remove_material_from_course(request):
+    """Detach a Material from a Course."""
+    try:
+        data = json.loads(request.body)
+        course_id = data.get('course_id')
+        material_id = data.get('material_id')
+
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        course = Course.objects.filter(id=course_id, teacher=teacher_user).first()
+        if not course:
+            return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
+
+        material = Material.objects.filter(id=material_id).first()
+        if not material:
+            return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+        course.materials.remove(material)
+        # Also attempt to remove linked assessment if present
+        if getattr(material, 'assessment', None):
+            try:
+                course.assessments.remove(material.assessment)
+            except Exception:
+                pass
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        logger.exception('Error removing material from course')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+
 
 @csrf_protect
 @require_http_methods(["POST"])

@@ -82,6 +82,8 @@ urlpatterns = [
     path('dashboard/teacher/courses/', views.get_teacher_courses_api, name='get_teacher_courses_api'),
     path('dashboard/teacher/create-course/', views.create_course, name='create_course'),
     path('dashboard/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes'),
+    path('dashboard/teacher/course/add-material/', views.add_material_to_course, name='add_material_to_course'),
+    path('dashboard/teacher/course/remove-material/', views.remove_material_from_course, name='remove_material_from_course'),
     # Backwards-compatible alias: some client-side code expects this API path
     path('api/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes_api'),
     path('students/send-email/', views.send_parent_email, name='send_parent_email'),
