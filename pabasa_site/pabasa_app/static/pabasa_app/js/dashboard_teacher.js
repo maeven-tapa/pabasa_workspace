@@ -370,6 +370,8 @@
                     if (codeDisplay) codeDisplay.textContent = data.class_code;
 
                     setTimeout(() => {
+                        // Refresh authoritative saved classes so other pages (Courses) see the new class
+                        try { loadSavedClasses(); } catch (e) { console.warn('Could not refresh saved classes', e); }
                         const successModalEl = document.getElementById('classCreatedModal');
                         if (successModalEl) {
                             const modal = bootstrap.Modal.getOrCreateInstance(successModalEl);

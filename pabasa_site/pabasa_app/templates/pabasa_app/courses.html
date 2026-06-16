@@ -2190,24 +2190,34 @@
 
             <!-- Create Course Modal -->
             <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content system-modal">
-                        <div class="modal-header">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content course-modal-content">
+                        <div class="modal-header course-modal-header">
                             <h5 class="modal-title" id="createCourseModalLabel">Create Course</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">Title</label>
-                                <input type="text" id="courseTitle" class="form-control" placeholder="e.g., Term 1 Reading 2026">
+                        <div class="modal-body course-modal-body">
+                            <div class="course-sidebar">
+                                <div class="mb-2">
+                                    <strong>Course Info</strong>
+                                </div>
+                                <p class="small text-muted">Courses group assessments and materials across multiple sections. Select the sections you want included in this course.</p>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Description</label>
-                                <textarea id="courseDescription" class="form-control" rows="3"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Sections</label>
-                                <div id="courseSectionsList" style="max-height:200px; overflow:auto; border:1px solid rgba(0,0,0,0.06); padding:8px; border-radius:6px;"></div>
+                            <div class="course-tab-content">
+                                <form id="createCourseForm" onsubmit="return false;">
+                                    <div class="mb-3">
+                                        <label for="courseTitle" class="form-label">Title</label>
+                                        <input type="text" id="courseTitle" class="form-control" placeholder="e.g., Term 1 Reading 2026">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="courseDescription" class="form-label">Description</label>
+                                        <textarea id="courseDescription" class="form-control" rows="3" placeholder="Optional description"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="courseSectionsList" class="form-label">Sections</label>
+                                        <div id="courseSectionsList" class="border rounded p-2" style="max-height:200px; overflow:auto;"></div>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -2394,20 +2404,32 @@
     };
 
     // Create Course modal handlers
-    document.getElementById('btnCreateCourse')?.addEventListener('click', function() {
+    document.getElementById('btnCreateCourse')?.addEventListener('click', async function() {
         try {
+            // Refresh authoritative classes from server before rendering the modal
+            await loadTeacherClassesFromServer();
+
             const container = document.getElementById('courseSectionsList');
             container.innerHTML = '';
-            (teacherClasses || []).forEach(cls => {
-                const sid = cls.id || '';
-                const label = `${cls.name} (${cls.code})`;
-                const html = `<div class="form-check mb-1"><input class="form-check-input course-section-checkbox" type="checkbox" value="${sid}" id="cs_${sid}"><label class="form-check-label ms-2" for="cs_${sid}">${label}</label></div>`;
-                container.insertAdjacentHTML('beforeend', html);
-            });
+
+            if (!teacherClasses || teacherClasses.length === 0) {
+                container.innerHTML = `<div class="text-muted small">You have no classes yet. <a href="/dashboard/teacher/">Create a class</a> to include sections in a course.</div>`;
+            } else {
+                (teacherClasses || []).forEach(cls => {
+                    // Fallback id: prefer numeric id, fall back to code (sanitize)
+                    const rawId = cls.id || cls.code || cls.class_code || '';
+                    const sid = String(rawId).replace(/[^a-zA-Z0-9_-]/g, '_') || '';
+                    const label = `${cls.name} (${cls.code})`;
+                    const html = `<div class="form-check mb-1"><input class="form-check-input course-section-checkbox" type="checkbox" value="${cls.id || cls.code}" id="cs_${sid}"><label class="form-check-label ms-2" for="cs_${sid}">${label}</label></div>`;
+                    container.insertAdjacentHTML('beforeend', html);
+                });
+            }
+
             const modal = new bootstrap.Modal(document.getElementById('createCourseModal'));
             modal.show();
         } catch (e) {
             console.warn('Failed to open create course modal', e);
+            showToast('Could not open Create Course — try refreshing the page', 'error');
         }
     });
 
