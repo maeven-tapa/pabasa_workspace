@@ -22,13 +22,17 @@ var getStudentClassData = window.getStudentClassData = function() {
  * provides robust styles for reading/practice interfaces.
  */
 (function() {
-    const theme = localStorage.getItem("pabasa_theme");
+    let theme = localStorage.getItem("pabasa_theme");
+    try { theme = JSON.parse(theme); } catch(e) {}
+
     if (theme === "dark") {
         document.documentElement.classList.add("dark-theme");
     }
 
     const applyBodyTheme = () => {
-        if (localStorage.getItem("pabasa_theme") === "dark") {
+        let t = localStorage.getItem("pabasa_theme");
+        try { t = JSON.parse(t); } catch(e) {}
+        if (t === "dark") {
             document.body.classList.add("dark-theme");
         }
     };
@@ -38,7 +42,9 @@ var getStudentClassData = window.getStudentClassData = function() {
 
     // Global listener to sync theme changes across tabs and within the current page
     const syncTheme = () => {
-        const isDark = localStorage.getItem("pabasa_theme") === "dark";
+        let currentTheme = localStorage.getItem("pabasa_theme");
+        try { currentTheme = JSON.parse(currentTheme); } catch(e) {}
+        const isDark = currentTheme === "dark";
         document.documentElement.classList.toggle("dark-theme", isDark);
         document.body.classList.toggle("dark-theme", isDark);
     };

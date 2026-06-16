@@ -226,7 +226,7 @@ def _current_user(request):
 def _admin_users():
     return User.objects.filter(role='admin', is_archived=False)
 
-def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None):
+def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None, email_subject=None, email_body=None):
     if not recipient:
         return None
     notification = Notification.objects.create(
@@ -243,8 +243,8 @@ def _create_notification(recipient, title, message, notification_type='info', ac
         settings_dict = _notification_settings_for_user(recipient)
         if settings_dict.get('email_notifications') is True:
             send_mail(
-                title,
-                message,
+                email_subject if email_subject is not None else title,
+                email_body if email_body is not None else message,
                 settings.DEFAULT_FROM_EMAIL,
                 [recipient.email],
                 fail_silently=True
@@ -2948,10 +2948,11 @@ def get_class_materials(request):
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         
-        # Include all class materials and assessments for the teacher owner.
-        materials_qs = Material.objects.filter(section=section)
+        # Include materials directly linked to section or assigned via ManyToMany
+        materials_qs = Material.objects.filter(Q(section=section) | Q(assigned_sections=section)).distinct()
         assessments_qs = Assessment.objects.filter(section=section)
-        practices_qs = Practice.objects.filter(section__isnull=True)
+        # Practice sets are standalone.
+        practices_qs = Practice.objects.filter(section__isnull=True).order_by('-created_at')
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
         # If requester is not the class owner teacher, only include active items
@@ -2959,6 +2960,9 @@ def get_class_materials(request):
             materials_qs = materials_qs.filter(is_active=True)
             assessments_qs = assessments_qs.filter(is_active=True)
             practices_qs = practices_qs.filter(is_active=True, status='published')
+
+        # Limit practice sets to the most recent 100 to avoid payload bloat
+        practices_qs = practices_qs[:100]
 
         # Build combined list sorted by created_at descending
         combined = []
@@ -3279,13 +3283,27 @@ def add_reading_material(request):
                 if status == 'published':
                     action_url = f"{reverse('course_student_view')}?class_code={section.class_code}"
                     for student_user in _section_active_students(section):
+                        # In-app notification content
+                        in_app_title = f'📚 New material available: {m.title} has been published for {section.class_name}.'
+                        in_app_message = in_app_title # For in-app, message can be same as title if not specified otherwise
+
+                        # Email notification content
+                        email_subject = f'Start Reading: {m.title} Is Now Available'
+                        email_body = (
+                            f'Hello {student_user.first_name},\n\n'
+                            f'A new learning material, "{m.title}", has been published in {section.class_name} by {teacher_user.first_name} {teacher_user.last_name}.\n\n'
+                            f'Log in to PABASA to access the material and continue your learning journey.\n\n'
+                            f'Happy learning!\nThe PABASA Team'
+                        )
                         _create_notification(
                             student_user,
-                            'New assessment published',
-                            f'{teacher_user.first_name} {teacher_user.last_name} posted "{m.title}" for {section.class_name}.',
+                            in_app_title,
+                            in_app_message,
                             'assessment',
                             action_url,
                             teacher_user,
+                            email_subject=email_subject,
+                            email_body=email_body,
                         )
             else:
                 action_url = reverse('courses')
@@ -3429,6 +3447,8 @@ def record_assessment_completion(request):
         data = json.loads(request.body)
         assessment_id = data.get('assessment_id')
         material_id = data.get('material_id')
+        is_retake = data.get('is_retake', False)
+        attempt_number = data.get('attempt_number', 0)
         activity_type = data.get('activity_type', 'assessment')
         student_user = User.objects.get(id=request.session.get('user_id'))
 
@@ -3480,11 +3500,20 @@ def record_assessment_completion(request):
         student_name = f"{student_user.first_name} {student_user.last_name}"
         is_practice = activity_type == 'practice' or (practice_obj is not None) or (material and material.section is None and material.assessment is None)
         
+        email_subject = None
         class_name = "a class"
         if material and material.section:
             class_name = material.section.class_name
         elif assessment and assessment.section:
             class_name = assessment.section.class_name
+
+        if is_retake:
+            title = "🔄 Student Retook an Assessment"
+            notif_msg = f'🔄 {student_name} retook "{title_text}" in {class_name}.'
+            email_subject = "Student Retook an Assessment"
+        elif is_practice:
+            title = "📖 Student Read a Practice Material"
+            notif_msg = f'• {student_name} read "{title_text}" in {class_name}.'
 
         if is_practice:
             title = "📖 Student Read a Practice Material"
@@ -3506,6 +3535,19 @@ def record_assessment_completion(request):
             if recipient.id in seen_teacher_ids:
                 continue
             seen_teacher_ids.add(recipient.id)
+            
+            current_email_body = None
+            if is_retake:
+                teacher_name = f"{recipient.first_name} {recipient.last_name}"
+                current_email_body = (
+                    f"Hello {teacher_name},\n\n"
+                    f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
+                    f"for \"{title_text}\" in {class_name}.\n\n"
+                    "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
+                    "Thank you,\n\n"
+                    "The PABASA Team"
+                )
+
             _create_notification(
                 recipient,
                 title,
@@ -3513,6 +3555,8 @@ def record_assessment_completion(request):
                 "assessment",
                 f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
                 student_user,
+                email_subject=email_subject,
+                email_body=current_email_body,
             )
 
         _notify_admins(
@@ -3522,12 +3566,6 @@ def record_assessment_completion(request):
             reverse('admin_students'),
             student_user,
         )
-        if teacher_user:
-            send_mail(
-                title, notif_msg,
-                settings.DEFAULT_FROM_EMAIL, [teacher_user.email],
-                fail_silently=True
-            )
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -3620,7 +3658,7 @@ def get_teacher_students_api(request):
                     'wpm': profile.get('wpm', '0'),
                 })
                 results.append(sdata)
-        
         return JsonResponse({'success': True, 'students': results})
     except Exception as e:
+        logger.error(f"Error in get_teacher_students_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
