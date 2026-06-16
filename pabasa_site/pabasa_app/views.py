@@ -3284,8 +3284,29 @@ def add_reading_material(request):
             return JsonResponse({'success': False, 'error': 'No items found in content to create.'}, status=400)
 
         with transaction.atomic():
+            # If this material is intended to be an assessment (or both), create
+            # an authoritative Assessment record first and attach it to the
+            # created Material so attempts can be persisted there.
+            assessment_obj = None
+            if usage_type in ('assessment', 'both'):
+                # create a short unique assessment code
+                code = 'AS' + uuid.uuid4().hex[:8].upper()
+                while Assessment.objects.filter(code=code).exists():
+                    code = 'AS' + uuid.uuid4().hex[:8].upper()
+                assessment_obj = Assessment.objects.create(
+                    title=title,
+                    code=code,
+                    assessment_type=reading_type,
+                    content=content,
+                    status=status,
+                    scheduled_at=scheduled_at if status == 'scheduled' else None,
+                    teacher=teacher_user,
+                    section=section,
+                    is_active=(status in ['published', 'scheduled'])
+                )
+
             m = Material.objects.create(
-                assessment=None,
+                assessment=assessment_obj,
                 section=section,
                 item_type=reading_type,
                 title=title,
@@ -3397,6 +3418,8 @@ def teacher_update_material(request):
         material.type = data.get('usage_type', material.type)
         
         material.is_active = (material.status in ['published', 'scheduled'])
+        # current teacher for any potential Assessment creation
+        teacher_user = User.objects.filter(id=user_id).first()
 
         # Handle schedule update
         if material.status == 'scheduled':
@@ -3425,6 +3448,49 @@ def teacher_update_material(request):
             material.item_type = detect_type(content)
             material.content_json = {'items': content.split('\n') if material.item_type == 'word' else [content]}
             
+        # Ensure Assessment linkage reflects the requested usage type.
+        # If material should be an assessment (or both), create or update the
+        # linked Assessment record so attempts are recorded in the
+        # assessments table. If switching to practice, detach the link.
+        try:
+            if material.type in ('assessment', 'both'):
+                if not getattr(material, 'assessment', None):
+                    code = 'AS' + uuid.uuid4().hex[:8].upper()
+                    while Assessment.objects.filter(code=code).exists():
+                        code = 'AS' + uuid.uuid4().hex[:8].upper()
+                    assessment = Assessment.objects.create(
+                        title=material.title,
+                        code=code,
+                        assessment_type=material.item_type,
+                        content=material.content_text or material.prompt_text or '',
+                        status=material.status,
+                        scheduled_at=material.scheduled_at if material.status == 'scheduled' else None,
+                        teacher=teacher_user,
+                        section=material.section,
+                        is_active=material.is_active,
+                    )
+                    material.assessment = assessment
+                else:
+                    # Keep assessment metadata in sync (best-effort)
+                    try:
+                        a = material.assessment
+                        a.title = material.title
+                        a.assessment_type = material.item_type
+                        a.content = material.content_text or material.prompt_text or ''
+                        a.status = material.status
+                        a.scheduled_at = material.scheduled_at if material.status == 'scheduled' else None
+                        a.is_active = material.is_active
+                        a.save()
+                    except Exception:
+                        pass
+            else:
+                # Switching to practice: detach assessment link but do not delete record
+                if getattr(material, 'assessment', None):
+                    material.assessment = None
+        except Exception:
+            # Non-fatal; proceed to save material regardless
+            logger.exception('Failed to synchronize Assessment linkage for material %s', getattr(material, 'id', None))
+
         material.save()
         return JsonResponse({'success': True, 'message': 'Material updated successfully'})
     except Exception as e:
