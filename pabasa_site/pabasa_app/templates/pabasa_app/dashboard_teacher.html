@@ -924,17 +924,41 @@ function updateDashboardStatistics(providedStudents = null) {
 }
 
 // Load and display student cards
-function loadPersistedStudents() {
+async function loadPersistedStudents() {
     const studentRow = document.getElementById("dashboardStudentRow");
     if (!studentRow) return;
     
-    let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-    const filteredStudents = students.filter(student => student && student.name && student.name !== "Jay Park");
-    if (filteredStudents.length !== students.length) {
-        // Do not overwrite the persisted students; use filtered list in-memory only
-        students = filteredStudents;
+    // Prefer server-backed authoritative student list for preview; fall back to localStorage
+    let students = [];
+    try {
+        const resp = await fetch('/dashboard/teacher/students-api/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (resp && resp.ok) {
+            const data = await resp.json();
+            if (data && data.success && Array.isArray(data.students)) {
+                students = data.students.map(s => ({
+                    name: s.name || '',
+                    class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
+                    level: s.level || '',
+                    wpm: s.wpm || '0',
+                    accuracy: s.accuracy || '0',
+                    email: s.email || ''
+                }));
+                console.log('Loading students for dashboard from server:', students);
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to fetch dashboard students from server, falling back to localStorage', e);
     }
-    console.log("Loading students for dashboard:", students);
+
+    if (!students || students.length === 0) {
+        try {
+            let persisted = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+            const filteredStudents = persisted.filter(student => student && student.name && student.name !== "Jay Park");
+            students = filteredStudents.length !== persisted.length ? filteredStudents : persisted;
+        } catch (e) {
+            students = [];
+        }
+    }
     
     // Determine currently selected class (if any) and filter students accordingly
     const currentClassEl = document.getElementById('activeClassName');
@@ -1005,18 +1029,50 @@ function loadPersistedStudents() {
     });
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-    updateDashboardStatistics();
+document.addEventListener("DOMContentLoaded", async function() {
+    // Fetch authoritative student list from server and use it for dashboard statistics
+    async function fetchAndUpdateStudents() {
+        try {
+            const resp = await fetch('/dashboard/teacher/students-api/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (resp && resp.ok) {
+                const data = await resp.json();
+                if (data && data.success && Array.isArray(data.students)) {
+                    // Map server students to the expected shape used by updateDashboardStatistics
+                    const mapped = data.students.map(s => ({
+                        name: s.name || '',
+                        class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
+                        level: s.level || '',
+                        accuracy: s.accuracy || '0',
+                        wpm: s.wpm || '0',
+                        email: s.email || ''
+                    }));
+                    updateDashboardStatistics(mapped);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to fetch teacher students for dashboard statistics', e);
+        }
+        // Fallback to localStorage-driven statistics
+        updateDashboardStatistics();
+    }
+
+    await fetchAndUpdateStudents();
     loadPersistedStudents();
-    
+
     // Reload when localStorage changes (in another tab)
     window.addEventListener("storage", function(e) {
         if (e.key === "pabasa_added_students") {
             console.log("Students updated in another tab, updating dashboard");
-            updateDashboardStatistics();
+            fetchAndUpdateStudents();
             loadPersistedStudents();
         }
     });
+
+    // React to in-app events indicating student joins or teacher class updates
+    window.addEventListener('studentAdded', function() { fetchAndUpdateStudents(); });
+    window.addEventListener('pabasa:teacher-classes-updated', function() { fetchAndUpdateStudents(); });
+    window.addEventListener('pabasa:materials-updated', function() { fetchAndUpdateStudents(); });
 });
 </script>
 

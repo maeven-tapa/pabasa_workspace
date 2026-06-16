@@ -2270,7 +2270,8 @@
             console.warn('Failed to refresh overview:', e);
         }
         // Load authoritative classes and overview, then render
-        if (typeof refreshTeacherData === 'function') refreshTeacherData(); else renderClasses();
+        // Call renderClasses (not refreshTeacherData) to avoid recursion
+        if (typeof renderClasses === 'function') await renderClasses();
     }
     
     // Toast notification function
@@ -2568,7 +2569,7 @@
                 </div>
                 <div class="class-card-stats">
                     <div class="class-stat">
-                        <strong>${getStudentCountForClass(cls.name)}</strong>
+                        <strong>${cls.students || getStudentCountForClass(cls.name)}</strong>
                         <span>Students</span>
                     </div>
                     <div class="class-stat" data-readings-count="${cls.code}">
@@ -3446,6 +3447,10 @@
                                     card.style.pointerEvents = 'none';
                                     showSuccessModal('Deleted', `"${title}" has been removed.`);
                                     setTimeout(() => loadReadings(currentClassCode), 300);
+                                    // Notify other modules to re-sync authoritative data
+                                    try {
+                                        window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } }));
+                                    } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
                                 } else {
                                     alert("Error: " + data.error);
                                 }
@@ -3489,6 +3494,8 @@
                                 bootstrap.Modal.getInstance(document.getElementById('editMaterialModal')).hide();
                                 showSuccessModal('Updated', `"${newTitle}" has been updated`);
                                 loadReadings(currentClassCode);
+                                    // Notify other modules to refresh after material update
+                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
                             } else {
                                 alert("Error: " + data.error);
                             }
