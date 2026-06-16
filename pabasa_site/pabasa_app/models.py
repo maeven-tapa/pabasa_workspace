@@ -513,6 +513,33 @@ class Material(models.Model):
 # are stored inside the Assessment `attempts` JSONField.
 
 
+class Course(models.Model):
+    """
+    Courses group assessments and materials and allow per-section scheduling/tracking.
+    A Course is owned by a teacher and can include multiple sections and assessments.
+    """
+    code = models.CharField(max_length=40, unique=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="courses")
+    sections = models.ManyToManyField("Section", related_name="courses", blank=True)
+    # assessments and materials are attached directly to Course
+    assessments = models.ManyToManyField('Assessment', related_name='courses', blank=True)
+    materials = models.ManyToManyField('Material', related_name='courses', blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "courses"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+    
+
+
 class Note(models.Model):
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notes")
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="teacher_notes")

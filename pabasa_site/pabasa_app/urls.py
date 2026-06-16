@@ -78,6 +78,9 @@ urlpatterns = [
     path('dashboard/teacher/overview/', views.get_teacher_overview, name='get_teacher_overview'),
     # API: authoritative teacher student list (used by frontend JS)
     path('dashboard/teacher/students-api/', views.get_teacher_students_api, name='get_teacher_students_api'),
+    # Courses API for teachers
+    path('dashboard/teacher/courses/', views.get_teacher_courses_api, name='get_teacher_courses_api'),
+    path('dashboard/teacher/create-course/', views.create_course, name='create_course'),
     path('dashboard/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes'),
     # Backwards-compatible alias: some client-side code expects this API path
     path('api/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes_api'),

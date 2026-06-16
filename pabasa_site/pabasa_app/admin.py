@@ -7,6 +7,7 @@ from .models import (
 	Material,
 	Note,
 	Notification,
+	Course,
 )
 
 @admin.register(User)
@@ -105,3 +106,12 @@ class NotificationAdmin(admin.ModelAdmin):
 		"created_by__custom_id",
 	)
 	ordering = ("-created_at",)
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+	list_display = ("code", "title", "teacher", "is_active", "created_at")
+	list_filter = ("is_active", "created_at")
+	search_fields = ("code", "title", "teacher__custom_id")
+	ordering = ("-created_at",)
+

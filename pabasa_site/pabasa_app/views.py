@@ -24,7 +24,7 @@ from .forms import AdminPracticeMaterialForm, parse_practice_items
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Practice, Note, Notification
+from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -302,6 +302,19 @@ def generate_unique_class_code():
         if not Section.objects.filter(class_code=code).exists():
             return code
         # If exists, the loop continues to generate a fresh candidate
+
+
+def generate_unique_course_code():
+    """Generate a short unique course code like CRSE-XXXX"""
+    prefix = "CRS"
+    digits = "0123456789"
+    letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    while True:
+        part = "".join(random.choices(letters, k=3))
+        suffix = "".join(random.choices(digits, k=3))
+        code = f"{prefix}-{part}-{suffix}"
+        if not Course.objects.filter(code=code).exists():
+            return code
 
 # ===== Pending Signup/Reset Session Management (Temporary Storage) =====
 # Note: These store temporary data during signup/password reset flows.
@@ -2707,6 +2720,97 @@ def class_management_view(request):
     }
     return render(request, 'pabasa_app/class_management.html', _dashboard_context(request, 'teacher', extra))
 
+
+# ===== Course APIs =====
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_teacher_courses_api(request):
+    try:
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        courses = Course.objects.filter(teacher=teacher_user, is_active=True).order_by('-created_at')
+        course_list = []
+        for c in courses:
+            secs = [{'id': s.id, 'code': s.class_code, 'name': s.class_name} for s in c.sections.all()]
+            assessments_list = []
+            for a in c.assessments.all():
+                assessments_list.append({
+                    'id': a.id,
+                    'code': a.code,
+                    'title': a.title,
+                })
+            materials_list = []
+            for m in c.materials.all():
+                materials_list.append({
+                    'id': m.id,
+                    'title': m.title,
+                    'item_type': getattr(m, 'item_type', ''),
+                    'status': getattr(m, 'status', ''),
+                })
+            course_list.append({
+                'id': c.id,
+                'code': c.code,
+                'title': c.title,
+                'description': c.description,
+                'sections': secs,
+                'assessments': assessments_list,
+                'materials': materials_list,
+            })
+
+        return JsonResponse({'success': True, 'courses': course_list})
+    except Exception as e:
+        logger.exception('Unhandled error in get_teacher_courses_api')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def create_course(request):
+    try:
+        data = json.loads(request.body)
+        title = (data.get('title') or '').strip()
+        description = (data.get('description') or '').strip()
+        section_ids = data.get('sections') or []
+
+        if not title:
+            return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
+
+        teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        code = generate_unique_course_code()
+        course = Course.objects.create(
+            code=code,
+            title=title,
+            description=description,
+            teacher=teacher_user,
+        )
+        if section_ids:
+            # Accept either numeric ids or class_code strings
+            for sid in section_ids:
+                try:
+                    if isinstance(sid, int) or str(sid).isdigit():
+                        sec = Section.objects.filter(id=int(sid), teacher=teacher_user).first()
+                    else:
+                        sec = Section.objects.filter(class_code=str(sid).strip(), teacher=teacher_user).first()
+                    if sec:
+                        course.sections.add(sec)
+                except Exception:
+                    continue
+
+        return JsonResponse({'success': True, 'course': {'id': course.id, 'code': course.code, 'title': course.title}})
+    except Exception as e:
+        logger.exception('Error creating course')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -2829,6 +2933,7 @@ def get_teacher_classes(request):
         for cls in classes:
             student_count = _section_student_count(cls)
             class_list.append({
+                'id': cls.id,
                 'code': cls.class_code,
                 'name': cls.class_name,
                 'subject': cls.subject,

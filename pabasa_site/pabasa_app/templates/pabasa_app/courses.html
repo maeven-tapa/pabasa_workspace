@@ -1734,6 +1734,22 @@
     }
 </style>
 
+<!-- Courses (teacher created course groups) -->
+<section class="courses-home mb-4">
+    <div class="workspace-hero is-compact" style="margin-bottom:12px;">
+        <div>
+            <h5 class="mb-0">Courses</h5>
+            <p class="small text-muted mb-0">Create course groups to schedule assessments across multiple sections.</p>
+        </div>
+        <div>
+            <button class="btn btn-primary workspace-action-btn" id="btnCreateCourse">+ Create Course</button>
+        </div>
+    </div>
+    <div class="classes-grid" id="coursesGrid">
+        <!-- Courses will be rendered here -->
+    </div>
+</section>
+
 <section class="classes-home">
     <div class="classes-grid" id="classesGrid">
         <!-- Classes will be rendered here -->
@@ -2172,6 +2188,36 @@
     </div>
 </div>
 
+            <!-- Create Course Modal -->
+            <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content system-modal">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="createCourseModalLabel">Create Course</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Title</label>
+                                <input type="text" id="courseTitle" class="form-control" placeholder="e.g., Term 1 Reading 2026">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea id="courseDescription" class="form-control" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Sections</label>
+                                <div id="courseSectionsList" style="max-height:200px; overflow:auto; border:1px solid rgba(0,0,0,0.06); padding:8px; border-radius:6px;"></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="submitCreateCourse">Create Course</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 <script>
     // Get the current teacher's name from the page title or username
     let CURRENT_TEACHER_NAME = "Teacher";
@@ -2216,6 +2262,13 @@
         return email ? `pabasa_teacher_classes_${email}` : null;
     };
 
+    // Courses created by teacher (grouping for per-section scheduling)
+    let teacherCourses = [];
+    const teacherCoursesKey = () => {
+        const email = (window.PABASA_USER_EMAIL || '').trim();
+        return email ? `pabasa_teacher_courses_${email}` : null;
+    };
+
     async function loadTeacherClassesFromServer() {
         try {
             const res = await fetch('/dashboard/teacher/classes/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -2251,8 +2304,153 @@
         return false;
     }
 
+    // Load teacher-created courses from server (fallback to localStorage)
+    async function loadTeacherCoursesFromServer() {
+        try {
+            const res = await fetch('/dashboard/teacher/courses/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success && Array.isArray(data.courses)) {
+                    teacherCourses = data.courses;
+                    const key = teacherCoursesKey();
+                    if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                    console.log('✓ Loaded courses from server:', teacherCourses.length);
+                    return true;
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to fetch courses from server:', err);
+        }
+
+        try {
+            const key = teacherCoursesKey();
+            const stored = key ? localStorage.getItem(key) : null;
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                teacherCourses = Array.isArray(parsed) ? parsed : [];
+                if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                console.log('✓ Loaded courses from localStorage:', teacherCourses.length);
+                return false;
+            }
+        } catch (e) {
+            console.warn('Could not load courses from localStorage:', e);
+        }
+        teacherCourses = [];
+        return false;
+    }
+
+    // Render teacher-created courses
+    async function renderCourses() {
+        const grid = document.getElementById('coursesGrid');
+        if (!grid) return;
+        if (!teacherCourses || teacherCourses.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-journal-bookmark"></i>
+                    <h3>No Courses Yet</h3>
+                    <p>Create a course to schedule assessments across multiple sections.</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = teacherCourses.map(course => `
+            <article class="class-card-full" data-course-id="${course.id}">
+                <div class="class-card-header" style="cursor: default;">
+                    <span class="class-code-badge">${course.code}</span>
+                    <h3>${course.title}</h3>
+                    <p class="class-description">${course.description || ''}</p>
+                </div>
+                <div class="class-card-stats">
+                    <div class="class-stat">
+                        <strong>${(course.sections || []).length}</strong>
+                        <span>Sections</span>
+                    </div>
+                    <div class="class-stat">
+                        <strong>${(course.assessments || []).length}</strong>
+                        <span>Assessments</span>
+                    </div>
+                    <div class="class-stat">
+                        <strong>${(course.materials || []).length}</strong>
+                        <span>Materials</span>
+                    </div>
+                </div>
+                <div class="class-card-actions">
+                    <button class="btn btn-outline-primary" type="button" onclick="openCourseDetail(${course.id})">Open Course</button>
+                </div>
+            </article>
+        `).join('');
+    }
+
+    window.openCourseDetail = function(courseId) {
+        try {
+            const course = (teacherCourses || []).find(c => c.id === Number(courseId));
+            if (!course) return showToast('Course not found', 'error');
+            // For now show a simple info toast; a full modal view can be implemented later
+            showToast(`Course: ${course.title} — Sections: ${course.sections?.length || 0}`, 'info');
+        } catch (e) {
+            console.warn('openCourseDetail error', e);
+        }
+    };
+
+    // Create Course modal handlers
+    document.getElementById('btnCreateCourse')?.addEventListener('click', function() {
+        try {
+            const container = document.getElementById('courseSectionsList');
+            container.innerHTML = '';
+            (teacherClasses || []).forEach(cls => {
+                const sid = cls.id || '';
+                const label = `${cls.name} (${cls.code})`;
+                const html = `<div class="form-check mb-1"><input class="form-check-input course-section-checkbox" type="checkbox" value="${sid}" id="cs_${sid}"><label class="form-check-label ms-2" for="cs_${sid}">${label}</label></div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+            const modal = new bootstrap.Modal(document.getElementById('createCourseModal'));
+            modal.show();
+        } catch (e) {
+            console.warn('Failed to open create course modal', e);
+        }
+    });
+
+    document.getElementById('submitCreateCourse')?.addEventListener('click', async function() {
+        try {
+            const title = (document.getElementById('courseTitle')?.value || '').trim();
+            const description = (document.getElementById('courseDescription')?.value || '').trim();
+            if (!title) return showToast('Course title is required', 'error');
+
+            const checked = Array.from(document.querySelectorAll('.course-section-checkbox:checked')).map(el => el.value).filter(Boolean);
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+            const resp = await fetch('/dashboard/teacher/create-course/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                body: JSON.stringify({ title, description, sections: checked })
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                // Add to local cache and render
+                const newCourse = { id: data.course.id, code: data.course.code, title: data.course.title, description: description, sections: (teacherClasses || []).filter(c => checked.includes(String(c.id))).map(s => ({ id: s.id, code: s.code, name: s.name })), assessments: [], materials: [] };
+                teacherCourses = teacherCourses || [];
+                teacherCourses.unshift(newCourse);
+                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                renderCourses();
+                showToast('Course created successfully', 'success');
+                const modalEl = document.getElementById('createCourseModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            } else {
+                showToast('Error creating course: ' + (data.error || 'Unknown'), 'error');
+            }
+        } catch (e) {
+            console.error('Create course failed', e);
+            showToast('Failed to create course', 'error');
+        }
+    });
+
     async function refreshTeacherData() {
         await loadTeacherClassesFromServer();
+        // also load teacher-created courses
+        try { await loadTeacherCoursesFromServer(); } catch(e) { console.warn('Failed to load courses', e); }
         // Update authoritative overview stats
         try {
             const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -2272,6 +2470,7 @@
         // Load authoritative classes and overview, then render
         // Call renderClasses (not refreshTeacherData) to avoid recursion
         if (typeof renderClasses === 'function') await renderClasses();
+        if (typeof renderCourses === 'function') await renderCourses();
     }
     
     // Toast notification function
