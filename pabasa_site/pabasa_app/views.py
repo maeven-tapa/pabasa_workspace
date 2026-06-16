@@ -1721,7 +1721,7 @@ def admin_course_edit(request, material_id):
                     'Assigned content updated',
                     f'"{material.title}" was updated for {section.class_name}.',
                     'info',
-                    f"{reverse('course_student_view')}?class_code={section.class_code}",
+                    reverse('assessment'),
                     request.user if hasattr(request, 'user') and getattr(request.user, 'is_authenticated', False) else _current_user(request),
                 )
 
@@ -1748,7 +1748,7 @@ def admin_course_archive(request, material_id):
                     'Assigned content removed',
                     f'"{material.title}" is no longer available in {material.section.class_name}.',
                     'warning',
-                    reverse('course_student_view'),
+                    reverse('assessment'),
                     _current_user(request),
                 )
     elif action == 'restore' and not material.is_active:

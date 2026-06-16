@@ -606,6 +606,21 @@
     <div class="class-list" data-class-list aria-live="polite"></div>
 </section>
 
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-labelledby="loadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px;">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="fw-bold mb-1" id="loadingModalLabel">Joining Class...</h5>
+                <p class="text-muted small mb-0">Please wait while we process your request.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade unenroll-modal" id="unenrollConfirmModal" tabindex="-1" aria-labelledby="unenrollConfirmModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -663,6 +678,7 @@
         const legacyClassCodeKey = "pabasaStudentClassCode";
         const teacherClassesKey = null;
 
+        const loadingModalElement = document.getElementById('loadingModal');
         let pendingUnenrollCode = "";
 
         if (!dashboard || !form || !classCodeInput || !classList) {
@@ -1044,6 +1060,9 @@
                 return;
             }
 
+            // Show loading modal
+            const loadingModal = new bootstrap.Modal(loadingModalElement);
+            loadingModal.show();
             // Always query backend API to validate class code against database
             let teacherClass = null;
             try {
@@ -1079,6 +1098,8 @@
                 classCodeInput.value = "";
                 showInvalidClassCodeMessage();
                 return;
+            } finally {
+                loadingModal.hide();
             }
 
             codes.push(code);
