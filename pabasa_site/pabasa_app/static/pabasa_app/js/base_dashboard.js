@@ -867,7 +867,36 @@ var getStudentClassData = window.getStudentClassData = function() {
      * Automatically marks cards as "Done" across all student dashboards (Practice, Assessment, Course View)
      */
     function markCompletedMaterials() {
-        const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+        // Combine local `pabasa_seen_material_ids` (client-side) with server-side
+        // attempt indicators returned via `pabasa_class_readings` (`attempt_count`).
+        const seenIdsLocal = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+        const classReadings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+        const serverSeenSet = new Set();
+        try {
+            const studentCodes = getStudentClassData();
+            studentCodes.forEach(code => {
+                const classData = classReadings[String(code).toUpperCase()] || {};
+                ['word','sentence','paragraph','story'].forEach(type => {
+                    const keys = [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean);
+                    keys.forEach(k => {
+                        (classData[k] || []).forEach(mat => {
+                            try {
+                                if (mat && mat.attempt_count && Number(mat.attempt_count) > 0) {
+                                    const mid = (mat.id !== undefined && mat.id !== null) ? String(mat.id).trim() : null;
+                                    if (mid) serverSeenSet.add(mid);
+                                }
+                            } catch (e) {
+                                // ignore malformed entries
+                            }
+                        });
+                    });
+                });
+            });
+        } catch (e) {
+            // ignore parsing errors
+        }
+
+        const seenIds = Array.from(new Set([...seenIdsLocal, ...Array.from(serverSeenSet)]));
         if (seenIds.length === 0) return;
 
         // Find any element with data-material-id (used in both practice and assessment cards)

@@ -323,9 +323,8 @@
             background-size: cover !important;
             background-position: center !important;
             background-repeat: no-repeat !important;
-            background-image: {% if profile_photo_url %}url('{{ profile_photo_url }}'){% else %}
-                linear-gradient(135deg, #54C2F0 0%, #10466E 100%)
-            {% endif %};
+            /* Use a CSS variable for dynamic brand background to avoid template tags in this style block. */
+            background-image: var(--dash-brand-bg, linear-gradient(135deg, #54C2F0 0%, #10466E 100%));
             background-color: var(--dash-primary);
             box-shadow: 0 8px 16px rgba(16, 70, 110, 0.12);
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -338,9 +337,12 @@
         }
 
         .dash-brand-mark i {
-            display: {% if profile_photo_url %}none{% else %}inline-flex{% endif %};
+            display: inline-flex;
             font-size: 1.15rem;
         }
+
+        /* When the element has a photo, hide the icon */
+        .dash-brand-mark.has-photo i { display: none; }
 
         .dashboard-sidebar .sidebar-inner {
             position: relative;
@@ -1367,6 +1369,15 @@
             const container = document.getElementById('notifContainer');
             const badge = document.getElementById('notifBadge');
             if (!container) return;
+
+            // Avoid fetching notifications for anonymous users or before the sidebar
+            // has injected the current user id into localStorage. This prevents
+            // an unnecessary 401 request showing up in console when not signed in.
+            const pabasaCurrentUserId = window.localStorage.getItem('pabasaCurrentUserId') || '';
+            if (!pabasaCurrentUserId) {
+                if (badge) badge.style.display = 'none';
+                return;
+            }
 
             let notifications = [];
             try {
