@@ -2209,28 +2209,69 @@
 </script>
 
 <script>
-    // Get classes from localStorage (synced with dashboard_teacher.html)
-    let classes_from_storage = [];
-    try {
+    // Load teacher classes (prefer server, fallback to localStorage)
+    let teacherClasses = [];
+    const teacherClassesKey = () => {
         const email = (window.PABASA_USER_EMAIL || '').trim();
-        const stored = email ? localStorage.getItem(`pabasa_teacher_classes_${email}`) : null;
-        if (stored) {
-            classes_from_storage = JSON.parse(stored);
-            // Remove hardcoded/sample classes
-            classes_from_storage = classes_from_storage.filter(cls => {
-                const sampleCodes = ['RRG-9154', 'AFC-7302', 'ESL-5601'];
-                return !sampleCodes.includes(cls.code);
-            });
-            // Update localStorage to remove sample classes
-            if (email) localStorage.setItem(`pabasa_teacher_classes_${email}`, JSON.stringify(classes_from_storage));
-            console.log("✓ Loaded classes from localStorage:", classes_from_storage.length, "classes");
+        return email ? `pabasa_teacher_classes_${email}` : null;
+    };
+
+    async function loadTeacherClassesFromServer() {
+        try {
+            const res = await fetch('/dashboard/teacher/classes/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success && Array.isArray(data.classes)) {
+                    teacherClasses = data.classes.filter(c => !['RRG-9154','AFC-7302','ESL-5601'].includes(c.code));
+                    const key = teacherClassesKey();
+                    if (key) localStorage.setItem(key, JSON.stringify(teacherClasses));
+                    console.log('✓ Loaded classes from server:', teacherClasses.length);
+                    return true;
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to fetch classes from server:', err);
         }
-    } catch (e) {
-        console.warn('Could not load classes from localStorage:', e);
+
+        // Fallback to localStorage
+        try {
+            const key = teacherClassesKey();
+            const stored = key ? localStorage.getItem(key) : null;
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                teacherClasses = (Array.isArray(parsed) ? parsed : []).filter(c => !['RRG-9154','AFC-7302','ESL-5601'].includes(c.code));
+                if (key) localStorage.setItem(key, JSON.stringify(teacherClasses));
+                console.log('✓ Loaded classes from localStorage:', teacherClasses.length);
+                return false;
+            }
+        } catch (e) {
+            console.warn('Could not load classes from localStorage:', e);
+        }
+        teacherClasses = [];
+        return false;
     }
-    
-    // Initialize teacher classes with real data from localStorage
-    let teacherClasses = classes_from_storage || [];
+
+    async function refreshTeacherData() {
+        await loadTeacherClassesFromServer();
+        // Update authoritative overview stats
+        try {
+            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (r.ok) {
+                const overview = await r.json();
+                if (overview && overview.success) {
+                    const totalEl = document.getElementById('profileTotalStudentsCount');
+                    if (totalEl) totalEl.textContent = String(overview.total_students);
+                    const overviewKey = 'pabasa_teacher_overview_stats';
+                    const existing = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                    localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existing, overview)));
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to refresh overview:', e);
+        }
+        // Load authoritative classes and overview, then render
+        if (typeof refreshTeacherData === 'function') refreshTeacherData(); else renderClasses();
+    }
     
     // Toast notification function
     function showToast(message, type = 'info') {
@@ -2268,19 +2309,35 @@
         }, 5000);
     }
     
-    // Listen for localStorage changes (when classes are created in another tab)
+    // Listen for localStorage changes (when classes or students are modified in another tab)
     window.addEventListener('storage', function(e) {
-        const scopedKey = `pabasa_teacher_classes_${(window.PABASA_USER_EMAIL||'').trim()}`;
-        if ((e.key === scopedKey || e.key === 'pabasa_added_students') && e.newValue) {
+        const scopedKey = teacherClassesKey();
+        if (e.key === scopedKey && e.newValue) {
             try {
-                const updatedClasses = JSON.parse(e.newValue);
-                console.log('✓ Classes updated from another tab, reloading...');
-                renderClasses(); // Update the main grid immediately
+                const updated = JSON.parse(e.newValue);
+                teacherClasses = Array.isArray(updated) ? updated.filter(c => !['RRG-9154','AFC-7302','ESL-5601'].includes(c.code)) : [];
+                console.log('✓ Classes updated from another tab, re-rendering...');
+                renderClasses();
             } catch (err) {
                 console.warn('Could not parse updated classes:', err);
+                // As a last resort, re-fetch authoritative data
+                if (typeof refreshTeacherData === 'function') refreshTeacherData();
             }
+        } else if (e.key === 'pabasa_added_students') {
+            // Local student list changed: update UI counts
+            try { renderClasses(); } catch (err) { console.warn('Render error on students change', err); }
         }
     });
+
+        // When a student is added via the students modal, re-sync authoritative data
+        window.addEventListener('studentAdded', function(e) {
+            if (typeof refreshTeacherData === 'function') refreshTeacherData();
+        });
+
+        // When materials change, re-sync overview and class readings
+        window.addEventListener('pabasa:materials-updated', function() {
+            if (typeof refreshTeacherData === 'function') refreshTeacherData();
+        });
 
     const readingsStorageKey = 'pabasa_class_readings';
     const flatMaterialsStorageKey = 'pabasa_materials';
@@ -3621,6 +3678,19 @@
 
                             console.log('[AddMaterial] Save success:', successMsg);
                             showSuccessModal('Material Added', successMsg); // Show success modal
+
+                            // Notify other modules (profile, teacher dashboard, other tabs)
+                            try {
+                                window.dispatchEvent(new CustomEvent('pabasa:materials-updated', {
+                                    detail: {
+                                        material_ids: createdIds,
+                                        material: apiData.material || null,
+                                        class_code: currentClassCode || null
+                                    }
+                                }));
+                            } catch (e) {
+                                console.warn('Could not dispatch pabasa:materials-updated', e);
+                            }
 
                         } catch (err) {
                             console.error('[AddMaterial] Save failed:', err);

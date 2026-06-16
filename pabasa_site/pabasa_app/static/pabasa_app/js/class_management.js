@@ -89,7 +89,15 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    location.reload(); // Refresh to show the new student in the main table
+                    // Notify other modules to refresh authoritative data without forcing a full reload
+                    try { window.dispatchEvent(new CustomEvent('studentAdded', { detail: { student_id: studentId, class_code: classCode } })); } catch (e) { console.warn(e); }
+                    try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { class_code: classCode } })); } catch (e) { console.warn(e); }
+
+                    if (typeof showSuccessToast === 'function') {
+                        showSuccessToast('Student added successfully.');
+                    } else {
+                        alert('Student added successfully.');
+                    }
                 } else {
                     alert('Error: ' + data.error);
                 }

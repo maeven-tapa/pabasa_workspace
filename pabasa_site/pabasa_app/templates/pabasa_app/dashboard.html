@@ -1106,6 +1106,11 @@
             classCodeInput.setCustomValidity("");
             classCodeInput.value = "";
             await setJoinedState(codes);
+
+            // Notify other open pages/tabs that a student joined a class so teachers can refresh counts
+            try { window.dispatchEvent(new CustomEvent('studentAdded', { detail: { class_code: code, class_data: teacherClass } })); } catch (e) { console.warn(e); }
+            try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { class_code: code } })); } catch (e) { console.warn(e); }
+
             showSuccessToast(
             `Successfully joined ${teacherClass.name}!`
         );

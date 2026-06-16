@@ -933,6 +933,12 @@ function initProfilePage() {
         updateClassOverview();
     });
 
+    // Refresh overview when materials are added/updated so counts stay authoritative
+    window.addEventListener("pabasa:materials-updated", function () {
+        updateClassOverview();
+        updateDashboardClassStats();
+    });
+
     // Periodic refresh to keep status chips current (handles cases where other tabs or server updates don't emit events)
     setInterval(function () {
         updateClassOverview();
