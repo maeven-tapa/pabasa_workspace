@@ -3334,7 +3334,7 @@ def add_reading_material(request):
                 # Only notify students via database immediately if the material is live.
                 # Scheduled materials will trigger notifications via JS once the time is reached.
                 if status == 'published':
-                    action_url = f"{reverse('course_student_view')}?class_code={section.class_code}"
+                    action_url = reverse('assessment')
                     for student_user in _section_active_students(section):
                         # In-app notification content
                         in_app_title = '📚 Ready to read?'
