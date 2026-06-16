@@ -662,17 +662,12 @@
             `;
         }
 
-            // Helper: check seenIds for either prefixed id (e.g., 'assessment-12') or legacy numeric id '12'
+            // Helper: check seenIds specifically for the exact prefixed material ID
             const seenIncludes = (mid) => {
                 if (!mid) return false;
                 const m = String(mid).trim();
-                const candidates = [m];
-                if (m.includes('-')) {
-                    const parts = m.split('-', 2);
-                    if (parts.length === 2 && parts[1]) candidates.push(parts[1]);
-                }
                 const storedSeenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
-                return candidates.some(cid => storedSeenIds.includes(String(cid).trim()));
+                return storedSeenIds.includes(m);
             };
 
             async function updateAssessmentHub() {
@@ -722,7 +717,9 @@
                         const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text' };
                         const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading' };
                         const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
-                        const serverMarked = (m && typeof m.attempt_count !== 'undefined' && Number(m.attempt_count) > 0);
+                        // A material is Done if the server reports an attempt OR if we've recorded it locally
+                        // We treat attempt_count > 0 as the definitive source of truth.
+                        const serverMarked = (m && m.attempt_count && Number(m.attempt_count) > 0);
                         const isDone = serverMarked || (mId && seenIncludes(mId));
 
                         return `

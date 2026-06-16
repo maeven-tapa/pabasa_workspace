@@ -56,10 +56,6 @@
                 // Split by line to allow multiple items (words, sentences, or paragraphs)
                 return material.content.split(/\n/).map(i => i.trim()).filter(item => item.length > 0);
             }
-
-            // No items available; return empty list.
-            // IMPORTANT: Do not mutate `localStorage` here — marking materials as "seen"
-            // must only happen on explicit user completion (see `showCompletion()`).
             return [];
         }
 
@@ -153,6 +149,43 @@
                     // Dispatch both events to ensure sidebar and dashboard update
                     window.dispatchEvent(new CustomEvent('pabasa:student-class-updated', { bubbles: true }));
                     window.dispatchEvent(new Event('storage')); // Fake storage event for current tab consistency
+                }
+
+                // Also mark linked practice materials (type 'practice' or 'both') that share the same id or title
+                try {
+                    const readings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+                    const normalizedId = materialId ? String(materialId).trim() : null;
+                    const normalizedTitle = testTitle || null;
+                    const currentSeenIds = JSON.parse(localStorage.getItem('pabasa_seen_material_ids') || '[]').map(id => String(id).trim());
+                    const seenSet = new Set(currentSeenIds);
+
+                    Object.keys(readings).forEach(function (classCode) {
+                        const classMaterials = readings[classCode] || {};
+                        ['word', 'sentence', 'paragraph', 'story'].forEach(function (type) {
+                            const keys = [type, type + 's', type === 'story' ? 'stories' : null].filter(Boolean);
+                            keys.forEach(function (key) {
+                                const list = classMaterials[key] || [];
+                                if (!Array.isArray(list)) return;
+                                list.forEach(function (mat) {
+                                    if (!mat) return;
+                                    const matType = String(mat.type || '').toLowerCase();
+                                    if (!matType.includes('practice') && !matType.includes('both')) return;
+
+                                    const matId = (mat.id !== undefined && mat.id !== null) ? String(mat.id).trim() : null;
+                                    const matTitle = (mat.title || mat.content || '').toString();
+
+                                    if ((normalizedId && matId && normalizedId === matId) || (normalizedTitle && matTitle && normalizedTitle === normalizedTitle)) {
+                                        if (matId && !seenSet.has(matId)) {
+                                            seenSet.add(matId);
+                                        }
+                                    }
+                                });
+                            });
+                        });
+                    });
+                    localStorage.setItem('pabasa_seen_material_ids', JSON.stringify(Array.from(seenSet)));
+                } catch (e) {
+                    console.warn('PABASA: Could not mark linked materials as seen', e);
                 }
             }
 

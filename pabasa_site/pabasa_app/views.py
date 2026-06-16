@@ -2950,7 +2950,10 @@ def get_class_materials(request):
         
         # Include materials directly linked to section or assigned via ManyToMany
         materials_qs = Material.objects.filter(Q(section=section) | Q(assigned_sections=section)).distinct()
-        assessments_qs = Assessment.objects.filter(section=section)
+        # Avoid duplication: exclude assessments that are already represented by a Material record.
+        # Material records act as the primary container for metadata like "Assigned Week".
+        represented_asm_ids = materials_qs.exclude(assessment=None).values_list('assessment_id', flat=True)
+        assessments_qs = Assessment.objects.filter(section=section).exclude(id__in=represented_asm_ids)
         # Practice sets are standalone.
         practices_qs = Practice.objects.filter(section__isnull=True).order_by('-created_at')
         user_id = request.session.get('user_id')
@@ -2994,8 +2997,11 @@ def get_class_materials(request):
                 if m.assessment:
                     if is_requesting_student and request_user:
                         attempt_count = m.assessment.get_student_attempt_count(request_user)
+                    elif teacher_user and teacher_user.role == 'teacher':
+                        # Teachers see 0 completions for themselves on the hub
+                        attempt_count = 0
                     else:
-                        attempt_count = len(m.assessment.get_attempts())
+                        attempt_count = 0
 
                 item = {
                     'id': f"material-{m.id}",
@@ -3021,8 +3027,11 @@ def get_class_materials(request):
                 # compute attempt count for this assessment
                 if is_requesting_student and request_user:
                     attempt_count = a.get_student_attempt_count(request_user)
+                elif teacher_user and teacher_user.role == 'teacher':
+                    # Teachers see 0 completions for themselves on the hub
+                    attempt_count = 0
                 else:
-                    attempt_count = len(a.get_attempts())
+                    attempt_count = 0
 
                 item = {
                     'id': f"assessment-{a.id}",
