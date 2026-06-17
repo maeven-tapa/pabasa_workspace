@@ -1763,111 +1763,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body course-modal-body">
-                <!-- Course Detail Modal (now fullscreen with tabs) -->
-                <div class="modal fade" id="courseDetailModal" tabindex="-1" aria-labelledby="courseDetailModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-fullscreen">
-                        <div class="modal-content course-modal-content">
-                            <div class="modal-header course-modal-header">
-                                <div>
-                                    <h5 class="modal-title" id="courseDetailTitle">Course</h5>
-                                    <p class="small text-secondary mb-0 mt-1" id="courseDetailCode"></p>
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body course-modal-body">
-                                <!-- Vertical Tabs Sidebar -->
-                                <aside class="course-sidebar">
-                                    <ul class="nav flex-column vertical-tabs course-tabs" role="tablist">
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link active vertical-nav-link" id="course-readings-tab" data-bs-toggle="tab" data-bs-target="#courseReadingsContent" type="button" role="tab" aria-controls="courseReadingsContent" aria-selected="true">
-                                                <i class="bi bi-book-half"></i><span>Readings</span>
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link vertical-nav-link" id="course-materials-tab" data-bs-toggle="tab" data-bs-target="#courseMaterialsContent" type="button" role="tab" aria-controls="courseMaterialsContent" aria-selected="false">
-                                                <i class="bi bi-journal-text"></i><span>Materials</span>
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link vertical-nav-link" id="course-assessments-tab" data-bs-toggle="tab" data-bs-target="#courseAssessmentsContent" type="button" role="tab" aria-controls="courseAssessmentsContent" aria-selected="false">
-                                                <i class="bi bi-clipboard2-check"></i><span>Assessments</span>
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link vertical-nav-link" id="course-reports-tab" data-bs-toggle="tab" data-bs-target="#courseReportsContent" type="button" role="tab" aria-controls="courseReportsContent" aria-selected="false">
-                                                <i class="bi bi-file-earmark-bar-graph"></i><span>Reports & Updates</span>
-                                            </button>
-                                        </li>
-                                    </ul>
-                                    <div class="mt-3"><strong>Sections</strong>
-                                        <div id="courseDetailSections" class="mt-2 small text-muted"></div>
-                                    </div>
-                                </aside>
-
-                                <!-- Tab Content -->
-                                <div class="tab-content course-tab-content">
-                                    <!-- Readings Tab -->
-                                    <div class="tab-pane fade show active" id="courseReadingsContent" role="tabpanel" aria-labelledby="course-readings-tab">
-                                        <div class="workspace-shell" id="courseReadingsContainer">
-                                            <div class="workspace-hero is-compact">
-                                                <div>
-                                                    <h5><i class="bi bi-book-half me-2"></i>Reading Materials</h5>
-                                                    <p>Browse reading materials aggregated across the course's sections.</p>
-                                                </div>
-                                            </div>
-                                            <div id="courseAllReadingsList" class="readings-list"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Materials Tab -->
-                                    <div class="tab-pane fade" id="courseMaterialsContent" role="tabpanel" aria-labelledby="course-materials-tab">
-                                        <div class="mb-3 d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0">Assigned Materials</h6>
-                                            <button class="btn btn-sm btn-outline-primary" id="btnAddMaterialToCourse">Add Material</button>
-                                        </div>
-                                        <div id="courseDetailMaterials" class="mb-3"></div>
-
-                                        <!-- Course Overview (aggregated stats across sections) -->
-                                        <div id="courseOverviewStats" class="mb-3"></div>
-
-                                        <div id="courseAddMaterialForm" style="display:none;">
-                                            <div class="mb-2">
-                                                <label class="form-label">Title</label>
-                                                <input type="text" id="courseNewMaterialTitle" class="form-control" placeholder="Title">
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="form-label">Content</label>
-                                                <textarea id="courseNewMaterialContent" class="form-control" rows="4" placeholder="Paste words, sentences, or paragraphs here"></textarea>
-                                            </div>
-                                            <div class="mb-2">
-                                                <label class="form-label">Usage</label>
-                                                <select id="courseNewMaterialUsage" class="form-select">
-                                                    <option value="practice">Practice</option>
-                                                    <option value="assessment" selected>Assessment</option>
-                                                    <option value="both">Practice & Assessment</option>
-                                                </select>
-                                            </div>
-                                            <div class="d-flex gap-2">
-                                                <button class="btn btn-primary" id="courseCreateMaterialBtn">Create & Attach</button>
-                                                <button class="btn btn-outline-secondary" id="courseCancelCreateMaterial">Cancel</button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Assessments Tab -->
-                                    <div class="tab-pane fade" id="courseAssessmentsContent" role="tabpanel" aria-labelledby="course-assessments-tab">
-                                        <div id="courseDetailAssessments" class="mb-3"></div>
-                                    </div>
-
-                                    <!-- Reports Tab -->
-                                    <div class="tab-pane fade" id="courseReportsContent" role="tabpanel" aria-labelledby="course-reports-tab">
-                                        <div id="courseReportSection" class="mb-3"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Course detail modal moved to bottom of file to avoid nested modals. Use the standalone #courseDetailModal defined later. -->
+            </div>
                     <div class="tab-pane fade" id="reportsContent" role="tabpanel" aria-labelledby="reports-tab">
                         <div class="workspace-shell">
                             <div class="workspace-hero is-compact">
@@ -2107,6 +2004,32 @@
 
 <!-- Modals moved to bottom to prevent nesting issues -->
 <!-- Modal for Adding Materials -->
+<style>
+/* Precise Add Material modal styles (matches provided screenshots) */
+#addMaterialModal .modal-dialog { max-width: 980px; }
+#addMaterialModal .modal-content {
+    border-radius: 18px !important;
+    background: rgba(255,255,255,0.96) !important;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid rgba(31,111,139,0.06) !important;
+    box-shadow: 0 30px 80px rgba(20,24,28,0.28) !important;
+    overflow: visible;
+}
+#addMaterialModal .modal-header { padding: 1.25rem 1.5rem; border-bottom: none; background: transparent; }
+#addMaterialModal .modal-header h4 { font-size: 1.25rem; font-weight: 900; color: #0f172a; margin: 0; }
+#addMaterialModal .modal-body { padding: 1.25rem 1.5rem 1.5rem; }
+#addMaterialModal .teacher-field .form-label { color: #374151; font-weight: 800; }
+#addMaterialModal .form-control, #addMaterialModal .form-select { border-radius: 12px; padding: 0.7rem 0.9rem; background: rgba(255,255,255,0.98); border: 1px solid rgba(31,111,139,0.06); box-shadow: none; }
+#addMaterialModal .input-group .btn { border-radius: 0 12px 12px 0; }
+#addMaterialModal #itemChipsContainer { min-height: 140px; max-height: 200px; background: #fff; border-radius: 12px; border: 1px solid rgba(226,232,240,0.7); padding: 0.5rem; }
+#addMaterialModal #itemChipsContainer .badge { background: #fff; color: #0f172a; border: 1px solid rgba(226,232,240,0.85); border-radius: 10px; padding: 0.45rem 0.65rem; display: inline-flex; align-items:center; gap:0.5rem; font-weight:800; margin:4px; box-shadow: 0 8px 22px rgba(31,111,139,0.06); }
+#addMaterialModal #itemChipsContainer .btn-close { width: 18px; height:18px; opacity:0.6; filter: none; }
+#addMaterialModal .modal-footer { padding: 1rem 1.5rem; border-top: none; background: transparent; }
+#addMaterialModal .modal-footer .btn-link { color: #6b7280; font-weight:700; }
+#addMaterialModal .modal-footer .btn-primary { border-radius: 12px; min-height:48px; padding-left:1rem; padding-right:1rem; background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-soft)); box-shadow:0 8px 20px rgba(31,111,139,0.12); }
+@media (max-width: 991.98px) { #addMaterialModal .modal-dialog { max-width: 100%; margin: 0 1rem; } #addMaterialModal .modal-body { padding: 1rem; } }
+</style>
 <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
@@ -2587,17 +2510,7 @@
             try { if (typeof setupCourseUpdates === 'function') setupCourseUpdates(course.id); } catch (err) { console.warn('setupCourseUpdates error', err); }
             try { if (typeof loadCourseReadings === 'function') loadCourseReadings(course.id); } catch (err) { console.warn('loadCourseReadings error', err); }
 
-            // Ensure the parent class modal is visible so the nested course modal can render
-            const parentModalEl = document.getElementById('classDetailModal');
-            if (parentModalEl) {
-                try {
-                    let parentModal = bootstrap.Modal.getInstance(parentModalEl);
-                    if (!parentModal) parentModal = new bootstrap.Modal(parentModalEl);
-                    parentModal.show();
-                } catch (err) {
-                    console.warn('Failed to show parent classDetailModal before courseDetailModal', err);
-                }
-            }
+            // No parent modal shown — course modal is standalone to avoid nested/backdrop issues
 
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
@@ -2877,59 +2790,8 @@
         }
     });
 
-    // Show add material form inside course detail
-    document.getElementById('btnAddMaterialToCourse')?.addEventListener('click', function() {
-        const form = document.getElementById('courseAddMaterialForm');
-        if (!form) return;
-        form.style.display = form.style.display === 'none' ? 'block' : 'none';
-    });
-
-    document.getElementById('courseCancelCreateMaterial')?.addEventListener('click', function() {
-        const form = document.getElementById('courseAddMaterialForm');
-        if (form) form.style.display = 'none';
-    });
-
-    document.getElementById('courseCreateMaterialBtn')?.addEventListener('click', async function() {
-        const title = (document.getElementById('courseNewMaterialTitle')?.value || '').trim();
-        const content = (document.getElementById('courseNewMaterialContent')?.value || '').trim();
-        const usage = (document.getElementById('courseNewMaterialUsage')?.value || 'assessment');
-        if (!title || !content) return showToast('Title and content are required', 'error');
-
-        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-        const modalEl = document.getElementById('courseDetailModal');
-        const courseId = modalEl?.dataset?.courseId;
-        if (!courseId) return showToast('Course not found', 'error');
-
-        try {
-            // 1) create material (no class_code)
-            const resp = await fetch('/dashboard/teacher/add-material/', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify({ title, content, usage_type: usage, status: 'published' }) });
-            const data = await resp.json();
-            if (!resp.ok || !data.success) return showToast('Failed to create material: ' + (data.error || 'Unknown'), 'error');
-
-            const createdId = (data.material_ids && data.material_ids[0]) || (data.material && data.material.id) || null;
-            if (!createdId) return showToast('Created material id not returned', 'error');
-
-            // 2) attach material to course
-            const attach = await fetch('/dashboard/teacher/course/add-material/', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify({ course_id: Number(courseId), material_id: Number(createdId) }) });
-            const attachData = await attach.json();
-            if (!attach.ok || !attachData.success) return showToast('Failed to attach material: ' + (attachData.error || 'Unknown'), 'error');
-
-            // update local cache and UI
-            const course = (teacherCourses || []).find(c => c.id === Number(courseId));
-            if (course) {
-                course.materials = course.materials || [];
-                course.materials.push({ id: createdId, title: title, item_type: attachData.material?.item_type || '' });
-                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-            }
-            renderCourses();
-            openCourseDetail(Number(courseId));
-            document.getElementById('courseAddMaterialForm').style.display = 'none';
-            showToast('Material created and attached to course', 'success');
-        } catch (err) {
-            console.error('Create+attach material error', err);
-            showToast('Failed to create material', 'error');
-        }
-    });
+    // Course-level add material handlers moved into modal flow (use Add Material modal)
+    // Legacy inline course form handlers removed to avoid duplicate IDs.
 
     async function refreshTeacherData() {
         await loadTeacherClassesFromServer();
@@ -3922,6 +3784,25 @@
             editPublicationStatusSelect.addEventListener('change', toggleEditScheduleField);
         }
 
+        // Course-level Add Material button: open the Add Material modal and attach created materials to the course
+        document.getElementById('btnAddMaterialToCourse')?.addEventListener('click', function() {
+            const modalEl = document.getElementById('addMaterialModal');
+            if (!modalEl) return;
+            // Reset the add form and chips
+            const addForm = document.getElementById('addMaterialForm');
+            if (addForm) addForm.reset();
+            currentItemsList = [];
+            renderAddedItemsChips();
+            if (addMaterialValidationError) addMaterialValidationError.classList.add('d-none');
+
+            // Set course attach target from the currently-open course modal
+            const courseModalEl = document.getElementById('courseDetailModal');
+            window.courseAttachTarget = courseModalEl?.dataset?.courseId ? Number(courseModalEl.dataset.courseId) : null;
+
+            toggleAddScheduleField();
+            new bootstrap.Modal(modalEl).show();
+        });
+
         renderClasses();
 
         // ===== READINGS TAB HANDLERS =====
@@ -4092,6 +3973,8 @@
 
                         const modal = new bootstrap.Modal(document.getElementById('addMaterialModal'));
                         toggleAddScheduleField(); // Reset schedule field visibility when opening add modal
+                        // Ensure not attaching to a course when opening from the global readings list
+                        window.courseAttachTarget = null;
                         modal.show();
                     }
                     
@@ -4411,6 +4294,42 @@
                                 await renderClasses();
                             }
 
+                            // If this add action was initiated from a Course view, attach created materials to that course
+                            if (window.courseAttachTarget && Array.isArray(createdIds) && createdIds.length > 0) {
+                                try {
+                                    const csrftoken2 = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                                    for (const mid of createdIds) {
+                                        const attachResp = await fetch('/dashboard/teacher/course/add-material/', {
+                                            method: 'POST',
+                                            credentials: 'same-origin',
+                                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken2 },
+                                            body: JSON.stringify({ course_id: Number(window.courseAttachTarget), material_id: Number(mid) })
+                                        });
+                                        let attachData = {};
+                                        try { attachData = await attachResp.json(); } catch (e) { /* ignore */ }
+                                        if (attachResp.ok && attachData.success) {
+                                            // update local cache
+                                            try {
+                                                const course = (teacherCourses || []).find(c => Number(c.id) === Number(window.courseAttachTarget));
+                                                if (course) {
+                                                    course.materials = course.materials || [];
+                                                    course.materials.push({ id: mid, title: (apiData.material && apiData.material.title) || title, item_type: attachData.material?.item_type || '' });
+                                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                                }
+                                            } catch (e) { console.warn('Failed to update local course cache after attach', e); }
+                                        } else {
+                                            console.warn('Failed to attach material to course', attachData.error || attachResp.status);
+                                        }
+                                    }
+                                    // refresh courses UI
+                                    try { await renderCourses(); } catch (e) { /* ignore */ }
+                                } catch (e) {
+                                    console.warn('Course attach step failed', e);
+                                } finally {
+                                    window.courseAttachTarget = null;
+                                }
+                            }
+
                             // ── Step 4: Reset form ────────────────────────────────
                             const addMaterialFormEl = document.getElementById('addMaterialForm');
                             if (addMaterialFormEl) addMaterialFormEl.reset();
@@ -4460,7 +4379,7 @@
                             }
                         } finally {
                             submitMaterialBtn.disabled = false;
-                            submitMaterialBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Add Material';
+                            submitMaterialBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material';
                         }
                     });
                 }
@@ -4798,6 +4717,38 @@
         // Initial setup when DOM is ready
         setupAllHandlers();
     });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const courseModalEl = document.getElementById('courseDetailModal');
+    if (courseModalEl) {
+        courseModalEl.addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('courseAddMaterialForm');
+            if (form) form.style.display = 'none';
+            window.courseAttachTarget = null;
+            setTimeout(function () {
+                if (document.querySelectorAll('.modal.show').length === 0) {
+                    document.querySelectorAll('.modal-backdrop').forEach(e => e.parentNode && e.parentNode.removeChild(e));
+                    document.body.classList.remove('modal-open');
+                }
+            }, 120);
+        });
+    }
+    const classModalEl = document.getElementById('classDetailModal');
+    if (classModalEl) {
+        classModalEl.addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('courseAddMaterialForm');
+            if (form) form.style.display = 'none';
+            window.courseAttachTarget = null;
+            setTimeout(function () {
+                if (document.querySelectorAll('.modal.show').length === 0) {
+                    document.querySelectorAll('.modal-backdrop').forEach(e => e.parentNode && e.parentNode.removeChild(e));
+                    document.body.classList.remove('modal-open');
+                }
+            }, 120);
+        });
+    }
+});
 </script>
 </section>
 {% endblock %}
