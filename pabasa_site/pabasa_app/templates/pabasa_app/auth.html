@@ -92,7 +92,7 @@
                             name="custom_id"
                             placeholder="ADM-0001, TCH-1234 or G2-1234"
                             maxlength="8"
-                            pattern="^(ADM|TCH|G2)-[0-9]{4}$"
+                            pattern="^(ADM|TCH|G2|STD)-[0-9]{4}$"
                             required
                         >
                     </div>
@@ -115,7 +115,7 @@
         const password = document.getElementById("password");
         const loginBtn = document.getElementById("loginBtn");
         const errorMessage = document.getElementById("errorMessage");
-        const pabasaIdPattern = /^(ADM|TCH|G2)-[0-9]{4}$/;
+        const pabasaIdPattern = /^(ADM|TCH|G2|STD)-[0-9]{4}$/;
 
         const formatPabasaId = (value) => {
             const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -123,6 +123,11 @@
             if (cleaned.startsWith("TCH")) {
                 const digits = cleaned.slice(3).replace(/\D/g, "").slice(0, 4);
                 return digits ? `TCH-${digits}` : "TCH-";
+            }
+
+            if (cleaned.startsWith("STD")) {
+                const digits = cleaned.slice(3).replace(/\D/g, "").slice(0, 4);
+                return digits ? `STD-${digits}` : "STD-";
             }
 
             if (cleaned.startsWith("ADM")) {
