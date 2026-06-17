@@ -148,7 +148,7 @@
         notifications.unshift({
             id: Date.now() + Math.random(),
             classCode: testCode,
-            title: "📝 Student Read an Assessment",
+            title: "Student Completed an Assessment",
             message: `• ${studentName} completed the assessment "${testTitle}" in ${className}.`,
             timestamp: Date.now(),
             read: false,

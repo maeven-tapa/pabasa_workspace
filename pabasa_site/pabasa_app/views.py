@@ -259,6 +259,91 @@ def _notify_admins(title, message, notification_type='info', action_url='', crea
     for admin_user in _admin_users():
         _create_notification(admin_user, title, message, notification_type, action_url, created_by)
 
+def _resolve_assessment_class_name(assessment=None, material=None, class_code=None):
+    """Resolve a human-readable class name for assessment completion alerts."""
+    if material and material.section:
+        return material.section.class_name
+    if assessment and assessment.section:
+        return assessment.section.class_name
+    if class_code:
+        section = Section.objects.filter(class_code__iexact=str(class_code).strip(), is_active=True).first()
+        if section:
+            return section.class_name
+    if material and hasattr(material, 'assigned_sections'):
+        assigned = material.assigned_sections.filter(is_active=True).first()
+        if assigned:
+            return assigned.class_name
+    return None
+
+def _teachers_for_assessment_completion(assessment=None, material=None, student_user=None):
+    """Collect teacher recipients for an assessment completion event."""
+    teachers = []
+    seen_ids = set()
+
+    def add_teacher(user):
+        if user and user.id not in seen_ids:
+            seen_ids.add(user.id)
+            teachers.append(user)
+
+    if assessment and assessment.teacher:
+        add_teacher(assessment.teacher)
+    if material:
+        if material.assessment and material.assessment.teacher:
+            add_teacher(material.assessment.teacher)
+        if material.section and material.section.teacher:
+            add_teacher(material.section.teacher)
+        if hasattr(material, 'assigned_sections'):
+            for section in material.assigned_sections.filter(is_active=True).select_related('teacher'):
+                if section.teacher:
+                    add_teacher(section.teacher)
+
+    if not teachers and student_user:
+        for section in Section.objects.filter(is_active=True).select_related('teacher'):
+            if not section.teacher or not section.has_student(student_user, active_only=True):
+                continue
+            if assessment and assessment.section_id == section.id:
+                add_teacher(section.teacher)
+            elif material and (
+                material.section_id == section.id
+                or material.assigned_sections.filter(id=section.id).exists()
+            ):
+                add_teacher(section.teacher)
+            elif assessment and assessment.teacher_id == section.teacher_id:
+                add_teacher(section.teacher)
+
+    return teachers
+
+def _assessment_completion_message(student_name, title_text, class_name=None):
+    """Build the in-app notification body for a completed assessment."""
+    safe_title = title_text or 'an assessment'
+    if class_name:
+        return f"{student_name} completed the assessment '{safe_title}' in {class_name}."
+    return f"{student_name} completed the assessment '{safe_title}'."
+
+def _assessment_completion_notif_exists(recipient, student_user, message, is_retake=False):
+    """Prevent duplicate in-app notifications for the same completion event."""
+    window_start = timezone.now() - timedelta(minutes=10)
+    qs = Notification.objects.filter(
+        recipient=recipient,
+        created_by=student_user,
+        notification_type='assessment',
+        message=message,
+        created_at__gte=window_start,
+    )
+    if is_retake:
+        qs = qs.filter(title__icontains='Retook')
+    else:
+        qs = qs.exclude(title__icontains='Retook')
+    return qs.exists()
+
+def _student_completed_assessment_before(assessment, material, student_user):
+    """Return True if the student already has a completed attempt recorded."""
+    if assessment and assessment.has_student_completed(student_user):
+        return True
+    if material and material.assessment and material.assessment.has_student_completed(student_user):
+        return True
+    return False
+
 def _section_active_students(section):
     student_ids = [
         entry.get('student_id')
@@ -2547,7 +2632,7 @@ def join_class(request):
         class_url = f"{reverse('class_management')}?code={section.class_code}"
         _create_notification(
             section.teacher,
-            '📚 Student Joined a Class',
+            'Student Enrolled in a Class',
             f'• {student_name} joined {section.class_name}.',
             'success',
             class_url,
@@ -2602,7 +2687,7 @@ def unenroll_class(request):
 
             # Create an in-app notification for the teacher
             teacher_user = section.teacher
-            title = '🚪 Student Unenrolled from a Class'
+            title = 'Student Unenrolled from a Class'
             message = f"• {student_user.first_name} {student_user.last_name} unenrolled from {section.class_name}."
             Notification.objects.create(
                 recipient=teacher_user,
@@ -3251,7 +3336,7 @@ def teacher_add_student(request):
             )
             _create_notification(
                 section.teacher,
-                '📚 Student Joined a Class',
+                'Student Enrolled in a Class',
                 f'• {student_name} joined {section.class_name}.',
                 'success',
                 f"{reverse('class_management')}?code={section.class_code}",
@@ -3866,7 +3951,7 @@ def add_reading_material(request):
                     action_url = reverse('assessment')
                     for student_user in _section_active_students(section):
                         # In-app notification content
-                        in_app_title = '📚 Ready to read?'
+                        in_app_title = 'New Reading Material Available'
                         in_app_message = f'"{m.title}" is now available in {section.class_name}.'
 
                         # Email notification content
@@ -4194,6 +4279,12 @@ def record_assessment_completion(request):
         if not assessment and not material and not practice_obj:
             return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
 
+        class_code = data.get('class_code')
+        is_practice = activity_type == 'practice' or (practice_obj is not None) or (material and material.section is None and material.assessment is None)
+        already_completed = False
+        if not is_practice:
+            already_completed = _student_completed_assessment_before(assessment, material, student_user)
+
         # Record attempt server-side (authoritative). We mark attempts as completed
         # because this endpoint is called when the student finishes the reading flow.
         try:
@@ -4213,47 +4304,62 @@ def record_assessment_completion(request):
         except Exception as e:
             logger.exception('Failed to persist assessment/practice attempt: %s', e)
 
-        student_name = f"{student_user.first_name} {student_user.last_name}"
-        is_practice = activity_type == 'practice' or (practice_obj is not None) or (material and material.section is None and material.assessment is None)
-        
-        email_subject = None
-        class_name = "a class"
-        if material and material.section:
-            class_name = material.section.class_name
-        elif assessment and assessment.section:
-            class_name = assessment.section.class_name
+        student_name = f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id
+        class_name = _resolve_assessment_class_name(assessment=assessment, material=material, class_code=class_code)
 
+        email_subject = None
         if is_retake:
-            title = "🔄 Student Retook an Assessment"
-            notif_msg = f'🔄 {student_name} retook "{title_text}" in {class_name}.'
+            title = "Student Retook an Assessment"
+            display_class = class_name or "a class"
+            notif_msg = f'{student_name} retook the assessment "{title_text}" in {display_class}.'
             email_subject = "Student Retook an Assessment"
         elif is_practice:
-            title = "📖 Student Read a Practice Material"
-            notif_msg = f'• {student_name} read "{title_text}" in {class_name}.'
+            title = "Student Completed a Practice Material"
+            display_class = class_name or "a class"
+            notif_msg = f'{student_name} read "{title_text}" in {display_class}.'
         else:
-            title = "📝 Student Read an Assessment"
-            notif_msg = f'• {student_name} completed the assessment "{title_text}" in {class_name}.'
+            title = "Student Completed an Assessment"
+            notif_msg = _assessment_completion_message(student_name, title_text, class_name)
+
+        should_notify_assessment = (
+            not is_practice
+            and (is_retake or not already_completed)
+        )
+
         teacher_recipients = []
-        if teacher_user:
-            teacher_recipients.append(teacher_user)
-        elif is_practice:
-            for section in Section.objects.filter(is_active=True).select_related('teacher'):
-                if section.has_student(student_user, active_only=True) and section.teacher:
-                    teacher_recipients.append(section.teacher)
+        if is_practice:
+            if teacher_user:
+                teacher_recipients.append(teacher_user)
+            else:
+                for section in Section.objects.filter(is_active=True).select_related('teacher'):
+                    if section.has_student(student_user, active_only=True) and section.teacher:
+                        teacher_recipients.append(section.teacher)
+        elif should_notify_assessment:
+            teacher_recipients = _teachers_for_assessment_completion(
+                assessment=assessment,
+                material=material,
+                student_user=student_user,
+            )
 
         seen_teacher_ids = set()
         for recipient in teacher_recipients:
             if recipient.id in seen_teacher_ids:
                 continue
             seen_teacher_ids.add(recipient.id)
+
+            if not is_practice and _assessment_completion_notif_exists(
+                recipient, student_user, notif_msg, is_retake=is_retake
+            ):
+                continue
             
             current_email_body = None
             if is_retake:
                 teacher_name = f"{recipient.first_name} {recipient.last_name}"
+                display_class = class_name or "a class"
                 current_email_body = (
                     f"Hello {teacher_name},\n\n"
                     f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
-                    f"for \"{title_text}\" in {class_name}.\n\n"
+                    f"for \"{title_text}\" in {display_class}.\n\n"
                     "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
                     "Thank you,\n\n"
                     "The PABASA Team"
@@ -4270,13 +4376,14 @@ def record_assessment_completion(request):
                 email_body=current_email_body,
             )
 
-        _notify_admins(
-            title,
-            notif_msg,
-            "assessment",
-            reverse('admin_students'),
-            student_user,
-        )
+        if should_notify_assessment or is_practice:
+            _notify_admins(
+                title,
+                notif_msg,
+                "assessment",
+                reverse('admin_students'),
+                student_user,
+            )
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)

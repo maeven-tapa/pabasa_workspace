@@ -1,8 +1,9 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
+import json
 
-from .models import Material, User
+from .models import Material, User, Section, Assessment, Notification
 
 
 class ProfileUpdateTests(TestCase):
@@ -216,3 +217,135 @@ class AdminSettingsRenderTests(TestCase):
         self.assertContains(response, "Confirm Password")
         self.assertContains(response, "Update Password")
         self.assertNotContains(response, "Settings placeholder. CRUD is not implemented yet.")
+
+
+class AssessmentCompletionNotificationTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id="TCH-9001",
+            role="teacher",
+            first_name="Taylor",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="teacher9001@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        self.student = User.objects.create(
+            custom_id="STU-9001",
+            role="student",
+            first_name="Jane",
+            last_name="Doe",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=2,
+            birth_day=2,
+            birth_year=2012,
+            email="student9001@example.com",
+            password_hash=make_password("student-password"),
+        )
+        self.section = Section.objects.create(
+            teacher=self.teacher,
+            class_name="Class A",
+            class_code="CLS-A9001",
+            subject="Reading",
+            is_active=True,
+        )
+        self.section.add_student(self.student)
+        self.assessment = Assessment.objects.create(
+            title="Reading Fluency Test",
+            code="ASM-9001",
+            assessment_type="word",
+            content="cat\ndog",
+            teacher=self.teacher,
+            section=self.section,
+            is_active=True,
+        )
+
+    def _login_student(self):
+        session = self.client.session
+        session["user_id"] = self.student.id
+        session["user_role"] = self.student.role
+        session.save()
+
+    def _login_teacher(self):
+        session = self.client.session
+        session["user_id"] = self.teacher.id
+        session["user_role"] = self.teacher.role
+        session.save()
+
+    def test_assessment_completion_creates_teacher_notification(self):
+        self._login_student()
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "assessment_id": f"assessment-{self.assessment.id}",
+                "material_id": f"assessment-{self.assessment.id}",
+                "activity_type": "assessment",
+                "class_code": self.section.class_code,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        notification = Notification.objects.filter(
+            recipient=self.teacher,
+            created_by=self.student,
+            notification_type="assessment",
+        ).first()
+        self.assertIsNotNone(notification)
+        self.assertIn("Jane Doe completed the assessment 'Reading Fluency Test' in Class A.", notification.message)
+        self.assertFalse(notification.is_read)
+
+    def test_duplicate_assessment_completion_does_not_create_second_notification(self):
+        self._login_student()
+        payload = json.dumps({
+            "assessment_id": f"assessment-{self.assessment.id}",
+            "material_id": f"assessment-{self.assessment.id}",
+            "activity_type": "assessment",
+            "class_code": self.section.class_code,
+        })
+        first = self.client.post(
+            reverse("record_assessment_completion"),
+            data=payload,
+            content_type="application/json",
+        )
+        second = self.client.post(
+            reverse("record_assessment_completion"),
+            data=payload,
+            content_type="application/json",
+        )
+        self.assertTrue(first.json()["success"])
+        self.assertTrue(second.json()["success"])
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.teacher,
+                created_by=self.student,
+                notification_type="assessment",
+            ).count(),
+            1,
+        )
+
+    def test_teacher_can_fetch_unread_notification(self):
+        Notification.objects.create(
+            recipient=self.teacher,
+            created_by=self.student,
+            title="📝 Student Completed an Assessment",
+            message="Jane Doe completed the assessment 'Reading Fluency Test' in Class A.",
+            notification_type="assessment",
+            action_url=f"/dashboard/teacher/students/detail/?student_id={self.student.custom_id}",
+        )
+        self._login_teacher()
+        response = self.client.get(reverse("get_notifications"))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(len(data["notifications"]), 1)
+        self.assertFalse(data["notifications"][0]["is_read"])

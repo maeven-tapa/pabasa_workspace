@@ -42,6 +42,14 @@
         let isRecording = false;
         let isMuted = false;
         let startTime = null;
+        let completionSubmitted = false;
+
+        function getCsrfToken() {
+            const cookieToken = document.cookie.split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                ?.split('=')[1];
+            return cookieToken || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
 
         const studentClassCodesKey = "pabasaStudentClassCodes";
         const readingsStorageKey = "pabasa_class_readings";
@@ -118,7 +126,7 @@
             }
         }
 
-        function showCompletion() {
+        function showCompletion(isFullCompletion) {
             shell.classList.add("is-complete");
             closePauseMenu();
             if (completionCount) completionCount.textContent = items.length;
@@ -132,8 +140,9 @@
                 if (title) title.innerHTML += ` <span style="background: var(--sun); color: #1b1a17; padding: 4px 12px; border-radius: 10px; font-size: 0.4em; vertical-align: middle; margin-left: 10px; font-weight: 900;">RETAKE ${count}/3</span>`;
             }
 
-            // Skip updating stats if in view mode
-            if (viewMode === 'view') return;
+            // Skip side effects for review mode or partial progress
+            if (viewMode === 'view' || !isFullCompletion || completionSubmitted) return;
+            completionSubmitted = true;
 
             const count = parseInt(localStorage.getItem("pabasa_assessments_completed") || "0");
             localStorage.setItem("pabasa_assessments_completed", count + 1);
@@ -189,38 +198,29 @@
                 }
             }
 
-            // Notify teacher that activity finished
-            const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
-            const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
-            const classInfo = metadata[testCode.toUpperCase()] || {};
-            const className = classInfo.name || "your class";
-
-            const teacherClasses = JSON.parse(localStorage.getItem('pabasa_teacher_classes') || '[]');
-            const cls = teacherClasses.find(c => c.code === testCode);
-            const teacherEmail = cls ? cls.teacherEmail : null;
-
-            let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
-            notifications.unshift({
-                id: Date.now() + Math.random(),
-                classCode: testCode,
-                title: "📝 Student Read an Assessment",
-                message: `• ${studentName} completed the assessment "${testTitle}" in ${className}.`,
-                timestamp: Date.now(),
-                read: false,
-                role: 'teacher',
-                recipientEmail: teacherEmail
-            });
-            localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
-            window.dispatchEvent(new Event('pabasa:notifications-updated'));
-            // Notify teacher via Backend (Ensuring fetch is correctly implemented)
-            const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+            // Persist completion server-side so the teacher receives an in-app notification.
+            const token = getCsrfToken();
             if (materialId && token) {
+                const payload = {
+                    material_id: materialId,
+                    activity_type: 'assessment',
+                    class_code: testCode,
+                };
+                if (viewMode === 'retake') {
+                    payload.is_retake = true;
+                    const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
+                    payload.attempt_number = retakeCounts[String(materialId).trim()] || 1;
+                }
+                if (String(materialId).toLowerCase().startsWith('assessment-')) {
+                    payload.assessment_id = materialId;
+                }
                 fetch('/record-assessment-completion/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
-                    body: JSON.stringify({ material_id: materialId })
+                    credentials: 'same-origin',
+                    body: JSON.stringify(payload)
                 }).then(r => r.json()).then(d => {
-                    if (d.success) console.log("PABASA: Completion notified.");
+                    if (d.success) console.log("PABASA: Assessment completion recorded.");
                 }).catch(e => console.error("PABASA: Completion error", e));
             }
         }
@@ -237,7 +237,8 @@
         const stopReading = () => {
             if (!isRecording) return;
             isRecording = false;
-            showCompletion();
+            const reachedLastItem = items.length > 0 && currentIndex === items.length - 1;
+            showCompletion(reachedLastItem);
         };
 
         btnStartReading?.addEventListener("click", startReading);
@@ -285,7 +286,7 @@
                 currentIndex++; 
                 updateUI(); 
             } 
-            else { showCompletion(); }
+            else { showCompletion(true); }
         });
 
         pauseBtn?.addEventListener("click", () => {

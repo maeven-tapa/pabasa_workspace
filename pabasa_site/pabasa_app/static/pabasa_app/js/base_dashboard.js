@@ -678,7 +678,7 @@ var getStudentClassData = window.getStudentClassData = function() {
                             notifications.unshift({
                                 id: Date.now() + Math.random(),
                                 classCode: code,
-                                title: `🔔 ${className} has a new reading: "${m.title || 'New Reading'}"`,
+                                title: `${className} has a new reading: "${m.title || 'New Reading'}"`,
                                 message: `Hello ${studentName},\n\nA new reading material has just been added to PABASA and is ready for you to explore!\n\nTitle: ${m.title || 'New Reading'}\n\nTake a few moments to log in and check it out. Every word you read helps you build confidence,\nimprove your skills, and discover something new.\n\nHappy reading, and enjoy learning with PABASA!\n\nWarm regards,\n\nThe PABASA Team`,
                                 timestamp: Date.now(),
                                 read: false,
@@ -722,7 +722,7 @@ var getStudentClassData = window.getStudentClassData = function() {
             notifications.unshift({
                 id: Date.now() + Math.random(),
                 classCode: student.class || "General",
-                                title: "📚 Student Joined a Class",
+                                title: "Student Enrolled in a Class",
                                 message: `• ${student.name} joined ${student.class || "your class"}.`,
                 timestamp: Date.now(),
                 read: false,
@@ -759,7 +759,23 @@ var getStudentClassData = window.getStudentClassData = function() {
         checkScheduledNotifications();
         checkStudentJoinNotifications();
 
+        const userRole = window.PABASA_USER_ROLE || window.localStorage.getItem("pabasaUserRole") || "";
         const isStudent = window.localStorage.getItem("pabasaStudentClassJoined") === "1";
+
+        if (!isStudent && userRole === 'teacher') {
+            fetch('/api/notifications/unread-count/', {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            }).then(function (response) { return response.json(); }).then(function (data) {
+                if (data && data.success) {
+                    updateLinkBadge('/dashboard/notifications', data.unread_count || 0);
+                }
+            }).catch(function () {
+                // ignore
+            });
+            return;
+        }
+
         if (!isStudent) return;
 
         const studentCodes = getStudentClassData();

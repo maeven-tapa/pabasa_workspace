@@ -1446,7 +1446,10 @@
         document.addEventListener('DOMContentLoaded', updateInAppNotifications);
         window.addEventListener('pabasa:notifications-updated', updateInAppNotifications);
         window.addEventListener('pabasa:preferences-updated', updateInAppNotifications);
-        window.setInterval(updateInAppNotifications, 30000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') updateInAppNotifications();
+        });
+        window.setInterval(updateInAppNotifications, 10000);
     </script>
 </body>
 </html>

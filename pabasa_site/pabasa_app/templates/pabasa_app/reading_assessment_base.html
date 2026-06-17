@@ -874,6 +874,7 @@
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
     </script>
+    {% csrf_token %}
     {% block script %}{% endblock %}
 </body>
 </html>

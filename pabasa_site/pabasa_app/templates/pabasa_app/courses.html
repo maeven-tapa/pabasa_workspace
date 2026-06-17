@@ -3497,7 +3497,7 @@
             recipientId: null, // Omit specific recipient ID to broadcast to the entire class
             classCode: classData.code,
             title: title,
-            message: `🎉 A new ${typeLabel} activity is ready for your class! Check it out and start now!`,
+            message: `A new ${typeLabel} activity is ready for your class. Please log in to begin.`,
             timestamp: Date.now(),
             read: false,
             role: 'student',
@@ -3515,7 +3515,7 @@
             return settings.emailNotifications !== false;
         });
         recipients.forEach(s => {
-            const emailMessageContent = `Hi ${s.name}! 🎉 Your new reading activity is here! Check ${typeLabel} and start now!`;
+            const emailMessageContent = `Dear ${s.name}, your new reading activity is now available. Please log in to begin ${typeLabel}.`;
                 fetch('/students/send-email/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value },

@@ -282,6 +282,13 @@ class Assessment(models.Model):
     def has_student_attempted(self, student):
         """Check if a student has attempted this assessment"""
         return any(a.get('student_id') == student.id for a in self.get_attempts())
+
+    def has_student_completed(self, student):
+        """Check if a student has a completed attempt for this assessment."""
+        return any(
+            a.get('student_id') == student.id and a.get('status') == 'completed'
+            for a in self.get_attempts(student)
+        )
     
     def _get_attempt_entry(self, student, status='started', started_at=None, **kwargs):
         """Create an attempt entry dict"""
