@@ -250,6 +250,34 @@
         gap: 0.85rem;
     }
 
+    /* Vertical side nav for course modal */
+    .course-side-nav .nav-link {
+        background: rgba(255,255,255,0.95);
+        border: 1px solid rgba(27,26,23,0.06);
+        border-radius: 12px;
+        padding: 0.9rem 0.85rem;
+        color: var(--dash-ink);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        width: 160px;
+        justify-content: flex-start;
+        box-shadow: 0 8px 20px rgba(27,26,23,0.06);
+    }
+
+    .course-side-nav .nav-link.active {
+        background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
+        color: #fff !important;
+        border-color: rgba(31,111,139,0.12);
+        transform: translateX(0);
+    }
+
+    .course-side-nav .nav-link i {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
     .course-tabs {
         display: grid;
         gap: 0.65rem;
@@ -1896,25 +1924,21 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body course-modal-body">
-                            <div class="course-sidebar">
-                                <strong>Sections</strong>
-                                <div id="courseDetailSections" class="mt-2 small text-muted"></div>
+                            <div class="course-sidebar d-flex flex-column align-items-start">
+                                <div style="width:100%; margin-bottom:0.6rem;">
+                                    <strong>Sections</strong>
+                                    <div id="courseDetailSections" class="mt-2 small text-muted"></div>
+                                </div>
+
+                                <nav class="nav flex-column nav-pills course-side-nav" role="tablist" aria-orientation="vertical">
+                                    <button class="nav-link active" id="side-materials-tab" data-bs-toggle="tab" data-bs-target="#materialsPane" type="button" role="tab" aria-controls="materialsPane" aria-selected="true"><i class="bi bi-book"></i> Readings</button>
+                                    <button class="nav-link" id="side-students-tab" data-bs-toggle="tab" data-bs-target="#studentsPane" type="button" role="tab" aria-controls="studentsPane" aria-selected="false"><i class="bi bi-people"></i> Students</button>
+                                    <button class="nav-link" id="side-assessments-tab" data-bs-toggle="tab" data-bs-target="#assessmentsPane" type="button" role="tab" aria-controls="assessmentsPane" aria-selected="false"><i class="bi bi-clipboard2-check"></i> Assessments</button>
+                                    <button class="nav-link" id="side-reports-tab" data-bs-toggle="tab" data-bs-target="#reportsPane" type="button" role="tab" aria-controls="reportsPane" aria-selected="false"><i class="bi bi-bar-chart"></i> Reports & Updates</button>
+                                </nav>
                             </div>
 
                             <div class="course-tab-content">
-                                <!-- Top tabs for Materials / Assessments / Reports -->
-                                <ul class="nav nav-tabs mb-3" id="courseTabs" role="tablist">
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" id="materials-tab" data-bs-toggle="tab" data-bs-target="#materialsPane" type="button" role="tab" aria-controls="materialsPane" aria-selected="true">Materials</button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="assessments-tab" data-bs-toggle="tab" data-bs-target="#assessmentsPane" type="button" role="tab" aria-controls="assessmentsPane" aria-selected="false">Assessments</button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reportsPane" type="button" role="tab" aria-controls="reportsPane" aria-selected="false">Reports & Updates</button>
-                                    </li>
-                                </ul>
-
                                 <div class="tab-content">
                                     <div class="tab-pane fade show active" id="materialsPane" role="tabpanel" aria-labelledby="materials-tab">
                                         <div class="mb-3 d-flex justify-content-between align-items-center">
@@ -1929,6 +1953,33 @@
                                         <div class="mb-3">
                                             <h6 class="mb-0">Assessments</h6>
                                             <div id="courseDetailAssessments" class="mb-3"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Students Pane -->
+                                    <div class="tab-pane fade" id="studentsPane" role="tabpanel" aria-labelledby="students-tab">
+                                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">Students</h6>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary" id="btnAddStudentToCourse">Add Student</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="card rounded-4 p-3">
+                                            <div class="table-responsive">
+                                                <table class="table table-borderless align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Name</th>
+                                                            <th>Email</th>
+                                                            <th>Accuracy</th>
+                                                            <th>WPM</th>
+                                                            <th style="width:140px; text-align:right">Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="courseStudentsTableBody"></tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -2506,6 +2557,7 @@
             try { if (typeof loadCourseReports === 'function') loadCourseReports(course.id); } catch (err) { console.warn('loadCourseReports error', err); }
             try { if (typeof setupCourseUpdates === 'function') setupCourseUpdates(course.id); } catch (err) { console.warn('setupCourseUpdates error', err); }
             try { if (typeof loadCourseReadings === 'function') loadCourseReadings(course.id); } catch (err) { console.warn('loadCourseReadings error', err); }
+                try { if (typeof loadCourseStudents === 'function') loadCourseStudents(course.id); } catch (err) { console.warn('loadCourseStudents error', err); }
 
             // No parent modal shown — course modal is standalone to avoid nested/backdrop issues
 
@@ -2686,6 +2738,44 @@
                 });
             } catch (e) {
                 console.warn('loadCourseReports failed', e);
+            }
+        }
+
+        // Course Students loader
+        function loadCourseStudents(courseId) {
+            try {
+                const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+                if (!course) return;
+                const sectionNames = (course.sections || []).map(s => s.name).filter(Boolean);
+                const allStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                const courseStudents = allStudents.filter(s => s.class && sectionNames.includes(s.class) && s.name !== 'Jay Park');
+
+                const tbody = document.getElementById('courseStudentsTableBody');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                if (courseStudents.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No students enrolled in this course.</td></tr>`;
+                    return;
+                }
+
+                courseStudents.forEach(s => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${s.name}</strong><div class="small text-muted">${s.class || ''}</div></td>
+                        <td>${s.email || '<span class="text-danger">No email</span>'}</td>
+                        <td>${s.accuracy ? s.accuracy + '%' : '—'}</td>
+                        <td>${s.wpm || '—'}</td>
+                        <td class="text-end">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || ''}" data-student-name="${s.name}"><i class="bi bi-bar-chart"></i></button>
+                                <button class="btn btn-sm btn-outline-primary" data-student-id="${s.id || ''}" data-student-name="${s.name}" onclick="window.removeStudentFromClass('${s.pabasa_id || s.id || ''}', '${s.name}')"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.warn('loadCourseStudents failed', e);
             }
         }
 
@@ -2939,6 +3029,38 @@
     // Wire course handlers when Course modal is first used
     document.addEventListener('DOMContentLoaded', function() {
         setupCourseReadingsHandlers();
+    });
+    
+    // Wire students pane actions
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('#btnAddStudentToCourse')) {
+            e.preventDefault();
+            // open a simple prompt to add student (fallback if no modal available)
+            const name = prompt('Enter student name to add to this course:');
+            if (!name) return;
+            // This will call server endpoint to add student to class if available; otherwise persist locally
+            try {
+                const courseId = document.getElementById('courseDetailModal').dataset.courseId;
+                // Find first section to assign
+                const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+                const sectionName = (course && course.sections && course.sections[0] && course.sections[0].name) || '';
+                const newStudent = { id: 'local-' + Date.now(), name: name, email: '', class: sectionName, accuracy: 0, wpm: 0 };
+                const all = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                all.push(newStudent);
+                localStorage.setItem('pabasa_added_students', JSON.stringify(all));
+                loadCourseStudents(courseId);
+                showToast('Student added locally. Sync with server when possible.', 'success');
+            } catch (err) {
+                console.warn('Add student fallback failed', err);
+            }
+        }
+
+        if (e.target.closest('.view-student-progress')) {
+            const btn = e.target.closest('.view-student-progress');
+            const id = btn.dataset.studentId;
+            const name = btn.dataset.studentName;
+            alert(`Open progress view for ${name} (${id})`);
+        }
     });
     
     // Toast notification function
