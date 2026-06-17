@@ -2428,6 +2428,27 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Courses created by teacher (grouping for per-section scheduling)
+    // Ensure fetch includes X-Requested-With header for server-side AJAX detection
+    (function() {
+        const _origFetch = window.fetch.bind(window);
+        window.fetch = function(input, init = {}) {
+            init = init || {};
+            init.headers = init.headers || {};
+            if (!('X-Requested-With' in init.headers) && !('x-requested-with' in init.headers)) {
+                init.headers['X-Requested-With'] = 'XMLHttpRequest';
+            }
+            return _origFetch(input, init);
+        };
+    })();
+
+    function pc_itemsCount(o) {
+        if (!o) return 0;
+        if (typeof o.items_count === 'number') return o.items_count;
+        if (Array.isArray(o.items)) return o.items.length;
+        if (typeof o.items === 'number') return o.items;
+        return 0;
+    }
+
     let teacherCourses = [];
     const teacherCoursesKey = () => {
         const email = (window.PABASA_USER_EMAIL || '').trim();
@@ -2611,7 +2632,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (action === 'preview') {
                             const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
                             if (!mat) return showToast('Material not found', 'error');
-                            showSuccessModal('Material Preview', `${mat.title} \n\nType: ${mat.item_type || '-'}\nItems: ${Array.isArray(mat.items) ? mat.items.length : (mat.items || '-')}`);
+                            const matItems = (typeof mat.items_count === 'number') ? mat.items_count : (Array.isArray(mat.items) ? mat.items.length : (mat.items || '-'));
+                            showSuccessModal('Material Preview', `${mat.title} \n\nType: ${mat.item_type || '-'}\nItems: ${matItems}`);
                             return;
                         }
 
@@ -2678,7 +2700,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (action === 'preview') {
                             const pr = (course.practices || []).find(x => Number(x.id) === Number(pid));
                             if (!pr) return showToast('Practice not found', 'error');
-                            showSuccessModal('Practice Preview', `${pr.title} \n\nType: ${pr.item_type || '-'}\nItems: ${pr.items || '-'}\n\n${pr.content || ''}`);
+                            const prItems = (typeof pr.items_count === 'number') ? pr.items_count : (Array.isArray(pr.items) ? pr.items.length : (pr.items || '-'));
+                            showSuccessModal('Practice Preview', `${pr.title} \n\nType: ${pr.item_type || '-'}\nItems: ${prItems}\n\n${pr.content || ''}`);
                             return;
                         }
                     }
@@ -2712,7 +2735,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (!assessment) return showToast('Assessment not found', 'error');
 
                         if (actionBtn.dataset.assessmentAction === 'preview') {
-                            showSuccessModal('Assessment Preview', `${assessment.title} has ${assessment.items || 0} items and a ${assessment.minutes || 0}-minute limit.`);
+                            showSuccessModal('Assessment Preview', `${assessment.title} has ${pc_itemsCount(assessment)} items and a ${assessment.minutes || 0}-minute limit.`);
                             return;
                         }
 
@@ -2885,7 +2908,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div class="assessment-stats">
                             <div class="assessment-stat">
-                                <strong>${assessment.items || 0}</strong>
+                                <strong>${pc_itemsCount(assessment)}</strong>
                                 <span>Items</span>
                             </div>
                             <div class="assessment-stat">

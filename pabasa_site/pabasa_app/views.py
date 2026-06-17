@@ -2723,23 +2723,40 @@ def class_management_view(request):
 
 # ===== Course APIs =====
 @require_http_methods(["GET"])
-@login_required(role='teacher')
+@login_required()
 def get_teacher_courses_api(request):
     try:
-        user_id = request.session.get('user_id')
-        teacher_user = User.objects.filter(id=user_id).first()
-        if not teacher_user or teacher_user.role != 'teacher':
+        session_user = User.objects.filter(id=request.session.get('user_id')).first()
+        # Determine the teacher whose courses should be returned.
+        teacher_user = None
+        if session_user and session_user.role == 'teacher':
+            teacher_user = session_user
+        elif session_user and session_user.role == 'admin':
+            # Admins must provide a teacher identifier (id or custom_id) via query params.
+            tid = request.GET.get('teacher_id') or request.GET.get('teacher_custom_id') or request.GET.get('teacher')
+            if not tid:
+                return JsonResponse({'success': False, 'error': 'Missing teacher_id parameter for admin'}, status=400)
+            try:
+                teacher_user = User.objects.filter(Q(id=int(tid)) | Q(custom_id__iexact=str(tid)), role='teacher').first()
+            except Exception:
+                teacher_user = User.objects.filter(custom_id__iexact=str(tid), role='teacher').first()
+            if not teacher_user:
+                return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+        else:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        courses = Course.objects.filter(teacher=teacher_user, is_active=True).order_by('-created_at')
+        # Prefetch related objects to avoid N+1 queries
+        courses_qs = Course.objects.filter(teacher=teacher_user, is_active=True).select_related('teacher').prefetch_related(
+            'sections', 'materials', 'assessments', 'assessments__materials'
+        ).order_by('-created_at')
+
         course_list = []
-        for c in courses:
+        for c in courses_qs:
             secs = [{'id': s.id, 'code': s.class_code, 'name': s.class_name} for s in c.sections.all()]
 
             # Serialize assessments with helpful metadata used by the frontend
             assessments_list = []
             for a in c.assessments.all():
-                # derive item count by summing items from any linked materials
                 items = 0
                 minutes = 0
                 try:
@@ -2752,14 +2769,12 @@ def get_teacher_courses_api(request):
                             elif isinstance(val, int):
                                 items += int(val)
                         else:
-                            # fallback: rough heuristic from content_text
                             ct = getattr(mat, 'content_text', '') or ''
                             if ct:
-                                if mat.item_type == 'word':
+                                if getattr(mat, 'item_type', '') == 'word':
                                     items += max(1, ct.count('\n') + 1)
                                 else:
                                     items += 1
-                        # minutes may be stored in material content_json as optional metadata
                         try:
                             minutes += int(cj.get('minutes', 0) or 0)
                         except Exception:
@@ -2767,7 +2782,6 @@ def get_teacher_courses_api(request):
                 except Exception:
                     items = 0
 
-                # compute average accuracy across recorded attempts (if any)
                 avg = None
                 try:
                     attempts = getattr(a, 'attempts', None) or []
@@ -2784,6 +2798,7 @@ def get_teacher_courses_api(request):
                     'assessment_type': a.assessment_type,
                     'level': a.get_assessment_type_display() if hasattr(a, 'get_assessment_type_display') else (a.assessment_type or ''),
                     'items': items,
+                    'items_count': items,
                     'minutes': minutes,
                     'average': f"{avg}%" if avg is not None else None,
                     'dueDate': a.scheduled_at.isoformat() if getattr(a, 'scheduled_at', None) else None,
@@ -2792,19 +2807,42 @@ def get_teacher_courses_api(request):
                     'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
                 })
 
-            # Serialize materials with minimal metadata
+            # Serialize materials with normalized metadata
             materials_list = []
             for m in c.materials.all():
+                cj = getattr(m, 'content_json', None) or {}
+                items_count = 0
+                items_array = None
+                try:
+                    if isinstance(cj, dict) and 'items' in cj:
+                        val = cj.get('items')
+                        if isinstance(val, list):
+                            items_array = val
+                            items_count = len(val)
+                        elif isinstance(val, int):
+                            items_count = int(val)
+                except Exception:
+                    items_count = 0
+
+                if items_count == 0:
+                    ct = getattr(m, 'content_text', '') or ''
+                    if ct:
+                        if getattr(m, 'item_type', '') == 'word':
+                            items_count = max(1, ct.count('\n') + 1)
+                        else:
+                            items_count = 1
+
                 materials_list.append({
                     'id': m.id,
                     'title': m.title,
                     'item_type': getattr(m, 'item_type', ''),
                     'status': getattr(m, 'status', ''),
-                    'items': (getattr(m, 'content_json', {}) or {}).get('items') if isinstance(getattr(m, 'content_json', {}), dict) else None,
+                    'items': items_array,
+                    'items_count': items_count,
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                 })
 
-            # Also include standalone Practice sets related to this course (teacher-created or linked to course sections)
+            # Practices (normalized)
             practices_list = []
             try:
                 practices_qs = Practice.objects.filter(
@@ -2813,12 +2851,14 @@ def get_teacher_courses_api(request):
                     Q(section__isnull=True, teacher__role='admin')
                 ).order_by('-created_at')[:100]
                 for p in practices_qs:
+                    items_cnt = len(_practice_material_items(p)) if callable(_practice_material_items) else None
                     practices_list.append({
                         'id': p.id,
                         'title': p.title,
                         'item_type': getattr(p, 'item_type', getattr(p, 'practice_type', '')),
                         'status': getattr(p, 'status', ''),
-                        'items': len(_practice_material_items(p)) if callable(_practice_material_items) else None,
+                        'items': None,
+                        'items_count': items_cnt,
                         'created_at': p.created_at.isoformat() if getattr(p, 'created_at', None) else None,
                         'code': getattr(p, 'code', None),
                         'content': p.content_text if hasattr(p, 'content_text') else getattr(p, 'contents', ''),
