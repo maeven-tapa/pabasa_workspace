@@ -1888,7 +1888,7 @@
 
             <!-- Course Detail Modal -->
             <div class="modal fade" id="courseDetailModal" tabindex="-1" aria-labelledby="courseDetailModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-dialog modal-fullscreen">
                     <div class="modal-content course-modal-content">
                         <div class="modal-header course-modal-header">
                             <h5 class="modal-title" id="courseDetailTitle">Course</h5>
@@ -1900,100 +1900,97 @@
                                 <strong>Sections</strong>
                                 <div id="courseDetailSections" class="mt-2 small text-muted"></div>
                             </div>
+
                             <div class="course-tab-content">
-                                <div class="mb-3 d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">Assigned Materials</h6>
-                                    <button class="btn btn-sm btn-outline-primary" id="btnAddMaterialToCourse">Add Material</button>
-                                </div>
-                                <div id="courseDetailMaterials" class="mb-3"></div>
+                                <!-- Top tabs for Materials / Assessments / Reports -->
+                                <ul class="nav nav-tabs mb-3" id="courseTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" id="materials-tab" data-bs-toggle="tab" data-bs-target="#materialsPane" type="button" role="tab" aria-controls="materialsPane" aria-selected="true">Materials</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="assessments-tab" data-bs-toggle="tab" data-bs-target="#assessmentsPane" type="button" role="tab" aria-controls="assessmentsPane" aria-selected="false">Assessments</button>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reportsPane" type="button" role="tab" aria-controls="reportsPane" aria-selected="false">Reports & Updates</button>
+                                    </li>
+                                </ul>
 
-                                <!-- Course Overview (aggregated stats across sections) -->
-                                <div id="courseOverviewStats" class="mb-3"></div>
-
-                                <div class="mb-3">
-                                    <h6 class="mb-0">Assessments</h6>
-                                    <div id="courseDetailAssessments" class="mb-3"></div>
-                                </div>
-
-                                <div id="courseReportSection" class="mb-3">
-                                    <div class="mb-3 d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0">Reports & Updates</h6>
+                                <div class="tab-content">
+                                    <div class="tab-pane fade show active" id="materialsPane" role="tabpanel" aria-labelledby="materials-tab">
+                                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">Assigned Materials</h6>
+                                            <button class="btn btn-sm btn-outline-primary" id="btnAddMaterialToCourse">Add Material</button>
+                                        </div>
+                                        <div id="courseDetailMaterials" class="mb-3"></div>
+                                        <div id="courseOverviewStats" class="mb-3"></div>
                                     </div>
-                                    <div class="row g-4" style="margin-bottom:0">
-                                        <div class="col-lg-6">
-                                            <div class="dash-card h-100">
-                                                <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
-                                                    <h6 class="fw-bold mb-0">Select Recipients</h6>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" id="courseSelectAllRecipients">
-                                                        <label class="form-check-label small fw-bold" for="courseSelectAllRecipients">Select All</label>
+
+                                    <div class="tab-pane fade" id="assessmentsPane" role="tabpanel" aria-labelledby="assessments-tab">
+                                        <div class="mb-3">
+                                            <h6 class="mb-0">Assessments</h6>
+                                            <div id="courseDetailAssessments" class="mb-3"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tab-pane fade" id="reportsPane" role="tabpanel" aria-labelledby="reports-tab">
+                                        <div id="courseReportSection" class="mb-3">
+                                            <div class="mb-3 d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">Reports & Updates</h6>
+                                            </div>
+                                            <div class="row g-4" style="margin-bottom:0">
+                                                <div class="col-lg-6">
+                                                    <div class="dash-card h-100">
+                                                        <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
+                                                            <h6 class="fw-bold mb-0">Select Recipients</h6>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="courseSelectAllRecipients">
+                                                                <label class="form-check-label small fw-bold" for="courseSelectAllRecipients">Select All</label>
+                                                            </div>
+                                                        </div>
+                                                        <div class="card-body p-0">
+                                                            <div id="courseUnifiedStudentReportList" class="list-group list-group-flush">
+                                                                <!-- Populated by JS -->
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div class="card-body p-0">
-                                                    <div id="courseUnifiedStudentReportList" class="list-group list-group-flush">
-                                                        <!-- Populated by JS -->
+
+                                                <div class="col-lg-6">
+                                                    <div class="dash-card h-100">
+                                                        <div class="card-body p-4">
+                                                            <h6 class="fw-bold mb-3">Update Composer</h6>
+                                                            <form id="courseParentUpdateTabForm" action="#" method="post">
+                                                                {% csrf_token %}
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small fw-bold" for="courseParentUpdateTemplate">Update Type</label>
+                                                                    <select class="form-select" id="courseParentUpdateTemplate" style="border-radius:10px;">
+                                                                        <option value="general">Regular Progress Update</option>
+                                                                        <option value="commendation">Performance Commendation</option>
+                                                                        <option value="followup">Needs Additional Support</option>
+                                                                        <option value="assessment">Scheduled Assessment Notice</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="mb-3">
+                                                                    <label class="form-label d-flex justify-content-between" for="courseParentUpdateMessage">
+                                                                        <span class="small fw-bold">Teacher Comments</span>
+                                                                        <small class="text-primary">Tip: Use {name} for student name</small>
+                                                                    </label>
+                                                                    <textarea class="form-control" id="courseParentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
+                                                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Performance data and recommendations are auto-attached.</div>
+                                                                </div>
+
+                                                                <div class="d-flex justify-content-end">
+                                                                    <button type="submit" class="btn btn-primary" id="courseBtnSendParentUpdate" style="border-radius:10px; min-height:44px; padding-inline:1.5rem;">
+                                                                        <i class="bi bi-send me-1"></i> Send Update
+                                                                    </button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <div class="col-lg-6">
-                                            <div class="dash-card h-100">
-                                                <div class="card-body p-4">
-                                                    <h6 class="fw-bold mb-3">Update Composer</h6>
-                                                    <form id="courseParentUpdateTabForm" action="#" method="post">
-                                                        {% csrf_token %}
-                                                        <div class="mb-3">
-                                                            <label class="form-label small fw-bold" for="courseParentUpdateTemplate">Update Type</label>
-                                                            <select class="form-select" id="courseParentUpdateTemplate" style="border-radius:10px;">
-                                                                <option value="general">Regular Progress Update</option>
-                                                                <option value="commendation">Performance Commendation</option>
-                                                                <option value="followup">Needs Additional Support</option>
-                                                                <option value="assessment">Scheduled Assessment Notice</option>
-                                                            </select>
-                                                        </div>
-
-                                                        <div class="mb-3">
-                                                            <label class="form-label d-flex justify-content-between" for="courseParentUpdateMessage">
-                                                                <span class="small fw-bold">Teacher Comments</span>
-                                                                <small class="text-primary">Tip: Use {name} for student name</small>
-                                                            </label>
-                                                            <textarea class="form-control" id="courseParentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
-                                                            <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Performance data and recommendations are auto-attached.</div>
-                                                        </div>
-
-                                                        <div class="d-flex justify-content-end">
-                                                            <button type="submit" class="btn btn-primary" id="courseBtnSendParentUpdate" style="border-radius:10px; min-height:44px; padding-inline:1.5rem;">
-                                                                <i class="bi bi-send me-1"></i> Send Update
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div id="courseAddMaterialForm" style="display:none;">
-                                    <div class="mb-2">
-                                        <label class="form-label">Title</label>
-                                        <input type="text" id="courseNewMaterialTitle" class="form-control" placeholder="Title">
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Content</label>
-                                        <textarea id="courseNewMaterialContent" class="form-control" rows="4" placeholder="Paste words, sentences, or paragraphs here"></textarea>
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label">Usage</label>
-                                        <select id="courseNewMaterialUsage" class="form-select">
-                                            <option value="practice">Practice</option>
-                                            <option value="assessment" selected>Assessment</option>
-                                            <option value="both">Practice & Assessment</option>
-                                        </select>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-primary" id="courseCreateMaterialBtn">Create & Attach</button>
-                                        <button class="btn btn-outline-secondary" id="courseCancelCreateMaterial">Cancel</button>
                                     </div>
                                 </div>
                             </div>
@@ -2882,7 +2879,7 @@
             function tryRenderAll() {
                 try {
                     if (typeof window.renderAllReadingsList === 'function') {
-                        window.renderAllReadingsList(allMaterials, 'courseAllReadingsList');
+                        window.renderAllReadingsList(allMaterials, 'courseDetailMaterials');
                         return true;
                     }
                 } catch (e) {
