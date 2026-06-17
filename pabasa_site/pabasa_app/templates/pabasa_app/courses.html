@@ -1750,11 +1750,6 @@
     </div>
 </section>
 
-<section class="classes-home">
-    <div class="classes-grid" id="classesGrid">
-        <!-- Classes will be rendered here -->
-    </div>
-</section>
 
 <!-- Class Detail Modal -->
 <div class="modal fade" id="classDetailModal" tabindex="-1" aria-labelledby="classDetailModalLabel" aria-hidden="true">
@@ -1768,57 +1763,111 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body course-modal-body">
-                <!-- Vertical Tabs Sidebar -->
-                <aside class="course-sidebar">
-                    <ul class="nav flex-column vertical-tabs course-tabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active vertical-nav-link" id="readings-tab" data-bs-toggle="tab" data-bs-target="#readingsContent" type="button" role="tab" aria-controls="readingsContent" aria-selected="true">
-                                <i class="bi bi-book-half"></i><span>Readings</span>
-                            </button>
-                        </li>
-                        <!-- Students tab removed (students managed in Class module) -->
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link vertical-nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reportsContent" type="button" role="tab" aria-controls="reportsContent" aria-selected="false">
-                                <i class="bi bi-file-earmark-bar-graph"></i><span>Reports & Updates</span>
-                            </button>
-                        </li>
-                    </ul>
-                </aside>
-
-                <!-- Tab Content -->
-                <div class="tab-content course-tab-content">
-                    <!-- Readings Tab -->
-                    <div class="tab-pane fade show active" id="readingsContent" role="tabpanel" aria-labelledby="readings-tab">
-                        <div class="workspace-shell" id="readingsContainer">
-                            <div class="workspace-hero is-compact">
+                <!-- Course Detail Modal (now fullscreen with tabs) -->
+                <div class="modal fade" id="courseDetailModal" tabindex="-1" aria-labelledby="courseDetailModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-fullscreen">
+                        <div class="modal-content course-modal-content">
+                            <div class="modal-header course-modal-header">
                                 <div>
-                                    <h5><i class="bi bi-book-half me-2"></i>Reading Materials</h5>
-                                    <p>Add reading materials and choose whether each one appears in practice mode, assessment mode, or both.</p>
+                                    <h5 class="modal-title" id="courseDetailTitle">Course</h5>
+                                    <p class="small text-secondary mb-0 mt-1" id="courseDetailCode"></p>
                                 </div>
-                                <button class="btn btn-primary readings-add-btn" type="button">
-                                    <i class="bi bi-plus-lg"></i> Add New Material
-                                </button>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                            <div class="readings-section">
-                                <div class="readings-section-header">
-                                    <div class="readings-section-icon all">
-                                        <i class="bi bi-collection"></i>
+                            <div class="modal-body course-modal-body">
+                                <!-- Vertical Tabs Sidebar -->
+                                <aside class="course-sidebar">
+                                    <ul class="nav flex-column vertical-tabs course-tabs" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active vertical-nav-link" id="course-readings-tab" data-bs-toggle="tab" data-bs-target="#courseReadingsContent" type="button" role="tab" aria-controls="courseReadingsContent" aria-selected="true">
+                                                <i class="bi bi-book-half"></i><span>Readings</span>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link vertical-nav-link" id="course-materials-tab" data-bs-toggle="tab" data-bs-target="#courseMaterialsContent" type="button" role="tab" aria-controls="courseMaterialsContent" aria-selected="false">
+                                                <i class="bi bi-journal-text"></i><span>Materials</span>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link vertical-nav-link" id="course-assessments-tab" data-bs-toggle="tab" data-bs-target="#courseAssessmentsContent" type="button" role="tab" aria-controls="courseAssessmentsContent" aria-selected="false">
+                                                <i class="bi bi-clipboard2-check"></i><span>Assessments</span>
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link vertical-nav-link" id="course-reports-tab" data-bs-toggle="tab" data-bs-target="#courseReportsContent" type="button" role="tab" aria-controls="courseReportsContent" aria-selected="false">
+                                                <i class="bi bi-file-earmark-bar-graph"></i><span>Reports & Updates</span>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                    <div class="mt-3"><strong>Sections</strong>
+                                        <div id="courseDetailSections" class="mt-2 small text-muted"></div>
                                     </div>
-                                    <div class="readings-section-copy">
-                                        <h6 class="readings-section-title">All Materials</h6>
-                                        <p>Browse all reading materials regardless of type.</p>
+                                </aside>
+
+                                <!-- Tab Content -->
+                                <div class="tab-content course-tab-content">
+                                    <!-- Readings Tab -->
+                                    <div class="tab-pane fade show active" id="courseReadingsContent" role="tabpanel" aria-labelledby="course-readings-tab">
+                                        <div class="workspace-shell" id="courseReadingsContainer">
+                                            <div class="workspace-hero is-compact">
+                                                <div>
+                                                    <h5><i class="bi bi-book-half me-2"></i>Reading Materials</h5>
+                                                    <p>Browse reading materials aggregated across the course's sections.</p>
+                                                </div>
+                                            </div>
+                                            <div id="courseAllReadingsList" class="readings-list"></div>
+                                        </div>
                                     </div>
-                                    <span class="readings-count-badge" id="allReadingsCountBadge">0 items</span>
-                                </div>
-                                <div id="allReadingsList" class="readings-list">
-                                    <!-- All materials will appear here -->
+
+                                    <!-- Materials Tab -->
+                                    <div class="tab-pane fade" id="courseMaterialsContent" role="tabpanel" aria-labelledby="course-materials-tab">
+                                        <div class="mb-3 d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">Assigned Materials</h6>
+                                            <button class="btn btn-sm btn-outline-primary" id="btnAddMaterialToCourse">Add Material</button>
+                                        </div>
+                                        <div id="courseDetailMaterials" class="mb-3"></div>
+
+                                        <!-- Course Overview (aggregated stats across sections) -->
+                                        <div id="courseOverviewStats" class="mb-3"></div>
+
+                                        <div id="courseAddMaterialForm" style="display:none;">
+                                            <div class="mb-2">
+                                                <label class="form-label">Title</label>
+                                                <input type="text" id="courseNewMaterialTitle" class="form-control" placeholder="Title">
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label">Content</label>
+                                                <textarea id="courseNewMaterialContent" class="form-control" rows="4" placeholder="Paste words, sentences, or paragraphs here"></textarea>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label">Usage</label>
+                                                <select id="courseNewMaterialUsage" class="form-select">
+                                                    <option value="practice">Practice</option>
+                                                    <option value="assessment" selected>Assessment</option>
+                                                    <option value="both">Practice & Assessment</option>
+                                                </select>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-primary" id="courseCreateMaterialBtn">Create & Attach</button>
+                                                <button class="btn btn-outline-secondary" id="courseCancelCreateMaterial">Cancel</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Assessments Tab -->
+                                    <div class="tab-pane fade" id="courseAssessmentsContent" role="tabpanel" aria-labelledby="course-assessments-tab">
+                                        <div id="courseDetailAssessments" class="mb-3"></div>
+                                    </div>
+
+                                    <!-- Reports Tab -->
+                                    <div class="tab-pane fade" id="courseReportsContent" role="tabpanel" aria-labelledby="course-reports-tab">
+                                        <div id="courseReportSection" class="mb-3"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <!-- Students tab removed from class modal (students are managed in the Class module) -->
-
-                    <!-- Reports Tab -->
+                </div>
                     <div class="tab-pane fade" id="reportsContent" role="tabpanel" aria-labelledby="reports-tab">
                         <div class="workspace-shell">
                             <div class="workspace-hero is-compact">
@@ -2536,6 +2585,7 @@
             try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id); } catch (err) { console.warn('loadCourseAssessments error', err); }
             try { if (typeof loadCourseReports === 'function') loadCourseReports(course.id); } catch (err) { console.warn('loadCourseReports error', err); }
             try { if (typeof setupCourseUpdates === 'function') setupCourseUpdates(course.id); } catch (err) { console.warn('setupCourseUpdates error', err); }
+            try { if (typeof loadCourseReadings === 'function') loadCourseReadings(course.id); } catch (err) { console.warn('loadCourseReadings error', err); }
 
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
@@ -2902,6 +2952,66 @@
         document.addEventListener('DOMContentLoaded', function() { try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on DOMContentLoaded', e); } });
     }
     
+    // Course-specific readings loader (aggregated across sections)
+    async function loadCourseReadings(courseId) {
+        try {
+            const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+            if (!course) return;
+            // Collect section codes
+            const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
+            const aggregated = { word: [], sentence: [], paragraph: [] };
+            const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+            sectionCodes.forEach(code => {
+                const r = stored[code] || stored[String(code).toUpperCase()] || stored[String(code).toLowerCase()] || {};
+                ['word','sentence','paragraph'].forEach(t => {
+                    if (Array.isArray(r[t])) aggregated[t] = aggregated[t].concat(r[t]);
+                    else if (Array.isArray(r[t+'s'])) aggregated[t] = aggregated[t].concat(r[t+'s']);
+                });
+            });
+            const allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph];
+            renderAllReadingsList(allMaterials, 'courseAllReadingsList');
+        } catch (e) {
+            console.warn('loadCourseReadings failed', e);
+        }
+    }
+
+    function setupCourseReadingsHandlers() {
+        const el = document.getElementById('courseReadingsContainer');
+        if (!el || el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('click', function(e) {
+            // Delegate to existing reading handlers where possible
+            if (e.target.closest('.material-card-modern')) {
+                const card = e.target.closest('.material-card-modern');
+                const materialId = card.dataset.materialId;
+                // Open view modal
+                const viewModalEl = document.getElementById('viewMaterialModal');
+                if (!viewModalEl) return;
+                const material = (function findMaterial() {
+                    const id = String(materialId);
+                    const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+                    for (const k of Object.keys(stored)) {
+                        for (const t of ['word','sentence','paragraph']) {
+                            const arr = stored[k][t] || stored[k][t+'s'] || [];
+                            const found = arr.find(m => String(m.id) === id);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                })();
+                if (!material) return;
+                document.getElementById('viewMaterialModalLabel').textContent = material.title || 'Material';
+                document.getElementById('materialContentContainer').innerHTML = `<div class="p-3 bg-light rounded" style="white-space: pre-wrap; font-size: 1.1rem;">${material.content || material.content_text || ''}</div>`;
+                bootstrap.Modal.getOrCreateInstance(viewModalEl).show();
+            }
+        });
+    }
+
+    // Wire course handlers when Course modal is first used
+    document.addEventListener('DOMContentLoaded', function() {
+        setupCourseReadingsHandlers();
+    });
+    
     // Toast notification function
     function showToast(message, type = 'info') {
         const toastContainer = document.getElementById('toastContainer') || (() => {
@@ -3174,7 +3284,9 @@
     // Render classes grid
     async function renderClasses() {
         const grid = document.getElementById('classesGrid');
-        
+        // If this page/template does not include a classes grid, skip rendering classes
+        if (!grid) return;
+
         if (teacherClasses.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state">
