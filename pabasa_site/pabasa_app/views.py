@@ -25,6 +25,7 @@ from django.db import transaction
 import re
 import traceback
 from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course
+from .reading_material_utils import format_assigned_week_display, parse_assigned_week
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -283,6 +284,17 @@ def generate_custom_id(role):
 def generate_otp(length=6):
     return ''.join(random.choice('0123456789') for _ in range(length))
 
+CLASS_CODE_PATTERN = re.compile(r'^[A-Z]{4}-\d{3}$')
+
+
+def normalize_class_code(code):
+    return (code or '').strip().upper()
+
+
+def is_valid_class_code_format(code):
+    return bool(CLASS_CODE_PATTERN.match(normalize_class_code(code)))
+
+
 def generate_unique_class_code():
     """
     Generates a unique 4-letter and 3-digit class code (e.g., ABCD-123).
@@ -302,6 +314,21 @@ def generate_unique_class_code():
         if not Section.objects.filter(class_code=code).exists():
             return code
         # If exists, the loop continues to generate a fresh candidate
+
+
+def resolve_class_code_for_creation(provided_code=None):
+    """
+    Return a unique class code for a new section.
+    Uses the teacher-provided code when valid and available; otherwise generates one.
+    """
+    if provided_code:
+        code = normalize_class_code(provided_code)
+        if not is_valid_class_code_format(code):
+            raise ValueError('Invalid class code format. Expected 4 letters, a dash, then 3 numbers (e.g., ABCD-123).')
+        if Section.objects.filter(class_code__iexact=code).exists():
+            raise ValueError('Class code already exists. Please generate a new code.')
+        return code
+    return generate_unique_class_code()
 
 
 def generate_unique_course_code():
@@ -2609,6 +2636,17 @@ def unenroll_class(request):
 
 
 @csrf_protect
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def generate_class_code(request):
+    """Return a new unique class code for the create-class form."""
+    return JsonResponse({
+        'success': True,
+        'class_code': generate_unique_class_code(),
+    })
+
+
+@csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
 def create_reading_class(request):
@@ -2623,6 +2661,7 @@ def create_reading_class(request):
         description = data.get('description', '').strip()
         # 'grade_level' removed from Section model; ignore any incoming value
         section_name = data.get('section', '').strip() or "N/A"
+        requested_class_code = data.get('class_code', '').strip()
 
         if not class_name:
             return JsonResponse({'success': False, 'error': 'Title is required'}, status=400)
@@ -2633,7 +2672,10 @@ def create_reading_class(request):
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        unique_code = generate_unique_class_code()
+        try:
+            unique_code = resolve_class_code_for_creation(requested_class_code or None)
+        except ValueError as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
         new_class = Section.objects.create(
             teacher=teacher_user,
@@ -3498,7 +3540,8 @@ def get_class_materials(request):
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                     'attempt_count': attempt_count,
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
-                    'assigned_week': m.assigned_week or '',
+                    'assigned_week': m.assigned_week,
+                    'assigned_week_display': format_assigned_week_display(m.assigned_week),
                 }
             elif kind == 'assessment':
                 a = obj
@@ -3528,7 +3571,8 @@ def get_class_materials(request):
                     'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
                     'attempt_count': attempt_count,
                     'assigned_sections': [a.section.class_code] if a.section else [],
-                    'assigned_week': getattr(a, 'assigned_week', ''),
+                    'assigned_week': None,
+                    'assigned_week_display': format_assigned_week_display(None),
                 }
             else:
                 # practice
@@ -3556,7 +3600,8 @@ def get_class_materials(request):
                     'created_at': p.created_at.isoformat() if getattr(p, 'created_at', None) else None,
                     'attempt_count': attempt_count,
                     'assigned_sections': [],
-                    'assigned_week': '',
+                    'assigned_week': None,
+                    'assigned_week_display': format_assigned_week_display(None),
                 }
 
             if item.get('item_type') in materials:
@@ -3686,7 +3731,8 @@ def add_reading_material(request):
         usage_type   = (data.get('usage_type') or 'practice').strip()        # practice | assessment | both
         class_code   = (data.get('class_code') or '').strip()
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
-        assigned_week = (data.get('assigned_week') or '').strip()
+        assigned_week_raw = data.get('assigned_week')
+        assigned_week, week_error = parse_assigned_week(assigned_week_raw)
 
         logger.debug(f"add_reading_material received: title={title}, status={status}, class_code={class_code}")
 
@@ -3702,6 +3748,8 @@ def add_reading_material(request):
             errors['status'] = 'Status is required.'
         if status == 'scheduled' and not scheduled_at_str:
             errors['scheduled_at'] = 'Scheduled date & time is required.'
+        if week_error:
+            errors['assigned_week'] = week_error
 
         if errors:
             logger.warning(f"add_reading_material validation failed: {errors}")
@@ -3861,6 +3909,8 @@ def add_reading_material(request):
                 'items': len(tokens),
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                 'assigned_sections': [section.class_code] if section else [],
+                'assigned_week': m.assigned_week,
+                'assigned_week_display': format_assigned_week_display(m.assigned_week),
             }
 
         return JsonResponse({
@@ -3906,6 +3956,12 @@ def teacher_update_material(request):
         content = data.get('content', material.content_text).strip()
         material.status = data.get('status', material.status)
         material.type = data.get('usage_type', material.type)
+
+        if 'assigned_week' in data:
+            assigned_week, week_error = parse_assigned_week(data.get('assigned_week'))
+            if week_error:
+                return JsonResponse({'success': False, 'errors': {'assigned_week': week_error}}, status=400)
+            material.assigned_week = assigned_week
         
         material.is_active = (material.status in ['published', 'scheduled'])
         # current teacher for any potential Assessment creation

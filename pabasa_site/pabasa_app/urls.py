@@ -94,10 +94,15 @@ urlpatterns = [
     path('dashboard/teacher/add-material/', views.add_reading_material, name='add_reading_material'),
     path('api/class/materials/', views.get_class_materials, name='get_class_materials'),
     path(
-    'dashboard/teacher/create-class/',
-    views.create_reading_class,
-    name='create_reading_class'
-),
+        'dashboard/teacher/generate-class-code/',
+        views.generate_class_code,
+        name='generate_class_code',
+    ),
+    path(
+        'dashboard/teacher/create-class/',
+        views.create_reading_class,
+        name='create_reading_class',
+    ),
     path(
     'dashboard/teacher/delete-class/',
     views.delete_reading_class,

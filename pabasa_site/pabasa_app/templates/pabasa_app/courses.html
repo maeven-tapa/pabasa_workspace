@@ -1679,57 +1679,6 @@
     window.TEACHER_PHOTO = "{{ profile_photo_url|default:''|escapejs }}";
 </script>
 
-<!-- Modal: Add Students to Course (empty table placeholder) -->
-<div class="modal fade" id="addCourseStudentModal" tabindex="-1" aria-labelledby="addCourseStudentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content course-modal-content">
-            <div class="modal-header course-modal-header">
-                <h5 class="modal-title" id="addCourseStudentModalLabel">Add Students to Course</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body course-modal-body">
-                <div class="card rounded-4 p-3">
-                    <div class="table-responsive">
-                        <table class="table table-borderless align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th style="width:32px"></th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Grade</th>
-                                </tr>
-                            </thead>
-                            <tbody id="addCourseStudentsTableBody">
-                                <!-- Intentionally empty: client will populate available registered students here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="addCourseStudentModalAddSelected">Add Selected</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// Bind Add Student button to open empty modal table
-document.addEventListener('DOMContentLoaded', function() {
-    const addBtn = document.getElementById('btnAddStudentToCourse');
-    if (addBtn && !addBtn.dataset.bound) {
-        addBtn.dataset.bound = 'true';
-        addBtn.addEventListener('click', function() {
-            const tbody = document.getElementById('addCourseStudentsTableBody');
-            if (tbody) tbody.innerHTML = ''; // leave empty as requested
-            const modal = new bootstrap.Modal(document.getElementById('addCourseStudentModal'));
-            modal.show();
-        });
-    }
-});
-</script>
-
 <style>
     /* Reaction button styling */
     .reaction-btn {
@@ -2098,6 +2047,70 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
 <!-- Modals moved to bottom to prevent nesting issues -->
+<style>
+/* Keep Add Student modal centered above the Course Details overlay */
+#addCourseStudentModal {
+    --bs-modal-zindex: 1065;
+}
+#addCourseStudentModal .modal-dialog {
+    margin: 1.75rem auto;
+    max-height: calc(100% - 3.5rem);
+}
+#addCourseStudentModal .modal-content {
+    max-height: calc(100vh - 3.5rem);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+#addCourseStudentModal .modal-body {
+    display: block;
+    grid-template-columns: none;
+    max-height: none;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 1.25rem 1.5rem;
+}
+@media (max-width: 575.98px) {
+    #addCourseStudentModal .modal-dialog {
+        margin: 0.5rem auto;
+        max-width: calc(100% - 1rem);
+    }
+}
+</style>
+<!-- Modal: Add Students to Course -->
+<div class="modal fade" id="addCourseStudentModal" tabindex="-1" aria-labelledby="addCourseStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content course-modal-content">
+            <div class="modal-header course-modal-header">
+                <h5 class="modal-title" id="addCourseStudentModalLabel">Add Students to Course</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="card rounded-4 p-3">
+                    <div class="table-responsive">
+                        <table class="table table-borderless align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:32px"></th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody id="addCourseStudentsTableBody">
+                                <!-- Intentionally empty: client will populate available registered students here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="addCourseStudentModalAddSelected">Add Selected</button>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Modal for Adding Materials -->
 <style>
 /* Precise Add Material modal styles (matches provided screenshots) */
@@ -2202,7 +2215,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <div class="teacher-field">
                                 <label class="form-label fw-bold small text-dark mb-1" for="assignedWeek">Assigned Week</label>
-                                <input type="text" id="assignedWeek" class="form-control border-light shadow-sm" placeholder="e.g., Week 1" style="border-radius: 12px; min-height: 44px;">
+                                <select id="assignedWeek" class="form-select border-light shadow-sm" style="border-radius: 12px; min-height: 44px;">
+                                    <option value="">Unassigned</option>
+                                </select>
                             </div>
 
                             <div class="teacher-field d-none" id="scheduleField">
@@ -2279,6 +2294,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             <option value="published">Published</option>
                             <option value="draft">Draft</option>
                             <option value="scheduled">Custom Schedule</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="editAssignedWeek">Assigned Week</label>
+                        <select class="form-select" id="editAssignedWeek">
+                            <option value="">Unassigned</option>
                         </select>
                     </div>
                     <div class="mb-3 d-none" id="editScheduleField">
@@ -3281,7 +3302,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (modalEl) {
                 const tbody = document.getElementById('addCourseStudentsTableBody');
                 if (tbody) tbody.innerHTML = ''; // intentionally empty per request
-                new bootstrap.Modal(modalEl).show();
+                showStackedModal(modalEl);
                 // Do NOT auto-populate from prompt; leave table for later population
             } else {
                 try { if (typeof loadCourseStudents === 'function') loadCourseStudents(courseId); } catch (err) { console.warn('loadCourseStudents fallback failed', err); }
@@ -3959,6 +3980,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Helper functions for modals
+    function ensureModalOnBody(modalEl) {
+        if (modalEl && modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+    }
+
+    function showStackedModal(modalEl) {
+        if (!modalEl || !window.bootstrap) return null;
+        ensureModalOnBody(modalEl);
+        const openModalCount = document.querySelectorAll('.modal.show').length;
+        const zIndex = 1055 + (openModalCount * 10);
+        modalEl.style.setProperty('--bs-modal-zindex', String(zIndex));
+        modalEl.style.zIndex = String(zIndex);
+        const instance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        instance.show();
+        return instance;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const addCourseStudentModal = document.getElementById('addCourseStudentModal');
+        if (addCourseStudentModal) {
+            ensureModalOnBody(addCourseStudentModal);
+        }
+    });
+
     function showSuccessModal(title, message) {
         document.getElementById('successTitle').textContent = title;
         document.getElementById('successMessage').textContent = message;
@@ -4163,6 +4209,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
         renderClasses();
 
+        function buildAssignedWeekOptions(selectId, selectedValue) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            if (!select.dataset.optionsBuilt) {
+                let optionsHtml = '<option value="">Unassigned</option>';
+                for (let week = 1; week <= 99; week += 1) {
+                    optionsHtml += `<option value="${week}">Week ${week}</option>`;
+                }
+                select.innerHTML = optionsHtml;
+                select.dataset.optionsBuilt = 'true';
+            }
+            const normalized = (selectedValue === null || selectedValue === undefined || selectedValue === '') ? '' : String(selectedValue);
+            select.value = normalized;
+        }
+
+        function formatAssignedWeek(week) {
+            if (week === null || week === undefined || week === '' || week === 'Unassigned') {
+                return 'Unassigned';
+            }
+            const num = parseInt(week, 10);
+            if (!Number.isNaN(num) && num >= 1 && num <= 99) {
+                return `Week ${num}`;
+            }
+            return 'Unassigned';
+        }
+
+        function assignedWeekSortValue(week) {
+            if (week === 'Unassigned') {
+                return 1000;
+            }
+            if (typeof week === 'string' && week.startsWith('Week ')) {
+                const parsed = parseInt(week.replace('Week ', ''), 10);
+                return Number.isNaN(parsed) ? 1000 : parsed;
+            }
+            const label = formatAssignedWeek(week);
+            return label === 'Unassigned' ? 1000 : parseInt(label.replace('Week ', ''), 10);
+        }
+
+        buildAssignedWeekOptions('assignedWeek');
+        buildAssignedWeekOptions('editAssignedWeek');
+
         // ===== READINGS TAB HANDLERS =====
         // New function to render all materials in a single list
         function renderAllReadingsList(allMaterials, containerId) {
@@ -4186,7 +4273,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Group materials by week
             const groups = allMaterials.reduce((acc, m) => {
-                const week = (m.assigned_week || 'Unassigned').trim();
+                const week = m.assigned_week_display || formatAssignedWeek(m.assigned_week);
                 if (!acc[week]) acc[week] = [];
                 acc[week].push(m);
                 return acc;
@@ -4194,9 +4281,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Sort weeks: Numbers first, then Unassigned
             const sortedWeeks = Object.keys(groups).sort((a, b) => {
-                if (a === 'Unassigned') return 1;
-                if (b === 'Unassigned') return -1;
-                return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+                return assignedWeekSortValue(a) - assignedWeekSortValue(b);
             });
 
             container.innerHTML = sortedWeeks.map(week => {
@@ -4211,6 +4296,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (new Date(reading.schedule).getTime() <= Date.now()) displayStatus = 'published';
                     }
                     const iconMap = { word: 'bi-spellcheck', sentence: 'bi-chat-left-text', paragraph: 'bi-file-text' };
+                    const weekLabel = reading.assigned_week_display || formatAssignedWeek(reading.assigned_week);
 
                     return `
                         <div class="material-card-modern mb-2" data-material-id="${reading.id}" data-reading-type="${reading.item_type}"
@@ -4229,6 +4315,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <span>${reading.items} item${reading.items !== 1 ? 's' : ''}</span>
                                         <span class="material-type-badge ${badgeType}">${reading.type}</span>
                                         <span class="material-type-badge status-${displayStatus}">${displayStatus.toUpperCase()}</span>
+                                        <span class="material-type-badge week-badge">${weekLabel}</span>
                                     </p>
                                 </div>
                             </div>
@@ -4377,6 +4464,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         editMaterialContentInput.value = material.content || material.content_text;
                         editMaterialTypeSelect.value = material.type || 'practice';
                         editPublicationStatusSelect.value = material.status || 'published';
+                        buildAssignedWeekOptions('editAssignedWeek', material.assigned_week);
                         
                         toggleEditScheduleField(); // Update visibility based on loaded status
 
@@ -4469,6 +4557,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitEditBtn.addEventListener('click', async function() {
                     const newTitle = document.getElementById('editMaterialTitle').value;
                     const newContent = document.getElementById('editMaterialItems').value;
+                    const editAssignedWeekEl = document.getElementById('editAssignedWeek');
+                    const assignedWeekValue = editAssignedWeekEl ? editAssignedWeekEl.value : '';
                     if (newTitle.trim() && newContent.trim() && editingCard) {
                         const materialId = editingCard.dataset.materialId;
                         
@@ -4480,7 +4570,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 title: newTitle.trim(),
                                 content: newContent.trim(),
                                 status: editPublicationStatusSelect.value,
-                                usage_type: editMaterialTypeSelect.value
+                                usage_type: editMaterialTypeSelect.value,
+                                assigned_week: assignedWeekValue ? parseInt(assignedWeekValue, 10) : null
                             };
 
                             if (usage && usage.toLowerCase() === 'practice') {
@@ -4510,7 +4601,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // Notify other modules to refresh after material update
                                 try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
                             } else {
-                                alert("Error: " + data.error);
+                                alert("Error: " + (data.error || (data.errors && data.errors.assigned_week) || 'Update failed'));
                             }
                         } catch (err) {
                             console.error("Update error:", err);
@@ -4532,7 +4623,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const usageType = materialTypeSelect ? materialTypeSelect.value : 'practice';
-                        const assignedWeek = document.getElementById('assignedWeek') ? document.getElementById('assignedWeek').value.trim() : '';
+                        const assignedWeekEl = document.getElementById('assignedWeek');
+                        const assignedWeekRaw = assignedWeekEl ? assignedWeekEl.value.trim() : '';
+                        const assignedWeek = assignedWeekRaw ? parseInt(assignedWeekRaw, 10) : null;
                         const errorBanner = document.getElementById('amValidationError');
 
                         // ── Clear previous validation state ──────────────────────

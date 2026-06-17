@@ -670,6 +670,29 @@
                 return storedSeenIds.includes(m);
             };
 
+            function formatAssignedWeek(week) {
+                if (week === null || week === undefined || week === '' || week === 'Unassigned') {
+                    return 'Unassigned';
+                }
+                const num = parseInt(week, 10);
+                if (!Number.isNaN(num) && num >= 1 && num <= 99) {
+                    return `Week ${num}`;
+                }
+                return 'Unassigned';
+            }
+
+            function assignedWeekSortValue(week) {
+                if (week === 'Unassigned') {
+                    return 1000;
+                }
+                if (typeof week === 'string' && week.startsWith('Week ')) {
+                    const parsed = parseInt(week.replace('Week ', ''), 10);
+                    return Number.isNaN(parsed) ? 1000 : parsed;
+                }
+                const label = formatAssignedWeek(week);
+                return label === 'Unassigned' ? 1000 : parseInt(label.replace('Week ', ''), 10);
+            }
+
             async function updateAssessmentHub() {
             const grid = document.getElementById("subjectGrid");
             if (!grid) return;
@@ -697,7 +720,7 @@
 
                 // Group assessments by Assigned Week
                 const groups = itemsToRender.reduce((acc, m) => {
-                    const week = (m.assigned_week || 'Unassigned').trim();
+                    const week = m.assigned_week_display || formatAssignedWeek(m.assigned_week);
                     if (!acc[week]) acc[week] = [];
                     acc[week].push(m);
                     return acc;
@@ -705,9 +728,7 @@
 
                 // Sort weeks: Numbers first, then Unassigned (consistent with courses.html)
                 const sortedWeeks = Object.keys(groups).sort((a, b) => {
-                    if (a === 'Unassigned') return 1;
-                    if (b === 'Unassigned') return -1;
-                    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+                    return assignedWeekSortValue(a) - assignedWeekSortValue(b);
                 });
 
                 const contentHtml = sortedWeeks.map(week => {

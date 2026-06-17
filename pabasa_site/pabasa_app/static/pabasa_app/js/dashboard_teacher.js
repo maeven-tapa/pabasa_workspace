@@ -28,19 +28,34 @@
         const teacherEmail = (window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || '').trim();
         const scopedKey = teacherEmail ? `pabasa_teacher_classes_${teacherEmail}` : null;
 
-        function makeClassCode() {
-            const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-            let prefix = "";
-            for (let i = 0; i < 4; i += 1) {
-                prefix += letters[Math.floor(Math.random() * letters.length)];
+        async function fetchUniqueClassCode() {
+            const response = await fetch('/dashboard/teacher/generate-class-code/', {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
             }
-            const number = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
-            return prefix + "-" + number;
+            const data = await response.json();
+            if (!data.success || !data.class_code) {
+                throw new Error(data.error || 'Failed to generate class code');
+            }
+            return data.class_code;
         }
 
-        function setGeneratedCode() {
-            if (generatedClassCode) {
-                generatedClassCode.textContent = makeClassCode();
+        async function setGeneratedCode() {
+            if (!generatedClassCode) {
+                return null;
+            }
+            generatedClassCode.textContent = '...';
+            try {
+                const code = await fetchUniqueClassCode();
+                generatedClassCode.textContent = code;
+                return code;
+            } catch (error) {
+                console.error('Error generating class code:', error);
+                generatedClassCode.textContent = '—';
+                return null;
             }
         }
 
@@ -208,9 +223,6 @@
             activeStudentCount.textContent = actualStudentCount;
             if (classBanner) classBanner.setAttribute("data-header", header);
             
-            const modalCodeDisplay = document.getElementById("generatedClassCode");
-            if (modalCodeDisplay) modalCodeDisplay.textContent = code;
-
             if (classBanner) {
                 classBanner.querySelectorAll("#copyClassCodeBtn, .btn-copy-code, .copy-code-btn, [data-action='copy-code']").forEach(btn => btn.style.display = "block");
             }
@@ -299,6 +311,12 @@
             });
         }
 
+        if (regenerateCodeBtn) {
+            regenerateCodeBtn.addEventListener("click", function () {
+                setGeneratedCode();
+            });
+        }
+
         if (createClassForm) {
         createClassForm.addEventListener("submit", function (event) {
             event.preventDefault();
@@ -307,6 +325,7 @@
             const titleEl = document.getElementById("titleInput");
             const subjectEl = document.getElementById("subjectInput");
             const descEl = document.getElementById("classDescriptionInput");
+            const codeEl = document.getElementById("generatedClassCode");
 
             if (!titleEl || !subjectEl) {
                 alert("Form elements missing — please refresh the page and try again.");
@@ -315,9 +334,15 @@
 
             const title = (titleEl?.value || '').trim();
             const subject = subjectEl?.value || '';
+            const classCode = (codeEl?.textContent || '').trim();
 
             if (!title || !subject) {
                 alert("Please provide a Title and select a Subject.");
+                return;
+            }
+
+            if (!classCode || classCode === '...' || classCode === '—') {
+                alert("Please wait for a class code to be generated, or click New Code.");
                 return;
             }
 
@@ -334,7 +359,8 @@
                 body: JSON.stringify({
                     class_name: name,
                     subject: subject,
-                    description: description
+                    description: description,
+                    class_code: classCode,
                 })
             })
             .then(async response => {
@@ -380,8 +406,12 @@
                     }, 100);
 
                     createClassForm.reset();
+                    setGeneratedCode();
                 } else {
                     alert("Creation failed: " + (data.error || "Unknown error"));
+                    if ((data.error || '').toLowerCase().includes('class code')) {
+                        setGeneratedCode();
+                    }
                 }
             })
             .catch(error => {
@@ -644,6 +674,9 @@
 
         loadSavedClasses();
         updateClassCount();
+        if (createClassForm) {
+            setGeneratedCode();
+        }
 
     }); // closes DOMContentLoaded
 

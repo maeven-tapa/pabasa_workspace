@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 from datetime import datetime
@@ -493,8 +494,12 @@ class Material(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     scheduled_at = models.DateTimeField(null=True, blank=True)
     difficulty_level = models.CharField(max_length=50, blank=True)
-    # Optional week assignment (e.g. "week1", "week2") for grouping materials by week
-    assigned_week = models.CharField(max_length=20, blank=True, default='')
+    # Optional week assignment (1-99) for grouping materials by week
+    assigned_week = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(99)],
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
