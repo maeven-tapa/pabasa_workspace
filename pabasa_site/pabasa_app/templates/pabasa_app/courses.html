@@ -3253,23 +3253,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         if (e.target.closest('#btnAddStudentToCourse')) {
             e.preventDefault();
-            // open a simple prompt to add student (fallback if no modal available)
-            const name = prompt('Enter student name to add to this course:');
-            if (!name) return;
-            // This will call server endpoint to add student to class if available; otherwise persist locally
-            try {
-                const courseId = document.getElementById('courseDetailModal').dataset.courseId;
-                // Find first section to assign
-                const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
-                const sectionName = (course && course.sections && course.sections[0] && course.sections[0].name) || '';
-                const newStudent = { id: 'local-' + Date.now(), name: name, email: '', class: sectionName, accuracy: 0, wpm: 0 };
-                const all = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
-                all.push(newStudent);
-                localStorage.setItem('pabasa_added_students', JSON.stringify(all));
-                loadCourseStudents(courseId);
-                showToast('Student added locally. Sync with server when possible.', 'success');
-            } catch (err) {
-                console.warn('Add student fallback failed', err);
+            const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+            const modalEl = document.getElementById('addCourseStudentModal');
+            if (modalEl) {
+                const tbody = document.getElementById('addCourseStudentsTableBody');
+                if (tbody) tbody.innerHTML = ''; // intentionally empty per request
+                new bootstrap.Modal(modalEl).show();
+                // Do NOT auto-populate from prompt; leave table for later population
+            } else {
+                try { if (typeof loadCourseStudents === 'function') loadCourseStudents(courseId); } catch (err) { console.warn('loadCourseStudents fallback failed', err); }
             }
         }
 

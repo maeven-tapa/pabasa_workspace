@@ -3392,7 +3392,10 @@ def get_class_materials(request):
         # Practice sets: include those that belong to this section or were created by the
         # class' teacher (so teacher-created practice sets show up in their class view)
         practices_qs = Practice.objects.filter(
-            Q(section=section) | Q(teacher=section.teacher) | Q(section__isnull=True, teacher=section.teacher)
+            Q(section=section) |
+            Q(teacher=section.teacher) |
+            Q(section__isnull=True, teacher=section.teacher) |
+            Q(section__isnull=True, teacher__role='admin')
         ).order_by('-created_at')
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
