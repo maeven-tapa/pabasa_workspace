@@ -2735,13 +2735,64 @@ def get_teacher_courses_api(request):
         course_list = []
         for c in courses:
             secs = [{'id': s.id, 'code': s.class_code, 'name': s.class_name} for s in c.sections.all()]
+
+            # Serialize assessments with helpful metadata used by the frontend
             assessments_list = []
             for a in c.assessments.all():
+                # derive item count by summing items from any linked materials
+                items = 0
+                minutes = 0
+                try:
+                    for mat in a.materials.all():
+                        cj = getattr(mat, 'content_json', None) or {}
+                        if isinstance(cj, dict) and 'items' in cj:
+                            val = cj.get('items')
+                            if isinstance(val, list):
+                                items += len(val)
+                            elif isinstance(val, int):
+                                items += int(val)
+                        else:
+                            # fallback: rough heuristic from content_text
+                            ct = getattr(mat, 'content_text', '') or ''
+                            if ct:
+                                if mat.item_type == 'word':
+                                    items += max(1, ct.count('\n') + 1)
+                                else:
+                                    items += 1
+                        # minutes may be stored in material content_json as optional metadata
+                        try:
+                            minutes += int(cj.get('minutes', 0) or 0)
+                        except Exception:
+                            pass
+                except Exception:
+                    items = 0
+
+                # compute average accuracy across recorded attempts (if any)
+                avg = None
+                try:
+                    attempts = getattr(a, 'attempts', None) or []
+                    accs = [att.get('accuracy') for att in attempts if isinstance(att.get('accuracy'), (int, float))]
+                    if accs:
+                        avg = round(sum(accs) / len(accs))
+                except Exception:
+                    avg = None
+
                 assessments_list.append({
                     'id': a.id,
                     'code': a.code,
                     'title': a.title,
+                    'assessment_type': a.assessment_type,
+                    'level': a.get_assessment_type_display() if hasattr(a, 'get_assessment_type_display') else (a.assessment_type or ''),
+                    'items': items,
+                    'minutes': minutes,
+                    'average': f"{avg}%" if avg is not None else None,
+                    'dueDate': a.scheduled_at.isoformat() if getattr(a, 'scheduled_at', None) else None,
+                    'status': a.status,
+                    'is_active': a.is_active,
+                    'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
                 })
+
+            # Serialize materials with minimal metadata
             materials_list = []
             for m in c.materials.all():
                 materials_list.append({
@@ -2749,7 +2800,10 @@ def get_teacher_courses_api(request):
                     'title': m.title,
                     'item_type': getattr(m, 'item_type', ''),
                     'status': getattr(m, 'status', ''),
+                    'items': (getattr(m, 'content_json', {}) or {}).get('items') if isinstance(getattr(m, 'content_json', {}), dict) else None,
+                    'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                 })
+
             course_list.append({
                 'id': c.id,
                 'code': c.code,
@@ -2763,6 +2817,160 @@ def get_teacher_courses_api(request):
         return JsonResponse({'success': True, 'courses': course_list})
     except Exception as e:
         logger.exception('Unhandled error in get_teacher_courses_api')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_teacher_assessment_api(request, assessment_id):
+    """Return detailed data for a single assessment (teacher-only)."""
+    try:
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user:
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        assessment = Assessment.objects.filter(id=assessment_id).first()
+        if not assessment:
+            return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
+
+        # Ownership check: allow if teacher created it or is owner of the linked section
+        if assessment.teacher_id != teacher_user.id and not (getattr(assessment.section, 'teacher_id', None) == teacher_user.id):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+
+        # materials linked to this assessment
+        mats = []
+        for m in assessment.materials.all():
+            cj = getattr(m, 'content_json', None) or {}
+            mats.append({
+                'id': m.id,
+                'title': m.title,
+                'item_type': getattr(m, 'item_type', ''),
+                'items': len(cj.get('items')) if isinstance(cj.get('items'), list) else (cj.get('items') if isinstance(cj.get('items'), int) else None),
+                'status': m.status,
+                'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+            })
+
+        attempts = getattr(assessment, 'attempts', None) or []
+        avg = None
+        try:
+            accs = [att.get('accuracy') for att in attempts if isinstance(att.get('accuracy'), (int, float))]
+            if accs:
+                avg = round(sum(accs) / len(accs))
+        except Exception:
+            avg = None
+
+        payload = {
+            'id': assessment.id,
+            'code': assessment.code,
+            'title': assessment.title,
+            'type': assessment.assessment_type,
+            'level': assessment.get_assessment_type_display() if hasattr(assessment, 'get_assessment_type_display') else assessment.assessment_type,
+            'items': sum((m.get('items') or 0) for m in mats),
+            'minutes': 0,
+            'average': f"{avg}%" if avg is not None else None,
+            'dueDate': assessment.scheduled_at.isoformat() if getattr(assessment, 'scheduled_at', None) else None,
+            'status': assessment.status,
+            'is_active': assessment.is_active,
+            'materials': mats,
+            'attempts': attempts,
+        }
+        return JsonResponse({'success': True, 'assessment': payload})
+    except Exception as e:
+        logger.exception('Error in get_teacher_assessment_api')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_update_assessment(request):
+    """Allow teacher to update assessment metadata (title, status, scheduled_at)."""
+    try:
+        data = json.loads(request.body)
+        raw = data.get('assessment_id') or data.get('id')
+        _, aid = _parse_prefixed_id(raw)
+        if not aid:
+            return JsonResponse({'success': False, 'error': 'Invalid assessment id'}, status=400)
+
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user:
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        assessment = Assessment.objects.filter(id=aid).first()
+        if not assessment:
+            return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
+
+        if assessment.teacher_id != teacher_user.id and not (getattr(assessment.section, 'teacher_id', None) == teacher_user.id):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+
+        title = (data.get('title') or '').strip()
+        status = data.get('status')
+        scheduled_at_str = data.get('scheduled_at')
+
+        if title:
+            assessment.title = title
+        if status:
+            assessment.status = status
+            assessment.is_active = (status in ['published', 'scheduled'])
+
+        if scheduled_at_str:
+            try:
+                dt = parse_datetime(scheduled_at_str if 'T' in scheduled_at_str else scheduled_at_str + ':00')
+                if dt and not timezone.is_aware(dt):
+                    dt = timezone.make_aware(dt)
+                assessment.scheduled_at = dt
+            except Exception:
+                pass
+        else:
+            assessment.scheduled_at = None
+
+        assessment.save()
+        return JsonResponse({'success': True, 'message': 'Assessment updated'})
+    except Exception as e:
+        logger.exception('Error in teacher_update_assessment')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_archive_assessment(request):
+    """Archive (soft-delete) an assessment and detach it from courses owned by the teacher."""
+    try:
+        data = json.loads(request.body)
+        raw = data.get('assessment_id') or data.get('id')
+        _, aid = _parse_prefixed_id(raw)
+        if not aid:
+            return JsonResponse({'success': False, 'error': 'Invalid assessment id'}, status=400)
+
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
+        if not teacher_user:
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        assessment = Assessment.objects.filter(id=aid).first()
+        if not assessment:
+            return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
+
+        if assessment.teacher_id != teacher_user.id and not (getattr(assessment.section, 'teacher_id', None) == teacher_user.id):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+
+        # soft delete
+        assessment.is_active = False
+        assessment.save()
+
+        # remove from any courses owned by this teacher
+        try:
+            for course in Course.objects.filter(teacher=teacher_user, assessments=assessment):
+                course.assessments.remove(assessment)
+        except Exception:
+            pass
+
+        return JsonResponse({'success': True, 'message': 'Assessment archived'})
+    except Exception as e:
+        logger.exception('Error in teacher_archive_assessment')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 

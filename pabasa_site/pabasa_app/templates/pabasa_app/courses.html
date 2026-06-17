@@ -2513,41 +2513,96 @@
             const sectionsContainer = document.getElementById('courseDetailSections');
             sectionsContainer.innerHTML = (course.sections || []).map(s => `<div class="small text-muted mb-1">${s.name} <span class="text-secondary">(${s.code})</span></div>`).join('') || '<div class="small text-muted">No sections added</div>';
 
-            // Materials list
+            // Materials list (with preview/edit/delete actions)
             const materialsContainer = document.getElementById('courseDetailMaterials');
             materialsContainer.innerHTML = '';
             (course.materials || []).forEach(m => {
                 const item = document.createElement('div');
                 item.className = 'd-flex align-items-center justify-content-between mb-2';
-                item.innerHTML = `<div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div><div><button class="btn btn-sm btn-outline-danger btn-remove-course-material" data-mid="${m.id}">Remove</button></div>`;
+                item.innerHTML = `
+                    <div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="Preview"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Delete"><i class="bi bi-trash"></i></button>
+                    </div>`;
                 materialsContainer.appendChild(item);
             });
 
-            // attach remove handlers
-            materialsContainer.querySelectorAll('.btn-remove-course-material').forEach(btn => {
-                btn.addEventListener('click', async function() {
-                    const mid = this.getAttribute('data-mid');
+            // Attach a single delegated handler for material actions (avoid duplicate bindings)
+            if (!materialsContainer.dataset.bound) {
+                materialsContainer.dataset.bound = 'true';
+                materialsContainer.addEventListener('click', async function(e) {
+                    const btn = e.target.closest('[data-material-action]');
+                    if (!btn) return;
+                    const action = btn.dataset.materialAction;
+                    const mid = btn.getAttribute('data-mid');
                     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-                    try {
-                        const r = await fetch('/dashboard/teacher/course/remove-material/', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify({ course_id: course.id, material_id: Number(mid) }) });
-                        const data = await r.json();
-                        if (r.ok && data.success) {
-                            // update local cache
-                            course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
-                            const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                            renderCourses();
-                            // re-open detail to refresh
-                            openCourseDetail(course.id);
-                            showToast('Material removed from course', 'success');
-                        } else {
-                            showToast('Could not remove material: ' + (data.error || 'Unknown'), 'error');
+                    if (action === 'preview') {
+                        const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
+                        if (!mat) return showToast('Material not found', 'error');
+                        showSuccessModal('Material Preview', `${mat.title} \n\nType: ${mat.item_type || '-'}\nItems: ${Array.isArray(mat.items) ? mat.items.length : (mat.items || '-')}`);
+                        return;
+                    }
+
+                    if (action === 'edit') {
+                        const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
+                        if (!mat) return showToast('Material not found', 'error');
+                        // Open a simple prompt-based editor (title only) to keep UI changes minimal
+                        const newTitle = prompt('Edit material title', mat.title || '');
+                        if (newTitle === null) return; // cancelled
+                        try {
+                            const res = await fetch('/dashboard/teacher/update-material/', {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                body: JSON.stringify({ material_id: Number(mid), title: newTitle })
+                            });
+                            const d = await res.json();
+                            if (res.ok && d.success) {
+                                mat.title = newTitle;
+                                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                renderCourses();
+                                openCourseDetail(course.id);
+                                showToast('Material updated', 'success');
+                            } else {
+                                showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
+                            }
+                        } catch (err) {
+                            console.error('update material error', err);
+                            showToast('Failed to update material', 'error');
                         }
-                    } catch (err) {
-                        console.error('remove material error', err);
-                        showToast('Failed to remove material', 'error');
+                        return;
+                    }
+
+                    if (action === 'delete') {
+                        if (!confirm('Permanently delete this material?')) return;
+                        try {
+                            const res = await fetch('/dashboard/teacher/delete-material/', {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                body: JSON.stringify({ material_id: Number(mid) })
+                            });
+                            const d = await res.json();
+                            if (res.ok && d.success) {
+                                // remove locally
+                                course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
+                                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                renderCourses();
+                                openCourseDetail(course.id);
+                                showToast('Material deleted', 'success');
+                            } else {
+                                showToast('Could not delete material: ' + (d.error || 'Unknown'), 'error');
+                            }
+                        } catch (err) {
+                            console.error('delete material error', err);
+                            showToast('Failed to delete material', 'error');
+                        }
+                        return;
                     }
                 });
-            });
+            }
 
             // store current course id on modal for create flow
             const modalEl = document.getElementById('courseDetailModal');
@@ -2558,6 +2613,88 @@
             try { if (typeof setupCourseUpdates === 'function') setupCourseUpdates(course.id); } catch (err) { console.warn('setupCourseUpdates error', err); }
             try { if (typeof loadCourseReadings === 'function') loadCourseReadings(course.id); } catch (err) { console.warn('loadCourseReadings error', err); }
                 try { if (typeof loadCourseStudents === 'function') loadCourseStudents(course.id); } catch (err) { console.warn('loadCourseStudents error', err); }
+
+            // attach delegated handlers for the assessments rendered in course detail
+            try {
+                const assessmentsContainer = document.getElementById('courseDetailAssessments');
+                if (assessmentsContainer && !assessmentsContainer.dataset.bound) {
+                    assessmentsContainer.dataset.bound = 'true';
+                    assessmentsContainer.addEventListener('click', async function(e) {
+                        const actionBtn = e.target.closest('[data-assessment-action]');
+                        if (!actionBtn) return;
+                        const card = actionBtn.closest('.assessment-card');
+                        if (!card) return;
+                        const assessmentId = Number(card.dataset.assessmentId);
+                        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                        const assessments = (course.assessments || []);
+                        const assessment = assessments.find(a => Number(a.id) === assessmentId);
+                        if (!assessment) return showToast('Assessment not found', 'error');
+
+                        if (actionBtn.dataset.assessmentAction === 'preview') {
+                            showSuccessModal('Assessment Preview', `${assessment.title} has ${assessment.items || 0} items and a ${assessment.minutes || 0}-minute limit.`);
+                            return;
+                        }
+
+                        if (actionBtn.dataset.assessmentAction === 'edit') {
+                            const newTitle = prompt('Edit assessment title', assessment.title || '');
+                            if (newTitle === null) return; // cancelled
+                            const newDue = prompt('Edit due date/time (YYYY-MM-DDTHH:MM) or leave blank', assessment.dueDate || '') || '';
+                            try {
+                                const res = await fetch('/dashboard/teacher/update-assessment/', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                    body: JSON.stringify({ assessment_id: assessmentId, title: newTitle, scheduled_at: newDue })
+                                });
+                                const d = await res.json();
+                                if (res.ok && d.success) {
+                                    assessment.title = newTitle;
+                                    assessment.dueDate = newDue || null;
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Assessment updated', 'success');
+                                } else {
+                                    showToast('Could not update assessment: ' + (d.error || 'Unknown'), 'error');
+                                }
+                            } catch (err) {
+                                console.error('update assessment error', err);
+                                showToast('Failed to update assessment', 'error');
+                            }
+                            return;
+                        }
+
+                        if (actionBtn.dataset.assessmentAction === 'delete') {
+                            if (!confirm(`Archive assessment "${assessment.title}"? This will remove it from courses and mark it inactive.`)) return;
+                            try {
+                                const res = await fetch('/dashboard/teacher/archive-assessment/', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                    body: JSON.stringify({ assessment_id: assessmentId })
+                                });
+                                const d = await res.json();
+                                if (res.ok && d.success) {
+                                    // remove locally from this course
+                                    course.assessments = (course.assessments || []).filter(x => Number(x.id) !== assessmentId);
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Assessment archived', 'success');
+                                } else {
+                                    showToast('Could not archive assessment: ' + (d.error || 'Unknown'), 'error');
+                                }
+                            } catch (err) {
+                                console.error('archive assessment error', err);
+                                showToast('Failed to archive assessment', 'error');
+                            }
+                            return;
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('Failed to attach assessment handlers', err);
+            }
 
             // No parent modal shown — course modal is standalone to avoid nested/backdrop issues
 
