@@ -2587,6 +2587,18 @@
             try { if (typeof setupCourseUpdates === 'function') setupCourseUpdates(course.id); } catch (err) { console.warn('setupCourseUpdates error', err); }
             try { if (typeof loadCourseReadings === 'function') loadCourseReadings(course.id); } catch (err) { console.warn('loadCourseReadings error', err); }
 
+            // Ensure the parent class modal is visible so the nested course modal can render
+            const parentModalEl = document.getElementById('classDetailModal');
+            if (parentModalEl) {
+                try {
+                    let parentModal = bootstrap.Modal.getInstance(parentModalEl);
+                    if (!parentModal) parentModal = new bootstrap.Modal(parentModalEl);
+                    parentModal.show();
+                } catch (err) {
+                    console.warn('Failed to show parent classDetailModal before courseDetailModal', err);
+                }
+            }
+
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
         } catch (e) {
@@ -2952,6 +2964,41 @@
         document.addEventListener('DOMContentLoaded', function() { try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on DOMContentLoaded', e); } });
     }
     
+    // Ensure a global reading renderer exists (fallback shim)
+    if (typeof window.renderAllReadingsList !== 'function') {
+        window.renderAllReadingsList = function(allMaterials, containerId) {
+            try {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                if (!Array.isArray(allMaterials) || allMaterials.length === 0) {
+                    container.innerHTML = `
+                        <div class="readings-empty">
+                            <i class="bi bi-inbox"></i>
+                            <p>No materials yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = allMaterials.map(reading => {
+                    const preview = (reading.content_text || reading.content || '').replace(/</g, '&lt;').slice(0, 400);
+                    return `
+                        <div class="material-card-modern mb-2" data-material-id="${reading.id}">
+                            <div class="material-info">
+                                <div>
+                                    <p class="material-title">${reading.title || ''}</p>
+                                    <p class="material-preview">${preview}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.warn('fallback renderAllReadingsList error', e);
+            }
+        };
+    }
+
     // Course-specific readings loader (aggregated across sections)
     async function loadCourseReadings(courseId) {
         try {
