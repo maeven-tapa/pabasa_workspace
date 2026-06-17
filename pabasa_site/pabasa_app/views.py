@@ -2804,6 +2804,26 @@ def get_teacher_courses_api(request):
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                 })
 
+            # Also include standalone Practice sets related to this course (teacher-created or linked to course sections)
+            practices_list = []
+            try:
+                practices_qs = Practice.objects.filter(
+                    Q(section__in=c.sections.all()) | Q(teacher=c.teacher) | Q(section__isnull=True, teacher=c.teacher)
+                ).order_by('-created_at')[:100]
+                for p in practices_qs:
+                    practices_list.append({
+                        'id': p.id,
+                        'title': p.title,
+                        'item_type': getattr(p, 'item_type', getattr(p, 'practice_type', '')),
+                        'status': getattr(p, 'status', ''),
+                        'items': len(_practice_material_items(p)) if callable(_practice_material_items) else None,
+                        'created_at': p.created_at.isoformat() if getattr(p, 'created_at', None) else None,
+                        'code': getattr(p, 'code', None),
+                        'content': p.content_text if hasattr(p, 'content_text') else getattr(p, 'contents', ''),
+                    })
+            except Exception:
+                practices_list = []
+
             course_list.append({
                 'id': c.id,
                 'code': c.code,
@@ -2812,6 +2832,7 @@ def get_teacher_courses_api(request):
                 'sections': secs,
                 'assessments': assessments_list,
                 'materials': materials_list,
+                'practices': practices_list,
             })
 
         return JsonResponse({'success': True, 'courses': course_list})

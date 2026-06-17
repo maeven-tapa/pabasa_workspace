@@ -1670,17 +1670,64 @@
 {% endblock %}
 
 {% block content %}
-
 <script>
+    // Global JS context variables used elsewhere
     window.PABASA_USER_ROLE = "teacher";
-    window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
-</script>
-
-<script>
-    // Set teacher name, role, and profile photo from Django context for JavaScript to use
-    window.TEACHER_NAME = "{{ user_full_name|escapejs }}";
+    window.PABASA_USER_EMAIL = "{{ email|default:''|escapejs }}";
+    window.TEACHER_NAME = "{{ user_full_name|default:''|escapejs }}";
     window.TEACHER_ROLE = "{{ role_display|default:'Teacher'|escapejs }}";
     window.TEACHER_PHOTO = "{{ profile_photo_url|default:''|escapejs }}";
+</script>
+
+<!-- Modal: Add Students to Course (empty table placeholder) -->
+<div class="modal fade" id="addCourseStudentModal" tabindex="-1" aria-labelledby="addCourseStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content course-modal-content">
+            <div class="modal-header course-modal-header">
+                <h5 class="modal-title" id="addCourseStudentModalLabel">Add Students to Course</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body course-modal-body">
+                <div class="card rounded-4 p-3">
+                    <div class="table-responsive">
+                        <table class="table table-borderless align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:32px"></th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody id="addCourseStudentsTableBody">
+                                <!-- Intentionally empty: client will populate available registered students here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="addCourseStudentModalAddSelected">Add Selected</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Bind Add Student button to open empty modal table
+document.addEventListener('DOMContentLoaded', function() {
+    const addBtn = document.getElementById('btnAddStudentToCourse');
+    if (addBtn && !addBtn.dataset.bound) {
+        addBtn.dataset.bound = 'true';
+        addBtn.addEventListener('click', function() {
+            const tbody = document.getElementById('addCourseStudentsTableBody');
+            if (tbody) tbody.innerHTML = ''; // leave empty as requested
+            const modal = new bootstrap.Modal(document.getElementById('addCourseStudentModal'));
+            modal.show();
+        });
+    }
+});
 </script>
 
 <style>
@@ -2489,7 +2536,7 @@
                         <span>Assessments</span>
                     </div>
                     <div class="class-stat">
-                        <strong>${(course.materials || []).length}</strong>
+                        <strong>${((course.materials || []).length + (course.practices || []).length)}</strong>
                         <span>Materials</span>
                     </div>
                 </div>
@@ -2513,9 +2560,11 @@
             const sectionsContainer = document.getElementById('courseDetailSections');
             sectionsContainer.innerHTML = (course.sections || []).map(s => `<div class="small text-muted mb-1">${s.name} <span class="text-secondary">(${s.code})</span></div>`).join('') || '<div class="small text-muted">No sections added</div>';
 
-            // Materials list (with preview/edit/delete actions)
+            // Materials list (with preview/edit/delete actions) and Practice previews
             const materialsContainer = document.getElementById('courseDetailMaterials');
             materialsContainer.innerHTML = '';
+
+            // Render existing Material records (editable)
             (course.materials || []).forEach(m => {
                 const item = document.createElement('div');
                 item.className = 'd-flex align-items-center justify-content-between mb-2';
@@ -2529,77 +2578,109 @@
                 materialsContainer.appendChild(item);
             });
 
-            // Attach a single delegated handler for material actions (avoid duplicate bindings)
+            // Render related Practices (preview-only)
+            if ((course.practices || []).length > 0) {
+                const header = document.createElement('div');
+                header.className = 'mb-2 small text-muted';
+                header.textContent = 'Practice Sets';
+                materialsContainer.appendChild(header);
+                (course.practices || []).forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'd-flex align-items-center justify-content-between mb-2';
+                    item.innerHTML = `
+                        <div><strong>${p.title}</strong> <span class="small text-muted">${p.item_type || ''}</span></div>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-secondary" data-practice-action="preview" data-pid="${p.id}" title="Preview"><i class="bi bi-eye"></i></button>
+                        </div>`;
+                    materialsContainer.appendChild(item);
+                });
+            }
+
+            // Attach a single delegated handler for material and practice actions
             if (!materialsContainer.dataset.bound) {
                 materialsContainer.dataset.bound = 'true';
                 materialsContainer.addEventListener('click', async function(e) {
-                    const btn = e.target.closest('[data-material-action]');
+                    const btn = e.target.closest('[data-material-action], [data-practice-action]');
                     if (!btn) return;
-                    const action = btn.dataset.materialAction;
-                    const mid = btn.getAttribute('data-mid');
                     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-                    if (action === 'preview') {
-                        const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
-                        if (!mat) return showToast('Material not found', 'error');
-                        showSuccessModal('Material Preview', `${mat.title} \n\nType: ${mat.item_type || '-'}\nItems: ${Array.isArray(mat.items) ? mat.items.length : (mat.items || '-')}`);
-                        return;
+
+                    // Material actions (editable)
+                    if (btn.dataset.materialAction) {
+                        const action = btn.dataset.materialAction;
+                        const mid = btn.getAttribute('data-mid');
+                        if (action === 'preview') {
+                            const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
+                            if (!mat) return showToast('Material not found', 'error');
+                            showSuccessModal('Material Preview', `${mat.title} \n\nType: ${mat.item_type || '-'}\nItems: ${Array.isArray(mat.items) ? mat.items.length : (mat.items || '-')}`);
+                            return;
+                        }
+
+                        if (action === 'edit') {
+                            const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
+                            if (!mat) return showToast('Material not found', 'error');
+                            const newTitle = prompt('Edit material title', mat.title || '');
+                            if (newTitle === null) return;
+                            try {
+                                const res = await fetch('/dashboard/teacher/update-material/', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                    body: JSON.stringify({ material_id: Number(mid), title: newTitle })
+                                });
+                                const d = await res.json();
+                                if (res.ok && d.success) {
+                                    mat.title = newTitle;
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Material updated', 'success');
+                                } else {
+                                    showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
+                                }
+                            } catch (err) {
+                                console.error('update material error', err);
+                                showToast('Failed to update material', 'error');
+                            }
+                            return;
+                        }
+
+                        if (action === 'delete') {
+                            if (!confirm('Permanently delete this material?')) return;
+                            try {
+                                const res = await fetch('/dashboard/teacher/delete-material/', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                    body: JSON.stringify({ material_id: Number(mid) })
+                                });
+                                const d = await res.json();
+                                if (res.ok && d.success) {
+                                    course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Material deleted', 'success');
+                                } else {
+                                    showToast('Could not delete material: ' + (d.error || 'Unknown'), 'error');
+                                }
+                            } catch (err) {
+                                console.error('delete material error', err);
+                                showToast('Failed to delete material', 'error');
+                            }
+                            return;
+                        }
                     }
 
-                    if (action === 'edit') {
-                        const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
-                        if (!mat) return showToast('Material not found', 'error');
-                        // Open a simple prompt-based editor (title only) to keep UI changes minimal
-                        const newTitle = prompt('Edit material title', mat.title || '');
-                        if (newTitle === null) return; // cancelled
-                        try {
-                            const res = await fetch('/dashboard/teacher/update-material/', {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                                body: JSON.stringify({ material_id: Number(mid), title: newTitle })
-                            });
-                            const d = await res.json();
-                            if (res.ok && d.success) {
-                                mat.title = newTitle;
-                                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                renderCourses();
-                                openCourseDetail(course.id);
-                                showToast('Material updated', 'success');
-                            } else {
-                                showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
-                            }
-                        } catch (err) {
-                            console.error('update material error', err);
-                            showToast('Failed to update material', 'error');
+                    // Practice actions (preview-only)
+                    if (btn.dataset.practiceAction) {
+                        const action = btn.dataset.practiceAction;
+                        const pid = btn.getAttribute('data-pid');
+                        if (action === 'preview') {
+                            const pr = (course.practices || []).find(x => Number(x.id) === Number(pid));
+                            if (!pr) return showToast('Practice not found', 'error');
+                            showSuccessModal('Practice Preview', `${pr.title} \n\nType: ${pr.item_type || '-'}\nItems: ${pr.items || '-'}\n\n${pr.content || ''}`);
+                            return;
                         }
-                        return;
-                    }
-
-                    if (action === 'delete') {
-                        if (!confirm('Permanently delete this material?')) return;
-                        try {
-                            const res = await fetch('/dashboard/teacher/delete-material/', {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                                body: JSON.stringify({ material_id: Number(mid) })
-                            });
-                            const d = await res.json();
-                            if (res.ok && d.success) {
-                                // remove locally
-                                course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
-                                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                renderCourses();
-                                openCourseDetail(course.id);
-                                showToast('Material deleted', 'success');
-                            } else {
-                                showToast('Could not delete material: ' + (d.error || 'Unknown'), 'error');
-                            }
-                        } catch (err) {
-                            console.error('delete material error', err);
-                            showToast('Failed to delete material', 'error');
-                        }
-                        return;
                     }
                 });
             }
@@ -2730,7 +2811,7 @@
             });
 
             const totalReadings = (aggregated.word.length + aggregated.sentence.length + aggregated.paragraph.length) || 0;
-            const materialsCount = (course.materials || []).length || 0;
+            const materialsCount = ((course.materials || []).length + (course.practices || []).length) || 0;
             const assessmentCount = (course.assessments || []).length || 0;
 
             // Aggregate students across course sections
