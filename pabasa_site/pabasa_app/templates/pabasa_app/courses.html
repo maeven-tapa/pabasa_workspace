@@ -2969,7 +2969,30 @@
                 });
             });
             const allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph];
-            renderAllReadingsList(allMaterials, 'courseAllReadingsList');
+            // renderAllReadingsList may be declared later in the script; wait briefly if undefined
+            function tryRenderAll() {
+                try {
+                    if (typeof window.renderAllReadingsList === 'function') {
+                        window.renderAllReadingsList(allMaterials, 'courseAllReadingsList');
+                        return true;
+                    }
+                } catch (e) {
+                    console.warn('tryRenderAll error', e);
+                }
+                return false;
+            }
+
+            if (!tryRenderAll()) {
+                let attempts = 0;
+                const maxAttempts = 10;
+                const interval = setInterval(() => {
+                    attempts += 1;
+                    if (tryRenderAll() || attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        if (attempts >= maxAttempts) console.warn('renderAllReadingsList not available after waiting');
+                    }
+                }, 150);
+            }
         } catch (e) {
             console.warn('loadCourseReadings failed', e);
         }
@@ -3967,7 +3990,25 @@
                 ...(readings.paragraph || [])
             ];
 
-            renderAllReadingsList(allMaterials, 'allReadingsList');
+            // Ensure renderAllReadingsList is available (may be defined later)
+            (function waitAndRender() {
+                if (typeof window.renderAllReadingsList === 'function') {
+                    window.renderAllReadingsList(allMaterials, 'allReadingsList');
+                    return;
+                }
+                let tries = 0;
+                const maxTries = 10;
+                const t = setInterval(() => {
+                    tries += 1;
+                    if (typeof window.renderAllReadingsList === 'function') {
+                        clearInterval(t);
+                        window.renderAllReadingsList(allMaterials, 'allReadingsList');
+                    } else if (tries >= maxTries) {
+                        clearInterval(t);
+                        console.warn('renderAllReadingsList unavailable for allReadingsList after waiting');
+                    }
+                }, 150);
+            })();
         }
 
         function setupReadingsHandlers() {
