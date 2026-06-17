@@ -4315,13 +4315,18 @@
                         showDeleteConfirmModal(`Delete "${title}"?`, async () => {
                             try {
                                 const csrfToken = await ensureCsrfToken();
-                                const response = await fetch('/dashboard/teacher/delete-material/', {
+                                // If this is a practice item, call the practice delete API
+                                const usage = card.dataset.usage || (card.getAttribute('data-usage') || 'practice');
+                                const endpoint = (usage && usage.toLowerCase() === 'practice') ? '/dashboard/teacher/delete-practice/' : '/dashboard/teacher/delete-material/';
+                                const bodyPayload = (usage && usage.toLowerCase() === 'practice') ? { practice_id: materialId } : { material_id: materialId };
+
+                                const response = await fetch(endpoint, {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
                                         'X-CSRFToken': csrfToken
                                     },
-                                    body: JSON.stringify({ material_id: materialId })
+                                    body: JSON.stringify(bodyPayload)
                                 });
                                 
                                 if (!response.ok) {
@@ -4372,28 +4377,42 @@
                         const materialId = editingCard.dataset.materialId;
                         
                         try {
-                            const response = await fetch('/dashboard/teacher/update-material/', {
+                            const usage = editingCard.dataset.usage || (editingCard.getAttribute('data-usage') || 'practice');
+                            let endpoint = '/dashboard/teacher/update-material/';
+                            let payload = {
+                                material_id: materialId,
+                                title: newTitle.trim(),
+                                content: newContent.trim(),
+                                status: editPublicationStatusSelect.value,
+                                usage_type: editMaterialTypeSelect.value
+                            };
+
+                            if (usage && usage.toLowerCase() === 'practice') {
+                                endpoint = '/dashboard/teacher/update-practice/';
+                                payload = {
+                                    practice_id: materialId,
+                                    title: newTitle.trim(),
+                                    content: newContent.trim(),
+                                    status: editPublicationStatusSelect.value
+                                };
+                            }
+
+                            const response = await fetch(endpoint, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
                                     'X-CSRFToken': await ensureCsrfToken()
                                 },
-                                body: JSON.stringify({
-                                    material_id: materialId,
-                                    title: newTitle.trim(),
-                                    content: newContent.trim(),
-                                    status: editPublicationStatusSelect.value,
-                                    usage_type: editMaterialTypeSelect.value
-                                })
+                                body: JSON.stringify(payload)
                             });
-                            
+
                             const data = await response.json();
                             if (data.success) {
                                 bootstrap.Modal.getInstance(document.getElementById('editMaterialModal')).hide();
                                 showSuccessModal('Updated', `"${newTitle}" has been updated`);
                                 if (currentClassCode) loadReadings(currentClassCode);
-                                    // Notify other modules to refresh after material update
-                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
+                                // Notify other modules to refresh after material update
+                                try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
                             } else {
                                 alert("Error: " + data.error);
                             }

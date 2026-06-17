@@ -3310,10 +3310,19 @@ def get_teacher_overview(request):
                     unique_student_ids.add(entry.get('student_id'))
         total_students = len(unique_student_ids)
 
-        materials_posted = Material.objects.filter(
-            Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user) | Q(assessment__teacher=teacher_user),
+        # Separate materials vs assessments counts so they are not conflated
+        assessments_posted = Assessment.objects.filter(
+            Q(teacher=teacher_user) | Q(section__teacher=teacher_user),
             is_active=True
         ).distinct().count()
+
+        # Materials that are standalone (not representing an Assessment)
+        materials_posted = Material.objects.filter(
+            Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
+            is_active=True,
+            assessment__isnull=True,
+        ).distinct().count()
+
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
         return JsonResponse({
@@ -3321,6 +3330,7 @@ def get_teacher_overview(request):
             'classes_count': classes_count,
             'total_students': total_students,
             'materials_posted': materials_posted,
+            'assessments_posted': assessments_posted,
             'reports_generated': reports_generated,
         })
     except Exception as e:
@@ -3356,8 +3366,11 @@ def get_class_materials(request):
         # Material records act as the primary container for metadata like "Assigned Week".
         represented_asm_ids = materials_qs.exclude(assessment=None).values_list('assessment_id', flat=True)
         assessments_qs = Assessment.objects.filter(section=section).exclude(id__in=represented_asm_ids)
-        # Practice sets are standalone.
-        practices_qs = Practice.objects.filter(section__isnull=True).order_by('-created_at')
+        # Practice sets: include those that belong to this section or were created by the
+        # class' teacher (so teacher-created practice sets show up in their class view)
+        practices_qs = Practice.objects.filter(
+            Q(section=section) | Q(teacher=section.teacher) | Q(section__isnull=True, teacher=section.teacher)
+        ).order_by('-created_at')
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
         # Requesting user (could be student or teacher) used to compute attempt counts
@@ -3905,6 +3918,68 @@ def teacher_update_material(request):
         material.save()
         return JsonResponse({'success': True, 'message': 'Material updated successfully'})
     except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def teacher_update_practice(request):
+    """Allow teachers to update Practice items (title, content, status)."""
+    try:
+        data = json.loads(request.body)
+        raw_id = data.get('practice_id')
+        _, practice_id = _parse_prefixed_id(raw_id)
+
+        user_id = request.session.get('user_id')
+        if not practice_id:
+            return JsonResponse({'success': False, 'error': 'Invalid practice ID'}, status=400)
+
+        practice = Practice.objects.filter(id=practice_id, teacher_id=user_id).first()
+        if not practice:
+            return JsonResponse({'success': False, 'error': 'Practice not found or access denied'}, status=404)
+
+        title = data.get('title')
+        content = data.get('content')
+        status = data.get('status')
+
+        if title is not None:
+            practice.title = title.strip()
+        if content is not None:
+            practice.content_text = content.strip()
+        if status is not None:
+            practice.status = status
+            practice.is_active = (status in ['published', 'scheduled'])
+
+        practice.save()
+        return JsonResponse({'success': True, 'message': 'Practice updated successfully'})
+    except Exception as e:
+        logger.exception('Error updating practice')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def delete_practice(request):
+    """Allow teachers to delete their own Practice items."""
+    try:
+        data = json.loads(request.body)
+        raw_id = data.get('practice_id')
+        _, practice_id = _parse_prefixed_id(raw_id)
+
+        user_id = request.session.get('user_id')
+        if not practice_id:
+            return JsonResponse({'success': False, 'error': 'Practice ID is required'}, status=400)
+
+        practice = Practice.objects.filter(id=practice_id, teacher_id=user_id).first()
+        if not practice:
+            return JsonResponse({'success': False, 'error': 'Practice not found or access denied'}, status=404)
+
+        practice.delete()
+        return JsonResponse({'success': True, 'message': 'Practice deleted successfully'})
+    except Exception as e:
+        logger.exception('Error deleting practice')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @csrf_protect
