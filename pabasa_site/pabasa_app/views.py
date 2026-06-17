@@ -2808,7 +2808,9 @@ def get_teacher_courses_api(request):
             practices_list = []
             try:
                 practices_qs = Practice.objects.filter(
-                    Q(section__in=c.sections.all()) | Q(teacher=c.teacher) | Q(section__isnull=True, teacher=c.teacher)
+                    Q(section__in=c.sections.all()) |
+                    Q(teacher=c.teacher) |
+                    Q(section__isnull=True, teacher__role='admin')
                 ).order_by('-created_at')[:100]
                 for p in practices_qs:
                     practices_list.append({
