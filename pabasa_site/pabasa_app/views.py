@@ -3550,8 +3550,11 @@ def get_class_materials(request):
         if not section:
             return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
         
-        # Include materials directly linked to section or assigned via ManyToMany
-        materials_qs = Material.objects.filter(Q(section=section) | Q(assigned_sections=section)).distinct()
+        # Include materials directly linked to section, assigned via ManyToMany,
+        # or attached to a Course that includes this section.
+        materials_qs = Material.objects.filter(
+            Q(section=section) | Q(assigned_sections=section) | Q(courses__sections=section)
+        ).distinct()
         # Avoid duplication: exclude assessments that are already represented by a Material record.
         # Material records act as the primary container for metadata like "Assigned Week".
         represented_asm_ids = materials_qs.exclude(assessment=None).values_list('assessment_id', flat=True)
