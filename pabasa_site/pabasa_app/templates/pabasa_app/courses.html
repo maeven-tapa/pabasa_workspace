@@ -4797,6 +4797,44 @@
                                     }
                                     // refresh courses UI
                                     try { await renderCourses(); } catch (e) { /* ignore */ }
+
+                                    // Also attempt to refresh the open Course modal so the
+                                    // "No materials yet" placeholder is removed immediately.
+                                    try {
+                                        if (window.courseAttachTarget) {
+                                            // Refresh aggregated readings for the course (if function exists)
+                                            if (typeof loadCourseReadings === 'function') {
+                                                await loadCourseReadings(window.courseAttachTarget);
+                                            } else if (apiData && apiData.material && typeof window.renderAllReadingsList === 'function') {
+                                                // Fallback: render the single created material into aggregated container
+                                                try { window.renderAllReadingsList([apiData.material], 'courseAggregatedMaterials'); } catch (e) { /* ignore */ }
+                                            }
+
+                                            // If the course modal is currently visible, re-render attached materials list
+                                            const cModal = document.getElementById('courseDetailModal');
+                                            if (cModal && cModal.classList.contains('show')) {
+                                                try {
+                                                    const materialsContainer = document.getElementById('courseAttachedMaterials');
+                                                    const course = (teacherCourses || []).find(c => Number(c.id) === Number(window.courseAttachTarget));
+                                                    if (materialsContainer && course) {
+                                                        materialsContainer.innerHTML = '';
+                                                        (course.materials || []).forEach(m => {
+                                                            const item = document.createElement('div');
+                                                            item.className = 'd-flex align-items-center justify-content-between mb-2';
+                                                            item.innerHTML = `
+                                                                <div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div>
+                                                                <div class="btn-group" role="group">
+                                                                    <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="Preview"><i class="bi bi-eye"></i></button>
+                                                                    <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil"></i></button>
+                                                                    <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Delete"><i class="bi bi-trash"></i></button>
+                                                                </div>`;
+                                                            materialsContainer.appendChild(item);
+                                                        });
+                                                    }
+                                                } catch (e) { console.warn('Could not refresh attached materials DOM', e); }
+                                            }
+                                        }
+                                    } catch (e) { console.warn('Could not refresh course modal after attach', e); }
                                 } catch (e) {
                                     console.warn('Course attach step failed', e);
                                 } finally {
