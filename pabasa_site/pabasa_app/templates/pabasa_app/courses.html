@@ -1941,7 +1941,10 @@
                                             <h6 class="mb-0">Assigned Materials</h6>
                                             <button class="btn btn-sm btn-outline-primary" id="btnAddMaterialToCourse">Add Material</button>
                                         </div>
-                                        <div id="courseDetailMaterials" class="mb-3"></div>
+                                        <div id="courseDetailMaterials" class="mb-3">
+                                            <div id="courseAttachedMaterials" class="attached-materials mb-3"></div>
+                                            <div id="courseAggregatedMaterials" class="aggregated-materials"></div>
+                                        </div>
                                         <div id="courseOverviewStats" class="mb-3"></div>
                                     </div>
 
@@ -2603,8 +2606,8 @@
             sectionsContainer.innerHTML = (course.sections || []).map(s => `<div class="small text-muted mb-1">${s.name} <span class="text-secondary">(${s.code})</span></div>`).join('') || '<div class="small text-muted">No sections added</div>';
 
             // Materials list (with preview/edit/delete actions) and Practice previews
-            const materialsContainer = document.getElementById('courseDetailMaterials');
-            materialsContainer.innerHTML = '';
+            const materialsContainer = document.getElementById('courseAttachedMaterials');
+            if (materialsContainer) materialsContainer.innerHTML = '';
 
             // Render existing Material records (editable)
             (course.materials || []).forEach(m => {
@@ -3228,10 +3231,11 @@
             });
             const allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph];
             // renderAllReadingsList may be declared later in the script; wait briefly if undefined
-            function tryRenderAll() {
+                    function tryRenderAll() {
                 try {
                     if (typeof window.renderAllReadingsList === 'function') {
-                        window.renderAllReadingsList(allMaterials, 'courseDetailMaterials');
+                        // Render aggregated readings into the dedicated aggregated container
+                        window.renderAllReadingsList(allMaterials, 'courseAggregatedMaterials');
                         return true;
                     }
                 } catch (e) {
