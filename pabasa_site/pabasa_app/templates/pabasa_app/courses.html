@@ -3006,17 +3006,39 @@
             }
         }
 
-        // Course Students loader
-        function loadCourseStudents(courseId) {
+        // Course Students loader - fetch authoritative teacher students from server and filter per-course sections
+        async function loadCourseStudents(courseId) {
             try {
                 const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
                 if (!course) return;
+
+                const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
                 const sectionNames = (course.sections || []).map(s => s.name).filter(Boolean);
-                const allStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
-                const courseStudents = allStudents.filter(s => s.class && sectionNames.includes(s.class) && s.name !== 'Jay Park');
 
                 const tbody = document.getElementById('courseStudentsTableBody');
                 if (!tbody) return;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading students...</td></tr>`;
+
+                let students = [];
+                try {
+                    const res = await fetch('/dashboard/teacher/students-api/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.success && Array.isArray(data.students)) students = data.students;
+                    }
+                } catch (err) {
+                    console.warn('Failed to fetch teacher students API', err);
+                }
+
+                // Filter students who belong to any of the course sections
+                const courseStudents = students.filter(s => {
+                    const codes = Array.isArray(s.class_codes) ? s.class_codes : [];
+                    const classes = Array.isArray(s.classes) ? s.classes : [];
+                    const byCode = codes.some(c => sectionCodes.includes(c));
+                    const byName = classes.some(n => sectionNames.includes(n));
+                    return (byCode || byName);
+                });
+
                 tbody.innerHTML = '';
                 if (courseStudents.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No students enrolled in this course.</td></tr>`;
@@ -3024,16 +3046,19 @@
                 }
 
                 courseStudents.forEach(s => {
+                    // pick the first matching section code for remove action
+                    const matchCode = (Array.isArray(s.class_codes) ? s.class_codes.find(c => sectionCodes.includes(c)) : null) || (Array.isArray(s.class_codes) && s.class_codes[0]) || '';
+                    const sectionLabel = (Array.isArray(s.classes) && s.classes.length > 0) ? s.classes.join(', ') : '';
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td><strong>${s.name}</strong><div class="small text-muted">${s.class || ''}</div></td>
+                        <td><strong>${s.name}</strong><div class="small text-muted">${sectionLabel}</div></td>
                         <td>${s.email || '<span class="text-danger">No email</span>'}</td>
                         <td>${s.accuracy ? s.accuracy + '%' : '—'}</td>
                         <td>${s.wpm || '—'}</td>
                         <td class="text-end">
                             <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || ''}" data-student-name="${s.name}"><i class="bi bi-bar-chart"></i></button>
-                                <button class="btn btn-sm btn-outline-primary" data-student-id="${s.id || ''}" data-student-name="${s.name}" onclick="window.removeStudentFromClass('${s.pabasa_id || s.id || ''}', '${s.name}')"><i class="bi bi-trash"></i></button>
+                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || ''}" data-student-name="${s.name}" title="View progress"><i class="bi bi-bar-chart"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" type="button" title="Remove from section" onclick="window.removeStudentFromCourse('${s.id || s.custom_id || ''}', '${matchCode}', '${s.name.replace(/'/g, "\\'")}', '${courseId}')"><i class="bi bi-trash"></i></button>
                             </div>
                         </td>
                     `;
@@ -3133,6 +3158,8 @@
                 const modalEl = document.getElementById('createCourseModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
+                // Open the newly created course detail so students tab can load immediately
+                try { openCourseDetail(data.course.id); } catch (err) { console.warn('Could not open course detail after create', err); }
             } else {
                 showToast('Error creating course: ' + (data.error || 'Unknown'), 'error');
             }
@@ -3305,9 +3332,56 @@
             const modalEl = document.getElementById('addCourseStudentModal');
             if (modalEl) {
                 const tbody = document.getElementById('addCourseStudentsTableBody');
-                if (tbody) tbody.innerHTML = ''; // intentionally empty per request
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading available students...</td></tr>`;
                 showStackedModal(modalEl);
-                // Do NOT auto-populate from prompt; leave table for later population
+                // Populate available students not already in course
+                (async function populateAddStudents() {
+                    try {
+                        // Fetch authoritative teacher students
+                        const res = await fetch('/dashboard/teacher/students-api/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                        let students = [];
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data && data.success && Array.isArray(data.students)) students = data.students;
+                        }
+
+                        // Determine students already in this course
+                        const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+                        const courseCodes = (course?.sections || []).map(s => s.code).filter(Boolean);
+                        const courseNames = (course?.sections || []).map(s => s.name).filter(Boolean);
+
+                        // Fetch students not currently in any of the course sections
+                        const available = students.filter(s => {
+                            const codes = Array.isArray(s.class_codes) ? s.class_codes : [];
+                            const classes = Array.isArray(s.classes) ? s.classes : [];
+                            const inCourse = codes.some(c => courseCodes.includes(c)) || classes.some(n => courseNames.includes(n));
+                            return !inCourse;
+                        });
+
+                        const tbodyEl = document.getElementById('addCourseStudentsTableBody');
+                        if (!tbodyEl) return;
+                        tbodyEl.innerHTML = '';
+                        if (available.length === 0) {
+                            tbodyEl.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No available students to add.</td></tr>`;
+                            return;
+                        }
+
+                        available.forEach((s, idx) => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><div class="form-check"><input class="form-check-input add-course-student-checkbox" type="checkbox" id="add_std_${idx}" value="${s.id || s.custom_id || ''}"></div></td>
+                                <td><strong>${s.name}</strong><div class="small text-muted">${(s.classes || []).join(', ')}</div></td>
+                                <td>${s.email || '<span class="text-danger">No email</span>'}</td>
+                                <td>${s.level || ''}</td>
+                            `;
+                            tbodyEl.appendChild(tr);
+                        });
+                    } catch (err) {
+                        console.warn('populateAddStudents failed', err);
+                        const tbodyEl = document.getElementById('addCourseStudentsTableBody');
+                        if (tbodyEl) tbodyEl.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Failed to load students.</td></tr>`;
+                    }
+                })();
             } else {
                 try { if (typeof loadCourseStudents === 'function') loadCourseStudents(courseId); } catch (err) { console.warn('loadCourseStudents fallback failed', err); }
             }
@@ -3581,6 +3655,31 @@
             console.error('Error:', error);
             showToast('An error occurred.', 'error');
         });
+    };
+
+    // Remove student from a course-section (uses teacher_remove_student endpoint)
+    window.removeStudentFromCourse = function(studentId, sectionCode, studentName, courseId) {
+        if (!confirm(`Remove ${studentName} from this course?`)) return;
+        fetch('/dashboard/teacher/remove-student-from-class/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+            },
+            body: JSON.stringify({ class_code: sectionCode || currentClassCode, student_id: studentId })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                showToast(`${studentName} removed from course`, 'success');
+                // Refresh course students list
+                try { loadCourseStudents(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId); } catch(e){}
+                try { renderCourses(); } catch(e){}
+            } else {
+                showToast(d.error || 'Could not remove student', 'error');
+            }
+        })
+        .catch(err => { console.error(err); showToast('An error occurred', 'error'); });
     };
 
     const classAssessments = {};
@@ -4006,6 +4105,53 @@
         const addCourseStudentModal = document.getElementById('addCourseStudentModal');
         if (addCourseStudentModal) {
             ensureModalOnBody(addCourseStudentModal);
+        }
+    });
+
+    // Add selected students from Add Students modal into the course (use teacher_add_student endpoint)
+    document.getElementById('addCourseStudentModalAddSelected')?.addEventListener('click', async function() {
+        const modal = document.getElementById('addCourseStudentModal');
+        const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+        if (!courseId) return showToast('Course not identified', 'error');
+
+        const checkboxes = Array.from(document.querySelectorAll('#addCourseStudentsTableBody .add-course-student-checkbox:checked'));
+        if (checkboxes.length === 0) return showToast('Select at least one student to add', 'error');
+
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+        const targetSections = (course?.sections || []).map(s => s.code).filter(Boolean);
+        const targetClassCode = targetSections[0] || null;
+        if (!targetClassCode) return showToast('Course has no associated section code', 'error');
+
+        const added = [];
+        for (const cb of checkboxes) {
+            const studentId = cb.value;
+            try {
+                const res = await fetch('/dashboard/teacher/add-student-to-class/', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({ class_code: targetClassCode, student_id: studentId })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    added.push(studentId);
+                } else {
+                    console.warn('Failed to add student', studentId, data);
+                }
+            } catch (err) {
+                console.error('Error adding student', studentId, err);
+            }
+        }
+
+        if (added.length > 0) {
+            showToast(`${added.length} student(s) added to course`, 'success');
+            // close modal and refresh students list
+            try { bootstrap.Modal.getInstance(modal)?.hide(); } catch(e){}
+            try { loadCourseStudents(courseId); } catch(e){}
+            try { renderCourses(); } catch(e){}
+        } else {
+            showToast('No students were added', 'error');
         }
     });
 
