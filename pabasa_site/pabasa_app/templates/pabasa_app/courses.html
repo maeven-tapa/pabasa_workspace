@@ -3245,43 +3245,120 @@
         try {
             const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
             if (!course) return;
+
             // Collect section codes
             const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
+
+            // Aggregate materials across all sections, preferring database API, with localStorage fallback
             const aggregated = { word: [], sentence: [], paragraph: [] };
-            const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
-            sectionCodes.forEach(code => {
-                const r = stored[code] || stored[String(code).toUpperCase()] || stored[String(code).toLowerCase()] || {};
-                ['word','sentence','paragraph'].forEach(t => {
-                    if (Array.isArray(r[t])) aggregated[t] = aggregated[t].concat(r[t]);
-                    else if (Array.isArray(r[t+'s'])) aggregated[t] = aggregated[t].concat(r[t+'s']);
+
+            // If there are no section codes, fallback to localStorage behavior
+            if (sectionCodes.length === 0) {
+                const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+                const allMaterials = [];
+                Object.keys(stored).forEach(key => {
+                    const r = stored[key] || {};
+                    ['word','sentence','paragraph'].forEach(t => {
+                        if (Array.isArray(r[t])) allMaterials.push(...r[t]);
+                        else if (Array.isArray(r[t+'s'])) allMaterials.push(...r[t+'s']);
+                    });
                 });
-            });
-            const allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph];
-            // renderAllReadingsList may be declared later in the script; wait briefly if undefined
-                    function tryRenderAll() {
-                try {
+
+                // Filter out assessment usage from aggregated assigned materials
+                const filtered = allMaterials.filter(m => String((m.type || '')).toLowerCase() !== 'assessment');
+                const unique = [];
+                const seen = new Set();
+                filtered.forEach(m => {
+                    const id = m.id || m.material_id || m._id || null;
+                    if (id && seen.has(String(id))) return;
+                    if (id) seen.add(String(id));
+                    unique.push(m);
+                });
+
+                // Render
+                (function waitAndRender() {
                     if (typeof window.renderAllReadingsList === 'function') {
-                        // Render aggregated readings into the dedicated aggregated container
-                        window.renderAllReadingsList(allMaterials, 'courseAggregatedMaterials');
-                        return true;
+                        window.renderAllReadingsList(unique, 'courseAggregatedMaterials');
+                        return;
                     }
-                } catch (e) {
-                    console.warn('tryRenderAll error', e);
-                }
-                return false;
+                    let tries = 0; const maxTries = 10;
+                    const t = setInterval(() => {
+                        tries += 1;
+                        if (typeof window.renderAllReadingsList === 'function') {
+                            clearInterval(t);
+                            window.renderAllReadingsList(unique, 'courseAggregatedMaterials');
+                        } else if (tries >= maxTries) {
+                            clearInterval(t);
+                            console.warn('renderAllReadingsList unavailable for courseAggregatedMaterials after waiting');
+                        }
+                    }, 150);
+                })();
+                return;
             }
 
-            if (!tryRenderAll()) {
-                let attempts = 0;
-                const maxAttempts = 10;
-                const interval = setInterval(() => {
-                    attempts += 1;
-                    if (tryRenderAll() || attempts >= maxAttempts) {
-                        clearInterval(interval);
-                        if (attempts >= maxAttempts) console.warn('renderAllReadingsList not available after waiting');
+            // For each section code, try database fetch first, otherwise fallback to local storage
+            const fetchPromises = sectionCodes.map(async (code) => {
+                try {
+                    const db = await fetchMaterialsFromDatabase(code);
+                    if (db) return db;
+                } catch (e) {
+                    console.warn('fetchMaterialsFromDatabase error for', code, e);
+                }
+                // localStorage fallback for this code
+                try {
+                    const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
+                    const r = stored[code] || stored[String(code).toUpperCase()] || stored[String(code).toLowerCase()] || {};
+                    return {
+                        word: Array.isArray(r.word) ? r.word : (Array.isArray(r.words) ? r.words : []),
+                        sentence: Array.isArray(r.sentence) ? r.sentence : (Array.isArray(r.sentences) ? r.sentences : []),
+                        paragraph: Array.isArray(r.paragraph) ? r.paragraph : (Array.isArray(r.paragraphs) ? r.paragraphs : [])
+                    };
+                } catch (err) {
+                    return { word: [], sentence: [], paragraph: [] };
+                }
+            });
+
+            const results = await Promise.all(fetchPromises);
+            results.forEach(res => {
+                ['word','sentence','paragraph'].forEach(t => {
+                    if (Array.isArray(res[t])) aggregated[t] = aggregated[t].concat(res[t]);
+                });
+            });
+
+            let allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph];
+
+            // Remove assessments from assigned materials to avoid duplication with Assessments tab
+            allMaterials = allMaterials.filter(m => String((m.type || '')).toLowerCase() !== 'assessment');
+
+            // Deduplicate by id
+            const seenIds = new Set();
+            const uniqueMaterials = [];
+            allMaterials.forEach(m => {
+                const id = m.id || m.material_id || m._id || null;
+                if (id && seenIds.has(String(id))) return;
+                if (id) seenIds.add(String(id));
+                uniqueMaterials.push(m);
+            });
+
+            // Render aggregated readings into the dedicated aggregated container
+            (function waitAndRender() {
+                if (typeof window.renderAllReadingsList === 'function') {
+                    window.renderAllReadingsList(uniqueMaterials, 'courseAggregatedMaterials');
+                    return;
+                }
+                let tries = 0; const maxTries = 10;
+                const t = setInterval(() => {
+                    tries += 1;
+                    if (typeof window.renderAllReadingsList === 'function') {
+                        clearInterval(t);
+                        window.renderAllReadingsList(uniqueMaterials, 'courseAggregatedMaterials');
+                    } else if (tries >= maxTries) {
+                        clearInterval(t);
+                        console.warn('renderAllReadingsList not available after waiting');
                     }
                 }, 150);
-            }
+            })();
+
         } catch (e) {
             console.warn('loadCourseReadings failed', e);
         }
