@@ -2326,47 +2326,8 @@
 
 <!-- Assessment Modal moved to bottom -->
 <div class="modal fade" id="assessmentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title" id="assessmentModalTitle">Add Assessment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="assessmentForm" onsubmit="return false;">
-                    <div class="mb-3">
-                        <label class="form-label" for="assessmentTitle">Title</label>
-                        <input id="assessmentTitle" class="form-control" type="text" placeholder="Assessment title">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="assessmentLevel">Level</label>
-                        <select id="assessmentLevel" class="form-select">
-                            <option value="Word">Word</option>
-                            <option value="Sentence">Sentence</option>
-                            <option value="Paragraph">Paragraph</option>
-                        </select>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" for="assessmentItems">Items</label>
-                            <input id="assessmentItems" class="form-control" type="number" min="1" value="10">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" for="assessmentMinutes">Minutes</label>
-                            <input id="assessmentMinutes" class="form-control" type="number" min="1" value="15">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label" for="assessmentDueDate">Due (optional)</label>
-                            <input id="assessmentDueDate" class="form-control" type="datetime-local">
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="submitAssessment">Save Assessment</button>
-            </div>
-        </div>
+    <div class="modal-dialog modal-dialog-centered">
+        <!-- ... content ... -->
     </div>
 </div>
 
@@ -2644,29 +2605,131 @@
             const sectionsContainer = document.getElementById('courseDetailSections');
             sectionsContainer.innerHTML = (course.sections || []).map(s => `<div class="small text-muted mb-1">${s.name} <span class="text-secondary">(${s.code})</span></div>`).join('') || '<div class="small text-muted">No sections added</div>';
 
-            // Render attached course materials using unified material card UI
+            // Materials list (with preview/edit/delete actions) and Practice previews
             const materialsContainer = document.getElementById('courseAttachedMaterials');
-            if (materialsContainer) {
-                materialsContainer.innerHTML = '';
-                try {
-                    // Use the unified renderer (cards with actions)
-                    if (Array.isArray(course.materials) && course.materials.length > 0) {
-                        window.renderAllReadingsList(course.materials, 'courseAttachedMaterials');
-                    } else {
-                        materialsContainer.innerHTML = `
-                            <div class="readings-empty">
-                                <i class="bi bi-inbox"></i>
-                                <p>No materials attached to this course</p>
-                            </div>
-                        `;
-                    }
-                } catch (e) {
-                    // Fallback: simple list
-                    materialsContainer.innerHTML = (course.materials || []).map(m => `<div class="d-flex align-items-center justify-content-between mb-2"><div><strong>${m.title}</strong></div><div class="btn-group"><button class="btn btn-sm btn-outline-secondary" data-action="view" data-mid="${m.id}"><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-outline-primary" data-action="edit" data-mid="${m.id}"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-outline-danger" data-action="delete" data-mid="${m.id}"><i class="bi bi-trash"></i></button></div></div>`).join('') || '<div class="readings-empty"><i class="bi bi-inbox"></i><p>No materials attached to this course</p></div>';
-                }
+            if (materialsContainer) materialsContainer.innerHTML = '';
 
-                // Store a JSON snapshot so the delegated handlers can locate materials when needed
-                try { materialsContainer.dataset.materialsJson = JSON.stringify(course.materials || []); } catch(e) { materialsContainer.dataset.materialsJson = '[]'; }
+            // Render existing Material records (editable)
+            (course.materials || []).forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'd-flex align-items-center justify-content-between mb-2';
+                item.innerHTML = `
+                    <div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="Preview"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Delete"><i class="bi bi-trash"></i></button>
+                    </div>`;
+                materialsContainer.appendChild(item);
+            });
+
+            // Render related Practices (preview-only)
+            if ((course.practices || []).length > 0) {
+                const header = document.createElement('div');
+                header.className = 'mb-2 small text-muted';
+                header.textContent = 'Practice Sets';
+                materialsContainer.appendChild(header);
+                (course.practices || []).forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'd-flex align-items-center justify-content-between mb-2';
+                    item.innerHTML = `
+                        <div><strong>${p.title}</strong> <span class="small text-muted">${p.item_type || ''}</span></div>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-secondary" data-practice-action="preview" data-pid="${p.id}" title="Preview"><i class="bi bi-eye"></i></button>
+                        </div>`;
+                    materialsContainer.appendChild(item);
+                });
+            }
+
+            // Attach a single delegated handler for material and practice actions
+            if (!materialsContainer.dataset.bound) {
+                materialsContainer.dataset.bound = 'true';
+                materialsContainer.addEventListener('click', async function(e) {
+                    const btn = e.target.closest('[data-material-action], [data-practice-action]');
+                    if (!btn) return;
+                    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+                    // Material actions (editable)
+                    if (btn.dataset.materialAction) {
+                        const action = btn.dataset.materialAction;
+                        const mid = btn.getAttribute('data-mid');
+                        if (action === 'preview') {
+                            const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
+                            if (!mat) return showToast('Material not found', 'error');
+                            const matItems = (typeof mat.items_count === 'number') ? mat.items_count : (Array.isArray(mat.items) ? mat.items.length : (mat.items || '-'));
+                            showSuccessModal('Material Preview', `${mat.title} \n\nType: ${mat.item_type || '-'}\nItems: ${matItems}`);
+                            return;
+                        }
+
+                        if (action === 'edit') {
+                            const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
+                            if (!mat) return showToast('Material not found', 'error');
+                            const newTitle = prompt('Edit material title', mat.title || '');
+                            if (newTitle === null) return;
+                            try {
+                                const res = await fetch('/dashboard/teacher/update-material/', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                    body: JSON.stringify({ material_id: Number(mid), title: newTitle })
+                                });
+                                const d = await res.json();
+                                if (res.ok && d.success) {
+                                    mat.title = newTitle;
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Material updated', 'success');
+                                } else {
+                                    showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
+                                }
+                            } catch (err) {
+                                console.error('update material error', err);
+                                showToast('Failed to update material', 'error');
+                            }
+                            return;
+                        }
+
+                        if (action === 'delete') {
+                            if (!confirm('Permanently delete this material?')) return;
+                            try {
+                                const res = await fetch('/dashboard/teacher/delete-material/', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                    body: JSON.stringify({ material_id: Number(mid) })
+                                });
+                                const d = await res.json();
+                                if (res.ok && d.success) {
+                                    course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Material deleted', 'success');
+                                } else {
+                                    showToast('Could not delete material: ' + (d.error || 'Unknown'), 'error');
+                                }
+                            } catch (err) {
+                                console.error('delete material error', err);
+                                showToast('Failed to delete material', 'error');
+                            }
+                            return;
+                        }
+                    }
+
+                    // Practice actions (preview-only)
+                    if (btn.dataset.practiceAction) {
+                        const action = btn.dataset.practiceAction;
+                        const pid = btn.getAttribute('data-pid');
+                        if (action === 'preview') {
+                            const pr = (course.practices || []).find(x => Number(x.id) === Number(pid));
+                            if (!pr) return showToast('Practice not found', 'error');
+                            const prItems = (typeof pr.items_count === 'number') ? pr.items_count : (Array.isArray(pr.items) ? pr.items.length : (pr.items || '-'));
+                            showSuccessModal('Practice Preview', `${pr.title} \n\nType: ${pr.item_type || '-'}\nItems: ${prItems}\n\n${pr.content || ''}`);
+                            return;
+                        }
+                    }
+                });
             }
 
             // store current course id on modal for create flow
@@ -2679,16 +2742,87 @@
             try { if (typeof loadCourseReadings === 'function') loadCourseReadings(course.id); } catch (err) { console.warn('loadCourseReadings error', err); }
                 try { if (typeof loadCourseStudents === 'function') loadCourseStudents(course.id); } catch (err) { console.warn('loadCourseStudents error', err); }
 
-            // Note: assessment and material action handlers are provided by the
-            // centralized handler setup (setupReadingsHandlers / setupAssessmentHandlers)
-            // which will be bound on DOM ready. We store a snapshot for course assessments
-            // so those handlers can locate course-level assessments when needed.
+            // attach delegated handlers for the assessments rendered in course detail
             try {
                 const assessmentsContainer = document.getElementById('courseDetailAssessments');
-                if (assessmentsContainer) {
-                    try { assessmentsContainer.dataset.assessmentsJson = JSON.stringify(course.assessments || []); } catch(e) { assessmentsContainer.dataset.assessmentsJson = '[]'; }
+                if (assessmentsContainer && !assessmentsContainer.dataset.bound) {
+                    assessmentsContainer.dataset.bound = 'true';
+                    assessmentsContainer.addEventListener('click', async function(e) {
+                        const actionBtn = e.target.closest('[data-assessment-action]');
+                        if (!actionBtn) return;
+                        const card = actionBtn.closest('.assessment-card');
+                        if (!card) return;
+                        const assessmentId = Number(card.dataset.assessmentId);
+                        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                        const assessments = (course.assessments || []);
+                        const assessment = assessments.find(a => Number(a.id) === assessmentId);
+                        if (!assessment) return showToast('Assessment not found', 'error');
+
+                        if (actionBtn.dataset.assessmentAction === 'preview') {
+                            showSuccessModal('Assessment Preview', `${assessment.title} has ${pc_itemsCount(assessment)} items and a ${assessment.minutes || 0}-minute limit.`);
+                            return;
+                        }
+
+                        if (actionBtn.dataset.assessmentAction === 'edit') {
+                            const newTitle = prompt('Edit assessment title', assessment.title || '');
+                            if (newTitle === null) return; // cancelled
+                            const newDue = prompt('Edit due date/time (YYYY-MM-DDTHH:MM) or leave blank', assessment.dueDate || '') || '';
+                            try {
+                                const res = await fetch('/dashboard/teacher/update-assessment/', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                    body: JSON.stringify({ assessment_id: assessmentId, title: newTitle, scheduled_at: newDue })
+                                });
+                                const d = await res.json();
+                                if (res.ok && d.success) {
+                                    assessment.title = newTitle;
+                                    assessment.dueDate = newDue || null;
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Assessment updated', 'success');
+                                } else {
+                                    showToast('Could not update assessment: ' + (d.error || 'Unknown'), 'error');
+                                }
+                            } catch (err) {
+                                console.error('update assessment error', err);
+                                showToast('Failed to update assessment', 'error');
+                            }
+                            return;
+                        }
+
+                        if (actionBtn.dataset.assessmentAction === 'delete') {
+                            if (!confirm(`Archive assessment "${assessment.title}"? This will remove it from courses and mark it inactive.`)) return;
+                            try {
+                                const res = await fetch('/dashboard/teacher/archive-assessment/', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                    body: JSON.stringify({ assessment_id: assessmentId })
+                                });
+                                const d = await res.json();
+                                if (res.ok && d.success) {
+                                    // remove locally from this course
+                                    course.assessments = (course.assessments || []).filter(x => Number(x.id) !== assessmentId);
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Assessment archived', 'success');
+                                } else {
+                                    showToast('Could not archive assessment: ' + (d.error || 'Unknown'), 'error');
+                                }
+                            } catch (err) {
+                                console.error('archive assessment error', err);
+                                showToast('Failed to archive assessment', 'error');
+                            }
+                            return;
+                        }
+                    });
                 }
-            } catch (err) { console.warn('Failed to set course assessments snapshot', err); }
+            } catch (err) {
+                console.warn('Failed to attach assessment handlers', err);
+            }
 
             // No parent modal shown — course modal is standalone to avoid nested/backdrop issues
 
@@ -3257,7 +3391,7 @@
             const btn = e.target.closest('.view-student-progress');
             const id = btn.dataset.studentId;
             const name = btn.dataset.studentName;
-            showToast(`Open progress view for ${name} (${id})`, 'info');
+            alert(`Open progress view for ${name} (${id})`);
         }
     });
     
@@ -3487,62 +3621,65 @@
     // Reading materials for each class, persisted for dashboard/profile counts.
     const classReadings = loadStoredReadings();
 
-            window.removeStudentFromClass = function(studentId, studentName) {
-                showDeleteConfirmModal(`Remove ${studentName} from this class?`, async () => {
-                    try {
-                        const res = await fetch('/dashboard/teacher/remove-student-from-class/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
-                            },
-                            body: JSON.stringify({ class_code: currentClassCode, student_id: studentId })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            showToast(`${studentName} removed from class.`, 'success');
-                            const classData = teacherClasses.find(c => c.code === currentClassCode);
-                            try {
-                                const students = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
-                                const updated = students.filter(s => !((s.pabasa_id === studentId || s.id === studentId || s.name === studentName) && s.class === classData.name));
-                                localStorage.setItem('pabasa_added_students', JSON.stringify(updated));
-                            } catch(e) {}
-                            renderClasses();
-                        } else {
-                            showToast(data.error || 'Failed to remove student.', 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        showToast('An error occurred.', 'error');
-                    }
-                });
-            };
+    window.removeStudentFromClass = function(studentId, studentName) {
+        if (!confirm(`Are you sure you want to remove ${studentName} from this class?`)) return;
+        
+        fetch('/dashboard/teacher/remove-student-from-class/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+            },
+            body: JSON.stringify({
+                class_code: currentClassCode,
+                student_id: studentId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`${studentName} removed from class.`, 'success');
+                const classData = teacherClasses.find(c => c.code === currentClassCode);
+                try {
+                    const students = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                    const updated = students.filter(s => !((s.pabasa_id === studentId || s.id === studentId || s.name === studentName) && s.class === classData.name));
+                    localStorage.setItem('pabasa_added_students', JSON.stringify(updated));
+                } catch(e) {}
+                // Students view removed; refresh classes only
+                renderClasses();
+            } else {
+                showToast(data.error || 'Failed to remove student.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred.', 'error');
+        });
+    };
 
     // Remove student from a course-section (uses teacher_remove_student endpoint)
     window.removeStudentFromCourse = function(studentId, sectionCode, studentName, courseId) {
-        showDeleteConfirmModal(`Remove ${studentName} from this course?`, async () => {
-            try {
-                const res = await fetch('/dashboard/teacher/remove-student-from-class/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
-                    },
-                    body: JSON.stringify({ class_code: sectionCode || currentClassCode, student_id: studentId })
-                });
-                const d = await res.json();
-                if (d.success) {
-                    showToast(`${studentName} removed from course`, 'success');
-                    try { loadCourseStudents(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId); } catch(e){}
-                    try { renderCourses(); } catch(e){}
-                } else {
-                    showToast(d.error || 'Could not remove student', 'error');
-                }
-            } catch (err) {
-                console.error(err);
-                showToast('An error occurred', 'error');
+        if (!confirm(`Remove ${studentName} from this course?`)) return;
+        fetch('/dashboard/teacher/remove-student-from-class/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+            },
+            body: JSON.stringify({ class_code: sectionCode || currentClassCode, student_id: studentId })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                showToast(`${studentName} removed from course`, 'success');
+                // Refresh course students list
+                try { loadCourseStudents(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId); } catch(e){}
+                try { renderCourses(); } catch(e){}
+            } else {
+                showToast(d.error || 'Could not remove student', 'error');
             }
-        });
+        })
+        .catch(err => { console.error(err); showToast('An error occurred', 'error'); });
     };
 
     const classAssessments = {};
@@ -4397,48 +4534,22 @@
             })();
         }
 
-        function setupReadingsHandlers(containerId = 'readingsContainer') {
-            const readingsContainer = document.getElementById(containerId);
+        function setupReadingsHandlers() {
+            const readingsContainer = document.getElementById('readingsContainer');
             if (readingsContainer && !readingsContainer.dataset.bound) {
                 readingsContainer.dataset.bound = 'true';
                 readingsContainer.addEventListener('click', function(e) {
-                    // Helper to find material by ID across all categories or snapshots
+                    // Helper to find material by ID across all categories for safety
                     function getMaterialById(materialId) {
-                        if (!materialId) return null;
-                        // If this container has a snapshot of course materials, try it first
-                        try {
-                            if (containerId === 'courseAttachedMaterials' && readingsContainer && readingsContainer.dataset.materialsJson) {
-                                const snap = JSON.parse(readingsContainer.dataset.materialsJson || '[]');
-                                const found = (snap || []).find(m => String(m.id) === String(materialId));
+                        if (!currentClassCode) return null;
+                        const readings = ensureClassReadings(currentClassCode);
+                        // Search in all possible singular/plural keys
+                        for (const key of ['word', 'sentence', 'paragraph', 'words', 'sentences', 'paragraphs']) {
+                            if (readings[key]) {
+                                const found = readings[key].find(m => String(m.id) === String(materialId));
                                 if (found) return found;
                             }
-                        } catch (e) { /* ignore snapshot parse errors */ }
-
-                        // Try class-scoped readings
-                        if (currentClassCode) {
-                            const readings = ensureClassReadings(currentClassCode);
-                            for (const key of ['word', 'sentence', 'paragraph', 'words', 'sentences', 'paragraphs']) {
-                                if (readings[key]) {
-                                    const found = readings[key].find(m => String(m.id) === String(materialId));
-                                    if (found) return found;
-                                }
-                            }
                         }
-
-                        // Last-resort: search teacherMaterials or teacherCourses lists
-                        if (Array.isArray(window.teacherMaterials)) {
-                            const found = window.teacherMaterials.find(m => String(m.id) === String(materialId));
-                            if (found) return found;
-                        }
-                        if (Array.isArray(window.teacherCourses)) {
-                            for (const c of window.teacherCourses) {
-                                if (Array.isArray(c.materials)) {
-                                    const found = c.materials.find(m => String(m.id) === String(materialId));
-                                    if (found) return found;
-                                }
-                            }
-                        }
-
                         return null;
                     }
 
@@ -4462,58 +4573,49 @@
                         modal.show();
                     }
                     
-                    // View material button (supports both `data-action` and legacy `data-material-action`/`data-mid`)
-                    const viewBtn = e.target.closest('[data-action="view"], [data-material-action="preview"], [data-action="preview"], [data-material-action="view"]');
-                    if (viewBtn) {
-                        const btn = viewBtn;
+                    // View material button
+                    if (e.target.closest('[data-action="view"]')) {
+                        const btn = e.target.closest('[data-action="view"]');
                         const card = btn.closest('.material-card-modern');
-                        const materialId = (card && card.dataset && card.dataset.materialId) ? card.dataset.materialId : (btn.dataset.mid || btn.getAttribute('data-mid'));
+                        const materialId = card.dataset.materialId;
                         const material = getMaterialById(materialId);
+                        
                         if (material) {
                             const viewModalEl = document.getElementById('viewMaterialModal');
                             if (!viewModalEl) return;
                             const viewModal = bootstrap.Modal.getOrCreateInstance(viewModalEl);
+
                             document.getElementById('viewMaterialModalLabel').textContent = material.title;
                             document.getElementById('viewMaterialMeta').textContent = `${(material.item_type || 'Word').toUpperCase()} - ${(material.type || 'Practice').toUpperCase()}`;
                             const container = document.getElementById('materialContentContainer');
-                            // Use textContent for safety to avoid injecting raw HTML from materials
-                            container.innerHTML = '';
-                            const div = document.createElement('div');
-                            div.className = 'p-3 bg-light rounded';
-                            div.style.whiteSpace = 'pre-wrap';
-                            div.style.fontSize = '1.1rem';
-                            div.textContent = material.content || material.content_text || '';
-                            container.appendChild(div);
+                            container.innerHTML = `<div class="p-3 bg-light rounded" style="white-space: pre-wrap; font-size: 1.1rem;">${material.content || material.content_text}</div>`;
+                            
                             const modalIcon = document.getElementById('viewMaterialIcon');
                             if (modalIcon) modalIcon.className = `materials-modal-icon ${material.item_type || 'word'}`;
+                            
                             viewModal.show();
                         }
                     }
                     
-                    // Edit material button (supports legacy button attributes)
-                    const editBtn = e.target.closest('[data-action="edit"], [data-material-action="edit"]');
-                    if (editBtn) {
-                        const btn = editBtn;
-                        const card = btn.closest('.material-card-modern');
-                        const materialId = (card && card.dataset && card.dataset.materialId) ? card.dataset.materialId : (btn.dataset.mid || btn.getAttribute('data-mid'));
+                    // Edit material button
+                    if (e.target.closest('[data-action="edit"]')) {
+                        const btn = e.target.closest('[data-action="edit"]');
+                        editingCard = btn.closest('.material-card-modern');
+                        const materialId = editingCard.dataset.materialId;
                         const material = getMaterialById(materialId);
+
                         if (!material) return;
+
                         const editModalEl = document.getElementById('editMaterialModal');
                         if (!editModalEl) return;
                         const editModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
 
-                        // Keep a reference for submit handler; synthesize dataset when no DOM card exists
-                        if (card) {
-                            editingCard = card;
-                        } else {
-                            editingCard = { dataset: { materialId: materialId, usage: material.type || 'practice', getAttribute() { return null; } } };
-                        }
-
-                        editMaterialTitleInput.value = material.title || '';
-                        editMaterialContentInput.value = material.content || material.content_text || '';
+                        editMaterialTitleInput.value = material.title;
+                        editMaterialContentInput.value = material.content || material.content_text;
                         editMaterialTypeSelect.value = material.type || 'practice';
                         editPublicationStatusSelect.value = material.status || 'published';
                         buildAssignedWeekOptions('editAssignedWeek', material.assigned_week);
+                        
                         toggleEditScheduleField(); // Update visibility based on loaded status
 
                         if (material.status === 'scheduled' && material.schedule) {
@@ -4530,18 +4632,17 @@
                         editModal.show();
                     }
                     
-                    // Delete material button (supports legacy `data-material-action` + `data-mid`)
-                    const delBtn = e.target.closest('[data-action="delete"], [data-material-action="delete"]');
-                    if (delBtn) {
-                        const btn = delBtn;
+                    // Delete material button
+                    if (e.target.closest('[data-action="delete"]')) {
+                        const btn = e.target.closest('[data-action="delete"]');
                         const card = btn.closest('.material-card-modern');
-                        let title = '';
-                        const materialId = (card && card.dataset && card.dataset.materialId) ? card.dataset.materialId : (btn.dataset.mid || btn.getAttribute('data-mid'));
-                        if (card) title = card.querySelector('.material-title')?.textContent || '';
-                        else title = btn.closest('.d-flex')?.querySelector('strong')?.textContent || '';
-
+                        if (!card) return;
+                        
+                        const title = card.querySelector('.material-title').textContent;
+                        const materialId = card.dataset.materialId;
+                        
                         if (!materialId) {
-                            showToast('Could not identify the material ID. Please refresh the page.', 'error');
+                            alert("Could not identify the material ID. Please refresh the page.");
                             return;
                         }
 
@@ -4549,7 +4650,7 @@
                             try {
                                 const csrfToken = await ensureCsrfToken();
                                 // If this is a practice item, call the practice delete API
-                                const usage = (card && (card.dataset.usage || card.getAttribute('data-usage'))) || (btn.dataset.usage || btn.getAttribute('data-usage')) || 'practice';
+                                const usage = card.dataset.usage || (card.getAttribute('data-usage') || 'practice');
                                 const endpoint = (usage && usage.toLowerCase() === 'practice') ? '/dashboard/teacher/delete-practice/' : '/dashboard/teacher/delete-material/';
                                 const bodyPayload = (usage && usage.toLowerCase() === 'practice') ? { practice_id: materialId } : { material_id: materialId };
 
@@ -4588,11 +4689,11 @@
                                         window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } }));
                                     } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
                                 } else {
-                                    showToast("Error: " + (data.error || 'Delete failed'), 'error');
+                                    alert("Error: " + data.error);
                                 }
                             } catch (err) {
                                 console.error("Delete error details:", err);
-                                showToast("An error occurred while deleting the material.", 'error');
+                                alert("An error occurred while deleting the material.");
                             }
                         });
                     }
@@ -4650,14 +4751,14 @@
                                 // Notify other modules to refresh after material update
                                 try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
                             } else {
-                                showToast("Error: " + (data.error || (data.errors && data.errors.assigned_week) || 'Update failed'), 'error');
+                                alert("Error: " + (data.error || (data.errors && data.errors.assigned_week) || 'Update failed'));
                             }
                         } catch (err) {
                             console.error("Update error:", err);
-                            showToast("An error occurred while updating the material.", 'error');
+                            alert("An error occurred while updating the material.");
                         }
                     } else if (!newTitle.trim() || !newContent.trim()) {
-                        showToast('Title and content cannot be empty', 'error');
+                        alert('Title and content cannot be empty');
                     }
                 });
             }
@@ -4963,9 +5064,9 @@
             }
 
         // ===== ASSESSMENT TAB HANDLERS =====
-        function setupAssessmentHandlers(containerId = 'assessmentsContainer') {
+        function setupAssessmentHandlers() {
             let editingAssessmentId = null;
-            const container = document.getElementById(containerId);
+            const container = document.getElementById('assessmentsContainer');
             const modalEl = document.getElementById('assessmentModal');
             const submitBtn = document.getElementById('submitAssessment');
 
@@ -5007,25 +5108,7 @@
 
                     const card = actionBtn.closest('.assessment-card');
                     const assessmentId = Number(card.dataset.assessmentId);
-
-                    // Determine assessments source depending on container context
-                    let assessments = [];
-                    if (containerId === 'courseDetailAssessments') {
-                        // Try snapshot attached to container first
-                        try {
-                            assessments = JSON.parse(container.dataset.assessmentsJson || '[]');
-                        } catch (e) { assessments = []; }
-
-                        // Fallback: search teacherCourses for the course id
-                        if ((!assessments || assessments.length === 0) && window.teacherCourses) {
-                            const courseId = Number(document.getElementById('courseDetailModal')?.dataset?.courseId || 0);
-                            const courseObj = (window.teacherCourses || []).find(c => Number(c.id) === Number(courseId));
-                            assessments = (courseObj && Array.isArray(courseObj.assessments)) ? courseObj.assessments : [];
-                        }
-                    } else {
-                        assessments = classAssessments[currentClassCode] || [];
-                    }
-
+                    const assessments = classAssessments[currentClassCode] || [];
                     const assessment = assessments.find(item => item.id === assessmentId);
                     if (!assessment) return;
 
@@ -5041,18 +5124,8 @@
 
                     if (actionBtn.dataset.assessmentAction === 'delete') {
                         showDeleteConfirmModal(`Delete "${assessment.title}"?`, () => {
-                            if (containerId === 'courseDetailAssessments') {
-                                // remove from course assessments
-                                const courseId = Number(document.getElementById('courseDetailModal')?.dataset?.courseId || 0);
-                                const courseObj = (window.teacherCourses || []).find(c => Number(c.id) === Number(courseId));
-                                if (courseObj && Array.isArray(courseObj.assessments)) {
-                                    courseObj.assessments = courseObj.assessments.filter(item => item.id !== assessmentId);
-                                    try { renderCourses(); openCourseDetail(courseId); } catch (e) { /* ignore */ }
-                                }
-                            } else {
-                                classAssessments[currentClassCode] = assessments.filter(item => item.id !== assessmentId);
-                                loadAssessments(currentClassCode);
-                            }
+                            classAssessments[currentClassCode] = assessments.filter(item => item.id !== assessmentId);
+                            loadAssessments(currentClassCode);
                         });
                     }
                 });
@@ -5077,64 +5150,31 @@
                     }
 
                     if (editingAssessmentId) {
-                            if (containerId === 'courseDetailAssessments') {
-                                const courseId = Number(document.getElementById('courseDetailModal')?.dataset?.courseId || 0);
-                                const courseObj = (window.teacherCourses || []).find(c => Number(c.id) === Number(courseId));
-                                if (courseObj && Array.isArray(courseObj.assessments)) {
-                                    const assessment = courseObj.assessments.find(item => item.id === editingAssessmentId);
-                                    if (assessment) {
-                                        assessment.title = title;
-                                        assessment.level = level;
-                                        assessment.items = items;
-                                        assessment.minutes = minutes;
-                                        assessment.dueDate = dueDate;
-                                    }
-                                    showSuccessModal('Updated', `"${title}" was updated.`);
-                                    try { renderCourses(); openCourseDetail(courseId); } catch(e) {}
-                                }
-                            } else {
-                                const assessment = classAssessments[currentClassCode].find(item => item.id === editingAssessmentId);
-                                if (assessment) {
-                                    assessment.title = title;
-                                    assessment.level = level;
-                                    assessment.items = items;
-                                    assessment.minutes = minutes;
-                                    assessment.dueDate = dueDate;
-                                }
-                                showSuccessModal('Updated', `"${title}" was updated.`);
-                            }
-                        } else {
-                            if (containerId === 'courseDetailAssessments') {
-                                const courseId = Number(document.getElementById('courseDetailModal')?.dataset?.courseId || 0);
-                                const courseObj = (window.teacherCourses || []).find(c => Number(c.id) === Number(courseId));
-                                if (courseObj) {
-                                    courseObj.assessments = courseObj.assessments || [];
-                                    courseObj.assessments.push({ id: Date.now(), title, level, items, minutes, dueDate, completed: 0, average: 0 });
-                                    showSuccessModal('Added', `"${title}" was added.`);
-                                    try { renderCourses(); openCourseDetail(courseId); } catch(e) {}
-                                }
-                            } else {
-                                classAssessments[currentClassCode].push({
-                                    id: Date.now(),
-                                    title,
-                                    level,
-                                    items,
-                                    minutes,
-                                    dueDate,
-                                    completed: 0,
-                                    average: 0
-                                });
-                                showSuccessModal('Added', `"${title}" was added.`);
-                            }
+                        const assessment = classAssessments[currentClassCode].find(item => item.id === editingAssessmentId);
+                        if (assessment) {
+                            assessment.title = title;
+                            assessment.level = level;
+                            assessment.items = items;
+                            assessment.minutes = minutes;
+                            assessment.dueDate = dueDate;
                         }
+                        showSuccessModal('Updated', `"${title}" was updated.`);
+                    } else {
+                        classAssessments[currentClassCode].push({
+                            id: Date.now(),
+                            title,
+                            level,
+                            items,
+                            minutes,
+                            dueDate,
+                            completed: 0,
+                            average: 0
+                        });
+                        showSuccessModal('Added', `"${title}" was added.`);
+                    }
 
-                        bootstrap.Modal.getInstance(modalEl).hide();
-                        if (containerId === 'courseDetailAssessments') {
-                            const courseId = Number(document.getElementById('courseDetailModal')?.dataset?.courseId || 0);
-                            try { openCourseDetail(courseId); } catch(e) {}
-                        } else {
-                            loadAssessments(currentClassCode);
-                        }
+                    bootstrap.Modal.getInstance(modalEl).hide();
+                    loadAssessments(currentClassCode);
                 });
             }
         }
@@ -5185,7 +5225,7 @@
                     const classStudents = allStudents.filter(s => s.class === classData.name && s.name !== "Jay Park");
                     
                     if (classStudents.length === 0) {
-                        showToast("No data available to export for this class.", 'error');
+                        alert("No data available to export for this class.");
                         return;
                     }
 
@@ -5244,7 +5284,7 @@
                 );
 
                 if (recipients.length === 0) {
-                    showToast("Error: No recipients with email addresses found in this selection.", 'error');
+                    alert("Error: No recipients with email addresses found in this selection.");
                     return;
                 }
 
@@ -5290,10 +5330,11 @@
                     return { student: s.name, contact: s.email, html_message: htmlMessage, plain_message: `Reading Assessment Report for ${s.name} is ready. Log in to your dashboard to view.` };
                 });
 
-                showDeleteConfirmModal(`Send report for ${recipients.length} student(s) as an email? Note: This will be sent as a high-quality HTML report mimicking the PDF layout.`, async () => {
+                if (confirm(`Send report for ${recipients.length} student(s) as an email? Note: This will be sent as a high-quality HTML report mimicking the PDF layout.`)) {
                     const sendBtn = document.getElementById("btnSendParentUpdate");
-                    const originalBtnHtml = sendBtn ? sendBtn.innerHTML : '';
-                    if (sendBtn) { sendBtn.disabled = true; sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...'; }
+                    const originalBtnHtml = sendBtn.innerHTML;
+                    sendBtn.disabled = true;
+                    sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
 
                     const emailPromises = personalizedEmails.map(log => 
                         fetch('/students/send-email/', {
@@ -5325,21 +5366,20 @@
                         .catch(err => ({ success: false, error: err.message || err }))
                     );
 
-                    try {
-                        const results = await Promise.all(emailPromises);
+                    Promise.all(emailPromises).then(results => {
                         const sent = results.filter(r => r.success).length;
-                        if (sent > 0) showSuccessModal('Sent', `Success: ${sent} report(s) sent successfully.`);
-
+                        if (sent > 0) alert(`Success: ${sent} report(s) sent successfully.`);
+                        
                         // Save to history
                         const history = JSON.parse(localStorage.getItem("pabasa_parent_notice_history") || "[]");
                         localStorage.setItem("pabasa_parent_notice_history", JSON.stringify([...personalizedEmails, ...history]));
-                    } catch (err) {
-                        console.error('Email send error:', err);
-                        showToast("System Error: Could not connect to the email server.", 'error');
-                    } finally {
-                        if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = originalBtnHtml; }
-                    }
-                });
+                    }).catch(err => {
+                        alert("System Error: Could not connect to the email server.");
+                    }).finally(() => {
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = originalBtnHtml;
+                    });
+                }
             });
         }
 
