@@ -4883,6 +4883,26 @@
                                 console.warn('Could not dispatch pabasa:materials-updated', e);
                             }
 
+                            // Ensure any "No materials yet" placeholders are removed
+                            // from known containers so the new material appears immediately.
+                            try {
+                                const placeholderSelectors = [
+                                    '#courseAttachedMaterials .readings-empty',
+                                    '#courseAggregatedMaterials .readings-empty',
+                                    '#allReadingsList .readings-empty',
+                                    '#readingsContainer .readings-empty',
+                                    '#wordReadings .readings-empty',
+                                    '#sentenceReadings .readings-empty',
+                                    '#paragraphReadings .readings-empty'
+                                ];
+                                placeholderSelectors.forEach(sel => {
+                                    const el = document.querySelector(sel);
+                                    if (el && el.parentNode) el.parentNode.removeChild(el);
+                                });
+                            } catch (err) {
+                                console.warn('Could not remove readings-empty placeholders', err);
+                            }
+
                         } catch (err) {
                             console.error('[AddMaterial] Save failed:', err);
                             if (errorBanner) {
