@@ -3257,12 +3257,6 @@
                 });
             });
             const allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph];
-            const aggregatedContainer = document.getElementById('courseAggregatedMaterials');
-            if (allMaterials.length === 0) {
-                if (aggregatedContainer) aggregatedContainer.innerHTML = '';
-                return;
-            }
-            if (aggregatedContainer) aggregatedContainer.style.display = '';
             // renderAllReadingsList may be declared later in the script; wait briefly if undefined
                     function tryRenderAll() {
                 try {
