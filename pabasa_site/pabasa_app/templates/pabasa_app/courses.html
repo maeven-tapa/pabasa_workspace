@@ -2616,9 +2616,9 @@
                 item.innerHTML = `
                     <div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div>
                     <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="Preview"><i class="bi bi-eye"></i></button>
-                        <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Delete"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="View"><i class="bi bi-eye me-1"></i>View</button>
+                        <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil me-1"></i>Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Archive"><i class="bi bi-archive me-1"></i>Archive</button>
                     </div>`;
                 materialsContainer.appendChild(item);
             });
@@ -4476,9 +4476,9 @@
                                 </div>
                             </div>
                             <div class="material-actions">
-                                <button class="material-btn" title="View" data-action="view"><i class="bi bi-eye" style="color: #00bcd4;"></i></button>
-                                <button class="material-btn" title="Edit" data-action="edit"><i class="bi bi-pencil"></i></button>
-                                <button class="material-btn delete" title="Delete" data-action="delete"><i class="bi bi-trash"></i></button>
+                                <button class="material-btn" title="View" data-action="view"><i class="bi bi-eye me-1" style="color: #00bcd4;"></i>View</button>
+                                <button class="material-btn" title="Edit" data-action="edit"><i class="bi bi-pencil me-1"></i>Edit</button>
+                                <button class="material-btn delete" title="Archive" data-action="delete"><i class="bi bi-archive me-1"></i>Archive</button>
                             </div>
                         </div>
                     `;
@@ -4976,9 +4976,9 @@
                                                             item.innerHTML = `
                                                                 <div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div>
                                                                 <div class="btn-group" role="group">
-                                                                    <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="Preview"><i class="bi bi-eye"></i></button>
-                                                                    <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil"></i></button>
-                                                                    <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Delete"><i class="bi bi-trash"></i></button>
+                                                                    <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="View"><i class="bi bi-eye me-1"></i>View</button>
+                                                                    <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil me-1"></i>Edit</button>
+                                                                    <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Archive"><i class="bi bi-archive me-1"></i>Archive</button>
                                                                 </div>`;
                                                             materialsContainer.appendChild(item);
                                                         });
