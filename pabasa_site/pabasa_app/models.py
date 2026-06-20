@@ -27,6 +27,7 @@ class User(models.Model):
     password_hash = models.CharField(max_length=255)
     profile_picture = models.CharField(max_length=255, blank=True, null=True)
     tags = models.JSONField(default=list, blank=True)
+    preference = models.JSONField(default=dict, blank=True)
     is_archived = models.BooleanField(default=False)
     archived_at = models.DateTimeField(null=True, blank=True)
     # Teacher-specific fields
@@ -37,7 +38,6 @@ class User(models.Model):
     grade_level = models.CharField(max_length=20, blank=True, null=True)
     section = models.CharField(max_length=50, blank=True, null=True)
     reading_level = models.CharField(max_length=50, blank=True, null=True)
-    parent_contact_no = models.CharField(max_length=20, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

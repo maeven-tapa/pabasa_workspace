@@ -10,9 +10,14 @@ from .models import (
 	Course,
 )
 
+
+def all_model_fields(model):
+	return [f.name for f in model._meta.fields]
+
+
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-	list_display = ("custom_id", "first_name", "last_name", "email", "role", "is_archived", "created_at", "tags")
+	list_display = all_model_fields(User)
 	list_filter = ("role", "is_archived", "sex", "created_at")
 	search_fields = ("custom_id", "first_name", "last_name", "email")
 	ordering = ("last_name", "first_name")
@@ -24,7 +29,7 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Section)
 class SectionAdmin(admin.ModelAdmin):
-	list_display = ("class_code", "class_name", "teacher", "student_count", "is_active", "created_at")
+	list_display = all_model_fields(Section)
 	list_filter = ("is_active", "created_at")
 	search_fields = ("class_code", "class_name", "teacher__custom_id", "teacher__last_name")
 	ordering = ("class_name",)
@@ -35,7 +40,7 @@ class SectionAdmin(admin.ModelAdmin):
 
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
-	list_display = ("code", "title", "assessment_type", "teacher", "section", "is_active", "created_at")
+	list_display = all_model_fields(Assessment)
 	list_filter = ("assessment_type", "is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")
 	ordering = ("-created_at",)
@@ -43,7 +48,7 @@ class AssessmentAdmin(admin.ModelAdmin):
 
 @admin.register(Practice)
 class PracticeAdmin(admin.ModelAdmin):
-	list_display = ("title", "practice_type", "difficulty_type", "contents", "created_at")
+	list_display = all_model_fields(Practice)
 	list_filter = ("practice_type", "is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")
 	ordering = ("-created_at",)
@@ -51,15 +56,7 @@ class PracticeAdmin(admin.ModelAdmin):
 
 @admin.register(Material)
 class MaterialAdmin(admin.ModelAdmin):
-	list_display = (
-  		"section",
-  		"title",
-		"status",
-		"item_type",
-		"content_preview",
-		"created_at",
-		"updated_at",
-	)
+	list_display = all_model_fields(Material)
 	list_filter = ("item_type", "status", "is_active", "created_at")
 	search_fields = ("assessment__code", "section__class_code", "prompt_text", "content_text", "title")
 	ordering = ("section", "created_at")
@@ -68,6 +65,7 @@ class MaterialAdmin(admin.ModelAdmin):
 		if not obj.content_text:
 			return ""
 		return obj.content_text[:80] + ("..." if len(obj.content_text) > 80 else "")
+
 	content_preview.short_description = "Content"
 
 
@@ -76,7 +74,7 @@ class MaterialAdmin(admin.ModelAdmin):
 
 @admin.register(Note)
 class NoteAdmin(admin.ModelAdmin):
-	list_display = ("teacher", "student", "assessment", "note_type", "created_at")
+	list_display = all_model_fields(Note)
 	list_filter = ("note_type", "created_at")
 	search_fields = (
 		"teacher__custom_id",
@@ -89,14 +87,7 @@ class NoteAdmin(admin.ModelAdmin):
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-	list_display = (
-		"title",
-		"recipient",
-		"created_by",
-		"notification_type",
-		"is_read",
-		"created_at",
-	)
+	list_display = all_model_fields(Notification)
 	list_filter = ("notification_type", "is_read", "created_at")
 	search_fields = (
 		"title",
@@ -110,7 +101,7 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-	list_display = ("code", "title", "teacher", "is_active", "created_at")
+	list_display = all_model_fields(Course)
 	list_filter = ("is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id")
 	ordering = ("-created_at",)

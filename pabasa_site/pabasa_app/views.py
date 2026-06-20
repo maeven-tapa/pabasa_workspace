@@ -31,6 +31,15 @@ from .reading_material_utils import format_assigned_week_display, parse_assigned
 def _get_profile_dict(user, key):
     if not user:
         return {}
+    # Prefer a dedicated `preference` JSONField when available (new storage),
+    # fall back to legacy `tags` storage for backward compatibility.
+    try:
+        prefs = getattr(user, 'preference', None) or {}
+        if isinstance(prefs, dict) and key in prefs:
+            return prefs.get(key) or {}
+    except Exception:
+        pass
+
     tags = getattr(user, 'tags', None) or []
     if isinstance(tags, dict):
         return tags.get(key, {})
@@ -52,7 +61,18 @@ def _set_profile_dict(user, key, profile_dict):
     if not replaced:
         tags.append({key: profile_dict})
     user.tags = tags
-    user.save()
+
+    # Also persist into the new `preference` JSONField when available so
+    # settings changes are stored in a dedicated column.
+    try:
+        pref = getattr(user, 'preference', None) or {}
+        if not isinstance(pref, dict):
+            pref = {}
+        pref[key] = profile_dict
+        user.preference = pref
+        user.save(update_fields=['tags', 'preference', 'updated_at'])
+    except Exception:
+        user.save()
 
 def _parse_prefixed_id(val):
     """
@@ -499,7 +519,6 @@ def _store_pending_student_signup(request, data):
         'grade_level': data.get('grade_level', ''),
         'section': data.get('section', ''),
         'reading_level': data.get('reading_level', ''),
-        'parent_contact_no': data.get('parent_contact_no', ''),
     })
     _set_pending_data(request, 'pending_student_signup_otp', otp)
     _set_pending_data(request, 'pending_student_signup_otp_created', time.time())
@@ -953,7 +972,6 @@ def verify_student_otp(request):
             grade_level=pending.get('grade_level', ''),
             section=pending.get('section', ''),
             reading_level=pending.get('reading_level', ''),
-            parent_contact_no=pending.get('parent_contact_no', ''),
         )
 
         send_student_confirmation_email(request, user)
