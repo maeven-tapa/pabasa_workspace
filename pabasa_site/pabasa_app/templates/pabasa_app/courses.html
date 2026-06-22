@@ -3183,17 +3183,17 @@
                 const overview = await r.json();
                 if (overview && overview.success) {
                     const totalEl = document.getElementById('profileTotalStudentsCount');
-                        if (totalEl) totalEl.textContent = String(overview.total_students);
+                    if (totalEl) totalEl.textContent = String(overview.total_students);
                         const matEl = document.getElementById('profileMaterialsPostedCount');
-                        if (matEl && overview.materials_posted !== undefined)
-                            matEl.textContent = String(overview.materials_posted);
-                        const classesEl = document.getElementById('profileActiveClassesCount');
-                        if (classesEl && overview.classes_count !== undefined)
-                            classesEl.textContent = String(overview.classes_count);
-                        const reportsEl = document.getElementById('profileReportsGeneratedCount');
-                        if (reportsEl && overview.reports_generated !== undefined)
-                            reportsEl.textContent = String(overview.reports_generated);
-                        const overviewKey = 'pabasa_teacher_overview_stats';
+                    if (matEl && overview.materials_posted !== undefined)
+                        matEl.textContent = String(overview.materials_posted);
+                    const classesEl = document.getElementById('profileActiveClassesCount');
+                    if (classesEl && overview.classes_count !== undefined)
+                        classesEl.textContent = String(overview.classes_count);
+                    const reportsEl = document.getElementById('profileReportsGeneratedCount');
+                    if (reportsEl && overview.reports_generated !== undefined)
+                        reportsEl.textContent = String(overview.reports_generated);
+                    const overviewKey = 'pabasa_teacher_overview_stats';
                     const existing = JSON.parse(localStorage.getItem(overviewKey) || '{}');
                     localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existing, overview)));
                 }
@@ -3562,7 +3562,6 @@
         localStorage.setItem(flatMaterialsStorageKey, JSON.stringify(flatMaterials));
 
         const overviewStats = JSON.parse(localStorage.getItem(overviewStatsStorageKey) || "{}");
-        overviewStats.materialsPosted = flatMaterials.length;
         localStorage.setItem(overviewStatsStorageKey, JSON.stringify(overviewStats));
     }
 
