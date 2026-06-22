@@ -357,7 +357,8 @@ function initProfilePage() {
             return total + (Number.parseInt(classData.students, 10) || 0);
         }, 0);
         const overviewStats = getStoredValue("pabasa_teacher_overview_stats", {});
-        const storedMaterialsPosted = Number.parseInt(overviewStats.materialsPosted, 10) || 0;
+        // server stores snake_case keys (materials_posted); support both formats
+        const storedMaterialsPosted = Number.parseInt(overviewStats.materials_posted || overviewStats.materialsPosted || 0, 10) || 0;
 
         // Ensure flattened materials are also filtered to active classes
         const activeClassCodes = classes.map(function(c) { return (c.code || c.class_code || "").toString().toUpperCase(); }).filter(Boolean);
@@ -390,7 +391,8 @@ function initProfilePage() {
 
         // If the current user is a teacher, request authoritative overview from the server
         try {
-            const role = window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '';
+            // normalize role to avoid casing mismatches (e.g. 'Teacher' vs 'teacher')
+            const role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '').toString().toLowerCase();
             if (role === 'teacher') {
                 fetch('/dashboard/teacher/overview/', {
                     method: 'GET',
