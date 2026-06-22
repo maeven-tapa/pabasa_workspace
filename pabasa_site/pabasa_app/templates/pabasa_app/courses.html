@@ -4700,6 +4700,15 @@
                                     card.style.pointerEvents = 'none';
                                     showSuccessModal('Deleted', `"${title}" has been removed.`);
                                     setTimeout(() => { if (currentClassCode) loadReadings(currentClassCode); }, 300);
+                                    // Persist overview returned by backend (if any) so other tabs update
+                                    try {
+                                        if (data.overview) {
+                                            const k = 'pabasa_teacher_overview_stats';
+                                            const ex = JSON.parse(localStorage.getItem(k) || '{}');
+                                            localStorage.setItem(k, JSON.stringify(Object.assign({}, ex, data.overview)));
+                                        }
+                                    } catch (e) { /* ignore */ }
+
                                     // Notify other modules to re-sync authoritative data
                                     try {
                                         window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } }));
@@ -4781,6 +4790,15 @@
                                 bootstrap.Modal.getInstance(document.getElementById('editMaterialModal')).hide();
                                 showSuccessModal('Updated', `"${newTitle}" has been updated`);
                                 if (currentClassCode) loadReadings(currentClassCode);
+                                // Persist overview returned by backend (if any) so other tabs update immediately
+                                try {
+                                    if (data && data.overview) {
+                                        const k4 = 'pabasa_teacher_overview_stats';
+                                        const ex4 = JSON.parse(localStorage.getItem(k4) || '{}');
+                                        localStorage.setItem(k4, JSON.stringify(Object.assign({}, ex4, data.overview)));
+                                    }
+                                } catch (err4) { /* ignore */ }
+
                                 // Notify other modules to refresh after material update
                                 try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
 
@@ -4934,6 +4952,14 @@
 
                             console.log('[AddMaterial] Database save successful:', apiData);
 
+                                // If backend returned an updated overview, persist it immediately
+                                try {
+                                    if (apiData && apiData.overview) {
+                                        const overviewKey = 'pabasa_teacher_overview_stats';
+                                        const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                        localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, apiData.overview)));
+                                    }
+                                } catch (e) { /* ignore */ }
                             // ── Step 2: Store returned per-item materials locally (avoid full reload)
                             const createdIds = Array.isArray(apiData.material_ids) ? apiData.material_ids : (apiData.material_id ? [apiData.material_id] : []);
 

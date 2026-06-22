@@ -3225,6 +3225,48 @@ def create_course(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+def _compute_teacher_overview(teacher_user):
+    """Helper: compute the same overview payload returned by get_teacher_overview."""
+    try:
+        classes_count = Section.objects.filter(teacher=teacher_user, is_active=True).count()
+        active_sections = Section.objects.filter(teacher=teacher_user, is_active=True)
+        unique_student_ids = set()
+        for section in active_sections:
+            for entry in section.get_enrolled_students(active_only=True):
+                if entry.get('student_id'):
+                    unique_student_ids.add(entry.get('student_id'))
+        total_students = len(unique_student_ids)
+
+        assessments_posted = Assessment.objects.filter(
+            Q(teacher=teacher_user) | Q(section__teacher=teacher_user),
+            is_active=True
+        ).distinct().count()
+
+        materials_posted = Material.objects.filter(
+            Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
+            is_active=True,
+            assessment__isnull=True,
+        ).distinct().count()
+
+        reports_generated = Note.objects.filter(teacher=teacher_user).count()
+
+        return {
+            'classes_count': classes_count,
+            'total_students': total_students,
+            'materials_posted': materials_posted,
+            'assessments_posted': assessments_posted,
+            'reports_generated': reports_generated,
+        }
+    except Exception:
+        return {
+            'classes_count': 0,
+            'total_students': 0,
+            'materials_posted': 0,
+            'assessments_posted': 0,
+            'reports_generated': 0,
+        }
+
+
 
 @csrf_protect
 @require_http_methods(["POST"])
@@ -4029,6 +4071,7 @@ def add_reading_material(request):
             'type': reading_type,
             'status': status,
             'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+            'overview': _compute_teacher_overview(teacher_user),
         })
 
     except json.JSONDecodeError as e:
@@ -4144,7 +4187,13 @@ def teacher_update_material(request):
             logger.exception('Failed to synchronize Assessment linkage for material %s', getattr(material, 'id', None))
 
         material.save()
-        return JsonResponse({'success': True, 'message': 'Material updated successfully'})
+        # Return updated overview so clients can sync UI immediately
+        try:
+            teacher_user = User.objects.filter(id=user_id).first()
+            overview = _compute_teacher_overview(teacher_user) if teacher_user else None
+        except Exception:
+            overview = None
+        return JsonResponse({'success': True, 'message': 'Material updated successfully', 'overview': overview})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
@@ -4236,7 +4285,12 @@ def delete_reading_material(request):
             return JsonResponse({'success': False, 'error': 'Material not found or access denied'}, status=404)
 
         material.delete()
-        return JsonResponse({'success': True, 'message': 'Material deleted successfully'})
+        try:
+            teacher_user = User.objects.filter(id=user_id).first()
+            overview = _compute_teacher_overview(teacher_user) if teacher_user else None
+        except Exception:
+            overview = None
+        return JsonResponse({'success': True, 'message': 'Material deleted successfully', 'overview': overview})
     except Exception as e:
         logger.error(f"Error deleting material: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
