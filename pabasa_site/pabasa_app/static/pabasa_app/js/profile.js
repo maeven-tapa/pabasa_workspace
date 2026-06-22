@@ -357,8 +357,10 @@ function initProfilePage() {
             return total + (Number.parseInt(classData.students, 10) || 0);
         }, 0);
         const overviewStats = getStoredValue("pabasa_teacher_overview_stats", {});
-        // server stores snake_case keys (materials_posted); support both formats
-        const storedMaterialsPosted = Number.parseInt(overviewStats.materials_posted || overviewStats.materialsPosted || 0, 10) || 0;
+        // server stores snake_case keys (materials_posted, assessments_posted); support both formats
+        const storedMaterialsPosted = Number.parseInt(String(
+            (Number(overviewStats.materials_posted || 0) || 0) + (Number(overviewStats.assessments_posted || overviewStats.assessmentsPosted || 0) || 0)
+        ), 10) || 0;
 
         // Ensure flattened materials are also filtered to active classes
         const activeClassCodes = classes.map(function(c) { return (c.code || c.class_code || "").toString().toUpperCase(); }).filter(Boolean);
@@ -422,7 +424,7 @@ function initProfilePage() {
                     }
                     if (activeClassesCount) activeClassesCount.textContent = String(data.classes_count || stats.activeClasses);
                     if (totalStudentsCount) totalStudentsCount.textContent = String(data.total_students || stats.totalStudents);
-                    if (materialsPostedCount) materialsPostedCount.textContent = String(data.materials_posted || stats.materialsPosted);
+                    if (materialsPostedCount) materialsPostedCount.textContent = String((Number(data.materials_posted || 0) + Number(data.assessments_posted || data.assessmentsPosted || 0)) || stats.materialsPosted);
                     if (reportsGeneratedCount) reportsGeneratedCount.textContent = String(data.reports_generated || stats.reportsGenerated);
                 }).catch(function (err) {
                     console.warn('Network error fetching teacher overview', err);
