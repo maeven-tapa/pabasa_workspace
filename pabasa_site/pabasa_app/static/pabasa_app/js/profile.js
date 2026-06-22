@@ -392,7 +392,9 @@ function initProfilePage() {
         // If the current user is a teacher, request authoritative overview from the server
         try {
             // normalize role to avoid casing mismatches (e.g. 'Teacher' vs 'teacher')
-            const role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '').toString().toLowerCase();
+            // Fall back to the server-rendered profile role display when localStorage
+            // or window globals were cleared (ensures profile page still fetches)
+            const role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || profileRoleDisplay || '').toString().toLowerCase();
             if (role === 'teacher') {
                 fetch('/dashboard/teacher/overview/', {
                     method: 'GET',
