@@ -4704,6 +4704,23 @@
                                     try {
                                         window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } }));
                                     } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
+
+                                    try {
+                                        if (typeof refreshTeacherData === 'function') {
+                                            await refreshTeacherData();
+                                        } else {
+                                            // fallback: fetch overview and persist
+                                            try {
+                                                const r3 = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                                if (r3.ok) {
+                                                    const ov3 = await r3.json();
+                                                    const k = 'pabasa_teacher_overview_stats';
+                                                    const ex = JSON.parse(localStorage.getItem(k) || '{}');
+                                                    localStorage.setItem(k, JSON.stringify(Object.assign({}, ex, ov3)));
+                                                }
+                                            } catch (err3) { /* ignore */ }
+                                        }
+                                    } catch (err) { console.warn('Could not refresh teacher overview after delete', err); }
                                 } else {
                                     alert("Error: " + data.error);
                                 }
@@ -4766,6 +4783,22 @@
                                 if (currentClassCode) loadReadings(currentClassCode);
                                 // Notify other modules to refresh after material update
                                 try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after update', e); }
+
+                                try {
+                                    if (typeof refreshTeacherData === 'function') {
+                                        await refreshTeacherData();
+                                    } else {
+                                        try {
+                                            const r4 = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                            if (r4.ok) {
+                                                const ov4 = await r4.json();
+                                                const k4 = 'pabasa_teacher_overview_stats';
+                                                const ex4 = JSON.parse(localStorage.getItem(k4) || '{}');
+                                                localStorage.setItem(k4, JSON.stringify(Object.assign({}, ex4, ov4)));
+                                            }
+                                        } catch (err4) { /* ignore */ }
+                                    }
+                                } catch (err) { console.warn('Could not refresh teacher overview after update', err); }
                             } else {
                                 alert("Error: " + (data.error || (data.errors && data.errors.assigned_week) || 'Update failed'));
                             }
@@ -5043,6 +5076,30 @@
                                 }));
                             } catch (e) {
                                 console.warn('Could not dispatch pabasa:materials-updated', e);
+                            }
+
+                            // Also proactively refresh authoritative teacher overview
+                            // and persist it to localStorage so other tabs reliably
+                            // receive the `storage` event and update their UI.
+                            try {
+                                if (typeof refreshTeacherData === 'function') {
+                                    await refreshTeacherData();
+                                } else {
+                                    // Fallback: fetch overview and write to localStorage
+                                    try {
+                                        const r2 = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                        if (r2.ok) {
+                                            const overview2 = await r2.json();
+                                            if (overview2) {
+                                                const overviewKey = 'pabasa_teacher_overview_stats';
+                                                const existing = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existing, overview2)));
+                                            }
+                                        }
+                                    } catch (err2) { /* ignore fallback errors */ }
+                                }
+                            } catch (err) {
+                                console.warn('Could not refresh teacher overview after add', err);
                             }
 
                             // Ensure any "No materials yet" placeholders are removed

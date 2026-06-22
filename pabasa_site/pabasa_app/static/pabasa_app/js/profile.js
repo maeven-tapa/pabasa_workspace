@@ -933,8 +933,54 @@ function initProfilePage() {
 
     // Refresh overview when materials are added/updated so counts stay authoritative
     window.addEventListener("pabasa:materials-updated", function () {
-        updateClassOverview();
-        updateDashboardClassStats();
+        // Do a quick authoritative refresh from server so same-tab updates are instant
+        try {
+            const emailForCache = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
+            const scopedClassesKey = emailForCache ? `pabasa_teacher_classes_${emailForCache}` : 'pabasa_teacher_classes';
+
+            fetch('/dashboard/teacher/overview/', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            }).then(function (r) {
+                if (!r.ok) return null;
+                const ct = r.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) return null;
+                return r.json();
+            }).then(function (data) {
+                if (!data) return;
+                if (!data.success) return;
+
+                try {
+                    if (Array.isArray(data.classes)) {
+                        try { localStorage.setItem(scopedClassesKey, JSON.stringify(data.classes)); } catch (e) {}
+                        try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { classes: data.classes } })); } catch (e) {}
+                    }
+
+                    // Update overview stats cache for other listeners
+                    const overviewStats = {
+                        materials_posted: data.materials_posted || data.materialsPosted || 0,
+                        classes_count: data.classes_count || data.classesCount || 0,
+                        total_students: data.total_students || data.totalStudents || 0,
+                        reports_generated: data.reports_generated || data.reportsGenerated || 0
+                    };
+                    try { localStorage.setItem('pabasa_teacher_overview_stats', JSON.stringify(overviewStats)); } catch (e) {}
+                } catch (e) {
+                    // best-effort
+                }
+
+                // Update visible UI counts now
+                updateClassOverview();
+                updateDashboardClassStats();
+            }).catch(function (err) {
+                // fallback to local update if network fails
+                updateClassOverview();
+                updateDashboardClassStats();
+            });
+        } catch (e) {
+            updateClassOverview();
+            updateDashboardClassStats();
+        }
     });
 
     // Periodic refresh to keep status chips current (handles cases where other tabs or server updates don't emit events)
