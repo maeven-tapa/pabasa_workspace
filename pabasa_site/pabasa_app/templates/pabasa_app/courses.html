@@ -3478,6 +3478,46 @@
             if (typeof refreshTeacherData === 'function') refreshTeacherData();
         });
 
+        // Polling: refresh overview and active class materials every 15s
+        (function startDashboardPolling() {
+            const INTERVAL_MS = 15000;
+            async function poll() {
+                try {
+                    // Refresh overview stats (will update profile counts in refreshTeacherData)
+                    if (typeof refreshTeacherData === 'function') {
+                        await refreshTeacherData();
+                    } else {
+                        try {
+                            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                            if (r.ok) {
+                                const ov = await r.json();
+                                if (ov && ov.success) {
+                                    const totalEl = document.getElementById('profileTotalStudentsCount');
+                                    if (totalEl) totalEl.textContent = String(ov.total_students || 0);
+                                    const matEl = document.getElementById('profileMaterialsPostedCount');
+                                    if (matEl) matEl.textContent = String(ov.materials_posted || 0);
+                                    const classesEl = document.getElementById('profileActiveClassesCount') || document.getElementById('classCountMirror');
+                                    if (classesEl) classesEl.textContent = String(ov.classes_count || 0);
+                                }
+                            }
+                        } catch (e) { /* ignore */ }
+                    }
+
+                    // Refresh per-class readings counts for the active class (if any)
+                    try {
+                        if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
+                            await loadReadings(currentClassCode);
+                        }
+                    } catch (e) { /* ignore loadReadings errors */ }
+
+                } catch (e) {
+                    console.warn('dashboard polling failed', e);
+                }
+            }
+            poll();
+            setInterval(poll, INTERVAL_MS);
+        })();
+
     const readingsStorageKey = 'pabasa_class_readings';
     const flatMaterialsStorageKey = 'pabasa_materials';
     const overviewStatsStorageKey = 'pabasa_teacher_overview_stats';

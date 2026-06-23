@@ -678,6 +678,38 @@
             setGeneratedCode();
         }
 
+        // Polling: refresh overview stats every 15s to keep counts fresh
+        (function startOverviewPolling() {
+            const INTERVAL_MS = 15000;
+            async function poll() {
+                try {
+                    const resp = await fetch('/dashboard/teacher/overview/', {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+                    if (!data || !data.success) return;
+
+                    // Update key UI elements if present
+                    try {
+                        if (classCountMirror) classCountMirror.textContent = String(data.classes_count || 0);
+                        const totalEl = document.getElementById('profileTotalStudentsCount');
+                        if (totalEl) totalEl.textContent = String(data.total_students || 0);
+                        const matEl = document.getElementById('profileMaterialsPostedCount');
+                        if (matEl) matEl.textContent = String(data.materials_posted || 0);
+                    } catch (e) { console.warn('Overview poll DOM update failed', e); }
+
+                } catch (e) {
+                    // ignore network errors silently
+                }
+            }
+            // initial call and interval
+            poll();
+            setInterval(poll, INTERVAL_MS);
+        })();
+
     }); // closes DOMContentLoaded
 
 })(); // closes IIFE
