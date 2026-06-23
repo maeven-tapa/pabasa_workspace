@@ -2674,15 +2674,47 @@
                                     body: JSON.stringify({ material_id: Number(mid), title: newTitle })
                                 });
                                 const d = await res.json();
-                                if (res.ok && d.success) {
-                                    mat.title = newTitle;
-                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                    renderCourses();
-                                    openCourseDetail(course.id);
-                                    showToast('Material updated', 'success');
-                                } else {
-                                    showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
-                                }
+                                    if (res.ok && d.success) {
+                                        mat.title = newTitle;
+                                        const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                        renderCourses();
+                                        openCourseDetail(course.id);
+                                        showToast('Material updated', 'success');
+
+                                        // Persist overview returned by backend (if any) so other tabs update
+                                        try {
+                                            if (d.overview) {
+                                                const overviewKey = 'pabasa_teacher_overview_stats';
+                                                const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
+                                            }
+                                        } catch (e) { /* ignore */ }
+
+                                        // Notify other modules and refresh authoritative data
+                                        try {
+                                            window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, class_code: currentClassCode } }));
+                                        } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+
+                                        try {
+                                            if (typeof refreshTeacherData === 'function') {
+                                                await refreshTeacherData();
+                                            } else {
+                                                const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                                if (r.ok) {
+                                                    const ov = await r.json();
+                                                    const overviewKey = 'pabasa_teacher_overview_stats';
+                                                    const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                    localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
+                                                }
+                                            }
+                                        } catch (err) { console.warn('Could not refresh teacher overview after update', err); }
+
+                                        if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
+                                            try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                        }
+                                    } else {
+                                        showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
+                                    }
                             } catch (err) {
                                 console.error('update material error', err);
                                 showToast('Failed to update material', 'error');
@@ -2706,6 +2738,36 @@
                                     renderCourses();
                                     openCourseDetail(course.id);
                                     showToast('Material deleted', 'success');
+
+                                    // Persist overview returned by backend (if any)
+                                    try {
+                                        if (d.overview) {
+                                            const overviewKey = 'pabasa_teacher_overview_stats';
+                                            const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                            localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
+                                        }
+                                    } catch (e) { /* ignore */ }
+
+                                    // Notify other modules and refresh authoritative data
+                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+
+                                    try {
+                                        if (typeof refreshTeacherData === 'function') {
+                                            await refreshTeacherData();
+                                        } else {
+                                            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                            if (r.ok) {
+                                                const ov = await r.json();
+                                                const overviewKey = 'pabasa_teacher_overview_stats';
+                                                const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
+                                            }
+                                        }
+                                    } catch (err) { console.warn('Could not refresh teacher overview after delete', err); }
+
+                                    if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
+                                        try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                    }
                                 } else {
                                     showToast('Could not delete material: ' + (d.error || 'Unknown'), 'error');
                                 }
@@ -2782,6 +2844,35 @@
                                     renderCourses();
                                     openCourseDetail(course.id);
                                     showToast('Assessment updated', 'success');
+
+                                    // Persist overview and notify
+                                    try {
+                                        if (d.overview) {
+                                            const overviewKey = 'pabasa_teacher_overview_stats';
+                                            const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                            localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
+                                        }
+                                    } catch (e) { /* ignore */ }
+
+                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+
+                                    try {
+                                        if (typeof refreshTeacherData === 'function') {
+                                            await refreshTeacherData();
+                                        } else {
+                                            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                            if (r.ok) {
+                                                const ov = await r.json();
+                                                const overviewKey = 'pabasa_teacher_overview_stats';
+                                                const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
+                                            }
+                                        }
+                                    } catch (err) { console.warn('Could not refresh teacher overview after assessment update', err); }
+
+                                    if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
+                                        try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                    }
                                 } else {
                                     showToast('Could not update assessment: ' + (d.error || 'Unknown'), 'error');
                                 }
@@ -2809,6 +2900,35 @@
                                     renderCourses();
                                     openCourseDetail(course.id);
                                     showToast('Assessment archived', 'success');
+
+                                    // Persist overview and notify
+                                    try {
+                                        if (d.overview) {
+                                            const overviewKey = 'pabasa_teacher_overview_stats';
+                                            const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                            localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
+                                        }
+                                    } catch (e) { /* ignore */ }
+
+                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+
+                                    try {
+                                        if (typeof refreshTeacherData === 'function') {
+                                            await refreshTeacherData();
+                                        } else {
+                                            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                            if (r.ok) {
+                                                const ov = await r.json();
+                                                const overviewKey = 'pabasa_teacher_overview_stats';
+                                                const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
+                                            }
+                                        }
+                                    } catch (err) { console.warn('Could not refresh teacher overview after assessment archive', err); }
+
+                                    if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
+                                        try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                    }
                                 } else {
                                     showToast('Could not archive assessment: ' + (d.error || 'Unknown'), 'error');
                                 }
