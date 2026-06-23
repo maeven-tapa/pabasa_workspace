@@ -4530,6 +4530,24 @@
             ];
 
             // Ensure renderAllReadingsList is available (may be defined later)
+            // Update per-class material counts (assessment vs practice) so the active class banner shows accurate numbers.
+            try {
+                let assessmentCount = 0, practiceCount = 0;
+                (allMaterials || []).forEach(m => {
+                    const t = (m.type || '').toString().toLowerCase();
+                    const mid = (m.id || '').toString();
+                    if (t === 'assessment') assessmentCount++;
+                    else if (t === 'practice') practiceCount++;
+                    else if (t === 'both') { assessmentCount++; practiceCount++; }
+                    else if (mid.startsWith('assessment-')) assessmentCount++;
+                    else if (mid.startsWith('practice-')) practiceCount++;
+                });
+                const aEl = document.getElementById('activeAssessmentCount');
+                const pEl = document.getElementById('activePracticeCount');
+                if (aEl) aEl.textContent = String(assessmentCount);
+                if (pEl) pEl.textContent = String(practiceCount);
+            } catch (e) { console.warn('Failed to update per-class material counts', e); }
+
             (function waitAndRender() {
                 if (typeof window.renderAllReadingsList === 'function') {
                     window.renderAllReadingsList(allMaterials, 'allReadingsList');
