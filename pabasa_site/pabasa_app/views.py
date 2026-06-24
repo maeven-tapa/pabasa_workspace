@@ -4209,6 +4209,12 @@ def teacher_update_practice(request):
         _, practice_id = _parse_prefixed_id(raw_id)
 
         user_id = request.session.get('user_id')
+        # Debug logging: record the incoming practice id and user for troubleshooting
+        try:
+            logger.info('teacher_update_practice called - user_id=%s raw_id=%s parsed_practice_id=%s payload_keys=%s',
+                        user_id, raw_id, practice_id, list(data.keys()))
+        except Exception:
+            logger.exception('Failed to log teacher_update_practice invocation')
         if not practice_id:
             return JsonResponse({'success': False, 'error': 'Invalid practice ID'}, status=400)
 

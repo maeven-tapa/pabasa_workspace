@@ -5096,6 +5096,7 @@
                                 };
                             }
 
+                            console.log('[submitEditMaterial] POST', endpoint, payload);
                             const response = await fetch(endpoint, {
                                 method: 'POST',
                                 headers: {
@@ -5231,11 +5232,13 @@
                                             },
                                             body: JSON.stringify({ practice_id: editingMaterialId, title: title, content: content, status: status })
                                         };
+                                        try { console.log('[AddMaterial] update-practice opts body', opts.body ? JSON.parse(opts.body) : opts.body); } catch(e) { console.log('[AddMaterial] update-practice opts body (raw)', opts.body); }
                                         apiResponse = await fetch('/dashboard/teacher/update-practice/', opts);
                                         if (apiResponse.status === 403) {
                                             const refreshed = await ensureCsrfToken(true);
                                             if (refreshed && refreshed !== csrfToken) {
                                                 opts.headers['X-CSRFToken'] = refreshed;
+                                                try { console.log('[AddMaterial] update-practice opts body', opts.body ? JSON.parse(opts.body) : opts.body); } catch(e) { console.log('[AddMaterial] update-practice opts body (raw)', opts.body); }
                                                 apiResponse = await fetch('/dashboard/teacher/update-practice/', opts);
                                             } else {
                                                 const text = await apiResponse.text();
