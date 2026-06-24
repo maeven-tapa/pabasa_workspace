@@ -598,59 +598,6 @@
     }
 
     /* ===== READINGS TAB STYLES ===== */
-    .readings-section {
-        background: rgba(255, 255, 255, 0.6) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        padding: 1rem;
-        width: 100%;
-        min-width: 0;
-    }
-
-    .reading-category-grid {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .readings-section-header {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        align-items: flex-start;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-        padding-bottom: 0.85rem;
-        border-bottom: 1px solid rgba(31, 111, 139, 0.1);
-    }
-
-    .readings-section-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        color: #fff;
-        flex-shrink: 0;
-    }
-
-    .readings-section-icon.word {
-        background: #1f6f8b;
-    }
-
-    .readings-section-icon.sentence {
-        background: #7a8b5f;
-    }
-
-    .readings-section-icon.paragraph {
-        background: #b95f44;
-    }
 
     .readings-section-icon.assessment {
         background: #7c3aed;
@@ -764,6 +711,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
+        line-clamp: 2;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
     }
@@ -2653,8 +2601,8 @@
                     if (btn.dataset.materialAction) {
                         const action = btn.dataset.materialAction;
                         const mid = btn.getAttribute('data-mid');
+                        const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
                         if (action === 'preview') {
-                            const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
                             if (!mat) return showToast('Material not found', 'error');
                             const matItems = (typeof mat.items_count === 'number') ? mat.items_count : (Array.isArray(mat.items) ? mat.items.length : (mat.items || '-'));
                             showSuccessModal('Material Preview', `${mat.title} \n\nType: ${mat.item_type || '-'}\nItems: ${matItems}`);
@@ -2662,8 +2610,14 @@
                         }
 
                         if (action === 'edit') {
-                            const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
                             if (!mat) return showToast('Material not found', 'error');
+                            // Prefer opening the full Add Material modal pre-filled for editing
+                            if (typeof window.openAddMaterialForEdit === 'function') {
+                                try { window.openAddMaterialForEdit(mat); } catch (e) { console.warn('openAddMaterialForEdit failed', e); }
+                                return;
+                            }
+
+                            // Fallback: simple prompt-based rename
                             const newTitle = prompt('Edit material title', mat.title || '');
                             if (newTitle === null) return;
                             try {
@@ -2674,47 +2628,47 @@
                                     body: JSON.stringify({ material_id: Number(mid), title: newTitle })
                                 });
                                 const d = await res.json();
-                                    if (res.ok && d.success) {
-                                        mat.title = newTitle;
-                                        const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                        renderCourses();
-                                        openCourseDetail(course.id);
-                                        showToast('Material updated', 'success');
+                                if (res.ok && d.success) {
+                                    mat.title = newTitle;
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    renderCourses();
+                                    openCourseDetail(course.id);
+                                    showToast('Material updated', 'success');
 
-                                        // Persist overview returned by backend (if any) so other tabs update
-                                        try {
-                                            if (d.overview) {
+                                    // Persist overview returned by backend (if any) so other tabs update
+                                    try {
+                                        if (d.overview) {
+                                            const overviewKey = 'pabasa_teacher_overview_stats';
+                                            const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                            localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
+                                        }
+                                    } catch (e) { /* ignore */ }
+
+                                    // Notify other modules and refresh authoritative data
+                                    try {
+                                        window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, class_code: currentClassCode } }));
+                                    } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+
+                                    try {
+                                        if (typeof refreshTeacherData === 'function') {
+                                            await refreshTeacherData();
+                                        } else {
+                                            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                            if (r.ok) {
+                                                const ov = await r.json();
                                                 const overviewKey = 'pabasa_teacher_overview_stats';
                                                 const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
+                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
                                             }
-                                        } catch (e) { /* ignore */ }
-
-                                        // Notify other modules and refresh authoritative data
-                                        try {
-                                            window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, class_code: currentClassCode } }));
-                                        } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
-
-                                        try {
-                                            if (typeof refreshTeacherData === 'function') {
-                                                await refreshTeacherData();
-                                            } else {
-                                                const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                                                if (r.ok) {
-                                                    const ov = await r.json();
-                                                    const overviewKey = 'pabasa_teacher_overview_stats';
-                                                    const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                                    localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
-                                                }
-                                            }
-                                        } catch (err) { console.warn('Could not refresh teacher overview after update', err); }
-
-                                        if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
-                                            try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
                                         }
-                                    } else {
-                                        showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
+                                    } catch (err) { console.warn('Could not refresh teacher overview after update', err); }
+
+                                    if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
+                                        try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
                                     }
+                                } else {
+                                    showToast('Could not update material: ' + (d.error || 'Unknown'), 'error');
+                                }
                             } catch (err) {
                                 console.error('update material error', err);
                                 showToast('Failed to update material', 'error');
@@ -2723,21 +2677,37 @@
                         }
 
                         if (action === 'delete') {
-                            if (!confirm('Permanently delete this material?')) return;
+                            // Determine if this material is an assessment/practice so we call the correct endpoint
+                            const usage = (mat.usage || mat.type || mat.usage_type || '').toString().toLowerCase();
+                            const isAssessment = usage === 'assessment';
+                            const isPractice = usage === 'practice';
+                            const promptMsg = isAssessment ? 'Archive this assessment? It will be removed from courses but kept in your account.' : 'Permanently delete this material?';
+                            if (!confirm(promptMsg)) return;
                             try {
-                                const res = await fetch('/dashboard/teacher/delete-material/', {
+                                let endpoint = '/dashboard/teacher/delete-material/';
+                                let payload = { material_id: Number(mid) };
+                                if (isAssessment || String(mid).startsWith('assessment-')) {
+                                    endpoint = '/dashboard/teacher/archive-assessment/';
+                                    payload = { assessment_id: Number(mid) };
+                                } else if (isPractice) {
+                                    endpoint = '/dashboard/teacher/delete-practice/';
+                                    payload = { practice_id: Number(mid) };
+                                }
+
+                                const res = await fetch(endpoint, {
                                     method: 'POST',
                                     credentials: 'same-origin',
                                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                                    body: JSON.stringify({ material_id: Number(mid) })
+                                    body: JSON.stringify(payload)
                                 });
                                 const d = await res.json();
                                 if (res.ok && d.success) {
+                                    // Remove from course materials listing
                                     course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
                                     const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
                                     renderCourses();
                                     openCourseDetail(course.id);
-                                    showToast('Material deleted', 'success');
+                                    showToast(isAssessment ? 'Assessment archived' : 'Material deleted', 'success');
 
                                     // Persist overview returned by backend (if any)
                                     try {
@@ -4516,6 +4486,70 @@
             renderAddedItemsChips();
         };
 
+        // Open the Add Material modal pre-filled for editing an existing material
+        window.openAddMaterialForEdit = function(material) {
+            try {
+                // mark editing target so submit handler performs update instead of create
+                editingCard = { dataset: {} };
+                editingCard.dataset.materialId = (material.id !== undefined) ? String(material.id) : (material.material_id ? String(material.material_id) : '');
+                editingCard.dataset.usage = (material.usage || material.usage_type || material.type || '').toString();
+
+                // Prefill title
+                if (materialTitleInput) materialTitleInput.value = material.title || '';
+
+                // Prefill items list
+                const raw = material.content || material.content_text || (material.items ? material.items.join('\n') : '') || '';
+                let items = [];
+                const itype = (material.item_type || material.reading_type || '').toString().toLowerCase();
+                if (itype === 'paragraph') {
+                    items = raw.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+                } else if (itype === 'sentence') {
+                    items = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+                } else {
+                    items = raw.split(/\n+/).map(s => s.trim()).filter(Boolean);
+                    if (items.length === 0 && raw.trim()) items = raw.split(/\s+/).map(s => s.trim()).filter(Boolean);
+                }
+                currentItemsList = items;
+                renderAddedItemsChips();
+
+                // Prefill type/status/assigned week/schedule
+                try { materialTypeSelect.value = material.type || material.usage || material.usage_type || 'practice'; } catch (e) { /* ignore */ }
+                try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
+                buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || null);
+                if ((material.status || '').toString().toLowerCase() === 'scheduled' && material.schedule) {
+                    try {
+                        const date = new Date(material.schedule);
+                        const yr = date.getFullYear();
+                        const mo = String(date.getMonth() + 1).padStart(2, '0');
+                        const da = String(date.getDate()).padStart(2, '0');
+                        const hh = String(date.getHours()).padStart(2, '0');
+                        const mm = String(date.getMinutes()).padStart(2, '0');
+                        scheduleDateTimeInput.value = `${yr}-${mo}-${da}T${hh}:${mm}`;
+                    } catch (e) { scheduleDateTimeInput.value = ''; }
+                } else {
+                    scheduleDateTimeInput.value = '';
+                }
+
+                try { normalizeMaterialTypeSelect(materialTypeSelect); } catch (e) { /* ignore */ }
+
+                // Update UI to indicate edit mode
+                const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
+                if (addHeader) addHeader.textContent = 'Edit Reading Material';
+                if (submitMaterialBtn) {
+                    if (!submitMaterialBtn.dataset.origHtml) submitMaterialBtn.dataset.origHtml = submitMaterialBtn.innerHTML;
+                    submitMaterialBtn.innerHTML = '<i class="bi bi-save me-2"></i>Save Changes';
+                }
+
+                // Prevent accidental attach-as-new
+                window.courseAttachTarget = null;
+
+                // Show modal
+                new bootstrap.Modal(addMaterialModal).show();
+            } catch (err) {
+                console.warn('openAddMaterialForEdit failed', err);
+            }
+        };
+
         if (addItemBtn && itemInput) {
             addItemBtn.addEventListener('click', function() {
                 const val = itemInput.value.trim();
@@ -4860,7 +4894,7 @@
                         }
                     }
                     
-                    // Edit material button
+                    // Edit material button -> open the Add Material modal in "edit" mode (reuse same UI)
                     if (e.target.closest('[data-action="edit"]')) {
                         const btn = e.target.closest('[data-action="edit"]');
                         editingCard = btn.closest('.material-card-modern');
@@ -4869,45 +4903,74 @@
 
                         if (!material) return;
 
-                        const editModalEl = document.getElementById('editMaterialModal');
-                        if (!editModalEl) return;
-                        const editModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
+                        // Prefill the Add Material modal fields so edit UI matches Add UI exactly
+                        const addModalEl = document.getElementById('addMaterialModal');
+                        if (!addModalEl) return;
 
-                        editMaterialTitleInput.value = material.title;
-                        editMaterialContentInput.value = material.content || material.content_text;
-                        editMaterialTypeSelect.value = material.type || 'practice';
-                        editPublicationStatusSelect.value = material.status || 'published';
-                        buildAssignedWeekOptions('editAssignedWeek', material.assigned_week);
-                        
-                        // Apply global constraints (hide practice options if teacher has none)
-                        try { applyMaterialTypeConstraints(null); } catch (e) { /* ignore */ }
+                        // Title
+                        if (materialTitleInput) materialTitleInput.value = material.title || '';
 
-                        toggleEditScheduleField(); // Update visibility based on loaded status
+                        // Items -> populate currentItemsList used by the Add modal chips UI
+                        try {
+                            const raw = material.content || material.content_text || '';
+                            let items = [];
+                            if ((material.item_type || '').toLowerCase() === 'paragraph') {
+                                items = raw.split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+                            } else if ((material.item_type || '').toLowerCase() === 'sentence') {
+                                items = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+                            } else { // word or default
+                                // prefer newline-separated tokens, fallback to whitespace
+                                items = raw.split(/\n+/).map(s => s.trim()).filter(Boolean);
+                                if (items.length === 0 && raw.trim()) items = raw.split(/\s+/).map(s => s.trim()).filter(Boolean);
+                            }
+                            currentItemsList = items;
+                            renderAddedItemsChips();
+                        } catch (err) { currentItemsList = []; renderAddedItemsChips(); }
 
-                        if (material.status === 'scheduled' && material.schedule) {
-                            const date = new Date(material.schedule);
-                            const year = date.getFullYear();
-                            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                            const day = date.getDate().toString().padStart(2, '0');
-                            const hours = date.getHours().toString().padStart(2, '0');
-                            const minutes = date.getMinutes().toString().padStart(2, '0');
-                            editScheduleDateTimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                        // Type / status / assigned week / schedule
+                        try { materialTypeSelect.value = material.type || 'practice'; } catch (e) { /* ignore */ }
+                        try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
+                        buildAssignedWeekOptions('assignedWeek', material.assigned_week);
+
+                        if ((material.status || '').toLowerCase() === 'scheduled' && material.schedule) {
+                            try {
+                                const date = new Date(material.schedule);
+                                const yr = date.getFullYear();
+                                const mo = String(date.getMonth() + 1).padStart(2, '0');
+                                const da = String(date.getDate()).padStart(2, '0');
+                                const hh = String(date.getHours()).padStart(2, '0');
+                                const mm = String(date.getMinutes()).padStart(2, '0');
+                                scheduleDateTimeInput.value = `${yr}-${mo}-${da}T${hh}:${mm}`;
+                            } catch (e) { scheduleDateTimeInput.value = ''; }
                         } else {
-                            editScheduleDateTimeInput.value = '';
+                            scheduleDateTimeInput.value = '';
                         }
-                        try { normalizeMaterialTypeSelect(editMaterialTypeSelect); } catch (e) { /* ignore */ }
-                        editModal.show();
+
+                        try { normalizeMaterialTypeSelect(materialTypeSelect); } catch (e) { /* ignore */ }
+
+                        // Update header/button to indicate edit mode
+                        const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
+                        const origBtnHtml = submitMaterialBtn ? submitMaterialBtn.dataset.origHtml || submitMaterialBtn.innerHTML : null;
+                        if (addHeader) addHeader.textContent = 'Edit Reading Material';
+                        if (submitMaterialBtn) {
+                            if (!submitMaterialBtn.dataset.origHtml) submitMaterialBtn.dataset.origHtml = submitMaterialBtn.innerHTML;
+                            submitMaterialBtn.innerHTML = '<i class="bi bi-save me-2"></i>Save Changes';
+                        }
+
+                        // prevent attaching new materials during edit flows
+                        window.courseAttachTarget = null;
+                        new bootstrap.Modal(addModalEl).show();
                     }
                     
-                    // Delete material button
+                    // Delete / Archive material button
                     if (e.target.closest('[data-action="delete"]')) {
                         const btn = e.target.closest('[data-action="delete"]');
                         const card = btn.closest('.material-card-modern');
                         if (!card) return;
-                        
-                        const title = card.querySelector('.material-title').textContent;
+
+                        const title = card.querySelector('.material-title') ? card.querySelector('.material-title').textContent : '';
                         const materialId = card.dataset.materialId;
-                        
+
                         if (!materialId) {
                             alert("Could not identify the material ID. Please refresh the page.");
                             return;
@@ -4916,10 +4979,20 @@
                         showDeleteConfirmModal(`Delete "${title}"?`, async () => {
                             try {
                                 const csrfToken = await ensureCsrfToken();
-                                // If this is a practice item, call the practice delete API
-                                const usage = card.dataset.usage || (card.getAttribute('data-usage') || 'practice');
-                                const endpoint = (usage && usage.toLowerCase() === 'practice') ? '/dashboard/teacher/delete-practice/' : '/dashboard/teacher/delete-material/';
-                                const bodyPayload = (usage && usage.toLowerCase() === 'practice') ? { practice_id: materialId } : { material_id: materialId };
+
+                                // Determine action: practice -> delete-practice, assessment -> archive-assessment, material -> delete-material
+                                const usage = (card.dataset.usage || (card.getAttribute('data-usage') || '')).toString().toLowerCase();
+                                let endpoint = '/dashboard/teacher/delete-material/';
+                                let bodyPayload = { material_id: materialId };
+
+                                if (usage === 'practice') {
+                                    endpoint = '/dashboard/teacher/delete-practice/';
+                                    bodyPayload = { practice_id: materialId };
+                                } else if (String(materialId || '').startsWith('assessment-') || usage === 'assessment') {
+                                    // For assessment items in the Readings list, call archive-assessment (soft-delete)
+                                    endpoint = '/dashboard/teacher/archive-assessment/';
+                                    bodyPayload = { assessment_id: materialId };
+                                }
 
                                 const response = await fetch(endpoint, {
                                     method: 'POST',
@@ -4929,7 +5002,7 @@
                                     },
                                     body: JSON.stringify(bodyPayload)
                                 });
-                                
+
                                 if (!response.ok) {
                                     throw new Error(`Server returned ${response.status}: ${response.statusText}`);
                                 }
@@ -4946,30 +5019,26 @@
                                         }
                                         saveStoredReadings();
                                     }
-                                    
+
                                     card.style.opacity = '0.5';
                                     card.style.pointerEvents = 'none';
                                     showSuccessModal('Deleted', `"${title}" has been removed.`);
                                     setTimeout(() => { if (currentClassCode) loadReadings(currentClassCode); }, 300);
-                                    // Persist overview returned by backend (if any) so other tabs update
-                                    try {
-                                        if (data.overview) {
+
+                                    // Persist overview returned by backend (if any)
+                                    try { if (data.overview) {
                                             const k = 'pabasa_teacher_overview_stats';
                                             const ex = JSON.parse(localStorage.getItem(k) || '{}');
                                             localStorage.setItem(k, JSON.stringify(Object.assign({}, ex, data.overview)));
                                         }
                                     } catch (e) { /* ignore */ }
 
-                                    // Notify other modules to re-sync authoritative data
-                                    try {
-                                        window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } }));
-                                    } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
+                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: materialId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
 
                                     try {
                                         if (typeof refreshTeacherData === 'function') {
                                             await refreshTeacherData();
                                         } else {
-                                            // fallback: fetch overview and persist
                                             try {
                                                 const r3 = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                                                 if (r3.ok) {
@@ -5141,42 +5210,102 @@
                                 throw new Error('CSRF token missing. Please reload and sign in.');
                             }
 
-                            const postOpts = {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': csrfToken,
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                },
-                                body: JSON.stringify({
-                                    title: title,
-                                    reading_type: readingType,
-                                    content: content,
-                                    status: status,
-                                    usage_type: usageType,
-                                    class_code: currentClassCode,
-                                    scheduled_at: schedule || null,
-                                    assigned_week: assignedWeek
-                                })
-                            };
+                            // Determine whether we're editing an existing material (editingCard set)
+                            let apiResponse = null;
+                            let isEdit = false;
+                            let editingMaterialId = null;
+                            try {
+                                if (typeof editingCard !== 'undefined' && editingCard && ( (editingCard.dataset && (editingCard.dataset.materialId || editingCard.dataset.mid)) || editingCard.materialId )) {
+                                    isEdit = true;
+                                    editingMaterialId = editingCard.dataset ? (editingCard.dataset.materialId || editingCard.dataset.mid) : editingCard.materialId;
+                                    const detectedUsage = (usageType || (editingCard.dataset ? editingCard.dataset.usage : '') || '').toString().toLowerCase();
 
-                            let apiResponse = await fetch('/dashboard/teacher/add-material/', postOpts);
-                            if (apiResponse.status === 403) {
-                                // Try refreshing CSRF token and retry once
-                                const refreshed = await ensureCsrfToken(true);
-                                if (refreshed && refreshed !== csrfToken) {
-                                    postOpts.headers['X-CSRFToken'] = refreshed;
-                                    apiResponse = await fetch('/dashboard/teacher/add-material/', postOpts);
+                                    if (detectedUsage === 'practice') {
+                                        const opts = {
+                                            method: 'POST',
+                                            credentials: 'same-origin',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRFToken': csrfToken,
+                                                'X-Requested-With': 'XMLHttpRequest'
+                                            },
+                                            body: JSON.stringify({ practice_id: editingMaterialId, title: title, content: content, status: status })
+                                        };
+                                        apiResponse = await fetch('/dashboard/teacher/update-practice/', opts);
+                                        if (apiResponse.status === 403) {
+                                            const refreshed = await ensureCsrfToken(true);
+                                            if (refreshed && refreshed !== csrfToken) {
+                                                opts.headers['X-CSRFToken'] = refreshed;
+                                                apiResponse = await fetch('/dashboard/teacher/update-practice/', opts);
+                                            } else {
+                                                const text = await apiResponse.text();
+                                                try { const errorData = JSON.parse(text); throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`); } catch (e) { throw new Error(`API error: ${apiResponse.status} - ${text.slice(0,200)}`); }
+                                            }
+                                        }
+                                    } else {
+                                        const opts = {
+                                            method: 'POST',
+                                            credentials: 'same-origin',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRFToken': csrfToken,
+                                                'X-Requested-With': 'XMLHttpRequest'
+                                            },
+                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, class_code: currentClassCode, scheduled_at: schedule || null, assigned_week: assignedWeek })
+                                        };
+                                        apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
+                                        if (apiResponse.status === 403) {
+                                            const refreshed = await ensureCsrfToken(true);
+                                            if (refreshed && refreshed !== csrfToken) {
+                                                opts.headers['X-CSRFToken'] = refreshed;
+                                                apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
+                                            } else {
+                                                const text = await apiResponse.text();
+                                                try { const errorData = JSON.parse(text); throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`); } catch (e) { throw new Error(`API error: ${apiResponse.status} - ${text.slice(0,200)}`); }
+                                            }
+                                        }
+                                    }
                                 } else {
-                                    const text = await apiResponse.text();
-                                    try {
-                                        const errorData = JSON.parse(text);
-                                        throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`);
-                                    } catch (e) {
-                                        throw new Error(`API error: ${apiResponse.status} - ${text.slice(0,200)}`);
+                                    const postOpts = {
+                                        method: 'POST',
+                                        credentials: 'same-origin',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRFToken': csrfToken,
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        },
+                                        body: JSON.stringify({
+                                            title: title,
+                                            reading_type: readingType,
+                                            content: content,
+                                            status: status,
+                                            usage_type: usageType,
+                                            class_code: currentClassCode,
+                                            scheduled_at: schedule || null,
+                                            assigned_week: assignedWeek
+                                        })
+                                    };
+
+                                    apiResponse = await fetch('/dashboard/teacher/add-material/', postOpts);
+                                    if (apiResponse.status === 403) {
+                                        // Try refreshing CSRF token and retry once
+                                        const refreshed = await ensureCsrfToken(true);
+                                        if (refreshed && refreshed !== csrfToken) {
+                                            postOpts.headers['X-CSRFToken'] = refreshed;
+                                            apiResponse = await fetch('/dashboard/teacher/add-material/', postOpts);
+                                        } else {
+                                            const text = await apiResponse.text();
+                                            try {
+                                                const errorData = JSON.parse(text);
+                                                throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`);
+                                            } catch (e) {
+                                                throw new Error(`API error: ${apiResponse.status} - ${text.slice(0,200)}`);
+                                            }
+                                        }
                                     }
                                 }
+                            } catch (errInner) {
+                                throw errInner;
                             }
 
                             if (!apiResponse.ok) {
@@ -5203,7 +5332,16 @@
 
                             console.log('[AddMaterial] Database save successful:', apiData);
 
-                                // If backend returned an updated overview, persist it immediately
+                            // If this was an edit/update action, handle update-specific UI and exit
+                            if (isEdit) {
+                                try {
+                                    bootstrap.Modal.getInstance(addMaterialModal).hide();
+                                } catch (e) { /* ignore */ }
+
+                                showSuccessModal('Updated', `"${title}" has been updated.`);
+                                if (currentClassCode) await loadReadings(currentClassCode);
+
+                                // Persist overview returned by backend (if any)
                                 try {
                                     if (apiData && apiData.overview) {
                                         const overviewKey = 'pabasa_teacher_overview_stats';
@@ -5211,6 +5349,61 @@
                                         localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, apiData.overview)));
                                     }
                                 } catch (e) { /* ignore */ }
+
+                                try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: editingMaterialId, class_code: currentClassCode } })); } catch (e) { /* ignore */ }
+
+                                try {
+                                    if (typeof refreshTeacherData === 'function') {
+                                        await refreshTeacherData();
+                                    } else {
+                                        try {
+                                            const r4 = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                            if (r4.ok) {
+                                                const ov4 = await r4.json();
+                                                const k4 = 'pabasa_teacher_overview_stats';
+                                                const ex4 = JSON.parse(localStorage.getItem(k4) || '{}');
+                                                localStorage.setItem(k4, JSON.stringify(Object.assign({}, ex4, ov4)));
+                                            }
+                                        } catch (err4) { /* ignore */ }
+                                    }
+                                } catch (err) { console.warn('Could not refresh teacher overview after update', err); }
+
+                                // Restore add modal UI
+                                try {
+                                    const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
+                                    if (addHeader) addHeader.textContent = 'Add Reading Material';
+                                    if (submitMaterialBtn) {
+                                        if (submitMaterialBtn.dataset.origHtml) {
+                                            submitMaterialBtn.innerHTML = submitMaterialBtn.dataset.origHtml;
+                                            delete submitMaterialBtn.dataset.origHtml;
+                                        } else {
+                                            submitMaterialBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material';
+                                        }
+                                    }
+                                } catch (e) { /* ignore */ }
+
+                                editingCard = null;
+
+                                // Reset form state
+                                try {
+                                    const addMaterialFormEl = document.getElementById('addMaterialForm');
+                                    if (addMaterialFormEl) addMaterialFormEl.reset();
+                                    if (scheduleFieldDiv) scheduleFieldDiv.classList.add('d-none');
+                                    [materialTitleInput, scheduleDateTimeInput].forEach(function (el) { if (el) el.classList.remove('is-invalid', 'is-valid'); });
+                                    if (errorBanner) errorBanner.classList.add('d-none');
+                                } catch (e) { /* ignore */ }
+
+                                return;
+                            }
+
+                            // If backend returned an updated overview, persist it immediately
+                            try {
+                                if (apiData && apiData.overview) {
+                                    const overviewKey = 'pabasa_teacher_overview_stats';
+                                    const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                    localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, apiData.overview)));
+                                }
+                            } catch (e) { /* ignore */ }
                             // ── Step 2: Store returned per-item materials locally (avoid full reload)
                             const createdIds = Array.isArray(apiData.material_ids) ? apiData.material_ids : (apiData.material_id ? [apiData.material_id] : []);
 
@@ -5407,7 +5600,15 @@
                             }
                         } finally {
                             submitMaterialBtn.disabled = false;
-                            submitMaterialBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material';
+                            try {
+                                if (submitMaterialBtn && submitMaterialBtn.dataset && submitMaterialBtn.dataset.origHtml) {
+                                    submitMaterialBtn.innerHTML = submitMaterialBtn.dataset.origHtml;
+                                } else if (submitMaterialBtn) {
+                                    submitMaterialBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material';
+                                }
+                            } catch (e) {
+                                if (submitMaterialBtn) submitMaterialBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material';
+                            }
                         }
                     });
                 }
