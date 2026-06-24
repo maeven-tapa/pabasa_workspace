@@ -4425,6 +4425,36 @@
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
 
+        // If the teacher/context only allows a single material usage (e.g. assessment-only),
+        // convert the select into a single-value display by disabling it and showing a note.
+        function normalizeMaterialTypeSelect(selectEl) {
+            try {
+                if (!selectEl) return;
+                const opts = Array.from(selectEl.options || []).filter(o => (o.value || '').toString().trim() !== '');
+                const count = opts.length;
+                if (count <= 1) {
+                    selectEl.disabled = true;
+                    selectEl.classList.add('single-option-select');
+                    if (count === 1) selectEl.value = opts[0].value;
+                    const parent = selectEl.parentElement || selectEl.parentNode;
+                    if (parent && !parent.querySelector('.material-type-note')) {
+                        const note = document.createElement('div');
+                        note.className = 'form-text small text-muted material-type-note';
+                        note.textContent = (count === 1) ? `${opts[0].text} only` : 'Assessment only';
+                        parent.appendChild(note);
+                    }
+                } else {
+                    selectEl.disabled = false;
+                    selectEl.classList.remove('single-option-select');
+                    const parent = selectEl.parentElement || selectEl.parentNode;
+                    if (parent) {
+                        const note = parent.querySelector('.material-type-note');
+                        if (note) note.remove();
+                    }
+                }
+            } catch (e) { console.warn('normalizeMaterialTypeSelect failed', e); }
+        }
+
         // Logic for adding items as chips in Add Material modal
         function renderAddedItemsChips() {
             const chipsContainer = document.getElementById('itemChipsContainer');
@@ -4530,6 +4560,8 @@
             window.courseAttachTarget = courseModalEl?.dataset?.courseId ? Number(courseModalEl.dataset.courseId) : null;
 
             toggleAddScheduleField();
+            // Ensure material type select is normalized for contexts where only one option exists
+            try { normalizeMaterialTypeSelect(materialTypeSelect); } catch (e) { /* ignore */ }
             new bootstrap.Modal(modalEl).show();
         });
 
@@ -4764,6 +4796,7 @@
                         toggleAddScheduleField(); // Reset schedule field visibility when opening add modal
                         // Ensure not attaching to a course when opening from the global readings list
                         window.courseAttachTarget = null;
+                        try { normalizeMaterialTypeSelect(materialTypeSelect); } catch (e) { /* ignore */ }
                         modal.show();
                     }
                     
@@ -4823,6 +4856,7 @@
                         } else {
                             editScheduleDateTimeInput.value = '';
                         }
+                        try { normalizeMaterialTypeSelect(editMaterialTypeSelect); } catch (e) { /* ignore */ }
                         editModal.show();
                     }
                     
