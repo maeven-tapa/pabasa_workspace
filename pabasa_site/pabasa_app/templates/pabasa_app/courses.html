@@ -2754,7 +2754,7 @@
                         const action = btn.dataset.practiceAction;
                         const pid = btn.getAttribute('data-pid');
                         if (action === 'preview') {
-                            const pr = (course.practices || []).find(x => Number(x.id) === Number(pid));
+                            const pr = (course.practices || []).find(x => String(x.id) === String(pid) || String(x.raw_id || '') === String(pid).replace(/^practice-/, ''));
                             if (!pr) return showToast('Practice not found', 'error');
                             const prItems = (typeof pr.items_count === 'number') ? pr.items_count : (Array.isArray(pr.items) ? pr.items.length : (pr.items || '-'));
                             showSuccessModal('Practice Preview', `${pr.title} \n\nType: ${pr.item_type || '-'}\nItems: ${prItems}\n\n${pr.content || ''}`);
@@ -4395,6 +4395,18 @@
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
 
+        function prefixedRecordKind(id) {
+            const match = String(id || '').match(/^([a-z]+)-/i);
+            return match ? match[1].toLowerCase() : '';
+        }
+
+        function materialRecordId(material, fallbackKind) {
+            const rawId = (material && material.id !== undefined) ? String(material.id) : (material && material.material_id ? String(material.material_id) : '');
+            if (!rawId) return '';
+            if (prefixedRecordKind(rawId)) return rawId;
+            return fallbackKind ? `${fallbackKind}-${rawId}` : rawId;
+        }
+
         // If the teacher/context only allows a single material usage (e.g. assessment-only),
         // convert the select into a single-value display by disabling it and showing a note.
         function normalizeMaterialTypeSelect(selectEl) {
@@ -4489,10 +4501,14 @@
         // Open the Add Material modal pre-filled for editing an existing material
         window.openAddMaterialForEdit = function(material) {
             try {
+                const usage = (material.usage || material.usage_type || material.type || '').toString();
+                const fallbackKind = usage.toLowerCase() === 'practice' && String(material.id || '').startsWith('practice-') ? 'practice' : 'material';
+                const normalizedMaterialId = materialRecordId(material, fallbackKind);
                 // mark editing target so submit handler performs update instead of create
                 editingCard = { dataset: {} };
-                editingCard.dataset.materialId = (material.id !== undefined) ? String(material.id) : (material.material_id ? String(material.material_id) : '');
-                editingCard.dataset.usage = (material.usage || material.usage_type || material.type || '').toString();
+                editingCard.dataset.materialId = normalizedMaterialId;
+                editingCard.dataset.usage = usage;
+                editingCard.dataset.recordKind = prefixedRecordKind(normalizedMaterialId) || fallbackKind;
 
                 // Prefill title
                 if (materialTitleInput) materialTitleInput.value = material.title || '';
@@ -4731,7 +4747,8 @@
                              data-full-content="${(reading.content_text || '').replace(/"/g, '&quot;')}"
                              data-status="${reading.status || 'published'}"
                              data-schedule="${reading.schedule || ''}"
-                             data-usage="${reading.type || 'practice'}">
+                             data-usage="${reading.type || 'practice'}"
+                             data-record-kind="${prefixedRecordKind(reading.id) || 'material'}">
                             <div class="material-info">
                                 <div class="material-leading-icon">
                                     <i class="bi ${iconMap[reading.item_type]}"></i>
@@ -5076,6 +5093,7 @@
                         
                         try {
                             const usage = editingCard.dataset.usage || (editingCard.getAttribute('data-usage') || 'practice');
+                            const recordKind = prefixedRecordKind(materialId) || editingCard.dataset.recordKind || editingCard.getAttribute('data-record-kind') || '';
                             let endpoint = '/dashboard/teacher/update-material/';
                             let payload = {
                                 material_id: materialId,
@@ -5086,7 +5104,7 @@
                                 assigned_week: assignedWeekValue ? parseInt(assignedWeekValue, 10) : null
                             };
 
-                            if (usage && usage.toLowerCase() === 'practice') {
+                            if (recordKind === 'practice' || (!recordKind && usage && usage.toLowerCase() === 'practice')) {
                                 endpoint = '/dashboard/teacher/update-practice/';
                                 payload = {
                                     practice_id: materialId,
@@ -5221,9 +5239,10 @@
                                 if (typeof editingCard !== 'undefined' && editingCard && ( (editingCard.dataset && (editingCard.dataset.materialId || editingCard.dataset.mid)) || editingCard.materialId )) {
                                     isEdit = true;
                                     editingMaterialId = editingCard.dataset ? (editingCard.dataset.materialId || editingCard.dataset.mid) : editingCard.materialId;
-                                    const detectedUsage = (usageType || (editingCard.dataset ? editingCard.dataset.usage : '') || '').toString().toLowerCase();
+                                    const detectedUsage = ((editingCard.dataset ? editingCard.dataset.usage : '') || usageType || '').toString().toLowerCase();
+                                    const recordKind = prefixedRecordKind(editingMaterialId) || (editingCard.dataset ? editingCard.dataset.recordKind : '') || '';
 
-                                    if (detectedUsage === 'practice') {
+                                    if (recordKind === 'practice' || (!recordKind && detectedUsage === 'practice')) {
                                         const opts = {
                                             method: 'POST',
                                             credentials: 'same-origin',

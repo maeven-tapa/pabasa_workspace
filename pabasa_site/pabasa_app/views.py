@@ -2998,7 +2998,8 @@ def get_teacher_courses_api(request):
                 for p in practices_qs:
                     items_cnt = len(_practice_material_items(p)) if callable(_practice_material_items) else None
                     practices_list.append({
-                        'id': p.id,
+                        'id': f"practice-{p.id}",
+                        'raw_id': p.id,
                         'title': p.title,
                         'item_type': getattr(p, 'item_type', getattr(p, 'practice_type', '')),
                         'status': getattr(p, 'status', ''),
@@ -4218,9 +4219,13 @@ def teacher_update_practice(request):
         if not practice_id:
             return JsonResponse({'success': False, 'error': 'Invalid practice ID'}, status=400)
 
-        practice = Practice.objects.filter(id=practice_id, teacher_id=user_id).first()
+        practice = Practice.objects.filter(
+            Q(id=practice_id) & (Q(teacher_id=user_id) | Q(section__teacher_id=user_id))
+        ).distinct().first()
         if not practice:
-            return JsonResponse({'success': False, 'error': 'Practice not found or access denied'}, status=404)
+            if Practice.objects.filter(id=practice_id).exists():
+                return JsonResponse({'success': False, 'error': 'Practice access denied'}, status=403)
+            return JsonResponse({'success': False, 'error': 'Practice not found'}, status=404)
 
         title = data.get('title')
         content = data.get('content')
