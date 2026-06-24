@@ -4455,6 +4455,39 @@
             } catch (e) { console.warn('normalizeMaterialTypeSelect failed', e); }
         }
 
+            // Apply constraints to the material-type selects based on whether the teacher
+            // appears to have any practice sets available. If not, prefer Assessment-only.
+            function applyMaterialTypeConstraints(course) {
+                try {
+                    const hasPracticeAnywhere = Array.isArray(teacherCourses) && teacherCourses.some(c => Array.isArray(c.practices) && c.practices.length > 0);
+                    const hasPracticeInCourse = course && Array.isArray(course.practices) && course.practices.length > 0;
+                    const allowPractice = hasPracticeAnywhere || hasPracticeInCourse;
+
+                    const selects = [materialTypeSelect, editMaterialTypeSelect].filter(Boolean);
+                    selects.forEach(sel => {
+                        // Hide/disable practice/both options when not allowed
+                        for (let i = 0; i < sel.options.length; i++) {
+                            const o = sel.options[i];
+                            if (!o) continue;
+                            if (o.value === 'practice' || o.value === 'both') {
+                                o.disabled = !allowPractice;
+                                o.hidden = !allowPractice;
+                            }
+                        }
+
+                        // Ensure the select has a valid value
+                        const assessmentOpt = Array.from(sel.options).find(o => o.value === 'assessment');
+                        if (!allowPractice && assessmentOpt) {
+                            try { sel.value = 'assessment'; } catch (e) { /* ignore */ }
+                        }
+                    });
+
+                    // Normalize UI after changes
+                    try { normalizeMaterialTypeSelect(materialTypeSelect); } catch (e) { /* ignore */ }
+                    try { normalizeMaterialTypeSelect(editMaterialTypeSelect); } catch (e) { /* ignore */ }
+                } catch (e) { console.warn('applyMaterialTypeConstraints failed', e); }
+            }
+
         // Logic for adding items as chips in Add Material modal
         function renderAddedItemsChips() {
             const chipsContainer = document.getElementById('itemChipsContainer');
@@ -4560,8 +4593,11 @@
             window.courseAttachTarget = courseModalEl?.dataset?.courseId ? Number(courseModalEl.dataset.courseId) : null;
 
             toggleAddScheduleField();
-            // Ensure material type select is normalized for contexts where only one option exists
-            try { normalizeMaterialTypeSelect(materialTypeSelect); } catch (e) { /* ignore */ }
+            // Apply course-specific constraints (hide practice options if teacher has none)
+            try {
+                const course = (teacherCourses || []).find(c => Number(c.id) === Number(courseModalEl?.dataset?.courseId));
+                applyMaterialTypeConstraints(course);
+            } catch (e) { /* ignore */ }
             new bootstrap.Modal(modalEl).show();
         });
 
@@ -4796,7 +4832,7 @@
                         toggleAddScheduleField(); // Reset schedule field visibility when opening add modal
                         // Ensure not attaching to a course when opening from the global readings list
                         window.courseAttachTarget = null;
-                        try { normalizeMaterialTypeSelect(materialTypeSelect); } catch (e) { /* ignore */ }
+                        try { applyMaterialTypeConstraints(null); } catch (e) { /* ignore */ }
                         modal.show();
                     }
                     
@@ -4843,6 +4879,9 @@
                         editPublicationStatusSelect.value = material.status || 'published';
                         buildAssignedWeekOptions('editAssignedWeek', material.assigned_week);
                         
+                        // Apply global constraints (hide practice options if teacher has none)
+                        try { applyMaterialTypeConstraints(null); } catch (e) { /* ignore */ }
+
                         toggleEditScheduleField(); // Update visibility based on loaded status
 
                         if (material.status === 'scheduled' && material.schedule) {
