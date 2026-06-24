@@ -77,6 +77,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const studentId = this.dataset.studentId;
             const classCode = new URLSearchParams(window.location.search).get('code');
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            const clickedButton = this;
+            const loadingModalEl = document.getElementById('addStudentLoadingModal');
+            const loadingModal = loadingModalEl ? bootstrap.Modal.getOrCreateInstance(loadingModalEl) : null;
+
+            clickedButton.disabled = true;
+            if (loadingModal) loadingModal.show();
 
             fetch('/dashboard/teacher/add-student-to-class/', {
                 method: 'POST',
@@ -88,19 +94,25 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(res => res.json())
             .then(data => {
+                if (loadingModal) loadingModal.hide();
+
                 if (data.success) {
                     // Notify other modules to refresh authoritative data without forcing a full reload
                     try { window.dispatchEvent(new CustomEvent('studentAdded', { detail: { student_id: studentId, class_code: classCode } })); } catch (e) { console.warn(e); }
                     try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { class_code: classCode } })); } catch (e) { console.warn(e); }
 
-                    if (typeof showSuccessToast === 'function') {
-                        showSuccessToast('Student added successfully.');
-                    } else {
-                        alert('Student added successfully.');
-                    }
+                    alert('Student added successfully.');
+                    window.location.reload();
                 } else {
                     alert('Error: ' + data.error);
+                    clickedButton.disabled = false;
                 }
+            })
+            .catch(error => {
+                if (loadingModal) loadingModal.hide();
+                clickedButton.disabled = false;
+                console.error('Error adding student to class:', error);
+                alert('Error: Unable to add student. Please try again.');
             });
         });
     });
