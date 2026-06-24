@@ -2021,6 +2021,31 @@
     min-height: 0;
     padding: 1.25rem 1.5rem;
 }
+.course-student-add-loading-modal {
+    align-items: center;
+    background: rgba(15, 23, 42, 0.48);
+    bottom: 0;
+    display: none;
+    justify-content: center;
+    left: 0;
+    padding: 1rem;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 3000;
+}
+.course-student-add-loading-modal.is-visible {
+    display: flex;
+}
+.course-student-add-loading-dialog {
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+    max-width: 420px;
+    padding: 2rem;
+    text-align: center;
+    width: min(100%, 420px);
+}
 @media (max-width: 575.98px) {
     #addCourseStudentModal .modal-dialog {
         margin: 0.5rem auto;
@@ -2057,20 +2082,16 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="addCourseStudentModalAddSelected">Add Selected</button>
+                <button type="button" class="btn btn-primary" id="addCourseStudentModalAddSelected">Add Student</button>
             </div>
         </div>
     </div>
 </div>
-<div class="modal fade" id="addCourseStudentLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-center p-4">
-            <div class="modal-body">
-                <div class="spinner-border text-primary mb-3" role="status" aria-label="Loading"></div>
-                <h5 class="fw-bold mb-2">Adding student to class</h5>
-                <p class="text-muted mb-0">Please wait while the selected student is being added.</p>
-            </div>
-        </div>
+<div class="course-student-add-loading-modal" id="addCourseStudentLoadingModal" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="addCourseStudentLoadingTitle">
+    <div class="course-student-add-loading-dialog">
+        <div class="spinner-border text-primary mb-3" role="status" aria-label="Loading"></div>
+        <h5 class="fw-bold mb-2" id="addCourseStudentLoadingTitle">Adding student to class</h5>
+        <p class="text-muted mb-0">Please wait while the selected student is being added.</p>
     </div>
 </div>
 <!-- Modal for Adding Materials -->
@@ -4332,12 +4353,11 @@
         if (!targetClassCode) return showToast('Course has no associated section code', 'error');
 
         const loadingModalEl = document.getElementById('addCourseStudentLoadingModal');
-        const loadingModal = loadingModalEl ? bootstrap.Modal.getOrCreateInstance(loadingModalEl) : null;
         const added = [];
 
         addButton.disabled = true;
+        if (loadingModalEl) loadingModalEl.classList.add('is-visible');
         try { bootstrap.Modal.getInstance(modal)?.hide(); } catch(e){}
-        if (loadingModal) loadingModal.show();
 
         try {
             for (const cb of checkboxes) {
@@ -4360,7 +4380,7 @@
                 }
             }
 
-            if (loadingModal) loadingModal.hide();
+            if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
 
             if (added.length > 0) {
                 alert(`${added.length} student(s) added to course.`);
@@ -4370,7 +4390,7 @@
                 addButton.disabled = false;
             }
         } catch (err) {
-            if (loadingModal) loadingModal.hide();
+            if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
             addButton.disabled = false;
             console.error('Error adding selected students', err);
             alert('Unable to add the selected student. Please try again.');

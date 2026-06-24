@@ -240,7 +240,7 @@
                                 <td><span class="pabasa-id-pill">{{ s.pabasa_id }}</span></td>
                                 <td>{{ s.grade }}</td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-primary add-student-btn px-3" data-student-id="{{ s.id }}" style="border-radius: 8px;">Add Student</button>
+                                    <button class="btn btn-sm btn-primary add-student-btn px-3" data-student-id="{{ s.id }}" style="border-radius: 8px;" onclick="window.showClassStudentLoading && window.showClassStudentLoading();">Add Student</button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -260,5 +260,19 @@
     </div>
 </div>
 
-<script src="{% static 'pabasa_app/js/class_management.js' %}"></script>
+<script>
+window.showClassStudentLoading = function () {
+    const loadingModal = document.getElementById('addStudentLoadingModal');
+    if (loadingModal) {
+        loadingModal.classList.add('is-visible');
+    }
+};
+window.hideClassStudentLoading = function () {
+    const loadingModal = document.getElementById('addStudentLoadingModal');
+    if (loadingModal) {
+        loadingModal.classList.remove('is-visible');
+    }
+};
+</script>
+<script src="{% static 'pabasa_app/js/class_management.js' %}?v=class-student-loading-20260624"></script>
 {% endblock %}

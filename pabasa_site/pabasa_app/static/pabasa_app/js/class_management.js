@@ -82,7 +82,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const loadingModalEl = document.getElementById('addStudentLoadingModal');
 
             clickedButton.disabled = true;
-            if (loadingModalEl) loadingModalEl.classList.add('is-visible');
+            if (typeof window.showClassStudentLoading === 'function') {
+                window.showClassStudentLoading();
+            } else if (loadingModalEl) {
+                loadingModalEl.classList.add('is-visible');
+            }
             try { bootstrap.Modal.getInstance(addStudentModalEl)?.hide(); } catch (e) { console.warn(e); }
 
             fetch('/dashboard/teacher/add-student-to-class/', {
@@ -95,7 +99,11 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(res => res.json())
             .then(data => {
-                if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
+                if (typeof window.hideClassStudentLoading === 'function') {
+                    window.hideClassStudentLoading();
+                } else if (loadingModalEl) {
+                    loadingModalEl.classList.remove('is-visible');
+                }
 
                 if (data.success) {
                     // Notify other modules to refresh authoritative data without forcing a full reload
@@ -110,7 +118,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             .catch(error => {
-                if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
+                if (typeof window.hideClassStudentLoading === 'function') {
+                    window.hideClassStudentLoading();
+                } else if (loadingModalEl) {
+                    loadingModalEl.classList.remove('is-visible');
+                }
                 clickedButton.disabled = false;
                 console.error('Error adding student to class:', error);
                 alert('Error: Unable to add student. Please try again.');
