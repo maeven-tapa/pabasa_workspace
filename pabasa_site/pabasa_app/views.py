@@ -3144,6 +3144,15 @@ def teacher_update_assessment(request):
             assessment.scheduled_at = None
 
         assessment.save()
+        try:
+            for material in assessment.materials.all():
+                material.title = assessment.title
+                material.status = assessment.status
+                material.scheduled_at = assessment.scheduled_at
+                material.is_active = assessment.is_active
+                material.save(update_fields=['title', 'status', 'scheduled_at', 'is_active', 'updated_at'])
+        except Exception:
+            logger.exception('Failed to synchronize materials for assessment %s', assessment.id)
         return JsonResponse({'success': True, 'message': 'Assessment updated'})
     except Exception as e:
         logger.exception('Error in teacher_update_assessment')

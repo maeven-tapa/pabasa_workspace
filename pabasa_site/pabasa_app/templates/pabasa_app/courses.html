@@ -2811,8 +2811,6 @@
                                     assessment.title = newTitle;
                                     assessment.dueDate = newDue || null;
                                     const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                    renderCourses();
-                                    openCourseDetail(course.id);
                                     showToast('Assessment updated', 'success');
 
                                     // Persist overview and notify
@@ -2825,24 +2823,7 @@
                                     } catch (e) { /* ignore */ }
 
                                     try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
-
-                                    try {
-                                        if (typeof refreshTeacherData === 'function') {
-                                            await refreshTeacherData();
-                                        } else {
-                                            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                                            if (r.ok) {
-                                                const ov = await r.json();
-                                                const overviewKey = 'pabasa_teacher_overview_stats';
-                                                const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
-                                            }
-                                        }
-                                    } catch (err) { console.warn('Could not refresh teacher overview after assessment update', err); }
-
-                                    if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
-                                        try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
-                                    }
+                                    await refreshOpenCourseAfterAssessmentChange({ courseId: course.id, classCode: currentClassCode });
                                 } else {
                                     showToast('Could not update assessment: ' + (d.error || 'Unknown'), 'error');
                                 }
@@ -3297,6 +3278,53 @@
         if (typeof renderCourses === 'function') await renderCourses();
     }
 
+    function syncClassAssessmentsFromCourses(classCode) {
+        if (!classCode || !Array.isArray(teacherCourses)) return;
+        const seen = new Set();
+        const synced = [];
+        teacherCourses.forEach(course => {
+            const belongsToClass = Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(classCode).toUpperCase());
+            if (!belongsToClass || !Array.isArray(course.assessments)) return;
+            course.assessments.forEach(assessment => {
+                const key = String(assessment.id);
+                if (seen.has(key)) return;
+                seen.add(key);
+                synced.push({
+                    id: assessment.id,
+                    title: assessment.title || '',
+                    level: assessment.level || assessment.assessment_type || '',
+                    items: pc_itemsCount(assessment),
+                    minutes: assessment.minutes || 0,
+                    dueDate: assessment.dueDate || null,
+                    completed: 0,
+                    average: assessment.average || 0
+                });
+            });
+        });
+        classAssessments[classCode] = synced;
+    }
+
+    async function refreshOpenCourseAfterAssessmentChange(options = {}) {
+        const courseModal = document.getElementById('courseDetailModal');
+        const openCourseId = options.courseId || courseModal?.dataset?.courseId || null;
+        const classCode = options.classCode || currentClassCode || null;
+
+        try { await loadTeacherCoursesFromServer(); } catch (e) { console.warn('Could not reload courses after assessment change', e); }
+        try { if (typeof renderCourses === 'function') await renderCourses(); } catch (e) { console.warn('Could not render courses after assessment change', e); }
+
+        if (classCode) {
+            try { syncClassAssessmentsFromCourses(classCode); } catch (e) { console.warn('Could not sync class assessments after assessment change', e); }
+            try { if (typeof loadAssessments === 'function') loadAssessments(classCode); } catch (e) { console.warn('Could not refresh class assessments after assessment change', e); }
+            try { if (typeof loadReadings === 'function') await loadReadings(classCode); } catch (e) { console.warn('Could not refresh class readings after assessment change', e); }
+        }
+
+        if (openCourseId && courseModal && courseModal.classList.contains('show')) {
+            try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(openCourseId); } catch (e) { console.warn('Could not refresh course assessments after assessment change', e); }
+            try { if (typeof loadCourseReadings === 'function') await loadCourseReadings(openCourseId); } catch (e) { console.warn('Could not refresh course readings after assessment change', e); }
+            try { if (typeof loadCourseOverview === 'function') loadCourseOverview(openCourseId); } catch (e) { console.warn('Could not refresh course overview after assessment change', e); }
+        }
+    }
+
     // Ensure courses load on first paint
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on load', e); }
@@ -3348,14 +3376,28 @@
             const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
             const aggregated = { word: [], sentence: [], paragraph: [] };
             const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
-            sectionCodes.forEach(code => {
-                const r = stored[code] || stored[String(code).toUpperCase()] || stored[String(code).toLowerCase()] || {};
+            for (const code of sectionCodes) {
+                let r = null;
+                try {
+                    r = (typeof fetchMaterialsFromDatabase === 'function') ? await fetchMaterialsFromDatabase(code) : null;
+                } catch (e) {
+                    console.warn('Could not fetch course readings from database for class', code, e);
+                }
+                if (!r) {
+                    r = stored[code] || stored[String(code).toUpperCase()] || stored[String(code).toLowerCase()] || {};
+                }
                 ['word','sentence','paragraph'].forEach(t => {
                     if (Array.isArray(r[t])) aggregated[t] = aggregated[t].concat(r[t]);
                     else if (Array.isArray(r[t+'s'])) aggregated[t] = aggregated[t].concat(r[t+'s']);
                 });
+            }
+            const seenMaterialIds = new Set();
+            const allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph].filter(material => {
+                const key = String(material.id || `${material.type || ''}-${material.title || ''}-${material.created_at || ''}`);
+                if (seenMaterialIds.has(key)) return false;
+                seenMaterialIds.add(key);
+                return true;
             });
-            const allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph];
 
             const aggregatedContainer = document.getElementById('courseAggregatedMaterials');
             if (allMaterials.length === 0) {
@@ -3564,8 +3606,16 @@
         });
 
         // When materials change, re-sync overview and class readings
-        window.addEventListener('pabasa:materials-updated', function() {
-            if (typeof refreshTeacherData === 'function') refreshTeacherData();
+        window.addEventListener('pabasa:materials-updated', async function(e) {
+            if (typeof refreshTeacherData === 'function') await refreshTeacherData();
+            try {
+                const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+                if (openCourseId) {
+                    await refreshOpenCourseAfterAssessmentChange({ courseId: openCourseId, classCode: e.detail?.class_code || currentClassCode });
+                }
+            } catch (err) {
+                console.warn('Could not refresh open course after materials-updated event', err);
+            }
         });
 
         // Polling: refresh overview and active class materials every 15s
@@ -5486,6 +5536,7 @@
                                     }
                                     // refresh courses UI
                                     try { await renderCourses(); } catch (e) { /* ignore */ }
+                                    try { await refreshOpenCourseAfterAssessmentChange({ courseId: window.courseAttachTarget, classCode: currentClassCode }); } catch (e) { console.warn('Could not refresh course after material attach', e); }
 
                                     // Also attempt to refresh the open Course modal so the
                                     // "No materials yet" placeholder is removed immediately.
