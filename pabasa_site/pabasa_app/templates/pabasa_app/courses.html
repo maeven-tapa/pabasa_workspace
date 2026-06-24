@@ -2062,6 +2062,17 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="addCourseStudentLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-4">
+            <div class="modal-body">
+                <div class="spinner-border text-primary mb-3" role="status" aria-label="Loading"></div>
+                <h5 class="fw-bold mb-2">Adding student to class</h5>
+                <p class="text-muted mb-0">Please wait while the selected student is being added.</p>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Modal for Adding Materials -->
 <style>
 /* Precise Add Material modal styles (matches provided screenshots) */
@@ -4307,6 +4318,7 @@
     // Add selected students from Add Students modal into the course (use teacher_add_student endpoint)
     document.getElementById('addCourseStudentModalAddSelected')?.addEventListener('click', async function() {
         const modal = document.getElementById('addCourseStudentModal');
+        const addButton = this;
         const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
         if (!courseId) return showToast('Course not identified', 'error');
 
@@ -4319,35 +4331,49 @@
         const targetClassCode = targetSections[0] || null;
         if (!targetClassCode) return showToast('Course has no associated section code', 'error');
 
+        const loadingModalEl = document.getElementById('addCourseStudentLoadingModal');
+        const loadingModal = loadingModalEl ? bootstrap.Modal.getOrCreateInstance(loadingModalEl) : null;
         const added = [];
-        for (const cb of checkboxes) {
-            const studentId = cb.value;
-            try {
-                const res = await fetch('/dashboard/teacher/add-student-to-class/', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                    body: JSON.stringify({ class_code: targetClassCode, student_id: studentId })
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    added.push(studentId);
-                } else {
-                    console.warn('Failed to add student', studentId, data);
-                }
-            } catch (err) {
-                console.error('Error adding student', studentId, err);
-            }
-        }
 
-        if (added.length > 0) {
-            showToast(`${added.length} student(s) added to course`, 'success');
-            // close modal and refresh students list
-            try { bootstrap.Modal.getInstance(modal)?.hide(); } catch(e){}
-            try { loadCourseStudents(courseId); } catch(e){}
-            try { renderCourses(); } catch(e){}
-        } else {
-            showToast('No students were added', 'error');
+        addButton.disabled = true;
+        try { bootstrap.Modal.getInstance(modal)?.hide(); } catch(e){}
+        if (loadingModal) loadingModal.show();
+
+        try {
+            for (const cb of checkboxes) {
+                const studentId = cb.value;
+                try {
+                    const res = await fetch('/dashboard/teacher/add-student-to-class/', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                        body: JSON.stringify({ class_code: targetClassCode, student_id: studentId })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        added.push(studentId);
+                    } else {
+                        console.warn('Failed to add student', studentId, data);
+                    }
+                } catch (err) {
+                    console.error('Error adding student', studentId, err);
+                }
+            }
+
+            if (loadingModal) loadingModal.hide();
+
+            if (added.length > 0) {
+                alert(`${added.length} student(s) added to course.`);
+                window.location.reload();
+            } else {
+                alert('No students were added.');
+                addButton.disabled = false;
+            }
+        } catch (err) {
+            if (loadingModal) loadingModal.hide();
+            addButton.disabled = false;
+            console.error('Error adding selected students', err);
+            alert('Unable to add the selected student. Please try again.');
         }
     });
 
