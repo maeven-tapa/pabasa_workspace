@@ -5476,6 +5476,31 @@
                         showDeleteConfirmModal(`Delete "${assessment.title}"?`, () => {
                             classAssessments[currentClassCode] = assessments.filter(item => item.id !== assessmentId);
                             loadAssessments(currentClassCode);
+
+                            // Remove from any teacher-created courses that reference this class
+                            try {
+                                if (Array.isArray(teacherCourses)) {
+                                    teacherCourses.forEach(course => {
+                                        if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentClassCode || '').toUpperCase())) {
+                                            course.assessments = (course.assessments || []).filter(a => Number(a.id) !== assessmentId);
+                                        }
+                                    });
+                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                    try { renderCourses(); } catch (e) { /* ignore */ }
+                                    const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+                                    if (openCourseId) {
+                                        teacherCourses.forEach(course => {
+                                            if (String(course.id) === String(openCourseId)) {
+                                                try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id); } catch (e) { /* ignore */ }
+                                                try { if (typeof loadCourseOverview === 'function') loadCourseOverview(course.id); } catch (e) { /* ignore */ }
+                                            }
+                                        });
+                                    }
+                                }
+                            } catch (e) { console.warn('Could not update teacherCourses after assessment delete', e); }
+
+                            // Notify other modules
+                            try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after delete', e); }
                         });
                     }
                 });
@@ -5509,8 +5534,38 @@
                             assessment.dueDate = dueDate;
                         }
                         showSuccessModal('Updated', `"${title}" was updated.`);
+
+                        // Propagate edits to teacherCourses so course modal reflects updates
+                        try {
+                            if (Array.isArray(teacherCourses)) {
+                                teacherCourses.forEach(course => {
+                                    if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentClassCode || '').toUpperCase())) {
+                                        course.assessments = (course.assessments || []).map(a => {
+                                            if (Number(a.id) === Number(editingAssessmentId)) {
+                                                return Object.assign({}, a, { title, level, items, minutes, dueDate });
+                                            }
+                                            return a;
+                                        });
+                                    }
+                                });
+                                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                try { renderCourses(); } catch (e) { /* ignore */ }
+                                const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+                                if (openCourseId) {
+                                    teacherCourses.forEach(course => {
+                                        if (String(course.id) === String(openCourseId)) {
+                                            try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id); } catch (e) { /* ignore */ }
+                                            try { if (typeof loadCourseOverview === 'function') loadCourseOverview(course.id); } catch (e) { /* ignore */ }
+                                        }
+                                    });
+                                }
+                            }
+                        } catch (e) { console.warn('Could not propagate assessment edit to teacherCourses', e); }
+
+                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: editingAssessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after edit', e); }
                     } else {
-                        classAssessments[currentClassCode].push({
+                        // Create new assessment object and add to classAssessments
+                        const newAssessment = {
                             id: Date.now(),
                             title,
                             level,
@@ -5519,8 +5574,41 @@
                             dueDate,
                             completed: 0,
                             average: 0
-                        });
+                        };
+                        classAssessments[currentClassCode].push(newAssessment);
                         showSuccessModal('Added', `"${title}" was added.`);
+
+                        // Update any teacher-created courses that include this class (so Course modal updates in real-time)
+                        try {
+                            if (Array.isArray(teacherCourses)) {
+                                const affectedCourseIds = [];
+                                teacherCourses.forEach(course => {
+                                    if (Array.isArray(course.sections) && course.sections.some(s => String(s.code || '').toUpperCase() === String(currentClassCode || '').toUpperCase())) {
+                                        course.assessments = course.assessments || [];
+                                        // push a shallow copy to avoid shared refs
+                                        course.assessments.push(Object.assign({}, newAssessment));
+                                        affectedCourseIds.push(course.id);
+                                    }
+                                });
+                                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                try { renderCourses(); } catch (e) { /* ignore */ }
+
+                                // If a course detail modal for an affected course is open, refresh its assessments/readings/overview
+                                const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+                                if (openCourseId) {
+                                    affectedCourseIds.forEach(cid => {
+                                        if (String(cid) === String(openCourseId)) {
+                                            try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(cid); } catch (e) { /* ignore */ }
+                                            try { if (typeof loadCourseReadings === 'function') loadCourseReadings(cid); } catch (e) { /* ignore */ }
+                                            try { if (typeof loadCourseOverview === 'function') loadCourseOverview(cid); } catch (e) { /* ignore */ }
+                                        }
+                                    });
+                                }
+                            }
+                        } catch (e) { console.warn('Could not update teacherCourses after assessment create', e); }
+
+                        // Notify other modules and refresh authoritative data
+                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: newAssessment.id, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated after create', e); }
                     }
 
                     bootstrap.Modal.getInstance(modalEl).hide();
