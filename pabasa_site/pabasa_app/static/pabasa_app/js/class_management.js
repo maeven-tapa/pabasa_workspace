@@ -80,11 +80,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const clickedButton = this;
             const addStudentModalEl = document.getElementById('addStudentModal');
             const loadingModalEl = document.getElementById('addStudentLoadingModal');
-            const loadingModal = loadingModalEl ? bootstrap.Modal.getOrCreateInstance(loadingModalEl) : null;
 
             clickedButton.disabled = true;
+            if (loadingModalEl) loadingModalEl.classList.add('is-visible');
             try { bootstrap.Modal.getInstance(addStudentModalEl)?.hide(); } catch (e) { console.warn(e); }
-            if (loadingModal) loadingModal.show();
 
             fetch('/dashboard/teacher/add-student-to-class/', {
                 method: 'POST',
@@ -96,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(res => res.json())
             .then(data => {
-                if (loadingModal) loadingModal.hide();
+                if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
 
                 if (data.success) {
                     // Notify other modules to refresh authoritative data without forcing a full reload
@@ -111,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             .catch(error => {
-                if (loadingModal) loadingModal.hide();
+                if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
                 clickedButton.disabled = false;
                 console.error('Error adding student to class:', error);
                 alert('Error: Unable to add student. Please try again.');

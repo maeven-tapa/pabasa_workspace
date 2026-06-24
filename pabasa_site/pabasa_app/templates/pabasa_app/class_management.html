@@ -59,6 +59,32 @@
     }
     .class-switcher-pill:hover { border-color: var(--dash-primary); }
 
+    .student-add-loading-modal {
+        align-items: center;
+        background: rgba(15, 23, 42, 0.48);
+        bottom: 0;
+        display: none;
+        justify-content: center;
+        left: 0;
+        padding: 1rem;
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 3000;
+    }
+    .student-add-loading-modal.is-visible {
+        display: flex;
+    }
+    .student-add-loading-dialog {
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: 20px;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+        max-width: 420px;
+        padding: 2rem;
+        text-align: center;
+        width: min(100%, 420px);
+    }
+
     /* Dark Mode Overrides */
     body.dark-theme .manage-card {
         background: rgba(30, 41, 59, 0.7) !important;
@@ -226,15 +252,11 @@
     </div>
 </div>
 
-<div class="modal fade" id="addStudentLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-center p-4">
-            <div class="modal-body">
-                <div class="spinner-border text-primary mb-3" role="status" aria-label="Loading"></div>
-                <h5 class="fw-bold mb-2">Adding student to class</h5>
-                <p class="text-muted mb-0">Please wait while the selected student is being added.</p>
-            </div>
-        </div>
+<div class="student-add-loading-modal" id="addStudentLoadingModal" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="addStudentLoadingTitle">
+    <div class="student-add-loading-dialog">
+        <div class="spinner-border text-primary mb-3" role="status" aria-label="Loading"></div>
+        <h5 class="fw-bold mb-2" id="addStudentLoadingTitle">Adding student to class</h5>
+        <p class="text-muted mb-0">Please wait while the selected student is being added.</p>
     </div>
 </div>
 
