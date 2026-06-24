@@ -5099,9 +5099,11 @@
                             console.log('[submitEditMaterial] POST', endpoint, payload);
                             const response = await fetch(endpoint, {
                                 method: 'POST',
+                                credentials: 'same-origin',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRFToken': await ensureCsrfToken()
+                                    'X-CSRFToken': await ensureCsrfToken(),
+                                    'X-Requested-With': 'XMLHttpRequest'
                                 },
                                 body: JSON.stringify(payload)
                             });
