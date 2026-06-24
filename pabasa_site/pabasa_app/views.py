@@ -2979,12 +2979,20 @@ def get_teacher_courses_api(request):
 
                 materials_list.append({
                     'id': m.id,
+                    'raw_id': m.id,
                     'title': m.title,
                     'item_type': getattr(m, 'item_type', ''),
+                    'type': getattr(m, 'type', ''),
+                    'content': getattr(m, 'content_text', '') or getattr(m, 'prompt_text', '') or '',
+                    'content_text': getattr(m, 'content_text', '') or getattr(m, 'prompt_text', '') or '',
                     'status': getattr(m, 'status', ''),
+                    'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(m, 'scheduled_at', None) else None,
                     'items': items_array,
                     'items_count': items_count,
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+                    'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
+                    'assigned_week': m.assigned_week,
+                    'assigned_week_display': format_assigned_week_display(m.assigned_week),
                 })
 
             # Practices (normalized)
@@ -4097,9 +4105,18 @@ def teacher_update_material(request):
         if not material_id:
             return JsonResponse({'success': False, 'error': 'Invalid material ID'}, status=400)
             
-        material = Material.objects.filter(id=material_id, section__teacher_id=user_id).first()
-        
+        material = Material.objects.filter(
+            Q(id=material_id) & (
+                Q(section__teacher_id=user_id) |
+                Q(assigned_sections__teacher_id=user_id) |
+                Q(courses__teacher_id=user_id) |
+                Q(assessment__teacher_id=user_id)
+            )
+        ).distinct().first()
+
         if not material:
+            if Material.objects.filter(id=material_id).exists():
+                return JsonResponse({'success': False, 'error': 'Material access denied'}, status=403)
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
 
         material.title = data.get('title', material.title).strip()
