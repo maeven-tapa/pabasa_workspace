@@ -24,12 +24,23 @@
         display: grid;
         gap: 1.5rem;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+    }
+
+    #studentStatsContainer {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        height: 100%;
+        justify-content: space-between;
     }
 
     .students-overview-metrics {
         display: grid;
         gap: 1rem;
         grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-content: start;
+        width: 100%;
     }
 
     .student-stat,
@@ -45,7 +56,7 @@
     .student-stat {
         display: grid;
         gap: 0.8rem;
-        min-height: 140px;
+        min-height: 175px;
         overflow: hidden;
         padding: 1.25rem;
         position: relative;
@@ -116,6 +127,8 @@
         min-height: 300px;
         display: grid;
         gap: 1rem;
+        height: 100%;
+        align-content: start;
     }
 
     .chart-container {
@@ -128,7 +141,8 @@
         display: grid;
         gap: 1rem;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        margin-top: 0.5rem;
+        width: 100%;
+        align-items: stretch;
     }
 
     .secondary-metric {
@@ -139,7 +153,7 @@
         border-radius: 14px;
         padding: 1rem;
         text-align: center;
-        min-height: 110px;
+        min-height: 170px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -379,6 +393,11 @@
             grid-template-columns: 1fr;
         }
 
+        #studentStatsContainer {
+            height: auto;
+            justify-content: flex-start;
+        }
+
         .students-overview-metrics {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
@@ -469,7 +488,7 @@
                 <article class="student-stat danger" data-mark="🎯"><span>Needs Support</span><strong id="needsSupportCount">0</strong><small id="needsSupportPercent">0% of cohort</small></article>
                 <article class="student-stat success" data-mark="✓"><span>Grade Level Ready</span><strong id="gradeLevelReadyCount">0</strong><small id="gradeLevelReadyPercent">0% of cohort</small></article>
             </div>
-            <div class="students-secondary-metrics mt-3">
+            <div class="students-secondary-metrics">
                 <div class="secondary-metric">
                     <strong id="avgImprovement">—</strong>
                     <span>Avg Improvement (30d)</span>

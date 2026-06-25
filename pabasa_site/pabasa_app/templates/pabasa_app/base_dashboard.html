@@ -59,14 +59,14 @@
             border-right: 1px solid rgba(31, 182, 255, 0.12);
             background:
                 radial-gradient(circle at top left, rgba(31, 182, 255, 0.08), transparent 40%),
-                rgba(255, 255, 255, 0.55);
+                rgba(255, 255, 255, 0.92);
             box-shadow: 10px 0 40px rgba(15, 182, 255, 0.04);
             backdrop-filter: blur(24px) saturate(180%);
             position: fixed; /* Changed from sticky to fixed to keep it in place */
             top: 0;
             left: 0; /* Ensure it's fixed to the left edge */
             transition: width 0.2s ease;
-            overflow-y: auto; /* Allow internal scrolling for sidebar content if it overflows */
+            overflow-y: hidden;
             overflow-x: hidden;
             z-index: 1030; /* Ensure it's above main content but below modals */
         }
@@ -406,9 +406,9 @@
             background:
                 linear-gradient(135deg, rgba(31, 182, 255, 0.08), transparent 58%),
                 rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(31, 182, 255, 0.1);
+            border: 1px solid rgba(31, 182, 255, 0.12);
             border-radius: 22px;
-            color: #475569;
+            color: #334155;
             display: grid;
             gap: 0.25rem;
             padding: 0.85rem;
@@ -421,7 +421,7 @@
         }
 
         .sidebar-section-label {
-            color: #94A3B8;
+            color: #64748b;
             font-size: 0.68rem;
             font-weight: 800;
             letter-spacing: 0.12em;
@@ -430,8 +430,9 @@
         }
 
         .dash-link {
-            color: #475569 !important;
+            color: #334155 !important;
             border: 1px solid transparent;
+            background: transparent;
             border-radius: 14px;
             font-weight: 600;
             min-height: 46px;
@@ -958,24 +959,30 @@
         body.dark-theme .notif-item,
         body.dark-theme .profile-pane-card,
         body.dark-theme .profile-pane-meta div {
-            background: rgba(30, 41, 59, 0.6) !important;
+            background: rgba(15, 23, 42, 0.78) !important;
             border-color: rgba(255, 255, 255, 0.08) !important;
             backdrop-filter: blur(12px) saturate(180%) !important;
             -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
         }
-        body.dark-theme .dash-link { color: #cbd5e1 !important; }
-        body.dark-theme .dash-link i { background: rgba(255, 255, 255, 0.05); color: #38bdf8; }
+        body.dark-theme .sidebar-section-label { color: #94a3b8; }
+        body.dark-theme .dash-link {
+            background: transparent !important;
+            color: #e2e8f0 !important;
+            border-color: transparent !important;
+        }
+        body.dark-theme .dash-link i { background: rgba(56, 189, 248, 0.12); color: #7dd3fc; }
         body.dark-theme .dash-link:hover,
         body.dark-theme .dash-link.is-active {
-            background: rgba(255, 255, 255, 0.05);
-            color: #38bdf8 !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: #7dd3fc !important;
+            border-color: transparent !important;
         }
 
         body.dark-theme [data-sidebar-brand-id] {
             color: #F1F5F9 !important;
         }
-        body.dark-theme .brand-note { color: #38bdf8 !important; }
+        body.dark-theme .brand-note { color: #7dd3fc !important; }
 
         body.dark-theme .dashboard-topbar {
             background: rgba(30, 41, 59, 0.8) !important;
