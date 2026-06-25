@@ -2902,6 +2902,8 @@ def get_teacher_courses_api(request):
             # Serialize assessments with helpful metadata used by the frontend
             assessments_list = []
             for a in c.assessments.all():
+                if not getattr(a, 'is_active', True):
+                    continue
                 items = 0
                 minutes = 0
                 try:
@@ -2947,7 +2949,7 @@ def get_teacher_courses_api(request):
                     'minutes': minutes,
                     'average': f"{avg}%" if avg is not None else None,
                     'dueDate': a.scheduled_at.isoformat() if getattr(a, 'scheduled_at', None) else None,
-                    'status': a.status,
+                    'status': 'archived' if not a.is_active else a.status,
                     'is_active': a.is_active,
                     'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
                 })
@@ -2955,6 +2957,8 @@ def get_teacher_courses_api(request):
             # Serialize materials with normalized metadata
             materials_list = []
             for m in c.materials.all():
+                if not getattr(m, 'is_active', True):
+                    continue
                 cj = getattr(m, 'content_json', None) or {}
                 items_count = 0
                 items_array = None
@@ -2980,6 +2984,8 @@ def get_teacher_courses_api(request):
                 materials_list.append({
                     'id': m.id,
                     'raw_id': m.id,
+                    'assessment_id': m.assessment_id,
+                    'code': m.assessment.code if m.assessment else None,
                     'title': m.title,
                     'item_type': getattr(m, 'item_type', ''),
                     'type': getattr(m, 'type', ''),
@@ -3069,9 +3075,46 @@ def get_teacher_assessment_api(request, assessment_id):
             })
 
         attempts = getattr(assessment, 'attempts', None) or []
+        if not isinstance(attempts, list):
+            attempts = []
+        student_ids = {
+            att.get('student_id')
+            for att in attempts
+            if isinstance(att, dict) and att.get('student_id')
+        }
+        students_by_id = {
+            student.id: student
+            for student in User.objects.filter(id__in=student_ids)
+        }
+        enriched_attempts = []
+        for att in attempts:
+            if not isinstance(att, dict):
+                continue
+            student = students_by_id.get(att.get('student_id'))
+            student_name = ''
+            if student:
+                student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or student.email or f"Student {student.id}"
+            words_correct = (
+                att.get('words_correct')
+                or att.get('correct_words')
+                or att.get('correct_count')
+                or att.get('total_score')
+                or att.get('score')
+            )
+            enriched_attempt = dict(att)
+            enriched_attempt.update({
+                'student_name': student_name or f"Student {att.get('student_id')}",
+                'student_email': getattr(student, 'email', '') if student else '',
+                'words_correct': words_correct,
+            })
+            enriched_attempts.append(enriched_attempt)
         avg = None
         try:
-            accs = [att.get('accuracy') for att in attempts if isinstance(att.get('accuracy'), (int, float))]
+            accs = [
+                att.get('accuracy')
+                for att in attempts
+                if isinstance(att, dict) and isinstance(att.get('accuracy'), (int, float))
+            ]
             if accs:
                 avg = round(sum(accs) / len(accs))
         except Exception:
@@ -3087,10 +3130,10 @@ def get_teacher_assessment_api(request, assessment_id):
             'minutes': 0,
             'average': f"{avg}%" if avg is not None else None,
             'dueDate': assessment.scheduled_at.isoformat() if getattr(assessment, 'scheduled_at', None) else None,
-            'status': assessment.status,
+            'status': 'archived' if not assessment.is_active else assessment.status,
             'is_active': assessment.is_active,
             'materials': mats,
-            'attempts': attempts,
+            'attempts': enriched_attempts,
         }
         return JsonResponse({'success': True, 'assessment': payload})
     except Exception as e:
@@ -3186,6 +3229,12 @@ def teacher_archive_assessment(request):
         # soft delete
         assessment.is_active = False
         assessment.save()
+        try:
+            for material in assessment.materials.all():
+                material.is_active = False
+                material.save(update_fields=['is_active', 'updated_at'])
+        except Exception:
+            logger.exception('Failed to archive materials for assessment %s', assessment.id)
 
         # remove from any courses owned by this teacher
         try:
@@ -3650,11 +3699,14 @@ def get_class_materials(request):
         # Requesting user (could be student or teacher) used to compute attempt counts
         request_user = User.objects.filter(id=user_id).first() if user_id else None
         is_requesting_student = bool(request_user and request_user.role == 'student')
-        # If requester is not the class owner teacher, only include active items
+        # Archived records should not appear in class/course readings, even for the owning teacher.
+        materials_qs = materials_qs.filter(is_active=True)
+        assessments_qs = assessments_qs.filter(is_active=True)
+        practices_qs = practices_qs.filter(is_active=True)
+
+        # If requester is not the class owner teacher, only include published practice items
         if not (teacher_user and teacher_user.role == 'teacher' and section.teacher_id == teacher_user.id):
-            materials_qs = materials_qs.filter(is_active=True)
-            assessments_qs = assessments_qs.filter(is_active=True)
-            practices_qs = practices_qs.filter(is_active=True, status='published')
+            practices_qs = practices_qs.filter(status='published')
 
         # Limit practice sets to the most recent 100 to avoid payload bloat
         practices_qs = practices_qs[:100]
@@ -3700,7 +3752,7 @@ def get_class_materials(request):
                     'type': m.type,
                     'content': content_value,
                     'content_text': content_value,
-                    'status': m.status or ('published' if m.is_active else 'inactive'),
+                    'status': 'archived' if not m.is_active else (m.status or 'published'),
                     'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(m, 'scheduled_at', None) else None,
                     'items': items_count,
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
@@ -3731,7 +3783,7 @@ def get_class_materials(request):
                     'type': 'assessment',
                     'content': content_value,
                     'content_text': content_value,
-                    'status': a.status or ('published' if a.is_active else 'inactive'),
+                    'status': 'archived' if not a.is_active else (a.status or 'published'),
                     'schedule': timezone.localtime(a.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(a, 'scheduled_at', None) else None,
                     'items': items_count,
                     'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
@@ -3760,7 +3812,7 @@ def get_class_materials(request):
                     'type': 'practice',
                     'content': content_value,
                     'content_text': content_value,
-                    'status': p.status or ('published' if p.is_active else 'inactive'),
+                    'status': 'archived' if not p.is_active else (p.status or 'published'),
                     'schedule': None,
                     'items': items_count,
                     'created_at': p.created_at.isoformat() if getattr(p, 'created_at', None) else None,

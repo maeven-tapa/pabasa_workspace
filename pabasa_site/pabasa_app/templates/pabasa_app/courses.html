@@ -2281,6 +2281,50 @@
     </div>
 </div>
 
+<!-- Assessment Attempts Modal -->
+<div class="modal fade" id="assessmentAttemptsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <div>
+                    <h5 class="modal-title" id="assessmentAttemptsModalLabel">Assessment Attempts</h5>
+                    <p class="text-muted small mb-0" id="assessmentAttemptsMeta">Student results</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-uppercase" for="assessmentAttemptsSearch">Search Student</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="search" class="form-control" id="assessmentAttemptsSearch" placeholder="Search by student name">
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Words Correct</th>
+                                <th>Accuracy</th>
+                                <th>Words Per Minute</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assessmentAttemptsTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No attempts yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Edit Material Modal -->
 <div class="modal fade" id="editMaterialModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -2592,6 +2636,144 @@
         return renderedMaterials.find(material => String(material.id) === String(materialId)) || null;
     }
 
+    function isArchivedRecord(record) {
+        if (!record) return false;
+        return record.is_active === false || String(record.status || '').toLowerCase() === 'archived';
+    }
+
+    function activeRecords(records) {
+        return (Array.isArray(records) ? records : []).filter(record => !isArchivedRecord(record));
+    }
+
+    function markAssessmentArchivedLocally(assessmentId) {
+        const idText = String(assessmentId || '').replace(/^assessment-/, '');
+        const prefixedId = `assessment-${idText}`;
+        try {
+            (teacherCourses || []).forEach(course => {
+                const archivedAssessments = (course.assessments || []).filter(assessment => String(assessment.id) === idText);
+                course.assessments = activeRecords(course.assessments || []).filter(assessment => String(assessment.id) !== idText);
+                course.materials = activeRecords(course.materials || []).filter(material => {
+                    const materialId = String(material.id || '');
+                    const materialAssessmentId = String(material.assessment_id || material.assessmentId || '').replace(/^assessment-/, '');
+                    const codeMatches = material.code && archivedAssessments.some(assessment => assessment.code === material.code);
+                    const titleMatches = String(material.type || '').toLowerCase() === 'assessment'
+                        && archivedAssessments.some(assessment => String(assessment.title || '') === String(material.title || ''));
+                    return materialId !== prefixedId && materialId !== idText && materialAssessmentId !== idText && !codeMatches && !titleMatches;
+                });
+            });
+            const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+        } catch (e) { console.warn('Could not update teacher course cache after archive', e); }
+
+        try {
+            Object.values(classReadings || {}).forEach(readings => {
+                ['word', 'sentence', 'paragraph', 'words', 'sentences', 'paragraphs'].forEach(type => {
+                    if (!Array.isArray(readings[type])) return;
+                    readings[type].forEach(item => {
+                        if (String(item.id) === prefixedId || String(item.id) === idText) {
+                            item.status = 'archived';
+                            item.is_active = false;
+                        }
+                    });
+                    readings[type] = activeRecords(readings[type]);
+                });
+            });
+            if (typeof saveStoredReadings === 'function') saveStoredReadings();
+        } catch (e) { console.warn('Could not update readings cache after archive', e); }
+
+        try {
+            Object.keys(window.renderedReadingsByContainer || {}).forEach(containerId => {
+                window.renderedReadingsByContainer[containerId] = activeRecords(window.renderedReadingsByContainer[containerId]).filter(item => {
+                    return String(item.id) !== prefixedId && String(item.id) !== idText;
+                });
+            });
+        } catch (e) { console.warn('Could not update rendered readings cache after archive', e); }
+    }
+
+    function attemptMetric(value, suffix = '') {
+        if (value === null || value === undefined || value === '') return '-';
+        const text = String(value);
+        return suffix && !text.includes(suffix) ? `${text}${suffix}` : text;
+    }
+
+    function attemptWordsCorrect(attempt) {
+        if (!attempt) return '-';
+        return attempt.words_correct ?? attempt.correct_words ?? attempt.correct_count ?? attempt.total_score ?? attempt.score ?? '-';
+    }
+
+    function renderAssessmentAttemptsRows(query = '') {
+        const tableBody = document.getElementById('assessmentAttemptsTableBody');
+        if (!tableBody) return;
+        const rows = window.currentAssessmentAttempts || [];
+        const normalizedQuery = query.trim().toLowerCase();
+        const filteredRows = normalizedQuery
+            ? rows.filter(attempt => String(attempt.student_name || '').toLowerCase().includes(normalizedQuery))
+            : rows;
+
+        if (filteredRows.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">${rows.length ? 'No students match your search.' : 'No attempts yet.'}</td></tr>`;
+            return;
+        }
+
+        tableBody.innerHTML = filteredRows.map(attempt => `
+            <tr>
+                <td>
+                    <div class="fw-semibold">${escapeHtml(attempt.student_name || 'Unknown Student')}</div>
+                    ${attempt.student_email ? `<div class="small text-muted">${escapeHtml(attempt.student_email)}</div>` : ''}
+                </td>
+                <td>${escapeHtml(attemptMetric(attemptWordsCorrect(attempt)))}</td>
+                <td>${escapeHtml(attemptMetric(attempt.accuracy, '%'))}</td>
+                <td>${escapeHtml(attemptMetric(attempt.wpm))}</td>
+            </tr>
+        `).join('');
+    }
+
+    async function showAssessmentAttemptsModal(assessment) {
+        const modalEl = document.getElementById('assessmentAttemptsModal');
+        if (!modalEl || !assessment) return;
+
+        document.getElementById('assessmentAttemptsModalLabel').textContent = assessment.title || 'Assessment Attempts';
+        document.getElementById('assessmentAttemptsMeta').textContent = `${assessment.level || assessment.assessment_type || 'Assessment'} results`;
+        const searchInput = document.getElementById('assessmentAttemptsSearch');
+        const tableBody = document.getElementById('assessmentAttemptsTableBody');
+        if (searchInput) searchInput.value = '';
+        if (tableBody) {
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading attempts...</td></tr>';
+        }
+        window.currentAssessmentAttempts = [];
+
+        if (searchInput && !searchInput.dataset.bound) {
+            searchInput.dataset.bound = 'true';
+            searchInput.addEventListener('input', () => renderAssessmentAttemptsRows(searchInput.value));
+        }
+
+        if (typeof showStackedModal === 'function') {
+            showStackedModal(modalEl);
+        } else {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+
+        try {
+            const response = await fetch(`/dashboard/teacher/assessment/${encodeURIComponent(assessment.id)}/`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Could not load attempts');
+            }
+            const attempts = Array.isArray(data.assessment?.attempts) ? data.assessment.attempts : [];
+            window.currentAssessmentAttempts = attempts.filter(attempt => {
+                const status = String(attempt.status || '').toLowerCase();
+                return status !== 'cancelled' && status !== 'archived';
+            });
+            renderAssessmentAttemptsRows('');
+        } catch (err) {
+            console.error('assessment attempts load error', err);
+            if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4">Unable to load assessment attempts.</td></tr>';
+        }
+    }
+
     let teacherCourses = [];
     const teacherCoursesKey = () => {
         const email = (window.PABASA_USER_EMAIL || '').trim();
@@ -2877,6 +3059,7 @@
                                     });
                                     const d = await res.json();
                                     if (res.ok && d.success) {
+                                        if (isAssessment) markAssessmentArchivedLocally(mid);
                                         // Remove from course materials listing
                                         course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
                                         const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
@@ -2912,6 +3095,9 @@
 
                                         if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
                                             try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                        }
+                                        if (typeof loadCourseReadings === 'function') {
+                                            try { await loadCourseReadings(course.id); } catch (e) { /* ignore */ }
                                         }
                                     } else {
                                         showToast('Could not archive material: ' + (d.error || 'Unknown'), 'error');
@@ -2966,51 +3152,19 @@
                         if (!card) return;
                         const assessmentId = Number(card.dataset.assessmentId);
                         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-                        const assessments = (course.assessments || []);
+                        const activeCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId || course.id;
+                        const activeCourse = (teacherCourses || []).find(item => String(item.id) === String(activeCourseId)) || course;
+                        const assessments = activeRecords(activeCourse.assessments || []);
                         const assessment = assessments.find(a => Number(a.id) === assessmentId);
                         if (!assessment) return showToast('Assessment not found', 'error');
 
                         if (actionBtn.dataset.assessmentAction === 'preview') {
-                            showSuccessModal('Assessment Preview', `${assessment.title} has ${pc_itemsCount(assessment)} items and a ${assessment.minutes || 0}-minute limit.`);
+                            showAssessmentAttemptsModal(assessment);
                             return;
                         }
 
                         if (actionBtn.dataset.assessmentAction === 'edit') {
-                            const newTitle = prompt('Edit assessment title', assessment.title || '');
-                            if (newTitle === null) return; // cancelled
-                            const newDue = prompt('Edit due date/time (YYYY-MM-DDTHH:MM) or leave blank', assessment.dueDate || '') || '';
-                            try {
-                                const res = await fetch('/dashboard/teacher/update-assessment/', {
-                                    method: 'POST',
-                                    credentials: 'same-origin',
-                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                                    body: JSON.stringify({ assessment_id: assessmentId, title: newTitle, scheduled_at: newDue })
-                                });
-                                const d = await res.json();
-                                if (res.ok && d.success) {
-                                    assessment.title = newTitle;
-                                    assessment.dueDate = newDue || null;
-                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                    showToast('Assessment updated', 'success');
-
-                                    // Persist overview and notify
-                                    try {
-                                        if (d.overview) {
-                                            const overviewKey = 'pabasa_teacher_overview_stats';
-                                            const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                            localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
-                                        }
-                                    } catch (e) { /* ignore */ }
-
-                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
-                                    await refreshOpenCourseAfterAssessmentChange({ courseId: course.id, classCode: currentClassCode });
-                                } else {
-                                    showToast('Could not update assessment: ' + (d.error || 'Unknown'), 'error');
-                                }
-                            } catch (err) {
-                                console.error('update assessment error', err);
-                                showToast('Failed to update assessment', 'error');
-                            }
+                            showToast('Use the Readings tab to edit assessments.', 'info');
                             return;
                         }
 
@@ -3028,10 +3182,11 @@
                                         const d = await res.json();
                                         if (res.ok && d.success) {
                                             // remove locally from this course
-                                            course.assessments = (course.assessments || []).filter(x => Number(x.id) !== assessmentId);
-                                            const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                            assessment.status = 'archived';
+                                            assessment.is_active = false;
+                                            markAssessmentArchivedLocally(assessmentId);
                                             renderCourses();
-                                            openCourseDetail(course.id);
+                                            openCourseDetail(activeCourse.id);
                                             showToast('Assessment archived', 'success');
 
                                             // Persist overview and notify
@@ -3061,6 +3216,9 @@
 
                                             if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
                                                 try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                            }
+                                            if (typeof loadCourseReadings === 'function') {
+                                                try { await loadCourseReadings(activeCourse.id); } catch (e) { /* ignore */ }
                                             }
                                         } else {
                                             showToast('Could not archive assessment: ' + (d.error || 'Unknown'), 'error');
@@ -3162,9 +3320,9 @@
         function loadCourseAssessments(courseId) {
             try {
                 const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
-                const container = document.getElementById('courseDetailAssessments');
-                if (!container) return;
-                const assessments = Array.isArray(course?.assessments) ? course.assessments : [];
+            const container = document.getElementById('courseDetailAssessments');
+            if (!container) return;
+                const assessments = activeRecords(course?.assessments);
                 if (assessments.length === 0) {
                     container.innerHTML = `
                         <div class="assessment-empty">
@@ -3205,9 +3363,8 @@
                             </div>
                         </div>
                         <div class="assessment-actions">
-                            <button class="material-btn" title="Preview" data-assessment-action="preview"><i class="bi bi-eye"></i></button>
-                            <button class="material-btn" title="Edit" data-assessment-action="edit"><i class="bi bi-pencil"></i></button>
-                            <button class="material-btn delete" title="Delete" data-assessment-action="delete"><i class="bi bi-trash"></i></button>
+                            <button class="material-btn" title="View Attempts" data-assessment-action="preview"><i class="bi bi-eye"></i></button>
+                            <button class="material-btn delete" title="Archive" data-assessment-action="delete"><i class="bi bi-archive"></i></button>
                         </div>
                     </article>
                 `).join('');
@@ -3581,7 +3738,7 @@
                 });
             }
             const seenMaterialIds = new Set();
-            const allMaterials = [...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph].filter(material => {
+            const allMaterials = activeRecords([...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph]).filter(material => {
                 const key = String(material.id || `${material.type || ''}-${material.title || ''}-${material.created_at || ''}`);
                 if (seenMaterialIds.has(key)) return false;
                 seenMaterialIds.add(key);
@@ -3676,6 +3833,7 @@
                             throw new Error(data.error || 'Archive failed');
                         }
 
+                        if (isAssessment) markAssessmentArchivedLocally(materialId);
                         card.style.opacity = '0.5';
                         card.style.pointerEvents = 'none';
                         showToast(isAssessment ? 'Assessment archived' : 'Material archived', 'success');
@@ -3920,9 +4078,9 @@
             if (data.success && data.materials) {
                 // Convert API response to localStorage format for compatibility
                 const materials = {
-                    word: data.materials.word || [],
-                    sentence: data.materials.sentence || [],
-                    paragraph: data.materials.paragraph || []
+                    word: activeRecords(data.materials.word || []),
+                    sentence: activeRecords(data.materials.sentence || []),
+                    paragraph: activeRecords(data.materials.paragraph || [])
                 };
                 // Fix: Sync local cache variable so View/Edit handlers find the data
                 if (classCode) {
@@ -5108,11 +5266,11 @@
                 }
 
             // Combine all materials into a single array
-            const allMaterials = [
+            const allMaterials = activeRecords([
                 ...(readings.word || []),
                 ...(readings.sentence || []),
                 ...(readings.paragraph || [])
-            ];
+            ]);
 
             // Ensure renderAllReadingsList is available (may be defined later)
             // Update per-class material counts (assessment vs practice) so the active class banner shows accurate numbers.
@@ -5289,7 +5447,12 @@
                             return;
                         }
 
-                        showDeleteConfirmModal(`Delete "${title}"?`, async () => {
+                        const isAssessmentArchive = String(materialId || '').startsWith('assessment-') || String(card.dataset.usage || '').toLowerCase() === 'assessment';
+                        showDeleteConfirmModal(
+                            isAssessmentArchive
+                                ? `<p>Remove <strong>${escapeHtml(title || 'this assessment')}</strong>?</p><p class="text-muted small mt-2 mb-0">The assessment will be archived and removed from the Readings tab.</p>`
+                                : `<p>Archive <strong>${escapeHtml(title || 'this material')}</strong>?</p>`,
+                            async () => {
                             try {
                                 const csrfToken = await ensureCsrfToken();
 
@@ -5322,6 +5485,7 @@
 
                                 const data = await response.json();
                                 if (data.success) {
+                                    if (isAssessmentArchive) markAssessmentArchivedLocally(materialId);
                                     // Clear from local storage cache as well
                                     if (currentClassCode && String(materialId)) {
                                         const readings = ensureClassReadings(currentClassCode);
@@ -5337,6 +5501,10 @@
                                     card.style.pointerEvents = 'none';
                                     showSuccessModal('Deleted', `"${title}" has been removed.`);
                                     setTimeout(() => { if (currentClassCode) loadReadings(currentClassCode); }, 300);
+                                    const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+                                    if (openCourseId && typeof loadCourseReadings === 'function') {
+                                        try { await loadCourseReadings(openCourseId); } catch (e) { /* ignore */ }
+                                    }
 
                                     // Persist overview returned by backend (if any)
                                     try { if (data.overview) {
@@ -5370,6 +5538,10 @@
                                 console.error("Delete error details:", err);
                                 alert("An error occurred while deleting the material.");
                             }
+                        }, {
+                            title: isAssessmentArchive ? 'Remove Assessment?' : 'Archive Material?',
+                            confirmText: isAssessmentArchive ? 'Remove Assessment' : 'Archive',
+                            confirmClass: 'btn btn-danger px-4'
                         });
                     }
                 });
