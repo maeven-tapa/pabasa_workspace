@@ -4550,11 +4550,24 @@ def get_teacher_students_api(request):
         for section in sections:
             enrolled = section.get_enrolled_students(active_only=True)
             for entry in enrolled:
-                sid = entry.get('student_id')
-                if not sid: continue
+                raw_sid = entry.get('student_id')
+                if not raw_sid:
+                    continue
+
+                try:
+                    sid = int(raw_sid)
+                except (TypeError, ValueError):
+                    logger.warning(
+                        "Skipping enrolled student with invalid student_id %r in section %s",
+                        raw_sid,
+                        section.class_code,
+                    )
+                    continue
+
+                sid_key = str(sid)
                 
-                if sid not in student_map:
-                    student_map[sid] = {
+                if sid_key not in student_map:
+                    student_map[sid_key] = {
                         'id': sid,
                         'name': f"{entry.get('first_name')} {entry.get('last_name')}",
                         'email': entry.get('email', ''),
@@ -4563,16 +4576,17 @@ def get_teacher_students_api(request):
                         'class_codes': [section.class_code]
                     }
                 else:
-                    if section.class_name not in student_map[sid]['classes']:
-                        student_map[sid]['classes'].append(section.class_name)
-                        student_map[sid]['class_codes'].append(section.class_code)
+                    if section.class_name not in student_map[sid_key]['classes']:
+                        student_map[sid_key]['classes'].append(section.class_name)
+                    if section.class_code not in student_map[sid_key]['class_codes']:
+                        student_map[sid_key]['class_codes'].append(section.class_code)
         
-        user_ids = list(student_map.keys())
+        user_ids = [sdata['id'] for sdata in student_map.values()]
         users = User.objects.filter(id__in=user_ids).in_bulk()
         
         results = []
-        for sid, sdata in student_map.items():
-            user = users.get(sid)
+        for sdata in student_map.values():
+            user = users.get(sdata['id'])
             if user:
                 # Extract metrics from profile tags
                 profile = {}

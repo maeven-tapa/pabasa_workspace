@@ -349,3 +349,84 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertTrue(data["success"])
         self.assertEqual(len(data["notifications"]), 1)
         self.assertFalse(data["notifications"][0]["is_read"])
+
+
+class TeacherStudentsDirectoryTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id="TCH-DIR1",
+            role="teacher",
+            first_name="Directory",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="directory-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        self.student = User.objects.create(
+            custom_id="STD-DIR1",
+            role="student",
+            first_name="Single",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=2,
+            birth_day=2,
+            birth_year=2013,
+            email="single-student@example.com",
+            password_hash=make_password("student-password"),
+        )
+        self.section_a = Section.objects.create(
+            teacher=self.teacher,
+            class_name="Reading One",
+            class_code="READ-ONE",
+            subject="Reading",
+            is_active=True,
+        )
+        self.section_b = Section.objects.create(
+            teacher=self.teacher,
+            class_name="Reading Two",
+            class_code="READ-TWO",
+            subject="Reading",
+            is_active=True,
+        )
+        self.section_a.add_student(self.student)
+        self.section_b.add_student(self.student)
+
+        entries = self.section_b.get_enrolled_students()
+        entries[0]["student_id"] = str(entries[0]["student_id"])
+        self.section_b.students = entries
+        self.section_b.save(update_fields=["students", "updated_at"])
+
+        session = self.client.session
+        session["user_id"] = self.teacher.id
+        session["user_role"] = self.teacher.role
+        session["first_name"] = self.teacher.first_name
+        session["last_name"] = self.teacher.last_name
+        session["email"] = self.teacher.email
+        session["custom_id"] = self.teacher.custom_id
+        session.save()
+
+    def test_teacher_students_api_returns_one_row_with_joined_classes(self):
+        response = self.client.get(reverse("get_teacher_students_api"))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(len(data["students"]), 1)
+        self.assertEqual(data["students"][0]["custom_id"], self.student.custom_id)
+        self.assertCountEqual(data["students"][0]["classes"], ["Reading One", "Reading Two"])
+        self.assertCountEqual(data["students"][0]["class_codes"], ["READ-ONE", "READ-TWO"])
+
+    def test_students_template_uses_static_renderer_only(self):
+        response = self.client.get(reverse("students"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "pabasa_app/js/students.js", html=False)
+        self.assertNotContains(response, "Students directory: prefer server")

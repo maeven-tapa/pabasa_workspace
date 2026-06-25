@@ -15,6 +15,54 @@ function initStudentsPage() {
         return (value || "").toLowerCase().trim();
     }
 
+    function normalizeKeyPart(value) {
+        return normalize(value).replace(/\s+/g, " ");
+    }
+
+    function getStudentKeys(student) {
+        const keys = [];
+        const id = student.pabasa_id || student.custom_id || "";
+        if (id) keys.push(`id:${normalizeKeyPart(id)}`);
+
+        const email = student.email || "";
+        if (email) keys.push(`email:${normalizeKeyPart(email)}`);
+
+        const name = normalizeKeyPart(student.name);
+        if (name) keys.push(`name:${name}`);
+
+        return keys;
+    }
+
+    function toClassList(value) {
+        if (Array.isArray(value)) {
+            return value.map(item => String(item || "").trim()).filter(Boolean);
+        }
+
+        if (typeof value === "string") {
+            return value.split(",").map(item => item.trim()).filter(Boolean);
+        }
+
+        return [];
+    }
+
+    function collectClassNames(student) {
+        return [
+            ...toClassList(student.allClasses),
+            ...toClassList(student.classes),
+            ...toClassList(student.class)
+        ];
+    }
+
+    function addUniqueClasses(target, classNames) {
+        target.allClasses = Array.isArray(target.allClasses) ? target.allClasses : [];
+        classNames.forEach(className => {
+            if (!target.allClasses.some(existing => normalizeKeyPart(existing) === normalizeKeyPart(className))) {
+                target.allClasses.push(className);
+            }
+        });
+        target.class = target.allClasses[0] || target.class || "";
+    }
+
     function filterStudents() {
         const query = normalize(studentSearchInput ? studentSearchInput.value : "");
         const selectedLevel = readingLevelFilter ? readingLevelFilter.value : "All levels";
@@ -95,13 +143,16 @@ function initStudentsPage() {
 
                 if (data && data.success && Array.isArray(data.students)) {
                     serverStudents = data.students.map(s => ({
+                        id: s.id,
                         name: s.name,
                         email: s.email,
-                        "class": Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
+                        "class": Array.isArray(s.classes) ? (s.classes[0] || '') : (s.class || ''),
+                        classes: Array.isArray(s.classes) ? s.classes : toClassList(s.class),
                         level: s.level,
                         wpm: s.wpm || '0',
                         accuracy: s.accuracy || '0',
                         pabasa_id: s.custom_id,
+                        custom_id: s.custom_id,
                         isServer: true
                     }));
                 }
@@ -119,19 +170,31 @@ function initStudentsPage() {
         // Combine server and local, prioritizing server data for duplicate IDs/Emails
         const allStudents = [...serverStudents, ...students];
 
-        // Group students to aggregate multiple classes
+        // Group students to aggregate multiple classes into one row per student.
         let consolidated = [];
+        const studentIndex = new Map();
         allStudents.forEach(s => {
-            const found = consolidated.find(c => {
-                return (c.pabasa_id && s.pabasa_id && c.pabasa_id === s.pabasa_id) || 
-                       (c.email && s.email && c.email.toLowerCase().trim() === s.email.toLowerCase().trim());
-            });
+            const keys = s ? getStudentKeys(s) : [];
+            if (keys.length === 0) return;
+
+            const found = keys.map(key => studentIndex.get(key)).find(Boolean);
             if (found) {
-                if (s.class && !found.allClasses.includes(s.class)) {
-                    found.allClasses.push(s.class);
+                const existingClasses = found.allClasses;
+                if (s.isServer && !found.isServer) {
+                    Object.assign(found, s);
+                    found.allClasses = existingClasses;
+                    found.isServer = true;
                 }
+                addUniqueClasses(found, collectClassNames(s));
+                found.email = found.email || s.email || "";
+                found.pabasa_id = found.pabasa_id || s.pabasa_id || s.custom_id || "";
+                found.custom_id = found.custom_id || s.custom_id || s.pabasa_id || "";
+                getStudentKeys(found).forEach(key => studentIndex.set(key, found));
             } else {
-                consolidated.push({ ...s, allClasses: s.class ? [s.class] : [] });
+                const student = { ...s, allClasses: [] };
+                addUniqueClasses(student, collectClassNames(s));
+                consolidated.push(student);
+                getStudentKeys(student).forEach(key => studentIndex.set(key, student));
             }
         });
 
@@ -288,7 +351,11 @@ function initStudentsPage() {
             e.preventDefault();
             
             // Get form values (guard against missing elements)
-            const studentName = document.getElementById("studentName")?.value || "";
+            const firstName = document.getElementById("studentFirstName")?.value.trim() || "";
+            const middleInitial = document.getElementById("studentMiddleInitial")?.value.trim() || "";
+            const lastName = document.getElementById("studentLastName")?.value.trim() || "";
+            const suffix = document.getElementById("studentSuffix")?.value || "";
+            const studentName = [firstName, middleInitial ? `${middleInitial}.` : "", lastName, suffix].filter(Boolean).join(" ");
             const studentClass = document.getElementById("studentClass")?.value || "";
             const readingLevel = document.getElementById("studentReadingLevel")?.value || "";
             const wpm = document.getElementById("studentWPM")?.value || "0";
