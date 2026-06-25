@@ -91,6 +91,7 @@ urlpatterns = [
     path('api/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes_api'),
     path('students/send-email/', views.send_parent_email, name='send_parent_email'),
     path('dashboard/student/unenroll/', views.unenroll_class, name='unenroll_class'),
+    path('dashboard/teacher/extract-material/', views.extract_reading_material_file, name='extract_reading_material_file'),
     path('dashboard/teacher/add-material/', views.add_reading_material, name='add_reading_material'),
     path('api/class/materials/', views.get_class_materials, name='get_class_materials'),
     path(

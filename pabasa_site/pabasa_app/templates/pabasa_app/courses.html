@@ -2113,6 +2113,8 @@
 #addMaterialModal .teacher-field .form-label { color: #374151; font-weight: 800; }
 #addMaterialModal .form-control, #addMaterialModal .form-select { border-radius: 12px; padding: 0.7rem 0.9rem; background: rgba(255,255,255,0.98); border: 1px solid rgba(31,111,139,0.06); box-shadow: none; }
 #addMaterialModal .input-group .btn { border-radius: 0 12px 12px 0; }
+#addMaterialModal .upload-material-panel { border: 1px dashed rgba(31,111,139,0.28); border-radius: 14px; background: rgba(31,111,139,0.05); padding: 0.85rem; }
+#addMaterialModal .upload-material-panel .btn { border-radius: 12px; min-height: 44px; }
 #addMaterialModal #itemChipsContainer { min-height: 140px; max-height: 200px; background: #fff; border-radius: 12px; border: 1px solid rgba(226,232,240,0.7); padding: 0.5rem; }
 #addMaterialModal #itemChipsContainer .badge { background: #fff; color: #0f172a; border: 1px solid rgba(226,232,240,0.85); border-radius: 10px; padding: 0.45rem 0.65rem; display: inline-flex; align-items:center; gap:0.5rem; font-weight:800; margin:4px; box-shadow: 0 8px 22px rgba(31,111,139,0.06); }
 #addMaterialModal #itemChipsContainer .btn-close { width: 18px; height:18px; opacity:0.6; filter: none; }
@@ -2149,6 +2151,18 @@
 
                             <div class="teacher-field">
                                 <label class="form-label fw-bold small text-dark mb-1">Items <span class="text-danger">*</span></label>
+                                <div class="upload-material-panel mb-3">
+                                    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+                                        <button type="button" class="btn btn-outline-primary px-3 py-2 shadow-sm fw-bold flex-shrink-0" id="uploadMaterial">
+                                            <i class="bi bi-upload me-2"></i>Upload Material
+                                        </button>
+                                        <div class="small text-muted">
+                                            Upload a PDF, DOCX, or text file to extract reading items automatically.
+                                        </div>
+                                    </div>
+                                    <input type="file" id="materialFileInput" class="d-none" accept=".pdf,.docx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                                    <div id="materialUploadStatus" class="form-text small mt-2 mb-0 d-none"></div>
+                                </div>
                                 <div class="input-group mb-2">
                                     <input type="text" id="itemInput" class="form-control border-light shadow-sm" placeholder="Add word or phrase..." style="border-radius: 12px 0 0 12px; min-height: 44px;">
                                     <button class="btn btn-primary px-3" type="button" id="addItemBtn" style="border-radius: 0 12px 12px 0;">
@@ -4854,6 +4868,9 @@
         const scheduleFieldDiv = document.getElementById('scheduleField');
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
+        const uploadMaterialBtn = document.getElementById('uploadMaterial');
+        const materialFileInput = document.getElementById('materialFileInput');
+        const materialUploadStatus = document.getElementById('materialUploadStatus');
 
         function prefixedRecordKind(id) {
             const match = String(id || '').match(/^([a-z]+)-/i);
@@ -4931,6 +4948,12 @@
             }
 
         // Logic for adding items as chips in Add Material modal
+        function escapeChipText(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
         function renderAddedItemsChips() {
             const chipsContainer = document.getElementById('itemChipsContainer');
             if (!chipsContainer) return;
@@ -4946,11 +4969,100 @@
             chipsContainer.innerHTML = currentItemsList.map((item, index) => `
                 <div class="badge d-flex align-items-center gap-2 p-2 px-3 shadow-sm border" 
                      style="background: #fff; color: #1e293b; border-color: #e2e8f0; border-radius: 10px; font-weight: 700; font-size: 0.85rem; border-left: 3px solid var(--dash-primary) !important;">
-                    <span class="text-truncate" style="max-width: 150px;">${item}</span>
+                    <span class="text-truncate" style="max-width: 150px;">${escapeChipText(item)}</span>
                     <button type="button" class="btn-close" style="font-size: 0.6rem; filter: grayscale(1);" 
                             onclick="window.removeItemFromAddList(${index})" aria-label="Remove"></button>
                 </div>
             `).join('');
+        }
+
+        function setUploadStatus(message, tone = 'muted') {
+            if (!materialUploadStatus) return;
+            materialUploadStatus.classList.remove('d-none', 'text-danger', 'text-success', 'text-muted');
+            materialUploadStatus.classList.add(tone === 'danger' ? 'text-danger' : tone === 'success' ? 'text-success' : 'text-muted');
+            materialUploadStatus.textContent = message || '';
+            if (!message) materialUploadStatus.classList.add('d-none');
+        }
+
+        function excerptUploadedItems(text) {
+            const cleaned = String(text || '')
+                .replace(/\r/g, '\n')
+                .replace(/[ \t]+/g, ' ')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+            if (!cleaned) return [];
+
+            let items = [];
+            const numberedItems = cleaned
+                .replace(/\s*(\d{1,3})\.\s+/g, '\n$1. ')
+                .split(/\n(?=\d{1,3}\.\s+)/)
+                .map(s => s.replace(/^\d{1,3}\.\s+/, '').trim())
+                .filter(Boolean);
+            if (numberedItems.length > 1) {
+                items = numberedItems;
+            } else {
+                const paragraphs = cleaned.split(/\n\s*\n/).map(s => s.replace(/^\d{1,3}\.\s+/, '').trim()).filter(Boolean);
+                if (paragraphs.length > 1) {
+                    items = paragraphs;
+                } else {
+                    const lines = cleaned.split(/\n+/).map(s => s.replace(/^\d{1,3}\.\s+/, '').trim()).filter(Boolean);
+                    if (lines.length > 1) {
+                        items = lines;
+                    } else {
+                        const sentences = cleaned.split(/(?<=[.!?])\s+/).map(s => s.replace(/^\d{1,3}\.\s+/, '').trim()).filter(Boolean);
+                        items = sentences.length > 1 ? sentences : cleaned.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+                    }
+                }
+            }
+
+            const seen = new Set();
+            return items
+                .map(item => item.replace(/\s+/g, ' ').trim())
+                .filter(item => {
+                    const key = item.toLowerCase();
+                    if (!item || seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                })
+                .slice(0, 80)
+                .map(item => item.length > 220 ? `${item.slice(0, 217).trim()}...` : item);
+        }
+
+        function applyUploadedItems(items, fileName) {
+            if (!Array.isArray(items) || items.length === 0) {
+                setUploadStatus('No readable items were found in that file.', 'danger');
+                return;
+            }
+            currentItemsList = items;
+            renderAddedItemsChips();
+            if (materialTitleInput && !materialTitleInput.value.trim() && fileName) {
+                materialTitleInput.value = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+            }
+            setUploadStatus(`Extracted ${items.length} item${items.length === 1 ? '' : 's'} from ${fileName}.`, 'success');
+        }
+
+        async function extractUploadedMaterial(file) {
+            const extension = (file.name.split('.').pop() || '').toLowerCase();
+            setUploadStatus(`Extracting ${file.name}...`);
+            if (extension === 'txt' || file.type === 'text/plain') {
+                const text = await file.text();
+                applyUploadedItems(excerptUploadedItems(text), file.name);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch('/dashboard/teacher/extract-material/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-CSRFToken': await ensureCsrfToken() },
+                body: formData
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Could not extract text from that file.');
+            }
+            applyUploadedItems(Array.isArray(data.items) ? data.items : excerptUploadedItems(data.text || ''), file.name);
         }
 
         window.removeItemFromAddList = function(index) {
@@ -5044,6 +5156,29 @@
             });
         }
 
+        if (uploadMaterialBtn && materialFileInput) {
+            uploadMaterialBtn.addEventListener('click', function() {
+                materialFileInput.click();
+            });
+            materialFileInput.addEventListener('change', async function() {
+                const file = materialFileInput.files && materialFileInput.files[0];
+                if (!file) return;
+                uploadMaterialBtn.disabled = true;
+                const originalHtml = uploadMaterialBtn.innerHTML;
+                uploadMaterialBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Extracting';
+                try {
+                    await extractUploadedMaterial(file);
+                } catch (err) {
+                    console.warn('Material upload extraction failed', err);
+                    setUploadStatus(err.message || 'Could not extract that file.', 'danger');
+                } finally {
+                    uploadMaterialBtn.disabled = false;
+                    uploadMaterialBtn.innerHTML = originalHtml;
+                    materialFileInput.value = '';
+                }
+            });
+        }
+
         // Edit Material Modal elements
         const editMaterialModal = document.getElementById('editMaterialModal');
         const editMaterialTitleInput = document.getElementById('editMaterialTitle');
@@ -5096,6 +5231,8 @@
             if (addForm) addForm.reset();
             currentItemsList = [];
             renderAddedItemsChips();
+            if (materialFileInput) materialFileInput.value = '';
+            setUploadStatus('');
             if (addMaterialValidationError) addMaterialValidationError.classList.add('d-none');
 
             // Set course attach target from the currently-open course modal
@@ -5339,6 +5476,8 @@
                         if (addMaterialFormEl) addMaterialFormEl.reset();
                         currentItemsList = [];
                         renderAddedItemsChips();
+                        if (materialFileInput) materialFileInput.value = '';
+                        setUploadStatus('');
                         if (addMaterialValidationError) addMaterialValidationError.classList.add('d-none');
                         [materialTitleInput, scheduleDateTimeInput].forEach(function (el) {
                             if (el) el.classList.remove('is-invalid');

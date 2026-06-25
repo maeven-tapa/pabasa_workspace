@@ -20,6 +20,7 @@ import traceback
 import ssl
 import time
 import uuid
+import zipfile
 from .forms import AdminPracticeMaterialForm, parse_practice_items
 from django.db import transaction
 import re
@@ -3932,6 +3933,106 @@ def delete_reading_class(request):
     except Exception as e:
         logger.error(f"Class deletion error: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def extract_reading_material_file(request):
+    """Extract text snippets from an uploaded PDF, DOCX, or text file for the Add Material modal."""
+    upload = request.FILES.get('file')
+    if not upload:
+        return JsonResponse({'success': False, 'error': 'Please choose a PDF, DOCX, or text file.'}, status=400)
+
+    filename = upload.name or ''
+    ext = Path(filename).suffix.lower()
+    if ext not in {'.txt', '.docx', '.pdf'}:
+        return JsonResponse({'success': False, 'error': 'Only PDF, DOCX, and text files are supported.'}, status=400)
+
+    if upload.size and upload.size > 8 * 1024 * 1024:
+        return JsonResponse({'success': False, 'error': 'File is too large. Please upload a file under 8 MB.'}, status=400)
+
+    def excerpt_items(text):
+        cleaned = re.sub(r'[ \t]+', ' ', (text or '').replace('\r', '\n'))
+        cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
+        if not cleaned:
+            return []
+
+        numbered_text = re.sub(r'\s*(\d{1,3})\.\s+', r'\n\1. ', cleaned)
+        numbered_items = [
+            re.sub(r'^\d{1,3}\.\s+', '', item).strip()
+            for item in re.split(r'\n(?=\d{1,3}\.\s+)', numbered_text)
+            if item.strip()
+        ]
+        if len(numbered_items) > 1:
+            raw_items = numbered_items
+        else:
+            paragraphs = [re.sub(r'^\d{1,3}\.\s+', '', p).strip() for p in re.split(r'\n\s*\n', cleaned) if p.strip()]
+            if len(paragraphs) > 1:
+                raw_items = paragraphs
+            else:
+                lines = [re.sub(r'^\d{1,3}\.\s+', '', line).strip() for line in cleaned.split('\n') if line.strip()]
+                if len(lines) > 1:
+                    raw_items = lines
+                else:
+                    sentences = [
+                        re.sub(r'^\d{1,3}\.\s+', '', s).strip()
+                        for s in re.split(r'(?<=[.!?])\s+', cleaned)
+                        if s.strip()
+                    ]
+                    raw_items = sentences if len(sentences) > 1 else re.split(r'[,\s]+', cleaned)
+
+        items = []
+        seen = set()
+        for raw_item in raw_items:
+            item = re.sub(r'\s+', ' ', raw_item).strip()
+            key = item.lower()
+            if not item or key in seen:
+                continue
+            seen.add(key)
+            if len(item) > 220:
+                item = item[:217].strip() + '...'
+            items.append(item)
+            if len(items) >= 80:
+                break
+        return items
+
+    try:
+        if ext == '.txt':
+            raw = upload.read()
+            text = raw.decode('utf-8', errors='replace')
+        elif ext == '.docx':
+            with zipfile.ZipFile(upload) as docx_zip:
+                xml = docx_zip.read('word/document.xml').decode('utf-8', errors='ignore')
+            text = re.sub(r'</w:p[^>]*>', '\n', xml)
+            text = re.sub(r'<[^>]+>', '', text)
+            text = (
+                text.replace('&amp;', '&')
+                    .replace('&lt;', '<')
+                    .replace('&gt;', '>')
+                    .replace('&quot;', '"')
+                    .replace('&apos;', "'")
+            )
+        else:
+            try:
+                from pypdf import PdfReader
+            except ImportError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'PDF extraction needs the pypdf package installed. DOCX and text uploads are ready now.'
+                }, status=400)
+            reader = PdfReader(upload)
+            text = '\n\n'.join((page.extract_text() or '') for page in reader.pages)
+
+        items = excerpt_items(text)
+        if not items:
+            return JsonResponse({'success': False, 'error': 'No readable text was found in that file.'}, status=400)
+        return JsonResponse({'success': True, 'items': items, 'text': text[:12000], 'filename': filename})
+    except zipfile.BadZipFile:
+        return JsonResponse({'success': False, 'error': 'That DOCX file could not be read.'}, status=400)
+    except Exception as e:
+        logger.error('Material file extraction failed: %s', e, exc_info=True)
+        return JsonResponse({'success': False, 'error': 'Could not extract text from that file.'}, status=500)
+
 
 @csrf_protect
 @require_http_methods(["POST"])
