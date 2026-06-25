@@ -2223,7 +2223,7 @@
 
 <!-- View Material Modal -->
 <div class="modal fade" id="viewMaterialModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header border-0">
                 <h5 class="modal-title" id="viewMaterialModalLabel">Material Title</h5>
@@ -2239,7 +2239,39 @@
                     </div>
                 </div>
                 <div id="materialContentContainer">
-                    <!-- Content populated via JS -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="small text-muted fw-bold text-uppercase">Type</div>
+                            <div id="viewMaterialType" class="fw-semibold">-</div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="small text-muted fw-bold text-uppercase">Use</div>
+                            <div id="viewMaterialUse" class="fw-semibold">-</div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="small text-muted fw-bold text-uppercase">Assigned Week</div>
+                            <div id="viewMaterialWeek" class="fw-semibold">Unassigned</div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="small text-muted fw-bold text-uppercase">Status</div>
+                            <div id="viewMaterialStatus" class="fw-semibold">Published</div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:72px;">#</th>
+                                    <th>Content</th>
+                                </tr>
+                            </thead>
+                            <tbody id="materialContentTableBody">
+                                <tr>
+                                    <td colspan="2" class="text-muted text-center py-4">No content available.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-0">
@@ -2320,7 +2352,7 @@
                 <div class="system-modal-icon danger mb-3">
                     <i class="bi bi-trash3-fill"></i>
                 </div>
-                <h5 class="modal-title mb-2">Are you sure?</h5>
+                <h5 class="modal-title mb-2" id="deleteConfirmTitle">Are you sure?</h5>
                 <div id="deleteConfirmText" class="text-muted px-3">This action cannot be undone.</div>
             </div>
             <div class="modal-footer border-0 justify-content-center pb-4">
@@ -2451,6 +2483,113 @@
         if (Array.isArray(o.items)) return o.items.length;
         if (typeof o.items === 'number') return o.items;
         return 0;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function titleCaseLabel(value, fallback = '-') {
+        const raw = String(value || fallback || '').trim();
+        if (!raw) return fallback;
+        return raw
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .replace(/\b\w/g, char => char.toUpperCase());
+    }
+
+    function getMaterialContentItems(material) {
+        if (!material) return [];
+        if (Array.isArray(material.items)) {
+            return material.items.map(item => {
+                if (item === null || item === undefined) return '';
+                if (typeof item === 'object') {
+                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
+                }
+                return item;
+            }).map(item => String(item).trim()).filter(Boolean);
+        }
+
+        const raw = String(material.content || material.content_text || material.prompt_text || '').trim();
+        if (!raw) return [];
+
+        const itemType = String(material.item_type || material.reading_type || '').toLowerCase();
+        if (itemType === 'paragraph') {
+            const paragraphs = raw.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
+            return paragraphs.length ? paragraphs : [raw];
+        }
+        if (raw.includes('\n')) {
+            return raw.split(/\n+/).map(item => item.trim()).filter(Boolean);
+        }
+        if (itemType === 'sentence') {
+            const sentences = raw.split(/(?<=[.!?])\s+/).map(item => item.trim()).filter(Boolean);
+            return sentences.length ? sentences : [raw];
+        }
+        return raw.split(/\s+/).map(item => item.trim()).filter(Boolean);
+    }
+
+    function getMaterialAssignedWeekLabel(material) {
+        if (!material) return 'Unassigned';
+        if (material.assigned_week_display) return material.assigned_week_display;
+        return formatAssignedWeek(material.assigned_week ?? material.assignedWeek ?? material.week);
+    }
+
+    function getMaterialStatusLabel(material) {
+        const status = String((material && (material.status || material.publication_status)) || 'published').toLowerCase();
+        return titleCaseLabel(status, 'Published');
+    }
+
+    function showMaterialPreviewModal(material) {
+        const viewModalEl = document.getElementById('viewMaterialModal');
+        if (!viewModalEl || !material) return;
+
+        const title = material.title || 'Material';
+        const itemType = titleCaseLabel(material.item_type || material.reading_type, 'Material');
+        const usage = titleCaseLabel(material.usage || material.usage_type || material.type, 'Practice');
+        const assignedWeek = getMaterialAssignedWeekLabel(material);
+        const status = getMaterialStatusLabel(material);
+        const items = getMaterialContentItems(material);
+
+        document.getElementById('viewMaterialModalLabel').textContent = title;
+        document.getElementById('viewMaterialMeta').textContent = `${itemType} - ${usage}`;
+        document.getElementById('viewMaterialType').textContent = itemType;
+        document.getElementById('viewMaterialUse').textContent = usage;
+        document.getElementById('viewMaterialWeek').textContent = assignedWeek;
+        document.getElementById('viewMaterialStatus').textContent = status;
+
+        const modalIcon = document.getElementById('viewMaterialIcon');
+        if (modalIcon) modalIcon.className = `materials-modal-icon ${String(material.item_type || material.reading_type || 'word').toLowerCase()}`;
+
+        const tableBody = document.getElementById('materialContentTableBody');
+        if (tableBody) {
+            tableBody.innerHTML = items.length
+                ? items.map((item, index) => `
+                    <tr>
+                        <td class="text-muted fw-semibold">${index + 1}</td>
+                        <td style="white-space: pre-wrap;">${escapeHtml(item)}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="2" class="text-muted text-center py-4">No content available.</td></tr>';
+        }
+
+        if (typeof showStackedModal === 'function') {
+            showStackedModal(viewModalEl);
+        } else {
+            bootstrap.Modal.getOrCreateInstance(viewModalEl).show();
+        }
+    }
+
+    function findRenderedReadingMaterial(card, materialId) {
+        if (!card || !materialId) return null;
+        const renderedContainer = card.closest('[data-readings-container-id]');
+        const containerId = renderedContainer ? renderedContainer.dataset.readingsContainerId : '';
+        const renderedMaterials = (window.renderedReadingsByContainer && window.renderedReadingsByContainer[containerId]) || [];
+        return renderedMaterials.find(material => String(material.id) === String(materialId)) || null;
     }
 
     let teacherCourses = [];
@@ -2636,8 +2775,7 @@
                         const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
                         if (action === 'preview') {
                             if (!mat) return showToast('Material not found', 'error');
-                            const matItems = (typeof mat.items_count === 'number') ? mat.items_count : (Array.isArray(mat.items) ? mat.items.length : (mat.items || '-'));
-                            showSuccessModal('Material Preview', `${mat.title} \n\nType: ${mat.item_type || '-'}\nItems: ${matItems}`);
+                            showMaterialPreviewModal(mat);
                             return;
                         }
 
@@ -2709,74 +2847,84 @@
                         }
 
                         if (action === 'delete') {
+                            if (!mat) return showToast('Material not found', 'error');
                             // Determine if this material is an assessment/practice so we call the correct endpoint
                             const usage = (mat.usage || mat.type || mat.usage_type || '').toString().toLowerCase();
                             const isAssessment = usage === 'assessment';
                             const isPractice = usage === 'practice';
-                            const promptMsg = isAssessment ? 'Archive this assessment? It will be removed from courses but kept in your account.' : 'Permanently delete this material?';
-                            if (!confirm(promptMsg)) return;
-                            try {
-                                let endpoint = '/dashboard/teacher/delete-material/';
-                                let payload = { material_id: Number(mid) };
-                                if (isAssessment || String(mid).startsWith('assessment-')) {
-                                    endpoint = '/dashboard/teacher/archive-assessment/';
-                                    payload = { assessment_id: Number(mid) };
-                                } else if (isPractice) {
-                                    endpoint = '/dashboard/teacher/delete-practice/';
-                                    payload = { practice_id: Number(mid) };
-                                }
+                            const modalTitle = isAssessment ? 'Remove Assessment?' : 'Archive Material?';
+                            const confirmText = isAssessment ? 'Remove Assessment' : 'Archive';
+                            const confirmMessage = isAssessment
+                                ? `<p>Remove <strong>${escapeHtml(mat.title || 'this assessment')}</strong> from this course?</p><p class="text-muted small mt-2 mb-0">The assessment will be archived and detached from courses, but kept in your teacher records.</p>`
+                                : `<p>Archive <strong>${escapeHtml(mat.title || 'this material')}</strong>?</p><p class="text-muted small mt-2 mb-0">Students will no longer see this item in the course readings.</p>`;
+                            showDeleteConfirmModal(confirmMessage, async () => {
+                                try {
+                                    let endpoint = '/dashboard/teacher/delete-material/';
+                                    let payload = { material_id: Number(mid) };
+                                    if (isAssessment || String(mid).startsWith('assessment-')) {
+                                        endpoint = '/dashboard/teacher/archive-assessment/';
+                                        payload = { assessment_id: Number(mid) };
+                                    } else if (isPractice) {
+                                        endpoint = '/dashboard/teacher/delete-practice/';
+                                        payload = { practice_id: Number(mid) };
+                                    }
 
-                                const res = await fetch(endpoint, {
-                                    method: 'POST',
-                                    credentials: 'same-origin',
-                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                                    body: JSON.stringify(payload)
-                                });
-                                const d = await res.json();
-                                if (res.ok && d.success) {
-                                    // Remove from course materials listing
-                                    course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
-                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                    renderCourses();
-                                    openCourseDetail(course.id);
-                                    showToast(isAssessment ? 'Assessment archived' : 'Material deleted', 'success');
+                                    const res = await fetch(endpoint, {
+                                        method: 'POST',
+                                        credentials: 'same-origin',
+                                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                        body: JSON.stringify(payload)
+                                    });
+                                    const d = await res.json();
+                                    if (res.ok && d.success) {
+                                        // Remove from course materials listing
+                                        course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
+                                        const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                        renderCourses();
+                                        openCourseDetail(course.id);
+                                        showToast(isAssessment ? 'Assessment archived' : 'Material archived', 'success');
 
-                                    // Persist overview returned by backend (if any)
-                                    try {
-                                        if (d.overview) {
-                                            const overviewKey = 'pabasa_teacher_overview_stats';
-                                            const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                            localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
-                                        }
-                                    } catch (e) { /* ignore */ }
-
-                                    // Notify other modules and refresh authoritative data
-                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
-
-                                    try {
-                                        if (typeof refreshTeacherData === 'function') {
-                                            await refreshTeacherData();
-                                        } else {
-                                            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                                            if (r.ok) {
-                                                const ov = await r.json();
+                                        // Persist overview returned by backend (if any)
+                                        try {
+                                            if (d.overview) {
                                                 const overviewKey = 'pabasa_teacher_overview_stats';
                                                 const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
+                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
                                             }
-                                        }
-                                    } catch (err) { console.warn('Could not refresh teacher overview after delete', err); }
+                                        } catch (e) { /* ignore */ }
 
-                                    if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
-                                        try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                        // Notify other modules and refresh authoritative data
+                                        try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: mid, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+
+                                        try {
+                                            if (typeof refreshTeacherData === 'function') {
+                                                await refreshTeacherData();
+                                            } else {
+                                                const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                                if (r.ok) {
+                                                    const ov = await r.json();
+                                                    const overviewKey = 'pabasa_teacher_overview_stats';
+                                                    const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                    localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
+                                                }
+                                            }
+                                        } catch (err) { console.warn('Could not refresh teacher overview after delete', err); }
+
+                                        if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
+                                            try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                        }
+                                    } else {
+                                        showToast('Could not archive material: ' + (d.error || 'Unknown'), 'error');
                                     }
-                                } else {
-                                    showToast('Could not delete material: ' + (d.error || 'Unknown'), 'error');
+                                } catch (err) {
+                                    console.error('archive material error', err);
+                                    showToast('Failed to archive material', 'error');
                                 }
-                            } catch (err) {
-                                console.error('delete material error', err);
-                                showToast('Failed to delete material', 'error');
-                            }
+                            }, {
+                                title: modalTitle,
+                                confirmText,
+                                confirmClass: 'btn btn-danger px-4'
+                            });
                             return;
                         }
                     }
@@ -2867,58 +3015,67 @@
                         }
 
                         if (actionBtn.dataset.assessmentAction === 'delete') {
-                            if (!confirm(`Archive assessment "${assessment.title}"? This will remove it from courses and mark it inactive.`)) return;
-                            try {
-                                const res = await fetch('/dashboard/teacher/archive-assessment/', {
-                                    method: 'POST',
-                                    credentials: 'same-origin',
-                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                                    body: JSON.stringify({ assessment_id: assessmentId })
-                                });
-                                const d = await res.json();
-                                if (res.ok && d.success) {
-                                    // remove locally from this course
-                                    course.assessments = (course.assessments || []).filter(x => Number(x.id) !== assessmentId);
-                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                    renderCourses();
-                                    openCourseDetail(course.id);
-                                    showToast('Assessment archived', 'success');
-
-                                    // Persist overview and notify
+                            showDeleteConfirmModal(
+                                `<p>Remove <strong>${escapeHtml(assessment.title || 'this assessment')}</strong> from this course?</p><p class="text-muted small mt-2 mb-0">The assessment will be archived, detached from courses, and marked inactive.</p>`,
+                                async () => {
                                     try {
-                                        if (d.overview) {
-                                            const overviewKey = 'pabasa_teacher_overview_stats';
-                                            const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                            localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
-                                        }
-                                    } catch (e) { /* ignore */ }
+                                        const res = await fetch('/dashboard/teacher/archive-assessment/', {
+                                            method: 'POST',
+                                            credentials: 'same-origin',
+                                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                                            body: JSON.stringify({ assessment_id: assessmentId })
+                                        });
+                                        const d = await res.json();
+                                        if (res.ok && d.success) {
+                                            // remove locally from this course
+                                            course.assessments = (course.assessments || []).filter(x => Number(x.id) !== assessmentId);
+                                            const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                                            renderCourses();
+                                            openCourseDetail(course.id);
+                                            showToast('Assessment archived', 'success');
 
-                                    try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+                                            // Persist overview and notify
+                                            try {
+                                                if (d.overview) {
+                                                    const overviewKey = 'pabasa_teacher_overview_stats';
+                                                    const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                    localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, d.overview)));
+                                                }
+                                            } catch (e) { /* ignore */ }
 
-                                    try {
-                                        if (typeof refreshTeacherData === 'function') {
-                                            await refreshTeacherData();
-                                        } else {
-                                            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                                            if (r.ok) {
-                                                const ov = await r.json();
-                                                const overviewKey = 'pabasa_teacher_overview_stats';
-                                                const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
+                                            try { window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { assessment_id: assessmentId, class_code: currentClassCode } })); } catch (e) { console.warn('Could not dispatch pabasa:materials-updated', e); }
+
+                                            try {
+                                                if (typeof refreshTeacherData === 'function') {
+                                                    await refreshTeacherData();
+                                                } else {
+                                                    const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                                                    if (r.ok) {
+                                                        const ov = await r.json();
+                                                        const overviewKey = 'pabasa_teacher_overview_stats';
+                                                        const existingOv = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                        localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, ov)));
+                                                    }
+                                                }
+                                            } catch (err) { console.warn('Could not refresh teacher overview after assessment archive', err); }
+
+                                            if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
+                                                try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
                                             }
+                                        } else {
+                                            showToast('Could not archive assessment: ' + (d.error || 'Unknown'), 'error');
                                         }
-                                    } catch (err) { console.warn('Could not refresh teacher overview after assessment archive', err); }
-
-                                    if (typeof loadReadings === 'function' && typeof currentClassCode !== 'undefined' && currentClassCode) {
-                                        try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
+                                    } catch (err) {
+                                        console.error('archive assessment error', err);
+                                        showToast('Failed to archive assessment', 'error');
                                     }
-                                } else {
-                                    showToast('Could not archive assessment: ' + (d.error || 'Unknown'), 'error');
+                                },
+                                {
+                                    title: 'Remove Assessment?',
+                                    confirmText: 'Remove Assessment',
+                                    confirmClass: 'btn btn-danger px-4'
                                 }
-                            } catch (err) {
-                                console.error('archive assessment error', err);
-                                showToast('Failed to archive assessment', 'error');
-                            }
+                            );
                             return;
                         }
                     });
@@ -3469,33 +3626,74 @@
     }
 
     function setupCourseReadingsHandlers() {
-        const el = document.getElementById('courseReadingsContainer');
+        const el = document.getElementById('courseAggregatedMaterials');
         if (!el || el.dataset.bound) return;
         el.dataset.bound = 'true';
         el.addEventListener('click', function(e) {
             // Delegate to existing reading handlers where possible
-            if (e.target.closest('.material-card-modern')) {
-                const card = e.target.closest('.material-card-modern');
-                const materialId = card.dataset.materialId;
-                // Open view modal
-                const viewModalEl = document.getElementById('viewMaterialModal');
-                if (!viewModalEl) return;
-                const material = (function findMaterial() {
-                    const id = String(materialId);
-                    const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
-                    for (const k of Object.keys(stored)) {
-                        for (const t of ['word','sentence','paragraph']) {
-                            const arr = stored[k][t] || stored[k][t+'s'] || [];
-                            const found = arr.find(m => String(m.id) === id);
-                            if (found) return found;
+            const card = e.target.closest('.material-card-modern');
+            if (!card) return;
+            const materialId = card.dataset.materialId;
+            const material = findRenderedReadingMaterial(card, materialId);
+
+            if (e.target.closest('[data-action="view"]') || (!e.target.closest('[data-action]') && card)) {
+                if (!material) return showToast('Material not found', 'error');
+                showMaterialPreviewModal(material);
+                return;
+            }
+
+            if (e.target.closest('[data-action="delete"]')) {
+                if (!materialId) return showToast('Material not identified', 'error');
+                const usage = (card.dataset.usage || material?.usage || material?.usage_type || material?.type || '').toString().toLowerCase();
+                const isAssessment = String(materialId).startsWith('assessment-') || usage === 'assessment';
+                const isPractice = String(materialId).startsWith('practice-') || usage === 'practice';
+                const title = material?.title || card.querySelector('.material-title')?.textContent || 'this item';
+                const message = isAssessment
+                    ? `<p>Remove <strong>${escapeHtml(title)}</strong> from this course?</p><p class="text-muted small mt-2 mb-0">The assessment will be archived and detached from courses, but kept in your teacher records.</p>`
+                    : `<p>Archive <strong>${escapeHtml(title)}</strong>?</p><p class="text-muted small mt-2 mb-0">Students will no longer see this item in the course readings.</p>`;
+
+                showDeleteConfirmModal(message, async () => {
+                    try {
+                        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || await ensureCsrfToken();
+                        let endpoint = '/dashboard/teacher/delete-material/';
+                        let payload = { material_id: materialId };
+                        if (isAssessment) {
+                            endpoint = '/dashboard/teacher/archive-assessment/';
+                            payload = { assessment_id: materialId };
+                        } else if (isPractice) {
+                            endpoint = '/dashboard/teacher/delete-practice/';
+                            payload = { practice_id: materialId };
                         }
+
+                        const res = await fetch(endpoint, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await res.json();
+                        if (!res.ok || !data.success) {
+                            throw new Error(data.error || 'Archive failed');
+                        }
+
+                        card.style.opacity = '0.5';
+                        card.style.pointerEvents = 'none';
+                        showToast(isAssessment ? 'Assessment archived' : 'Material archived', 'success');
+
+                        const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+                        if (courseId && typeof loadCourseReadings === 'function') {
+                            await loadCourseReadings(courseId);
+                        }
+                        if (typeof refreshTeacherData === 'function') await refreshTeacherData();
+                    } catch (err) {
+                        console.error('course readings archive error', err);
+                        showToast('Failed to archive material', 'error');
                     }
-                    return null;
-                })();
-                if (!material) return;
-                document.getElementById('viewMaterialModalLabel').textContent = material.title || 'Material';
-                document.getElementById('materialContentContainer').innerHTML = `<div class="p-3 bg-light rounded" style="white-space: pre-wrap; font-size: 1.1rem;">${material.content || material.content_text || ''}</div>`;
-                bootstrap.Modal.getOrCreateInstance(viewModalEl).show();
+                }, {
+                    title: isAssessment ? 'Remove Assessment?' : 'Archive Material?',
+                    confirmText: isAssessment ? 'Remove Assessment' : 'Archive',
+                    confirmClass: 'btn btn-danger px-4'
+                });
             }
         });
     }
@@ -4010,8 +4208,13 @@
         
         deleteConfirmText.innerHTML = `<p>Are you sure you want to delete <strong>${className}</strong>?</p><p class="text-danger small mt-2"><i class="bi bi-exclamation-triangle me-2"></i>This action cannot be undone. All class data will be removed.</p>`;
         
-        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-        modal.show();
+        const modalEl = document.getElementById('deleteConfirmModal');
+        if (typeof showStackedModal === 'function') {
+            showStackedModal(modalEl);
+        } else {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
     }
 
     function deleteClass(classCode) {
@@ -4405,10 +4608,13 @@
         setTimeout(() => modal.hide(), 2000);
     }
 
-    function showDeleteConfirmModal(message, onConfirm) {
+    function showDeleteConfirmModal(message, onConfirm, options = {}) {
+        const titleEl = document.getElementById('deleteConfirmTitle');
+        if (titleEl) titleEl.textContent = options.title || 'Are you sure?';
         document.getElementById('deleteConfirmText').innerHTML = message;
         const confirmBtn = document.getElementById('confirmDelete');
-        confirmBtn.textContent = 'Delete Forever';
+        confirmBtn.textContent = options.confirmText || 'Delete Forever';
+        confirmBtn.className = options.confirmClass || 'btn btn-danger px-4';
         
         // Remove old listener and add new one
         const newConfirmBtn = confirmBtn.cloneNode(true);
@@ -4797,6 +5003,9 @@
             const countBadge = document.getElementById('allReadingsCountBadge');
 
             if (!container) return;
+            window.renderedReadingsByContainer = window.renderedReadingsByContainer || {};
+            window.renderedReadingsByContainer[containerId] = Array.isArray(allMaterials) ? allMaterials : [];
+            container.dataset.readingsContainerId = containerId;
 
             if (allMaterials.length === 0) {
                 container.innerHTML = `
@@ -4837,26 +5046,27 @@
                     }
                     const iconMap = { word: 'bi-spellcheck', sentence: 'bi-chat-left-text', paragraph: 'bi-file-text' };
                     const weekLabel = reading.assigned_week_display || formatAssignedWeek(reading.assigned_week);
+                    const contentText = reading.content_text || reading.content || '';
 
                     return `
-                        <div class="material-card-modern mb-2" data-material-id="${reading.id}" data-reading-type="${reading.item_type}"
-                             data-full-content="${(reading.content_text || '').replace(/"/g, '&quot;')}"
-                             data-status="${reading.status || 'published'}"
-                             data-schedule="${reading.schedule || ''}"
-                             data-usage="${reading.type || 'practice'}"
-                             data-record-kind="${prefixedRecordKind(reading.id) || 'material'}">
+                        <div class="material-card-modern mb-2" data-material-id="${escapeHtml(reading.id)}" data-reading-type="${escapeHtml(reading.item_type)}"
+                             data-full-content="${escapeHtml(contentText)}"
+                             data-status="${escapeHtml(reading.status || 'published')}"
+                             data-schedule="${escapeHtml(reading.schedule || '')}"
+                             data-usage="${escapeHtml(reading.type || 'practice')}"
+                             data-record-kind="${escapeHtml(prefixedRecordKind(reading.id) || 'material')}">
                             <div class="material-info">
                                 <div class="material-leading-icon">
                                     <i class="bi ${iconMap[reading.item_type]}"></i>
                                 </div>
                                 <div>
-                                    <p class="material-title">${reading.title}</p>
-                                    <p class="material-preview">${reading.content_text || ''}</p>
+                                    <p class="material-title">${escapeHtml(reading.title || '')}</p>
+                                    <p class="material-preview">${escapeHtml(contentText)}</p>
                                     <p class="material-meta">
                                         <span>${reading.items} item${reading.items !== 1 ? 's' : ''}</span>
-                                        <span class="material-type-badge ${badgeType}">${reading.type}</span>
-                                        <span class="material-type-badge status-${displayStatus}">${displayStatus.toUpperCase()}</span>
-                                        <span class="material-type-badge week-badge">${weekLabel}</span>
+                                        <span class="material-type-badge ${escapeHtml(badgeType)}">${escapeHtml(reading.type || '')}</span>
+                                        <span class="material-type-badge status-${escapeHtml(displayStatus)}">${escapeHtml(displayStatus.toUpperCase())}</span>
+                                        <span class="material-type-badge week-badge">${escapeHtml(weekLabel)}</span>
                                     </p>
                                 </div>
                             </div>
@@ -4950,6 +5160,8 @@
                 readingsContainer.addEventListener('click', function(e) {
                     // Helper to find material by ID across all categories for safety
                     function getMaterialById(materialId) {
+                        const renderedMaterial = findRenderedReadingMaterial(e.target.closest('.material-card-modern'), materialId);
+                        if (renderedMaterial) return renderedMaterial;
                         if (!currentClassCode) return null;
                         const readings = ensureClassReadings(currentClassCode);
                         // Search in all possible singular/plural keys
@@ -4991,19 +5203,7 @@
                         const material = getMaterialById(materialId);
                         
                         if (material) {
-                            const viewModalEl = document.getElementById('viewMaterialModal');
-                            if (!viewModalEl) return;
-                            const viewModal = bootstrap.Modal.getOrCreateInstance(viewModalEl);
-
-                            document.getElementById('viewMaterialModalLabel').textContent = material.title;
-                            document.getElementById('viewMaterialMeta').textContent = `${(material.item_type || 'Word').toUpperCase()} - ${(material.type || 'Practice').toUpperCase()}`;
-                            const container = document.getElementById('materialContentContainer');
-                            container.innerHTML = `<div class="p-3 bg-light rounded" style="white-space: pre-wrap; font-size: 1.1rem;">${material.content || material.content_text}</div>`;
-                            
-                            const modalIcon = document.getElementById('viewMaterialIcon');
-                            if (modalIcon) modalIcon.className = `materials-modal-icon ${material.item_type || 'word'}`;
-                            
-                            viewModal.show();
+                            showMaterialPreviewModal(material);
                         }
                     }
                     
