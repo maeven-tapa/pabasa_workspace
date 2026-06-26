@@ -2898,11 +2898,16 @@ def get_teacher_courses_api(request):
 
         course_list = []
         for c in courses_qs:
-            secs = [{'id': s.id, 'code': s.class_code, 'name': s.class_name} for s in c.sections.all()]
+            course_sections = list(c.sections.all())
+            secs = [{'id': s.id, 'code': s.class_code, 'name': s.class_name} for s in course_sections]
 
             # Serialize assessments with helpful metadata used by the frontend
             assessments_list = []
-            for a in c.assessments.all():
+            course_assessments_qs = Assessment.objects.filter(
+                Q(courses=c) |
+                Q(section__in=course_sections, teacher=teacher_user)
+            ).prefetch_related('materials').distinct()
+            for a in course_assessments_qs:
                 if not getattr(a, 'is_active', True):
                     continue
                 items = 0
@@ -2941,6 +2946,8 @@ def get_teacher_courses_api(request):
 
                 assessments_list.append({
                     'id': a.id,
+                    'raw_id': a.id,
+                    'action_id': f"assessment-{a.id}",
                     'code': a.code,
                     'title': a.title,
                     'assessment_type': a.assessment_type,
@@ -2985,6 +2992,8 @@ def get_teacher_courses_api(request):
                 materials_list.append({
                     'id': m.id,
                     'raw_id': m.id,
+                    'action_id': f"material-{m.id}",
+                    'record_kind': 'material',
                     'assessment_id': m.assessment_id,
                     'code': m.assessment.code if m.assessment else None,
                     'title': m.title,
@@ -3006,7 +3015,7 @@ def get_teacher_courses_api(request):
             practices_list = []
             try:
                 practices_qs = Practice.objects.filter(
-                    Q(section__in=c.sections.all()) |
+                    Q(section__in=course_sections) |
                     Q(teacher=c.teacher) |
                     Q(section__isnull=True, teacher__role='admin')
                 ).order_by('-created_at')[:100]
@@ -3015,6 +3024,8 @@ def get_teacher_courses_api(request):
                     practices_list.append({
                         'id': f"practice-{p.id}",
                         'raw_id': p.id,
+                        'action_id': f"practice-{p.id}",
+                        'record_kind': 'practice',
                         'title': p.title,
                         'item_type': getattr(p, 'item_type', getattr(p, 'practice_type', '')),
                         'status': getattr(p, 'status', ''),
@@ -3747,6 +3758,10 @@ def get_class_materials(request):
 
                 item = {
                     'id': f"material-{m.id}",
+                    'raw_id': m.id,
+                    'action_id': f"material-{m.id}",
+                    'record_kind': 'material',
+                    'assessment_id': m.assessment_id,
                     'code': m.assessment.code if m.assessment else None,
                     'title': title_value,
                     'item_type': m.item_type,
@@ -4468,7 +4483,12 @@ def delete_reading_material(request):
 
         # Find the material. We check both the direct section link and assigned_sections
         material = Material.objects.filter(
-            Q(id=material_id) & (Q(section__teacher_id=user_id) | Q(assigned_sections__teacher_id=user_id))
+            Q(id=material_id) & (
+                Q(section__teacher_id=user_id) |
+                Q(assigned_sections__teacher_id=user_id) |
+                Q(courses__teacher_id=user_id) |
+                Q(assessment__teacher_id=user_id)
+            )
         ).distinct().first()
         
         if not material:

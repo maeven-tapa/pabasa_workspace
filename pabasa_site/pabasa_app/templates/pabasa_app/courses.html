@@ -2907,9 +2907,44 @@
         `).join('');
     }
 
-    window.openCourseDetail = function(courseId) {
+    function courseMaterialActionId(material) {
+        if (!material) return '';
+        const raw = String(material.action_id || material.id || material.raw_id || '');
+        if (!raw) return '';
+        return raw.includes('-') ? raw : `material-${raw}`;
+    }
+
+    function rawRecordId(value) {
+        return String(value || '').replace(/^[a-z]+-/i, '');
+    }
+
+    function findCourseById(courseId) {
+        return (teacherCourses || []).find(c => String(c.id) === String(courseId));
+    }
+
+    function findCourseMaterial(course, materialId) {
+        const rawId = rawRecordId(materialId);
+        return (course?.materials || []).find(item => {
+            return String(item.action_id || '') === String(materialId)
+                || String(item.id || '') === String(materialId)
+                || String(item.raw_id || '') === rawId
+                || String(item.id || '') === rawId;
+        });
+    }
+
+    function findCoursePractice(course, practiceId) {
+        const rawId = rawRecordId(practiceId);
+        return (course?.practices || []).find(item => {
+            return String(item.action_id || item.id || '') === String(practiceId)
+                || String(item.raw_id || '') === rawId
+                || String(item.id || '') === rawId;
+        });
+    }
+
+    window.openCourseDetail = async function(courseId) {
         try {
-            const course = (teacherCourses || []).find(c => c.id === Number(courseId));
+            await loadTeacherCoursesFromServer();
+            const course = findCourseById(courseId);
             if (!course) return showToast('Course not found', 'error');
 
             // Populate modal fields
@@ -2931,9 +2966,9 @@
                 item.innerHTML = `
                     <div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div>
                     <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="View"><i class="bi bi-eye me-1"></i>View</button>
-                        <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil me-1"></i>Edit</button>
-                        <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Archive"><i class="bi bi-archive me-1"></i>Archive</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${courseMaterialActionId(m)}" title="View"><i class="bi bi-eye me-1"></i>View</button>
+                        <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${courseMaterialActionId(m)}" title="Edit"><i class="bi bi-pencil me-1"></i>Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${courseMaterialActionId(m)}" title="Archive"><i class="bi bi-archive me-1"></i>Archive</button>
                     </div>`;
                 materialsContainer.appendChild(item);
             });
@@ -2950,7 +2985,7 @@
                     item.innerHTML = `
                         <div><strong>${p.title}</strong> <span class="small text-muted">${p.item_type || ''}</span></div>
                         <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-outline-secondary" data-practice-action="preview" data-pid="${p.id}" title="Preview"><i class="bi bi-eye"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary" data-practice-action="preview" data-pid="${p.action_id || p.id}" title="Preview"><i class="bi bi-eye"></i></button>
                         </div>`;
                     materialsContainer.appendChild(item);
                 });
@@ -2968,7 +3003,9 @@
                     if (btn.dataset.materialAction) {
                         const action = btn.dataset.materialAction;
                         const mid = btn.getAttribute('data-mid');
-                        const mat = (course.materials || []).find(x => Number(x.id) === Number(mid));
+                        const activeCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId || course.id;
+                        const activeCourse = findCourseById(activeCourseId) || course;
+                        const mat = findCourseMaterial(activeCourse, mid);
                         if (action === 'preview') {
                             if (!mat) return showToast('Material not found', 'error');
                             showMaterialPreviewModal(mat);
@@ -2991,7 +3028,7 @@
                                     method: 'POST',
                                     credentials: 'same-origin',
                                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                                    body: JSON.stringify({ material_id: Number(mid), title: newTitle })
+                                    body: JSON.stringify({ material_id: mid, title: newTitle })
                                 });
                                 const d = await res.json();
                                 if (res.ok && d.success) {
@@ -3046,7 +3083,7 @@
                             if (!mat) return showToast('Material not found', 'error');
                             // Determine if this material is an assessment/practice so we call the correct endpoint
                             const usage = (mat.usage || mat.type || mat.usage_type || '').toString().toLowerCase();
-                            const isAssessment = usage === 'assessment';
+                            const isAssessment = usage === 'assessment' || usage === 'both' || !!mat.assessment_id;
                             const isPractice = usage === 'practice';
                             const modalTitle = isAssessment ? 'Remove Assessment?' : 'Archive Material?';
                             const confirmText = isAssessment ? 'Remove Assessment' : 'Archive';
@@ -3056,13 +3093,19 @@
                             showDeleteConfirmModal(confirmMessage, async () => {
                                 try {
                                     let endpoint = '/dashboard/teacher/delete-material/';
-                                    let payload = { material_id: Number(mid) };
-                                    if (isAssessment || String(mid).startsWith('assessment-')) {
+                                    let payload = { material_id: mid };
+                                    let archivedAssessmentId = null;
+                                    if (String(mid).startsWith('assessment-')) {
                                         endpoint = '/dashboard/teacher/archive-assessment/';
-                                        payload = { assessment_id: Number(mid) };
+                                        payload = { assessment_id: mid };
+                                        archivedAssessmentId = mid;
+                                    } else if (isAssessment && mat.assessment_id) {
+                                        endpoint = '/dashboard/teacher/archive-assessment/';
+                                        payload = { assessment_id: `assessment-${mat.assessment_id}` };
+                                        archivedAssessmentId = payload.assessment_id;
                                     } else if (isPractice) {
                                         endpoint = '/dashboard/teacher/delete-practice/';
-                                        payload = { practice_id: Number(mid) };
+                                        payload = { practice_id: mid };
                                     }
 
                                     const res = await fetch(endpoint, {
@@ -3073,12 +3116,12 @@
                                     });
                                     const d = await res.json();
                                     if (res.ok && d.success) {
-                                        if (isAssessment) markAssessmentArchivedLocally(mid);
+                                        if (archivedAssessmentId) markAssessmentArchivedLocally(archivedAssessmentId);
                                         // Remove from course materials listing
-                                        course.materials = (course.materials || []).filter(x => Number(x.id) !== Number(mid));
+                                        activeCourse.materials = (activeCourse.materials || []).filter(x => rawRecordId(x.id || x.raw_id) !== rawRecordId(mid));
                                         const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
                                         renderCourses();
-                                        openCourseDetail(course.id);
+                                        openCourseDetail(activeCourse.id);
                                         showToast(isAssessment ? 'Assessment archived' : 'Material archived', 'success');
 
                                         // Persist overview returned by backend (if any)
@@ -3111,7 +3154,7 @@
                                             try { await loadReadings(currentClassCode); } catch (e) { /* ignore */ }
                                         }
                                         if (typeof loadCourseReadings === 'function') {
-                                            try { await loadCourseReadings(course.id); } catch (e) { /* ignore */ }
+                                            try { await loadCourseReadings(activeCourse.id); } catch (e) { /* ignore */ }
                                         }
                                     } else {
                                         showToast('Could not archive material: ' + (d.error || 'Unknown'), 'error');
@@ -3134,7 +3177,9 @@
                         const action = btn.dataset.practiceAction;
                         const pid = btn.getAttribute('data-pid');
                         if (action === 'preview') {
-                            const pr = (course.practices || []).find(x => String(x.id) === String(pid) || String(x.raw_id || '') === String(pid).replace(/^practice-/, ''));
+                            const activeCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId || course.id;
+                            const activeCourse = findCourseById(activeCourseId) || course;
+                            const pr = findCoursePractice(activeCourse, pid);
                             if (!pr) return showToast('Practice not found', 'error');
                             const prItems = (typeof pr.items_count === 'number') ? pr.items_count : (Array.isArray(pr.items) ? pr.items.length : (pr.items || '-'));
                             showSuccessModal('Practice Preview', `${pr.title} \n\nType: ${pr.item_type || '-'}\nItems: ${prItems}\n\n${pr.content || ''}`);
@@ -3813,10 +3858,36 @@
                 return;
             }
 
+            if (e.target.closest('[data-action="edit"]')) {
+                if (!materialId) return showToast('Material not identified', 'error');
+                if (!material) return showToast('Material not found', 'error');
+
+                const recordKind = card.dataset.recordKind || (String(materialId || '').match(/^([a-z]+)-/i)?.[1] || '').toLowerCase();
+                const usage = (card.dataset.usage || material.usage || material.usage_type || material.type || '').toString().toLowerCase();
+                if (recordKind === 'assessment' || String(materialId).startsWith('assessment-')) {
+                    showToast('Assessment records can be viewed or archived here. Edit their linked reading material when available.', 'info');
+                    return;
+                }
+
+                if (typeof window.openAddMaterialForEdit === 'function') {
+                    window.openAddMaterialForEdit(Object.assign({}, material, {
+                        id: materialId,
+                        action_id: materialId,
+                        usage: usage || material.type,
+                        usage_type: usage || material.type,
+                        record_kind: recordKind || (usage === 'practice' ? 'practice' : 'material')
+                    }));
+                    return;
+                }
+
+                showToast('Edit form is not available yet. Please refresh and try again.', 'error');
+                return;
+            }
+
             if (e.target.closest('[data-action="delete"]')) {
                 if (!materialId) return showToast('Material not identified', 'error');
                 const usage = (card.dataset.usage || material?.usage || material?.usage_type || material?.type || '').toString().toLowerCase();
-                const isAssessment = String(materialId).startsWith('assessment-') || usage === 'assessment';
+                const isAssessment = String(materialId).startsWith('assessment-') || usage === 'assessment' || usage === 'both' || !!material?.assessment_id;
                 const isPractice = String(materialId).startsWith('practice-') || usage === 'practice';
                 const title = material?.title || card.querySelector('.material-title')?.textContent || 'this item';
                 const message = isAssessment
@@ -3828,9 +3899,15 @@
                         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || await ensureCsrfToken();
                         let endpoint = '/dashboard/teacher/delete-material/';
                         let payload = { material_id: materialId };
-                        if (isAssessment) {
+                        let archivedAssessmentId = null;
+                        if (String(materialId).startsWith('assessment-')) {
                             endpoint = '/dashboard/teacher/archive-assessment/';
                             payload = { assessment_id: materialId };
+                            archivedAssessmentId = materialId;
+                        } else if (isAssessment && material?.assessment_id) {
+                            endpoint = '/dashboard/teacher/archive-assessment/';
+                            payload = { assessment_id: `assessment-${material.assessment_id}` };
+                            archivedAssessmentId = payload.assessment_id;
                         } else if (isPractice) {
                             endpoint = '/dashboard/teacher/delete-practice/';
                             payload = { practice_id: materialId };
@@ -3847,7 +3924,7 @@
                             throw new Error(data.error || 'Archive failed');
                         }
 
-                        if (isAssessment) markAssessmentArchivedLocally(materialId);
+                        if (archivedAssessmentId) markAssessmentArchivedLocally(archivedAssessmentId);
                         card.style.opacity = '0.5';
                         card.style.pointerEvents = 'none';
                         showToast(isAssessment ? 'Assessment archived' : 'Material archived', 'success');
@@ -5586,7 +5663,9 @@
                             return;
                         }
 
-                        const isAssessmentArchive = String(materialId || '').startsWith('assessment-') || String(card.dataset.usage || '').toLowerCase() === 'assessment';
+                        const materialForAction = getMaterialById(materialId);
+                        const materialUsageForAction = String(card.dataset.usage || materialForAction?.type || '').toLowerCase();
+                        const isAssessmentArchive = String(materialId || '').startsWith('assessment-') || materialUsageForAction === 'assessment' || materialUsageForAction === 'both' || !!materialForAction?.assessment_id;
                         showDeleteConfirmModal(
                             isAssessmentArchive
                                 ? `<p>Remove <strong>${escapeHtml(title || 'this assessment')}</strong>?</p><p class="text-muted small mt-2 mb-0">The assessment will be archived and removed from the Readings tab.</p>`
@@ -5599,14 +5678,20 @@
                                 const usage = (card.dataset.usage || (card.getAttribute('data-usage') || '')).toString().toLowerCase();
                                 let endpoint = '/dashboard/teacher/delete-material/';
                                 let bodyPayload = { material_id: materialId };
+                                let archivedAssessmentId = null;
 
                                 if (usage === 'practice') {
                                     endpoint = '/dashboard/teacher/delete-practice/';
                                     bodyPayload = { practice_id: materialId };
-                                } else if (String(materialId || '').startsWith('assessment-') || usage === 'assessment') {
+                                } else if (String(materialId || '').startsWith('assessment-')) {
                                     // For assessment items in the Readings list, call archive-assessment (soft-delete)
                                     endpoint = '/dashboard/teacher/archive-assessment/';
                                     bodyPayload = { assessment_id: materialId };
+                                    archivedAssessmentId = materialId;
+                                } else if ((usage === 'assessment' || usage === 'both') && materialForAction?.assessment_id) {
+                                    endpoint = '/dashboard/teacher/archive-assessment/';
+                                    bodyPayload = { assessment_id: `assessment-${materialForAction.assessment_id}` };
+                                    archivedAssessmentId = bodyPayload.assessment_id;
                                 }
 
                                 const response = await fetch(endpoint, {
@@ -5624,7 +5709,7 @@
 
                                 const data = await response.json();
                                 if (data.success) {
-                                    if (isAssessmentArchive) markAssessmentArchivedLocally(materialId);
+                                    if (archivedAssessmentId) markAssessmentArchivedLocally(archivedAssessmentId);
                                     // Clear from local storage cache as well
                                     if (currentClassCode && String(materialId)) {
                                         const readings = ensureClassReadings(currentClassCode);
