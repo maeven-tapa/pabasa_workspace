@@ -621,6 +621,21 @@
     </div>
 </div>
 
+<!-- Unenrolling Loading Modal -->
+<div class="modal fade" id="unenrollingModal" tabindex="-1" aria-labelledby="unenrollingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px;">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-danger mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5 class="fw-bold mb-1" id="unenrollingModalLabel">Unenrolling...</h5>
+                <p class="text-muted small mb-0">Please wait while we process your request.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade unenroll-modal" id="unenrollConfirmModal" tabindex="-1" aria-labelledby="unenrollConfirmModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -673,6 +688,7 @@
         const unenrollClassCode = document.querySelector("[data-unenroll-class-code]");
         const confirmUnenrollButton = document.querySelector("[data-confirm-unenroll]");
         const invalidClassCodeModalElement = document.getElementById("invalidClassCodeModal");
+        const unenrollingModalElement = document.getElementById("unenrollingModal");
         const classJoinedKey = "pabasaStudentClassJoined";
         const classCodesKey = "pabasaStudentClassCodes";
         const legacyClassCodeKey = "pabasaStudentClassCode";
@@ -1141,6 +1157,11 @@
         confirmUnenrollButton.addEventListener("click", async () => {
             if (!pendingUnenrollCode) return;
 
+            // Hide confirmation modal and show unenrolling loading modal
+            bootstrap.Modal.getOrCreateInstance(unenrollModalElement).hide();
+            const unenrollingModal = new bootstrap.Modal(unenrollingModalElement);
+            unenrollingModal.show();
+
             // Find teacher class name for local student list cleanup
             const teacherClass = findTeacherClass(pendingUnenrollCode) || { name: null };
 
@@ -1211,7 +1232,7 @@
                 showErrorToast && showErrorToast('Network error. Please try again.');
             } finally {
                 pendingUnenrollCode = "";
-                bootstrap.Modal.getOrCreateInstance(unenrollModalElement).hide();
+                bootstrap.Modal.getOrCreateInstance(unenrollingModalElement).hide();
             }
         });
 
