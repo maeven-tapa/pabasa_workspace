@@ -2295,50 +2295,6 @@
     </div>
 </div>
 
-<!-- Assessment Attempts Modal -->
-<div class="modal fade" id="assessmentAttemptsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <div>
-                    <h5 class="modal-title" id="assessmentAttemptsModalLabel">Assessment Attempts</h5>
-                    <p class="text-muted small mb-0" id="assessmentAttemptsMeta">Student results</p>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-uppercase" for="assessmentAttemptsSearch">Search Student</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input type="search" class="form-control" id="assessmentAttemptsSearch" placeholder="Search by student name">
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Student</th>
-                                <th>Words Correct</th>
-                                <th>Accuracy</th>
-                                <th>Words Per Minute</th>
-                            </tr>
-                        </thead>
-                        <tbody id="assessmentAttemptsTableBody">
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-4">No attempts yet.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Edit Material Modal -->
 <div class="modal fade" id="editMaterialModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -2701,91 +2657,6 @@
                 });
             });
         } catch (e) { console.warn('Could not update rendered readings cache after archive', e); }
-    }
-
-    function attemptMetric(value, suffix = '') {
-        if (value === null || value === undefined || value === '') return '-';
-        const text = String(value);
-        return suffix && !text.includes(suffix) ? `${text}${suffix}` : text;
-    }
-
-    function attemptWordsCorrect(attempt) {
-        if (!attempt) return '-';
-        return attempt.words_correct ?? attempt.correct_words ?? attempt.correct_count ?? attempt.total_score ?? attempt.score ?? '-';
-    }
-
-    function renderAssessmentAttemptsRows(query = '') {
-        const tableBody = document.getElementById('assessmentAttemptsTableBody');
-        if (!tableBody) return;
-        const rows = window.currentAssessmentAttempts || [];
-        const normalizedQuery = query.trim().toLowerCase();
-        const filteredRows = normalizedQuery
-            ? rows.filter(attempt => String(attempt.student_name || '').toLowerCase().includes(normalizedQuery))
-            : rows;
-
-        if (filteredRows.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">${rows.length ? 'No students match your search.' : 'No attempts yet.'}</td></tr>`;
-            return;
-        }
-
-        tableBody.innerHTML = filteredRows.map(attempt => `
-            <tr>
-                <td>
-                    <div class="fw-semibold">${escapeHtml(attempt.student_name || 'Unknown Student')}</div>
-                    ${attempt.student_email ? `<div class="small text-muted">${escapeHtml(attempt.student_email)}</div>` : ''}
-                </td>
-                <td>${escapeHtml(attemptMetric(attemptWordsCorrect(attempt)))}</td>
-                <td>${escapeHtml(attemptMetric(attempt.accuracy, '%'))}</td>
-                <td>${escapeHtml(attemptMetric(attempt.wpm))}</td>
-            </tr>
-        `).join('');
-    }
-
-    async function showAssessmentAttemptsModal(assessment) {
-        const modalEl = document.getElementById('assessmentAttemptsModal');
-        if (!modalEl || !assessment) return;
-
-        document.getElementById('assessmentAttemptsModalLabel').textContent = assessment.title || 'Assessment Attempts';
-        document.getElementById('assessmentAttemptsMeta').textContent = `${assessment.level || assessment.assessment_type || 'Assessment'} results`;
-        const searchInput = document.getElementById('assessmentAttemptsSearch');
-        const tableBody = document.getElementById('assessmentAttemptsTableBody');
-        if (searchInput) searchInput.value = '';
-        if (tableBody) {
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading attempts...</td></tr>';
-        }
-        window.currentAssessmentAttempts = [];
-
-        if (searchInput && !searchInput.dataset.bound) {
-            searchInput.dataset.bound = 'true';
-            searchInput.addEventListener('input', () => renderAssessmentAttemptsRows(searchInput.value));
-        }
-
-        if (typeof showStackedModal === 'function') {
-            showStackedModal(modalEl);
-        } else {
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        }
-
-        try {
-            const response = await fetch(`/dashboard/teacher/assessment/${encodeURIComponent(assessment.id)}/`, {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Could not load attempts');
-            }
-            const attempts = Array.isArray(data.assessment?.attempts) ? data.assessment.attempts : [];
-            window.currentAssessmentAttempts = attempts.filter(attempt => {
-                const status = String(attempt.status || '').toLowerCase();
-                return status !== 'cancelled' && status !== 'archived';
-            });
-            renderAssessmentAttemptsRows('');
-        } catch (err) {
-            console.error('assessment attempts load error', err);
-            if (tableBody) tableBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4">Unable to load assessment attempts.</td></tr>';
-        }
     }
 
     let teacherCourses = [];
@@ -3217,11 +3088,6 @@
                         const assessment = assessments.find(a => Number(a.id) === assessmentId);
                         if (!assessment) return showToast('Assessment not found', 'error');
 
-                        if (actionBtn.dataset.assessmentAction === 'preview') {
-                            showAssessmentAttemptsModal(assessment);
-                            return;
-                        }
-
                         if (actionBtn.dataset.assessmentAction === 'edit') {
                             showToast('Use the Readings tab to edit assessments.', 'info');
                             return;
@@ -3422,7 +3288,6 @@
                             </div>
                         </div>
                         <div class="assessment-actions">
-                            <button class="material-btn" title="View Attempts" data-assessment-action="preview"><i class="bi bi-eye"></i></button>
                             <button class="material-btn delete" title="Archive" data-assessment-action="delete"><i class="bi bi-archive"></i></button>
                         </div>
                     </article>
