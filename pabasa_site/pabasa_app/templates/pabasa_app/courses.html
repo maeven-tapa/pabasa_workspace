@@ -2393,6 +2393,40 @@
     </div>
 </div>
 
+<!-- Modal for Student Reading Progress -->
+<div class="modal fade" id="studentProgressModal" tabindex="-1" aria-labelledby="studentProgressModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content course-modal-content">
+            <div class="modal-header course-modal-header">
+                <div>
+                    <h5 class="modal-title" id="studentProgressModalLabel">Reading Progress</h5>
+                    <small class="text-muted" id="studentProgressSubtext">Course reading task attempts</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Reading Task (Title)</th>
+                                <th>Status</th>
+                                <th>Reading Score</th>
+                                <th class="text-end">Attempts</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentProgressTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">Select a student to view progress.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
             <!-- Create Course Modal -->
             <div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -3398,7 +3432,7 @@
                         <td>${s.wpm || '—'}</td>
                         <td class="text-end">
                             <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || ''}" data-student-name="${s.name}" title="View progress"><i class="bi bi-bar-chart"></i></button>
+                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || ''}" data-student-name="${escapeHtml(s.name)}" title="View progress"><i class="bi bi-bar-chart"></i></button>
                                 <button class="btn btn-sm btn-outline-danger" type="button" title="Remove from section" onclick="window.removeStudentFromCourse('${s.id || s.custom_id || ''}', '${matchCode}', '${s.name.replace(/'/g, "\\'")}', '${courseId}')"><i class="bi bi-trash"></i></button>
                             </div>
                         </td>
@@ -3880,11 +3914,142 @@
             }
         }
 
+        function progressStudentMatches(attempt, studentId, studentName) {
+            if (!attempt) return false;
+            const attemptStudentId = attempt.student_id ?? attempt.studentId ?? attempt.user_id ?? '';
+            const attemptCustomId = attempt.student_custom_id ?? attempt.custom_id ?? '';
+            const normalizedId = String(studentId || '').trim();
+            const normalizedName = String(studentName || '').trim().toLowerCase();
+            if (normalizedId && (String(attemptStudentId) === normalizedId || String(attemptCustomId) === normalizedId)) return true;
+            return normalizedName && String(attempt.student_name || '').trim().toLowerCase() === normalizedName;
+        }
+
+        function normalizeProgressStatus(attempts) {
+            if (!attempts.length) return { label: 'Not Started', className: 'bg-secondary' };
+            if (attempts.some(att => String(att.status || '').toLowerCase() === 'completed' || att.completed_at)) {
+                return { label: 'Completed', className: 'bg-success' };
+            }
+            return { label: 'In Progress', className: 'bg-warning text-dark' };
+        }
+
+        function formatAttemptScore(attempt, index) {
+            const wpm = attempt.wpm ?? attempt.words_per_minute ?? attempt.reading_wpm;
+            const accuracy = attempt.accuracy ?? attempt.accuracy_percent ?? attempt.reading_accuracy;
+            const wpmText = (wpm !== undefined && wpm !== null && wpm !== '') ? `${escapeHtml(wpm)} WPM` : 'No WPM';
+            const accuracyText = (accuracy !== undefined && accuracy !== null && accuracy !== '') ? `${escapeHtml(accuracy)}% Accuracy` : 'No accuracy';
+            return `<div class="small"><span class="fw-semibold">Attempt ${index + 1}:</span> ${wpmText} / ${accuracyText}</div>`;
+        }
+
+        function courseProgressTasks(course) {
+            const tasks = [];
+            const seen = new Set();
+            const addMaterialTask = (material) => {
+                if (!material) return;
+                const assessmentId = material.assessment_id || (String(material.id || '').startsWith('assessment-') ? rawRecordId(material.id) : null);
+                const key = assessmentId ? `assessment-${assessmentId}` : `material-${material.id || material.raw_id || material.title || ''}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                tasks.push({
+                    title: material.title || 'Untitled reading task',
+                    assessmentId,
+                });
+            };
+
+            activeRecords(course?.materials || []).forEach(addMaterialTask);
+
+            let storedReadings = {};
+            try { storedReadings = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}'); } catch (e) { storedReadings = {}; }
+            (course?.sections || []).forEach(section => {
+                const code = section.code || section.class_code || '';
+                const readings = classReadings[code] || storedReadings[code] || storedReadings[String(code).toUpperCase()] || storedReadings[String(code).toLowerCase()] || {};
+                ['word', 'sentence', 'paragraph'].forEach(type => {
+                    activeRecords(readings[type] || readings[`${type}s`] || []).forEach(addMaterialTask);
+                });
+            });
+
+            activeRecords(course?.assessments || []).forEach(assessment => {
+                const assessmentId = assessment.raw_id || assessment.id;
+                const key = `assessment-${assessmentId}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                tasks.push({
+                    title: assessment.title || 'Untitled assessment',
+                    assessmentId,
+                });
+            });
+            return tasks;
+        }
+
+        async function fetchAssessmentProgressDetails(assessmentIds) {
+            const uniqueIds = [...new Set(assessmentIds.filter(Boolean).map(id => rawRecordId(id)))];
+            const entries = await Promise.all(uniqueIds.map(async id => {
+                try {
+                    const res = await fetch(`/dashboard/teacher/assessment/${id}/`, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success && data.assessment) return [String(id), data.assessment];
+                } catch (err) {
+                    console.warn('Failed to load assessment progress', id, err);
+                }
+                return [String(id), null];
+            }));
+            return Object.fromEntries(entries);
+        }
+
+        async function openStudentProgressModal(studentId, studentName, courseId) {
+            const course = findCourseById(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId);
+            if (!course) return showToast('Course not found', 'error');
+
+            const modalEl = document.getElementById('studentProgressModal');
+            const titleEl = document.getElementById('studentProgressModalLabel');
+            const subtextEl = document.getElementById('studentProgressSubtext');
+            const tbody = document.getElementById('studentProgressTableBody');
+            if (!modalEl || !tbody) return;
+
+            if (titleEl) titleEl.textContent = `${studentName || 'Student'} Progress`;
+            if (subtextEl) subtextEl.textContent = `${course.title || 'Course'} reading task attempts`;
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading progress...</td></tr>`;
+
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+
+            const tasks = courseProgressTasks(course);
+            if (tasks.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No reading tasks assigned in this course.</td></tr>`;
+                return;
+            }
+
+            const assessmentDetails = await fetchAssessmentProgressDetails(tasks.map(task => task.assessmentId));
+            tbody.innerHTML = tasks.map(task => {
+                const detail = task.assessmentId ? assessmentDetails[String(rawRecordId(task.assessmentId))] : null;
+                const allAttempts = Array.isArray(detail?.attempts) ? detail.attempts : [];
+                const attempts = allAttempts
+                    .filter(att => progressStudentMatches(att, studentId, studentName))
+                    .filter(att => String(att.status || '').toLowerCase() !== 'cancelled');
+                const status = normalizeProgressStatus(attempts);
+                const scoreHtml = attempts.length
+                    ? attempts.map(formatAttemptScore).join('')
+                    : '<span class="text-muted small">No attempts yet</span>';
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(task.title)}</strong></td>
+                        <td><span class="badge ${status.className}">${status.label}</span></td>
+                        <td>${scoreHtml}</td>
+                        <td class="text-end fw-semibold">${Math.min(attempts.length, 3)}/3</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
         if (e.target.closest('.view-student-progress')) {
             const btn = e.target.closest('.view-student-progress');
             const id = btn.dataset.studentId;
             const name = btn.dataset.studentName;
-            alert(`Open progress view for ${name} (${id})`);
+            const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+            openStudentProgressModal(id, name, courseId);
         }
     });
     
@@ -4199,27 +4364,38 @@
 
     // Remove student from a course-section (uses teacher_remove_student endpoint)
     window.removeStudentFromCourse = function(studentId, sectionCode, studentName, courseId) {
-        if (!confirm(`Remove ${studentName} from this course?`)) return;
-        fetch('/dashboard/teacher/remove-student-from-class/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+        showDeleteConfirmModal(
+            `<p>Remove <strong>${escapeHtml(studentName || 'this student')}</strong> from this course?</p><p class="text-muted small mt-2 mb-0">Their account will remain active, but they will no longer appear in this course's Students tab.</p>`,
+            async () => {
+                try {
+                    const response = await fetch('/dashboard/teacher/remove-student-from-class/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
+                        },
+                        body: JSON.stringify({ class_code: sectionCode || currentClassCode, student_id: studentId })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        showToast(`${studentName} removed from course`, 'error');
+                        // Refresh course students list
+                        try { loadCourseStudents(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId); } catch(e){}
+                        try { renderCourses(); } catch(e){}
+                    } else {
+                        showToast(data.error || 'Could not remove student', 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast('An error occurred', 'error');
+                }
             },
-            body: JSON.stringify({ class_code: sectionCode || currentClassCode, student_id: studentId })
-        })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                showToast(`${studentName} removed from course`, 'success');
-                // Refresh course students list
-                try { loadCourseStudents(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId); } catch(e){}
-                try { renderCourses(); } catch(e){}
-            } else {
-                showToast(d.error || 'Could not remove student', 'error');
+            {
+                title: 'Remove Student?',
+                confirmText: 'Remove Student',
+                confirmClass: 'btn btn-danger px-4'
             }
-        })
-        .catch(err => { console.error(err); showToast('An error occurred', 'error'); });
+        );
     };
 
     const classAssessments = {};
