@@ -2163,10 +2163,6 @@
                                     <input type="file" id="materialFileInput" class="d-none" accept=".pdf,.docx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                                     <div id="materialUploadStatus" class="form-text small mt-2 mb-0 d-none"></div>
                                 </div>
-                                <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="paragraphModeToggle">
-                                    <label class="form-check-label small fw-bold text-dark" for="paragraphModeToggle">Save input as one paragraph</label>
-                                </div>
                                 <div class="input-group mb-2">
                                     <textarea id="itemInput" class="form-control border-light shadow-sm" placeholder="Add word or phrase..." rows="1" style="border-radius: 12px 0 0 12px; min-height: 44px; resize: vertical;"></textarea>
                                     <button class="btn btn-primary px-3" type="button" id="addItemBtn" style="border-radius: 0 12px 12px 0;">
@@ -4976,6 +4972,7 @@
         // Global variables for current class and material being edited/added
         let editingCard = null;
         let currentItemsList = [];
+        let currentItemsAreParagraph = false;
 
         // Add Material Modal elements
         const addMaterialModal = document.getElementById('addMaterialModal');
@@ -4983,7 +4980,6 @@
         const materialCategorySelect = document.getElementById('materialCategory');
         const itemInput = document.getElementById('itemInput');
         const addItemBtn = document.getElementById('addItemBtn');
-        const paragraphModeToggle = document.getElementById('paragraphModeToggle');
         const addedItemsList = document.getElementById('addedItemsList');
         const materialTypeSelect = document.getElementById('materialType');
         const publicationStatusSelect = document.getElementById('publicationStatus');
@@ -5077,31 +5073,35 @@
             return div.innerHTML;
         }
 
-        function isParagraphModeEnabled() {
-            return !!(paragraphModeToggle && paragraphModeToggle.checked);
+        function countPeriodSeparatedSentences(value) {
+            return String(value || '')
+                .split('.')
+                .map(part => part.trim())
+                .filter(Boolean)
+                .length;
         }
 
-        function resetParagraphMode(enabled = false) {
-            if (!paragraphModeToggle) return;
-            paragraphModeToggle.checked = !!enabled;
-            updateParagraphModeUi();
+        function isParagraphInput(value) {
+            return countPeriodSeparatedSentences(value) > 1;
         }
 
-        function updateParagraphModeUi() {
+        function resetDetectedParagraphState(enabled = false) {
+            currentItemsAreParagraph = !!enabled;
             if (!itemInput) return;
-            const enabled = isParagraphModeEnabled();
-            itemInput.rows = enabled ? 4 : 1;
-            itemInput.placeholder = enabled ? 'Paste or type the full paragraph...' : 'Add word or phrase...';
+            itemInput.rows = currentItemsAreParagraph ? 4 : 1;
+            itemInput.placeholder = currentItemsAreParagraph ? 'Paste or type the full paragraph...' : 'Add word or phrase...';
         }
 
         function addCurrentInputToItems() {
             if (!itemInput) return;
             const val = itemInput.value.trim();
             if (!val) return;
-            if (isParagraphModeEnabled()) {
+            if (isParagraphInput(val)) {
                 currentItemsList = [val];
+                resetDetectedParagraphState(true);
             } else {
                 currentItemsList.push(val);
+                resetDetectedParagraphState(false);
             }
             itemInput.value = '';
             itemInput.focus();
@@ -5120,7 +5120,7 @@
                 return;
             }
 
-            const paragraphMode = isParagraphModeEnabled();
+            const paragraphMode = currentItemsAreParagraph;
             chipsContainer.innerHTML = currentItemsList.map((item, index) => `
                 <div class="badge d-flex align-items-${paragraphMode ? 'start' : 'center'} gap-2 p-2 px-3 shadow-sm border ${paragraphMode ? 'w-100 justify-content-between text-start' : ''}"
                      style="background: #fff; color: #1e293b; border-color: #e2e8f0; border-radius: 10px; font-weight: 700; font-size: 0.85rem; border-left: 3px solid var(--dash-primary) !important; white-space: ${paragraphMode ? 'normal' : 'nowrap'};">
@@ -5189,7 +5189,7 @@
                 return;
             }
             currentItemsList = items;
-            resetParagraphMode(false);
+            resetDetectedParagraphState(false);
             renderAddedItemsChips();
             if (materialTitleInput && !materialTitleInput.value.trim() && fileName) {
                 materialTitleInput.value = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
@@ -5254,7 +5254,7 @@
                     if (items.length === 0 && raw.trim()) items = raw.split(/\s+/).map(s => s.trim()).filter(Boolean);
                 }
                 currentItemsList = items;
-                resetParagraphMode(itype === 'paragraph');
+                resetDetectedParagraphState(itype === 'paragraph');
                 renderAddedItemsChips();
 
                 // Prefill type/status/assigned week/schedule
@@ -5300,23 +5300,11 @@
                 addCurrentInputToItems();
             });
             itemInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && (!isParagraphModeEnabled() || e.ctrlKey || e.metaKey)) {
+                if (e.key === 'Enter' && (!isParagraphInput(itemInput.value) || e.ctrlKey || e.metaKey)) {
                     e.preventDefault();
                     addItemBtn.click();
                 }
             });
-        }
-
-        if (paragraphModeToggle) {
-            paragraphModeToggle.addEventListener('change', function() {
-                updateParagraphModeUi();
-                if (paragraphModeToggle.checked && itemInput && itemInput.value.trim()) {
-                    addCurrentInputToItems();
-                } else {
-                    renderAddedItemsChips();
-                }
-            });
-            updateParagraphModeUi();
         }
 
         if (uploadMaterialBtn && materialFileInput) {
@@ -5393,7 +5381,7 @@
             const addForm = document.getElementById('addMaterialForm');
             if (addForm) addForm.reset();
             currentItemsList = [];
-            resetParagraphMode(false);
+            resetDetectedParagraphState(false);
             renderAddedItemsChips();
             if (materialFileInput) materialFileInput.value = '';
             setUploadStatus('');
@@ -5642,7 +5630,7 @@
                         const addMaterialFormEl = document.getElementById('addMaterialForm');
                         if (addMaterialFormEl) addMaterialFormEl.reset();
                         currentItemsList = [];
-                        resetParagraphMode(false);
+                        resetDetectedParagraphState(false);
                         renderAddedItemsChips();
                         if (materialFileInput) materialFileInput.value = '';
                         setUploadStatus('');
@@ -5702,9 +5690,9 @@
                                 if (items.length === 0 && raw.trim()) items = raw.split(/\s+/).map(s => s.trim()).filter(Boolean);
                             }
                             currentItemsList = items;
-                            resetParagraphMode((material.item_type || '').toLowerCase() === 'paragraph');
+                            resetDetectedParagraphState((material.item_type || '').toLowerCase() === 'paragraph');
                             renderAddedItemsChips();
-                        } catch (err) { currentItemsList = []; resetParagraphMode(false); renderAddedItemsChips(); }
+                        } catch (err) { currentItemsList = []; resetDetectedParagraphState(false); renderAddedItemsChips(); }
 
                         // Type / status / assigned week / schedule
                         try { materialTypeSelect.value = material.type || 'practice'; } catch (e) { /* ignore */ }
@@ -5960,14 +5948,21 @@
                     submitMaterialBtn.addEventListener('click', async function () {
                         const title   = materialTitleInput   ? materialTitleInput.value.trim()   : '';
                         // Category is auto-detected by backend
-                        const paragraphMode = isParagraphModeEnabled();
-                        if (paragraphMode && itemInput && itemInput.value.trim()) {
-                            currentItemsList = [itemInput.value.trim()];
+                        const pendingInput = itemInput ? itemInput.value.trim() : '';
+                        if (pendingInput) {
+                            if (isParagraphInput(pendingInput)) {
+                                currentItemsList = [pendingInput];
+                                resetDetectedParagraphState(true);
+                            } else {
+                                currentItemsList.push(pendingInput);
+                                resetDetectedParagraphState(false);
+                            }
                             itemInput.value = '';
                             renderAddedItemsChips();
                         }
-                        const readingType = paragraphMode ? 'paragraph' : '';
-                        const content = paragraphMode ? (currentItemsList[0] || '') : currentItemsList.join('\n');
+                        const finalParagraphMode = currentItemsAreParagraph || (currentItemsList.length === 1 && isParagraphInput(currentItemsList[0]));
+                        const readingType = finalParagraphMode ? 'paragraph' : '';
+                        const content = finalParagraphMode ? (currentItemsList[0] || '') : currentItemsList.join('\n');
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const usageType = materialTypeSelect ? materialTypeSelect.value : 'practice';
@@ -6202,7 +6197,7 @@
                                 try {
                                     const addMaterialFormEl = document.getElementById('addMaterialForm');
                                     if (addMaterialFormEl) addMaterialFormEl.reset();
-                                    resetParagraphMode(false);
+                                    resetDetectedParagraphState(false);
                                     if (scheduleFieldDiv) scheduleFieldDiv.classList.add('d-none');
                                     [materialTitleInput, scheduleDateTimeInput].forEach(function (el) { if (el) el.classList.remove('is-invalid', 'is-valid'); });
                                     if (errorBanner) errorBanner.classList.add('d-none');
@@ -6326,7 +6321,7 @@
                             // ── Step 4: Reset form ────────────────────────────────
                             const addMaterialFormEl = document.getElementById('addMaterialForm');
                             if (addMaterialFormEl) addMaterialFormEl.reset();
-                            resetParagraphMode(false);
+                            resetDetectedParagraphState(false);
                             if (scheduleFieldDiv)   scheduleFieldDiv.classList.add('d-none');
                             [materialTitleInput, scheduleDateTimeInput].forEach(function (el) {
                                 if (el) el.classList.remove('is-invalid', 'is-valid');

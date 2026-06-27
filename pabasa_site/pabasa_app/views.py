@@ -4092,7 +4092,12 @@ def add_reading_material(request):
 
         # ── Auto-detect reading_type (Category) ──────────────────────────
         # Since we removed the field, we determine it by analyzing the content
+        def has_multiple_period_sentences(text):
+            return len([part for part in text.split('.') if part.strip()]) > 1
+
         def detect_reading_type(text):
+            if has_multiple_period_sentences(text):
+                return 'paragraph'
             # If there are double newlines, it's likely a paragraph
             if len(re.split(r'\n{2,}', text.strip())) > 1:
                 return 'paragraph'
@@ -4112,7 +4117,7 @@ def add_reading_material(request):
             if rtype == 'sentence':
                 return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
             if rtype == 'paragraph':
-                if requested_reading_type == 'paragraph':
+                if requested_reading_type == 'paragraph' or has_multiple_period_sentences(text):
                     return [text.strip()]
                 return [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
             return [text]
@@ -4334,7 +4339,11 @@ def teacher_update_material(request):
         if content != material.content_text or requested_reading_type == 'paragraph':
             material.content_text = content
             # Re-detect type and tokens if content changed
+            def has_multiple_period_sentences(text):
+                return len([part for part in text.split('.') if part.strip()]) > 1
+
             def detect_type(text):
+                if has_multiple_period_sentences(text): return 'paragraph'
                 if len(re.split(r'\n{2,}', text.strip())) > 1: return 'paragraph'
                 if re.search(r'[.!?]', text) and len(text.split()) > 3: return 'sentence'
                 return 'word'
