@@ -573,41 +573,117 @@
         /* System Modals Base Styling */
         .system-modal {
             border: 0;
-            border-radius: 16px;
-            box-shadow: 0 30px 90px rgba(20, 24, 28, 0.3);
+            border-radius: 22px;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.16);
             overflow: hidden;
-            background: linear-gradient(135deg, #ffffff 0%, #f9fbfa 100%);
-            border: 1px solid rgba(31, 111, 139, 0.1);
+            background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            backdrop-filter: blur(12px);
         }
         .system-modal-accent {
-            height: 4px;
-            background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
+            height: 5px;
+            background: linear-gradient(90deg, var(--dash-primary), #38bdf8);
         }
-        .system-modal-accent.danger { background: linear-gradient(90deg, #dc2626, #ef4444); }
+        .system-modal-accent.danger { background: linear-gradient(90deg, #f43f5e, #fb7185); }
         .system-modal-icon {
             align-items: center;
-            background: linear-gradient(135deg, rgba(31, 111, 139, 0.12), rgba(31, 111, 139, 0.08));
-            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(31, 111, 139, 0.16), rgba(56, 189, 248, 0.12));
+            border-radius: 16px;
             color: var(--dash-primary-deep);
             display: inline-flex;
             font-size: 1.8rem;
-            height: 56px;
+            height: 60px;
             justify-content: center;
-            width: 56px;
-            border: 2px solid rgba(31, 111, 139, 0.15);
-            box-shadow: 0 4px 16px rgba(31, 111, 139, 0.1);
+            width: 60px;
+            border: 1px solid rgba(31, 111, 139, 0.14);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 10px 24px rgba(31, 111, 139, 0.14);
         }
         .system-modal-icon.danger {
-            background: linear-gradient(135deg, rgba(220, 38, 38, 0.12), rgba(220, 38, 38, 0.08));
-            color: #dc2626;
-            border-color: rgba(220, 38, 38, 0.15);
-            box-shadow: 0 4px 16px rgba(220, 38, 38, 0.1);
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.16), rgba(251, 113, 133, 0.12));
+            color: #e11d48;
+            border-color: rgba(225, 29, 72, 0.18);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 10px 24px rgba(225, 29, 72, 0.14);
         }
         .system-modal .modal-title {
             color: var(--dash-ink);
             font-weight: 800;
             font-size: 1.35rem;
             margin-bottom: 0.5rem;
+        }
+        .logout-modal-shell {
+            padding: 2.25rem 1.75rem 1.5rem;
+        }
+        .logout-modal-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.85rem;
+        }
+        .logout-modal-icon {
+            height: 64px;
+            width: 64px;
+            border-radius: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.9rem;
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.14), rgba(251, 113, 133, 0.1));
+            color: #e11d48;
+            border: 1px solid rgba(225, 29, 72, 0.16);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 14px 28px rgba(225, 29, 72, 0.12);
+            margin-bottom: 0.25rem;
+        }
+        .logout-modal-title {
+            color: var(--dash-ink);
+            font-weight: 800;
+            font-size: 1.45rem;
+            margin: 0;
+            letter-spacing: -0.01em;
+        }
+        .logout-modal-copy {
+            color: var(--dash-text);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0;
+            max-width: 340px;
+            opacity: 0.9;
+        }
+        .logout-modal-actions {
+            gap: 0.85rem;
+            padding-top: 0.35rem;
+        }
+        .logout-modal-actions .btn {
+            border-radius: 999px;
+            font-weight: 700;
+            min-width: 144px;
+            padding: 0.8rem 1.25rem;
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, background-color 0.22s ease;
+        }
+        .logout-modal-actions .btn:hover {
+            transform: translateY(-2px);
+        }
+        .logout-modal-actions .btn:active {
+            transform: translateY(0);
+        }
+        .logout-modal-actions .btn-secondary {
+            background: linear-gradient(135deg, #ffffff, #f1f5f9);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            color: #334155;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+        }
+        .logout-modal-actions .btn-secondary:hover {
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            color: #0f172a;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
+        }
+        .logout-modal-actions .btn-danger {
+            background: linear-gradient(135deg, #e11d48, #f43f5e);
+            border: 0;
+            box-shadow: 0 10px 24px rgba(225, 29, 72, 0.28);
+        }
+        .logout-modal-actions .btn-danger:hover {
+            background: linear-gradient(135deg, #be123c, #e11d48);
+            box-shadow: 0 14px 30px rgba(225, 29, 72, 0.36);
         }
 
         .dash-card {
@@ -1092,15 +1168,27 @@
         }
 
         body.dark-theme .system-modal {
-            background: #1e293b !important;
-            border-color: rgba(255, 255, 255, 0.1) !important;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96)) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            box-shadow: 0 24px 70px rgba(2, 6, 23, 0.45) !important;
         }
         body.dark-theme .system-modal .modal-title { color: #f1f5f9 !important; }
         body.dark-theme .system-modal .modal-body,
-        body.dark-theme .system-modal .text-muted { color: #94a3b8 !important; }
+        body.dark-theme .system-modal .text-muted,
+        body.dark-theme .logout-modal-copy { color: #cbd5e1 !important; }
         body.dark-theme .system-modal-icon {
-            background: rgba(31, 111, 139, 0.2) !important;
-            color: #38bdf8 !important;
+            background: rgba(56, 189, 248, 0.16) !important;
+            color: #7dd3fc !important;
+            border-color: rgba(125, 211, 252, 0.2) !important;
+        }
+        body.dark-theme .logout-modal-actions .btn-secondary {
+            background: linear-gradient(135deg, rgba(148, 163, 184, 0.16), rgba(71, 85, 105, 0.16)) !important;
+            color: #e2e8f0 !important;
+            border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+        body.dark-theme .logout-modal-actions .btn-secondary:hover {
+            background: linear-gradient(135deg, rgba(148, 163, 184, 0.24), rgba(71, 85, 105, 0.24)) !important;
+            color: #f8fafc !important;
         }
         body.dark-theme .system-modal-icon.danger {
             background: rgba(220, 38, 38, 0.2) !important;
@@ -1260,16 +1348,18 @@
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content system-modal">
                         <div class="system-modal-accent danger"></div>
-                        <div class="modal-body text-center pt-5 pb-4">
-                            <div class="system-modal-icon danger mb-3">
-                                <i class="bi bi-box-arrow-right"></i>
+                        <div class="modal-body text-center logout-modal-shell">
+                            <div class="logout-modal-body">
+                                <div class="logout-modal-icon">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                </div>
+                                <h5 class="logout-modal-title">Ready to leave?</h5>
+                                <p class="logout-modal-copy">You'll be returned to the home page when this session ends.</p>
                             </div>
-                            <h5 class="modal-title mb-2">Ready to leave?</h5>
-                            <p class="text-muted px-3">Ending your session will return you to the home page.</p>
                         </div>
-                        <div class="modal-footer border-0 justify-content-center pb-4">
-                            <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Stay Here</button>
-                            <a class="btn btn-danger px-4" href="{% url 'home' %}">Yes, Logout</a>
+                        <div class="modal-footer border-0 justify-content-center pb-4 logout-modal-actions">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Stay Here</button>
+                            <a class="btn btn-danger" href="{% url 'home' %}">Yes, Logout</a>
                         </div>
                     </div>
                 </div>

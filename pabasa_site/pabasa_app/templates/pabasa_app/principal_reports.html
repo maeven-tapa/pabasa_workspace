@@ -1,0 +1,285 @@
+{% extends "pabasa_app/principal_base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="principal-content">
+    <!-- Reports Overview -->
+    <p class="text-secondary mb-4">
+        Generate and view comprehensive reports on school performance, grade-level achievements, and assessment results.
+    </p>
+
+    <!-- Available Reports Section -->
+    <h5 class="mb-3">Available Reports</h5>
+
+    <!-- School Performance Report -->
+    <div class="principal-panel mb-4" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%); border: 1px solid rgba(59, 130, 246, 0.1);">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-2">School Performance Report</h6>
+                <p class="small text-muted mb-3">Comprehensive analysis of school-wide performance metrics, trends, and key indicators across all grades and subjects.</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-primary" onclick="alert('Opening School Performance Report...')">
+                        <i class="bi bi-eye me-1"></i>View Report
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="alert('Exporting to PDF...')">
+                        <i class="bi bi-download me-1"></i>Export PDF
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="alert('Exporting to Excel...')">
+                        <i class="bi bi-download me-1"></i>Export Excel
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <i class="bi bi-file-earmark-pdf" style="font-size: 3rem; color: #3b82f6; opacity: 0.3;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grade-Level Report -->
+    <div class="principal-panel mb-4" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.02) 100%); border: 1px solid rgba(34, 197, 94, 0.1);">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-2">Grade-Level Report</h6>
+                <p class="small text-muted mb-3">Detailed performance breakdown by grade level, including individual grade statistics, teacher performance, and comparative analysis.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-sm btn-primary" onclick="alert('Opening Grade-Level Report...')">
+                        <i class="bi bi-eye me-1"></i>View Report
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="alert('Exporting to PDF...')">
+                        <i class="bi bi-download me-1"></i>Export PDF
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="alert('Exporting to Excel...')">
+                        <i class="bi bi-download me-1"></i>Export Excel
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <i class="bi bi-bar-chart" style="font-size: 3rem; color: #22c55e; opacity: 0.3;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessment Report -->
+    <div class="principal-panel mb-4" style="background: linear-gradient(135deg, rgba(251, 146, 60, 0.05) 0%, rgba(251, 146, 60, 0.02) 100%); border: 1px solid rgba(251, 146, 60, 0.1);">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-2">Assessment Report</h6>
+                <p class="small text-muted mb-3">Individual assessment results, completion rates, student performance data, and improvement trends across all assessments.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-sm btn-primary" onclick="alert('Opening Assessment Report...')">
+                        <i class="bi bi-eye me-1"></i>View Report
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="alert('Exporting to PDF...')">
+                        <i class="bi bi-download me-1"></i>Export PDF
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="alert('Exporting to Excel...')">
+                        <i class="bi bi-download me-1"></i>Export Excel
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <i class="bi bi-journal-check" style="font-size: 3rem; color: #fb923c; opacity: 0.3;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recently Generated Reports -->
+    <h5 class="mb-3">Recently Generated Reports</h5>
+    <div class="principal-panel mb-4">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 placeholder-table">
+                <thead>
+                    <tr>
+                        <th>Report Name</th>
+                        <th>Type</th>
+                        <th>Generated Date</th>
+                        <th>Generated By</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>School Performance Report - November 2024</strong></td>
+                        <td><span class="badge bg-info">School-wide</span></td>
+                        <td>November 30, 2024</td>
+                        <td>Admin System</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="alert('Downloading report...')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade-Level Report - Grade 4 & 5</strong></td>
+                        <td><span class="badge bg-success">Grade-Level</span></td>
+                        <td>November 25, 2024</td>
+                        <td>Mrs. Jobelyn Valdez</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="alert('Downloading report...')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Assessment Report - Word Recognition Test</strong></td>
+                        <td><span class="badge bg-warning">Assessment</span></td>
+                        <td>November 20, 2024</td>
+                        <td>Admin System</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="alert('Downloading report...')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>School Performance Report - October 2024</strong></td>
+                        <td><span class="badge bg-info">School-wide</span></td>
+                        <td>October 31, 2024</td>
+                        <td>Admin System</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="alert('Downloading report...')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade-Level Report - All Grades</strong></td>
+                        <td><span class="badge bg-success">Grade-Level</span></td>
+                        <td>October 25, 2024</td>
+                        <td>Mrs. Jobelyn Valdez</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="alert('Downloading report...')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Report Customization Section -->
+    <h5 class="mb-3">Generate Custom Report</h5>
+    <div class="principal-panel mb-4">
+        <form onsubmit="alert('Custom report generation (placeholder)'); return false;">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="reportType" class="form-label">Report Type</label>
+                    <select class="form-select" id="reportType">
+                        <option value="school">School Performance</option>
+                        <option value="grade">Grade-Level</option>
+                        <option value="assessment">Assessment</option>
+                        <option value="teacher">Teacher Performance</option>
+                        <option value="student">Student Progress</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="dateRange" class="form-label">Date Range</label>
+                    <select class="form-select" id="dateRange">
+                        <option value="current-month">Current Month</option>
+                        <option value="last-month">Last Month</option>
+                        <option value="last-quarter">Last Quarter</option>
+                        <option value="year-to-date">Year-to-Date</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="gradeLevel" class="form-label">Grade Level (Optional)</label>
+                    <select class="form-select" id="gradeLevel">
+                        <option value="">All Grades</option>
+                        <option value="1">Grade 1</option>
+                        <option value="2">Grade 2</option>
+                        <option value="3">Grade 3</option>
+                        <option value="4">Grade 4</option>
+                        <option value="5">Grade 5</option>
+                        <option value="6">Grade 6</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="exportFormat" class="form-label">Export Format</label>
+                    <select class="form-select" id="exportFormat">
+                        <option value="pdf">PDF</option>
+                        <option value="excel">Excel</option>
+                        <option value="csv">CSV</option>
+                        <option value="view">View Online</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Include Sections</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="summary" checked>
+                    <label class="form-check-label" for="summary">
+                        Executive Summary
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="details" checked>
+                    <label class="form-check-label" for="details">
+                        Detailed Metrics
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="charts" checked>
+                    <label class="form-check-label" for="charts">
+                        Charts & Visualizations
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="recommendations">
+                    <label class="form-check-label" for="recommendations">
+                        Recommendations & Insights
+                    </label>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Generate Report
+                </button>
+                <button type="reset" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Report Templates -->
+    <h5 class="mb-3">Report Templates</h5>
+    <div class="row">
+        <!-- Standard Template -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="cursor: pointer;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(124, 45, 18, 0.15)'" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--principal-shadow)'; this.style.transition='all 0.2s'">
+                <i class="bi bi-file-earmark" style="font-size: 2rem; color: #7c2d12; margin-bottom: 1rem;"></i>
+                <h6>Standard Report</h6>
+                <p class="small text-muted mb-3">Basic performance metrics and completion rates</p>
+                <button class="btn btn-sm btn-outline-primary" onclick="alert('Using Standard Template...')">Use Template</button>
+            </div>
+        </div>
+
+        <!-- Comprehensive Template -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="cursor: pointer;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(124, 45, 18, 0.15)'" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--principal-shadow)'; this.style.transition='all 0.2s'">
+                <i class="bi bi-file-earmark-check" style="font-size: 2rem; color: #22c55e; margin-bottom: 1rem;"></i>
+                <h6>Comprehensive Report</h6>
+                <p class="small text-muted mb-3">Detailed analysis with trends and comparisons</p>
+                <button class="btn btn-sm btn-outline-primary" onclick="alert('Using Comprehensive Template...')">Use Template</button>
+            </div>
+        </div>
+
+        <!-- Executive Summary Template -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="cursor: pointer;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(124, 45, 18, 0.15)'" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--principal-shadow)'; this.style.transition='all 0.2s'">
+                <i class="bi bi-file-earmark-text" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
+                <h6>Executive Summary</h6>
+                <p class="small text-muted mb-3">Concise overview for stakeholders</p>
+                <button class="btn btn-sm btn-outline-primary" onclick="alert('Using Executive Summary Template...')">Use Template</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

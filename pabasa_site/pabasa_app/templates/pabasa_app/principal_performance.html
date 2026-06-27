@@ -1,0 +1,339 @@
+{% extends "pabasa_app/principal_base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="principal-content">
+    <!-- Performance Overview Cards -->
+    <div class="row mb-4">
+        <!-- Current Month Performance -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);">
+                <p class="text-secondary small mb-2">Current Month Performance</p>
+                <strong style="font-size: 2.2rem; color: #3b82f6;">82.5%</strong>
+                <p class="small text-muted mt-2 mb-0">
+                    <i class="bi bi-graph-up" style="color: #22c55e;"></i>
+                    <span style="color: #22c55e;">+5.2%</span> from last month
+                </p>
+            </div>
+        </div>
+
+        <!-- Average Completion Rate -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%);">
+                <p class="text-secondary small mb-2">Average Completion Rate</p>
+                <strong style="font-size: 2.2rem; color: #22c55e;">78%</strong>
+                <p class="small text-muted mt-2 mb-0">
+                    <i class="bi bi-check-circle"></i>
+                    <span>245 Students Participating</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Year-to-Date Progress -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(251, 146, 60, 0.08) 0%, rgba(251, 146, 60, 0.04) 100%);">
+                <p class="text-secondary small mb-2">Year-to-Date Progress</p>
+                <strong style="font-size: 2.2rem; color: #fb923c;">74%</strong>
+                <p class="small text-muted mt-2 mb-0">
+                    <i class="bi bi-calendar"></i>
+                    <span>Overall School Performance</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Breakdown Section -->
+    <h5 class="mb-3">Performance Breakdown</h5>
+
+    <!-- Reading and Speech Performance by Grade -->
+    <div class="principal-panel mb-4">
+        <h6 class="mb-3">Reading and Speech Performance by Grade</h6>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 placeholder-table">
+                <thead>
+                    <tr>
+                        <th>Grade Level</th>
+                        <th>Reading Score</th>
+                        <th>Speech Score</th>
+                        <th>Average</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Grade 1</strong></td>
+                        <td>62%</td>
+                        <td>68%</td>
+                        <td><strong>65%</strong></td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 65%; background-color: #ef4444;">65%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 2</strong></td>
+                        <td>72%</td>
+                        <td>75%</td>
+                        <td><strong>73.5%</strong></td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 73%; background-color: #fb923c;">73%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 3</strong></td>
+                        <td>82%</td>
+                        <td>80%</td>
+                        <td><strong>81%</strong></td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 81%; background-color: #22c55e;">81%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 4</strong></td>
+                        <td>88%</td>
+                        <td>87%</td>
+                        <td><strong>87.5%</strong></td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 87%; background-color: #22c55e;">87%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 5</strong></td>
+                        <td>86%</td>
+                        <td>85%</td>
+                        <td><strong>85.5%</strong></td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 85%; background-color: #22c55e;">85%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 6</strong></td>
+                        <td>84%</td>
+                        <td>83%</td>
+                        <td><strong>83.5%</strong></td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 83%; background-color: #22c55e;">83%</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Completion Rate by Grade -->
+    <div class="principal-panel mb-4">
+        <h6 class="mb-3">Completion Rate by Grade</h6>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 placeholder-table">
+                <thead>
+                    <tr>
+                        <th>Grade Level</th>
+                        <th>Total Students</th>
+                        <th>Completed</th>
+                        <th>In Progress</th>
+                        <th>Not Started</th>
+                        <th>Completion %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Grade 1</strong></td>
+                        <td>35</td>
+                        <td>25</td>
+                        <td>8</td>
+                        <td>2</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 71%; background-color: #fb923c;">71%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 2</strong></td>
+                        <td>40</td>
+                        <td>32</td>
+                        <td>6</td>
+                        <td>2</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 80%; background-color: #22c55e;">80%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 3</strong></td>
+                        <td>42</td>
+                        <td>38</td>
+                        <td>4</td>
+                        <td>0</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 90%; background-color: #22c55e;">90%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 4</strong></td>
+                        <td>41</td>
+                        <td>37</td>
+                        <td>3</td>
+                        <td>1</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 90%; background-color: #22c55e;">90%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 5</strong></td>
+                        <td>43</td>
+                        <td>39</td>
+                        <td>4</td>
+                        <td>0</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 90%; background-color: #22c55e;">90%</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grade 6</strong></td>
+                        <td>44</td>
+                        <td>38</td>
+                        <td>5</td>
+                        <td>1</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 86%; background-color: #22c55e;">86%</div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Improvement Rate and Trends -->
+    <div class="row mb-4">
+        <!-- Improvement Rate -->
+        <div class="col-md-6 mb-3">
+            <div class="principal-panel">
+                <h6 class="mb-3">Improvement Rate (Monthly)</h6>
+                <div class="d-flex flex-column gap-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small">Grade 1</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="progress" style="height: 6px; width: 100px; background: #f3f4f6;">
+                                <div class="progress-bar" role="progressbar" style="width: 12%; background-color: #22c55e;"></div>
+                            </div>
+                            <span style="color: #22c55e; font-weight: 600;">+12%</span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small">Grade 2</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="progress" style="height: 6px; width: 100px; background: #f3f4f6;">
+                                <div class="progress-bar" role="progressbar" style="width: 18%; background-color: #22c55e;"></div>
+                            </div>
+                            <span style="color: #22c55e; font-weight: 600;">+18%</span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small">Grade 3</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="progress" style="height: 6px; width: 100px; background: #f3f4f6;">
+                                <div class="progress-bar" role="progressbar" style="width: 8%; background-color: #22c55e;"></div>
+                            </div>
+                            <span style="color: #22c55e; font-weight: 600;">+8%</span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small">Grade 4</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="progress" style="height: 6px; width: 100px; background: #f3f4f6;">
+                                <div class="progress-bar" role="progressbar" style="width: 5%; background-color: #fbbf24;"></div>
+                            </div>
+                            <span style="color: #fbbf24; font-weight: 600;">+5%</span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small">Grade 5</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div class="progress" style="height: 6px; width: 100px; background: #f3f4f6;">
+                                <div class="progress-bar" role="progressbar" style="width: 3%; background-color: #fbbf24;"></div>
+                            </div>
+                            <span style="color: #fbbf24; font-weight: 600;">+3%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performing Grades and Intervention Needed -->
+        <div class="col-md-6 mb-3">
+            <div class="principal-panel">
+                <h6 class="mb-3">Performance Summary</h6>
+                <div class="mb-3">
+                    <p class="small mb-2" style="color: #22c55e; font-weight: 600;"><i class="bi bi-trophy"></i> Top Performing Grades</p>
+                    <div class="d-flex flex-column gap-2">
+                        <div style="padding: 0.75rem; background: rgba(34, 197, 94, 0.05); border-radius: 8px;">
+                            <p class="small mb-0"><strong>Grade 4:</strong> 87.5% Average</p>
+                        </div>
+                        <div style="padding: 0.75rem; background: rgba(34, 197, 94, 0.05); border-radius: 8px;">
+                            <p class="small mb-0"><strong>Grade 5:</strong> 85.5% Average</p>
+                        </div>
+                        <div style="padding: 0.75rem; background: rgba(34, 197, 94, 0.05); border-radius: 8px;">
+                            <p class="small mb-0"><strong>Grade 3:</strong> 81% Average</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div>
+                    <p class="small mb-2" style="color: #ef4444; font-weight: 600;"><i class="bi bi-exclamation-triangle"></i> Grades Needing Intervention</p>
+                    <div class="d-flex flex-column gap-2">
+                        <div style="padding: 0.75rem; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">
+                            <p class="small mb-0"><strong>Grade 1:</strong> 65% Average - <span style="font-size: 0.75rem; color: #ef4444;">Urgent support</span></p>
+                        </div>
+                        <div style="padding: 0.75rem; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">
+                            <p class="small mb-0"><strong>Grade 2:</strong> 73.5% Average - <span style="font-size: 0.75rem; color: #ef4444;">Additional support</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Charts (Placeholders) -->
+    <h5 class="mb-3">Performance Visualizations</h5>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="principal-panel">
+                <h6 class="mb-3">Grade Performance Trend (Last 3 Months)</h6>
+                <div style="height: 250px; background: linear-gradient(135deg, rgba(124, 45, 18, 0.05) 0%, rgba(254, 215, 170, 0.08) 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #7c2d12;">
+                    <p class="text-muted text-center">Chart visualization (Placeholder for Chart.js)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="principal-panel">
+                <h6 class="mb-3">Completion Rate Comparison</h6>
+                <div style="height: 250px; background: linear-gradient(135deg, rgba(124, 45, 18, 0.05) 0%, rgba(254, 215, 170, 0.08) 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #7c2d12;">
+                    <p class="text-muted text-center">Chart visualization (Placeholder for Chart.js)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

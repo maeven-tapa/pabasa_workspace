@@ -185,7 +185,7 @@ def _clear_all_assessment_attempts(assessment):
 from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.db.models import Max, Count, Q
 
 
@@ -1060,6 +1060,8 @@ def login_user(request):
         
         if user.role == 'admin':
             redirect_url = '/dashboard/admin/'
+        elif user.role == 'principal':
+            redirect_url = '/dashboard/principal/'
         elif user.role == 'teacher':
             redirect_url = '/dashboard/teacher/'
         else:
@@ -4792,3 +4794,277 @@ def get_teacher_students_api(request):
     except Exception as e:
         logger.error(f"Error in get_teacher_students_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# =================================================================================
+# PRINCIPAL DASHBOARD VIEWS (UI/UX Layout - Placeholder Data Only)
+# =================================================================================
+
+def _parse_user_agent(user_agent):
+    """Parse user agent string to extract browser and OS info."""
+    if not user_agent:
+        return 'Unknown Device'
+    ua = user_agent.lower()
+    browser = 'Unknown Browser'
+    os = 'Unknown OS'
+    if 'edg/' in ua:
+        browser = 'Edge'
+    elif 'chrome/' in ua and 'chromium' not in ua:
+        browser = 'Chrome'
+    elif 'firefox/' in ua:
+        browser = 'Firefox'
+    elif 'safari/' in ua and 'chrome' not in ua:
+        browser = 'Safari'
+    if 'windows' in ua:
+        os = 'Windows'
+    elif 'macintosh' in ua or 'mac os x' in ua:
+        os = 'macOS'
+    elif 'linux' in ua:
+        os = 'Linux'
+    elif 'android' in ua:
+        os = 'Android'
+    elif 'iphone' in ua or 'ipad' in ua:
+        os = 'iOS'
+    return f'{browser} on {os}'
+
+
+def _principal_context(request, page_title):
+    """Helper function to generate context for Principal pages"""
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    if user:
+        first_name = user.first_name
+        last_name = user.last_name
+        middle_initial = user.middle_initial
+        profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
+        if not isinstance(profile_info, dict):
+            profile_info = {}
+        position = profile_info.get('position', 'Head Teacher/Principal II')
+    else:
+        first_name = request.session.get('first_name', 'Jobelyn')
+        last_name = request.session.get('last_name', 'Valdez')
+        middle_initial = ''
+        position = 'Head Teacher/Principal II'
+    return {
+        'principal_id': request.session.get('custom_id', 'PRN-SES'),
+        'first_name': first_name,
+        'last_name': last_name,
+        'middle_initial': middle_initial,
+        'position': position,
+        'page_title': page_title,
+    }
+
+def principal_required(view_func):
+    """Decorator to check if user is Principal"""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not _check_auth(request):
+            return redirect('auth')
+        # For now, we'll allow admin or principal role to access
+        # Update this when principal authentication is fully implemented
+        if request.session.get('user_role') not in ['admin', 'principal']:
+            return redirect('auth')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+@principal_required
+def dashboard_principal(request):
+    """Principal Dashboard - Main overview with greeting, statistics, and recent activities"""
+    context = _principal_context(request, 'Dashboard')
+
+    # Build the display name dynamically from the user's personal information
+    name_parts = [context.get('first_name', '')]
+    if context.get('middle_initial'):
+        name_parts.append(context['middle_initial'] + '.')
+    if context.get('last_name'):
+        name_parts.append(context['last_name'])
+    greeting_name = ' '.join(name_parts).strip() or 'Principal'
+
+    context.update({
+        'greeting_name': greeting_name,
+        'greeting_title': context.get('position', 'Head Teacher/Principal II'),
+        'school_name': 'Salawag Elementary School',
+    })
+    return render(request, 'pabasa_app/principal_dashboard.html', context)
+
+@principal_required
+def principal_performance(request):
+    """Principal Performance Page - Grade performance, completion rates, and trends"""
+    context = _principal_context(request, 'Performance')
+    # Placeholder data for performance tracking
+    context.update({
+        'current_month_performance': '82.5%',
+        'completion_rate': '78%',
+        'ytd_progress': '74%',
+    })
+    return render(request, 'pabasa_app/principal_performance.html', context)
+
+@principal_required
+def principal_assessments(request):
+    """Principal Assessments Page - Assessment overview and results"""
+    context = _principal_context(request, 'Assessments')
+    # Placeholder data for assessments
+    context.update({
+        'total_assessments': 35,
+        'in_progress': 12,
+        'completed': 18,
+        'pending': 5,
+    })
+    return render(request, 'pabasa_app/principal_assessments.html', context)
+
+@principal_required
+def principal_reports(request):
+    """Principal Reports Page - Generate and view reports"""
+    context = _principal_context(request, 'Reports')
+    # Placeholder data for reports
+    context.update({
+        'report_types': [
+            'School Performance',
+            'Grade-Level',
+            'Assessment',
+        ],
+    })
+    return render(request, 'pabasa_app/principal_reports.html', context)
+
+@csrf_protect
+@require_http_methods(["GET", "POST"])
+@principal_required
+def principal_settings(request):
+    """Principal Settings Page - School information and account settings"""
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not user:
+        request.session.flush()
+        return redirect('auth')
+
+    context = _principal_context(request, 'Settings')
+    notification_settings = _notification_settings_for_user(user)
+
+    default_school_info = {
+        'name': 'Salawag Elementary School',
+        'code': 'SES-2024',
+        'municipality': 'Imus',
+        'province': 'Cavite',
+        'district': 'District 4',
+        'region': 'CALABARZON',
+        'address': 'Salawag, Imus, Cavite',
+        'contact': '(046) 555-0123',
+        'email': 'salawag.elementary@deped.gov.ph',
+    }
+    default_academic_settings = {
+        'academic_year': '2024-2025',
+        'term': '2',
+        'school_year_start': '2024-06-03',
+        'school_year_end': '2025-04-30',
+    }
+
+    school_info = _get_profile_dict(user, 'principal_school_info') or {}
+    academic_settings = _get_profile_dict(user, 'principal_academic_settings') or {}
+    principal_profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
+    if not isinstance(school_info, dict):
+        school_info = {}
+    if not isinstance(academic_settings, dict):
+        academic_settings = {}
+    if not isinstance(principal_profile_info, dict):
+        principal_profile_info = {}
+
+    if request.method == 'POST':
+        action = request.POST.get('settings_action', '').strip()
+
+        if action == 'save_school_info':
+            school_info = {
+                'name': request.POST.get('school_name', '').strip() or default_school_info['name'],
+                'code': request.POST.get('school_code', '').strip() or default_school_info['code'],
+                'municipality': request.POST.get('municipality', '').strip() or default_school_info['municipality'],
+                'province': request.POST.get('province', '').strip() or default_school_info['province'],
+                'district': request.POST.get('district', '').strip() or default_school_info['district'],
+                'region': request.POST.get('region', '').strip() or default_school_info['region'],
+                'address': request.POST.get('address', '').strip() or default_school_info['address'],
+                'contact': request.POST.get('contact', '').strip() or default_school_info['contact'],
+                'email': request.POST.get('email', '').strip() or default_school_info['email'],
+            }
+            _set_profile_dict(user, 'principal_school_info', school_info)
+            context['settings_success'] = 'School information updated.'
+
+        elif action == 'save_academic_year':
+            academic_settings = {
+                'academic_year': request.POST.get('academic_year', '').strip() or default_academic_settings['academic_year'],
+                'term': request.POST.get('term', '').strip() or default_academic_settings['term'],
+                'school_year_start': request.POST.get('school_year_start', '').strip() or default_academic_settings['school_year_start'],
+                'school_year_end': request.POST.get('school_year_end', '').strip() or default_academic_settings['school_year_end'],
+            }
+            _set_profile_dict(user, 'principal_academic_settings', academic_settings)
+            context['settings_success'] = 'Academic year settings updated.'
+
+        elif action == 'change_password':
+            current_password = request.POST.get('current_password', '')
+            new_password = request.POST.get('new_password', '')
+            confirm_password = request.POST.get('confirm_password', '')
+
+            if not current_password or not new_password or not confirm_password:
+                context['settings_error'] = 'All password fields are required.'
+            elif not check_password(current_password, user.password_hash):
+                context['settings_error'] = 'Current password is incorrect.'
+            elif new_password != confirm_password:
+                context['settings_error'] = 'New passwords do not match.'
+            elif len(new_password) < 8:
+                context['settings_error'] = 'Password must be at least 8 characters.'
+            else:
+                user.password_hash = make_password(new_password)
+                user.save(update_fields=['password_hash', 'updated_at'])
+                context['settings_success'] = 'Password changed successfully.'
+
+        elif action == 'save_personal_info':
+            first_name = request.POST.get('first_name', '').strip()
+            last_name = request.POST.get('last_name', '').strip()
+            middle_initial = request.POST.get('middle_initial', '').strip()
+            email = request.POST.get('email', '').strip()
+            contact_number = request.POST.get('contact_number', '').strip()
+            position = request.POST.get('position', '').strip()
+
+            if not first_name or not last_name:
+                context['settings_error'] = 'First name and last name are required.'
+            else:
+                user.first_name = first_name
+                user.last_name = last_name
+                user.middle_initial = middle_initial if middle_initial else ''
+                user.email = email
+                user.contact_no = contact_number
+                request.session['first_name'] = user.first_name
+                request.session['last_name'] = user.last_name
+                request.session['middle_initial'] = user.middle_initial
+                user.save(update_fields=['first_name', 'last_name', 'middle_initial', 'email', 'contact_no', 'updated_at'])
+                profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
+                if not isinstance(profile_info, dict):
+                    profile_info = {}
+                profile_info['position'] = position or 'Head Teacher/Principal II'
+                _set_profile_dict(user, 'principal_profile_info', profile_info)
+                context['settings_success'] = 'Personal information updated.'
+
+        elif action == 'save_notifications':
+            notification_settings = _posted_notification_settings(request)
+            _set_profile_dict(user, 'notification_settings', notification_settings)
+            context['settings_success'] = 'Notification preferences updated.'
+
+        else:
+            context['settings_error'] = 'Unknown settings action.'
+
+    last_login_dt = user.updated_at if isinstance(user.updated_at, datetime) else datetime.fromisoformat(str(user.updated_at)) if user.updated_at else None
+    account_created_dt = user.created_at if isinstance(user.created_at, datetime) else datetime.fromisoformat(str(user.created_at)) if user.created_at else None
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    browser_device = _parse_user_agent(user_agent)
+    context.update({
+        'school_info': {**default_school_info, **school_info},
+        'academic_settings': {**default_academic_settings, **academic_settings},
+        'principal_profile_info': {
+            'position': principal_profile_info.get('position', 'Head Teacher/Principal II'),
+        },
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'middle_initial': user.middle_initial,
+        'email': user.email,
+        'contact_number': user.contact_no or '',
+        'notification_settings': notification_settings,
+        'last_login': last_login_dt.strftime('%B %d, %Y') if last_login_dt else 'N/A',
+        'account_created': account_created_dt.strftime('%B %d, %Y') if account_created_dt else 'N/A',
+        'browser_device': browser_device,
+    })
+    return render(request, 'pabasa_app/principal_settings.html', context)

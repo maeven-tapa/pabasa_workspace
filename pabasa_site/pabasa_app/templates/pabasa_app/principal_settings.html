@@ -1,0 +1,306 @@
+{% extends "pabasa_app/principal_base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="principal-content">
+    <p class="text-secondary mb-4">
+        Manage school information, academic settings, and account preferences.
+    </p>
+
+    {% if settings_success %}
+        <div class="alert alert-success" role="alert">{{ settings_success }}</div>
+    {% endif %}
+    {% if settings_error %}
+        <div class="alert alert-danger" role="alert">{{ settings_error }}</div>
+    {% endif %}
+
+    <!-- School Information Section -->
+    <h5 class="mb-3">School Information</h5>
+    <div class="principal-panel mb-4">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="save_school_info">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="schoolName" class="form-label">School Name</label>
+                    <input type="text" class="form-control" id="schoolName" name="school_name" value="{{ school_info.name }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="schoolCode" class="form-label">School Code/ID</label>
+                    <input type="text" class="form-control" id="schoolCode" name="school_code" value="{{ school_info.code }}">
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="municipality" class="form-label">Municipality/City</label>
+                    <input type="text" class="form-control" id="municipality" name="municipality" value="{{ school_info.municipality }}" placeholder="Enter municipality">
+                </div>
+                <div class="col-md-6">
+                    <label for="province" class="form-label">Province</label>
+                    <input type="text" class="form-control" id="province" name="province" value="{{ school_info.province }}" placeholder="Enter province">
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="district" class="form-label">District</label>
+                    <input type="text" class="form-control" id="district" name="district" value="{{ school_info.district }}" placeholder="Enter district">
+                </div>
+                <div class="col-md-6">
+                    <label for="region" class="form-label">Region</label>
+                    <input type="text" class="form-control" id="region" name="region" value="{{ school_info.region }}" placeholder="Enter region">
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <label for="address" class="form-label">Complete Address</label>
+                    <input type="text" class="form-control" id="address" name="address" value="{{ school_info.address }}" placeholder="Enter full address">
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="contact" class="form-label">Contact Number</label>
+                    <input type="tel" class="form-control" id="contact" name="contact" value="{{ school_info.contact }}" placeholder="Enter contact number">
+                </div>
+                <div class="col-md-6">
+                    <label for="email" class="form-label">School Email</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ school_info.email }}" placeholder="Enter email">
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check me-1"></i>Save Changes
+                </button></div>
+        </form>
+    </div>
+
+    <!-- Academic Year Section -->
+    <h5 class="mb-3">Academic Year</h5>
+    <div class="principal-panel mb-4">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="save_academic_year">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="academicYear" class="form-label">Current Academic Year</label>
+                    <input type="text" class="form-control" id="academicYear" name="academic_year" value="{{ academic_settings.academic_year }}" placeholder="Enter academic year">
+                    <small class="text-muted">Format: YYYY-YYYY</small>
+                </div>
+                <div class="col-md-6">
+                    <label for="term" class="form-label">Current Term</label>
+                    <select class="form-select" id="term" name="term">
+                        <option value="1" {% if academic_settings.term == '1' %}selected{% endif %}>Term 1</option>
+                        <option value="2" {% if academic_settings.term == '2' %}selected{% endif %}>Term 2</option>
+                        <option value="3" {% if academic_settings.term == '3' %}selected{% endif %}>Term 3</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="schoolStart" class="form-label">School Year Start Date</label>
+                    <input type="date" class="form-control" id="schoolStart" name="school_year_start" value="{{ academic_settings.school_year_start }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="schoolEnd" class="form-label">School Year End Date</label>
+                    <input type="date" class="form-control" id="schoolEnd" name="school_year_end" value="{{ academic_settings.school_year_end }}">
+                </div>
+            </div>
+
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Note:</strong> These dates are used to organize assessments and reports by academic period.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check me-1"></i>Save Changes
+                </button></div>
+        </form>
+    </div>
+
+    <!-- Change Password Section -->
+    <h5 class="mb-3">Change Password</h5>
+    <div class="principal-panel mb-4">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="change_password">
+            <div class="mb-3">
+                <label for="currentPassword" class="form-label">Current Password</label>
+                <input type="password" class="form-control" id="currentPassword" name="current_password" placeholder="Enter current password" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="newPassword" class="form-label">New Password</label>
+                <input type="password" class="form-control" id="newPassword" name="new_password" placeholder="Enter new password" required>
+                <small class="text-muted">Minimum 8 characters, must include uppercase, lowercase, numbers, and special characters</small>
+            </div>
+
+            <div class="mb-3">
+                <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                <input type="password" class="form-control" id="confirmPassword" name="confirm_password" placeholder="Confirm new password" required>
+            </div>
+
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Security:</strong> Make sure to use a strong password and keep it confidential.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-lock me-1"></i>Update Password
+                </button></div>
+        </form>
+    </div>
+
+    <!-- Personal Information Section -->
+    <h5 class="mb-3">Personal Information</h5>
+    <div class="principal-panel mb-4">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="save_personal_info">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="firstName" class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="firstName" name="first_name" value="{{ first_name }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="lastName" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="lastName" name="last_name" value="{{ last_name }}" required>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="middleInitial" class="form-label">Middle Initial</label>
+                    <input type="text" class="form-control" id="middleInitial" name="middle_initial" value="{{ middle_initial|default:'' }}" maxlength="1">
+                </div>
+                <div class="col-md-6">
+                    <label for="position" class="form-label">Position</label>
+                    <input type="text" class="form-control" id="position" name="position" value="{{ principal_profile_info.position|default:'Head Teacher/Principal II' }}">
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ email|default:'' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="contactNumber" class="form-label">Contact Number</label>
+                    <input type="tel" class="form-control" id="contactNumber" name="contact_number" value="{{ contact_number|default:'' }}">
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="pabsaId" class="form-label">PABASA ID</label>
+                    <input type="text" class="form-control" id="pabsaId" value="{{ principal_id }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label for="role" class="form-label">Role</label>
+                    <input type="text" class="form-control" id="role" value="Principal" readonly>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check me-1"></i>Save Changes
+                </button></div>
+        </form>
+    </div>
+
+    <!-- Notification Preferences -->
+    <h5 class="mb-3">Notification Preferences</h5>
+    <div class="principal-panel mb-4">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="settings_action" value="save_notifications">
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" {% if notification_settings.email_notifications %}checked{% endif %}>
+                    <label class="form-check-label" for="emailNotifications">
+                        <strong>Email Notifications</strong>
+                        <p class="small text-muted mb-0">Receive email alerts about school activities and assessments</p>
+                    </label>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="assessmentUpdates" name="progress_updates" {% if notification_settings.progress_updates %}checked{% endif %}>
+                    <label class="form-check-label" for="assessmentUpdates">
+                        <strong>Assessment Updates</strong>
+                        <p class="small text-muted mb-0">Notify when assessments are completed or new results are available</p>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="performanceAlerts" name="new_materials" {% if notification_settings.new_materials %}checked{% endif %}>
+                    <label class="form-check-label" for="performanceAlerts">
+                        <strong>Performance Alerts</strong>
+                        <p class="small text-muted mb-0">Alert when grades need intervention or improvement</p>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="teacherUpdates" name="reading_reminders" {% if notification_settings.reading_reminders %}checked{% endif %}>
+                    <label class="form-check-label" for="teacherUpdates">
+                        <strong>Teacher Activity Updates</strong>
+                        <p class="small text-muted mb-0">Notify about new materials and activities from teachers</p>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="pushEnabled" name="push_enabled" {% if notification_settings.push_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="pushEnabled">
+                        <strong>Enable Notifications</strong>
+                    </label>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check me-1"></i>Save Preferences
+                </button></div>
+        </form>
+    </div>
+
+    <!-- System Information -->
+    <h5 class="mb-3">System Information</h5>
+    <div class="principal-panel">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <p class="small text-muted mb-1">Last Login</p>
+                <strong>{{ last_login }}</strong>
+            </div>
+            <div class="col-md-6 mb-3">
+                <p class="small text-muted mb-1">Account Created</p>
+                <strong>{{ account_created }}</strong>
+            </div>
+            <div class="col-md-6 mb-3">
+                <p class="small text-muted mb-1">PABASA System Version</p>
+                <strong>2.1.0</strong>
+            </div>
+            <div class="col-md-6 mb-3">
+                <p class="small text-muted mb-1">Browser/Device</p>
+                <strong>{{ browser_device }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
