@@ -149,4 +149,11 @@ urlpatterns = [
         views.teacher_remove_student,
         name='teacher_remove_student'
     ),
+    
+    # Principal Dashboard Routes
+    path('dashboard/principal/', views.dashboard_principal, name='dashboard_principal'),
+    path('dashboard/principal/performance/', views.principal_performance, name='principal_performance'),
+    path('dashboard/principal/assessments/', views.principal_assessments, name='principal_assessments'),
+    path('dashboard/principal/reports/', views.principal_reports, name='principal_reports'),
+    path('dashboard/principal/settings/', views.principal_settings, name='principal_settings'),
 ]

@@ -90,9 +90,9 @@
                             id="pabasaId"
                             type="text"
                             name="custom_id"
-                            placeholder="ADM-0001, TCH-1234 or G2-1234"
-                            maxlength="8"
-                            pattern="^(ADM|TCH|G2|STD)-[0-9]{4}$"
+                            placeholder="ADM-0001, TCH-1234, G2-1234 or PRN-SES"
+                            maxlength="20"
+                            pattern="^(ADM|TCH|G2|STD|PRN)-[A-Z0-9]{1,12}$"
                             required
                         >
                     </div>
@@ -115,32 +115,32 @@
         const password = document.getElementById("password");
         const loginBtn = document.getElementById("loginBtn");
         const errorMessage = document.getElementById("errorMessage");
-        const pabasaIdPattern = /^(ADM|TCH|G2|STD)-[0-9]{4}$/;
+        const pabasaIdPattern = /^(ADM|TCH|G2|STD|PRN)-[A-Z0-9]{1,12}$/;
 
         const formatPabasaId = (value) => {
-            const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+            const cleaned = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").replace(/-+/g, "-").replace(/(^-|-$)/g, "");
+            if (!cleaned) return "";
 
-            if (cleaned.startsWith("TCH")) {
-                const digits = cleaned.slice(3).replace(/\D/g, "").slice(0, 4);
-                return digits ? `TCH-${digits}` : "TCH-";
+            const [prefix, ...rest] = cleaned.split("-");
+            const suffix = rest.join("");
+            if (!prefix) return "";
+
+            if (prefix === "TCH" || prefix === "STD" || prefix === "ADM") {
+                const digits = suffix.replace(/\D/g, "").slice(0, 4);
+                return digits ? `${prefix}-${digits}` : `${prefix}-`;
             }
 
-            if (cleaned.startsWith("STD")) {
-                const digits = cleaned.slice(3).replace(/\D/g, "").slice(0, 4);
-                return digits ? `STD-${digits}` : "STD-";
-            }
-
-            if (cleaned.startsWith("ADM")) {
-                const digits = cleaned.slice(3).replace(/\D/g, "").slice(0, 4);
-                return digits ? `ADM-${digits}` : "ADM-";
-            }
-
-            if (cleaned.startsWith("G2")) {
-                const digits = cleaned.slice(2).replace(/\D/g, "").slice(0, 4);
+            if (prefix === "G2") {
+                const digits = suffix.replace(/\D/g, "").slice(0, 4);
                 return digits ? `G2-${digits}` : "G2-";
             }
 
-            return cleaned.slice(0, 3);
+            if (prefix === "PRN") {
+                const code = suffix.replace(/[^A-Z0-9]/g, "").slice(0, 12);
+                return code ? `PRN-${code}` : "PRN-";
+            }
+
+            return cleaned.slice(0, 20);
         };
 
         pabasaId.addEventListener("input", () => {
@@ -154,7 +154,7 @@
             event.preventDefault();
             
             if (!pabasaIdPattern.test(pabasaId.value)) {
-                pabasaId.setCustomValidity("PABASA ID must be ADM-0001, TCH-1234 or G2-1234.");
+                pabasaId.setCustomValidity("PABASA ID must be in the form ADM-0001, TCH-1234, G2-1234, STD-1234, or PRN-SES.");
                 pabasaId.reportValidity();
                 return;
             }

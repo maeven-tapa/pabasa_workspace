@@ -219,6 +219,98 @@ class AdminSettingsRenderTests(TestCase):
         self.assertNotContains(response, "Settings placeholder. CRUD is not implemented yet.")
 
 
+class PrincipalSettingsViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(
+            custom_id="PRN-SES",
+            role="principal",
+            first_name="Jobelyn",
+            last_name="Valdez",
+            middle_initial="A",
+            suffix="",
+            sex="female",
+            birth_month=6,
+            birth_day=3,
+            birth_year=1980,
+            email="principal@example.com",
+            password_hash=make_password("old-password"),
+        )
+        session = self.client.session
+        session["user_id"] = self.user.id
+        session["user_role"] = self.user.role
+        session["first_name"] = self.user.first_name
+        session["last_name"] = self.user.last_name
+        session["email"] = self.user.email
+        session["custom_id"] = self.user.custom_id
+        session.save()
+
+    def test_principal_settings_saves_school_information(self):
+        response = self.client.post(
+            reverse("principal_settings"),
+            {
+                "settings_action": "save_school_info",
+                "school_name": "Example Elementary School",
+                "school_code": "EX-001",
+                "municipality": "Imus",
+                "province": "Cavite",
+                "district": "District 5",
+                "region": "CALABARZON",
+                "address": "Example Street",
+                "contact": "0917-123-4567",
+                "email": "principal@example.org",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "School information updated.")
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.preference["principal_school_info"]["name"], "Example Elementary School")
+        self.assertEqual(self.user.preference["principal_school_info"]["code"], "EX-001")
+
+    def test_principal_settings_changes_password(self):
+        response = self.client.post(
+            reverse("principal_settings"),
+            {
+                "settings_action": "change_password",
+                "current_password": "old-password",
+                "new_password": "new-password",
+                "confirm_password": "new-password",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Password changed successfully.")
+
+        self.user.refresh_from_db()
+        self.assertTrue(check_password("new-password", self.user.password_hash))
+
+    def test_principal_settings_updates_personal_information(self):
+        response = self.client.post(
+            reverse("principal_settings"),
+            {
+                "settings_action": "save_personal_info",
+                "first_name": "Maria",
+                "last_name": "Cruz",
+                "middle_initial": "L",
+                "email": "maria.cruz@example.org",
+                "contact_number": "09171234567",
+                "position": "Principal II",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Personal information updated.")
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Maria")
+        self.assertEqual(self.user.last_name, "Cruz")
+        self.assertEqual(self.user.middle_initial, "L")
+        self.assertEqual(self.user.email, "maria.cruz@example.org")
+        self.assertEqual(self.user.contact_no, "09171234567")
+        self.assertEqual(self.user.preference["principal_profile_info"]["position"], "Principal II")
+
+
 class AssessmentCompletionNotificationTests(TestCase):
     def setUp(self):
         self.teacher = User.objects.create(

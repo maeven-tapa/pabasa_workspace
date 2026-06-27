@@ -1,0 +1,335 @@
+{% extends "pabasa_app/principal_base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="principal-content">
+    <!-- Greeting Section -->
+    <div class="principal-panel mb-4" style="background: linear-gradient(135deg, rgba(124, 45, 18, 0.08) 0%, rgba(254, 215, 170, 0.15) 100%); border: 1px solid rgba(124, 45, 18, 0.12);">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 60px; height: 60px; background: rgba(124, 45, 18, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-sun" style="font-size: 1.8rem; color: #7c2d12;"></i>
+            </div>
+            <div>
+                <p class="mb-0" style="font-size: 0.95rem; color: #7c2d12;">
+                    <strong id="greeting-time">Good Morning</strong>,
+                </p>
+                <h4 class="mb-0" style="color: #1b1a17; font-weight: 700;">{{ greeting_name }}</h4>
+                <p class="small text-muted mb-0">{{ greeting_title }}</p>
+                <p class="small text-muted mb-0">Salawag Elementary School</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards Section -->
+    <div class="row mb-4">
+        <!-- Total PABASA Students Card -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, rgba(254, 215, 170, 0.3) 0%, rgba(254, 215, 170, 0.1) 100%);">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 50px; height: 50px; background: rgba(124, 45, 18, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-mortarboard" style="font-size: 1.5rem; color: #7c2d12;"></i>
+                    </div>
+                    <div>
+                        <p class="text-secondary mb-2" style="font-size: 0.85rem;">Total PABASA Students</p>
+                        <strong style="font-size: 1.8rem; color: #1b1a17;">245</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total PABASA Teachers Card -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, rgba(254, 215, 170, 0.3) 0%, rgba(254, 215, 170, 0.1) 100%);">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 50px; height: 50px; background: rgba(124, 45, 18, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-person-workspace" style="font-size: 1.5rem; color: #7c2d12;"></i>
+                    </div>
+                    <div>
+                        <p class="text-secondary mb-2" style="font-size: 0.85rem;">Total PABASA Teachers</p>
+                        <strong style="font-size: 1.8rem; color: #1b1a17;">12</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Assessments Card -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, rgba(254, 215, 170, 0.3) 0%, rgba(254, 215, 170, 0.1) 100%);">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 50px; height: 50px; background: rgba(124, 45, 18, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-journal-check" style="font-size: 1.5rem; color: #7c2d12;"></i>
+                    </div>
+                    <div>
+                        <p class="text-secondary mb-2" style="font-size: 0.85rem;">Total Assessments</p>
+                        <strong style="font-size: 1.8rem; color: #1b1a17;">35</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row of Summary Cards -->
+    <div class="row mb-4">
+        <!-- Assessment Completion Rate Card -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 50px; height: 50px; background: rgba(34, 197, 94, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-percent" style="font-size: 1.5rem; color: #22c55e;"></i>
+                    </div>
+                    <div>
+                        <p class="text-secondary mb-2" style="font-size: 0.85rem;">Assessment Completion Rate</p>
+                        <strong style="font-size: 1.8rem; color: #1b1a17;">78%</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Average Reading Score Card -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 50px; height: 50px; background: rgba(59, 130, 246, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-star" style="font-size: 1.5rem; color: #3b82f6;"></i>
+                    </div>
+                    <div>
+                        <p class="text-secondary mb-2" style="font-size: 0.85rem;">Average Reading Score</p>
+                        <strong style="font-size: 1.8rem; color: #1b1a17;">82.5%</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Placeholder Card -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="height: 100%; display: flex; flex-direction: column; justify-content: center; opacity: 0.6;">
+                <p class="text-secondary mb-0 text-center">Additional Metrics</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- School Performance Chart Section -->
+    <div class="principal-panel mb-4">
+        <h5 class="mb-3">School Performance Chart</h5>
+        <div style="height: 300px; background: linear-gradient(135deg, rgba(124, 45, 18, 0.05) 0%, rgba(254, 215, 170, 0.08) 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #7c2d12;">
+            <div class="text-center">
+                <i class="bi bi-graph-up" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                <p class="text-muted">Chart visualization (Placeholder for Chart.js/Canvas)</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities Section -->
+    <div class="principal-panel mb-4">
+        <h5 class="mb-3">Recent Activities</h5>
+        <div class="d-flex flex-column gap-2">
+            <div style="padding: 1rem; background: rgba(34, 197, 94, 0.05); border-left: 3px solid #22c55e; border-radius: 8px;">
+                <p class="small mb-0"><strong>Grade 3 Completed Assessment</strong></p>
+                <p class="small text-muted mb-0">Mrs. Maria Santos's class completed the Word Recognition Assessment</p>
+                <p class="small text-muted mb-0" style="font-size: 0.75rem;">Today at 2:30 PM</p>
+            </div>
+            <div style="padding: 1rem; background: rgba(59, 130, 246, 0.05); border-left: 3px solid #3b82f6; border-radius: 8px;">
+                <p class="small mb-0"><strong>New Material Created</strong></p>
+                <p class="small text-muted mb-0">Paragraph reading material added by Mr. Juan Dela Cruz</p>
+                <p class="small text-muted mb-0" style="font-size: 0.75rem;">Yesterday at 10:15 AM</p>
+            </div>
+            <div style="padding: 1rem; background: rgba(251, 146, 60, 0.05); border-left: 3px solid #fb923c; border-radius: 8px;">
+                <p class="small mb-0"><strong>Teacher Performance Update</strong></p>
+                <p class="small text-muted mb-0">Grade 2 reading scores improved by 12% this week</p>
+                <p class="small text-muted mb-0" style="font-size: 0.75rem;">2 days ago</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Section -->
+    <h5 class="mb-3">Performance</h5>
+
+    <div class="row mb-4">
+        <!-- Reading and Speech Performance by Grade -->
+        <div class="col-md-6 mb-3">
+            <div class="principal-panel">
+                <h6 class="mb-3">Reading and Speech Performance by Grade</h6>
+                <div style="height: 250px; background: linear-gradient(135deg, rgba(124, 45, 18, 0.05) 0%, rgba(254, 215, 170, 0.08) 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #7c2d12;">
+                    <p class="text-muted text-center" style="font-size: 0.9rem;">Chart visualization (Placeholder)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Rate by Grade -->
+        <div class="col-md-6 mb-3">
+            <div class="principal-panel">
+                <h6 class="mb-3">Completion Rate by Grade</h6>
+                <div style="height: 250px; background: linear-gradient(135deg, rgba(124, 45, 18, 0.05) 0%, rgba(254, 215, 170, 0.08) 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #7c2d12;">
+                    <p class="text-muted text-center" style="font-size: 0.9rem;">Chart visualization (Placeholder)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Improvement Rate -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%);">
+                <h6 class="mb-3">Improvement Rate</h6>
+                <div style="text-align: center;">
+                    <strong style="font-size: 2.5rem; color: #22c55e;">+15%</strong>
+                    <p class="text-muted small mt-2 mb-0">vs. Previous Month</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performing Grades -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);">
+                <h6 class="mb-3">Top Performing Grades</h6>
+                <div>
+                    <p class="small mb-2"><strong>Grade 4:</strong> <span style="color: #3b82f6;">88%</span></p>
+                    <p class="small mb-2"><strong>Grade 5:</strong> <span style="color: #3b82f6;">86%</span></p>
+                    <p class="small mb-0"><strong>Grade 3:</strong> <span style="color: #3b82f6;">82%</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grades Needing Intervention -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.04) 100%);">
+                <h6 class="mb-3">Grades Needing Intervention</h6>
+                <div>
+                    <p class="small mb-2"><strong>Grade 1:</strong> <span style="color: #ef4444;">65%</span></p>
+                    <p class="small mb-2"><strong>Grade 2:</strong> <span style="color: #ef4444;">72%</span></p>
+                    <p class="small mb-0"><span style="font-size: 0.75rem; color: #7c2d12;">⚠️ Support needed</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessments Section -->
+    <h5 class="mb-3">Assessments</h5>
+    <div class="principal-panel mb-4">
+        <h6 class="mb-3">Assessment List</h6>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 placeholder-table">
+                <thead>
+                    <tr>
+                        <th>Assessment Name</th>
+                        <th>Status</th>
+                        <th>Participants</th>
+                        <th>Completion Rate</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Word Recognition Test</strong></td>
+                        <td><span class="badge bg-success">Active</span></td>
+                        <td>245</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 85%; background-color: #22c55e;">85%</div>
+                            </div>
+                        </td>
+                        <td><a href="#" class="btn btn-sm btn-outline-primary">View Summary</a></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sentence Comprehension</strong></td>
+                        <td><span class="badge bg-warning">In Progress</span></td>
+                        <td>215</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 62%; background-color: #fb923c;">62%</div>
+                            </div>
+                        </td>
+                        <td><a href="#" class="btn btn-sm btn-outline-primary">View Summary</a></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Paragraph Analysis</strong></td>
+                        <td><span class="badge bg-info">Pending</span></td>
+                        <td>240</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 0%; background-color: #94a3b8;">0%</div>
+                            </div>
+                        </td>
+                        <td><a href="#" class="btn btn-sm btn-outline-primary">View Summary</a></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Speech Fluency Test</strong></td>
+                        <td><span class="badge bg-success">Completed</span></td>
+                        <td>245</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" style="width: 100%; background-color: #22c55e;">100%</div>
+                            </div>
+                        </td>
+                        <td><a href="#" class="btn btn-sm btn-outline-primary">View Summary</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Reports Section -->
+    <h5 class="mb-3">Reports</h5>
+    <div class="row mb-4">
+        <!-- School Performance Report -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(124, 45, 18, 0.15)'" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--principal-shadow)'">
+                <i class="bi bi-file-earmark-pdf" style="font-size: 2.5rem; color: #7c2d12; margin-bottom: 1rem;"></i>
+                <h6>School Performance Report</h6>
+                <p class="small text-muted">Comprehensive school-wide performance analysis</p>
+                <a href="#" class="btn btn-sm btn-outline-primary mt-2">Generate Report</a>
+            </div>
+        </div>
+
+        <!-- Grade-Level Report -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(124, 45, 18, 0.15)'" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--principal-shadow)'">
+                <i class="bi bi-bar-chart" style="font-size: 2.5rem; color: #7c2d12; margin-bottom: 1rem;"></i>
+                <h6>Grade-Level Report</h6>
+                <p class="small text-muted">Detailed analysis by grade level</p>
+                <a href="#" class="btn btn-sm btn-outline-primary mt-2">Generate Report</a>
+            </div>
+        </div>
+
+        <!-- Assessment Report -->
+        <div class="col-md-4 mb-3">
+            <div class="principal-panel" style="text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(124, 45, 18, 0.15)'" onmouseout="this.style.transform='none'; this.style.boxShadow='var(--principal-shadow)'">
+                <i class="bi bi-journal-check" style="font-size: 2.5rem; color: #7c2d12; margin-bottom: 1rem;"></i>
+                <h6>Assessment Report</h6>
+                <p class="small text-muted">Individual assessment results and trends</p>
+                <a href="#" class="btn btn-sm btn-outline-primary mt-2">Generate Report</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="principal-panel mb-4">
+        <h6 class="mb-3">Export Options</h6>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" onclick="alert('PDF export placeholder')">
+                <i class="bi bi-filetype-pdf me-2"></i>Export to PDF
+            </button>
+            <button class="btn btn-outline-secondary" onclick="alert('Excel export placeholder')">
+                <i class="bi bi-filetype-xlsx me-2"></i>Export to Excel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update greeting based on time
+    function updateGreeting() {
+        const hour = new Date().getHours();
+        const greetingEl = document.getElementById('greeting-time');
+        if (hour < 12) {
+            greetingEl.textContent = 'Good Morning';
+        } else if (hour < 18) {
+            greetingEl.textContent = 'Good Afternoon';
+        } else {
+            greetingEl.textContent = 'Good Evening';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', updateGreeting);
+</script>
+{% endblock %}

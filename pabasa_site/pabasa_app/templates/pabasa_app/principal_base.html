@@ -1,0 +1,348 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | PABASA Principal</title>
+    <link rel="icon" type="image/png" href="{% static 'pabasa_app/images/pabasalogo.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css' %}">
+    <style>
+        :root {
+            --principal-primary: #7c2d12;
+            --principal-primary-deep: #5d1f0a;
+            --principal-primary-soft: #fed7aa;
+            --principal-bg: #fef6f3;
+            --principal-border: rgba(124, 45, 18, 0.08);
+            --principal-text: #1b1a17;
+            --principal-muted: #5f645f;
+            --principal-shadow: 0 22px 44px rgba(124, 45, 18, 0.11);
+            --principal-sidebar-width: 300px;
+        }
+
+        body {
+            min-height: 100vh;
+            background:
+                linear-gradient(115deg, rgba(254, 215, 170, 0.58), transparent 34%),
+                linear-gradient(245deg, rgba(247, 231, 207, 0.72), transparent 38%),
+                linear-gradient(180deg, #fbfbf8 0%, #fef6f3 58%, #faf5f2 100%);
+            color: var(--principal-text);
+            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        }
+
+        h1, h2, h3, .btn, .principal-nav-link {
+            font-family: "Nunito", "Segoe UI", sans-serif;
+        }
+
+        .principal-sidebar {
+            width: var(--principal-sidebar-width);
+            min-height: 100vh;
+            position: fixed;
+            inset: 0 auto 0 0;
+            background: rgba(255, 255, 255, 0.68);
+            border-right: 1px solid rgba(124, 45, 18, 0.12);
+            box-shadow: 10px 0 40px rgba(124, 45, 18, 0.04);
+            backdrop-filter: blur(22px) saturate(170%);
+            padding: 1.15rem;
+        }
+
+        .principal-main {
+            margin-left: var(--principal-sidebar-width);
+            min-height: 100vh;
+            padding: clamp(1rem, 2vw, 1.6rem);
+        }
+
+        .principal-brand {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 18px;
+            display: flex;
+            gap: 0.85rem;
+            padding: 0.8rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .principal-brand-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--principal-primary);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .principal-role-card {
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(124, 45, 18, 0.1);
+            border-radius: 18px;
+            color: var(--principal-muted);
+            padding: 0.85rem;
+        }
+
+        .principal-nav-label {
+            color: #94a3b8;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            margin: 1.3rem 0 0.45rem;
+            text-transform: uppercase;
+        }
+
+        .principal-nav-link {
+            align-items: center;
+            border: 1px solid transparent;
+            border-radius: 14px;
+            color: #475569;
+            display: flex;
+            gap: 0.65rem;
+            font-weight: 700;
+            min-height: 46px;
+            padding: 0.72rem 0.82rem;
+            text-decoration: none;
+        }
+
+        .principal-nav-link i {
+            width: 24px;
+            height: 24px;
+            border-radius: 10px;
+            background: rgba(124, 45, 18, 0.08);
+            color: #7c2d12;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .principal-nav-link:hover,
+        .principal-nav-link.active {
+            background: rgba(255, 255, 255, 0.92);
+            border-color: rgba(124, 45, 18, 0.15);
+            color: #7c2d12;
+        }
+
+        .principal-topbar,
+        .principal-panel {
+            background: rgba(255, 253, 247, 0.84);
+            border: 1px solid var(--principal-border);
+            border-radius: 18px;
+            box-shadow: var(--principal-shadow);
+        }
+
+        .principal-topbar {
+            align-items: center;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 0 auto 1rem;
+            max-width: 1180px;
+            padding: 1rem 1.15rem;
+        }
+
+        .principal-content {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .principal-panel {
+            padding: 1rem;
+        }
+
+        .placeholder-table {
+            margin: 0;
+        }
+
+        .placeholder-table th {
+            color: var(--principal-muted);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+        }
+
+        .principal-logout-btn {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border: 1px solid rgba(124, 45, 18, 0.16);
+            border-radius: 14px;
+            color: #9a2c0f;
+            font-weight: 800;
+            padding: 0.8rem 0.95rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .principal-logout-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(124, 45, 18, 0.14);
+            color: #9a2c0f;
+        }
+
+        .principal-logout-modal .modal-content {
+            border: 0;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 24px 60px rgba(124, 45, 18, 0.18);
+        }
+
+        .principal-logout-modal .modal-body {
+            padding: 1.5rem 1.5rem 1rem;
+        }
+
+        .principal-logout-icon {
+            align-items: center;
+            background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%);
+            border-radius: 999px;
+            color: #fff;
+            display: inline-flex;
+            font-size: 1.4rem;
+            height: 56px;
+            justify-content: center;
+            margin-bottom: 0.9rem;
+            width: 56px;
+        }
+
+        .principal-logout-title {
+            color: #5d1f0a;
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 0.4rem;
+        }
+
+        .principal-logout-copy {
+            color: #6b7280;
+            margin: 0 auto;
+            max-width: 320px;
+        }
+
+        .principal-logout-actions .btn {
+            border-radius: 999px;
+            font-weight: 700;
+            min-width: 120px;
+            padding: 0.7rem 1rem;
+        }
+
+        .principal-logout-actions .btn-outline-secondary {
+            border-color: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .principal-logout-actions .btn-danger {
+            background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%);
+            border: 0;
+        }
+
+        @media (max-width: 991.98px) {
+            .principal-sidebar {
+                position: static;
+                width: 100%;
+                min-height: auto;
+            }
+
+            .principal-main {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <aside class="principal-sidebar">
+        <div class="d-flex flex-column h-100">
+            <a class="principal-brand" href="{% url 'dashboard_principal' %}">
+                <span class="principal-brand-icon"><i class="bi bi-mortarboard"></i></span>
+                <span>
+                    <strong class="d-block">{{ principal_id|default:"PRN-SES" }}</strong>
+                    <span class="small text-secondary">PABASA Principal</span>
+                </span>
+            </a>
+
+            <div class="principal-role-card mt-3">
+                <span class="small d-block">Principal workspace</span>
+                <strong class="text-dark">School Management & Performance</strong>
+            </div>
+
+            <nav class="mt-2">
+                <div class="principal-nav-label">Main</div>
+                <a class="principal-nav-link {% if request.resolver_match.url_name == 'dashboard_principal' %}active{% endif %}" href="{% url 'dashboard_principal' %}"><i class="bi bi-grid"></i>Dashboard</a>
+                <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_performance' %}active{% endif %}" href="{% url 'principal_performance' %}"><i class="bi bi-graph-up"></i>Performance</a>
+                <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_assessments' %}active{% endif %}" href="{% url 'principal_assessments' %}"><i class="bi bi-journal-check"></i>Assessments</a>
+                <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_reports' %}active{% endif %}" href="{% url 'principal_reports' %}"><i class="bi bi-file-earmark-pdf"></i>Reports</a>
+                <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_settings' %}active{% endif %}" href="{% url 'principal_settings' %}"><i class="bi bi-gear"></i>Settings</a>
+            </nav>
+
+            <div class="mt-auto pt-3">
+                <button class="btn principal-logout-btn w-100" type="button" data-bs-toggle="modal" data-bs-target="#principalLogoutModal">
+                    <i class="bi bi-box-arrow-right me-1"></i>Logout
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="principal-main">
+        <header class="principal-topbar">
+            <div>
+                <p class="small text-secondary text-uppercase fw-bold mb-1">Principal Module</p>
+                <h1 class="h3 fw-bold mb-0">{{ page_title }}</h1>
+            </div>
+            <div class="text-end">
+                <span class="small text-secondary d-block">Logged in as</span>
+                <strong>{{ principal_id }}</strong>
+            </div>
+            <button class="btn btn-link text-dark p-0 position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#principalNotificationPane" aria-label="View notifications">
+                <i class="bi bi-bell fs-5"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="display: none; font-size: 0.6rem; padding: 0.35em 0.5em;">0</span>
+            </button>
+        </header>
+
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="principalNotificationPane" aria-labelledby="principalNotificationPaneLabel">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="principalNotificationPaneLabel">Notifications</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body p-0">
+                <div id="notifContainer" class="p-3"></div>
+            </div>
+        </div>
+
+        <section class="principal-content">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
+    <div class="modal fade principal-logout-modal" id="principalLogoutModal" tabindex="-1" aria-labelledby="principalLogoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="principal-logout-icon">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </div>
+                    <h5 class="principal-logout-title" id="principalLogoutModalLabel">Ready to sign out?</h5>
+                    <p class="principal-logout-copy">You’ll be returned to the home page once your Principal session ends.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4 principal-logout-actions">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a class="btn btn-danger" href="{% url 'logout' %}">Yes, Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+        function updateInAppNotifications() {
+            // Placeholder for notification system
+            const container = document.getElementById('notifContainer');
+            const badge = document.getElementById('notifBadge');
+            if (!container) return;
+            
+            container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i> No notifications yet</div>';
+        }
+
+        // Load notifications on page load
+        document.addEventListener('DOMContentLoaded', updateInAppNotifications);
+    </script>
+</body>
+</html>
