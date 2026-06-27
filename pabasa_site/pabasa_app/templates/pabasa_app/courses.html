@@ -5139,6 +5139,59 @@
             if (!message) materialUploadStatus.classList.add('d-none');
         }
 
+        function resetAddMaterialModalState(options = {}) {
+            const {
+                clearEditing = true,
+                clearAttachTarget = true,
+                resetForm = true
+            } = options;
+
+            if (clearEditing) editingCard = null;
+            if (clearAttachTarget) window.courseAttachTarget = null;
+
+            const addForm = document.getElementById('addMaterialForm');
+            if (resetForm && addForm) addForm.reset();
+
+            currentItemsList = [];
+            resetDetectedParagraphState(false);
+            renderAddedItemsChips();
+            if (materialFileInput) materialFileInput.value = '';
+            setUploadStatus('');
+
+            if (addMaterialValidationError) {
+                addMaterialValidationError.textContent = '';
+                addMaterialValidationError.classList.add('d-none');
+            }
+
+            [materialTitleInput, scheduleDateTimeInput, itemInput].forEach(function (el) {
+                if (el) el.classList.remove('is-invalid', 'is-valid');
+            });
+
+            if (scheduleFieldDiv) scheduleFieldDiv.classList.add('d-none');
+            if (scheduleDateTimeInput) scheduleDateTimeInput.value = '';
+            buildAssignedWeekOptions('assignedWeek', null);
+
+            const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
+            if (addHeader) addHeader.textContent = 'Add Reading Material';
+
+            if (submitMaterialBtn) {
+                submitMaterialBtn.disabled = false;
+                if (submitMaterialBtn.dataset.origHtml) {
+                    submitMaterialBtn.innerHTML = submitMaterialBtn.dataset.origHtml;
+                    delete submitMaterialBtn.dataset.origHtml;
+                } else {
+                    submitMaterialBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material';
+                }
+            }
+        }
+
+        if (addMaterialModal && !addMaterialModal.dataset.resetBound) {
+            addMaterialModal.dataset.resetBound = 'true';
+            addMaterialModal.addEventListener('hidden.bs.modal', function() {
+                resetAddMaterialModalState();
+            });
+        }
+
         function excerptUploadedItems(text) {
             const cleaned = String(text || '')
                 .replace(/\r/g, '\n')
@@ -5229,6 +5282,7 @@
         // Open the Add Material modal pre-filled for editing an existing material
         window.openAddMaterialForEdit = function(material) {
             try {
+                resetAddMaterialModalState({ clearEditing: false, clearAttachTarget: true });
                 const usage = (material.usage || material.usage_type || material.type || '').toString();
                 const fallbackKind = usage.toLowerCase() === 'practice' && String(material.id || '').startsWith('practice-') ? 'practice' : 'material';
                 const normalizedMaterialId = materialRecordId(material, fallbackKind);
@@ -5377,15 +5431,7 @@
         document.getElementById('btnAddMaterialToCourse')?.addEventListener('click', function() {
             const modalEl = document.getElementById('addMaterialModal');
             if (!modalEl) return;
-            // Reset the add form and chips
-            const addForm = document.getElementById('addMaterialForm');
-            if (addForm) addForm.reset();
-            currentItemsList = [];
-            resetDetectedParagraphState(false);
-            renderAddedItemsChips();
-            if (materialFileInput) materialFileInput.value = '';
-            setUploadStatus('');
-            if (addMaterialValidationError) addMaterialValidationError.classList.add('d-none');
+            resetAddMaterialModalState();
 
             // Set course attach target from the currently-open course modal
             const courseModalEl = document.getElementById('courseDetailModal');
@@ -5626,19 +5672,7 @@
 
                     // Add material button
                     if (e.target.closest('.readings-add-btn')) {
-                        // Reset the form and validation state
-                        const addMaterialFormEl = document.getElementById('addMaterialForm');
-                        if (addMaterialFormEl) addMaterialFormEl.reset();
-                        currentItemsList = [];
-                        resetDetectedParagraphState(false);
-                        renderAddedItemsChips();
-                        if (materialFileInput) materialFileInput.value = '';
-                        setUploadStatus('');
-                        if (addMaterialValidationError) addMaterialValidationError.classList.add('d-none');
-                        [materialTitleInput, scheduleDateTimeInput].forEach(function (el) {
-                            if (el) el.classList.remove('is-invalid');
-                        });
-                        if (itemInput) itemInput.classList.remove('is-invalid');
+                        resetAddMaterialModalState();
 
                         const modal = new bootstrap.Modal(document.getElementById('addMaterialModal'));
                         toggleAddScheduleField(); // Reset schedule field visibility when opening add modal
