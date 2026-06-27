@@ -4063,6 +4063,7 @@ def add_reading_material(request):
         data = json.loads(request.body)
         title        = (data.get('title') or '').strip()
         content      = (data.get('content') or '').strip()
+        requested_reading_type = (data.get('reading_type') or '').strip().lower()
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
         usage_type   = (data.get('usage_type') or 'practice').strip()        # practice | assessment | both
         class_code   = (data.get('class_code') or '').strip()
@@ -4103,7 +4104,7 @@ def add_reading_material(request):
             # Otherwise, treat as a word list
             return 'word'
 
-        reading_type = detect_reading_type(content)
+        reading_type = requested_reading_type if requested_reading_type == 'paragraph' else detect_reading_type(content)
 
         def split_content(text, rtype):
             if not text:
@@ -4113,6 +4114,8 @@ def add_reading_material(request):
             if rtype == 'sentence':
                 return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
             if rtype == 'paragraph':
+                if requested_reading_type == 'paragraph':
+                    return [text.strip()]
                 return [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
             return [text]
         
@@ -4300,6 +4303,7 @@ def teacher_update_material(request):
 
         material.title = data.get('title', material.title).strip()
         content = data.get('content', material.content_text).strip()
+        requested_reading_type = (data.get('reading_type') or '').strip().lower()
         material.status = data.get('status', material.status)
         material.type = data.get('usage_type', material.type)
 
@@ -4329,7 +4333,7 @@ def teacher_update_material(request):
         else:
             material.scheduled_at = None
 
-        if content != material.content_text:
+        if content != material.content_text or requested_reading_type == 'paragraph':
             material.content_text = content
             # Re-detect type and tokens if content changed
             def detect_type(text):
@@ -4337,7 +4341,7 @@ def teacher_update_material(request):
                 if re.search(r'[.!?]', text) and len(text.split()) > 3: return 'sentence'
                 return 'word'
             
-            material.item_type = detect_type(content)
+            material.item_type = 'paragraph' if requested_reading_type == 'paragraph' else detect_type(content)
             material.content_json = {'items': content.split('\n') if material.item_type == 'word' else [content]}
             
         # Ensure Assessment linkage reflects the requested usage type.
