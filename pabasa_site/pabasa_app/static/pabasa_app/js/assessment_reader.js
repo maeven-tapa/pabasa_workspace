@@ -198,6 +198,25 @@
                 }
             }
 
+            // Emit an immediate in-app notification for the admin so the bell updates even before a full page reload.
+            const studentName = window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || 'A student';
+            const metadata = JSON.parse(localStorage.getItem('pabasa_class_metadata') || '{}');
+            const classInfo = metadata[String(testCode).toUpperCase()] || {};
+            const className = classInfo.name || 'your class';
+            const notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
+            notifications.unshift({
+                id: Date.now() + Math.random(),
+                classCode: testCode,
+                title: 'Student Completed an Assessment',
+                message: `• ${studentName} completed the assessment "${testTitle}" in ${className}.`,
+                timestamp: Date.now(),
+                read: false,
+                role: 'admin',
+                recipientEmail: null,
+            });
+            localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
+            window.dispatchEvent(new Event('pabasa:notifications-updated'));
+
             // Persist completion server-side so the teacher receives an in-app notification.
             const token = getCsrfToken();
             if (materialId && token) {

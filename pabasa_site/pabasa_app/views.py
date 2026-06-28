@@ -248,7 +248,7 @@ def _current_user(request):
 def _admin_users():
     return User.objects.filter(role='admin', is_archived=False)
 
-def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None, email_subject=None, email_body=None):
+def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None, email_subject=None, email_body=None, send_email=True):
     if not recipient:
         return None
     notification = Notification.objects.create(
@@ -259,6 +259,9 @@ def _create_notification(recipient, title, message, notification_type='info', ac
         notification_type=notification_type,
         action_url=action_url or '',
     )
+
+    if not send_email:
+        return notification
 
     # REAL-TIME EMAIL DISPATCH: Send email immediately if user preference allows
     try:
@@ -276,9 +279,9 @@ def _create_notification(recipient, title, message, notification_type='info', ac
 
     return notification
 
-def _notify_admins(title, message, notification_type='info', action_url='', created_by=None):
+def _notify_admins(title, message, notification_type='info', action_url='', created_by=None, send_email=True):
     for admin_user in _admin_users():
-        _create_notification(admin_user, title, message, notification_type, action_url, created_by)
+        _create_notification(admin_user, title, message, notification_type, action_url, created_by, send_email=send_email)
 
 def _resolve_assessment_class_name(assessment=None, material=None, class_code=None):
     """Resolve a human-readable class name for assessment completion alerts."""
@@ -4626,64 +4629,68 @@ def record_assessment_completion(request):
             and (is_retake or not already_completed)
         )
 
-        teacher_recipients = []
         if is_practice:
-            if teacher_user:
-                teacher_recipients.append(teacher_user)
-            else:
-                for section in Section.objects.filter(is_active=True).select_related('teacher'):
-                    if section.has_student(student_user, active_only=True) and section.teacher:
-                        teacher_recipients.append(section.teacher)
-        elif should_notify_assessment:
-            teacher_recipients = _teachers_for_assessment_completion(
-                assessment=assessment,
-                material=material,
-                student_user=student_user,
-            )
-
-        seen_teacher_ids = set()
-        for recipient in teacher_recipients:
-            if recipient.id in seen_teacher_ids:
-                continue
-            seen_teacher_ids.add(recipient.id)
-
-            if not is_practice and _assessment_completion_notif_exists(
-                recipient, student_user, notif_msg, is_retake=is_retake
-            ):
-                continue
-            
-            current_email_body = None
-            if is_retake:
-                teacher_name = f"{recipient.first_name} {recipient.last_name}"
-                display_class = class_name or "a class"
-                current_email_body = (
-                    f"Hello {teacher_name},\n\n"
-                    f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
-                    f"for \"{title_text}\" in {display_class}.\n\n"
-                    "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
-                    "Thank you,\n\n"
-                    "The PABASA Team"
-                )
-
-            _create_notification(
-                recipient,
-                title,
-                notif_msg,
-                "assessment",
-                f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
-                student_user,
-                email_subject=email_subject,
-                email_body=current_email_body,
-            )
-
-        if should_notify_assessment or is_practice:
             _notify_admins(
                 title,
                 notif_msg,
                 "assessment",
                 reverse('admin_students'),
                 student_user,
+                send_email=False,
             )
+        else:
+            teacher_recipients = []
+            if should_notify_assessment:
+                teacher_recipients = _teachers_for_assessment_completion(
+                    assessment=assessment,
+                    material=material,
+                    student_user=student_user,
+                )
+
+            seen_teacher_ids = set()
+            for recipient in teacher_recipients:
+                if recipient.id in seen_teacher_ids:
+                    continue
+                seen_teacher_ids.add(recipient.id)
+
+                if _assessment_completion_notif_exists(
+                    recipient, student_user, notif_msg, is_retake=is_retake
+                ):
+                    continue
+
+                current_email_body = None
+                if is_retake:
+                    teacher_name = f"{recipient.first_name} {recipient.last_name}"
+                    display_class = class_name or "a class"
+                    current_email_body = (
+                        f"Hello {teacher_name},\n\n"
+                        f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
+                        f"for \"{title_text}\" in {display_class}.\n\n"
+                        "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
+                        "Thank you,\n\n"
+                        "The PABASA Team"
+                    )
+
+                _create_notification(
+                    recipient,
+                    title,
+                    notif_msg,
+                    "assessment",
+                    f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
+                    student_user,
+                    email_subject=email_subject,
+                    email_body=current_email_body,
+                )
+
+            if should_notify_assessment:
+                _notify_admins(
+                    title,
+                    notif_msg,
+                    "assessment",
+                    reverse('admin_students'),
+                    student_user,
+                    send_email=False,
+                )
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)

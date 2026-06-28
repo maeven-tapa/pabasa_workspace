@@ -275,21 +275,47 @@
             return div.innerHTML;
         }
 
+        function getLocalAdminNotifications() {
+            try {
+                const raw = localStorage.getItem('pabasa_notifications') || '[]';
+                const entries = JSON.parse(raw);
+                if (!Array.isArray(entries)) return [];
+                return entries
+                    .filter(entry => !entry.role || entry.role === 'admin' || entry.recipientEmail === null || entry.recipientEmail === undefined)
+                    .map(entry => ({
+                        id: entry.id,
+                        title: entry.title || 'Notification',
+                        message: entry.message || '',
+                        notification_type: entry.notification_type || 'assessment',
+                        is_read: Boolean(entry.read ?? entry.is_read),
+                        action_url: entry.action_url || '',
+                        created_at: entry.created_at || entry.timestamp || new Date().toISOString(),
+                    }));
+            } catch (error) {
+                return [];
+            }
+        }
+
         async function updateInAppNotifications() {
             const container = document.getElementById('notifContainer');
             const badge = document.getElementById('notifBadge');
             if (!container) return;
 
-            let notifications = [];
+            let notifications = getLocalAdminNotifications();
+            let serverNotifications = [];
             try {
                 const response = await fetch("{% url 'get_notifications' %}", { headers: { "Accept": "application/json" }, credentials: "same-origin" });
                 const data = await response.json();
                 if (!data.success) throw new Error(data.error || "Unable to load notifications.");
-                notifications = Array.isArray(data.notifications) ? data.notifications : [];
+                serverNotifications = Array.isArray(data.notifications) ? data.notifications : [];
             } catch (error) {
-                container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-wifi-off d-block fs-1 mb-3 opacity-25"></i> Notifications are unavailable right now.</div>';
-                return;
+                serverNotifications = [];
             }
+
+            const mergedNotifications = [...serverNotifications, ...notifications]
+                .filter((notification, index, array) => array.findIndex(item => String(item.id) === String(notification.id)) === index)
+                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+            notifications = mergedNotifications;
 
             const unreadCount = notifications.filter(n => !n.is_read).length;
             if (badge) {
@@ -332,7 +358,20 @@
             }
         };
 
-        document.addEventListener('DOMContentLoaded', updateInAppNotifications);
+        document.addEventListener('DOMContentLoaded', () => {
+            updateInAppNotifications();
+            window.addEventListener('pabasa:notifications-updated', updateInAppNotifications);
+            window.addEventListener('storage', (event) => {
+                if (!event.key || event.key === 'pabasa_notifications') {
+                    updateInAppNotifications();
+                }
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    updateInAppNotifications();
+                }
+            });
+        });
         window.setInterval(updateInAppNotifications, 30000);
     </script>
 </body>

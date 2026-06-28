@@ -135,15 +135,11 @@
             }
         }
 
-        // Notify teacher that activity finished
+        // Notify admin that activity finished
         const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
         const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
         const classInfo = metadata[testCode.toUpperCase()] || {};
         const className = classInfo.name || "your class";
-
-        const teacherClasses = JSON.parse(localStorage.getItem('pabasa_teacher_classes') || '[]');
-        const cls = teacherClasses.find(c => c.code === testCode);
-        const teacherEmail = cls ? cls.teacherEmail : null;
 
         let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
         notifications.unshift({
@@ -153,8 +149,8 @@
             message: `• ${studentName} completed the assessment "${testTitle}" in ${className}.`,
             timestamp: Date.now(),
             read: false,
-            role: 'teacher',
-            recipientEmail: teacherEmail
+            role: 'admin',
+            recipientEmail: null
         });
         localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
         window.dispatchEvent(new Event('pabasa:notifications-updated'));

@@ -129,29 +129,35 @@
             }
         }
 
-        // Notify teacher that practice activity finished
+        // Notify admin that practice activity finished
         const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
-        const tTitle = urlParams.get("test") || "Practice Material";
+        const fallbackTitle = urlParams.get("test") || "Practice Material";
+        const serverMaterials = getServerPracticeMaterials();
+        const matchingMaterial = serverMaterials.find((material) => {
+            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+            const normalizedTitle = typeof material.title === 'string' ? material.title.trim() : '';
+            const normalizedTestTitle = typeof testTitle === 'string' ? testTitle.trim() : '';
+            return (materialId && mId && String(materialId).trim() === mId)
+                || (normalizedTestTitle && normalizedTitle && normalizedTitle === normalizedTestTitle)
+                || (!materialId && !normalizedTestTitle && normalizedTitle);
+        });
+        const practiceTitle = (matchingMaterial && matchingMaterial.title) || fallbackTitle;
         const tCode = urlParams.get("code") || "GENERAL";
         
         const metadata = JSON.parse(localStorage.getItem("pabasa_class_metadata") || "{}");
         const classInfo = metadata[tCode.toUpperCase()] || {};
         const className = classInfo.name || "your class";
 
-        const studentClasses = JSON.parse(localStorage.getItem("pabasa_student_joined_classes") || "[]");
-        const clsInfo = studentClasses.find(c => c.code.toUpperCase() === tCode.toUpperCase());
-        const teacherEmail = clsInfo ? clsInfo.teacher_email || clsInfo.teacherEmail : null;
-
         let notifications = JSON.parse(localStorage.getItem('pabasa_notifications') || '[]');
         notifications.unshift({
             id: Date.now() + Math.random(),
             classCode: tCode,
-            title: "📖 Student Read a Practice Material",
-            message: `• ${studentName} read "${tTitle}" in ${className}.`,
+            title: 'Practice Material Completed',
+            message: `${studentName} finished reading Practice Material: ${practiceTitle}`,
             timestamp: Date.now(),
             read: false,
-            role: 'teacher',
-            recipientEmail: teacherEmail
+            role: 'admin',
+            recipientEmail: null
         });
         localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
         window.dispatchEvent(new Event('pabasa:notifications-updated'));

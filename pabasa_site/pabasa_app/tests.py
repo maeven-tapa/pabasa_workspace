@@ -342,6 +342,20 @@ class AssessmentCompletionNotificationTests(TestCase):
             email="student9001@example.com",
             password_hash=make_password("student-password"),
         )
+        self.admin = User.objects.create(
+            custom_id="ADM-9001",
+            role="admin",
+            first_name="Alex",
+            last_name="Admin",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=3,
+            birth_day=3,
+            birth_year=1985,
+            email="admin9001@example.com",
+            password_hash=make_password("admin-password"),
+        )
         self.section = Section.objects.create(
             teacher=self.teacher,
             class_name="Class A",
@@ -441,6 +455,45 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertTrue(data["success"])
         self.assertEqual(len(data["notifications"]), 1)
         self.assertFalse(data["notifications"][0]["is_read"])
+
+    def test_practice_completion_notifies_admin_in_app_only(self):
+        material = Material.objects.create(
+            title="Practice Words",
+            item_type="word",
+            content_text="cat\ndog",
+            content_json={"items": ["cat", "dog"]},
+            status="published",
+            is_active=True,
+        )
+        self._login_student()
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "material_id": f"material-{material.id}",
+                "activity_type": "practice",
+                "class_code": self.section.class_code,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        teacher_notification = Notification.objects.filter(
+            recipient=self.teacher,
+            created_by=self.student,
+            notification_type="assessment",
+        ).first()
+        self.assertIsNone(teacher_notification)
+
+        admin_notification = Notification.objects.filter(
+            recipient=self.admin,
+            created_by=self.student,
+            notification_type="assessment",
+        ).first()
+        self.assertIsNotNone(admin_notification)
+        self.assertIn("Jane Doe read \"Practice Words\"", admin_notification.message)
+        self.assertFalse(admin_notification.is_read)
 
 
 class TeacherStudentsDirectoryTests(TestCase):
