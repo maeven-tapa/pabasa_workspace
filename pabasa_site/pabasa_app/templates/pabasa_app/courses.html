@@ -3331,14 +3331,62 @@
             }
         }
 
+        function getCourseSectionMatchers(course) {
+            const sections = Array.isArray(course?.sections) ? course.sections : [];
+            const normalize = value => String(value || '').trim().toLowerCase();
+            const sectionCodes = new Set(sections.map(s => normalize(s.code || s.id)).filter(Boolean));
+            const sectionNames = new Set(sections.map(s => normalize(s.name)).filter(Boolean));
+            return { normalize, sectionCodes, sectionNames };
+        }
+
+        async function fetchStudentsForCourse(course) {
+            const { normalize, sectionCodes, sectionNames } = getCourseSectionMatchers(course);
+            let students = [];
+
+            try {
+                const res = await fetch('/dashboard/teacher/students-api/', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.success && Array.isArray(data.students)) students = data.students;
+                }
+            } catch (err) {
+                console.warn('Failed to fetch teacher students API for course reports', err);
+            }
+
+            if (!students.length) {
+                try {
+                    const storedStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                    students = Array.isArray(storedStudents) ? storedStudents : [];
+                } catch (e) {
+                    students = [];
+                }
+            }
+
+            const seen = new Set();
+            return students.filter(s => {
+                const codes = Array.isArray(s.class_codes) ? s.class_codes : [s.class_code, s.code].filter(Boolean);
+                const classes = Array.isArray(s.classes) ? s.classes : [s.class, s.class_name].filter(Boolean);
+                const byCode = codes.some(c => sectionCodes.has(normalize(c)));
+                const byName = classes.some(n => sectionNames.has(normalize(n)));
+                if (!byCode && !byName) return false;
+
+                const key = String(s.id || s.custom_id || s.email || s.name || '').trim().toLowerCase();
+                if (key && seen.has(key)) return false;
+                if (key) seen.add(key);
+                return true;
+            });
+        }
+
         // Course-scoped Reports loader
-        function loadCourseReports(courseId) {
+        async function loadCourseReports(courseId) {
             try {
                 const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
                 if (!course) return;
-                const sectionNames = (course.sections || []).map(s => s.name).filter(Boolean);
-                const allStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
-                const courseStudents = allStudents.filter(s => s.class && sectionNames.includes(s.class) && s.name !== 'Jay Park');
+                const courseStudents = await fetchStudentsForCourse(course);
 
                 const listContainer = document.getElementById('courseUnifiedStudentReportList');
                 const selectAll = document.getElementById('courseSelectAllRecipients');
@@ -3361,16 +3409,17 @@
                 }
 
                 courseStudents.forEach((s, index) => {
-                    const studentUsername = s.name.toLowerCase().replace(/ /g, "_");
+                    const studentName = s.name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Unnamed Student';
+                    const studentUsername = studentName.toLowerCase().replace(/ /g, "_");
                     const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + studentUsername) || "{}");
                     const emailEnabled = settings.emailNotifications !== false && s.email;
                     const item = document.createElement('div');
                     item.className = 'list-group-item p-3 border-0 border-bottom';
                     item.innerHTML = `
                         <div class="d-flex align-items-center gap-3">
-                            <div class="form-check mb-0"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${s.id || s.name}" ${!emailEnabled ? 'disabled' : ''}></div>
+                            <div class="form-check mb-0"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${escapeHtml(s.id || s.custom_id || studentName)}" ${!emailEnabled ? 'disabled' : ''}></div>
                             <div class="flex-grow-1"><div class="d-flex justify-content-between align-items-center">
-                                    <strong class="mb-0">${s.name}</strong><span class="level-chip" style="font-size: 0.7rem;">${s.level || ''}</span>
+                                    <strong class="mb-0">${escapeHtml(studentName)}</strong><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(s.level || '')}</span>
                                 </div><div class="small text-secondary mt-1">${s.email || '<span class="text-danger">No email</span>'} | Accuracy: <span class="fw-bold">${s.accuracy || '—'}%</span> | Speed: <span class="fw-bold">${s.wpm || 0} WPM</span></div>
                             </div>
                         </div>`;
