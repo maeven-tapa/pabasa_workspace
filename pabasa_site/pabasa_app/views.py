@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.hashers import make_password, check_password
@@ -21,6 +21,7 @@ import ssl
 import time
 import uuid
 import zipfile
+import csv
 from .forms import AdminPracticeMaterialForm, parse_practice_items
 from django.db import transaction
 import re
@@ -367,6 +368,106 @@ def _student_completed_assessment_before(assessment, material, student_user):
     if material and material.assessment and material.assessment.has_student_completed(student_user):
         return True
     return False
+
+CRLA_CLASSIFICATIONS = [
+    (95, "Readers at Grade Level"),
+    (85, "Transitioning Readers"),
+    (75, "Developing Readers"),
+    (60, "High Emerging Readers"),
+    (0, "Low Emerging Readers"),
+]
+
+
+def _clamp_score(value, default=0):
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        numeric = default
+    return round(max(0, min(100, numeric)), 2)
+
+
+def _crla_classification(total_score):
+    score = _clamp_score(total_score)
+    for threshold, label in CRLA_CLASSIFICATIONS:
+        if score >= threshold:
+            return label
+    return CRLA_CLASSIFICATIONS[-1][1]
+
+
+def _assessment_score_payload(data):
+    """Normalize assessment scoring values submitted by the reader."""
+    raw = data.get('scores') if isinstance(data.get('scores'), dict) else data
+    fluency = _clamp_score(raw.get('fluency_score', raw.get('fluency')))
+    accuracy = _clamp_score(raw.get('accuracy', raw.get('accuracy_score')))
+    pronunciation = _clamp_score(raw.get('pronunciation_score', raw.get('pronunciation')))
+    time_score = _clamp_score(raw.get('time_score', raw.get('time')))
+    total = raw.get('total_score')
+    if total is None:
+        total = round((fluency + accuracy + pronunciation + time_score) / 4, 2)
+    else:
+        total = _clamp_score(total)
+    classification = raw.get('crla_classification') or raw.get('classification') or _crla_classification(total)
+
+    try:
+        wpm = round(max(0, float(raw.get('wpm', 0))), 2)
+    except (TypeError, ValueError):
+        wpm = 0
+    try:
+        duration_seconds = round(max(0, float(raw.get('duration_seconds', 0))), 2)
+    except (TypeError, ValueError):
+        duration_seconds = 0
+    try:
+        word_count = max(0, int(float(raw.get('word_count', 0))))
+    except (TypeError, ValueError):
+        word_count = 0
+
+    needs_manual_review = bool(raw.get('needs_manual_review', False))
+    remarks = raw.get('remarks') or (
+        "Speech recognition unavailable; review recording manually."
+        if needs_manual_review else
+        f"CRLA classification: {classification}."
+    )
+
+    return {
+        'fluency_score': fluency,
+        'accuracy': accuracy,
+        'pronunciation_score': pronunciation,
+        'time_score': time_score,
+        'total_score': total,
+        'crla_classification': classification,
+        'classification': classification,
+        'wpm': wpm,
+        'duration_seconds': duration_seconds,
+        'word_count': word_count,
+        'transcript': str(raw.get('transcript', ''))[:5000],
+        'speech_recognition_used': bool(raw.get('speech_recognition_used', False)),
+        'needs_manual_review': needs_manual_review,
+        'passed': total >= 75,
+        'remarks': remarks,
+    }
+
+
+def _update_student_reading_profile(student_user, score_payload):
+    profile = _get_profile_dict(student_user, 'student_profile')
+    if not isinstance(profile, dict):
+        profile = {}
+    profile.update({
+        'reading_level': score_payload['crla_classification'],
+        'accuracy': str(round(score_payload['accuracy'])),
+        'wpm': str(round(score_payload['wpm'])),
+        'fluency_score': score_payload['fluency_score'],
+        'pronunciation_score': score_payload['pronunciation_score'],
+        'time_score': score_payload['time_score'],
+        'total_score': score_payload['total_score'],
+        'crla_classification': score_payload['crla_classification'],
+        'last_assessment_at': timezone.now().isoformat(),
+    })
+    student_user.reading_level = score_payload['crla_classification']
+    _set_profile_dict(student_user, 'student_profile', profile)
+    try:
+        student_user.save(update_fields=['reading_level', 'updated_at'])
+    except Exception:
+        student_user.save()
 
 def _section_active_students(section):
     student_ids = [
@@ -3750,11 +3851,20 @@ def get_class_materials(request):
                 if isinstance(m.content_json, dict) and isinstance(m.content_json.get('items'), list):
                     items_count = len(m.content_json.get('items'))
 
-                # compute attempt count: for materials linked to an Assessment use that Assessment's attempts
+                # Compute completion state for materials linked to an Assessment.
+                # Attempt count is retained for compatibility, but completion UI must
+                # rely on completed attempts only.
                 attempt_count = 0
+                completed_attempt_count = 0
+                student_has_completed = False
                 if m.assessment:
                     if is_requesting_student and request_user:
                         attempt_count = m.assessment.get_student_attempt_count(request_user)
+                        completed_attempt_count = len([
+                            attempt for attempt in m.assessment.get_attempts(request_user)
+                            if attempt.get('status') == 'completed'
+                        ])
+                        student_has_completed = completed_attempt_count > 0
                     elif teacher_user and teacher_user.role == 'teacher':
                         # Teachers see 0 completions for themselves on the hub
                         attempt_count = 0
@@ -3778,6 +3888,8 @@ def get_class_materials(request):
                     'items': items_count,
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                     'attempt_count': attempt_count,
+                    'completed_attempt_count': completed_attempt_count,
+                    'student_has_completed': student_has_completed,
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
@@ -3787,9 +3899,18 @@ def get_class_materials(request):
                 content_value = a.content or ''
                 title_value = a.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
                 items_count = 1
-                # compute attempt count for this assessment
+                # Compute completion state for this assessment. Attempt count is
+                # retained for compatibility, but completion UI must rely on
+                # completed attempts only.
+                completed_attempt_count = 0
+                student_has_completed = False
                 if is_requesting_student and request_user:
                     attempt_count = a.get_student_attempt_count(request_user)
+                    completed_attempt_count = len([
+                        attempt for attempt in a.get_attempts(request_user)
+                        if attempt.get('status') == 'completed'
+                    ])
+                    student_has_completed = completed_attempt_count > 0
                 elif teacher_user and teacher_user.role == 'teacher':
                     # Teachers see 0 completions for themselves on the hub
                     attempt_count = 0
@@ -3809,6 +3930,8 @@ def get_class_materials(request):
                     'items': items_count,
                     'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
                     'attempt_count': attempt_count,
+                    'completed_attempt_count': completed_attempt_count,
+                    'student_has_completed': student_has_completed,
                     'assigned_sections': [a.section.class_code] if a.section else [],
                     'assigned_week': None,
                     'assigned_week_display': format_assigned_week_display(None),
@@ -4587,6 +4710,7 @@ def record_assessment_completion(request):
         already_completed = False
         if not is_practice:
             already_completed = _student_completed_assessment_before(assessment, material, student_user)
+        score_payload = _assessment_score_payload(data)
 
         # Record attempt server-side (authoritative). We mark attempts as completed
         # because this endpoint is called when the student finishes the reading flow.
@@ -4595,15 +4719,23 @@ def record_assessment_completion(request):
                 'user_agent': request.META.get('HTTP_USER_AGENT', ''),
                 'remote_addr': request.META.get('REMOTE_ADDR', ''),
             }
+            attempt_payload = {
+                'status': 'completed',
+                'completed_at': timezone.now().isoformat(),
+                'device_info': device_info,
+                **score_payload,
+            }
             if assessment:
-                assessment.record_attempt(student_user, status='completed', completed_at=timezone.now().isoformat(), device_info=device_info)
+                assessment.record_attempt(student_user, **attempt_payload)
             elif practice_obj:
-                practice_obj.record_attempt(student_user, replace=True, status='completed', completed_at=timezone.now().isoformat(), device_info=device_info)
+                practice_obj.record_attempt(student_user, replace=True, **attempt_payload)
             elif material and getattr(material, 'assessment', None):
                 # Material linked to an Assessment
-                material.assessment.record_attempt(student_user, status='completed', completed_at=timezone.now().isoformat(), device_info=device_info)
+                material.assessment.record_attempt(student_user, **attempt_payload)
             # Note: standalone Material objects that are not linked to Assessment do not
             # currently have an attempts schema; they are handled by client-side notifications.
+            if not is_practice:
+                _update_student_reading_profile(student_user, score_payload)
         except Exception as e:
             logger.exception('Failed to persist assessment/practice attempt: %s', e)
 
@@ -4778,6 +4910,39 @@ def get_teacher_students_api(request):
         
         user_ids = [sdata['id'] for sdata in student_map.values()]
         users = User.objects.filter(id__in=user_ids).in_bulk()
+        latest_scores = {}
+        teacher_sections = Section.objects.filter(
+            class_code__in=[
+                code
+                for sdata in student_map.values()
+                for code in sdata.get('class_codes', [])
+            ],
+            is_active=True,
+        )
+        for assessment in Assessment.objects.filter(section__in=teacher_sections, is_active=True):
+            attempts = getattr(assessment, 'attempts', None) or []
+            if not isinstance(attempts, list):
+                continue
+            for attempt in attempts:
+                if not isinstance(attempt, dict) or attempt.get('status') != 'completed':
+                    continue
+                student_id = attempt.get('student_id')
+                if not student_id:
+                    continue
+                completed_at = attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at') or ''
+                current = latest_scores.get(student_id)
+                if current and str(current.get('completed_at', '')) >= str(completed_at):
+                    continue
+                latest_scores[student_id] = {
+                    'completed_at': completed_at,
+                    'level': attempt.get('crla_classification') or attempt.get('classification'),
+                    'accuracy': attempt.get('accuracy'),
+                    'wpm': attempt.get('wpm'),
+                    'fluency_score': attempt.get('fluency_score'),
+                    'pronunciation_score': attempt.get('pronunciation_score'),
+                    'time_score': attempt.get('time_score'),
+                    'total_score': attempt.get('total_score'),
+                }
         
         results = []
         for sdata in student_map.values():
@@ -4791,10 +4956,15 @@ def get_teacher_students_api(request):
                             profile = tag['student_profile']
                             break
                 
+                latest = latest_scores.get(user.id, {})
                 sdata.update({
-                    'level': user.reading_level or profile.get('reading_level', 'Developing Readers'),
-                    'accuracy': profile.get('accuracy', '0'),
-                    'wpm': profile.get('wpm', '0'),
+                    'level': latest.get('level') or user.reading_level or profile.get('reading_level', 'Developing Readers'),
+                    'accuracy': latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy', '0'),
+                    'wpm': latest.get('wpm') if latest.get('wpm') is not None else profile.get('wpm', '0'),
+                    'fluency_score': latest.get('fluency_score', profile.get('fluency_score')),
+                    'pronunciation_score': latest.get('pronunciation_score', profile.get('pronunciation_score')),
+                    'time_score': latest.get('time_score', profile.get('time_score')),
+                    'total_score': latest.get('total_score', profile.get('total_score')),
                 })
                 results.append(sdata)
         return JsonResponse({'success': True, 'students': results})
@@ -4804,7 +4974,7 @@ def get_teacher_students_api(request):
 
 
 # =================================================================================
-# PRINCIPAL DASHBOARD VIEWS (UI/UX Layout - Placeholder Data Only)
+# PRINCIPAL DASHBOARD VIEWS
 # =================================================================================
 
 def _parse_user_agent(user_agent):
@@ -4860,6 +5030,396 @@ def _principal_context(request, page_title):
         'page_title': page_title,
     }
 
+
+def _grade_sort_key(value):
+    text = str(value or '').strip()
+    match = re.search(r'(\d+)', text)
+    return int(match.group(1)) if match else 999
+
+
+def _normalize_grade(value):
+    text = str(value or '').strip()
+    if not text:
+        return 'Unspecified'
+    match = re.search(r'(\d+)', text)
+    if match:
+        return f"Grade {int(match.group(1))}"
+    return text.title()
+
+
+def _pct(numerator, denominator):
+    if not denominator:
+        return 0
+    try:
+        return round((float(numerator) / float(denominator)) * 100)
+    except Exception:
+        return 0
+
+
+def _as_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _parse_attempt_timestamp(value):
+    if not value:
+        return None
+    parsed = parse_datetime(str(value))
+    if parsed:
+        return parsed
+    try:
+        return datetime.fromisoformat(str(value))
+    except Exception:
+        return None
+
+
+def _principal_analytics(user):
+    students_qs = User.objects.filter(role='student', is_archived=False)
+    teachers_qs = User.objects.filter(role='teacher', is_archived=False)
+    sections = Section.objects.filter(is_active=True).select_related('teacher')
+    assessments = Assessment.objects.filter(is_active=True).select_related('section', 'teacher')
+
+    school_info = _get_profile_dict(user, 'principal_school_info') if user else {}
+    school_name = (
+        (school_info.get('name') if isinstance(school_info, dict) else None)
+        or getattr(user, 'school', None)
+        or 'Salawag Elementary School'
+    )
+
+    student_grade_map = {}
+    grade_students = {}
+    for student in students_qs:
+        grade_label = _normalize_grade(student.grade_level)
+        student_grade_map[student.id] = grade_label
+        grade_students.setdefault(grade_label, 0)
+        grade_students[grade_label] += 1
+
+    grade_keys = sorted(grade_students.keys(), key=_grade_sort_key)
+    grade_data = {
+        grade: {
+            'grade': grade,
+            'total_students': grade_students.get(grade, 0),
+            'completed_student_ids': set(),
+            'in_progress_student_ids': set(),
+            'reading_sum': 0.0,
+            'reading_count': 0,
+            'speech_sum': 0.0,
+            'speech_count': 0,
+            'total_sum': 0.0,
+            'total_count': 0,
+            'current_month_scores': [],
+            'previous_month_scores': [],
+        }
+        for grade in grade_keys
+    }
+
+    now = timezone.now()
+    current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    previous_month_end = current_month_start - timedelta(seconds=1)
+    previous_month_start = previous_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    assessment_rows = []
+    status_counts = {'completed': 0, 'in_progress': 0, 'pending': 0}
+    type_stats = {}
+    latest_activity = []
+
+    def _clean_numeric_scores(values):
+        cleaned = []
+        for value in values or []:
+            numeric = _as_float(value, default=None)
+            if numeric is None:
+                continue
+            # Skip NaN values while keeping valid numeric scores.
+            if numeric != numeric:
+                continue
+            cleaned.append(numeric)
+        return cleaned
+
+    for assessment in assessments:
+        attempts = assessment.get_attempts()
+        participants = set()
+        completed_students = set()
+        completed_scores = []
+        last_completed_at = None
+
+        for attempt in attempts:
+            sid = attempt.get('student_id')
+            if sid:
+                try:
+                    participants.add(int(sid))
+                except (TypeError, ValueError):
+                    continue
+
+            status = str(attempt.get('status') or '').lower()
+            if status == 'completed' and sid:
+                try:
+                    sid_int = int(sid)
+                except (TypeError, ValueError):
+                    continue
+                completed_students.add(sid_int)
+                score_val = _as_float(attempt.get('total_score'), default=None)
+                if score_val is not None:
+                    completed_scores.append(score_val)
+
+                grade_label = student_grade_map.get(sid_int)
+                if grade_label and grade_label in grade_data:
+                    g = grade_data[grade_label]
+                    g['completed_student_ids'].add(sid_int)
+                    g['in_progress_student_ids'].discard(sid_int)
+
+                    accuracy = _as_float(attempt.get('accuracy'), default=None)
+                    pronunciation = _as_float(attempt.get('pronunciation_score'), default=None)
+                    total_score = _as_float(attempt.get('total_score'), default=None)
+                    if accuracy is not None:
+                        g['reading_sum'] += accuracy
+                        g['reading_count'] += 1
+                    if pronunciation is not None:
+                        g['speech_sum'] += pronunciation
+                        g['speech_count'] += 1
+                    if total_score is not None:
+                        g['total_sum'] += total_score
+                        g['total_count'] += 1
+
+                    completed_at = _parse_attempt_timestamp(attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at'))
+                    if completed_at:
+                        if completed_at >= current_month_start and total_score is not None:
+                            g['current_month_scores'].append(total_score)
+                        elif previous_month_start <= completed_at <= previous_month_end and total_score is not None:
+                            g['previous_month_scores'].append(total_score)
+                        if not last_completed_at or completed_at > last_completed_at:
+                            last_completed_at = completed_at
+            elif sid:
+                try:
+                    sid_int = int(sid)
+                except (TypeError, ValueError):
+                    continue
+                grade_label = student_grade_map.get(sid_int)
+                if grade_label and grade_label in grade_data and sid_int not in grade_data[grade_label]['completed_student_ids']:
+                    grade_data[grade_label]['in_progress_student_ids'].add(sid_int)
+
+        expected_students = assessment.section.get_student_count() if assessment.section else len(participants)
+        completion_rate = _pct(len(completed_students), expected_students if expected_students else len(participants))
+
+        status_raw = str(assessment.status or '').lower()
+        if status_raw == 'draft' or (status_raw == 'scheduled' and assessment.scheduled_at and assessment.scheduled_at > now):
+            status_key = 'pending'
+        elif completion_rate >= 100 and expected_students:
+            status_key = 'completed'
+        elif participants or completed_students:
+            status_key = 'in_progress'
+        else:
+            status_key = 'pending'
+        status_counts[status_key] += 1
+
+        status_label_map = {
+            'completed': ('Completed', 'success'),
+            'in_progress': ('In Progress', 'warning'),
+            'pending': ('Pending', 'info'),
+        }
+        status_label, badge = status_label_map[status_key]
+
+        avg_score = round(sum(completed_scores) / len(completed_scores), 1) if completed_scores else 0
+        type_key = assessment.assessment_type or 'other'
+        type_bucket = type_stats.setdefault(type_key, {'total': 0, 'completed': 0, 'score_sum': 0.0, 'score_count': 0})
+        type_bucket['total'] += 1
+        if status_key == 'completed':
+            type_bucket['completed'] += 1
+        if completed_scores:
+            type_bucket['score_sum'] += sum(completed_scores)
+            type_bucket['score_count'] += len(completed_scores)
+
+        assessment_rows.append({
+            'id': assessment.id,
+            'title': assessment.title,
+            'assessment_type': assessment.get_assessment_type_display(),
+            'grade_label': _normalize_grade(getattr(assessment.section, 'class_name', '') or getattr(assessment.section, 'header', '')),
+            'status': status_label,
+            'status_badge': badge,
+            'participants': len(participants),
+            'expected_students': expected_students,
+            'completed_students': len(completed_students),
+            'completion_rate': completion_rate,
+            'avg_score': avg_score,
+            'code': assessment.code,
+            'teacher_name': f"{assessment.teacher.first_name} {assessment.teacher.last_name}".strip(),
+            'updated_at': assessment.updated_at,
+        })
+
+        if last_completed_at:
+            latest_activity.append({
+                'title': 'Assessment Completed',
+                'message': f"{assessment.title} recorded completion updates.",
+                'created_at': last_completed_at,
+                'variant': 'success',
+            })
+
+    assessment_rows.sort(key=lambda row: row['updated_at'], reverse=True)
+
+    grade_rows = []
+    for grade in sorted(grade_data.keys(), key=_grade_sort_key):
+        data = grade_data[grade]
+        total_students = data['total_students']
+        completed_count = len(data['completed_student_ids'])
+        in_progress_count = len(data['in_progress_student_ids'])
+        not_started = max(total_students - completed_count - in_progress_count, 0)
+        reading_avg = round(data['reading_sum'] / data['reading_count'], 1) if data['reading_count'] else 0
+        speech_avg = round(data['speech_sum'] / data['speech_count'], 1) if data['speech_count'] else 0
+        average = round((reading_avg + speech_avg) / 2, 1) if (reading_avg or speech_avg) else 0
+        completion_pct = _pct(completed_count, total_students)
+
+        current_month_scores = _clean_numeric_scores(data.get('current_month_scores'))
+        previous_month_scores = _clean_numeric_scores(data.get('previous_month_scores'))
+        current_avg = (sum(current_month_scores) / len(current_month_scores)) if current_month_scores else None
+        previous_avg = (sum(previous_month_scores) / len(previous_month_scores)) if previous_month_scores else None
+        improvement = round(current_avg - previous_avg, 1) if current_avg is not None and previous_avg is not None else 0
+
+        grade_rows.append({
+            'grade': grade,
+            'total_students': total_students,
+            'completed': completed_count,
+            'in_progress': in_progress_count,
+            'not_started': not_started,
+            'completion_pct': completion_pct,
+            'reading_score': reading_avg,
+            'speech_score': speech_avg,
+            'average_score': average,
+            'improvement': improvement,
+        })
+
+    grade_rows.sort(key=lambda row: _grade_sort_key(row['grade']))
+    top_grades = sorted(grade_rows, key=lambda row: row['average_score'], reverse=True)[:3]
+    intervention_grades = [row for row in grade_rows if row['average_score'] and row['average_score'] < 75]
+
+    total_assessments = len(assessment_rows)
+    total_students = students_qs.count()
+    total_teachers = teachers_qs.count()
+    completed_assessments = status_counts['completed']
+    completion_rate = _pct(completed_assessments, total_assessments)
+
+    all_scores = _clean_numeric_scores([row.get('avg_score') for row in assessment_rows])
+    all_scores = [score for score in all_scores if score > 0]
+    average_score = round(sum(all_scores) / len(all_scores), 1) if all_scores else 0
+
+    notifications_feed = []
+    if user:
+        for notif in Notification.objects.filter(recipient=user).order_by('-created_at')[:8]:
+            notifications_feed.append({
+                'title': notif.title,
+                'message': notif.message,
+                'created_at': notif.created_at,
+                'variant': notif.notification_type,
+                'is_read': notif.is_read,
+            })
+
+    recent_activity = sorted((notifications_feed + latest_activity), key=lambda item: item['created_at'], reverse=True)[:8]
+
+    report_rows = [
+        {
+            'report_name': f"Assessment Summary - {row['title']}",
+            'report_type': 'Assessment',
+            'generated_date': row['updated_at'],
+            'generated_by': row['teacher_name'],
+            'completion_rate': row['completion_rate'],
+            'avg_score': row['avg_score'],
+        }
+        for row in assessment_rows[:10]
+    ]
+
+    type_cards = []
+    for type_key, bucket in type_stats.items():
+        avg = round(bucket['score_sum'] / bucket['score_count'], 1) if bucket['score_count'] else 0
+        type_cards.append({
+            'label': type_key.title(),
+            'total': bucket['total'],
+            'completed': bucket['completed'],
+            'avg_score': avg,
+        })
+    type_cards.sort(key=lambda item: item['label'])
+
+    return {
+        'school_name': school_name,
+        'total_students': total_students,
+        'total_teachers': total_teachers,
+        'total_sections': sections.count(),
+        'total_assessments': total_assessments,
+        'completed_assessments': completed_assessments,
+        'in_progress_assessments': status_counts['in_progress'],
+        'pending_assessments': status_counts['pending'],
+        'completion_rate': completion_rate,
+        'average_score': average_score,
+        'grade_rows': grade_rows,
+        'top_grades': top_grades,
+        'intervention_grades': intervention_grades,
+        'assessment_rows': assessment_rows,
+        'assessment_type_cards': type_cards,
+        'recent_activity': recent_activity,
+        'report_rows': report_rows,
+    }
+
+
+def _principal_report_preview_rows(analytics, report_type='school', grade_filter=''):
+    if report_type == 'grade':
+        rows = analytics.get('grade_rows', [])
+        if grade_filter:
+            rows = [row for row in rows if row.get('grade') == grade_filter]
+        headers = ['Grade', 'Students', 'Completed', 'In Progress', 'Not Started', 'Completion %', 'Average Score']
+        values = [
+            [
+                row.get('grade'),
+                row.get('total_students'),
+                row.get('completed'),
+                row.get('in_progress'),
+                row.get('not_started'),
+                f"{row.get('completion_pct', 0)}%",
+                f"{row.get('average_score', 0)}%",
+            ]
+            for row in rows
+        ]
+        return headers, values
+
+    if report_type == 'assessment':
+        rows = analytics.get('assessment_rows', [])
+        headers = ['Assessment', 'Type', 'Status', 'Participants', 'Completion %', 'Average Score']
+        values = [
+            [
+                row.get('title'),
+                row.get('assessment_type'),
+                row.get('status'),
+                row.get('participants'),
+                f"{row.get('completion_rate', 0)}%",
+                f"{row.get('avg_score', 0)}%",
+            ]
+            for row in rows
+        ]
+        return headers, values
+
+    headers = ['Metric', 'Value']
+    values = [
+        ['School Name', analytics.get('school_name')],
+        ['Total Students', analytics.get('total_students')],
+        ['Total Teachers', analytics.get('total_teachers')],
+        ['Total Assessments', analytics.get('total_assessments')],
+        ['Completed Assessments', analytics.get('completed_assessments')],
+        ['In Progress Assessments', analytics.get('in_progress_assessments')],
+        ['Pending Assessments', analytics.get('pending_assessments')],
+        ['Overall Completion Rate', f"{analytics.get('completion_rate', 0)}%"],
+        ['Average Reading Score', f"{analytics.get('average_score', 0)}%"],
+    ]
+    return headers, values
+
+
+def _principal_report_csv_response(report_type, headers, rows):
+    filename = f"principal_{report_type}_report_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    writer = csv.writer(response)
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow(row)
+    return response
+
 def principal_required(view_func):
     """Decorator to check if user is Principal"""
     @wraps(view_func)
@@ -4877,6 +5437,8 @@ def principal_required(view_func):
 def dashboard_principal(request):
     """Principal Dashboard - Main overview with greeting, statistics, and recent activities"""
     context = _principal_context(request, 'Dashboard')
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    analytics = _principal_analytics(user)
 
     # Build the display name dynamically from the user's personal information
     name_parts = [context.get('first_name', '')]
@@ -4889,7 +5451,7 @@ def dashboard_principal(request):
     context.update({
         'greeting_name': greeting_name,
         'greeting_title': context.get('position', 'Head Teacher/Principal II'),
-        'school_name': 'Salawag Elementary School',
+        **analytics,
     })
     return render(request, 'pabasa_app/principal_dashboard.html', context)
 
@@ -4897,11 +5459,14 @@ def dashboard_principal(request):
 def principal_performance(request):
     """Principal Performance Page - Grade performance, completion rates, and trends"""
     context = _principal_context(request, 'Performance')
-    # Placeholder data for performance tracking
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    analytics = _principal_analytics(user)
+    grade_rows = analytics.get('grade_rows', [])
+    current_month_performance = round(sum([row['average_score'] for row in grade_rows if row['average_score']]) / max(len([row for row in grade_rows if row['average_score']]), 1), 1) if grade_rows else 0
     context.update({
-        'current_month_performance': '82.5%',
-        'completion_rate': '78%',
-        'ytd_progress': '74%',
+        **analytics,
+        'current_month_performance': current_month_performance,
+        'ytd_progress': analytics.get('completion_rate', 0),
     })
     return render(request, 'pabasa_app/principal_performance.html', context)
 
@@ -4909,12 +5474,13 @@ def principal_performance(request):
 def principal_assessments(request):
     """Principal Assessments Page - Assessment overview and results"""
     context = _principal_context(request, 'Assessments')
-    # Placeholder data for assessments
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    analytics = _principal_analytics(user)
     context.update({
-        'total_assessments': 35,
-        'in_progress': 12,
-        'completed': 18,
-        'pending': 5,
+        **analytics,
+        'in_progress': analytics.get('in_progress_assessments', 0),
+        'completed': analytics.get('completed_assessments', 0),
+        'pending': analytics.get('pending_assessments', 0),
     })
     return render(request, 'pabasa_app/principal_assessments.html', context)
 
@@ -4922,13 +5488,31 @@ def principal_assessments(request):
 def principal_reports(request):
     """Principal Reports Page - Generate and view reports"""
     context = _principal_context(request, 'Reports')
-    # Placeholder data for reports
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    analytics = _principal_analytics(user)
+
+    selected_report_type = (request.GET.get('report_type') or 'school').strip().lower()
+    selected_grade = (request.GET.get('grade_level') or '').strip()
+    export_type = (request.GET.get('export') or '').strip().lower()
+    headers, rows = _principal_report_preview_rows(analytics, selected_report_type, selected_grade)
+
+    if export_type == 'csv' or export_type == 'excel':
+        return _principal_report_csv_response(selected_report_type, headers, rows)
+
+    print_mode = export_type == 'pdf'
+
     context.update({
+        **analytics,
         'report_types': [
-            'School Performance',
-            'Grade-Level',
-            'Assessment',
+            {'value': 'school', 'label': 'School Performance'},
+            {'value': 'grade', 'label': 'Grade-Level'},
+            {'value': 'assessment', 'label': 'Assessment'},
         ],
+        'selected_report_type': selected_report_type,
+        'selected_grade': selected_grade,
+        'report_preview_headers': headers,
+        'report_preview_rows': rows,
+        'print_mode': print_mode,
     })
     return render(request, 'pabasa_app/principal_reports.html', context)
 

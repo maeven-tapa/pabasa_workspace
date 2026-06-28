@@ -299,7 +299,14 @@ class Assessment(models.Model):
             'status': status,
         }
         # Add optional fields if provided
-        for key in ['completed_at', 'device_info', 'mic_used', 'accuracy', 'wpm', 'total_score', 'passed', 'remarks']:
+        for key in [
+            'completed_at', 'device_info', 'mic_used', 'accuracy', 'wpm',
+            'fluency_score', 'pronunciation_score', 'time_score',
+            'total_score', 'crla_classification', 'classification',
+            'duration_seconds', 'word_count', 'transcript',
+            'speech_recognition_used', 'needs_manual_review',
+            'passed', 'remarks',
+        ]:
             if key in kwargs:
                 entry[key] = kwargs[key]
         return entry
@@ -415,7 +422,14 @@ class Practice(models.Model):
             'started_at': started_at or timezone.now().isoformat(),
             'status': status,
         }
-        for key in ['completed_at', 'device_info', 'mic_used', 'accuracy', 'wpm', 'total_score', 'passed', 'remarks']:
+        for key in [
+            'completed_at', 'device_info', 'mic_used', 'accuracy', 'wpm',
+            'fluency_score', 'pronunciation_score', 'time_score',
+            'total_score', 'crla_classification', 'classification',
+            'duration_seconds', 'word_count', 'transcript',
+            'speech_recognition_used', 'needs_manual_review',
+            'passed', 'remarks',
+        ]:
             if key in kwargs:
                 entry[key] = kwargs[key]
         return entry

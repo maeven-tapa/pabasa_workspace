@@ -3978,9 +3978,21 @@
         function formatAttemptScore(attempt, index) {
             const wpm = attempt.wpm ?? attempt.words_per_minute ?? attempt.reading_wpm;
             const accuracy = attempt.accuracy ?? attempt.accuracy_percent ?? attempt.reading_accuracy;
+            const fluency = attempt.fluency_score ?? attempt.fluency;
+            const pronunciation = attempt.pronunciation_score ?? attempt.pronunciation;
+            const timeScore = attempt.time_score ?? attempt.time;
+            const total = attempt.total_score ?? attempt.score;
+            const classification = attempt.crla_classification ?? attempt.classification;
             const wpmText = (wpm !== undefined && wpm !== null && wpm !== '') ? `${escapeHtml(wpm)} WPM` : 'No WPM';
             const accuracyText = (accuracy !== undefined && accuracy !== null && accuracy !== '') ? `${escapeHtml(accuracy)}% Accuracy` : 'No accuracy';
-            return `<div class="small"><span class="fw-semibold">Attempt ${index + 1}:</span> ${wpmText} / ${accuracyText}</div>`;
+            const scoreParts = [
+                fluency !== undefined && fluency !== null && fluency !== '' ? `Fluency ${escapeHtml(fluency)}%` : null,
+                pronunciation !== undefined && pronunciation !== null && pronunciation !== '' ? `Pronunciation ${escapeHtml(pronunciation)}%` : null,
+                timeScore !== undefined && timeScore !== null && timeScore !== '' ? `Time ${escapeHtml(timeScore)}%` : null,
+                total !== undefined && total !== null && total !== '' ? `Total ${escapeHtml(total)}%` : null,
+                classification ? `CRLA: ${escapeHtml(classification)}` : null,
+            ].filter(Boolean).join(' / ');
+            return `<div class="small"><span class="fw-semibold">Attempt ${index + 1}:</span> ${wpmText} / ${accuracyText}${scoreParts ? `<br>${scoreParts}` : ''}</div>`;
         }
 
         function courseProgressTasks(course) {

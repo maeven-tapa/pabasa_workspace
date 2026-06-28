@@ -410,6 +410,50 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertIn("Jane Doe completed the assessment 'Reading Fluency Test' in Class A.", notification.message)
         self.assertFalse(notification.is_read)
 
+    def test_assessment_completion_saves_scores_and_crla_classification(self):
+        self._login_student()
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "assessment_id": f"assessment-{self.assessment.id}",
+                "material_id": f"assessment-{self.assessment.id}",
+                "activity_type": "assessment",
+                "class_code": self.section.class_code,
+                "scores": {
+                    "fluency_score": 90,
+                    "accuracy": 88,
+                    "pronunciation_score": 86,
+                    "time_score": 94,
+                    "total_score": 89.5,
+                    "wpm": 72,
+                    "duration_seconds": 15,
+                    "word_count": 18,
+                    "transcript": "cat dog",
+                    "speech_recognition_used": True,
+                },
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        self.assessment.refresh_from_db()
+        attempt = self.assessment.attempts[-1]
+        self.assertEqual(attempt["fluency_score"], 90)
+        self.assertEqual(attempt["accuracy"], 88)
+        self.assertEqual(attempt["pronunciation_score"], 86)
+        self.assertEqual(attempt["time_score"], 94)
+        self.assertEqual(attempt["total_score"], 89.5)
+        self.assertEqual(attempt["crla_classification"], "Transitioning Readers")
+        self.assertEqual(attempt["wpm"], 72)
+
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.reading_level, "Transitioning Readers")
+        profile = self.student.preference.get("student_profile", {})
+        self.assertEqual(profile["accuracy"], "88")
+        self.assertEqual(profile["wpm"], "72")
+        self.assertEqual(profile["crla_classification"], "Transitioning Readers")
+
     def test_duplicate_assessment_completion_does_not_create_second_notification(self):
         self._login_student()
         payload = json.dumps({
@@ -438,6 +482,31 @@ class AssessmentCompletionNotificationTests(TestCase):
             ).count(),
             1,
         )
+
+    def test_class_materials_only_marks_completed_after_completed_attempt(self):
+        self._login_student()
+
+        self.assessment.record_attempt(self.student, status="started")
+        response = self.client.get(
+            reverse("get_class_materials"),
+            {"class_code": self.section.class_code},
+        )
+        self.assertEqual(response.status_code, 200)
+        item = response.json()["materials"]["word"][0]
+        self.assertEqual(item["attempt_count"], 1)
+        self.assertEqual(item["completed_attempt_count"], 0)
+        self.assertFalse(item["student_has_completed"])
+
+        self.assessment.record_attempt(self.student, status="completed")
+        response = self.client.get(
+            reverse("get_class_materials"),
+            {"class_code": self.section.class_code},
+        )
+        self.assertEqual(response.status_code, 200)
+        item = response.json()["materials"]["word"][0]
+        self.assertEqual(item["attempt_count"], 2)
+        self.assertEqual(item["completed_attempt_count"], 1)
+        self.assertTrue(item["student_has_completed"])
 
     def test_teacher_can_fetch_unread_notification(self):
         Notification.objects.create(

@@ -332,16 +332,87 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
-        function updateInAppNotifications() {
-            // Placeholder for notification system
-            const container = document.getElementById('notifContainer');
-            const badge = document.getElementById('notifBadge');
-            if (!container) return;
-            
-            container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i> No notifications yet</div>';
+        function getCsrfToken() {
+            const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (tokenInput && tokenInput.value) return tokenInput.value;
+            const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
         }
 
-        // Load notifications on page load
+        function renderNotifications(list) {
+            const container = document.getElementById('notifContainer');
+            const badge = document.getElementById('notifBadge');
+            if (!container || !badge) return;
+
+            const escapeHtml = (value) => {
+                const div = document.createElement('div');
+                div.textContent = value == null ? '' : String(value);
+                return div.innerHTML;
+            };
+
+            const unread = (list || []).filter(item => !item.is_read).length;
+            badge.textContent = unread;
+            badge.style.display = unread > 0 ? 'inline-block' : 'none';
+
+            if (!list || !list.length) {
+                container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i>No notifications yet</div>';
+                return;
+            }
+
+            container.innerHTML = list.map(item => {
+                const when = item.created_at ? new Date(item.created_at).toLocaleString() : '';
+                const unreadClass = item.is_read ? '' : 'border-start border-3 border-warning';
+                const title = escapeHtml(item.title || 'Notification');
+                const message = escapeHtml(item.message || '');
+                const action = item.action_url ? `<a href="${item.action_url}" class="btn btn-sm btn-outline-secondary mt-2">Open</a>` : '';
+                return `
+                    <div class="mb-3 p-3 rounded bg-white ${unreadClass}" data-notif-id="${item.id}">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <strong class="small text-dark">${title}</strong>
+                            <button class="btn btn-sm btn-link p-0 text-secondary mark-notif-read" data-notif-id="${item.id}" aria-label="Mark as read"><i class="bi bi-check2-circle"></i></button>
+                        </div>
+                        <p class="small text-muted mb-1">${message}</p>
+                        <div class="small text-secondary">${when}</div>
+                        ${action}
+                    </div>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.mark-notif-read').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const notifId = this.getAttribute('data-notif-id');
+                    try {
+                        await fetch('/api/notifications/mark-read/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCsrfToken()
+                            },
+                            body: JSON.stringify({ notification_id: notifId })
+                        });
+                        await updateInAppNotifications();
+                    } catch (error) {
+                        console.warn('Failed to mark notification as read', error);
+                    }
+                });
+            });
+        }
+
+        async function updateInAppNotifications() {
+            try {
+                const response = await fetch('/api/notifications/', { credentials: 'same-origin' });
+                const data = await response.json();
+                if (data.success) {
+                    renderNotifications(data.notifications || []);
+                }
+            } catch (error) {
+                const container = document.getElementById('notifContainer');
+                if (container) {
+                    container.innerHTML = '<div class="p-4 text-center text-muted small">Unable to load notifications right now.</div>';
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', updateInAppNotifications);
     </script>
 </body>

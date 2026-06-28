@@ -35,6 +35,8 @@
         const testCode = urlParams.get("code") || "TST-000";
         const materialId = urlParams.get("id");
         const viewMode = urlParams.get("viewMode");
+        const isReviewMode = viewMode === "view";
+        const isRetakeMode = viewMode === "retake";
         if (testMeta) testMeta.textContent = `${testTitle} - ${testCode}`;
 
         let items = [];
@@ -43,6 +45,10 @@
         let isMuted = false;
         let startTime = null;
         let completionSubmitted = false;
+        let recognition = null;
+        let recognitionActive = false;
+        let spokenTranscript = "";
+        let latestScores = null;
 
         function getCsrfToken() {
             const cookieToken = document.cookie.split('; ')
@@ -53,6 +59,7 @@
 
         const studentClassCodesKey = "pabasaStudentClassCodes";
         const readingsStorageKey = "pabasa_class_readings";
+        const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
 
         function getStoredData(key, fallback = []) {
             try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (e) { return fallback; }
@@ -112,6 +119,164 @@
             updateUI();
         }
 
+        function normalizeWords(value) {
+            return String(value || "")
+                .toLowerCase()
+                .replace(/[^a-z0-9\s'-]/g, " ")
+                .split(/\s+/)
+                .map(word => word.trim())
+                .filter(Boolean);
+        }
+
+        function lcsLength(a, b) {
+            const prev = new Array(b.length + 1).fill(0);
+            const curr = new Array(b.length + 1).fill(0);
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    curr[j] = a[i - 1] === b[j - 1] ? prev[j - 1] + 1 : Math.max(prev[j], curr[j - 1]);
+                }
+                for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+            }
+            return prev[b.length] || 0;
+        }
+
+        function targetWpmForMode() {
+            if (mode === "word") return 45;
+            if (mode === "sentence") return 65;
+            return 85;
+        }
+
+        function classifyCRLA(totalScore) {
+            if (totalScore >= 95) return "Readers at Grade Level";
+            if (totalScore >= 85) return "Transitioning Readers";
+            if (totalScore >= 75) return "Developing Readers";
+            if (totalScore >= 60) return "High Emerging Readers";
+            return "Low Emerging Readers";
+        }
+
+        function calculateScores() {
+            const targetText = items.join(" ");
+            const targetWords = normalizeWords(targetText);
+            const spokenWords = normalizeWords(spokenTranscript);
+            const durationSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+            const wpm = Math.round((targetWords.length / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100;
+            const targetWpm = targetWpmForMode();
+            const matchedWords = spokenWords.length ? lcsLength(targetWords, spokenWords) : 0;
+            const speechRecognitionUsed = spokenWords.length > 0;
+
+            const accuracy = targetWords.length && speechRecognitionUsed
+                ? Math.round((matchedWords / targetWords.length) * 10000) / 100
+                : 0;
+            const pronunciationScore = targetWords.length && speechRecognitionUsed
+                ? Math.round((matchedWords / Math.max(spokenWords.length, targetWords.length)) * 10000) / 100
+                : 0;
+            const fluencyScore = Math.round(Math.min(100, (wpm / targetWpm) * 100) * 100) / 100;
+            const expectedSeconds = Math.max(1, (targetWords.length / targetWpm) * 60);
+            const timeRatio = durationSeconds / expectedSeconds;
+            const timeScore = Math.round(Math.max(0, Math.min(100, 100 - Math.max(0, timeRatio - 1.15) * 55)) * 100) / 100;
+            const totalScore = Math.round(((fluencyScore + accuracy + pronunciationScore + timeScore) / 4) * 100) / 100;
+            const crlaClassification = classifyCRLA(totalScore);
+            const needsManualReview = !speechRecognitionUsed;
+
+            return {
+                fluency_score: fluencyScore,
+                accuracy,
+                pronunciation_score: pronunciationScore,
+                time_score: timeScore,
+                total_score: totalScore,
+                crla_classification: crlaClassification,
+                classification: crlaClassification,
+                wpm,
+                duration_seconds: durationSeconds,
+                word_count: targetWords.length,
+                transcript: spokenTranscript.trim(),
+                speech_recognition_used: speechRecognitionUsed,
+                needs_manual_review: needsManualReview,
+                remarks: needsManualReview
+                    ? "Speech recognition was unavailable or did not capture speech; teacher review is recommended."
+                    : `CRLA classification: ${crlaClassification}.`
+            };
+        }
+
+        function renderScoreSummary(scores) {
+            const summary = document.querySelector(".completion-summary");
+            if (!summary || !scores) return;
+            summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
+            const tiles = [
+                [`${Math.round(scores.fluency_score)}%`, "fluency"],
+                [`${Math.round(scores.accuracy)}%`, "accuracy"],
+                [`${Math.round(scores.pronunciation_score)}%`, "pronunciation"],
+                [`${Math.round(scores.time_score)}%`, "time"],
+                [`${Math.round(scores.total_score)}%`, "total score"],
+                [scores.crla_classification, "CRLA level"],
+            ];
+            tiles.forEach(([value, label]) => {
+                const tile = document.createElement("div");
+                tile.className = "summary-tile";
+                tile.dataset.scoreTile = "true";
+                const strong = document.createElement("strong");
+                strong.textContent = value;
+                const span = document.createElement("span");
+                span.textContent = label;
+                tile.append(strong, span);
+                summary.appendChild(tile);
+            });
+        }
+
+        function setupSpeechRecognition() {
+            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!Recognition) return null;
+            const instance = new Recognition();
+            instance.lang = "en-US";
+            instance.continuous = true;
+            instance.interimResults = true;
+            instance.onresult = (event) => {
+                let text = "";
+                for (let i = 0; i < event.results.length; i++) {
+                    text += event.results[i][0]?.transcript || "";
+                    text += " ";
+                }
+                spokenTranscript = text.trim();
+            };
+            instance.onend = () => {
+                recognitionActive = false;
+                if (isRecording && !isMuted && !isReviewMode) {
+                    try {
+                        instance.start();
+                        recognitionActive = true;
+                    } catch (error) {
+                        console.warn("PABASA: Speech recognition restart failed", error);
+                    }
+                }
+            };
+            instance.onerror = (event) => {
+                console.warn("PABASA: Speech recognition error", event.error);
+            };
+            return instance;
+        }
+
+        function startSpeechRecognition() {
+            if (isReviewMode || isMuted) return;
+            recognition = recognition || setupSpeechRecognition();
+            if (!recognition || recognitionActive) return;
+            try {
+                recognition.start();
+                recognitionActive = true;
+            } catch (error) {
+                console.warn("PABASA: Speech recognition unavailable", error);
+            }
+        }
+
+        function stopSpeechRecognition() {
+            if (!recognition || !recognitionActive) return;
+            try {
+                recognition.stop();
+            } catch (error) {
+                console.warn("PABASA: Speech recognition stop failed", error);
+            }
+            recognitionActive = false;
+        }
+
         function updateUI() {
             if (!items.length) return;
             if (readingWord) readingWord.textContent = items[currentIndex];
@@ -119,36 +284,53 @@
             if (counter) counter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
             if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
             
-            if (prevBtn) prevBtn.disabled = !isRecording || (currentIndex === 0);
+            if (prevBtn) prevBtn.disabled = isReviewMode ? currentIndex === 0 : (!isRecording || (currentIndex === 0));
             if (nextBtn) {
-                nextBtn.disabled = !isRecording || (currentIndex === items.length - 1);
-                nextBtn.textContent = "Next";
+                nextBtn.disabled = isReviewMode ? currentIndex === items.length - 1 : (!isRecording || (currentIndex === items.length - 1));
+                nextBtn.textContent = isReviewMode && currentIndex === items.length - 1 ? "Done" : "Next";
             }
         }
 
         function showCompletion(isFullCompletion) {
+            stopSpeechRecognition();
             shell.classList.add("is-complete");
             closePauseMenu();
             if (completionCount) completionCount.textContent = items.length;
             if (completionLevel) completionLevel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+            latestScores = latestScores || calculateScores();
+            renderScoreSummary(latestScores);
             
             // Add retake attempt information to the results title
-            if (viewMode === 'retake' && materialId) {
+            if (isRetakeMode && materialId) {
                 const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
                 const count = retakeCounts[String(materialId).trim()] || 0;
                 const title = document.querySelector(".completion-card h1");
-                if (title) title.innerHTML += ` <span style="background: var(--sun); color: #1b1a17; padding: 4px 12px; border-radius: 10px; font-size: 0.4em; vertical-align: middle; margin-left: 10px; font-weight: 900;">RETAKE ${count}/3</span>`;
+                if (title) title.innerHTML += ` <span style="background: var(--sun); color: #1b1a17; padding: 4px 12px; border-radius: 10px; font-size: 0.4em; vertical-align: middle; margin-left: 10px; font-weight: 900;">RETAKE ${count + 1}/3</span>`;
             }
 
             // Skip side effects for review mode or partial progress
-            if (viewMode === 'view' || !isFullCompletion || completionSubmitted) return;
+            if (isReviewMode || !isFullCompletion || completionSubmitted) return;
             completionSubmitted = true;
+
+            if (isRetakeMode && materialId) {
+                const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
+                const mId = String(materialId).trim();
+                retakeCounts[mId] = (retakeCounts[mId] || 0) + 1;
+                localStorage.setItem('pabasa_retake_counts', JSON.stringify(retakeCounts));
+            }
 
             const count = parseInt(localStorage.getItem("pabasa_assessments_completed") || "0");
             localStorage.setItem("pabasa_assessments_completed", count + 1);
 
             // Explicitly mark this specific material as seen to decrease sidebar badges
             if (materialId) {
+                const completedAssessmentIds = JSON.parse(localStorage.getItem(completedAssessmentIdsKey) || "[]").map(id => String(id).trim());
+                const completedId = String(materialId).trim();
+                if (!completedAssessmentIds.includes(completedId)) {
+                    completedAssessmentIds.push(completedId);
+                    localStorage.setItem(completedAssessmentIdsKey, JSON.stringify(completedAssessmentIds));
+                }
+
                 const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
                 const mId = String(materialId).trim();
 
@@ -224,8 +406,9 @@
                     material_id: materialId,
                     activity_type: 'assessment',
                     class_code: testCode,
+                    scores: latestScores,
                 };
-                if (viewMode === 'retake') {
+                if (isRetakeMode) {
                     payload.is_retake = true;
                     const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
                     payload.attempt_number = retakeCounts[String(materialId).trim()] || 1;
@@ -245,17 +428,23 @@
         }
 
         const startReading = () => {
+            if (isReviewMode) return;
             isRecording = true;
             startTime = Date.now();
+            spokenTranscript = "";
+            latestScores = null;
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
+            startSpeechRecognition();
             updateUI();
             console.log("PABASA: Assessment recording and timer started.");
         };
 
         const stopReading = () => {
+            if (isReviewMode) return;
             if (!isRecording) return;
             isRecording = false;
+            stopSpeechRecognition();
             const reachedLastItem = items.length > 0 && currentIndex === items.length - 1;
             showCompletion(reachedLastItem);
         };
@@ -269,6 +458,8 @@
             if (icon) icon.className = isMuted ? "bi bi-mic-mute-fill" : "bi bi-mic-fill";
             btnToggleMic.classList.toggle("btn-outline-danger", isMuted);
             btnToggleMic.classList.toggle("btn-outline-dark", !isMuted);
+            if (isMuted) stopSpeechRecognition();
+            else if (isRecording) startSpeechRecognition();
         });
 
         if (btnTestMic) {
@@ -293,6 +484,14 @@
             pauseOverlay?.classList.add("d-none");
         }
 
+        function goBackToAssessments() {
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+            window.location.href = '/dashboard/assessment/';
+        }
+
         prevBtn?.addEventListener("click", () => { 
             if (currentIndex > 0) { 
                 currentIndex--; 
@@ -305,7 +504,7 @@
                 currentIndex++; 
                 updateUI(); 
             } 
-            else { showCompletion(true); }
+            else if (!isReviewMode) { showCompletion(true); }
         });
 
         pauseBtn?.addEventListener("click", () => {
@@ -316,18 +515,33 @@
         pauseOverlay?.addEventListener("click", closePauseMenu);
         resumeBtn?.addEventListener("click", closePauseMenu);
         retryBtn?.addEventListener("click", () => {
+            if (isReviewMode) return;
             shell.classList.remove("is-complete");
             currentIndex = 0;
             updateUI();
             closePauseMenu();
         });
-        quitBtn?.addEventListener("click", () => { window.location.href = '/dashboard/assessment/'; });
+        quitBtn?.addEventListener("click", goBackToAssessments);
         reviewBtn?.addEventListener("click", () => { location.reload(); });
-        finishBtn?.addEventListener("click", () => { window.location.href = '/dashboard/assessment/'; });
+        finishBtn?.addEventListener("click", goBackToAssessments);
 
-        if (viewMode === 'view') {
-            if (pauseBtn) pauseBtn.classList.add("d-none");
+        if (isReviewMode) {
+            [pauseBtn, btnStartReading, btnStopReading, btnToggleMic, btnTestMic].forEach((button) => button?.classList.add("d-none"));
+            document.querySelector(".read-helper span:last-child")?.replaceChildren(document.createTextNode("Review your completed assessment. This view does not record or update your score."));
             if (testMeta) testMeta.innerHTML += ' <span style="background: rgba(148, 163, 184, 0.2); color: var(--muted); padding: 2px 8px; border-radius: 6px; font-size: 0.6em; vertical-align: middle; margin-left: 8px;">Review Mode</span>';
+
+            const headerActions = document.querySelector(".header-actions");
+            if (headerActions && !document.getElementById("btnBackAssessment")) {
+                const backBtn = document.createElement("button");
+                backBtn.id = "btnBackAssessment";
+                backBtn.type = "button";
+                backBtn.className = "header-action-btn";
+                backBtn.title = "Back to assessments";
+                backBtn.setAttribute("aria-label", "Back to assessments");
+                backBtn.innerHTML = '<i class="bi bi-arrow-left"></i>';
+                backBtn.addEventListener("click", goBackToAssessments);
+                headerActions.prepend(backBtn);
+            }
         }
 
         loadItems();
