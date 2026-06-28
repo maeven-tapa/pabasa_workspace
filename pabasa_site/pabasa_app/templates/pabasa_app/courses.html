@@ -3341,33 +3341,23 @@
 
         async function fetchStudentsForCourse(course) {
             const { normalize, sectionCodes, sectionNames } = getCourseSectionMatchers(course);
-            let students = [];
 
-            try {
-                const res = await fetch('/dashboard/teacher/students-api/', {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.success && Array.isArray(data.students)) students = data.students;
-                }
-            } catch (err) {
-                console.warn('Failed to fetch teacher students API for course reports', err);
+            const res = await fetch('/dashboard/teacher/students-api/', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) {
+                throw new Error(`Student database request failed with status ${res.status}`);
             }
 
-            if (!students.length) {
-                try {
-                    const storedStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
-                    students = Array.isArray(storedStudents) ? storedStudents : [];
-                } catch (e) {
-                    students = [];
-                }
+            const data = await res.json();
+            if (!data || !data.success || !Array.isArray(data.students)) {
+                throw new Error(data?.error || 'Student database response was invalid');
             }
 
             const seen = new Set();
-            return students.filter(s => {
+            return data.students.filter(s => {
                 const codes = Array.isArray(s.class_codes) ? s.class_codes : [s.class_code, s.code].filter(Boolean);
                 const classes = Array.isArray(s.classes) ? s.classes : [s.class, s.class_name].filter(Boolean);
                 const byCode = codes.some(c => sectionCodes.has(normalize(c)));
@@ -3386,8 +3376,6 @@
             try {
                 const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
                 if (!course) return;
-                const courseStudents = await fetchStudentsForCourse(course);
-
                 const listContainer = document.getElementById('courseUnifiedStudentReportList');
                 const selectAll = document.getElementById('courseSelectAllRecipients');
                 if (!listContainer) return;
@@ -3402,6 +3390,8 @@
                         });
                     }
                 }
+
+                const courseStudents = await fetchStudentsForCourse(course);
 
                 if (courseStudents.length === 0) {
                     listContainer.innerHTML = '<p class="text-center text-muted p-3">No students found in this course to generate a report.</p>';
@@ -3427,6 +3417,10 @@
                 });
             } catch (e) {
                 console.warn('loadCourseReports failed', e);
+                const listContainer = document.getElementById('courseUnifiedStudentReportList');
+                if (listContainer) {
+                    listContainer.innerHTML = '<p class="text-center text-danger p-3">Could not load students from the database. Please refresh and try again.</p>';
+                }
             }
         }
 

@@ -575,3 +575,15 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "pabasa_app/js/students.js", html=False)
         self.assertNotContains(response, "Students directory: prefer server")
+
+    def test_course_report_recipients_do_not_use_local_storage_students(self):
+        response = self.client.get(reverse("courses"))
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        helper_start = content.index("async function fetchStudentsForCourse(course)")
+        helper_end = content.index("// Course-scoped Reports loader", helper_start)
+        helper_body = content[helper_start:helper_end]
+
+        self.assertIn("/dashboard/teacher/students-api/", helper_body)
+        self.assertNotIn("pabasa_added_students", helper_body)
