@@ -2,24 +2,111 @@
 {% load static %}
 
 {% block content %}
+<style>
+    .performance-hero {
+        background: linear-gradient(135deg, rgba(124, 45, 18, 0.16) 0%, rgba(255, 247, 237, 0.98) 100%);
+        border: 1px solid rgba(124, 45, 18, 0.16);
+        box-shadow: 0 18px 42px rgba(124, 45, 18, 0.12);
+        border-radius: 24px;
+        padding: 1.2rem 1.3rem;
+    }
+
+    .performance-kpi-card {
+        border: 1px solid rgba(124, 45, 18, 0.12);
+        box-shadow: 0 10px 24px rgba(124, 45, 18, 0.07);
+        border-radius: 20px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        padding: 1rem 1rem 0.95rem;
+    }
+
+    .performance-kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px rgba(124, 45, 18, 0.12);
+    }
+
+    .performance-section-title {
+        color: #7c2d12;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        margin-bottom: 0.8rem;
+        padding-bottom: 0.35rem;
+        border-bottom: 2px solid rgba(124, 45, 18, 0.12);
+        display: inline-block;
+    }
+
+    .performance-table thead th {
+        border-bottom: 2px solid rgba(124, 45, 18, 0.12) !important;
+        color: #7c2d12;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-size: 0.74rem;
+    }
+
+    .performance-table tbody tr {
+        transition: background 0.2s ease;
+    }
+
+    .performance-table tbody tr:hover {
+        background: rgba(124, 45, 18, 0.03);
+    }
+
+    .performance-pill {
+        background: rgba(124, 45, 18, 0.08);
+        color: #7c2d12;
+        display: inline-block;
+        padding: 0.28rem 0.6rem;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.76rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .performance-callout {
+        padding: 0.8rem 0.95rem;
+        border-radius: 12px;
+        transition: background 0.2s ease;
+        border: 1px solid rgba(124, 45, 18, 0.08);
+    }
+
+    .performance-callout:hover {
+        background: rgba(124, 45, 18, 0.04);
+    }
+</style>
 <div class="principal-content">
+    <div class="principal-panel mb-4 performance-hero">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <p class="performance-pill mb-2">School Performance</p>
+                <h4 class="mb-1" style="color: #1b1a17; font-weight: 800;">Performance Overview</h4>
+                <p class="text-muted mb-0">A clear view of learning progress across grades and reading outcomes.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
+                    <i class="bi bi-bar-chart-line"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row mb-4">
         <div class="col-md-4 mb-3">
-            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%);">
+            <div class="principal-panel performance-kpi-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.04) 100%);">
                 <p class="text-secondary small mb-2">Current Month Performance</p>
                 <strong style="font-size: 2.2rem; color: #3b82f6;">{{ current_month_performance }}%</strong>
                 <p class="small text-muted mt-2 mb-0"><i class="bi bi-graph-up" style="color: #22c55e;"></i> School-wide average</p>
             </div>
         </div>
         <div class="col-md-4 mb-3">
-            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%);">
+            <div class="principal-panel performance-kpi-card" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.04) 100%);">
                 <p class="text-secondary small mb-2">Average Completion Rate</p>
                 <strong style="font-size: 2.2rem; color: #22c55e;">{{ completion_rate }}%</strong>
                 <p class="small text-muted mt-2 mb-0"><i class="bi bi-check-circle"></i> {{ total_students }} students tracked</p>
             </div>
         </div>
         <div class="col-md-4 mb-3">
-            <div class="principal-panel" style="background: linear-gradient(135deg, rgba(251, 146, 60, 0.08) 0%, rgba(251, 146, 60, 0.04) 100%);">
+            <div class="principal-panel performance-kpi-card" style="background: linear-gradient(135deg, rgba(251, 146, 60, 0.1) 0%, rgba(251, 146, 60, 0.04) 100%);">
                 <p class="text-secondary small mb-2">Year-to-Date Progress</p>
                 <strong style="font-size: 2.2rem; color: #fb923c;">{{ ytd_progress }}%</strong>
                 <p class="small text-muted mt-2 mb-0"><i class="bi bi-calendar"></i> Overall completion index</p>
@@ -27,10 +114,10 @@
         </div>
     </div>
 
-    <h5 class="mb-3">Reading and Speech Performance by Grade</h5>
-    <div class="principal-panel mb-4">
+    <h5 class="performance-section-title mb-3">Reading and Speech Performance by Grade</h5>
+    <div class="principal-panel mb-4" style="border-radius: 20px; box-shadow: 0 10px 24px rgba(124, 45, 18, 0.06);">
         <div class="table-responsive">
-            <table class="table align-middle mb-0 placeholder-table">
+            <table class="table align-middle mb-0 placeholder-table performance-table">
                 <thead>
                     <tr>
                         <th>Grade Level</th>
@@ -61,10 +148,10 @@
         </div>
     </div>
 
-    <h5 class="mb-3">Completion Rate by Grade</h5>
-    <div class="principal-panel mb-4">
+    <h5 class="performance-section-title mb-3">Completion Rate by Grade</h5>
+    <div class="principal-panel mb-4" style="border-radius: 20px; box-shadow: 0 10px 24px rgba(124, 45, 18, 0.06);">
         <div class="table-responsive">
-            <table class="table align-middle mb-0 placeholder-table">
+            <table class="table align-middle mb-0 placeholder-table performance-table">
                 <thead>
                     <tr>
                         <th>Grade Level</th>
@@ -103,7 +190,7 @@
                 <h6 class="mb-3">Top Performing Grades</h6>
                 <div class="d-flex flex-column gap-2">
                     {% for row in top_grades %}
-                    <div style="padding: 0.75rem; background: rgba(34, 197, 94, 0.05); border-radius: 8px;">
+                    <div class="performance-callout" style="background: linear-gradient(90deg, rgba(34, 197, 94, 0.08) 0%, rgba(255, 255, 255, 0.85) 100%);">
                         <p class="small mb-0"><strong>{{ row.grade }}</strong>: {{ row.average_score }}% average</p>
                     </div>
                     {% empty %}
@@ -117,7 +204,7 @@
                 <h6 class="mb-3">Grades Needing Intervention</h6>
                 <div class="d-flex flex-column gap-2">
                     {% for row in intervention_grades %}
-                    <div style="padding: 0.75rem; background: rgba(239, 68, 68, 0.05); border-radius: 8px;">
+                    <div class="performance-callout" style="background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(255, 255, 255, 0.85) 100%);">
                         <p class="small mb-0"><strong>{{ row.grade }}</strong>: {{ row.average_score }}% average</p>
                     </div>
                     {% empty %}

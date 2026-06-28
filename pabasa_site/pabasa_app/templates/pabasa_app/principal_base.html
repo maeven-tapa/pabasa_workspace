@@ -16,6 +16,8 @@
             --principal-primary: #7c2d12;
             --principal-primary-deep: #5d1f0a;
             --principal-primary-soft: #fed7aa;
+            --principal-accent: #b45309;
+            --principal-accent-soft: #fff7ed;
             --principal-bg: #fef6f3;
             --principal-border: rgba(124, 45, 18, 0.08);
             --principal-text: #1b1a17;
@@ -163,6 +165,45 @@
             color: var(--principal-muted);
             font-size: 0.78rem;
             text-transform: uppercase;
+        }
+
+        .btn {
+            border-radius: 999px;
+            font-weight: 700;
+            padding: 0.7rem 1rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--principal-primary) 0%, var(--principal-accent) 100%);
+            border: 1px solid transparent;
+            box-shadow: 0 10px 24px rgba(124, 45, 18, 0.18);
+            color: #fff;
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus {
+            background: linear-gradient(135deg, var(--principal-primary-deep) 0%, #9a2c0f 100%);
+            border-color: transparent;
+            box-shadow: 0 12px 26px rgba(124, 45, 18, 0.2);
+            color: #fff;
+        }
+
+        .btn-outline-secondary {
+            background: rgba(255, 255, 255, 0.78);
+            border-color: rgba(124, 45, 18, 0.18);
+            color: var(--principal-primary);
+        }
+
+        .btn-outline-secondary:hover,
+        .btn-outline-secondary:focus {
+            background: var(--principal-accent-soft);
+            border-color: rgba(124, 45, 18, 0.24);
+            color: var(--principal-primary);
         }
 
         .principal-logout-btn {

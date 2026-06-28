@@ -2,72 +2,137 @@
 {% load static %}
 
 {% block content %}
+<style>
+    .settings-hero {
+        background: linear-gradient(135deg, rgba(124, 45, 18, 0.16) 0%, rgba(255, 247, 237, 0.98) 100%);
+        border: 1px solid rgba(124, 45, 18, 0.16);
+        box-shadow: 0 18px 42px rgba(124, 45, 18, 0.12);
+        border-radius: 24px;
+        padding: 1.2rem 1.3rem;
+    }
+
+    .settings-section-title {
+        color: #7c2d12;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        margin-bottom: 0.8rem;
+        padding-bottom: 0.35rem;
+        border-bottom: 2px solid rgba(124, 45, 18, 0.12);
+        display: inline-block;
+    }
+
+    .settings-card {
+        border: 1px solid rgba(124, 45, 18, 0.12);
+        border-radius: 20px;
+        box-shadow: 0 10px 24px rgba(124, 45, 18, 0.07);
+        background: linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(254, 247, 237, 0.93) 100%);
+        padding: 1rem 1rem 0.95rem;
+    }
+
+    .settings-form-control {
+        border-radius: 12px;
+        border: 1px solid rgba(124, 45, 18, 0.16);
+        background: rgba(255,255,255,0.95);
+        box-shadow: inset 0 1px 2px rgba(124, 45, 18, 0.04);
+    }
+
+    .settings-action-btn {
+        border-radius: 999px;
+        font-weight: 700;
+        padding: 0.65rem 0.95rem;
+    }
+
+    .settings-alert {
+        border: 0;
+        border-radius: 14px;
+        box-shadow: 0 8px 18px rgba(124, 45, 18, 0.06);
+        padding: 0.8rem 0.95rem;
+    }
+
+    .settings-subtle-text {
+        color: #6b7280;
+        font-size: 0.92rem;
+    }
+</style>
 <div class="principal-content">
-    <p class="text-secondary mb-4">
+    <div class="principal-panel mb-4 settings-hero">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <p style="background: rgba(124, 45, 18, 0.08); color: #7c2d12; display: inline-block; padding: 0.28rem 0.6rem; border-radius: 999px; font-weight: 700; font-size: 0.76rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.4rem;">Account Settings</p>
+                <h4 class="mb-1" style="color: #1b1a17; font-weight: 800;">Manage school and account preferences</h4>
+                <p class="settings-subtle-text mb-0">Keep school information, academic details, and account security neatly organized.</p>
+            </div>
+            <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
+                <i class="bi bi-gear-wide-connected"></i>
+            </div>
+        </div>
+    </div>
+
+    <p class="settings-subtle-text mb-4">
         Manage school information, academic settings, and account preferences.
     </p>
 
     {% if settings_success %}
-        <div class="alert alert-success" role="alert">{{ settings_success }}</div>
+        <div class="alert alert-success settings-alert" role="alert">{{ settings_success }}</div>
     {% endif %}
     {% if settings_error %}
-        <div class="alert alert-danger" role="alert">{{ settings_error }}</div>
+        <div class="alert alert-danger settings-alert" role="alert">{{ settings_error }}</div>
     {% endif %}
 
     <!-- School Information Section -->
-    <h5 class="mb-3">School Information</h5>
-    <div class="principal-panel mb-4">
+    <h5 class="settings-section-title mb-3">School Information</h5>
+    <div class="principal-panel mb-4 settings-card">
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="settings_action" value="save_school_info">
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="schoolName" class="form-label">School Name</label>
-                    <input type="text" class="form-control" id="schoolName" name="school_name" value="{{ school_info.name }}">
+                    <input type="text" class="form-control settings-form-control" id="schoolName" name="school_name" value="{{ school_info.name }}">
                 </div>
                 <div class="col-md-6">
                     <label for="schoolCode" class="form-label">School Code/ID</label>
-                    <input type="text" class="form-control" id="schoolCode" name="school_code" value="{{ school_info.code }}">
+                    <input type="text" class="form-control settings-form-control" id="schoolCode" name="school_code" value="{{ school_info.code }}">
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="municipality" class="form-label">Municipality/City</label>
-                    <input type="text" class="form-control" id="municipality" name="municipality" value="{{ school_info.municipality }}" placeholder="Enter municipality">
+                    <input type="text" class="form-control settings-form-control" id="municipality" name="municipality" value="{{ school_info.municipality }}" placeholder="Enter municipality">
                 </div>
                 <div class="col-md-6">
                     <label for="province" class="form-label">Province</label>
-                    <input type="text" class="form-control" id="province" name="province" value="{{ school_info.province }}" placeholder="Enter province">
+                    <input type="text" class="form-control settings-form-control" id="province" name="province" value="{{ school_info.province }}" placeholder="Enter province">
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="district" class="form-label">District</label>
-                    <input type="text" class="form-control" id="district" name="district" value="{{ school_info.district }}" placeholder="Enter district">
+                    <input type="text" class="form-control settings-form-control" id="district" name="district" value="{{ school_info.district }}" placeholder="Enter district">
                 </div>
                 <div class="col-md-6">
                     <label for="region" class="form-label">Region</label>
-                    <input type="text" class="form-control" id="region" name="region" value="{{ school_info.region }}" placeholder="Enter region">
+                    <input type="text" class="form-control settings-form-control" id="region" name="region" value="{{ school_info.region }}" placeholder="Enter region">
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-md-12">
                     <label for="address" class="form-label">Complete Address</label>
-                    <input type="text" class="form-control" id="address" name="address" value="{{ school_info.address }}" placeholder="Enter full address">
+                    <input type="text" class="form-control settings-form-control" id="address" name="address" value="{{ school_info.address }}" placeholder="Enter full address">
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="contact" class="form-label">Contact Number</label>
-                    <input type="tel" class="form-control" id="contact" name="contact" value="{{ school_info.contact }}" placeholder="Enter contact number">
+                    <input type="tel" class="form-control settings-form-control" id="contact" name="contact" value="{{ school_info.contact }}" placeholder="Enter contact number">
                 </div>
                 <div class="col-md-6">
                     <label for="email" class="form-label">School Email</label>
-                    <input type="email" class="form-control" id="email" name="email" value="{{ school_info.email }}" placeholder="Enter email">
+                    <input type="email" class="form-control settings-form-control" id="email" name="email" value="{{ school_info.email }}" placeholder="Enter email">
                 </div>
             </div>
 
@@ -79,20 +144,20 @@
     </div>
 
     <!-- Academic Year Section -->
-    <h5 class="mb-3">Academic Year</h5>
-    <div class="principal-panel mb-4">
+    <h5 class="settings-section-title mb-3">Academic Year</h5>
+    <div class="principal-panel mb-4 settings-card">
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="settings_action" value="save_academic_year">
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="academicYear" class="form-label">Current Academic Year</label>
-                    <input type="text" class="form-control" id="academicYear" name="academic_year" value="{{ academic_settings.academic_year }}" placeholder="Enter academic year">
+                    <input type="text" class="form-control settings-form-control" id="academicYear" name="academic_year" value="{{ academic_settings.academic_year }}" placeholder="Enter academic year">
                     <small class="text-muted">Format: YYYY-YYYY</small>
                 </div>
                 <div class="col-md-6">
                     <label for="term" class="form-label">Current Term</label>
-                    <select class="form-select" id="term" name="term">
+                    <select class="form-select settings-form-control" id="term" name="term">
                         <option value="1" {% if academic_settings.term == '1' %}selected{% endif %}>Term 1</option>
                         <option value="2" {% if academic_settings.term == '2' %}selected{% endif %}>Term 2</option>
                         <option value="3" {% if academic_settings.term == '3' %}selected{% endif %}>Term 3</option>
@@ -103,15 +168,15 @@
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="schoolStart" class="form-label">School Year Start Date</label>
-                    <input type="date" class="form-control" id="schoolStart" name="school_year_start" value="{{ academic_settings.school_year_start }}">
+                    <input type="date" class="form-control settings-form-control" id="schoolStart" name="school_year_start" value="{{ academic_settings.school_year_start }}">
                 </div>
                 <div class="col-md-6">
                     <label for="schoolEnd" class="form-label">School Year End Date</label>
-                    <input type="date" class="form-control" id="schoolEnd" name="school_year_end" value="{{ academic_settings.school_year_end }}">
+                    <input type="date" class="form-control settings-form-control" id="schoolEnd" name="school_year_end" value="{{ academic_settings.school_year_end }}">
                 </div>
             </div>
 
-            <div class="alert alert-info" role="alert">
+            <div class="alert alert-info settings-alert" role="alert">
                 <i class="bi bi-info-circle me-2"></i>
                 <strong>Note:</strong> These dates are used to organize assessments and reports by academic period.
             </div>
@@ -124,86 +189,86 @@
     </div>
 
     <!-- Change Password Section -->
-    <h5 class="mb-3">Change Password</h5>
-    <div class="principal-panel mb-4">
+    <h5 class="settings-section-title mb-3">Change Password</h5>
+    <div class="principal-panel mb-4 settings-card">
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="settings_action" value="change_password">
             <div class="mb-3">
                 <label for="currentPassword" class="form-label">Current Password</label>
-                <input type="password" class="form-control" id="currentPassword" name="current_password" placeholder="Enter current password" required>
+                <input type="password" class="form-control settings-form-control" id="currentPassword" name="current_password" placeholder="Enter current password" required>
             </div>
 
             <div class="mb-3">
                 <label for="newPassword" class="form-label">New Password</label>
-                <input type="password" class="form-control" id="newPassword" name="new_password" placeholder="Enter new password" required>
+                <input type="password" class="form-control settings-form-control" id="newPassword" name="new_password" placeholder="Enter new password" required>
                 <small class="text-muted">Minimum 8 characters, must include uppercase, lowercase, numbers, and special characters</small>
             </div>
 
             <div class="mb-3">
                 <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                <input type="password" class="form-control" id="confirmPassword" name="confirm_password" placeholder="Confirm new password" required>
+                <input type="password" class="form-control settings-form-control" id="confirmPassword" name="confirm_password" placeholder="Confirm new password" required>
             </div>
 
-            <div class="alert alert-warning" role="alert">
+            <div class="alert alert-warning settings-alert" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 <strong>Security:</strong> Make sure to use a strong password and keep it confidential.
             </div>
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary settings-action-btn">
                     <i class="bi bi-lock me-1"></i>Update Password
                 </button></div>
         </form>
     </div>
 
     <!-- Personal Information Section -->
-    <h5 class="mb-3">Personal Information</h5>
-    <div class="principal-panel mb-4">
+    <h5 class="settings-section-title mb-3">Personal Information</h5>
+    <div class="principal-panel mb-4 settings-card">
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="settings_action" value="save_personal_info">
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="firstName" class="form-label">First Name</label>
-                    <input type="text" class="form-control" id="firstName" name="first_name" value="{{ first_name }}" required>
+                    <input type="text" class="form-control settings-form-control" id="firstName" name="first_name" value="{{ first_name }}" required>
                 </div>
                 <div class="col-md-6">
                     <label for="lastName" class="form-label">Last Name</label>
-                    <input type="text" class="form-control" id="lastName" name="last_name" value="{{ last_name }}" required>
+                    <input type="text" class="form-control settings-form-control" id="lastName" name="last_name" value="{{ last_name }}" required>
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="middleInitial" class="form-label">Middle Initial</label>
-                    <input type="text" class="form-control" id="middleInitial" name="middle_initial" value="{{ middle_initial|default:'' }}" maxlength="1">
+                    <input type="text" class="form-control settings-form-control" id="middleInitial" name="middle_initial" value="{{ middle_initial|default:'' }}" maxlength="1">
                 </div>
                 <div class="col-md-6">
                     <label for="position" class="form-label">Position</label>
-                    <input type="text" class="form-control" id="position" name="position" value="{{ principal_profile_info.position|default:'Head Teacher/Principal II' }}">
+                    <input type="text" class="form-control settings-form-control" id="position" name="position" value="{{ principal_profile_info.position|default:'Head Teacher/Principal II' }}">
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" name="email" value="{{ email|default:'' }}" required>
+                    <input type="email" class="form-control settings-form-control" id="email" name="email" value="{{ email|default:'' }}" required>
                 </div>
                 <div class="col-md-6">
                     <label for="contactNumber" class="form-label">Contact Number</label>
-                    <input type="tel" class="form-control" id="contactNumber" name="contact_number" value="{{ contact_number|default:'' }}">
+                    <input type="tel" class="form-control settings-form-control" id="contactNumber" name="contact_number" value="{{ contact_number|default:'' }}">
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="pabsaId" class="form-label">PABASA ID</label>
-                    <input type="text" class="form-control" id="pabsaId" value="{{ principal_id }}" readonly>
+                    <input type="text" class="form-control settings-form-control" id="pabsaId" value="{{ principal_id }}" readonly>
                 </div>
                 <div class="col-md-6">
                     <label for="role" class="form-label">Role</label>
-                    <input type="text" class="form-control" id="role" value="Principal" readonly>
+                    <input type="text" class="form-control settings-form-control" id="role" value="Principal" readonly>
                 </div>
             </div>
 
@@ -215,8 +280,8 @@
     </div>
 
     <!-- Notification Preferences -->
-    <h5 class="mb-3">Notification Preferences</h5>
-    <div class="principal-panel mb-4">
+    <h5 class="settings-section-title mb-3">Notification Preferences</h5>
+    <div class="principal-panel mb-4 settings-card">
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="settings_action" value="save_notifications">
@@ -274,15 +339,15 @@
             <hr>
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary settings-action-btn">
                     <i class="bi bi-check me-1"></i>Save Preferences
                 </button></div>
         </form>
     </div>
 
     <!-- System Information -->
-    <h5 class="mb-3">System Information</h5>
-    <div class="principal-panel">
+    <h5 class="settings-section-title mb-3">System Information</h5>
+    <div class="principal-panel settings-card">
         <div class="row">
             <div class="col-md-6 mb-3">
                 <p class="small text-muted mb-1">Last Login</p>
