@@ -610,80 +610,51 @@
             font-size: 1.35rem;
             margin-bottom: 0.5rem;
         }
-        .logout-modal-shell {
-            padding: 2.25rem 1.75rem 1.5rem;
+        .logout-modal .modal-content {
+            border: 0;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 24px 60px rgba(31, 111, 139, 0.18);
         }
-        .logout-modal-body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.85rem;
+        .logout-modal .modal-body {
+            padding: 1.5rem 1.5rem 1rem;
         }
         .logout-modal-icon {
-            height: 64px;
-            width: 64px;
-            border-radius: 18px;
-            display: inline-flex;
             align-items: center;
+            background: linear-gradient(135deg, #1f6f8b 0%, #38bdf8 100%);
+            border-radius: 999px;
+            color: #fff;
+            display: inline-flex;
+            font-size: 1.4rem;
+            height: 56px;
             justify-content: center;
-            font-size: 1.9rem;
-            background: linear-gradient(135deg, rgba(244, 63, 94, 0.14), rgba(251, 113, 133, 0.1));
-            color: #e11d48;
-            border: 1px solid rgba(225, 29, 72, 0.16);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 14px 28px rgba(225, 29, 72, 0.12);
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.9rem;
+            width: 56px;
         }
         .logout-modal-title {
-            color: var(--dash-ink);
+            color: #155e75;
+            font-size: 1.15rem;
             font-weight: 800;
-            font-size: 1.45rem;
-            margin: 0;
-            letter-spacing: -0.01em;
+            margin-bottom: 0.4rem;
         }
         .logout-modal-copy {
-            color: var(--dash-text);
-            font-size: 0.95rem;
-            line-height: 1.6;
-            margin: 0;
-            max-width: 340px;
-            opacity: 0.9;
-        }
-        .logout-modal-actions {
-            gap: 0.85rem;
-            padding-top: 0.35rem;
+            color: #6b7280;
+            margin: 0 auto;
+            max-width: 320px;
         }
         .logout-modal-actions .btn {
             border-radius: 999px;
             font-weight: 700;
-            min-width: 144px;
-            padding: 0.8rem 1.25rem;
-            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, background-color 0.22s ease;
+            min-width: 120px;
+            padding: 0.7rem 1rem;
         }
-        .logout-modal-actions .btn:hover {
-            transform: translateY(-2px);
-        }
-        .logout-modal-actions .btn:active {
-            transform: translateY(0);
-        }
-        .logout-modal-actions .btn-secondary {
-            background: linear-gradient(135deg, #ffffff, #f1f5f9);
-            border: 1px solid rgba(148, 163, 184, 0.28);
-            color: #334155;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
-        }
-        .logout-modal-actions .btn-secondary:hover {
-            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-            color: #0f172a;
-            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
+        .logout-modal-actions .btn-outline-secondary {
+            border-color: #e5e7eb;
+            color: #4b5563;
         }
         .logout-modal-actions .btn-danger {
-            background: linear-gradient(135deg, #e11d48, #f43f5e);
+            background: linear-gradient(135deg, #1f6f8b 0%, #38bdf8 100%);
             border: 0;
-            box-shadow: 0 10px 24px rgba(225, 29, 72, 0.28);
-        }
-        .logout-modal-actions .btn-danger:hover {
-            background: linear-gradient(135deg, #be123c, #e11d48);
-            box-shadow: 0 14px 30px rgba(225, 29, 72, 0.36);
         }
 
         .dash-card {
@@ -1181,18 +1152,18 @@
             color: #7dd3fc !important;
             border-color: rgba(125, 211, 252, 0.2) !important;
         }
-        body.dark-theme .logout-modal-actions .btn-secondary {
+        body.dark-theme .logout-modal-actions .btn-outline-secondary {
             background: linear-gradient(135deg, rgba(148, 163, 184, 0.16), rgba(71, 85, 105, 0.16)) !important;
             color: #e2e8f0 !important;
             border-color: rgba(148, 163, 184, 0.2) !important;
         }
-        body.dark-theme .logout-modal-actions .btn-secondary:hover {
+        body.dark-theme .logout-modal-actions .btn-outline-secondary:hover {
             background: linear-gradient(135deg, rgba(148, 163, 184, 0.24), rgba(71, 85, 105, 0.24)) !important;
             color: #f8fafc !important;
         }
-        body.dark-theme .system-modal-icon.danger {
-            background: rgba(220, 38, 38, 0.2) !important;
-            color: #f87171 !important;
+        body.dark-theme .logout-modal-icon {
+            background: linear-gradient(135deg, #1f6f8b 0%, #38bdf8 100%) !important;
+            color: #fff !important;
         }
         body.dark-theme .btn-outline-danger {
             background: rgba(239, 68, 68, 0.1) !important;
@@ -1344,21 +1315,18 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-labelledby="logoutConfirmModalLabel" aria-hidden="true">
+            <div class="modal fade logout-modal" id="logoutConfirmModal" tabindex="-1" aria-labelledby="logoutConfirmModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content system-modal">
-                        <div class="system-modal-accent danger"></div>
-                        <div class="modal-body text-center logout-modal-shell">
-                            <div class="logout-modal-body">
-                                <div class="logout-modal-icon">
-                                    <i class="bi bi-box-arrow-right"></i>
-                                </div>
-                                <h5 class="logout-modal-title">Ready to leave?</h5>
-                                <p class="logout-modal-copy">You'll be returned to the home page when this session ends.</p>
+                    <div class="modal-content">
+                        <div class="modal-body text-center">
+                            <div class="logout-modal-icon">
+                                <i class="bi bi-box-arrow-right"></i>
                             </div>
+                            <h5 class="logout-modal-title" id="logoutConfirmModalLabel">Ready to sign out?</h5>
+                            <p class="logout-modal-copy">You'll be returned to the home page once your session ends.</p>
                         </div>
                         <div class="modal-footer border-0 justify-content-center pb-4 logout-modal-actions">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Stay Here</button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                             <a class="btn btn-danger" href="{% url 'home' %}">Yes, Logout</a>
                         </div>
                     </div>

@@ -165,6 +165,53 @@
             text-transform: uppercase;
         }
 
+        .admin-logout-modal .modal-content {
+            border: 0;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 24px 60px rgba(31, 111, 139, 0.18);
+        }
+        .admin-logout-modal .modal-body {
+            padding: 1.5rem 1.5rem 1rem;
+        }
+        .admin-logout-icon {
+            align-items: center;
+            background: linear-gradient(135deg, #1f6f8b 0%, #38bdf8 100%);
+            border-radius: 999px;
+            color: #fff;
+            display: inline-flex;
+            font-size: 1.4rem;
+            height: 56px;
+            justify-content: center;
+            margin-bottom: 0.9rem;
+            width: 56px;
+        }
+        .admin-logout-title {
+            color: #155e75;
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 0.4rem;
+        }
+        .admin-logout-copy {
+            color: #6b7280;
+            margin: 0 auto;
+            max-width: 320px;
+        }
+        .admin-logout-actions .btn {
+            border-radius: 999px;
+            font-weight: 700;
+            min-width: 120px;
+            padding: 0.7rem 1rem;
+        }
+        .admin-logout-actions .btn-outline-secondary {
+            border-color: #e5e7eb;
+            color: #4b5563;
+        }
+        .admin-logout-actions .btn-danger {
+            background: linear-gradient(135deg, #1f6f8b 0%, #38bdf8 100%);
+            border: 0;
+        }
+
         @media (max-width: 991.98px) {
             .admin-sidebar {
                 position: static;
@@ -244,19 +291,19 @@
         </section>
     </main>
 
-    <div class="modal fade" id="adminLogoutModal" tabindex="-1" aria-labelledby="adminLogoutModalLabel" aria-hidden="true">
+    <div class="modal fade admin-logout-modal" id="adminLogoutModal" tabindex="-1" aria-labelledby="adminLogoutModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-                <div class="modal-body text-center p-4">
-                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 56px; height: 56px; background: rgba(220, 53, 69, 0.12); color: #dc3545;">
-                        <i class="bi bi-box-arrow-right fs-3"></i>
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="admin-logout-icon">
+                        <i class="bi bi-box-arrow-right"></i>
                     </div>
-                    <h5 class="modal-title fw-bold" id="adminLogoutModalLabel">Log out of admin account?</h5>
-                    <p class="text-secondary mb-4">You will need to sign in again to access the admin dashboard.</p>
-                    <div class="d-flex justify-content-center gap-2">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
-                    </div>
+                    <h5 class="admin-logout-title" id="adminLogoutModalLabel">Ready to sign out?</h5>
+                    <p class="admin-logout-copy">You'll be returned to the home page once your Admin session ends.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4 admin-logout-actions">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a class="btn btn-danger" href="{% url 'logout' %}">Yes, Logout</a>
                 </div>
             </div>
         </div>
