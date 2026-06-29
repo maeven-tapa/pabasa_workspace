@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             .then(res => {
                 if (res.success) {
-                    alert('Class details updated successfully!');
-                    window.location.reload();
+                    (window.showSuccessToast || function(msg){ try{ alert(msg); }catch(e){} })('Class details updated successfully.');
+                    setTimeout(() => window.location.reload(), 1200);
                 } else {
-                    alert('Error: ' + res.error);
+                    (window.showErrorToast || function(msg){ try{ alert(msg); }catch(e){} })('Error: ' + res.error);
                 }
             });
         });
@@ -110,10 +110,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     try { window.dispatchEvent(new CustomEvent('studentAdded', { detail: { student_id: studentId, class_code: classCode } })); } catch (e) { console.warn(e); }
                     try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { class_code: classCode } })); } catch (e) { console.warn(e); }
 
-                    alert('Student added successfully.');
-                    window.location.reload();
+                    (window.showSuccessToast || function(msg){ try{ alert(msg); }catch(e){} })('Student added successfully.');
+                    setTimeout(() => window.location.reload(), 1200);
                 } else {
-                    alert('Error: ' + data.error);
+                    (window.showErrorToast || function(msg){ try{ alert(msg); }catch(e){} })('Error: ' + data.error);
                     clickedButton.disabled = false;
                 }
             })
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 clickedButton.disabled = false;
                 console.error('Error adding student to class:', error);
-                alert('Error: Unable to add student. Please try again.');
+                (window.showErrorToast || function(msg){ try{ alert(msg); }catch(e){} })('Error: Unable to add student. Please try again.');
             });
         });
     });

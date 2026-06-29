@@ -5132,17 +5132,17 @@
             if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
 
             if (added.length > 0) {
-                alert(`${added.length} student(s) added to course.`);
-                window.location.reload();
+                if (typeof showToast === 'function') showToast(`${added.length} student(s) added to course.`, 'success'); else alert(`${added.length} student(s) added to course.`);
+                setTimeout(() => window.location.reload(), 1200);
             } else {
-                alert('No students were added.');
+                if (typeof showToast === 'function') showToast('No students were added.', 'error'); else alert('No students were added.');
                 addButton.disabled = false;
             }
         } catch (err) {
             if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
             addButton.disabled = false;
             console.error('Error adding selected students', err);
-            alert('Unable to add the selected student. Please try again.');
+            if (typeof showToast === 'function') showToast('Unable to add the selected student. Please try again.', 'error'); else alert('Unable to add the selected student. Please try again.');
         }
     });
 
