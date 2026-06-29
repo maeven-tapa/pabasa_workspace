@@ -55,6 +55,12 @@
         let pendingAudioChunk = null;
         let currentSyllableIndex = 0;
         let currentMaterialLanguage = "";
+        let audioContext = null;
+        let audioAnalyser = null;
+        let audioMeterFrame = null;
+        let lastHeardAt = 0;
+        let hasHeardSinceLastChunk = false;
+        let lastAudioFlushAt = 0;
 
         function getCsrfToken() {
             const cookieToken = document.cookie.split('; ')
@@ -239,6 +245,7 @@
             const transcript = document.getElementById("speechTranscript");
             panel?.classList.toggle("is-listening", listening);
             shell?.classList.toggle("is-recording", Boolean(listening && isRecording && !isMuted));
+            if (!listening || !isRecording || isMuted) shell?.classList.remove("is-hearing");
             if (status) status.textContent = message;
             if (transcript) transcript.textContent = detail || "Google Speech results will appear here while you read.";
         }
@@ -261,10 +268,12 @@
             }
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                startAudioMeter(mediaStream);
                 const mimeType = pickAudioMimeType();
                 mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
                 mediaRecorder.ondataavailable = (event) => {
-                    if (event.data && event.data.size > 0 && isRecording && !isMuted) {
+                    if (event.data && event.data.size > 0 && isRecording && !isMuted && shouldSendAudioChunk()) {
+                        hasHeardSinceLastChunk = false;
                         sendAudioChunk(event.data);
                     }
                 };
@@ -289,13 +298,86 @@
             } catch (error) {
                 console.warn("PABASA: MediaRecorder stop failed", error);
             }
+            stopAudioMeter();
             mediaStream?.getTracks().forEach(track => track.stop());
             mediaStream = null;
             mediaRecorder = null;
             recognitionActive = false;
             pendingAudioChunk = null;
-            shell?.classList.remove("is-recording");
+            hasHeardSinceLastChunk = false;
+            lastAudioFlushAt = 0;
+            shell?.classList.remove("is-recording", "is-hearing");
             setSpeechStatus("Speech check stopped.", spokenTranscript || "No speech transcript was captured.");
+        }
+
+        function startAudioMeter(stream) {
+            stopAudioMeter();
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            try {
+                audioContext = new AudioContextClass();
+                const source = audioContext.createMediaStreamSource(stream);
+                audioAnalyser = audioContext.createAnalyser();
+                audioAnalyser.fftSize = 1024;
+                source.connect(audioAnalyser);
+                const samples = new Uint8Array(audioAnalyser.fftSize);
+                const tick = () => {
+                    if (!audioAnalyser || !isRecording || isMuted) {
+                        shell?.classList.remove("is-hearing");
+                        return;
+                    }
+                    audioAnalyser.getByteTimeDomainData(samples);
+                    let sum = 0;
+                    for (let index = 0; index < samples.length; index += 1) {
+                        const centered = (samples[index] - 128) / 128;
+                        sum += centered * centered;
+                    }
+                    const rms = Math.sqrt(sum / samples.length);
+                    const now = Date.now();
+                    if (rms > 0.035) {
+                        lastHeardAt = now;
+                        hasHeardSinceLastChunk = true;
+                        requestAudioChunkSoon(now);
+                    }
+                    shell?.classList.toggle("is-hearing", now - lastHeardAt < 260);
+                    audioMeterFrame = window.requestAnimationFrame(tick);
+                };
+                tick();
+            } catch (error) {
+                console.warn("PABASA: Audio meter unavailable", error);
+                stopAudioMeter();
+            }
+        }
+
+        function stopAudioMeter() {
+            if (audioMeterFrame) {
+                window.cancelAnimationFrame(audioMeterFrame);
+                audioMeterFrame = null;
+            }
+            shell?.classList.remove("is-hearing");
+            audioAnalyser = null;
+            if (audioContext) {
+                audioContext.close().catch(() => {});
+                audioContext = null;
+            }
+            lastHeardAt = 0;
+            hasHeardSinceLastChunk = false;
+            lastAudioFlushAt = 0;
+        }
+
+        function shouldSendAudioChunk() {
+            return hasHeardSinceLastChunk || Date.now() - lastHeardAt < 1800;
+        }
+
+        function requestAudioChunkSoon(now = Date.now()) {
+            if (!mediaRecorder || mediaRecorder.state !== "recording") return;
+            if (now - lastAudioFlushAt < 1200) return;
+            lastAudioFlushAt = now;
+            try {
+                mediaRecorder.requestData();
+            } catch (error) {
+                console.warn("PABASA: Audio chunk request failed", error);
+            }
         }
 
         async function sendAudioChunk(blob) {
@@ -372,7 +454,7 @@
                 );
             } else {
                 const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
-                setSpeechStatus(transcript ? nextHint : "Still listening...", transcript ? `Words: ${transcript}` : "Read when you are ready. The microphone is still active.", true);
+                setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", transcript ? `Words: ${transcript}` : "Read when you are ready. The microphone is active.", true);
             }
         }
 
@@ -583,6 +665,8 @@
             latestScores = null;
             currentSyllableIndex = 0;
             pendingAudioChunk = null;
+            hasHeardSinceLastChunk = false;
+            lastAudioFlushAt = 0;
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
             startSpeechRecognition();
@@ -680,6 +764,8 @@
             currentSyllableIndex = 0;
             spokenTranscript = "";
             pendingAudioChunk = null;
+            hasHeardSinceLastChunk = false;
+            lastAudioFlushAt = 0;
             updateUI();
             setSpeechStatus("Ready to start reading");
             closePauseMenu();
