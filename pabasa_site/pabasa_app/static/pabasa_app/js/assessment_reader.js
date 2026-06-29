@@ -60,7 +60,8 @@
         let audioMeterFrame = null;
         let lastHeardAt = 0;
         let hasHeardSinceLastChunk = false;
-        let lastAudioFlushAt = 0;
+        const speechChunkMs = 1100;
+        const speechLevelThreshold = 0.018;
 
         function getCsrfToken() {
             const cookieToken = document.cookie.split('; ')
@@ -281,7 +282,7 @@
                     console.warn("PABASA: MediaRecorder error", event.error);
                     setSpeechStatus("Speech recorder error.", event.error?.message || "Please try starting again.");
                 };
-                mediaRecorder.start(3000);
+                mediaRecorder.start(speechChunkMs);
                 recognitionActive = true;
                 setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
             } catch (error) {
@@ -305,7 +306,6 @@
             recognitionActive = false;
             pendingAudioChunk = null;
             hasHeardSinceLastChunk = false;
-            lastAudioFlushAt = 0;
             shell?.classList.remove("is-recording", "is-hearing");
             setSpeechStatus("Speech check stopped.", spokenTranscript || "No speech transcript was captured.");
         }
@@ -316,6 +316,9 @@
             if (!AudioContextClass) return;
             try {
                 audioContext = new AudioContextClass();
+                if (audioContext.state === "suspended") {
+                    audioContext.resume().catch(() => {});
+                }
                 const source = audioContext.createMediaStreamSource(stream);
                 audioAnalyser = audioContext.createAnalyser();
                 audioAnalyser.fftSize = 1024;
@@ -334,12 +337,11 @@
                     }
                     const rms = Math.sqrt(sum / samples.length);
                     const now = Date.now();
-                    if (rms > 0.035) {
+                    if (rms > speechLevelThreshold) {
                         lastHeardAt = now;
                         hasHeardSinceLastChunk = true;
-                        requestAudioChunkSoon(now);
                     }
-                    shell?.classList.toggle("is-hearing", now - lastHeardAt < 260);
+                    shell?.classList.toggle("is-hearing", now - lastHeardAt < 360);
                     audioMeterFrame = window.requestAnimationFrame(tick);
                 };
                 tick();
@@ -362,22 +364,10 @@
             }
             lastHeardAt = 0;
             hasHeardSinceLastChunk = false;
-            lastAudioFlushAt = 0;
         }
 
         function shouldSendAudioChunk() {
-            return hasHeardSinceLastChunk || Date.now() - lastHeardAt < 1800;
-        }
-
-        function requestAudioChunkSoon(now = Date.now()) {
-            if (!mediaRecorder || mediaRecorder.state !== "recording") return;
-            if (now - lastAudioFlushAt < 1200) return;
-            lastAudioFlushAt = now;
-            try {
-                mediaRecorder.requestData();
-            } catch (error) {
-                console.warn("PABASA: Audio chunk request failed", error);
-            }
+            return !audioAnalyser || hasHeardSinceLastChunk || Date.now() - lastHeardAt < speechChunkMs + 700;
         }
 
         async function sendAudioChunk(blob) {
@@ -666,7 +656,6 @@
             currentSyllableIndex = 0;
             pendingAudioChunk = null;
             hasHeardSinceLastChunk = false;
-            lastAudioFlushAt = 0;
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
             startSpeechRecognition();
@@ -765,7 +754,6 @@
             spokenTranscript = "";
             pendingAudioChunk = null;
             hasHeardSinceLastChunk = false;
-            lastAudioFlushAt = 0;
             updateUI();
             setSpeechStatus("Ready to start reading");
             closePauseMenu();
