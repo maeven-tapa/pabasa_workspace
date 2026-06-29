@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             .then(res => {
                 if (res.success) {
-                    (window.showSuccessToast || function(msg){ try{ alert(msg); }catch(e){} })('Class details updated successfully.');
+                    if (typeof showToast === 'function') showToast('Class details updated successfully.', 'success'); else try{ alert('Class details updated successfully.'); }catch(e){}
                     setTimeout(() => window.location.reload(), 1200);
                 } else {
-                    (window.showErrorToast || function(msg){ try{ alert(msg); }catch(e){} })('Error: ' + res.error);
+                    if (typeof showToast === 'function') showToast('Error: ' + res.error, 'error'); else try{ alert('Error: ' + res.error); }catch(e){}
                 }
             });
         });
@@ -110,10 +110,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     try { window.dispatchEvent(new CustomEvent('studentAdded', { detail: { student_id: studentId, class_code: classCode } })); } catch (e) { console.warn(e); }
                     try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { class_code: classCode } })); } catch (e) { console.warn(e); }
 
-                    (window.showSuccessToast || function(msg){ try{ alert(msg); }catch(e){} })('Student added successfully.');
+                    if (typeof showToast === 'function') showToast('Student added successfully.', 'success'); else try{ alert('Student added successfully.'); }catch(e){}
                     setTimeout(() => window.location.reload(), 1200);
                 } else {
-                    (window.showErrorToast || function(msg){ try{ alert(msg); }catch(e){} })('Error: ' + data.error);
+                    if (typeof showToast === 'function') showToast('Error: ' + data.error, 'error'); else try{ alert('Error: ' + data.error); }catch(e){}
                     clickedButton.disabled = false;
                 }
             })
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 clickedButton.disabled = false;
                 console.error('Error adding student to class:', error);
-                (window.showErrorToast || function(msg){ try{ alert(msg); }catch(e){} })('Error: Unable to add student. Please try again.');
+                if (typeof showToast === 'function') showToast('Error: Unable to add student. Please try again.', 'error'); else try{ alert('Error: Unable to add student. Please try again.'); }catch(e){}
             });
         });
     });
