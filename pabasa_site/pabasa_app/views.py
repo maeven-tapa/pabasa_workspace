@@ -2786,6 +2786,99 @@ def join_class(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
+@login_required(role='teacher')
+def send_course_update(request):
+    """Send a course progress update to selected enrolled students and store sent updates as notes."""
+    try:
+        data = json.loads(request.body or '{}')
+        course_id = data.get('course_id')
+        student_ids = data.get('student_ids') or []
+        update_type = str(data.get('update_type') or 'general').strip()[:50]
+        message_template = str(data.get('message') or '').strip()
+
+        if not course_id:
+            return JsonResponse({'success': False, 'error': 'Course is required'}, status=400)
+        if not isinstance(student_ids, list) or not student_ids:
+            return JsonResponse({'success': False, 'error': 'Select at least one recipient'}, status=400)
+        if not message_template:
+            return JsonResponse({'success': False, 'error': 'Teacher comments are required'}, status=400)
+
+        teacher_user = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
+        if not teacher_user:
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).prefetch_related('sections').first()
+        if not course:
+            return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+
+        selected_student_ids = []
+        for raw_id in student_ids:
+            try:
+                selected_student_ids.append(int(raw_id))
+            except (TypeError, ValueError):
+                continue
+
+        if not selected_student_ids:
+            return JsonResponse({'success': False, 'error': 'No valid student recipients selected'}, status=400)
+
+        course_sections = list(course.sections.filter(is_active=True))
+        students = User.objects.filter(id__in=selected_student_ids, role='student')
+        students_by_id = {student.id: student for student in students}
+        ordered_students = [students_by_id[sid] for sid in selected_student_ids if sid in students_by_id]
+
+        sender = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
+        sent = []
+        skipped = []
+
+        for student in ordered_students:
+            if not any(section.has_student(student, active_only=True) for section in course_sections):
+                skipped.append({'student_id': student.id, 'reason': 'not_enrolled'})
+                continue
+            if not student.email:
+                skipped.append({'student_id': student.id, 'reason': 'missing_email'})
+                continue
+
+            student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or 'Student'
+            personalized_message = message_template.replace('{name}', student_name)
+            subject = f"PABASA Course Update: {course.title}"
+            note_text = (
+                f"Course: {course.title} ({course.code})\n"
+                f"Update Type: {update_type}\n"
+                f"Recipient Email: {student.email}\n\n"
+                f"{personalized_message}"
+            )
+
+            send_mail(subject, personalized_message, sender, [student.email], fail_silently=False)
+            Note.objects.create(
+                teacher=teacher_user,
+                student=student,
+                note_text=note_text,
+                note_type=f"course_update:{update_type}"[:50],
+            )
+            sent.append({'student_id': student.id, 'email': student.email, 'name': student_name})
+
+        if not sent:
+            return JsonResponse({
+                'success': False,
+                'error': 'No selected recipients could be emailed',
+                'skipped': skipped,
+            }, status=400)
+
+        return JsonResponse({
+            'success': True,
+            'sent_count': len(sent),
+            'sent': sent,
+            'skipped': skipped,
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
+    except Exception as e:
+        logger.exception('Failed to send course update')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
 @login_required(role='student')
 def unenroll_class(request):
     """Student unenroll endpoint: deactivates the student entry inside Section.students."""

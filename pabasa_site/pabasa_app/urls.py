@@ -84,6 +84,7 @@ urlpatterns = [
     path('dashboard/teacher/update-assessment/', views.teacher_update_assessment, name='teacher_update_assessment'),
     path('dashboard/teacher/archive-assessment/', views.teacher_archive_assessment, name='teacher_archive_assessment'),
     path('dashboard/teacher/create-course/', views.create_course, name='create_course'),
+    path('dashboard/teacher/course/send-update/', views.send_course_update, name='send_course_update'),
     path('dashboard/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes'),
     path('dashboard/teacher/course/add-material/', views.add_material_to_course, name='add_material_to_course'),
     path('dashboard/teacher/course/remove-material/', views.remove_material_from_course, name='remove_material_from_course'),

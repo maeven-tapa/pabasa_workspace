@@ -2,8 +2,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
 import json
+from unittest.mock import patch
 
-from .models import Material, User, Section, Assessment, Notification
+from .models import Material, User, Section, Assessment, Notification, Course, Note
 
 
 class ProfileUpdateTests(TestCase):
@@ -656,3 +657,37 @@ class TeacherStudentsDirectoryTests(TestCase):
 
         self.assertIn("/dashboard/teacher/students-api/", helper_body)
         self.assertNotIn("pabasa_added_students", helper_body)
+
+    @patch("pabasa_app.views.send_mail")
+    def test_send_course_update_emails_student_and_stores_note(self, mock_send_mail):
+        course = Course.objects.create(
+            teacher=self.teacher,
+            title="Chapter 2",
+            code="CRS-TEST-001",
+            description="Course update test",
+        )
+        course.sections.add(self.section_a)
+
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": course.id,
+                "student_ids": [self.student.id],
+                "update_type": "general",
+                "message": "Hello {name}, keep practicing.",
+            }),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["sent_count"], 1)
+        mock_send_mail.assert_called_once()
+        self.assertIn("Single Student", mock_send_mail.call_args[0][1])
+
+        note = Note.objects.get(teacher=self.teacher, student=self.student)
+        self.assertEqual(note.note_type, "course_update:general")
+        self.assertIn("Chapter 2", note.note_text)
+        self.assertIn("Hello Single Student, keep practicing.", note.note_text)
