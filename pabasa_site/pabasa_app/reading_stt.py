@@ -180,7 +180,7 @@ def analyze_reading(target_text, current_syllable_index=0, transcript=""):
 class ReadingMatcher:
     def __init__(self, target_text, current_syllable_index=0):
         self.target_text = target_text or ""
-        self.words = self.target_text.split()
+        self.words = self.readable_words(self.target_text)
         self.current_syllable_index = max(0, int(current_syllable_index or 0))
         self.current_word_index = 0
         self.syllables = []
@@ -328,8 +328,32 @@ class ReadingMatcher:
         return re.sub(r"[^a-z0-9']", "", word.lower())
 
     @classmethod
+    def is_list_marker(cls, word):
+        cleaned = word.strip()
+        normalized = cls.normalize_word(cleaned)
+        return bool(
+            re.fullmatch(r"\d+[\.)]?", cleaned)
+            or re.fullmatch(r"\(?\d+[\.)]", cleaned)
+            or re.fullmatch(r"\d+", normalized)
+        )
+
+    @classmethod
+    def readable_words(cls, text):
+        words = []
+        for part in text.split():
+            normalized = cls.normalize_word(part)
+            if not normalized or cls.is_list_marker(part):
+                continue
+            words.append(part)
+        return words
+
+    @classmethod
     def normalize_words(cls, text):
-        return [word for word in (cls.normalize_word(part) for part in text.split()) if word]
+        return [
+            cls.normalize_word(part)
+            for part in text.split()
+            if cls.normalize_word(part) and not cls.is_list_marker(part)
+        ]
 
     @classmethod
     def syllables_for_text(cls, text):

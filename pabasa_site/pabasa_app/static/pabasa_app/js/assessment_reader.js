@@ -134,7 +134,7 @@
                 .replace(/[^a-z0-9\s'-]/g, " ")
                 .split(/\s+/)
                 .map(word => word.trim())
-                .filter(Boolean);
+                .filter(word => word && !/^\d+$/.test(word));
         }
 
         function lcsLength(a, b) {
@@ -364,33 +364,42 @@
         function renderSyllableDisplay(data) {
             if (!readingWord || !Array.isArray(data.words) || !Array.isArray(data.word_syllable_ranges)) return;
             readingWord.textContent = "";
-            data.words.forEach((word, wordIndex) => {
-                if (wordIndex > 0) {
-                    const gap = document.createElement("span");
-                    gap.className = "word-gap";
-                    gap.textContent = " ";
-                    readingWord.appendChild(gap);
-                }
-                const range = data.word_syllable_ranges[wordIndex] || [0, 0];
-                const wordSyllables = (data.syllables || []).slice(range[0], range[1]);
-                if (!wordSyllables.length) {
-                    readingWord.appendChild(document.createTextNode(word));
+            let readableWordIndex = 0;
+            const parts = String(items[currentIndex] || "").split(/(\s+)/);
+            parts.forEach((part) => {
+                if (!part) return;
+                if (/^\s+$/.test(part)) {
+                    readingWord.appendChild(document.createTextNode(part));
                     return;
                 }
-                wordSyllables.forEach((syllable, offset) => {
-                    if (offset > 0) readingWord.appendChild(document.createTextNode("-"));
-                    const syllableIndex = range[0] + offset;
-                    const span = document.createElement("span");
-                    span.className = "syllable";
-                    if (syllableIndex < currentSyllableIndex) span.classList.add("is-read");
-                    else if (syllableIndex === currentSyllableIndex) span.classList.add("is-current");
-                    span.textContent = syllable;
-                    readingWord.appendChild(span);
-                });
+
+                if (isDisplayListMarker(part) || !normalizeDisplayWord(part)) {
+                    readingWord.appendChild(document.createTextNode(part));
+                    return;
+                }
+
+                const range = data.word_syllable_ranges[readableWordIndex] || [0, 0];
+                const span = document.createElement("span");
+                span.className = "syllable";
+                if (range[1] <= currentSyllableIndex) span.classList.add("is-read");
+                else if (range[0] <= currentSyllableIndex && currentSyllableIndex < range[1]) span.classList.add("is-current");
+                span.textContent = part;
+                readingWord.appendChild(span);
+                readableWordIndex += 1;
             });
             if (progressFill && typeof data.progress === "number") {
                 progressFill.style.width = `${((currentIndex + (data.progress / 100)) / items.length) * 100}%`;
             }
+        }
+
+        function normalizeDisplayWord(word) {
+            return String(word || "").toLowerCase().replace(/[^a-z0-9']/g, "");
+        }
+
+        function isDisplayListMarker(word) {
+            const raw = String(word || "").trim();
+            const normalized = normalizeDisplayWord(raw);
+            return /^\d+[\.)]?$/.test(raw) || /^\(?\d+[\.)]$/.test(raw) || /^\d+$/.test(normalized);
         }
 
         async function waitForPendingSpeech(maxMs = 3500) {
