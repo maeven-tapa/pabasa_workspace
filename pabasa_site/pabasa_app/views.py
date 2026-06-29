@@ -2979,26 +2979,37 @@ def class_management_view(request):
 def get_teacher_courses_api(request):
     try:
         session_user = User.objects.filter(id=request.session.get('user_id')).first()
-        # Determine the teacher whose courses should be returned.
+        shared = str(request.GET.get('shared', '') or '').strip().lower() in ['1', 'true', 'yes', 'on']
+
         teacher_user = None
         if session_user and session_user.role == 'teacher':
             teacher_user = session_user
         elif session_user and session_user.role == 'admin':
-            # Admins must provide a teacher identifier (id or custom_id) via query params.
+            # Admins must provide a teacher identifier (id or custom_id) via query params for normal teacher filtering.
             tid = request.GET.get('teacher_id') or request.GET.get('teacher_custom_id') or request.GET.get('teacher')
-            if not tid:
+            if not tid and not shared:
                 return JsonResponse({'success': False, 'error': 'Missing teacher_id parameter for admin'}, status=400)
-            try:
-                teacher_user = User.objects.filter(Q(id=int(tid)) | Q(custom_id__iexact=str(tid)), role='teacher').first()
-            except Exception:
-                teacher_user = User.objects.filter(custom_id__iexact=str(tid), role='teacher').first()
-            if not teacher_user:
-                return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+            if tid:
+                try:
+                    teacher_user = User.objects.filter(Q(id=int(tid)) | Q(custom_id__iexact=str(tid)), role='teacher').first()
+                except Exception:
+                    teacher_user = User.objects.filter(custom_id__iexact=str(tid), role='teacher').first()
+                if not teacher_user:
+                    return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
         else:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
         # Prefetch related objects to avoid N+1 queries
-        courses_qs = Course.objects.filter(teacher=teacher_user, is_active=True).select_related('teacher').prefetch_related(
+        if shared:
+            # Shared mode: return all active courses from all teachers (including current teacher)
+            courses_qs = Course.objects.filter(is_active=True)
+        else:
+            # Personal mode: return only current teacher's courses
+            if not teacher_user:
+                return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+            courses_qs = Course.objects.filter(teacher=teacher_user, is_active=True)
+
+        courses_qs = courses_qs.select_related('teacher').prefetch_related(
             'sections', 'materials', 'assessments', 'assessments__materials'
         ).order_by('-created_at')
 
@@ -3006,13 +3017,16 @@ def get_teacher_courses_api(request):
         for c in courses_qs:
             course_sections = list(c.sections.all())
             secs = [{'id': s.id, 'code': s.class_code, 'name': s.class_name} for s in course_sections]
+            course_teacher_name = ''
+            if getattr(c, 'teacher', None):
+                course_teacher_name = f"{c.teacher.first_name} {c.teacher.last_name}".strip()
 
             # Serialize assessments with helpful metadata used by the frontend
             assessments_list = []
             course_assessments_qs = Assessment.objects.filter(
                 Q(courses=c) |
                 Q(section__in=course_sections, teacher=teacher_user)
-            ).prefetch_related('materials').distinct()
+            ).prefetch_related('materials', 'teacher').distinct()
             for a in course_assessments_qs:
                 if not getattr(a, 'is_active', True):
                     continue
@@ -3050,12 +3064,18 @@ def get_teacher_courses_api(request):
                 except Exception:
                     avg = None
 
+                assessment_teacher_name = course_teacher_name
+                if getattr(a, 'teacher', None):
+                    assessment_teacher_name = f"{a.teacher.first_name} {a.teacher.last_name}".strip() or assessment_teacher_name
+
                 assessments_list.append({
                     'id': a.id,
                     'raw_id': a.id,
                     'action_id': f"assessment-{a.id}",
                     'code': a.code,
                     'title': a.title,
+                    'teacher_name': assessment_teacher_name,
+                    'author': assessment_teacher_name,
                     'assessment_type': a.assessment_type,
                     'level': a.get_assessment_type_display() if hasattr(a, 'get_assessment_type_display') else (a.assessment_type or ''),
                     'items': items,
@@ -3095,6 +3115,12 @@ def get_teacher_courses_api(request):
                         else:
                             items_count = 1
 
+                material_teacher_name = course_teacher_name
+                if getattr(m, 'assessment', None) and getattr(m.assessment, 'teacher', None):
+                    material_teacher_name = f"{m.assessment.teacher.first_name} {m.assessment.teacher.last_name}".strip() or material_teacher_name
+                elif getattr(m, 'section', None) and getattr(m.section, 'teacher', None):
+                    material_teacher_name = f"{m.section.teacher.first_name} {m.section.teacher.last_name}".strip() or material_teacher_name
+
                 materials_list.append({
                     'id': m.id,
                     'raw_id': m.id,
@@ -3103,6 +3129,8 @@ def get_teacher_courses_api(request):
                     'assessment_id': m.assessment_id,
                     'code': m.assessment.code if m.assessment else None,
                     'title': m.title,
+                    'teacher_name': material_teacher_name,
+                    'author': material_teacher_name,
                     'item_type': getattr(m, 'item_type', ''),
                     'type': getattr(m, 'type', ''),
                     'content': getattr(m, 'content_text', '') or getattr(m, 'prompt_text', '') or '',
@@ -3126,6 +3154,9 @@ def get_teacher_courses_api(request):
                     Q(section__isnull=True, teacher__role='admin')
                 ).order_by('-created_at')[:100]
                 for p in practices_qs:
+                    practice_teacher_name = course_teacher_name
+                    if getattr(p, 'teacher', None):
+                        practice_teacher_name = f"{p.teacher.first_name} {p.teacher.last_name}".strip() or practice_teacher_name
                     items_cnt = len(_practice_material_items(p)) if callable(_practice_material_items) else None
                     practices_list.append({
                         'id': f"practice-{p.id}",
@@ -3133,6 +3164,8 @@ def get_teacher_courses_api(request):
                         'action_id': f"practice-{p.id}",
                         'record_kind': 'practice',
                         'title': p.title,
+                        'teacher_name': practice_teacher_name,
+                        'author': practice_teacher_name,
                         'item_type': getattr(p, 'item_type', getattr(p, 'practice_type', '')),
                         'status': getattr(p, 'status', ''),
                         'items': None,

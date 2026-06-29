@@ -2121,6 +2121,60 @@
 #addMaterialModal .modal-footer { padding: 1rem 1.5rem; border-top: none; background: transparent; }
 #addMaterialModal .modal-footer .btn-link { color: #6b7280; font-weight:700; }
 #addMaterialModal .modal-footer .btn-primary { border-radius: 12px; min-height:48px; padding-left:1rem; padding-right:1rem; background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-soft)); box-shadow:0 8px 20px rgba(31,111,139,0.12); }
+#addMaterialModal .material-source-toggle {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    max-width: 560px;
+    padding: 3px;
+    border-radius: 24px;
+    background: #E2E8F0;
+    border: 1px solid #CBD5E1;
+    min-height: 42px;
+}
+#addMaterialModal .material-source-toggle::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: calc(50% - 6px);
+    height: calc(100% - 6px);
+    border-radius: 18px;
+    background: linear-gradient(135deg, #CFFAFE, #BFDBFE);
+    box-shadow: 0 10px 22px rgba(59,130,246,0.14);
+    transition: left 0.2s ease, background 0.2s ease;
+}
+#addMaterialModal .material-source-toggle.active-other::before {
+    left: calc(50% + 3px);
+}
+#addMaterialModal .material-source-toggle button {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    border: none;
+    border-radius: 20px;
+    background: transparent;
+    color: #475569;
+    font-weight: 700;
+    height: 42px;
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+#addMaterialModal .material-source-toggle button.active {
+    color: #0F172A;
+}
+#addMaterialModal .material-source-toggle button:not(.active):hover {
+    background: rgba(15,23,42,0.06);
+}
+#addMaterialModal .material-source-toggle button:focus-visible {
+    outline: 2px solid rgba(59,130,246,0.3);
+    outline-offset: 2px;
+}
+@media (max-width: 575.98px) { #addMaterialModal .material-source-toggle { max-width: 100%; } }
 @media (max-width: 991.98px) { #addMaterialModal .modal-dialog { max-width: 100%; margin: 0 1rem; } #addMaterialModal .modal-body { padding: 1rem; } }
 </style>
 <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
@@ -2136,9 +2190,70 @@
             <div class="modal-body px-4 pb-4">
                 <form id="addMaterialForm" class="row g-4 mt-1">
                     <div id="amValidationError" class="col-12 alert alert-danger d-none mb-0 rounded-3" role="alert"></div>
-                    
+
+                    <div class="col-12">
+                        <div class="d-flex justify-content-center py-3">
+                            <div class="rounded-4 shadow-sm p-3 bg-white border" style="border-color: rgba(31,111,139,0.12); min-width: 100%; max-width: 560px;">
+                                <div class="text-center mb-2">
+                                    <div class="fw-semibold">Material source</div>
+                                    <div class="small text-muted">Choose a source for your reading material. Select Personal to use your own content or Shared to browse materials provided by others..</div>
+                                </div>
+                                <div class="d-flex justify-content-center">
+                                    <div class="material-source-toggle active-personal" id="addMaterialModeToggle" role="group" aria-label="Material source toggle">
+                                        <button type="button" class="material-source-option active" id="materialModePersonal" data-mode="personal" style="font-size: 0.95rem;">Personal</button>
+                                        <button type="button" class="material-source-option" id="materialModeOther" data-mode="other" style="font-size: 0.95rem;">Other</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div id="otherMaterialPanel" class="d-none rounded-4 shadow-sm p-3 bg-white border mb-4" style="border-color: rgba(31,111,139,0.12);">
+                            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center justify-content-between mb-3">
+                                <div class="input-group flex-grow-1">
+                                    <span class="input-group-text bg-white border-light"><i class="bi bi-search"></i></span>
+                                    <input type="search" id="otherMaterialSearchInput" class="form-control border-light shadow-sm" placeholder="Search title...">
+                                </div>
+                                <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
+                                    <div class="input-group" style="min-width: 180px;">
+                                        <label class="input-group-text bg-white border-light" for="otherMaterialAuthorSelect">Author</label>
+                                        <select id="otherMaterialAuthorSelect" class="form-select border-light shadow-sm">
+                                            <option value="">All teachers</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group" style="min-width: 170px;">
+                                        <label class="input-group-text bg-white border-light" for="otherMaterialSortSelect">Sort</label>
+                                        <select id="otherMaterialSortSelect" class="form-select border-light shadow-sm">
+                                            <option value="date_desc">Date ↓</option>
+                                            <option value="date_asc">Date ↑</option>
+                                            <option value="author_asc">Author A→Z</option>
+                                            <option value="author_desc">Author Z→A</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive rounded-4 border" style="border-color: rgba(226,232,240,0.85); background: #f8fafc;">
+                                <table class="table table-sm table-hover align-middle mb-0">
+                                    <thead class="bg-white">
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Author (Teacher)</th>
+                                            <th style="width: 170px;">Published Date</th>
+                                            <th style="width: 120px;">Status</th>
+                                            <th style="width: 110px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="otherMaterialTableBody">
+                                        <tr><td colspan="5" class="text-center text-muted py-4">No materials visible. Select Other to load shared items.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Content Section -->
-                    <div class="col-lg-7">
+                    <div class="col-lg-7 personal-material-section">
                         <div class="d-flex flex-column gap-3 h-100 p-3 rounded-4 shadow-sm" style="background: rgba(248, 250, 252, 0.5); border: 1px solid #f1f5f9;">
                             <h6 class="fw-bold text-uppercase small ls-1 mb-0 d-flex align-items-center gap-2" style="color: #64748b;">
                                 <i class="bi bi-file-earmark-text"></i> 1. Content
@@ -2180,7 +2295,7 @@
                     </div>
 
                     <!-- Settings Section -->
-                    <div class="col-lg-5">
+                    <div class="col-lg-5 personal-material-section">
                         <div class="d-flex flex-column gap-3 h-100 p-3 rounded-4 shadow-sm" style="background: rgba(248, 250, 252, 0.5); border: 1px solid #f1f5f9;">
                             <h6 class="fw-bold text-uppercase small ls-1 mb-0 d-flex align-items-center gap-2" style="color: #64748b;">
                                 <i class="bi bi-gear-fill"></i> 2. Settings
@@ -2694,9 +2809,14 @@
     }
 
     let teacherCourses = [];
+    let sharedTeacherCourses = null;
     const teacherCoursesKey = () => {
         const email = (window.PABASA_USER_EMAIL || '').trim();
         return email ? `pabasa_teacher_courses_${email}` : null;
+    };
+    const sharedTeacherCoursesKey = () => {
+        const email = (window.PABASA_USER_EMAIL || '').trim();
+        return email ? `pabasa_shared_teacher_courses_${email}` : null;
     };
 
     async function loadTeacherClassesFromServer() {
@@ -2766,6 +2886,44 @@
             console.warn('Could not load courses from localStorage:', e);
         }
         teacherCourses = [];
+        return false;
+    }
+
+    async function loadSharedTeacherCoursesFromServer() {
+        try {
+            const res = await fetch('/dashboard/teacher/courses/?shared=true', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.success && Array.isArray(data.courses)) {
+                    sharedTeacherCourses = data.courses;
+                    const key = sharedTeacherCoursesKey();
+                    if (key) localStorage.setItem(key, JSON.stringify(sharedTeacherCourses));
+                    console.log('✓ Loaded shared courses from server:', sharedTeacherCourses.length);
+                    const otherMaterialPanel = document.getElementById('otherMaterialPanel');
+                    if (otherMaterialPanel && !otherMaterialPanel.classList.contains('d-none')) {
+                        renderOtherMaterialsPanel();
+                    }
+                    return true;
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to fetch shared courses from server:', err);
+        }
+
+        try {
+            const key = sharedTeacherCoursesKey();
+            const stored = key ? localStorage.getItem(key) : null;
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                sharedTeacherCourses = Array.isArray(parsed) ? parsed : [];
+                if (key) localStorage.setItem(key, JSON.stringify(sharedTeacherCourses));
+                console.log('✓ Loaded shared courses from localStorage:', sharedTeacherCourses.length);
+                return false;
+            }
+        } catch (e) {
+            console.warn('Could not load shared courses from localStorage:', e);
+        }
+        sharedTeacherCourses = [];
         return false;
     }
 
@@ -3594,6 +3752,8 @@
         await loadTeacherClassesFromServer();
         // also load teacher-created courses
         try { await loadTeacherCoursesFromServer(); } catch(e) { console.warn('Failed to load courses', e); }
+        // also load shared courses for the Other material source
+        try { await loadSharedTeacherCoursesFromServer(); } catch(e) { console.warn('Failed to load shared courses', e); }
         // Update authoritative overview stats
         try {
             const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -5045,6 +5205,15 @@
         const uploadMaterialBtn = document.getElementById('uploadMaterial');
         const materialFileInput = document.getElementById('materialFileInput');
         const materialUploadStatus = document.getElementById('materialUploadStatus');
+        const materialModePersonalBtn = document.getElementById('materialModePersonal');
+        const materialModeOtherBtn = document.getElementById('materialModeOther');
+        const addMaterialModeToggle = document.getElementById('addMaterialModeToggle');
+        const otherMaterialPanel = document.getElementById('otherMaterialPanel');
+        const otherMaterialSearchInput = document.getElementById('otherMaterialSearchInput');
+        const otherMaterialAuthorSelect = document.getElementById('otherMaterialAuthorSelect');
+        const otherMaterialSortSelect = document.getElementById('otherMaterialSortSelect');
+        const otherMaterialTableBody = document.getElementById('otherMaterialTableBody');
+        const personalMaterialSections = Array.from(document.querySelectorAll('.personal-material-section'));
 
         function prefixedRecordKind(id) {
             const match = String(id || '').match(/^([a-z]+)-/i);
@@ -5246,6 +5415,268 @@
                 resetAddMaterialModalState();
             });
         }
+
+        function setAddMaterialMode(mode) {
+            if (!mode) return;
+            const showPersonal = mode === 'personal';
+            const showOther = mode === 'other';
+
+            materialModePersonalBtn?.classList.toggle('active', showPersonal);
+            materialModeOtherBtn?.classList.toggle('active', showOther);
+            addMaterialModeToggle?.classList.toggle('active-other', showOther);
+            addMaterialModeToggle?.classList.toggle('active-personal', showPersonal);
+
+            personalMaterialSections.forEach(section => {
+                if (section) section.classList.toggle('d-none', showOther);
+            });
+
+            if (otherMaterialPanel) {
+                otherMaterialPanel.classList.toggle('d-none', !showOther);
+                if (showOther) {
+                    // Clear search and filters to show all materials
+                    if (otherMaterialSearchInput) otherMaterialSearchInput.value = '';
+                    if (otherMaterialAuthorSelect) otherMaterialAuthorSelect.value = '';
+                    if (otherMaterialSortSelect) otherMaterialSortSelect.value = 'date_desc';
+                    
+                    if (sharedTeacherCourses === null) {
+                        loadSharedTeacherCoursesFromServer().finally(() => renderOtherMaterialPanel());
+                    } else {
+                        renderOtherMaterialPanel();
+                    }
+                }
+            }
+        }
+
+        function isAssessmentMaterial(item) {
+            if (!item) return false;
+            const kind = String(item.type || item.usage || item.usage_type || item.reading_type || '').toLowerCase();
+            if (kind === 'assessment' || kind === 'both') return true;
+            if (String(item.assessment_id || item.assessmentId || '').trim()) return true;
+            return false;
+        }
+
+        function getOtherMaterialsSource() {
+            const items = [];
+            const sourceCourses = sharedTeacherCourses !== null ? sharedTeacherCourses : teacherCourses;
+            (sourceCourses || []).forEach(course => {
+                const authors = [];
+                if (course.teacher_name) authors.push(course.teacher_name);
+                if (course.teacher) authors.push(course.teacher);
+                if (course.owner) authors.push(course.owner);
+                if (course.author) authors.push(course.author);
+                const authorName = authors.find(Boolean) || CURRENT_TEACHER_NAME || 'Unknown Teacher';
+
+                const addItem = (item) => {
+                    if (!item) return;
+                    const publishedAt = item.published_at || item.schedule || item.scheduled_at || item.created_at || item.createdAt || item.updated_at || item.publishedAt || '';
+                    const status = (item.status || item.publication_status || item.state || 'published').toString().toLowerCase();
+                    items.push({
+                        id: item.id || item.material_id || item.raw_id || item.action_id || `${course.id}-${item.title || item.name || ''}`,
+                        title: item.title || item.name || item.content_title || 'Untitled material',
+                        author: item.author || item.teacher_name || course.teacher_name || authorName,
+                        published_at: publishedAt,
+                        status: status,
+                        originalStatus: item.status || item.publication_status || item.state || 'published',
+                        courseTitle: course.title || course.code || 'Course',
+                        sourceType: 'material',
+                        material: item
+                    });
+                };
+
+                const courseItems = Array.isArray(course.materials) ? course.materials : [];
+                courseItems.forEach(item => addItem(item));
+            });
+
+            const seenIds = new Set();
+            return items.filter(item => {
+                const key = String(item.id || `${item.title}|${item.author}|${item.published_at}`);
+                if (seenIds.has(key)) return false;
+                seenIds.add(key);
+                return true;
+            });
+        }
+
+        function formatMaterialDate(value) {
+            if (!value) return 'N/A';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return String(value);
+            return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function renderOtherMaterialPanel() {
+            if (!otherMaterialTableBody) return;
+            const search = (otherMaterialSearchInput?.value || '').trim().toLowerCase();
+            const selectedAuthor = (otherMaterialAuthorSelect?.value || '').trim().toLowerCase();
+            const sortMode = (otherMaterialSortSelect?.value || 'date_desc');
+
+            const allItems = getOtherMaterialsSource();
+            const filtered = allItems.filter(item => {
+                const matchesSearch = !search || String(item.title || '').toLowerCase().includes(search);
+                const matchesAuthor = !selectedAuthor || String(item.author || '').toLowerCase() === selectedAuthor;
+                return matchesSearch && matchesAuthor;
+            });
+
+            const sorted = filtered.slice().sort((a, b) => {
+                if (sortMode === 'date_asc' || sortMode === 'date_desc') {
+                    const timeA = new Date(a.published_at).getTime() || 0;
+                    const timeB = new Date(b.published_at).getTime() || 0;
+                    return sortMode === 'date_asc' ? timeA - timeB : timeB - timeA;
+                }
+                const authorA = String(a.author || '').toLowerCase();
+                const authorB = String(b.author || '').toLowerCase();
+                if (authorA < authorB) return sortMode === 'author_asc' ? -1 : 1;
+                if (authorA > authorB) return sortMode === 'author_asc' ? 1 : -1;
+                return 0;
+            });
+
+            const uniqueAuthors = Array.from(new Set(allItems.map(item => item.author || 'Unknown Teacher'))).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+            if (otherMaterialAuthorSelect) {
+                const current = otherMaterialAuthorSelect.value;
+                otherMaterialAuthorSelect.innerHTML = `<option value="">All teachers</option>` + uniqueAuthors.map(author => `
+                    <option value="${escapeHtml(author)}"${author === current ? ' selected' : ''}>${escapeHtml(author)}</option>
+                `).join('');
+            }
+
+            if (sorted.length === 0) {
+                otherMaterialTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No materials found. Try another search or filter.</td></tr>`;
+                return;
+            }
+
+            otherMaterialTableBody.innerHTML = sorted.map(item => `
+                <tr>
+                    <td class="align-middle">
+                        <div class="fw-semibold">${escapeHtml(item.title)}</div>
+                        <div class="small text-muted">${escapeHtml(item.courseTitle)}</div>
+                    </td>
+                    <td class="align-middle">${escapeHtml(item.author)}</td>
+                    <td class="align-middle">${escapeHtml(formatMaterialDate(item.published_at))}</td>
+                    <td class="align-middle text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.04em;">
+                        ${escapeHtml(item.originalStatus.toString())}
+                    </td>
+                    <td class="align-middle text-end">
+                        <button type="button" class="btn btn-sm btn-primary use-other-material-btn" data-material-id="${escapeHtml(item.id)}">Use</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getOtherMaterialItems(material) {
+            if (!material) return [];
+            if (Array.isArray(material.items) && material.items.length > 0) {
+                return material.items.map(item => String(item || '').trim()).filter(Boolean);
+            }
+            const raw = String(material.content || material.content_text || material.prompt_text || material.prompt || '').trim();
+            const itype = String(material.item_type || material.reading_type || material.type || material.assessment_type || '').toLowerCase();
+            if (itype === 'paragraph') {
+                return raw ? [raw] : [];
+            }
+            if (itype === 'sentence') {
+                return raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+            }
+            const lines = raw.split(/\n+/).map(s => s.trim()).filter(Boolean);
+            if (lines.length > 0) return lines;
+            const words = raw ? raw.split(/\s+/).map(s => s.trim()).filter(Boolean) : [];
+            // Fallback: if no items extracted and material has a title, use title as a single item to allow saving
+            if (words.length === 0 && material.title) {
+                return [material.title];
+            }
+            return words;
+        }
+
+        function useOtherMaterial(materialId) {
+            const materials = getOtherMaterialsSource();
+            const record = materials.find(item => String(item.id) === String(materialId));
+            if (!record) return;
+            const material = record.material || record;
+
+            resetAddMaterialModalState({ clearEditing: true, clearAttachTarget: true, resetForm: true });
+            setAddMaterialMode('personal');
+
+            if (materialTitleInput) materialTitleInput.value = material.title || '';
+            if (materialTypeSelect) {
+                const materialType = material.type || material.usage || material.usage_type || material.reading_type || 'assessment';
+                try { materialTypeSelect.value = materialType; } catch (e) { /* ignore */ }
+            }
+            if (publicationStatusSelect) {
+                publicationStatusSelect.value = (material.status || 'published').toString().toLowerCase();
+            }
+            buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || material.week || null);
+
+            if (publicationStatusSelect && scheduleFieldDiv && scheduleDateTimeInput) {
+                const scheduled = (publicationStatusSelect.value === 'scheduled');
+                scheduleFieldDiv.classList.toggle('d-none', !scheduled);
+                scheduleDateTimeInput.required = scheduled;
+                if (scheduled) {
+                    const scheduleValue = material.schedule || material.scheduled_at || material.published_at || material.dueDate || '';
+                    if (scheduleValue) {
+                        try {
+                            const date = new Date(scheduleValue);
+                            if (!Number.isNaN(date.getTime())) {
+                                const yr = date.getFullYear();
+                                const mo = String(date.getMonth() + 1).padStart(2, '0');
+                                const da = String(date.getDate()).padStart(2, '0');
+                                const hh = String(date.getHours()).padStart(2, '0');
+                                const mm = String(date.getMinutes()).padStart(2, '0');
+                                scheduleDateTimeInput.value = `${yr}-${mo}-${da}T${hh}:${mm}`;
+                            }
+                        } catch (err) {
+                            scheduleDateTimeInput.value = '';
+                        }
+                    }
+                } else {
+                    scheduleDateTimeInput.value = '';
+                }
+            }
+
+            const items = getOtherMaterialItems(material);
+            currentItemsList = items;
+            resetDetectedParagraphState((material.item_type || material.reading_type || '').toString().toLowerCase() === 'paragraph');
+            renderAddedItemsChips();
+            try { normalizeMaterialTypeSelect(materialTypeSelect); } catch (e) { /* ignore */ }
+
+            if (window.showToast) window.showToast('Material selected for use. Review and save as your own.', 'success');
+            
+            // Show the Add Material modal with the form now populated
+            try {
+                if (addMaterialModal) {
+                    new bootstrap.Modal(addMaterialModal).show();
+                }
+            } catch (e) {
+                console.warn('Could not show Add Material modal', e);
+            }
+        }
+
+        function attachOtherMaterialHandlers() {
+            materialModePersonalBtn?.addEventListener('click', () => setAddMaterialMode('personal'));
+            materialModeOtherBtn?.addEventListener('click', () => setAddMaterialMode('other'));
+            otherMaterialSearchInput?.addEventListener('input', renderOtherMaterialPanel);
+            otherMaterialAuthorSelect?.addEventListener('change', renderOtherMaterialPanel);
+            otherMaterialSortSelect?.addEventListener('change', renderOtherMaterialPanel);
+            otherMaterialTableBody?.addEventListener('click', function(event) {
+                const btn = event.target.closest('.use-other-material-btn');
+                if (!btn) return;
+                useOtherMaterial(btn.dataset.materialId);
+            });
+
+            window.addEventListener('pabasa:materials-updated', async function() {
+                try {
+                    if (typeof refreshTeacherData === 'function') {
+                        await refreshTeacherData();
+                    }
+                } catch (e) {
+                    console.warn('Could not refresh teacher data after materials update', e);
+                }
+                if (otherMaterialPanel && !otherMaterialPanel.classList.contains('d-none')) {
+                    renderOtherMaterialPanel();
+                }
+            });
+        }
+
+        function openOtherMaterialModal() {
+            /* removed: other materials now render inline */
+        }
+
+        attachOtherMaterialHandlers();
 
         function excerptUploadedItems(text) {
             const cleaned = String(text || '')
@@ -6164,6 +6595,18 @@
                                         }
                                     }
                                 } else {
+                                    // Determine class code for new material
+                                    let saveClassCode = currentClassCode;
+                                    // If no current class and we have courses with sections, auto-assign to first class
+                                    if (!saveClassCode && Array.isArray(teacherCourses) && teacherCourses.length > 0) {
+                                        for (const course of teacherCourses) {
+                                            if (Array.isArray(course.sections) && course.sections.length > 0) {
+                                                saveClassCode = course.sections[0].code || null;
+                                                if (saveClassCode) break;
+                                            }
+                                        }
+                                    }
+                                    
                                     const postOpts = {
                                         method: 'POST',
                                         credentials: 'same-origin',
@@ -6178,7 +6621,7 @@
                                             content: content,
                                             status: status,
                                             usage_type: usageType,
-                                            class_code: currentClassCode,
+                                            class_code: saveClassCode,
                                             scheduled_at: schedule || null,
                                             assigned_week: assignedWeek
                                         })
@@ -6303,6 +6746,7 @@
                                     localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existingOv, apiData.overview)));
                                 }
                             } catch (e) { /* ignore */ }
+
                             // ── Step 2: Store returned per-item materials locally (avoid full reload)
                             const createdIds = Array.isArray(apiData.material_ids) ? apiData.material_ids : (apiData.material_id ? [apiData.material_id] : []);
 
@@ -6322,13 +6766,57 @@
                                 return [text];
                             }
 
+                            function getClassCodeForRefresh() {
+                                if (currentClassCode) return currentClassCode;
+                                if (!window.courseAttachTarget) return null;
+                                const attachedCourse = (teacherCourses || []).find(c => Number(c.id) === Number(window.courseAttachTarget));
+                                if (!attachedCourse || !Array.isArray(attachedCourse.sections) || attachedCourse.sections.length === 0) return null;
+                                return attachedCourse.sections[0].code || null;
+                            }
+
+                            function cacheCreatedMaterialForClass(code, material) {
+                                if (!code || !material || !material.item_type) return;
+                                try {
+                                    const kind = material.item_type || material.reading_type || 'word';
+                                    const readings = ensureClassReadings(code);
+                                    if (!Array.isArray(readings[kind])) readings[kind] = [];
+                                    const materialId = String(material.id || material.raw_id || material.action_id || '');
+                                    readings[kind] = readings[kind].filter(m => String(m.id || m.raw_id || m.action_id || '') !== materialId);
+                                    readings[kind].unshift(material);
+                                    saveStoredReadings();
+                                } catch (e) {
+                                    console.warn('Could not cache created material locally', e);
+                                }
+                            }
+
+                            const refreshClassCode = getClassCodeForRefresh();
+                            if (refreshClassCode && !currentClassCode) {
+                                currentClassCode = refreshClassCode;
+                            }
+                            // If still no refresh class code but we used "Other" materials, find first available class
+                            let effectiveRefreshCode = refreshClassCode;
+                            if (!effectiveRefreshCode && Array.isArray(teacherCourses) && teacherCourses.length > 0) {
+                                for (const course of teacherCourses) {
+                                    if (Array.isArray(course.sections) && course.sections.length > 0) {
+                                        effectiveRefreshCode = course.sections[0].code || null;
+                                        if (effectiveRefreshCode) {
+                                            currentClassCode = effectiveRefreshCode;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            
                             if (createdIds.length > 0 && apiData.material) {
-                                // Force refresh data from server to ensure local cache is perfectly synced
-                                if (currentClassCode) await loadReadings(currentClassCode);
+                                if (effectiveRefreshCode) {
+                                    cacheCreatedMaterialForClass(effectiveRefreshCode, apiData.material);
+                                    await loadReadings(effectiveRefreshCode);
+                                }
+                                if (typeof renderCourses === 'function') await renderCourses();
                                 await renderClasses();
                             } else {
-                                // Fallback: reload authoritative data from server
-                                if (currentClassCode) await loadReadings(currentClassCode);
+                                if (effectiveRefreshCode) await loadReadings(effectiveRefreshCode);
+                                if (typeof renderCourses === 'function') await renderCourses();
                                 await renderClasses();
                             }
 
