@@ -1,10 +1,14 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
+from django.utils import timezone
+from datetime import timedelta
 import json
 from unittest.mock import patch
 
 from .models import Material, User, Section, Assessment, Notification, Course, Note
+from .views import _create_notification
+from .weekly_digest import send_weekly_digest
 
 
 class ProfileUpdateTests(TestCase):
@@ -217,11 +221,30 @@ class SettingsViewTests(TestCase):
             "notification_settings": {
                 "push_enabled": True,
                 "email_notifications": False,
+                "weekly_digest_enabled": False,
                 "new_materials": True,
                 "reading_reminders": False,
                 "progress_updates": True,
             }
         }, self.user.tags)
+
+    def test_settings_saves_weekly_digest_preference(self):
+        response = self.client.post(
+            reverse("settings"),
+            {
+                "settings_action": "save_notifications",
+                "push_enabled": "on",
+                "email_notifications": "on",
+                "weekly_digest_enabled": "on",
+                "new_materials": "on",
+                "reading_reminders": "on",
+                "progress_updates": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.preference["notification_settings"]["weekly_digest_enabled"])
 
 
 class AdminSettingsRenderTests(TestCase):
@@ -264,6 +287,68 @@ class AdminSettingsRenderTests(TestCase):
         self.assertContains(response, "Confirm Password")
         self.assertContains(response, "Update Password")
         self.assertNotContains(response, "Settings placeholder. CRUD is not implemented yet.")
+
+
+class PreferenceDeliveryTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(
+            custom_id="TCH-PREF",
+            role="teacher",
+            first_name="Pref",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="pref-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+
+    def test_disabled_in_app_alerts_do_not_create_notification_rows(self):
+        self.user.preference = {
+            "notification_settings": {
+                "push_enabled": False,
+                "email_notifications": False,
+                "weekly_digest_enabled": False,
+            }
+        }
+        self.user.save(update_fields=["preference", "updated_at"])
+
+        result = _create_notification(
+            self.user,
+            "Hidden alert",
+            "This should not be stored.",
+            send_email=False,
+        )
+
+        self.assertIsNone(result)
+        self.assertFalse(Notification.objects.filter(recipient=self.user).exists())
+
+    @patch("pabasa_app.views.send_mail")
+    def test_email_alerts_respect_email_preference(self, mock_send_mail):
+        self.user.preference = {
+            "notification_settings": {
+                "push_enabled": True,
+                "email_notifications": False,
+                "weekly_digest_enabled": False,
+            }
+        }
+        self.user.save(update_fields=["preference", "updated_at"])
+
+        _create_notification(self.user, "Stored only", "No email should be sent.")
+
+        self.assertEqual(Notification.objects.filter(recipient=self.user).count(), 1)
+        mock_send_mail.assert_not_called()
+
+        self.user.preference["notification_settings"]["email_notifications"] = True
+        self.user.save(update_fields=["preference", "updated_at"])
+        _create_notification(self.user, "Stored and emailed", "Email should be sent.")
+
+        self.assertEqual(Notification.objects.filter(recipient=self.user).count(), 2)
+        mock_send_mail.assert_called_once()
 
 
 class PrincipalSettingsViewTests(TestCase):
@@ -610,6 +695,103 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertIsNotNone(admin_notification)
         self.assertIn("Jane Doe read \"Practice Words\"", admin_notification.message)
         self.assertFalse(admin_notification.is_read)
+
+
+class WeeklyDigestTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id="TCH-DIGEST",
+            role="teacher",
+            first_name="Digest",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="digest-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+            preference={
+                "notification_settings": {
+                    "push_enabled": True,
+                    "email_notifications": True,
+                    "weekly_digest_enabled": True,
+                }
+            },
+        )
+        self.student = User.objects.create(
+            custom_id="STD-DIGEST",
+            role="student",
+            first_name="Digest",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=2,
+            birth_day=2,
+            birth_year=2013,
+            email="digest-student@example.com",
+            password_hash=make_password("student-password"),
+        )
+        self.section = Section.objects.create(
+            teacher=self.teacher,
+            class_name="Digest Class",
+            class_code="DIG-001",
+            subject="Reading",
+            is_active=True,
+        )
+        self.section.add_student(self.student)
+        self.assessment = Assessment.objects.create(
+            teacher=self.teacher,
+            section=self.section,
+            title="Digest Assessment",
+            code="DIG-ASM-001",
+            assessment_type="word",
+            content="cat\ndog",
+            is_active=True,
+        )
+        self.start = timezone.now() - timedelta(days=7)
+        self.end = timezone.now() + timedelta(seconds=1)
+        self.assessment.record_attempt(
+            self.student,
+            status="completed",
+            completed_at=(timezone.now() - timedelta(days=1)).isoformat(),
+            total_score=88,
+            accuracy=87,
+            fluency_score=86,
+            pronunciation_score=85,
+        )
+
+    @patch("pabasa_app.weekly_digest.send_mail")
+    def test_weekly_digest_skips_disabled_user(self, mock_send_mail):
+        self.teacher.preference["notification_settings"]["weekly_digest_enabled"] = False
+        self.teacher.save(update_fields=["preference", "updated_at"])
+
+        result = send_weekly_digest(self.teacher, self.start, self.end)
+
+        self.assertEqual(result["skipped"], "weekly_digest_disabled")
+        mock_send_mail.assert_not_called()
+
+    @patch("pabasa_app.weekly_digest.send_mail")
+    def test_teacher_weekly_digest_sends_and_records_window(self, mock_send_mail):
+        result = send_weekly_digest(self.teacher, self.start, self.end)
+
+        self.assertTrue(result["sent"])
+        mock_send_mail.assert_called_once()
+        email_body = mock_send_mail.call_args[0][1]
+        self.assertIn("Assessments completed by students: 1", email_body)
+        self.assertIn("Average class reading performance: 88.0%", email_body)
+
+        self.teacher.refresh_from_db()
+        digest_meta = self.teacher.preference["weekly_digest"]
+        self.assertEqual(digest_meta["last_window_start"], self.start.isoformat())
+        self.assertEqual(digest_meta["last_window_end"], self.end.isoformat())
+
+        duplicate = send_weekly_digest(self.teacher, self.start, self.end)
+        self.assertEqual(duplicate["skipped"], "duplicate_window")
+        mock_send_mail.assert_called_once()
 
 
 class TeacherStudentsDirectoryTests(TestCase):
