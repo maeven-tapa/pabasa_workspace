@@ -64,6 +64,52 @@ class ProfileUpdateTests(TestCase):
         self.assertIn({"profile_info": {"bio": "Updated bio"}}, self.user.tags)
 
 
+class MaterialCreationTests(TestCase):
+    def test_add_reading_material_saves_selected_language(self):
+        user = User.objects.create(
+            custom_id="TCH-0002",
+            role="teacher",
+            first_name="Language",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="language@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Tagalog reading",
+                "content": "Araw\nBuwan",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "practice",
+                "class_code": "",
+                "language": "Tagalog",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        material = Material.objects.latest("id")
+        self.assertEqual(material.content_json.get("language"), "Tagalog")
+
+
 class PracticeReaderMaterialTests(TestCase):
     def test_word_reader_receives_active_published_practice_items(self):
         Material.objects.create(

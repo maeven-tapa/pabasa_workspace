@@ -4319,6 +4319,7 @@ def add_reading_material(request):
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
         usage_type   = (data.get('usage_type') or 'practice').strip()        # practice | assessment | both
         class_code   = (data.get('class_code') or '').strip()
+        language     = (data.get('language') or 'English').strip() or 'English'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
         assigned_week, week_error = parse_assigned_week(assigned_week_raw)
@@ -4446,7 +4447,7 @@ def add_reading_material(request):
                 title=title,
                 prompt_text=(tokens[0] if tokens else title) or title,
                 content_text=content,
-                content_json={'items': tokens},
+                content_json={'items': tokens, 'language': language},
                 type=usage_type,
                 status=status,
                 scheduled_at=scheduled_at if status == 'scheduled' else None,
@@ -4561,6 +4562,7 @@ def teacher_update_material(request):
         material.title = data.get('title', material.title).strip()
         content = data.get('content', material.content_text).strip()
         requested_reading_type = (data.get('reading_type') or '').strip().lower()
+        language = (data.get('language') or '').strip() or 'English'
         material.status = data.get('status', material.status)
         material.type = data.get('usage_type', material.type)
 
@@ -4603,7 +4605,14 @@ def teacher_update_material(request):
                 return 'word'
             
             material.item_type = 'paragraph' if requested_reading_type == 'paragraph' else detect_type(content)
-            material.content_json = {'items': content.split('\n') if material.item_type == 'word' else [content]}
+            content_json = dict(material.content_json or {})
+            content_json['items'] = content.split('\n') if material.item_type == 'word' else [content]
+            content_json['language'] = language
+            material.content_json = content_json
+        else:
+            content_json = dict(material.content_json or {})
+            content_json['language'] = language
+            material.content_json = content_json
             
         # Ensure Assessment linkage reflects the requested usage type.
         # If material should be an assessment (or both), create or update the

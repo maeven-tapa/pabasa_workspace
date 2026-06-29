@@ -2319,6 +2319,17 @@
                             </div>
 
                             <div class="teacher-field">
+                                <label class="form-label fw-bold small text-dark mb-1" for="materialLanguage">Language</label>
+                                <div class="position-relative">
+                                    <select id="materialLanguage" class="form-select border-light shadow-sm" style="border-radius: 12px; appearance: none; padding-right: 2.5rem; min-height: 44px;">
+                                        <option value="English" selected>English</option>
+                                        <option value="Tagalog">Tagalog</option>
+                                    </select>
+                                    <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-3 text-muted pointer-events-none" style="font-size: 0.8rem;"></i>
+                                </div>
+                            </div>
+
+                            <div class="teacher-field">
                                 <label class="form-label fw-bold small text-dark mb-1" for="publicationStatus">Status</label>
                                 <div class="position-relative">
                                     <select id="publicationStatus" class="form-select border-light shadow-sm" style="border-radius: 12px; appearance: none; padding-right: 2.5rem; min-height: 44px;">
@@ -5264,6 +5275,7 @@
         const addItemBtn = document.getElementById('addItemBtn');
         const addedItemsList = document.getElementById('addedItemsList');
         const materialTypeSelect = document.getElementById('materialType');
+        const materialLanguageSelect = document.getElementById('materialLanguage');
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const addMaterialValidationError = document.getElementById('amValidationError');
         const scheduleFieldDiv = document.getElementById('scheduleField');
@@ -5460,6 +5472,7 @@
 
             if (scheduleFieldDiv) scheduleFieldDiv.classList.add('d-none');
             if (scheduleDateTimeInput) scheduleDateTimeInput.value = '';
+            if (materialLanguageSelect) materialLanguageSelect.value = 'English';
             buildAssignedWeekOptions('assignedWeek', null);
 
             const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
@@ -5667,6 +5680,10 @@
             if (publicationStatusSelect) {
                 publicationStatusSelect.value = (material.status || 'published').toString().toLowerCase();
             }
+            const selectedLanguage = material.language || (material.content_json && typeof material.content_json === 'object' ? material.content_json.language : '') || (material.metadata && material.metadata.language) || 'English';
+            if (materialLanguageSelect) {
+                materialLanguageSelect.value = selectedLanguage === 'Tagalog' ? 'Tagalog' : 'English';
+            }
             buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || material.week || null);
 
             if (publicationStatusSelect && scheduleFieldDiv && scheduleDateTimeInput) {
@@ -5867,6 +5884,8 @@
                 // Prefill type/status/assigned week/schedule
                 try { materialTypeSelect.value = material.type || material.usage || material.usage_type || 'practice'; } catch (e) { /* ignore */ }
                 try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
+                const editLanguage = material.language || (material.content_json && typeof material.content_json === 'object' ? material.content_json.language : '') || 'English';
+                if (materialLanguageSelect) materialLanguageSelect.value = editLanguage === 'Tagalog' ? 'Tagalog' : 'English';
                 buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || null);
                 if ((material.status || '').toString().toLowerCase() === 'scheduled' && material.schedule) {
                     try {
@@ -6553,6 +6572,7 @@
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const usageType = materialTypeSelect ? materialTypeSelect.value : 'practice';
+                        const language = materialLanguageSelect ? materialLanguageSelect.value : 'English';
                         const assignedWeekEl = document.getElementById('assignedWeek');
                         const assignedWeekRaw = assignedWeekEl ? assignedWeekEl.value.trim() : '';
                         const assignedWeek = assignedWeekRaw ? parseInt(assignedWeekRaw, 10) : null;
@@ -6647,7 +6667,7 @@
                                                 'X-CSRFToken': csrfToken,
                                                 'X-Requested-With': 'XMLHttpRequest'
                                             },
-                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, class_code: currentClassCode, scheduled_at: schedule || null, assigned_week: assignedWeek })
+                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, class_code: currentClassCode, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language })
                                         };
                                         apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
                                         if (apiResponse.status === 403) {
@@ -6690,7 +6710,8 @@
                                             usage_type: usageType,
                                             class_code: saveClassCode,
                                             scheduled_at: schedule || null,
-                                            assigned_week: assignedWeek
+                                            assigned_week: assignedWeek,
+                                            language: language
                                         })
                                     };
 
