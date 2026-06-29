@@ -452,6 +452,29 @@
             padding: 0.5rem;
             background: rgba(255, 255, 255, 0.5);
             border-radius: 999px;
+            position: relative;
+            isolation: isolate;
+        }
+
+        .reader-shell.is-recording .recording-controls::before {
+            content: "";
+            position: absolute;
+            inset: -14px;
+            border-radius: 999px;
+            background:
+                conic-gradient(
+                    from 0deg,
+                    rgba(66, 133, 244, 0.34),
+                    rgba(52, 168, 83, 0.32),
+                    rgba(251, 188, 5, 0.34),
+                    rgba(234, 67, 53, 0.3),
+                    rgba(168, 85, 247, 0.32),
+                    rgba(66, 133, 244, 0.34)
+                );
+            filter: blur(18px);
+            opacity: 0.95;
+            z-index: -1;
+            animation: pabasaListeningAura 2.4s linear infinite;
         }
 
         .recording-controls button {
@@ -464,6 +487,7 @@
             align-items: center;
             justify-content: center;
             font-weight: 800;
+            position: relative;
         }
 
         #btnStartReading, #btnStopReading {
@@ -486,6 +510,42 @@
             box-shadow: 0 10px 20px rgba(185, 95, 68, 0.2);
         }
         #btnStopReading:hover { background: #a8543b; transform: translateY(-2px); }
+
+        .reader-shell.is-recording #btnStopReading {
+            background: linear-gradient(135deg, #1f6f8b, #7a8b5f, #f7c86a, #b95f44);
+            background-size: 260% 260%;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.5) inset,
+                0 16px 34px rgba(31, 111, 139, 0.24),
+                0 0 42px rgba(66, 133, 244, 0.26);
+            animation: pabasaListeningButton 3s ease infinite;
+        }
+
+        .reader-shell.is-recording #btnStopReading::after {
+            content: "";
+            position: absolute;
+            inset: -7px;
+            border-radius: inherit;
+            background: linear-gradient(90deg, rgba(66, 133, 244, 0.38), rgba(52, 168, 83, 0.28), rgba(251, 188, 5, 0.32), rgba(234, 67, 53, 0.3));
+            filter: blur(12px);
+            opacity: 0.78;
+            z-index: -1;
+            animation: pabasaListeningGlow 1.7s ease-in-out infinite alternate;
+        }
+
+        @keyframes pabasaListeningAura {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pabasaListeningButton {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes pabasaListeningGlow {
+            from { opacity: 0.45; transform: scale(0.98); }
+            to { opacity: 0.9; transform: scale(1.06); }
+        }
 
         #btnToggleMic, #btnTestMic {
             width: 48px;

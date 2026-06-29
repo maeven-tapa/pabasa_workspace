@@ -52,6 +52,7 @@
         let mediaStream = null;
         let mediaRecorder = null;
         let isSendingChunk = false;
+        let pendingAudioChunk = null;
         let currentSyllableIndex = 0;
         let currentMaterialLanguage = "";
 
@@ -237,6 +238,7 @@
             const status = document.getElementById("speechStatus");
             const transcript = document.getElementById("speechTranscript");
             panel?.classList.toggle("is-listening", listening);
+            shell?.classList.toggle("is-recording", Boolean(listening && isRecording && !isMuted));
             if (status) status.textContent = message;
             if (transcript) transcript.textContent = detail || "Google Speech results will appear here while you read.";
         }
@@ -291,11 +293,17 @@
             mediaStream = null;
             mediaRecorder = null;
             recognitionActive = false;
+            pendingAudioChunk = null;
+            shell?.classList.remove("is-recording");
             setSpeechStatus("Speech check stopped.", spokenTranscript || "No speech transcript was captured.");
         }
 
         async function sendAudioChunk(blob) {
-            if (isSendingChunk || !items[currentIndex]) return;
+            if (!items[currentIndex]) return;
+            if (isSendingChunk) {
+                pendingAudioChunk = blob;
+                return;
+            }
             isSendingChunk = true;
             const formData = new FormData();
             formData.append("audio", blob, `reading-${Date.now()}.webm`);
@@ -321,6 +329,11 @@
                 setSpeechStatus("Speech check had trouble.", error.message || "Keep reading, then try again.");
             } finally {
                 isSendingChunk = false;
+                if (pendingAudioChunk && isRecording && !isMuted) {
+                    const nextChunk = pendingAudioChunk;
+                    pendingAudioChunk = null;
+                    sendAudioChunk(nextChunk);
+                }
             }
         }
 
@@ -330,7 +343,9 @@
                 spokenTranscript = [spokenTranscript, transcript].filter(Boolean).join(" ");
             }
             currentSyllableIndex = Number(data.current_syllable_index || currentSyllableIndex || 0);
-            renderSyllableDisplay(data);
+            if (transcript || Number(data.matched || 0) > 0) {
+                renderSyllableDisplay(data);
+            }
 
             if (data.complete) {
                 setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
@@ -357,7 +372,7 @@
                 );
             } else {
                 const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
-                setSpeechStatus(nextHint, transcript ? `Words: ${transcript}` : "No speech detected. Keep reading.", true);
+                setSpeechStatus(transcript ? nextHint : "Still listening...", transcript ? `Words: ${transcript}` : "Read when you are ready. The microphone is still active.", true);
             }
         }
 
@@ -567,6 +582,7 @@
             spokenTranscript = "";
             latestScores = null;
             currentSyllableIndex = 0;
+            pendingAudioChunk = null;
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
             startSpeechRecognition();
@@ -663,6 +679,7 @@
             currentIndex = 0;
             currentSyllableIndex = 0;
             spokenTranscript = "";
+            pendingAudioChunk = null;
             updateUI();
             setSpeechStatus("Ready to start reading");
             closePauseMenu();
