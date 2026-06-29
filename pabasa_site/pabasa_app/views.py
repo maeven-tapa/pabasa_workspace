@@ -3352,10 +3352,24 @@ def get_teacher_courses_api(request):
                             items_count = 1
 
                 material_teacher_name = course_teacher_name
+                material_owner_teacher_id = None
                 if getattr(m, 'assessment', None) and getattr(m.assessment, 'teacher', None):
+                    material_owner_teacher_id = m.assessment.teacher_id
                     material_teacher_name = f"{m.assessment.teacher.first_name} {m.assessment.teacher.last_name}".strip() or material_teacher_name
                 elif getattr(m, 'section', None) and getattr(m.section, 'teacher', None):
+                    material_owner_teacher_id = m.section.teacher_id
                     material_teacher_name = f"{m.section.teacher.first_name} {m.section.teacher.last_name}".strip() or material_teacher_name
+                else:
+                    try:
+                        first_section = m.assigned_sections.filter(is_active=True).select_related('teacher').first()
+                        if first_section and getattr(first_section, 'teacher_id', None):
+                            material_owner_teacher_id = first_section.teacher_id
+                            material_teacher_name = f"{first_section.teacher.first_name} {first_section.teacher.last_name}".strip() or material_teacher_name
+                    except Exception:
+                        material_owner_teacher_id = None
+
+                is_shared_material = bool(material_owner_teacher_id and teacher_user and material_owner_teacher_id != teacher_user.id)
+                material_source = 'shared' if is_shared_material else 'personal'
 
                 materials_list.append({
                     'id': m.id,
@@ -3379,6 +3393,9 @@ def get_teacher_courses_api(request):
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
+                    'material_source': material_source,
+                    'is_shared_material': is_shared_material,
+                    'shared_owner_teacher_name': material_teacher_name if is_shared_material else None,
                 })
 
             # Practices (normalized)

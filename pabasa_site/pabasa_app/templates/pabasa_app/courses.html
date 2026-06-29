@@ -15,9 +15,14 @@
         }
     }
     
-    body {
+    body:not(.dark-theme) {
         background: url("{% static 'pabasa_app/images/teacher_bg.jpg' %}") no-repeat center center fixed !important;
         background-size: cover !important;
+    }
+
+    body.dark-theme {
+        background: #0f172a !important;
+        background-image: none !important;
     }
 
     .classes-grid {
@@ -651,33 +656,165 @@
         padding: 0;
     }
 
+    .reading-section-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        color: var(--dash-ink);
+        margin-bottom: 0.25rem;
+    }
+
+    .reading-section-note {
+        margin: 0;
+        font-size: 0.92rem;
+        color: var(--dash-muted);
+        line-height: 1.6;
+    }
+
+    .section-panel {
+        background: var(--dash-surface, #fff);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 18px;
+        padding: 1.25rem;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .section-panel + .section-panel {
+        margin-top: 1.5rem;
+    }
+
+    .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .assigned-materials-grid,
+    .practice-set-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
     .material-card-modern {
         background: #fff;
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 8px;
-        padding: 0.85rem;
+        border-radius: 16px;
+        padding: 1rem;
         display: grid;
-        gap: 0.75rem;
         grid-template-columns: minmax(0, 1fr) auto;
-        transition: all 0.2s ease;
-        justify-content: space-between;
-        align-items: start;
+        gap: 1rem;
+        align-items: center;
         min-width: 0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .material-card-modern.practice-card {
+        grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .material-card-modern:hover {
         border-color: rgba(31, 111, 139, 0.24);
-        box-shadow: 0 4px 12px rgba(27, 26, 23, 0.08);
-        background: #fffdf7;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+        transform: translateY(-1px);
+        background: #f8fcff;
     }
 
     .material-info {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 0.75rem;
+        gap: 0.45rem;
         min-width: 0;
-        flex: 1;
-        align-items: start;
+    }
+
+    .material-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.3;
+        color: var(--dash-ink);
+    }
+
+    .material-preview {
+        margin: 0;
+        color: var(--dash-muted);
+        font-size: 0.92rem;
+        line-height: 1.6;
+    }
+
+    .material-type-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem 0.7rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        white-space: nowrap;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.12);
+        color: var(--dash-primary);
+    }
+
+    .shared-material-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 0.4rem;
+        padding: 0 0.35rem;
+        border-radius: 0.85rem;
+        background: rgba(148, 163, 184, 0.14);
+        color: var(--dash-muted);
+        font-size: 0.95rem;
+        line-height: 1;
+        vertical-align: middle;
+    }
+
+    .material-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    .material-actions .btn {
+        min-height: 40px;
+        padding: 0.55rem 1rem;
+        font-size: 0.88rem;
+        border-radius: 12px;
+    }
+
+    .material-actions .btn i {
+        margin-right: 0.35rem;
+        font-size: 0.9rem;
+    }
+
+    .practice-card .material-type-badge {
+        background: rgba(14, 165, 233, 0.12);
+        color: #0369a1;
+    }
+
+    .readings-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 140px;
+        color: var(--dash-muted);
+        background: rgba(31, 41, 55, 0.04);
+        border: 1px dashed rgba(31, 41, 55, 0.12);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    .readings-empty i {
+        font-size: 1.4rem;
+        color: var(--dash-muted);
     }
 
     .material-leading-icon {
@@ -765,6 +902,10 @@
         gap: 0.35rem;
         justify-content: flex-end;
         flex-shrink: 0;
+    }
+
+    .material-actions button {
+        pointer-events: auto;
     }
 
     .material-btn {
@@ -1707,6 +1848,505 @@
         opacity: 0.65;
         background-color: rgba(27, 26, 23, 0.5);
     }
+
+    /* Course page dark mode support */
+    body.dark-theme .workspace-hero,
+    body.dark-theme .modern-tabs,
+    body.dark-theme .modern-tabs .nav-link,
+    body.dark-theme .modern-tabs .nav-link:hover,
+    body.dark-theme .modern-tabs .nav-link.active,
+    body.dark-theme .course-tab-content,
+    body.dark-theme .course-sidebar,
+    body.dark-theme .course-modal-body,
+    body.dark-theme .course-report-preview,
+    body.dark-theme .course-report-metric,
+    body.dark-theme .course-report-recommendation,
+    body.dark-theme .course-report-pill,
+    body.dark-theme .stream-empty,
+    body.dark-theme .readings-count-badge,
+    body.dark-theme .readings-add-btn,
+    body.dark-theme .comment-input-section,
+    body.dark-theme .comment-textarea,
+    body.dark-theme .comment-input-actions .btn-cancel,
+    body.dark-theme .material-actions .material-btn,
+    body.dark-theme .dropdown-menu,
+    body.dark-theme .table-responsive,
+    body.dark-theme .card,
+    body.dark-theme .form-control,
+    body.dark-theme .form-select,
+    body.dark-theme .input-group-text,
+    body.dark-theme .course-report-preview-head,
+    body.dark-theme .course-report-preview-title,
+    body.dark-theme .course-report-preview-meta,
+    body.dark-theme .course-report-pill {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        color: #e2e8f0 !important;
+        background-image: none !important;
+    }
+
+    body.dark-theme .comment-input-section {
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme .comment-textarea {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .comment-input-actions .btn-cancel {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: #cbd5e1 !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme .material-actions .material-btn {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme .section-panel,
+    body.dark-theme .material-card-modern,
+    body.dark-theme .readings-empty {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e2e8f0 !important;
+        box-shadow: none !important;
+    }
+
+    body.dark-theme .section-panel {
+        box-shadow: none !important;
+    }
+
+    body.dark-theme .material-info,
+    body.dark-theme .material-actions {
+        background: transparent !important;
+    }
+
+    body.dark-theme .material-actions .btn {
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .material-card-modern:hover {
+        background: rgba(15, 23, 42, 0.98) !important;
+        border-color: rgba(56, 189, 248, 0.18) !important;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16) !important;
+    }
+
+    body.dark-theme .material-type-badge {
+        background: rgba(148, 163, 184, 0.18) !important;
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme .reading-section-note {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .material-type-badge.assessment {
+        background: rgba(220, 38, 38, 0.18) !important;
+        color: #fecaca !important;
+    }
+
+    body.dark-theme .material-type-badge.both {
+        background: rgba(101, 163, 13, 0.18) !important;
+        color: #d9f99d !important;
+    }
+
+    body.dark-theme .material-type-badge.status-published {
+        background: rgba(16, 185, 129, 0.15) !important;
+        color: #8ef0d3 !important;
+    }
+    body.dark-theme .material-type-badge.status-draft {
+        background: rgba(107, 114, 128, 0.18) !important;
+        color: #cbd5e1 !important;
+    }
+    body.dark-theme .material-type-badge.status-scheduled {
+        background: rgba(245, 158, 11, 0.16) !important;
+        color: #fde68a !important;
+    }
+
+    body.dark-theme .course-report-metric strong {
+        color: #38bdf8 !important;
+    }
+
+    body.dark-theme .course-report-metric span,
+    body.dark-theme .course-report-preview-title,
+    body.dark-theme .course-report-preview-meta,
+    body.dark-theme .course-report-pill {
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme .course-report-recommendation {
+        border-left-color: #38bdf8 !important;
+    }
+
+    body.dark-theme .dropdown-menu {
+        background: rgba(15, 23, 42, 0.98) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .dropdown-item,
+    body.dark-theme .dropdown-item:focus,
+    body.dark-theme .dropdown-item:hover {
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .dropdown-item:hover,
+    body.dark-theme .dropdown-item:focus {
+        background: rgba(56, 189, 248, 0.12) !important;
+    }
+
+    body.dark-theme .form-control,
+    body.dark-theme .form-select {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .form-control:focus,
+    body.dark-theme .form-select:focus {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: var(--dash-primary) !important;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16) !important;
+        outline: none !important;
+    }
+
+    body.dark-theme .text-dark { color: #f1f5f9 !important; }
+    body.dark-theme .bg-white { background-color: rgba(15, 23, 42, 0.95) !important; }
+    body.dark-theme .border-light { border-color: rgba(255, 255, 255, 0.12) !important; }
+    body.dark-theme .input-group-text.bg-white {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .table {
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .table th,
+    body.dark-theme .table td {
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme .table thead.bg-white {
+        background: rgba(15, 23, 42, 0.95) !important;
+    }
+
+    body.dark-theme #addMaterialModal .modal-content,
+    body.dark-theme #addCourseStudentModal .modal-content,
+    body.dark-theme #viewMaterialModal .modal-content {
+        background: rgba(15, 23, 42, 0.98) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme #addMaterialModal .modal-header h4 {
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme #addMaterialModal .teacher-field label,
+    body.dark-theme #addMaterialModal .text-muted,
+    body.dark-theme #addMaterialModal .form-label {
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme #addMaterialModal .rounded-4.shadow-sm {
+        background: rgba(15, 23, 42, 0.92) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme #addMaterialModal .upload-material-panel {
+        background: rgba(30, 41, 59, 0.85) !important;
+        border-color: rgba(255, 255, 255, 0.14) !important;
+    }
+
+    body.dark-theme #addMaterialModal #itemChipsContainer {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme #addMaterialModal #itemChipsContainer .badge {
+        background: rgba(30, 41, 59, 0.95) !important;
+        color: #e2e8f0 !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        box-shadow: none !important;
+    }
+
+    body.dark-theme #addMaterialModal .form-control,
+    body.dark-theme #addMaterialModal .form-select {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme #addMaterialModal .modal-footer .btn-link {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .modal-content,
+    body.dark-theme .modal-header,
+    body.dark-theme .modal-body,
+    body.dark-theme .modal-footer,
+    body.dark-theme .btn-close,
+    body.dark-theme .btn-outline-secondary,
+    body.dark-theme .btn-outline-primary,
+    body.dark-theme .btn-outline-danger,
+    body.dark-theme .btn-link {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .btn-outline-secondary,
+    body.dark-theme .btn-outline-primary,
+    body.dark-theme .btn-outline-danger {
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .btn-link {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .modal-content {
+        background: rgba(15, 23, 42, 0.95) !important;
+    }
+
+    body.dark-theme .modal-header,
+    body.dark-theme .modal-footer {
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme .course-sidebar,
+    body.dark-theme .course-side-nav .nav-link,
+    body.dark-theme .course-side-nav .nav-link:hover,
+    body.dark-theme .course-side-nav .nav-link.active {
+        background: rgba(15, 23, 42, 0.95) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .course-side-nav .nav-link.active i,
+    body.dark-theme .course-side-nav .nav-link i {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .material-card-modern {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .material-actions .btn-outline-secondary,
+    body.dark-theme .material-actions .btn-outline-primary,
+    body.dark-theme .material-actions .btn-outline-danger {
+        background: rgba(30, 41, 59, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .material-type-badge {
+        background: rgba(148, 163, 184, 0.18) !important;
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme #addMaterialModal .material-source-toggle {
+        background: rgba(71, 85, 105, 0.2) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme #addMaterialModal .material-source-toggle::before {
+        background: rgba(56, 189, 248, 0.18) !important;
+    }
+
+    body.dark-theme #addMaterialModal .material-source-toggle button {
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme #addMaterialModal .material-source-toggle button.active {
+        color: #0f172a !important;
+    }
+
+    body.dark-theme #addMaterialModal .material-source-toggle button:not(.active):hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    body.dark-theme #addMaterialModal .material-source-toggle button:focus-visible {
+        outline-color: rgba(56, 189, 248, 0.3) !important;
+    }
+
+    body.dark-theme .empty-state,
+    body.dark-theme .stream-empty,
+    body.dark-theme .students-empty,
+    body.dark-theme .assessment-empty,
+    body.dark-theme .course-report-preview,
+    body.dark-theme .course-report-metric,
+    body.dark-theme .course-report-recommendation,
+    body.dark-theme .course-report-pill,
+    body.dark-theme .material-card-modern:hover,
+    body.dark-theme .student-card-modern:hover,
+    body.dark-theme .assessment-card:hover,
+    body.dark-theme .table-responsive.rounded-4,
+    body.dark-theme .table-responsive {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .assessment-card:hover {
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    body.dark-theme .material-card-modern:hover {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme .student-card-modern:hover {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme .course-report-preview-title,
+    body.dark-theme .course-report-preview-meta,
+    body.dark-theme .course-report-pill,
+    body.dark-theme .course-report-metric strong,
+    body.dark-theme .course-report-metric span {
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .empty-state i,
+    body.dark-theme .stream-empty i {
+        color: rgba(56, 189, 248, 0.35) !important;
+    }
+
+    body.dark-theme .empty-state h3,
+    body.dark-theme .empty-state p,
+    body.dark-theme .stream-empty h6,
+    body.dark-theme .stream-empty p {
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme .course-sidebar {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme .course-sidebar strong,
+    body.dark-theme .course-sidebar .text-muted,
+    body.dark-theme .course-sidebar .small {
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme .course-side-nav .nav-link {
+        background: rgba(30, 41, 59, 0.9) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme .course-side-nav .nav-link:hover {
+        background: rgba(56, 189, 248, 0.12) !important;
+        color: #ffffff !important;
+    }
+
+    body.dark-theme .course-side-nav .nav-link.active {
+        background: rgba(56, 189, 248, 0.2) !important;
+        border-color: rgba(56, 189, 248, 0.35) !important;
+        color: #ffffff !important;
+    }
+
+    body.dark-theme .course-side-nav .nav-link i {
+        color: #38bdf8 !important;
+    }
+
+    body.dark-theme .course-side-nav .nav-link.active i {
+        color: #ffffff !important;
+    }
+
+    body.dark-theme #otherMaterialPanel,
+    body.dark-theme #otherMaterialPanel .input-group,
+    body.dark-theme #otherMaterialPanel .input-group-text,
+    body.dark-theme #otherMaterialPanel .form-control,
+    body.dark-theme #otherMaterialPanel .form-select,
+    body.dark-theme #otherMaterialPanel .table-responsive,
+    body.dark-theme #otherMaterialPanel .table,
+    body.dark-theme #otherMaterialPanel .border {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme #otherMaterialPanel .table thead,
+    body.dark-theme #otherMaterialPanel .table th,
+    body.dark-theme #otherMaterialPanel .table td {
+        color: #e2e8f0 !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme #otherMaterialPanel .table thead {
+        background: rgba(15, 23, 42, 0.9) !important;
+    }
+
+    body.dark-theme #otherMaterialPanel .bg-white {
+        background-color: rgba(15, 23, 42, 0.95) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme #addMaterialModal .modal-header,
+    body.dark-theme #addMaterialModal .modal-body,
+    body.dark-theme #addMaterialModal .modal-footer {
+        background: rgba(15, 23, 42, 0.98) !important;
+    }
+
+    body.dark-theme .card.rounded-4.p-3,
+    body.dark-theme .card.rounded-4.p-3 .table-responsive,
+    body.dark-theme .card.rounded-4.p-3 .table,
+    body.dark-theme #courseDetailModal .card,
+    body.dark-theme #courseDetailModal .table,
+    body.dark-theme #courseDetailModal .table-responsive {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme .table thead {
+        background: rgba(15, 23, 42, 0.95) !important;
+    }
+
+    body.dark-theme .table-hover tbody tr:hover {
+        background: rgba(56, 189, 248, 0.08) !important;
+    }
+
+    body.dark-theme #otherMaterialPanel .table.table-sm,
+    body.dark-theme #otherMaterialPanel .table.table-hover,
+    body.dark-theme #otherMaterialPanel .table.table-borderless,
+    body.dark-theme #courseDetailModal .table.table-borderless,
+    body.dark-theme #courseDetailModal .table {
+        background-color: rgba(15, 23, 42, 0.95) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme #otherMaterialPanel .table thead th,
+    body.dark-theme #courseDetailModal .table thead th,
+    body.dark-theme #otherMaterialPanel .table tbody td,
+    body.dark-theme #courseDetailModal .table tbody td {
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme #courseDetailModal .table thead,
+    body.dark-theme #otherMaterialPanel .table thead {
+        background: rgba(15, 23, 42, 0.9) !important;
+    }
+
+    body.dark-theme #otherMaterialPanel .table th,
+    body.dark-theme #courseDetailModal .table th {
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme #otherMaterialPanel .table td,
+    body.dark-theme #courseDetailModal .table td {
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
 </style>
 {% endblock %}
 
@@ -1983,12 +2623,11 @@
                                 <div class="tab-content">
                                     <div class="tab-pane fade show active" id="materialsPane" role="tabpanel" aria-labelledby="materials-tab">
                                         <div class="mb-3 d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0">Assigned Materials</h6>
+                                            <h6 class="reading-section-title mb-0">Student Reading Materials</h6>
                                             <button class="btn btn-sm btn-outline-primary" id="btnAddMaterialToCourse">Add Material</button>
                                         </div>
                                         <div id="courseDetailMaterials" class="mb-3">
                                             <div id="courseAttachedMaterials" class="attached-materials mb-3"></div>
-                                            <div id="courseAggregatedMaterials" class="aggregated-materials"></div>
                                         </div>
                                         <div id="courseOverviewStats" class="mb-3"></div>
                                     </div>
@@ -2736,6 +3375,42 @@
             .join("")
             .substring(0, 2);
     }
+
+    const sharedMaterialIdsStorageKey = 'pabasa_shared_material_ids';
+    let sharedMaterialIds = new Set();
+
+    function normalizeSharedMaterialId(rawId) {
+        return rawRecordId(String(rawId || '').trim());
+    }
+
+    function loadSharedMaterialIdsFromStorage() {
+        try {
+            const stored = localStorage.getItem(sharedMaterialIdsStorageKey);
+            if (!stored) return;
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                sharedMaterialIds = new Set(parsed
+                    .map(id => normalizeSharedMaterialId(id))
+                    .filter(Boolean)
+                );
+            }
+        } catch (e) {
+            console.warn('Could not load shared material IDs from storage:', e);
+            sharedMaterialIds = new Set();
+        }
+    }
+
+    function saveSharedMaterialIdsToStorage() {
+        try {
+            localStorage.setItem(sharedMaterialIdsStorageKey, JSON.stringify(
+                Array.from(sharedMaterialIds).map(id => normalizeSharedMaterialId(id)).filter(Boolean)
+            ));
+        } catch (e) {
+            console.warn('Could not save shared material IDs to storage:', e);
+        }
+    }
+
+    loadSharedMaterialIdsFromStorage();
     
     console.log("Teacher Name:", CURRENT_TEACHER_NAME, "Initials:", CURRENT_TEACHER_INITIALS);
 </script>
@@ -2809,7 +3484,7 @@
             return paragraphs.length ? paragraphs : [raw];
         }
         if (raw.includes('\n')) {
-            return raw.split(/\n+/).map(item => item.trim()).filter(Boolean);
+            return raw.split(/\r?\n+/).map(item => item.trim()).filter(Boolean);
         }
         if (itemType === 'sentence') {
             const sentences = raw.split(/(?<=[.!?])\s+/).map(item => item.trim()).filter(Boolean);
@@ -2818,10 +3493,46 @@
         return raw.split(/\s+/).map(item => item.trim()).filter(Boolean);
     }
 
+    function getMaterialContentItemsForEdit(material) {
+        if (!material) return [];
+        if (Array.isArray(material.items)) {
+            return material.items.map(item => {
+                if (item === null || item === undefined) return '';
+                if (typeof item === 'object') {
+                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
+                }
+                return item;
+            }).map(item => String(item).trim()).filter(Boolean);
+        }
+
+        const raw = String(material.content || material.content_text || material.prompt_text || material.prompt || '').trim();
+        if (!raw) return [];
+
+        const itemType = String(material.item_type || material.reading_type || '').toLowerCase();
+        if (itemType === 'paragraph') {
+            return [raw];
+        }
+        if (raw.includes('\n')) {
+            return raw.split(/\r?\n+/).map(item => item.trim()).filter(Boolean);
+        }
+        if (itemType === 'sentence') {
+            return raw.split(/(?<=[.!?])\s+/).map(item => item.trim()).filter(Boolean);
+        }
+        return raw.split(/\s+/).map(item => item.trim()).filter(Boolean);
+    }
+
     function getMaterialAssignedWeekLabel(material) {
         if (!material) return 'Unassigned';
         if (material.assigned_week_display) return material.assigned_week_display;
-        return formatAssignedWeek(material.assigned_week ?? material.assignedWeek ?? material.week);
+        const week = material.assigned_week ?? material.assignedWeek ?? material.week;
+        if (week === null || week === undefined || week === '' || week === 'Unassigned') {
+            return 'Unassigned';
+        }
+        const num = parseInt(week, 10);
+        if (!Number.isNaN(num) && num >= 1 && num <= 99) {
+            return `Week ${num}`;
+        }
+        return 'Unassigned';
     }
 
     function getMaterialStatusLabel(material) {
@@ -2983,7 +3694,9 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.success && Array.isArray(data.courses)) {
+                    const previousCourses = Array.isArray(teacherCourses) ? teacherCourses : [];
                     teacherCourses = data.courses;
+                    mergeSharedMaterialFlags(previousCourses, teacherCourses);
                     const key = teacherCoursesKey();
                     if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
                     console.log('✓ Loaded courses from server:', teacherCourses.length);
@@ -3049,6 +3762,90 @@
         return false;
     }
 
+    function loadTeacherClassesFromCache() {
+        try {
+            const key = teacherClassesKey();
+            const stored = key ? localStorage.getItem(key) : null;
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                teacherClasses = Array.isArray(parsed) ? parsed : [];
+                return teacherClasses.length > 0;
+            }
+        } catch (e) {
+            console.warn('Could not load classes from cache:', e);
+        }
+        teacherClasses = [];
+        return false;
+    }
+
+    function loadTeacherCoursesFromCache() {
+        try {
+            const key = teacherCoursesKey();
+            const stored = key ? localStorage.getItem(key) : null;
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                teacherCourses = Array.isArray(parsed) ? parsed : [];
+                return teacherCourses.length > 0;
+            }
+        } catch (e) {
+            console.warn('Could not load courses from cache:', e);
+        }
+        teacherCourses = [];
+        return false;
+    }
+
+    function loadSharedTeacherCoursesFromCache() {
+        try {
+            const key = sharedTeacherCoursesKey();
+            const stored = key ? localStorage.getItem(key) : null;
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                sharedTeacherCourses = Array.isArray(parsed) ? parsed : [];
+                return sharedTeacherCourses.length > 0;
+            }
+        } catch (e) {
+            console.warn('Could not load shared courses from cache:', e);
+        }
+        sharedTeacherCourses = [];
+        return false;
+    }
+
+    function loadTeacherOverviewFromCache() {
+        try {
+            const overview = JSON.parse(localStorage.getItem('pabasa_teacher_overview_stats') || '{}');
+            if (overview && typeof overview === 'object') {
+                const totalEl = document.getElementById('profileTotalStudentsCount');
+                if (totalEl && overview.total_students !== undefined) totalEl.textContent = String(overview.total_students);
+                const matEl = document.getElementById('profileMaterialsPostedCount');
+                if (matEl && overview.materials_posted !== undefined) matEl.textContent = String(overview.materials_posted);
+                const classesEl = document.getElementById('profileActiveClassesCount');
+                if (classesEl && overview.classes_count !== undefined) classesEl.textContent = String(overview.classes_count);
+                const reportsEl = document.getElementById('profileReportsGeneratedCount');
+                if (reportsEl && overview.reports_generated !== undefined) reportsEl.textContent = String(overview.reports_generated);
+                return true;
+            }
+        } catch (e) {
+            console.warn('Could not load overview from cache:', e);
+        }
+        return false;
+    }
+
+    function renderTeacherDataFromCache() {
+        const hasCourses = loadTeacherCoursesFromCache();
+        loadTeacherClassesFromCache();
+        loadSharedTeacherCoursesFromCache();
+        loadTeacherOverviewFromCache();
+
+        if (typeof renderClasses === 'function') {
+            try { renderClasses(); } catch (e) { console.warn('Could not render classes from cache:', e); }
+        }
+        if (typeof renderCourses === 'function') {
+            try { renderCourses(); } catch (e) { console.warn('Could not render courses from cache:', e); }
+        }
+
+        return hasCourses;
+    }
+
     // Render teacher-created courses
     async function renderCourses() {
         const grid = document.getElementById('coursesGrid');
@@ -3103,6 +3900,35 @@
         return String(value || '').replace(/^[a-z]+-/i, '');
     }
 
+    function getMaterialSharedKey(material) {
+        return rawRecordId(String(material?.id || material?.action_id || material?.raw_id || '').trim());
+    }
+
+    function mergeSharedMaterialFlags(oldCourses, newCourses) {
+        if (!Array.isArray(oldCourses) || !Array.isArray(newCourses)) return;
+        const oldMaterialMap = new Map();
+        oldCourses.forEach(course => {
+            (course.materials || []).forEach(material => {
+                const key = getMaterialSharedKey(material);
+                if (!key || oldMaterialMap.has(key)) return;
+                oldMaterialMap.set(key, material);
+            });
+        });
+        newCourses.forEach(course => {
+            (course.materials || []).forEach(material => {
+                const key = getMaterialSharedKey(material);
+                const previous = oldMaterialMap.get(key);
+                if (!key || !previous) return;
+                if (previous._is_shared_origin) material._is_shared_origin = true;
+                if (previous.is_shared_material) material.is_shared_material = true;
+                if (String(previous.material_source || '').toLowerCase() === 'shared') material.material_source = 'shared';
+                if (previous.shared_owner_teacher_name && !material.shared_owner_teacher_name) {
+                    material.shared_owner_teacher_name = previous.shared_owner_teacher_name;
+                }
+            });
+        });
+    }
+
     function findCourseById(courseId) {
         return (teacherCourses || []).find(c => String(c.id) === String(courseId));
     }
@@ -3117,6 +3943,39 @@
         });
     }
 
+    function isCourseMaterialAlreadyAssigned(course, material) {
+        if (!course || !material) return false;
+        const materialId = String(material.id || material.action_id || material.raw_id || '').trim();
+        if (materialId) {
+            return !!findCourseMaterial(course, materialId);
+        }
+        const title = String(material.title || material.name || '').trim().toLowerCase();
+        const type = String(material.item_type || material.type || material.usage || '').trim().toLowerCase();
+        if (!title) return false;
+        return (course.materials || []).some(item => {
+            const sameTitle = String(item.title || item.name || '').trim().toLowerCase() === title;
+            const sameType = String(item.item_type || item.type || item.usage || '').trim().toLowerCase() === type;
+            return sameTitle && sameType;
+        });
+    }
+
+    function isSharedMaterial(material) {
+        if (!material) return false;
+        if (material._is_shared_origin) return true;
+        if (material.is_shared_material) return true;
+        if (String(material.material_source || '').toLowerCase() === 'shared') return true;
+        const materialIdKey = rawRecordId(String(material.id || material.action_id || material.raw_id || '').trim());
+        if (materialIdKey && sharedMaterialIds.has(materialIdKey)) return true;
+        return false;
+    }
+
+    function renderSharedMaterialBadge(material) {
+        if (!isSharedMaterial(material)) return '';
+        const owner = material.shared_owner_teacher_name || material.teacher_name || '';
+        const title = owner ? `Shared material from ${owner}` : 'Shared material';
+        return `<span class="shared-material-badge" title="${escapeHtml(title)}">👥</span>`;
+    }
+
     function findCoursePractice(course, practiceId) {
         const rawId = rawRecordId(practiceId);
         return (course?.practices || []).find(item => {
@@ -3128,8 +3987,20 @@
 
     window.openCourseDetail = async function(courseId) {
         try {
-            await loadTeacherCoursesFromServer();
-            const course = findCourseById(courseId);
+            let course = findCourseById(courseId);
+            if (!course) {
+                await loadTeacherCoursesFromServer();
+                course = findCourseById(courseId);
+            } else {
+                const refreshed = await loadTeacherCoursesFromServer().catch(err => {
+                    console.warn('Could not refresh courses while opening course', err);
+                    return false;
+                });
+                if (refreshed) {
+                    course = findCourseById(courseId) || course;
+                }
+            }
+
             if (!course) return showToast('Course not found', 'error');
 
             // Populate modal fields
@@ -3142,38 +4013,99 @@
 
             // Materials list (with preview/edit/delete actions) and Practice previews
             const materialsContainer = document.getElementById('courseAttachedMaterials');
-            if (materialsContainer) materialsContainer.innerHTML = '';
+            if (materialsContainer) {
+                materialsContainer.classList.remove('assigned-materials-grid');
+                materialsContainer.innerHTML = '';
 
-            // Render existing Material records (editable)
-            (course.materials || []).forEach(m => {
-                const item = document.createElement('div');
-                item.className = 'd-flex align-items-center justify-content-between mb-2';
-                item.innerHTML = `
-                    <div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div>
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${courseMaterialActionId(m)}" title="View"><i class="bi bi-eye me-1"></i>View</button>
-                        <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${courseMaterialActionId(m)}" title="Edit"><i class="bi bi-pencil me-1"></i>Edit</button>
-                        <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${courseMaterialActionId(m)}" title="Archive"><i class="bi bi-archive me-1"></i>Archive</button>
-                    </div>`;
-                materialsContainer.appendChild(item);
-            });
+                const courseMaterials = Array.isArray(course.materials) ? course.materials : [];
+                const assignedSection = document.createElement('section');
+                assignedSection.className = 'section-panel assigned-section';
+                assignedSection.innerHTML = `
+                    <div class="section-heading">
+                        <div>
+                            <h6 class="reading-section-title mb-1">Reading Materials</h6>
+                            <p class="reading-section-note mb-0">Materials currently assigned in this course.</p>
+                        </div>
+                    </div>
+                `;
+                const assignedList = document.createElement('div');
+                assignedList.className = 'assigned-materials-grid';
 
-            // Render related Practices (preview-only)
-            if ((course.practices || []).length > 0) {
-                const header = document.createElement('div');
-                header.className = 'mb-2 small text-muted';
-                header.textContent = 'Practice Sets';
-                materialsContainer.appendChild(header);
-                (course.practices || []).forEach(p => {
-                    const item = document.createElement('div');
-                    item.className = 'd-flex align-items-center justify-content-between mb-2';
-                    item.innerHTML = `
-                        <div><strong>${p.title}</strong> <span class="small text-muted">${p.item_type || ''}</span></div>
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-outline-secondary" data-practice-action="preview" data-pid="${p.action_id || p.id}" title="Preview"><i class="bi bi-eye"></i></button>
-                        </div>`;
-                    materialsContainer.appendChild(item);
-                });
+                if (courseMaterials.length === 0) {
+                    assignedList.innerHTML = `
+                        <div class="readings-empty">
+                            <i class="bi bi-inbox"></i>
+                            <p>No assigned materials yet</p>
+                        </div>
+                    `;
+                } else {
+                    courseMaterials.forEach(m => {
+                        const item = document.createElement('div');
+                        item.className = 'material-card-modern';
+                        item.dataset.materialId = courseMaterialActionId(m);
+
+                        const typeLabel = m.item_type || m.type || '';
+                        const typeSlug = String(typeLabel || '').toLowerCase().replace(/\s+/g, '-');
+
+                        const materialIdKey = rawRecordId(String(m.id || m.action_id || m.raw_id || '').trim());
+                        if (!m._is_shared_origin && materialIdKey && sharedMaterialIds.has(materialIdKey)) {
+                            m._is_shared_origin = true;
+                        }
+
+                        item.innerHTML = `
+                            <div class="material-info">
+                                <p class="material-title">${m.title || 'Untitled material'}${renderSharedMaterialBadge(m)}</p>
+                                ${typeLabel ? `<span class="material-type-badge ${typeSlug}">${typeLabel}</span>` : ''}
+                                ${m.description ? `<p class="material-preview">${m.description}</p>` : ''}
+                            </div>
+                            <div class="material-actions">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${courseMaterialActionId(m)}" title="View"><i class="bi bi-eye"></i>View</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${courseMaterialActionId(m)}" title="Edit"><i class="bi bi-pencil"></i>Edit</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${courseMaterialActionId(m)}" title="Archive"><i class="bi bi-archive"></i>Archive</button>
+                            </div>
+                        `;
+                        assignedList.appendChild(item);
+                    });
+                }
+                assignedSection.appendChild(assignedList);
+                materialsContainer.appendChild(assignedSection);
+
+                const coursePractices = Array.isArray(course.practices) ? course.practices : [];
+                if (coursePractices.length > 0) {
+                    const practiceSection = document.createElement('section');
+                    practiceSection.className = 'section-panel practice-section';
+                    practiceSection.innerHTML = `
+                        <div class="section-heading">
+                            <div>
+                                <h6 class="reading-section-title mb-1">Students' Practice Sets</h6>
+                                <p class="reading-section-note mb-0">Review curated practice materials available to students.</p>
+                            </div>
+                        </div>
+                    `;
+                    const practiceGrid = document.createElement('div');
+                    practiceGrid.className = 'practice-set-grid';
+
+                    coursePractices.forEach(p => {
+                        const typeLabel = p.item_type || 'Practice';
+                        const typeSlug = String(typeLabel || '').toLowerCase().replace(/\s+/g, '-');
+                        const item = document.createElement('div');
+                        item.className = 'material-card-modern practice-card';
+                        item.dataset.practiceId = p.action_id || p.id;
+                        item.innerHTML = `
+                            <div class="material-info">
+                                <p class="material-title">${p.title || 'Untitled practice set'}</p>
+                                <span class="material-type-badge ${typeSlug}">${typeLabel}</span>
+                            </div>
+                            <div class="material-actions">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-practice-action="preview" data-pid="${p.action_id || p.id}" title="View"><i class="bi bi-eye"></i>View</button>
+                            </div>
+                        `;
+                        practiceGrid.appendChild(item);
+                    });
+
+                    practiceSection.appendChild(practiceGrid);
+                    materialsContainer.appendChild(practiceSection);
+                }
             }
 
             // Attach a single delegated handler for material and practice actions
@@ -3366,8 +4298,16 @@
                             const activeCourse = findCourseById(activeCourseId) || course;
                             const pr = findCoursePractice(activeCourse, pid);
                             if (!pr) return showToast('Practice not found', 'error');
-                            const prItems = (typeof pr.items_count === 'number') ? pr.items_count : (Array.isArray(pr.items) ? pr.items.length : (pr.items || '-'));
-                            showSuccessModal('Practice Preview', `${pr.title} \n\nType: ${pr.item_type || '-'}\nItems: ${prItems}\n\n${pr.content || ''}`);
+
+                            const previewMaterial = {
+                                title: pr.title || 'Practice Preview',
+                                item_type: pr.item_type || 'Practice',
+                                type: 'practice',
+                                content: Array.isArray(pr.content) ? pr.content.join('\n') : (typeof pr.content === 'string' ? pr.content : ''),
+                                status: pr.status || 'published',
+                                assigned_week_display: pr.assigned_week_display ?? pr.assigned_week ?? pr.week
+                            };
+                            showMaterialPreviewModal(previewMaterial);
                             return;
                         }
                     }
@@ -4030,40 +4970,44 @@
     // Legacy inline course form handlers removed to avoid duplicate IDs.
 
     async function refreshTeacherData() {
-        await loadTeacherClassesFromServer();
-        // also load teacher-created courses
-        try { await loadTeacherCoursesFromServer(); } catch(e) { console.warn('Failed to load courses', e); }
-        // also load shared courses for the Other material source
-        try { await loadSharedTeacherCoursesFromServer(); } catch(e) { console.warn('Failed to load shared courses', e); }
-        // Update authoritative overview stats
-        try {
-            const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (r.ok) {
-                const overview = await r.json();
-                if (overview && overview.success) {
-                    const totalEl = document.getElementById('profileTotalStudentsCount');
-                    if (totalEl) totalEl.textContent = String(overview.total_students);
+        const classesPromise = loadTeacherClassesFromServer();
+        const coursesPromise = loadTeacherCoursesFromServer();
+        const sharedPromise = loadSharedTeacherCoursesFromServer();
+        const overviewPromise = (async () => {
+            try {
+                const r = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (r.ok) {
+                    const overview = await r.json();
+                    if (overview && overview.success) {
+                        const totalEl = document.getElementById('profileTotalStudentsCount');
+                        if (totalEl) totalEl.textContent = String(overview.total_students);
                         const matEl = document.getElementById('profileMaterialsPostedCount');
-                    if (matEl && overview.materials_posted !== undefined)
-                        matEl.textContent = String(overview.materials_posted);
-                    const classesEl = document.getElementById('profileActiveClassesCount');
-                    if (classesEl && overview.classes_count !== undefined)
-                        classesEl.textContent = String(overview.classes_count);
-                    const reportsEl = document.getElementById('profileReportsGeneratedCount');
-                    if (reportsEl && overview.reports_generated !== undefined)
-                        reportsEl.textContent = String(overview.reports_generated);
-                    const overviewKey = 'pabasa_teacher_overview_stats';
-                    const existing = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                    localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existing, overview)));
+                        if (matEl && overview.materials_posted !== undefined)
+                            matEl.textContent = String(overview.materials_posted);
+                        const classesEl = document.getElementById('profileActiveClassesCount');
+                        if (classesEl && overview.classes_count !== undefined)
+                            classesEl.textContent = String(overview.classes_count);
+                        const reportsEl = document.getElementById('profileReportsGeneratedCount');
+                        if (reportsEl && overview.reports_generated !== undefined)
+                            reportsEl.textContent = String(overview.reports_generated);
+                        const overviewKey = 'pabasa_teacher_overview_stats';
+                        const existing = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                        localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existing, overview)));
+                    }
                 }
+            } catch (e) {
+                console.warn('Failed to refresh overview:', e);
             }
-        } catch (e) {
-            console.warn('Failed to refresh overview:', e);
+        })();
+
+        await Promise.allSettled([classesPromise, coursesPromise, sharedPromise, overviewPromise]);
+
+        if (typeof renderClasses === 'function') {
+            try { await renderClasses(); } catch (e) { console.warn('Could not render classes after refresh:', e); }
         }
-        // Load authoritative classes and overview, then render
-        // Call renderClasses (not refreshTeacherData) to avoid recursion
-        if (typeof renderClasses === 'function') await renderClasses();
-        if (typeof renderCourses === 'function') await renderCourses();
+        if (typeof renderCourses === 'function') {
+            try { await renderCourses(); } catch (e) { console.warn('Could not render courses after refresh:', e); }
+        }
     }
 
     function syncClassAssessmentsFromCourses(classCode) {
@@ -4115,9 +5059,13 @@
 
     // Ensure courses load on first paint
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on load', e); }
+        try { renderTeacherDataFromCache(); } catch (e) { console.warn('Could not render cached teacher data on load', e); }
+        setTimeout(() => { try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on load', e); } }, 0);
     } else {
-        document.addEventListener('DOMContentLoaded', function() { try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on DOMContentLoaded', e); } });
+        document.addEventListener('DOMContentLoaded', function() {
+            try { renderTeacherDataFromCache(); } catch (e) { console.warn('Could not render cached teacher data on DOMContentLoaded', e); }
+            setTimeout(() => { try { refreshTeacherData(); } catch (e) { console.warn('refreshTeacherData failed on DOMContentLoaded', e); } }, 0);
+        });
     }
     
     // Ensure a global reading renderer exists (fallback shim)
@@ -4955,16 +5903,16 @@
         attachDeleteListeners();
         
         // Update reading counts from database for each class asynchronously
-        for (const cls of teacherClasses) {
+        const countPromises = (teacherClasses || []).map(async (cls) => {
             const materials = await fetchMaterialsFromDatabase(cls.code);
-            if (materials) {
-                const totalCount = materials.word.length + materials.sentence.length + materials.paragraph.length;
-                const countElement = document.querySelector(`[data-readings-count="${cls.code}"] strong`);
-                if (countElement) {
-                    countElement.textContent = totalCount;
-                }
+            if (!materials) return;
+            const totalCount = materials.word.length + materials.sentence.length + materials.paragraph.length;
+            const countElement = document.querySelector(`[data-readings-count="${cls.code}"] strong`);
+            if (countElement) {
+                countElement.textContent = totalCount;
             }
-        }
+        });
+        Promise.allSettled(countPromises).catch(err => console.warn('Could not update class reading counts', err));
     }
 
     function getClassReadingCount(classCode) {
@@ -5892,8 +6840,27 @@
             const record = materials.find(item => String(item.id) === String(materialId));
             if (!record) return;
             const material = record.material || record;
+            material._is_shared_origin = true;
+            material.is_shared_material = true;
+            material.material_source = 'shared';
+            const materialIdKey = String(material.id || material.action_id || material.raw_id || '').trim();
+            if (materialIdKey) {
+                sharedMaterialIds.add(materialIdKey);
+                saveSharedMaterialIdsToStorage();
+            }
+            window._pendingSharedMaterialOrigin = true;
 
-            resetAddMaterialModalState({ clearEditing: true, clearAttachTarget: true, resetForm: true });
+            const currentCourse = window.courseAttachTarget ? findCourseById(window.courseAttachTarget) : null;
+            if (currentCourse && isCourseMaterialAlreadyAssigned(currentCourse, material)) {
+                if (typeof showToast === 'function') {
+                    showToast('This material is already assigned to the current course.', 'info');
+                } else {
+                    alert('This material is already assigned to the current course.');
+                }
+                return;
+            }
+
+            resetAddMaterialModalState({ clearEditing: true, clearAttachTarget: false, resetForm: true });
             setAddMaterialMode('personal');
 
             if (materialTitleInput) materialTitleInput.value = material.title || '';
@@ -6090,17 +7057,8 @@
                 if (materialTitleInput) materialTitleInput.value = material.title || '';
 
                 // Prefill items list
-                const raw = material.content || material.content_text || (material.items ? material.items.join('\n') : '') || '';
-                let items = [];
+                const items = getMaterialContentItemsForEdit(material);
                 const itype = (material.item_type || material.reading_type || '').toString().toLowerCase();
-                if (itype === 'paragraph') {
-                    items = raw.trim() ? [raw.trim()] : [];
-                } else if (itype === 'sentence') {
-                    items = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
-                } else {
-                    items = raw.split(/\n+/).map(s => s.trim()).filter(Boolean);
-                    if (items.length === 0 && raw.trim()) items = raw.split(/\s+/).map(s => s.trim()).filter(Boolean);
-                }
                 currentItemsList = items;
                 resetDetectedParagraphState(itype === 'paragraph');
                 renderAddedItemsChips();
@@ -6508,17 +7466,7 @@
 
                         // Items -> populate currentItemsList used by the Add modal chips UI
                         try {
-                            const raw = material.content || material.content_text || '';
-                            let items = [];
-                            if ((material.item_type || '').toLowerCase() === 'paragraph') {
-                                items = raw.trim() ? [raw.trim()] : [];
-                            } else if ((material.item_type || '').toLowerCase() === 'sentence') {
-                                items = raw.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
-                            } else { // word or default
-                                // prefer newline-separated tokens, fallback to whitespace
-                                items = raw.split(/\n+/).map(s => s.trim()).filter(Boolean);
-                                if (items.length === 0 && raw.trim()) items = raw.split(/\s+/).map(s => s.trim()).filter(Boolean);
-                            }
+                            const items = getMaterialContentItemsForEdit(material);
                             currentItemsList = items;
                             resetDetectedParagraphState((material.item_type || '').toLowerCase() === 'paragraph');
                             renderAddedItemsChips();
@@ -7136,6 +8084,7 @@
                             if (window.courseAttachTarget && Array.isArray(createdIds) && createdIds.length > 0) {
                                 try {
                                     const csrftoken2 = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                                    const course = (teacherCourses || []).find(c => Number(c.id) === Number(window.courseAttachTarget));
                                     for (const mid of createdIds) {
                                         const attachResp = await fetch('/dashboard/teacher/course/add-material/', {
                                             method: 'POST',
@@ -7146,12 +8095,32 @@
                                         let attachData = {};
                                         try { attachData = await attachResp.json(); } catch (e) { /* ignore */ }
                                         if (attachResp.ok && attachData.success) {
-                                            // update local cache
+                                            // update local cache with the full material object when possible
                                             try {
-                                                const course = (teacherCourses || []).find(c => Number(c.id) === Number(window.courseAttachTarget));
                                                 if (course) {
                                                     course.materials = course.materials || [];
-                                                    course.materials.push({ id: mid, title: (apiData.material && apiData.material.title) || title, item_type: attachData.material?.item_type || '' });
+                                                    const attachedMaterial = apiData.material || {
+                                                        id: mid,
+                                                        title: (apiData.material && apiData.material.title) || title,
+                                                        item_type: attachData.material?.item_type || apiData.material?.item_type || '',
+                                                        type: apiData.material?.type || apiData.material?.usage || apiData.material?.usage_type || '',
+                                                        status: apiData.material?.status || 'published',
+                                                        assigned_week_display: apiData.material?.assigned_week_display || apiData.material?.assigned_week || apiData.material?.week || null
+                                                    };
+                                                    if (window._pendingSharedMaterialOrigin) {
+                                                        attachedMaterial._is_shared_origin = true;
+                                                        attachedMaterial.is_shared_material = true;
+                                                        attachedMaterial.material_source = 'shared';
+                                                        const attachedKey = rawRecordId(String(attachedMaterial.id || attachedMaterial.action_id || attachedMaterial.raw_id || '').trim());
+                                                        if (attachedKey) {
+                                                            sharedMaterialIds.add(attachedKey);
+                                                            saveSharedMaterialIdsToStorage();
+                                                        }
+                                                    }
+                                                    const existing = findCourseMaterial(course, mid) || findCourseMaterial(course, attachedMaterial.id) || (course.materials.find(item => String(item.title || '').trim().toLowerCase() === String(attachedMaterial.title || '').trim().toLowerCase()) && attachedMaterial);
+                                                    if (!existing) {
+                                                        course.materials.push(attachedMaterial);
+                                                    }
                                                     const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
                                                 }
                                             } catch (e) { console.warn('Failed to update local course cache after attach', e); }
@@ -7159,51 +8128,20 @@
                                             console.warn('Failed to attach material to course', attachData.error || attachResp.status);
                                         }
                                     }
-                                    // refresh courses UI
                                     try { await renderCourses(); } catch (e) { /* ignore */ }
                                     try { await refreshOpenCourseAfterAssessmentChange({ courseId: window.courseAttachTarget, classCode: currentClassCode }); } catch (e) { console.warn('Could not refresh course after material attach', e); }
 
-                                    // Also attempt to refresh the open Course modal so the
-                                    // "No materials yet" placeholder is removed immediately.
-                                    try {
-                                        if (window.courseAttachTarget) {
-                                            // Refresh aggregated readings for the course (if function exists)
-                                            if (typeof loadCourseReadings === 'function') {
-                                                await loadCourseReadings(window.courseAttachTarget);
-                                            } else if (apiData && apiData.material && typeof window.renderAllReadingsList === 'function') {
-                                                // Fallback: render the single created material into aggregated container
-                                                try { window.renderAllReadingsList([apiData.material], 'courseAggregatedMaterials'); } catch (e) { /* ignore */ }
-                                            }
-
-                                            // If the course modal is currently visible, re-render attached materials list
-                                            const cModal = document.getElementById('courseDetailModal');
-                                            if (cModal && cModal.classList.contains('show')) {
-                                                try {
-                                                    const materialsContainer = document.getElementById('courseAttachedMaterials');
-                                                    const course = (teacherCourses || []).find(c => Number(c.id) === Number(window.courseAttachTarget));
-                                                    if (materialsContainer && course) {
-                                                        materialsContainer.innerHTML = '';
-                                                        (course.materials || []).forEach(m => {
-                                                            const item = document.createElement('div');
-                                                            item.className = 'd-flex align-items-center justify-content-between mb-2';
-                                                            item.innerHTML = `
-                                                                <div><strong>${m.title}</strong> <span class="small text-muted">${m.item_type || ''}</span></div>
-                                                                <div class="btn-group" role="group">
-                                                                    <button class="btn btn-sm btn-outline-secondary" data-material-action="preview" data-mid="${m.id}" title="View"><i class="bi bi-eye me-1"></i>View</button>
-                                                                    <button class="btn btn-sm btn-outline-primary" data-material-action="edit" data-mid="${m.id}" title="Edit"><i class="bi bi-pencil me-1"></i>Edit</button>
-                                                                    <button class="btn btn-sm btn-outline-danger" data-material-action="delete" data-mid="${m.id}" title="Archive"><i class="bi bi-archive me-1"></i>Archive</button>
-                                                                </div>`;
-                                                            materialsContainer.appendChild(item);
-                                                        });
-                                                    }
-                                                } catch (e) { console.warn('Could not refresh attached materials DOM', e); }
-                                            }
-                                        }
-                                    } catch (e) { console.warn('Could not refresh course modal after attach', e); }
+                                    const cModal = document.getElementById('courseDetailModal');
+                                    if (cModal && cModal.classList.contains('show')) {
+                                        try {
+                                            await openCourseDetail(window.courseAttachTarget);
+                                        } catch (e) { console.warn('Could not refresh course modal after attach', e); }
+                                    }
                                 } catch (e) {
                                     console.warn('Course attach step failed', e);
                                 } finally {
                                     window.courseAttachTarget = null;
+                                    window._pendingSharedMaterialOrigin = false;
                                 }
                             }
 
