@@ -367,6 +367,35 @@
             overflow-wrap: anywhere;
         }
 
+        .raw-mic-output {
+            background: rgba(31, 111, 139, 0.06);
+            border: 1px solid rgba(31, 111, 139, 0.12);
+            border-radius: 12px;
+            color: #334e68;
+            display: grid;
+            gap: 0.25rem;
+            margin-top: 0.35rem;
+            padding: 0.55rem 0.7rem;
+            text-align: left;
+        }
+
+        .raw-mic-output span {
+            color: var(--accent-deep);
+            font-size: 0.72rem;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .raw-mic-output code {
+            color: #1b1a17;
+            font-family: "Nunito", "Trebuchet MS", "Segoe UI", sans-serif;
+            font-size: 0.9rem;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
+        }
+
         .content-word .reading-word {
             font-size: clamp(1.8rem, 6vw, 3.8rem);
             letter-spacing: 0.03em;
@@ -884,6 +913,15 @@
         body.dark-theme .speech-panel strong {
             color: #38bdf8 !important;
         }
+        body.dark-theme .raw-mic-output {
+            background: rgba(56, 189, 248, 0.08) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #cbd5e1 !important;
+        }
+        body.dark-theme .raw-mic-output code,
+        body.dark-theme .raw-mic-output span {
+            color: #f8fafc !important;
+        }
         body.dark-theme .reading-word .syllable.is-read {
             background: rgba(34, 197, 94, 0.16) !important;
             color: #86efac !important;
@@ -979,6 +1017,10 @@
                 <div class="speech-panel" id="speechPanel">
                     <strong id="speechStatus">Ready to start reading</strong>
                     <span class="speech-transcript" id="speechTranscript">Google Speech results will appear here while you read.</span>
+                    <div class="raw-mic-output">
+                        <span>Raw mic input</span>
+                        <code id="rawMicInput">Waiting for speech...</code>
+                    </div>
                 </div>
                 <div class="reader-footer">
                     <button class="nav-btn nav-prev" id="prevBtn" type="button" aria-label="Previous item">Back</button>

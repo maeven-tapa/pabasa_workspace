@@ -29,6 +29,7 @@
         const btnStopReading = document.getElementById("btnStopReading");
         const btnToggleMic = document.getElementById("btnToggleMic");
         const btnTestMic = document.getElementById("btnTestMic") || document.getElementById("testMic");
+        const rawMicInput = document.getElementById("rawMicInput");
 
         const urlParams = new URLSearchParams(window.location.search);
         const testTitle = urlParams.get("test") || "Assessment";
@@ -49,6 +50,8 @@
         let recognitionActive = false;
         let spokenTranscript = "";
         let latestScores = null;
+        let isTestingMic = false;
+        let rawMicLines = [];
         let mediaStream = null;
         let mediaRecorder = null;
         let isSendingChunk = false;
@@ -251,6 +254,22 @@
             if (transcript) transcript.textContent = detail || "Google Speech results will appear here while you read.";
         }
 
+        function setRawMicInput(value) {
+            if (rawMicInput) rawMicInput.textContent = value || "Waiting for speech...";
+        }
+
+        function appendRawMicInput(value) {
+            if (!value) return;
+            rawMicLines.push(value);
+            rawMicLines = rawMicLines.slice(-6);
+            setRawMicInput(rawMicLines.join("\n"));
+        }
+
+        function resetRawMicInput(value = "Waiting for speech...") {
+            rawMicLines = [];
+            setRawMicInput(value);
+        }
+
         function pickAudioMimeType() {
             const candidates = [
                 "audio/webm;codecs=opus",
@@ -284,6 +303,7 @@
                 };
                 mediaRecorder.start(speechChunkMs);
                 recognitionActive = true;
+                resetRawMicInput("Waiting for speech...");
                 setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
             } catch (error) {
                 console.warn("PABASA: Microphone unavailable", error);
@@ -395,6 +415,7 @@
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Speech check failed.");
                 }
+                appendRawMicInput(data.transcript ? `Words: ${data.transcript}` : "Google returned an empty transcript for this audio slice.");
                 handleSpeechResult(data);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
@@ -656,6 +677,7 @@
             currentSyllableIndex = 0;
             pendingAudioChunk = null;
             hasHeardSinceLastChunk = false;
+            resetRawMicInput("Waiting for speech...");
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
             startSpeechRecognition();
@@ -695,20 +717,81 @@
         });
 
         if (btnTestMic) {
-            btnTestMic.addEventListener("click", () => {
-                const title = "Microphone Check";
-                const msg = "Testing device audio input ...\n\nYour microphone is receiving signal clearly! You are ready to start reading.";
-                
-                // Prioritize showDialog (styled modal) as it mimics the original alert behavior best
-                if (typeof window.showDialog === 'function') {
-                    window.showDialog(title, msg, "success");
-                } else if (typeof window.showToast === 'function') {
-                    window.showToast(msg.replace(/\n\n/g, ' '), "success");
-                } else {
-                    console.warn("PABASA: Notification utilities not found. Falling back to native alert.");
-                    alert(title + "\n\n" + msg);
+            btnTestMic.addEventListener("click", runMicPlaybackTest);
+        }
+
+        async function runMicPlaybackTest() {
+            if (isTestingMic) return;
+            if (isRecording) {
+                showMicTestMessage("Microphone Check", "Finish the current reading first, then test the microphone.", "warning");
+                return;
+            }
+            if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+                showMicTestMessage("Microphone Check", "This browser cannot record microphone audio. Use a current Chrome or Edge browser.", "error");
+                return;
+            }
+
+            isTestingMic = true;
+            const icon = btnTestMic?.querySelector("i");
+            const originalIconClass = icon?.className || "";
+            if (icon) icon.className = "bi bi-record-circle-fill";
+            btnTestMic?.classList.add("btn-outline-danger");
+            setSpeechStatus("Recording mic test...", "Say a short phrase. Playback will start automatically.", false);
+            resetRawMicInput("Mic test recording... say something now.");
+
+            let testStream = null;
+            try {
+                testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mimeType = pickAudioMimeType();
+                const recorder = new MediaRecorder(testStream, mimeType ? { mimeType } : undefined);
+                const chunks = [];
+                recorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0) chunks.push(event.data);
+                };
+
+                await new Promise((resolve, reject) => {
+                    recorder.onerror = () => reject(new Error("The microphone test recorder failed."));
+                    recorder.onstop = resolve;
+                    recorder.start();
+                    window.setTimeout(() => {
+                        if (recorder.state !== "inactive") recorder.stop();
+                    }, 3000);
+                });
+
+                const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+                if (!blob.size) {
+                    setRawMicInput("No audio was captured during the mic test.");
+                    showMicTestMessage("Microphone Check", "No audio was captured. Check the selected microphone and try again.", "warning");
+                    return;
                 }
-            });
+
+                setRawMicInput(`Mic test captured ${(blob.size / 1024).toFixed(1)} KB. Playing it back now.`);
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                audio.controls = false;
+                audio.onended = () => URL.revokeObjectURL(url);
+                await audio.play();
+                showMicTestMessage("Microphone Check", "Playback started. If you hear your voice, your microphone is working.", "success");
+            } catch (error) {
+                console.warn("PABASA: Mic test failed", error);
+                setRawMicInput("Mic test failed: " + (error.message || "microphone access was not available."));
+                showMicTestMessage("Microphone Check", error.message || "Microphone access was not available.", "error");
+            } finally {
+                testStream?.getTracks().forEach(track => track.stop());
+                if (icon) icon.className = originalIconClass || "bi bi-headphones";
+                btnTestMic?.classList.remove("btn-outline-danger");
+                isTestingMic = false;
+            }
+        }
+
+        function showMicTestMessage(title, message, type = "success") {
+            if (typeof window.showDialog === "function") {
+                window.showDialog(title, message, type);
+            } else if (typeof window.showToast === "function") {
+                window.showToast(message, type);
+            } else {
+                alert(title + "\n\n" + message);
+            }
         }
 
         function closePauseMenu() {
@@ -754,6 +837,7 @@
             spokenTranscript = "";
             pendingAudioChunk = null;
             hasHeardSinceLastChunk = false;
+            resetRawMicInput("Waiting for speech...");
             updateUI();
             setSpeechStatus("Ready to start reading");
             closePauseMenu();
