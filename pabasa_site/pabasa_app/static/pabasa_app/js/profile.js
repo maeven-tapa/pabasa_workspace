@@ -34,6 +34,7 @@ function initProfilePage() {
     const profileEmail = JSON.parse(document.getElementById("profileEmail")?.textContent || "\"\"");
     const profilePabasaId = JSON.parse(document.getElementById("profilePabasaId")?.textContent || "\"\"");
     const profileRoleDisplay = JSON.parse(document.getElementById("profileRoleDisplay")?.textContent || "\"\"");
+    const serverNotificationSettings = JSON.parse(document.getElementById("profileNotificationSettings")?.textContent || "{}");
     const profileStorageKey = "pabasa_profile_settings_" + profileUsername;
 
     const accountFields = form ? form.querySelectorAll("[data-account-details-field]") : [];
@@ -641,18 +642,26 @@ function initProfilePage() {
     }
 
     function loadProfileSettings() {
+        const serverSettings = {
+            emailNotifications: serverNotificationSettings.email_notifications !== false,
+            pushNotifications: serverNotificationSettings.push_enabled !== false,
+            weeklyDigest: serverNotificationSettings.weekly_digest_enabled === true,
+            newMaterials: serverNotificationSettings.new_materials !== false,
+            readingReminders: serverNotificationSettings.reading_reminders === true,
+            progressUpdates: serverNotificationSettings.progress_updates !== false
+        };
         try {
             const stored = window.pabasaStore.get(profileStorageKey, null);
-            if (stored && typeof stored === 'object') return stored;
+            if (stored && typeof stored === 'object') return { ...stored, ...serverSettings };
             if (stored !== null && stored !== undefined) return stored;
         } catch (e) {
             // ignore
         }
         try {
             const raw = localStorage.getItem(profileStorageKey) || "{}";
-            return JSON.parse(raw || "{}") || {};
+            return { ...(JSON.parse(raw || "{}") || {}), ...serverSettings };
         } catch (e) {
-            return {};
+            return serverSettings;
         }
     }
 
@@ -663,6 +672,17 @@ function initProfilePage() {
             try { localStorage.setItem(profileStorageKey, JSON.stringify(settings)); } catch (e2) { /* ignore */ }
         }
         try { window.dispatchEvent(new CustomEvent('pabasa:preferences-updated', { detail: settings })); } catch (e) {}
+    }
+
+    function saveNotificationSettingsToServer(settings) {
+        return postProfileAction("save_notification_settings", {
+            email_notifications: settings.emailNotifications ? "true" : "false",
+            push_enabled: settings.pushNotifications ? "true" : "false",
+            weekly_digest_enabled: settings.weeklyDigest ? "true" : "false",
+            new_materials: settings.newMaterials !== false ? "true" : "false",
+            reading_reminders: settings.readingReminders ? "true" : "false",
+            progress_updates: settings.progressUpdates !== false ? "true" : "false"
+        });
     }
 
     function updatePreferenceState(toggle, isEnabled) {
@@ -706,6 +726,13 @@ function initProfilePage() {
 
             saveProfileSettings(settings);
             updatePreferenceState(toggle, isEnabled);
+            saveNotificationSettingsToServer(settings).then(function (data) {
+                if (!data.success) {
+                    showToast(data.error || "Could not save preferences.", "error");
+                }
+            }).catch(function () {
+                showToast("Could not save preferences. Please try again.", "error");
+            });
 
             // Logic for "In-App Alerts" (Push Notifications)
             if (toggle === pushNotifToggle && isEnabled) {

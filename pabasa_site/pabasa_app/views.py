@@ -249,25 +249,28 @@ def _current_user(request):
 def _admin_users():
     return User.objects.filter(role='admin', is_archived=False)
 
-def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None, email_subject=None, email_body=None, send_email=True):
+def _create_notification(recipient, title, message, notification_type='info', action_url='', created_by=None, email_subject=None, email_body=None, send_email=True, force_in_app=False):
     if not recipient:
         return None
-    notification = Notification.objects.create(
-        recipient=recipient,
-        created_by=created_by,
-        title=title,
-        message=message,
-        notification_type=notification_type,
-        action_url=action_url or '',
-    )
+
+    settings_dict = _notification_settings_for_user(recipient)
+    notification = None
+    if force_in_app or settings_dict.get('push_enabled') is True:
+        notification = Notification.objects.create(
+            recipient=recipient,
+            created_by=created_by,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            action_url=action_url or '',
+        )
 
     if not send_email:
         return notification
 
     # REAL-TIME EMAIL DISPATCH: Send email immediately if user preference allows
     try:
-        settings_dict = _notification_settings_for_user(recipient)
-        if settings_dict.get('email_notifications') is True:
+        if settings_dict.get('email_notifications') is True and getattr(recipient, 'email', ''):
             send_mail(
                 email_subject if email_subject is not None else title,
                 email_body if email_body is not None else message,
@@ -1559,24 +1562,40 @@ def _notification_settings_defaults(user):
     return {
         'push_enabled': True,
         'email_notifications': True,
+        'weekly_digest_enabled': False,
         'new_materials': True,
         'reading_reminders': getattr(user, 'role', '') == 'student',
         'progress_updates': True,
     }
 
 def _notification_settings_for_user(user):
+    saved_settings = _get_profile_dict(user, 'notification_settings')
+    if not isinstance(saved_settings, dict):
+        saved_settings = {}
     return {
         **_notification_settings_defaults(user),
-        **_get_profile_dict(user, 'notification_settings'),
+        **saved_settings,
     }
 
 def _posted_notification_settings(request):
     return {
         'push_enabled': request.POST.get('push_enabled') == 'on',
         'email_notifications': request.POST.get('email_notifications') == 'on',
+        'weekly_digest_enabled': request.POST.get('weekly_digest_enabled') == 'on',
         'new_materials': request.POST.get('new_materials') == 'on',
         'reading_reminders': request.POST.get('reading_reminders') == 'on',
         'progress_updates': request.POST.get('progress_updates') == 'on',
+    }
+
+def _json_notification_settings(data, user):
+    defaults = _notification_settings_defaults(user)
+    return {
+        'push_enabled': bool(data.get('push_enabled', defaults['push_enabled'])),
+        'email_notifications': bool(data.get('email_notifications', defaults['email_notifications'])),
+        'weekly_digest_enabled': bool(data.get('weekly_digest_enabled', defaults['weekly_digest_enabled'])),
+        'new_materials': bool(data.get('new_materials', defaults['new_materials'])),
+        'reading_reminders': bool(data.get('reading_reminders', defaults['reading_reminders'])),
+        'progress_updates': bool(data.get('progress_updates', defaults['progress_updates'])),
     }
 
 def _get_dashboard_data():
@@ -2632,6 +2651,32 @@ def profile(request):
             logger.info(f"Password changed for user {user.custom_id}")
             return JsonResponse({'success': True, 'message': 'Password changed successfully'})
 
+        # Handle notification preference changes from the profile page.
+        elif request.POST.get('save_notification_settings') == 'true':
+            try:
+                data = {}
+                if request.content_type == 'application/json':
+                    data = json.loads(request.body or '{}')
+                else:
+                    data = {
+                        'push_enabled': request.POST.get('push_enabled') == 'true',
+                        'email_notifications': request.POST.get('email_notifications') == 'true',
+                        'weekly_digest_enabled': request.POST.get('weekly_digest_enabled') == 'true',
+                        'new_materials': request.POST.get('new_materials') == 'true',
+                        'reading_reminders': request.POST.get('reading_reminders') == 'true',
+                        'progress_updates': request.POST.get('progress_updates') == 'true',
+                    }
+                notification_settings = _json_notification_settings(data, user)
+                _set_profile_dict(user, 'notification_settings', notification_settings)
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Notification preferences saved.',
+                    'notification_settings': notification_settings,
+                })
+            except Exception as e:
+                logger.error(f"Error saving notification preferences for {user.custom_id}: {str(e)}")
+                return JsonResponse({'success': False, 'error': str(e)})
+
         # Handle account deactivation
         elif request.POST.get('deactivate_account') == 'true':
             try:
@@ -2781,6 +2826,7 @@ def profile(request):
         'role_display': role_display,
         'initials': initials,
         'bio': bio,
+        'notification_settings': _notification_settings_for_user(user),
     })
 
 def notifications(request):

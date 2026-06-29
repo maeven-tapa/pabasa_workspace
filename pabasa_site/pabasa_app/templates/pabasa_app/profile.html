@@ -725,19 +725,19 @@
                 <div class="profile-info-row">
                     <span class="profile-info-label">Email Alerts</span>
                     <div class="form-check form-switch">
-                        <input class="form-check-input" id="emailNotifToggle" type="checkbox" checked>
+                        <input class="form-check-input" id="emailNotifToggle" type="checkbox" {% if notification_settings.email_notifications %}checked{% endif %}>
                     </div>
                 </div>
                 <div class="profile-info-row">
                     <span class="profile-info-label">In-App Alerts</span>
                     <div class="form-check form-switch">
-                        <input class="form-check-input" id="pushNotifToggle" type="checkbox" checked>
+                        <input class="form-check-input" id="pushNotifToggle" type="checkbox" {% if notification_settings.push_enabled %}checked{% endif %}>
                     </div>
                 </div>
                 <div class="profile-info-row">
                     <span class="profile-info-label">Weekly Digest</span>
                     <div class="form-check form-switch">
-                        <input class="form-check-input" id="digestToggle" type="checkbox">
+                        <input class="form-check-input" id="digestToggle" type="checkbox" {% if notification_settings.weekly_digest_enabled %}checked{% endif %}>
                     </div>
                 </div>
             </div>
@@ -918,6 +918,7 @@
 {{ email|json_script:"profileEmail" }}
 {{ pabasa_id|json_script:"profilePabasaId" }}
 {{ role_display|json_script:"profileRoleDisplay" }}
+{{ notification_settings|json_script:"profileNotificationSettings" }}
 
 <script>
     (function() {

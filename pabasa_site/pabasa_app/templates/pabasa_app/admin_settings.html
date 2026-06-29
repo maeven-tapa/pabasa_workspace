@@ -25,6 +25,10 @@
                         <label class="form-check-label" for="emailNotifications">Email Notifications</label>
                     </div>
                     <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="weeklyDigestEnabled" name="weekly_digest_enabled" {% if notification_settings.weekly_digest_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="weeklyDigestEnabled">Weekly Digest</label>
+                    </div>
+                    <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="newMaterials" name="new_materials" {% if notification_settings.new_materials %}checked{% endif %}>
                         <label class="form-check-label" for="newMaterials">New materials and assignments</label>
                     </div>
