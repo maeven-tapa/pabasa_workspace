@@ -313,6 +313,60 @@
             word-wrap: break-word;
         }
 
+        .reading-word .syllable {
+            display: inline-block;
+            border-radius: 0.3em;
+            padding: 0.02em 0.12em;
+            transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+
+        .reading-word .syllable.is-read {
+            background: #e7f7ec;
+            color: #2f9e44;
+        }
+
+        .reading-word .syllable.is-current {
+            background: #ddebff;
+            color: #0f172a;
+            transform: translateY(-1px);
+        }
+
+        .reading-word .word-gap {
+            display: inline-block;
+            width: 0.28em;
+        }
+
+        .speech-panel {
+            background: rgba(255, 253, 247, 0.92);
+            border: 1px solid rgba(31, 111, 139, 0.16);
+            border-radius: 16px;
+            color: var(--muted);
+            display: grid;
+            gap: 0.35rem;
+            font-size: 0.92rem;
+            font-weight: 800;
+            margin-inline: auto;
+            max-width: min(920px, 100%);
+            padding: 0.75rem 0.9rem;
+            position: relative;
+            text-align: center;
+            width: 100%;
+            z-index: 1;
+        }
+
+        .speech-panel strong {
+            color: var(--accent-deep);
+            font-weight: 900;
+        }
+
+        .speech-panel.is-listening strong {
+            color: #15803d;
+        }
+
+        .speech-transcript {
+            overflow-wrap: anywhere;
+        }
+
         .content-word .reading-word {
             font-size: clamp(1.8rem, 6vw, 3.8rem);
             letter-spacing: 0.03em;
@@ -760,6 +814,22 @@
         body.dark-theme .summary-tile strong {
             color: #f1f5f9 !important;
         }
+        body.dark-theme .speech-panel {
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #cbd5e1 !important;
+        }
+        body.dark-theme .speech-panel strong {
+            color: #38bdf8 !important;
+        }
+        body.dark-theme .reading-word .syllable.is-read {
+            background: rgba(34, 197, 94, 0.16) !important;
+            color: #86efac !important;
+        }
+        body.dark-theme .reading-word .syllable.is-current {
+            background: rgba(56, 189, 248, 0.22) !important;
+            color: #f8fafc !important;
+        }
         body.dark-theme .summary-tile span {
             color: #94a3b8 !important;
         }
@@ -844,6 +914,10 @@
                 <section class="word-stage" aria-live="polite" aria-atomic="true">
                     <h1 class="reading-word" id="readingWord">{% block initial_text %}{% endblock %}</h1>
                 </section>
+                <div class="speech-panel" id="speechPanel">
+                    <strong id="speechStatus">Ready to start reading</strong>
+                    <span class="speech-transcript" id="speechTranscript">Google Speech results will appear here while you read.</span>
+                </div>
                 <div class="reader-footer">
                     <button class="nav-btn nav-prev" id="prevBtn" type="button" aria-label="Previous item">Back</button>
                     

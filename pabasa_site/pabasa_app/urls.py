@@ -55,6 +55,7 @@ urlpatterns = [
     path('dashboard/assessment/reading_ui/word/', views.reading_word_page, name='reading_word_page'),
     path('dashboard/assessment/reading_ui/sentence/', views.reading_sentence_page, name='reading_sentence_page'),
     path('dashboard/assessment/reading_ui/para/', views.reading_para_page, name='reading_para_page'),
+    path('api/reading/transcribe/', views.reading_transcribe_api, name='reading_transcribe_api'),
     path('dashboard/practice/word/', views.practice_word_page, name='practice_word_page'),
     path('dashboard/practice/sentence/', views.practice_sentence_page, name='practice_sentence_page'),
     path('dashboard/practice/paragraph/', views.practice_para_page, name='practice_para_page'),

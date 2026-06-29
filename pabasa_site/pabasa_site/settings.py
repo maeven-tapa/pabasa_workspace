@@ -163,5 +163,10 @@ EMAIL_HOST_USER = 'pabasa.tupc@gmail.com'
 EMAIL_HOST_PASSWORD = 'sfsy zplk rmku bdxt'
 DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
 
+# Google Cloud Speech-to-Text settings used by the reading assessment UI.
+GOOGLE_STT_API_KEY = 'AIzaSyD1NqLTpMSzmkAdFX6UpcuJ-y4bT9mrXbk'
+GOOGLE_CLOUD_PROJECT_ID = 'direct-outlet-499701-p6'
+GOOGLE_STT_LOCATION = 'global'
+
 # When a CSRF failure occurs, prefer a JSON response for AJAX requests so frontend can handle it.
 CSRF_FAILURE_VIEW = 'pabasa_app.views.csrf_failure'

@@ -29,6 +29,12 @@ import re
 import traceback
 from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course
 from .reading_material_utils import format_assigned_week_display, parse_assigned_week
+from .reading_stt import (
+    analyze_reading,
+    language_code_for,
+    phrase_hints_for,
+    transcribe_audio_bytes,
+)
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -2417,6 +2423,59 @@ def reading_sentence_page(request):
 def reading_para_page(request):
     return render(request, 'pabasa_app/reading_para_page.html', _dashboard_context(request))
 
+
+@csrf_protect
+@require_http_methods(["POST"])
+def reading_transcribe_api(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    audio = request.FILES.get('audio')
+    target_text = (request.POST.get('target_text') or '').strip()
+    if not audio:
+        return JsonResponse({'success': False, 'error': 'Audio is required.'}, status=400)
+    if not target_text:
+        return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
+
+    try:
+        current_syllable_index = int(request.POST.get('current_syllable_index') or 0)
+    except (TypeError, ValueError):
+        current_syllable_index = 0
+
+    mode = (request.POST.get('mode') or '').strip().lower()
+    language = (request.POST.get('language') or '').strip()
+    language_code = language_code_for(language, mode)
+    phrase_hints = phrase_hints_for(language, mode)
+    api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
+    project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
+    location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()
+
+    if not api_key:
+        return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
+
+    try:
+        transcript = transcribe_audio_bytes(
+            audio.read(),
+            api_key,
+            language_code=language_code,
+            phrase_hints=phrase_hints,
+            model='chirp_3',
+            project_id=project_id,
+            location=location,
+            mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+        )
+        analysis = analyze_reading(target_text, current_syllable_index, transcript)
+        analysis.update({
+            'success': True,
+            'language_code': language_code,
+            'stt_model': 'chirp_3',
+        })
+        return JsonResponse(analysis)
+    except Exception as exc:
+        logger.exception('Reading transcription failed')
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
 def _student_practice_queryset():
     return Practice.objects.filter(
         section__isnull=True,
@@ -4226,6 +4285,7 @@ def get_class_materials(request):
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
+                    'language': (m.content_json or {}).get('language', ''),
                 }
             elif kind == 'assessment':
                 a = obj
@@ -4268,6 +4328,7 @@ def get_class_materials(request):
                     'assigned_sections': [a.section.class_code] if a.section else [],
                     'assigned_week': None,
                     'assigned_week_display': format_assigned_week_display(None),
+                    'language': '',
                 }
             else:
                 # practice
@@ -4297,6 +4358,7 @@ def get_class_materials(request):
                     'assigned_sections': [],
                     'assigned_week': None,
                     'assigned_week_display': format_assigned_week_display(None),
+                    'language': '',
                 }
 
             if item.get('item_type') in materials:

@@ -49,6 +49,11 @@
         let recognitionActive = false;
         let spokenTranscript = "";
         let latestScores = null;
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let isSendingChunk = false;
+        let currentSyllableIndex = 0;
+        let currentMaterialLanguage = "";
 
         function getCsrfToken() {
             const cookieToken = document.cookie.split('; ')
@@ -86,6 +91,7 @@
             Object.keys(readings).forEach(key => readingsMap[key.toUpperCase()] = readings[key]);
 
             let aggregatedItems = [];
+            currentMaterialLanguage = "";
             codes.forEach(code => {
                 const upperCode = String(code).toUpperCase();
                 const classReadings = readingsMap[upperCode];
@@ -103,6 +109,9 @@
                             
                             if (isAssessment && (matchesTarget || (!testTitle && !materialId && aggregatedItems.length === 0))) {
                                 aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
+                                if (!currentMaterialLanguage && material.language) {
+                                    currentMaterialLanguage = material.language;
+                                }
                             }
                         });
                     }
@@ -223,63 +232,178 @@
             });
         }
 
-        function setupSpeechRecognition() {
-            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!Recognition) return null;
-            const instance = new Recognition();
-            instance.lang = "en-US";
-            instance.continuous = true;
-            instance.interimResults = true;
-            instance.onresult = (event) => {
-                let text = "";
-                for (let i = 0; i < event.results.length; i++) {
-                    text += event.results[i][0]?.transcript || "";
-                    text += " ";
-                }
-                spokenTranscript = text.trim();
-            };
-            instance.onend = () => {
-                recognitionActive = false;
-                if (isRecording && !isMuted && !isReviewMode) {
-                    try {
-                        instance.start();
-                        recognitionActive = true;
-                    } catch (error) {
-                        console.warn("PABASA: Speech recognition restart failed", error);
-                    }
-                }
-            };
-            instance.onerror = (event) => {
-                console.warn("PABASA: Speech recognition error", event.error);
-            };
-            return instance;
+        function setSpeechStatus(message, detail = "", listening = false) {
+            const panel = document.getElementById("speechPanel");
+            const status = document.getElementById("speechStatus");
+            const transcript = document.getElementById("speechTranscript");
+            panel?.classList.toggle("is-listening", listening);
+            if (status) status.textContent = message;
+            if (transcript) transcript.textContent = detail || "Google Speech results will appear here while you read.";
         }
 
-        function startSpeechRecognition() {
-            if (isReviewMode || isMuted) return;
-            recognition = recognition || setupSpeechRecognition();
-            if (!recognition || recognitionActive) return;
+        function pickAudioMimeType() {
+            const candidates = [
+                "audio/webm;codecs=opus",
+                "audio/webm",
+                "audio/ogg;codecs=opus",
+                "audio/ogg",
+            ];
+            return candidates.find(type => window.MediaRecorder?.isTypeSupported?.(type)) || "";
+        }
+
+        async function startSpeechRecognition() {
+            if (isReviewMode || isMuted || recognitionActive) return;
+            if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+                setSpeechStatus("Speech recording is unavailable in this browser.", "Use a current Chrome or Edge browser for live Google Speech checking.");
+                return;
+            }
             try {
-                recognition.start();
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mimeType = pickAudioMimeType();
+                mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size > 0 && isRecording && !isMuted) {
+                        sendAudioChunk(event.data);
+                    }
+                };
+                mediaRecorder.onerror = (event) => {
+                    console.warn("PABASA: MediaRecorder error", event.error);
+                    setSpeechStatus("Speech recorder error.", event.error?.message || "Please try starting again.");
+                };
+                mediaRecorder.start(3000);
                 recognitionActive = true;
+                setSpeechStatus("Listening with Google Speech...", "Read the text on screen. Correct syllables will highlight as they are confirmed.", true);
             } catch (error) {
-                console.warn("PABASA: Speech recognition unavailable", error);
+                console.warn("PABASA: Microphone unavailable", error);
+                setSpeechStatus("Microphone access was not allowed.", "Please allow microphone access and try again.");
             }
         }
 
         function stopSpeechRecognition() {
-            if (!recognition || !recognitionActive) return;
             try {
-                recognition.stop();
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop();
+                }
             } catch (error) {
-                console.warn("PABASA: Speech recognition stop failed", error);
+                console.warn("PABASA: MediaRecorder stop failed", error);
             }
+            mediaStream?.getTracks().forEach(track => track.stop());
+            mediaStream = null;
+            mediaRecorder = null;
             recognitionActive = false;
+            setSpeechStatus("Speech check stopped.", spokenTranscript || "No speech transcript was captured.");
+        }
+
+        async function sendAudioChunk(blob) {
+            if (isSendingChunk || !items[currentIndex]) return;
+            isSendingChunk = true;
+            const formData = new FormData();
+            formData.append("audio", blob, `reading-${Date.now()}.webm`);
+            formData.append("target_text", items[currentIndex]);
+            formData.append("current_syllable_index", String(currentSyllableIndex));
+            formData.append("mode", mode);
+            formData.append("language", currentMaterialLanguage || "");
+
+            try {
+                const response = await fetch("/api/reading/transcribe/", {
+                    method: "POST",
+                    headers: { "X-CSRFToken": getCsrfToken() },
+                    credentials: "same-origin",
+                    body: formData,
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || "Speech check failed.");
+                }
+                handleSpeechResult(data);
+            } catch (error) {
+                console.warn("PABASA: Reading transcription failed", error);
+                setSpeechStatus("Speech check had trouble.", error.message || "Keep reading, then try again.");
+            } finally {
+                isSendingChunk = false;
+            }
+        }
+
+        function handleSpeechResult(data) {
+            const transcript = (data.transcript || "").trim();
+            if (transcript) {
+                spokenTranscript = [spokenTranscript, transcript].filter(Boolean).join(" ");
+            }
+            currentSyllableIndex = Number(data.current_syllable_index || currentSyllableIndex || 0);
+            renderSyllableDisplay(data);
+
+            if (data.complete) {
+                setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
+                if (currentIndex >= items.length - 1) {
+                    isRecording = false;
+                    stopSpeechRecognition();
+                    showCompletion(true);
+                } else {
+                    window.setTimeout(() => {
+                        currentIndex += 1;
+                        currentSyllableIndex = 0;
+                        updateUI();
+                        setSpeechStatus("Next item loaded.", "Keep reading clearly.", true);
+                    }, 700);
+                }
+                return;
+            }
+
+            if (Number(data.matched || 0) > 0) {
+                setSpeechStatus(
+                    `Matched ${data.matched} syllable${Number(data.matched) === 1 ? "" : "s"}.`,
+                    `Words: ${transcript || "..."}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}`,
+                    true
+                );
+            } else {
+                const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
+                setSpeechStatus(nextHint, transcript ? `Words: ${transcript}` : "No speech detected. Keep reading.", true);
+            }
+        }
+
+        function renderSyllableDisplay(data) {
+            if (!readingWord || !Array.isArray(data.words) || !Array.isArray(data.word_syllable_ranges)) return;
+            readingWord.textContent = "";
+            data.words.forEach((word, wordIndex) => {
+                if (wordIndex > 0) {
+                    const gap = document.createElement("span");
+                    gap.className = "word-gap";
+                    gap.textContent = " ";
+                    readingWord.appendChild(gap);
+                }
+                const range = data.word_syllable_ranges[wordIndex] || [0, 0];
+                const wordSyllables = (data.syllables || []).slice(range[0], range[1]);
+                if (!wordSyllables.length) {
+                    readingWord.appendChild(document.createTextNode(word));
+                    return;
+                }
+                wordSyllables.forEach((syllable, offset) => {
+                    if (offset > 0) readingWord.appendChild(document.createTextNode("-"));
+                    const syllableIndex = range[0] + offset;
+                    const span = document.createElement("span");
+                    span.className = "syllable";
+                    if (syllableIndex < currentSyllableIndex) span.classList.add("is-read");
+                    else if (syllableIndex === currentSyllableIndex) span.classList.add("is-current");
+                    span.textContent = syllable;
+                    readingWord.appendChild(span);
+                });
+            });
+            if (progressFill && typeof data.progress === "number") {
+                progressFill.style.width = `${((currentIndex + (data.progress / 100)) / items.length) * 100}%`;
+            }
+        }
+
+        async function waitForPendingSpeech(maxMs = 3500) {
+            const started = Date.now();
+            while (isSendingChunk && Date.now() - started < maxMs) {
+                await new Promise(resolve => window.setTimeout(resolve, 100));
+            }
         }
 
         function updateUI() {
             if (!items.length) return;
             if (readingWord) readingWord.textContent = items[currentIndex];
+            currentSyllableIndex = 0;
             const label = mode.charAt(0).toUpperCase() + mode.slice(1);
             if (counter) counter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
             if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
@@ -433,6 +557,7 @@
             startTime = Date.now();
             spokenTranscript = "";
             latestScores = null;
+            currentSyllableIndex = 0;
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
             startSpeechRecognition();
@@ -440,9 +565,18 @@
             console.log("PABASA: Assessment recording and timer started.");
         };
 
-        const stopReading = () => {
+        const stopReading = async () => {
             if (isReviewMode) return;
             if (!isRecording) return;
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                try {
+                    mediaRecorder.requestData();
+                    await new Promise(resolve => window.setTimeout(resolve, 300));
+                    await waitForPendingSpeech();
+                } catch (error) {
+                    console.warn("PABASA: Final audio request failed", error);
+                }
+            }
             isRecording = false;
             stopSpeechRecognition();
             const reachedLastItem = items.length > 0 && currentIndex === items.length - 1;
@@ -518,7 +652,10 @@
             if (isReviewMode) return;
             shell.classList.remove("is-complete");
             currentIndex = 0;
+            currentSyllableIndex = 0;
+            spokenTranscript = "";
             updateUI();
+            setSpeechStatus("Ready to start reading");
             closePauseMenu();
         });
         quitBtn?.addEventListener("click", goBackToAssessments);
