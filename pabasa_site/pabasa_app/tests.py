@@ -704,6 +704,12 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertIn("/dashboard/teacher/students-api/", helper_body)
         self.assertNotIn("pabasa_added_students", helper_body)
 
+    def test_course_update_composer_includes_report_preview_container(self):
+        response = self.client.get(reverse("courses"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="courseSelectedStudentReportPreview"', html=False)
+
     @patch("pabasa_app.views.send_mail")
     def test_send_course_update_emails_student_and_stores_note(self, mock_send_mail):
         course = Course.objects.create(
@@ -713,6 +719,27 @@ class TeacherStudentsDirectoryTests(TestCase):
             description="Course update test",
         )
         course.sections.add(self.section_a)
+        assessment = Assessment.objects.create(
+            teacher=self.teacher,
+            section=self.section_a,
+            title="Oral Reading Check",
+            code="ASM-COURSE-001",
+            assessment_type="paragraph",
+            status="published",
+            is_active=True,
+        )
+        assessment.record_attempt(
+            self.student,
+            status="completed",
+            completed_at="2026-06-01T09:00:00+00:00",
+            accuracy=88,
+            wpm=72,
+            fluency_score=84,
+            pronunciation_score=86,
+            time_score=90,
+            total_score=87,
+            crla_classification="Transitioning Readers",
+        )
 
         response = self.client.post(
             reverse("send_course_update"),
@@ -730,10 +757,109 @@ class TeacherStudentsDirectoryTests(TestCase):
         data = response.json()
         self.assertTrue(data["success"])
         self.assertEqual(data["sent_count"], 1)
+        self.assertTrue(data["report_included"])
+        self.assertIn("report_summary", data["sent"][0])
         mock_send_mail.assert_called_once()
-        self.assertIn("Single Student", mock_send_mail.call_args[0][1])
+        email_body = mock_send_mail.call_args[0][1]
+        self.assertIn("Hello Single Student, keep practicing.", email_body)
+        self.assertIn("Reading Performance Report", email_body)
+        self.assertIn("Accuracy: 88%", email_body)
+        self.assertIn("Words Per Minute: 72 WPM", email_body)
+        self.assertIn("Transitioning Readers", email_body)
 
         note = Note.objects.get(teacher=self.teacher, student=self.student)
         self.assertEqual(note.note_type, "course_update:general")
         self.assertIn("Chapter 2", note.note_text)
         self.assertIn("Hello Single Student, keep practicing.", note.note_text)
+        self.assertIn("Reading Performance Report", note.note_text)
+        self.assertIn("Suggested Home Support", note.note_text)
+
+    @patch("pabasa_app.views.send_mail")
+    def test_send_course_update_includes_baseline_message_when_metrics_missing(self, mock_send_mail):
+        course = Course.objects.create(
+            teacher=self.teacher,
+            title="Chapter 3",
+            code="CRS-TEST-002",
+            description="Missing metrics test",
+        )
+        course.sections.add(self.section_a)
+
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": course.id,
+                "student_ids": [self.student.id],
+                "update_type": "followup",
+                "message": "Hello {name}, we will check your baseline soon.",
+            }),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        email_body = mock_send_mail.call_args[0][1]
+        self.assertIn("No completed assessment yet", email_body)
+        self.assertIn("baseline reading assessment", email_body)
+
+        note = Note.objects.get(teacher=self.teacher, student=self.student)
+        self.assertIn("No completed assessment yet", note.note_text)
+
+    @patch("pabasa_app.views.send_mail")
+    def test_send_course_update_skips_unenrolled_and_missing_email_students(self, mock_send_mail):
+        no_email_student = User.objects.create(
+            custom_id="STD-NOEMAIL",
+            role="student",
+            first_name="No",
+            last_name="Email",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=3,
+            birth_day=3,
+            birth_year=2013,
+            email="",
+            password_hash=make_password("student-password"),
+        )
+        outsider = User.objects.create(
+            custom_id="STD-OUTSIDE",
+            role="student",
+            first_name="Outside",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=4,
+            birth_day=4,
+            birth_year=2013,
+            email="outside@example.com",
+            password_hash=make_password("student-password"),
+        )
+        self.section_a.add_student(no_email_student)
+        course = Course.objects.create(
+            teacher=self.teacher,
+            title="Chapter 4",
+            code="CRS-TEST-003",
+            description="Skipped recipient test",
+        )
+        course.sections.add(self.section_a)
+
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": course.id,
+                "student_ids": [self.student.id, no_email_student.id, outsider.id],
+                "update_type": "general",
+                "message": "Hello {name}, keep reading.",
+            }),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["sent_count"], 1)
+        self.assertEqual(len(data["skipped"]), 2)
+        self.assertCountEqual([item["reason"] for item in data["skipped"]], ["missing_email", "not_enrolled"])
+        mock_send_mail.assert_called_once()

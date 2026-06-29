@@ -477,6 +477,132 @@ def _section_active_students(section):
     ]
     return User.objects.filter(id__in=student_ids, role='student', is_archived=False)
 
+
+def _latest_student_reading_report(student_user, sections=None, course=None):
+    """Build the latest reading report for a student from assessment attempts/profile data."""
+    profile = _get_profile_dict(student_user, 'student_profile')
+    if not isinstance(profile, dict):
+        profile = {}
+
+    latest = {}
+    latest_dt = None
+    if sections is not None:
+        assessments = Assessment.objects.filter(section__in=sections, is_active=True)
+        for assessment in assessments:
+            attempts = getattr(assessment, 'attempts', None) or []
+            if not isinstance(attempts, list):
+                continue
+            for attempt in attempts:
+                if not isinstance(attempt, dict) or attempt.get('status') != 'completed':
+                    continue
+                try:
+                    sid = int(attempt.get('student_id'))
+                except (TypeError, ValueError):
+                    continue
+                if sid != student_user.id:
+                    continue
+
+                raw_completed_at = attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at') or ''
+                completed_dt = _parse_attempt_timestamp(raw_completed_at)
+                is_newer = False
+                if completed_dt and latest_dt:
+                    is_newer = completed_dt > latest_dt
+                elif completed_dt and not latest_dt:
+                    is_newer = True
+                elif not latest and raw_completed_at:
+                    is_newer = True
+                elif latest and raw_completed_at and str(raw_completed_at) > str(latest.get('completed_at', '')):
+                    is_newer = True
+
+                if not latest or is_newer:
+                    latest_dt = completed_dt or latest_dt
+                    latest = {
+                        'completed_at': raw_completed_at,
+                        'assessment_title': assessment.title,
+                        'assessment_type': assessment.assessment_type,
+                        'level': attempt.get('crla_classification') or attempt.get('classification'),
+                        'accuracy': attempt.get('accuracy'),
+                        'wpm': attempt.get('wpm'),
+                        'fluency_score': attempt.get('fluency_score'),
+                        'pronunciation_score': attempt.get('pronunciation_score'),
+                        'time_score': attempt.get('time_score'),
+                        'total_score': attempt.get('total_score'),
+                    }
+
+    report = {
+        'student_name': f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id or 'Student',
+        'course_name': getattr(course, 'title', '') or '',
+        'course_code': getattr(course, 'code', '') or '',
+        'reading_level': latest.get('level') or student_user.reading_level or profile.get('reading_level') or profile.get('crla_classification') or '',
+        'accuracy': latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy'),
+        'wpm': latest.get('wpm') if latest.get('wpm') is not None else profile.get('wpm'),
+        'fluency_score': latest.get('fluency_score') if latest.get('fluency_score') is not None else profile.get('fluency_score'),
+        'pronunciation_score': latest.get('pronunciation_score') if latest.get('pronunciation_score') is not None else profile.get('pronunciation_score'),
+        'time_score': latest.get('time_score') if latest.get('time_score') is not None else profile.get('time_score'),
+        'total_score': latest.get('total_score') if latest.get('total_score') is not None else profile.get('total_score'),
+        'completed_at': latest.get('completed_at') or profile.get('last_assessment_at') or '',
+        'assessment_title': latest.get('assessment_title') or profile.get('last_assessment_title') or '',
+        'assessment_type': latest.get('assessment_type') or '',
+        'has_completed_assessment': bool(latest),
+    }
+
+    accuracy = _as_float(report.get('accuracy'), default=None)
+    wpm = _as_float(report.get('wpm'), default=None)
+    fluency = _as_float(report.get('fluency_score'), default=None)
+    pronunciation = _as_float(report.get('pronunciation_score'), default=None)
+    total_score = _as_float(report.get('total_score'), default=None)
+
+    if not report['has_completed_assessment'] and not any(value not in (None, '', '0', 0) for value in [
+        report.get('accuracy'), report.get('wpm'), report.get('fluency_score'),
+        report.get('pronunciation_score'), report.get('time_score'), report.get('total_score')
+    ]):
+        recommendation = "No completed assessment is available yet. Schedule or complete a baseline reading assessment to establish the student's current level."
+    elif accuracy is not None and accuracy < 80:
+        recommendation = "Focus on decoding, word recognition, and short guided rereading practice before increasing passage difficulty."
+    elif wpm is not None and wpm < 60:
+        recommendation = "Build reading speed through short daily fluency drills and repeated oral reading for 10 minutes."
+    elif (fluency is not None and fluency < 80) or (pronunciation is not None and pronunciation < 80):
+        recommendation = "Use guided oral rereading, teacher modeling, and pronunciation practice to improve clarity and expression."
+    elif total_score is not None and total_score >= 85:
+        recommendation = "Commend the student's consistency and continue regular reading practice to sustain progress."
+    else:
+        recommendation = "Continue steady home reading practice and review teacher-assigned materials to strengthen fluency and confidence."
+
+    report['recommendation'] = recommendation
+    report['summary'] = (
+        "No completed assessment yet"
+        if not report['has_completed_assessment']
+        else f"{report.get('reading_level') or 'Reading level pending'} - "
+             f"{report.get('accuracy') if report.get('accuracy') not in (None, '') else 'No'}% accuracy, "
+             f"{report.get('wpm') if report.get('wpm') not in (None, '') else 'No'} WPM"
+    )
+    return report
+
+
+def _format_reading_report_text(report):
+    def metric(label, value, suffix=''):
+        if value in (None, ''):
+            return f"{label}: Not yet available"
+        return f"{label}: {value}{suffix}"
+
+    lines = [
+        "Reading Performance Report",
+        f"Student: {report.get('student_name') or 'Student'}",
+        f"Course: {report.get('course_name') or 'Course'} ({report.get('course_code') or 'No code'})",
+        f"Reading Level / CRLA Classification: {report.get('reading_level') or 'Not yet available'}",
+        metric("Accuracy", report.get('accuracy'), "%"),
+        metric("Words Per Minute", report.get('wpm'), " WPM"),
+        metric("Fluency Score", report.get('fluency_score'), "%"),
+        metric("Pronunciation Score", report.get('pronunciation_score'), "%"),
+        metric("Time Score", report.get('time_score'), "%"),
+        metric("Total Score", report.get('total_score'), "%"),
+        f"Latest Completed Assessment: {report.get('completed_at') or 'No completed assessment yet'}",
+        f"Suggested Home Support: {report.get('recommendation')}",
+    ]
+    if report.get('assessment_title'):
+        lines.insert(11, f"Assessment: {report.get('assessment_title')}")
+    return "\n".join(lines)
+
 # Authentication functions
 def generate_custom_id(role):
     """Generate unique custom ID based on role"""
@@ -2841,21 +2967,37 @@ def send_course_update(request):
             student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or 'Student'
             personalized_message = message_template.replace('{name}', student_name)
             subject = f"PABASA Course Update: {course.title}"
+            report = _latest_student_reading_report(student, sections=course_sections, course=course)
+            report_text = _format_reading_report_text(report)
+            email_body = (
+                f"Course: {course.title} ({course.code})\n"
+                f"Update Type: {update_type}\n\n"
+                f"Teacher Comments:\n"
+                f"{personalized_message}\n\n"
+                f"{report_text}"
+            )
             note_text = (
                 f"Course: {course.title} ({course.code})\n"
                 f"Update Type: {update_type}\n"
                 f"Recipient Email: {student.email}\n\n"
-                f"{personalized_message}"
+                f"Teacher Comments:\n"
+                f"{personalized_message}\n\n"
+                f"{report_text}"
             )
 
-            send_mail(subject, personalized_message, sender, [student.email], fail_silently=False)
+            send_mail(subject, email_body, sender, [student.email], fail_silently=False)
             Note.objects.create(
                 teacher=teacher_user,
                 student=student,
                 note_text=note_text,
                 note_type=f"course_update:{update_type}"[:50],
             )
-            sent.append({'student_id': student.id, 'email': student.email, 'name': student_name})
+            sent.append({
+                'student_id': student.id,
+                'email': student.email,
+                'name': student_name,
+                'report_summary': report.get('summary'),
+            })
 
         if not sent:
             return JsonResponse({
@@ -2869,6 +3011,7 @@ def send_course_update(request):
             'sent_count': len(sent),
             'sent': sent,
             'skipped': skipped,
+            'report_included': True,
         })
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
@@ -5070,6 +5213,8 @@ def get_teacher_students_api(request):
                     continue
                 latest_scores[student_id] = {
                     'completed_at': completed_at,
+                    'assessment_title': assessment.title,
+                    'assessment_type': assessment.assessment_type,
                     'level': attempt.get('crla_classification') or attempt.get('classification'),
                     'accuracy': attempt.get('accuracy'),
                     'wpm': attempt.get('wpm'),
@@ -5100,6 +5245,10 @@ def get_teacher_students_api(request):
                     'pronunciation_score': latest.get('pronunciation_score', profile.get('pronunciation_score')),
                     'time_score': latest.get('time_score', profile.get('time_score')),
                     'total_score': latest.get('total_score', profile.get('total_score')),
+                    'completed_at': latest.get('completed_at') or profile.get('last_assessment_at'),
+                    'assessment_title': latest.get('assessment_title', profile.get('last_assessment_title')),
+                    'assessment_type': latest.get('assessment_type'),
+                    'has_completed_assessment': bool(latest),
                 })
                 results.append(sdata)
         return JsonResponse({'success': True, 'students': results})

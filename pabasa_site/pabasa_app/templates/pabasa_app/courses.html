@@ -1363,6 +1363,103 @@
         padding: 0.8rem;
     }
 
+    .course-report-preview {
+        background: #f8faf9;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        display: grid;
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+
+    .course-report-preview-head {
+        align-items: flex-start;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+    }
+
+    .course-report-preview-title {
+        color: var(--dash-ink);
+        font-size: 0.95rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .course-report-preview-meta {
+        color: var(--dash-muted);
+        font-size: 0.78rem;
+        margin: 0.2rem 0 0;
+    }
+
+    .course-report-metric-grid {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .course-report-metric {
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 8px;
+        min-width: 0;
+        padding: 0.65rem;
+    }
+
+    .course-report-metric span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .course-report-metric strong {
+        color: var(--dash-primary-deep);
+        display: block;
+        font-size: 0.95rem;
+        margin-top: 0.15rem;
+        overflow-wrap: anywhere;
+    }
+
+    .course-report-recommendation {
+        background: #fff;
+        border-left: 3px solid var(--dash-primary);
+        border-radius: 8px;
+        color: var(--dash-ink);
+        font-size: 0.86rem;
+        line-height: 1.5;
+        margin: 0;
+        padding: 0.75rem;
+    }
+
+    .course-report-pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.45rem;
+    }
+
+    .course-report-pill {
+        background: #f8faf9;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 999px;
+        color: var(--dash-ink);
+        display: inline-flex;
+        font-size: 0.74rem;
+        font-weight: 700;
+        gap: 0.25rem;
+        line-height: 1.2;
+        padding: 0.25rem 0.55rem;
+    }
+
+    @media (max-width: 575.98px) {
+        .course-report-metric-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
     @media (max-width: 768px) {
         .classes-grid {
             grid-template-columns: 1fr;
@@ -1959,6 +2056,15 @@
                                                             <h6 class="fw-bold mb-3">Update Composer</h6>
                                                             <form id="courseParentUpdateTabForm" action="#" method="post">
                                                                 {% csrf_token %}
+                                                                <div class="course-report-preview" id="courseSelectedStudentReportPreview" aria-live="polite">
+                                                                    <div class="course-report-preview-head">
+                                                                        <div>
+                                                                            <p class="course-report-preview-title">Select a student to preview the reading report.</p>
+                                                                            <p class="course-report-preview-meta">The selected recipient will receive teacher comments plus their personalized performance report.</p>
+                                                                        </div>
+                                                                        <i class="bi bi-bar-chart text-primary"></i>
+                                                                    </div>
+                                                                </div>
                                                                 <div class="mb-3">
                                                                     <label class="form-label small fw-bold" for="courseParentUpdateTemplate">Update Type</label>
                                                                     <select class="form-select" id="courseParentUpdateTemplate" style="border-radius:10px;">
@@ -3545,6 +3651,109 @@
             });
         }
 
+        const courseReportStudentCache = {};
+
+        function courseReportMetricValue(value, suffix = '') {
+            if (value === undefined || value === null || value === '') return 'Not available';
+            return `${escapeHtml(value)}${suffix}`;
+        }
+
+        function getCourseReportRecommendation(student) {
+            const accuracy = Number(student?.accuracy);
+            const wpm = Number(student?.wpm);
+            const fluency = Number(student?.fluency_score);
+            const pronunciation = Number(student?.pronunciation_score);
+            const totalScore = Number(student?.total_score);
+            const hasAnyMetric = [
+                student?.accuracy,
+                student?.wpm,
+                student?.fluency_score,
+                student?.pronunciation_score,
+                student?.time_score,
+                student?.total_score
+            ].some(value => value !== undefined && value !== null && value !== '' && String(value) !== '0');
+
+            if (!student?.has_completed_assessment && !hasAnyMetric) {
+                return "No completed assessment is available yet. Schedule or complete a baseline reading assessment to establish the student's current level.";
+            }
+            if (!Number.isNaN(accuracy) && accuracy < 80) {
+                return 'Focus on decoding, word recognition, and short guided rereading practice before increasing passage difficulty.';
+            }
+            if (!Number.isNaN(wpm) && wpm < 60) {
+                return 'Build reading speed through short daily fluency drills and repeated oral reading for 10 minutes.';
+            }
+            if ((!Number.isNaN(fluency) && fluency < 80) || (!Number.isNaN(pronunciation) && pronunciation < 80)) {
+                return 'Use guided oral rereading, teacher modeling, and pronunciation practice to improve clarity and expression.';
+            }
+            if (!Number.isNaN(totalScore) && totalScore >= 85) {
+                return "Commend the student's consistency and continue regular reading practice to sustain progress.";
+            }
+            return 'Continue steady home reading practice and review teacher-assigned materials to strengthen fluency and confidence.';
+        }
+
+        function renderCourseReportPreview(courseId) {
+            const preview = document.getElementById('courseSelectedStudentReportPreview');
+            if (!preview) return;
+
+            const selectedIds = Array.from(document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:checked')).map(cb => String(cb.value));
+            const students = courseReportStudentCache[String(courseId)] || [];
+            const selectedStudents = selectedIds
+                .map(id => students.find(student => String(student.id || '') === id))
+                .filter(Boolean);
+
+            if (selectedStudents.length === 0) {
+                preview.innerHTML = `
+                    <div class="course-report-preview-head">
+                        <div>
+                            <p class="course-report-preview-title">Select a student to preview the reading report.</p>
+                            <p class="course-report-preview-meta">The selected recipient will receive teacher comments plus their personalized performance report.</p>
+                        </div>
+                        <i class="bi bi-bar-chart text-primary"></i>
+                    </div>`;
+                return;
+            }
+
+            if (selectedStudents.length > 1) {
+                const withMetrics = selectedStudents.filter(student => student.has_completed_assessment || student.accuracy || student.wpm);
+                preview.innerHTML = `
+                    <div class="course-report-preview-head">
+                        <div>
+                            <p class="course-report-preview-title">${selectedStudents.length} recipients selected</p>
+                            <p class="course-report-preview-meta">Each student will receive their own personalized reading performance report.</p>
+                        </div>
+                        <i class="bi bi-people text-primary"></i>
+                    </div>
+                    <div class="course-report-metric-grid">
+                        <div class="course-report-metric"><span>Reports With Data</span><strong>${withMetrics.length}</strong></div>
+                        <div class="course-report-metric"><span>Needs Baseline</span><strong>${selectedStudents.length - withMetrics.length}</strong></div>
+                    </div>
+                    <p class="course-report-recommendation">Review individual students one at a time for detailed stats. Sending now will generate separate report content for every selected recipient.</p>`;
+                return;
+            }
+
+            const student = selectedStudents[0];
+            const studentName = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
+            const latestAssessment = student.completed_at || 'No completed assessment yet';
+            const assessmentTitle = student.assessment_title ? ` - ${escapeHtml(student.assessment_title)}` : '';
+            preview.innerHTML = `
+                <div class="course-report-preview-head">
+                    <div>
+                        <p class="course-report-preview-title">${escapeHtml(studentName)}</p>
+                        <p class="course-report-preview-meta">Latest: ${escapeHtml(latestAssessment)}${assessmentTitle}</p>
+                    </div>
+                    <span class="level-chip" style="font-size:0.72rem;">${escapeHtml(student.level || student.reading_level || 'Level pending')}</span>
+                </div>
+                <div class="course-report-metric-grid">
+                    <div class="course-report-metric"><span>Accuracy</span><strong>${courseReportMetricValue(student.accuracy, '%')}</strong></div>
+                    <div class="course-report-metric"><span>WPM</span><strong>${courseReportMetricValue(student.wpm, ' WPM')}</strong></div>
+                    <div class="course-report-metric"><span>Fluency</span><strong>${courseReportMetricValue(student.fluency_score, '%')}</strong></div>
+                    <div class="course-report-metric"><span>Pronunciation</span><strong>${courseReportMetricValue(student.pronunciation_score, '%')}</strong></div>
+                    <div class="course-report-metric"><span>Time Score</span><strong>${courseReportMetricValue(student.time_score, '%')}</strong></div>
+                    <div class="course-report-metric"><span>Total Score</span><strong>${courseReportMetricValue(student.total_score, '%')}</strong></div>
+                </div>
+                <p class="course-report-recommendation"><strong>Suggested home support:</strong> ${escapeHtml(getCourseReportRecommendation(student))}</p>`;
+        }
+
         // Course-scoped Reports loader
         async function loadCourseReports(courseId) {
             try {
@@ -3561,11 +3770,14 @@
                         selectAll.dataset.bound = 'true';
                         selectAll.addEventListener('change', (e) => {
                             document.querySelectorAll('#courseUnifiedStudentReportList .student-checkbox:not(:disabled)').forEach(cb => cb.checked = e.target.checked);
+                            renderCourseReportPreview(document.getElementById('courseDetailModal')?.dataset?.courseId || courseId);
                         });
                     }
                 }
 
                 const courseStudents = await fetchStudentsForCourse(course);
+                courseReportStudentCache[String(courseId)] = courseStudents;
+                renderCourseReportPreview(courseId);
 
                 if (courseStudents.length === 0) {
                     listContainer.innerHTML = '<p class="text-center text-muted p-3">No students found in this course to generate a report.</p>';
@@ -3577,16 +3789,25 @@
                     const studentUsername = studentName.toLowerCase().replace(/ /g, "_");
                     const settings = JSON.parse(localStorage.getItem("pabasa_profile_settings_" + studentUsername) || "{}");
                     const emailEnabled = settings.emailNotifications !== false && s.email;
+                    const accuracyText = s.accuracy !== undefined && s.accuracy !== null && s.accuracy !== '' ? `${escapeHtml(s.accuracy)}%` : 'No accuracy';
+                    const wpmText = s.wpm !== undefined && s.wpm !== null && s.wpm !== '' ? `${escapeHtml(s.wpm)} WPM` : 'No WPM';
+                    const levelText = s.level || s.reading_level || 'Level pending';
                     const item = document.createElement('div');
                     item.className = 'list-group-item p-3 border-0 border-bottom';
                     item.innerHTML = `
                         <div class="d-flex align-items-center gap-3">
                             <div class="form-check mb-0"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${escapeHtml(s.id || '')}" ${!emailEnabled || !s.id ? 'disabled' : ''}></div>
                             <div class="flex-grow-1"><div class="d-flex justify-content-between align-items-center">
-                                    <strong class="mb-0">${escapeHtml(studentName)}</strong><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(s.level || '')}</span>
+                                    <strong class="mb-0">${escapeHtml(studentName)}</strong><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span>
                                 </div><div class="small text-secondary mt-1">${s.email || '<span class="text-danger">No email</span>'} | Accuracy: <span class="fw-bold">${s.accuracy || '—'}%</span> | Speed: <span class="fw-bold">${s.wpm || 0} WPM</span></div>
+                                <div class="course-report-pill-row">
+                                    <span class="course-report-pill"><i class="bi bi-bullseye"></i>${accuracyText}</span>
+                                    <span class="course-report-pill"><i class="bi bi-speedometer2"></i>${wpmText}</span>
+                                    <span class="course-report-pill"><i class="bi bi-calendar-check"></i>${escapeHtml(s.completed_at || 'No assessment')}</span>
+                                </div>
                             </div>
                         </div>`;
+                    item.querySelector('.student-checkbox')?.addEventListener('change', () => renderCourseReportPreview(courseId));
                     listContainer.appendChild(item);
                 });
             } catch (e) {
@@ -3595,6 +3816,8 @@
                 if (listContainer) {
                     listContainer.innerHTML = '<p class="text-center text-danger p-3">Could not load students from the database. Please refresh and try again.</p>';
                 }
+                courseReportStudentCache[String(courseId)] = [];
+                renderCourseReportPreview(courseId);
             }
         }
 
@@ -3717,7 +3940,8 @@
 
                         const skippedCount = Array.isArray(data.skipped) ? data.skipped.length : 0;
                         const skipText = skippedCount ? ` (${skippedCount} skipped)` : '';
-                        showToast(`Update sent to ${data.sent_count || checked.length} recipient(s)${skipText}`, 'success');
+                        const reportText = data.report_included ? ' with reading reports' : '';
+                        showToast(`Update sent${reportText} to ${data.sent_count || checked.length} recipient(s)${skipText}.`, 'success');
                     } catch (err) {
                         console.warn('send course update failed', err);
                         showToast(err.message || 'Failed to send update', 'error');
