@@ -4,11 +4,45 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from datetime import timedelta
 import json
+import uuid
 from unittest.mock import patch
 
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .views import _create_notification
 from .weekly_digest import send_weekly_digest
+
+
+class PrincipalReportsExportTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create(
+            custom_id=f"ADM-{uuid.uuid4().hex[:8].upper()}",
+            role="admin",
+            first_name="Principal",
+            last_name="User",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="principal@example.com",
+            password_hash="hashed-password",
+        )
+        session = self.client.session
+        session["user_id"] = self.user.id
+        session["user_role"] = self.user.role
+        session["first_name"] = self.user.first_name
+        session["last_name"] = self.user.last_name
+        session["email"] = self.user.email
+        session["custom_id"] = self.user.custom_id
+        session.save()
+
+    def test_principal_reports_pdf_export_returns_pdf_response(self):
+        response = self.client.get(reverse("principal_reports"), {"report_type": "school", "export": "pdf"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(response.content.startswith(b"%PDF"))
 
 
 class ProfileUpdateTests(TestCase):
