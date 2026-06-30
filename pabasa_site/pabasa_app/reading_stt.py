@@ -334,13 +334,7 @@ class ReadingMatcher:
             return True
         if self.cv_syllables_sound_match(spoken_word, target_word):
             return True
-        longer = max(len(spoken_word), len(target_word))
-        if longer <= 3:
-            return False
-        if not spoken_word or not target_word or spoken_word[0] != target_word[0]:
-            return False
-        allowed_distance = 1 if longer <= 5 else 2
-        return self.edit_distance(spoken_word, target_word, allowed_distance) <= allowed_distance
+        return False
 
     def word_index_for_syllable(self, syllable_index):
         if syllable_index >= len(self.syllables):

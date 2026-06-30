@@ -559,14 +559,15 @@
             if (transcript) {
                 spokenTranscript = [spokenTranscript, transcript].filter(Boolean).join(" ");
             }
+            const previousCorrectWords = Number(correctWordCounts[currentIndex] || 0);
             const itemCorrectWords = Math.max(
-                Number(correctWordCounts[currentIndex] || 0),
+                previousCorrectWords,
                 Number(data.correct_word_count || data.current_word_index || 0)
             );
             correctWordCounts[currentIndex] = Math.min(itemCorrectWords, readableWordCount(items[currentIndex]));
             currentSyllableIndex = Number(data.current_syllable_index || currentSyllableIndex || 0);
             if (transcript || Number(data.matched || 0) > 0) {
-                renderSyllableDisplay(data);
+                renderSyllableDisplay(data, previousCorrectWords);
             }
 
             if (data.complete) {
@@ -598,10 +599,12 @@
             }
         }
 
-        function renderSyllableDisplay(data) {
+        function renderSyllableDisplay(data, previousCorrectWords = 0) {
             if (!readingWord || !Array.isArray(data.words) || !Array.isArray(data.word_syllable_ranges)) return;
             readingWord.textContent = "";
             let readableWordIndex = 0;
+            let animatedWordCount = 0;
+            const shouldAnimate = mode === "sentence" || mode === "paragraph";
             const parts = String(items[currentIndex] || "").split(/(\s+)/);
             parts.forEach((part) => {
                 if (!part) return;
@@ -618,7 +621,14 @@
                 const range = data.word_syllable_ranges[readableWordIndex] || [0, 0];
                 const span = document.createElement("span");
                 span.className = "syllable";
-                if (range[1] <= currentSyllableIndex) span.classList.add("is-read");
+                if (range[1] <= currentSyllableIndex) {
+                    span.classList.add("is-read");
+                    if (shouldAnimate && readableWordIndex >= previousCorrectWords) {
+                        span.classList.add("is-new-read");
+                        span.style.animationDelay = `${animatedWordCount * 130}ms`;
+                        animatedWordCount += 1;
+                    }
+                }
                 else if (range[0] <= currentSyllableIndex && currentSyllableIndex < range[1]) span.classList.add("is-current");
                 span.textContent = part;
                 readingWord.appendChild(span);

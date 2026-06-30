@@ -325,6 +325,12 @@
             color: #2f9e44;
         }
 
+        .reading-word .syllable.is-new-read {
+            animation: pabasaWordReveal 0.58s ease both;
+            background-image: linear-gradient(90deg, rgba(231, 247, 236, 0) 0%, #e7f7ec 42%, #d7f4df 100%);
+            background-size: 220% 100%;
+        }
+
         .reading-word .syllable.is-current {
             background: #ddebff;
             color: #0f172a;
@@ -334,6 +340,24 @@
         .reading-word .word-gap {
             display: inline-block;
             width: 0.28em;
+        }
+
+        @keyframes pabasaWordReveal {
+            0% {
+                background-position: 100% 0;
+                color: #0f172a;
+                transform: translateY(0);
+            }
+            70% {
+                background-position: 0 0;
+                color: #2f9e44;
+                transform: translateY(-2px);
+            }
+            100% {
+                background-position: 0 0;
+                color: #2f9e44;
+                transform: translateY(0);
+            }
         }
 
         .speech-panel {
