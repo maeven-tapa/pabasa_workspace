@@ -312,6 +312,22 @@ function initProfilePage() {
         }, 0);
     }
 
+    function studentIdentityKey(student) {
+        if (!student || typeof student !== "object") return "";
+        const candidate = student.custom_id || student.pabasa_id || student.student_id || student.id || student.email || student.name || "";
+        return String(candidate).trim().toLowerCase();
+    }
+
+    function countUniqueStudents(students) {
+        const seen = new Set();
+        (Array.isArray(students) ? students : []).forEach(function (student) {
+            if (student && student.name === "Jay Park") return;
+            const key = studentIdentityKey(student);
+            if (key) seen.add(key);
+        });
+        return seen.size;
+    }
+
     function getTeacherOverviewStats() {
         const sampleClassCodes = ["RRG-9154", "AFC-7302", "ESL-5601"];
         // Prefer scoped server-backed classes cache: pabasa_teacher_classes_{email}
@@ -350,14 +366,13 @@ function initProfilePage() {
                 }).catch(function () {});
             } catch (e) {}
         })();
-        const students = getStoredArray("pabasa_added_students").filter(function (student) {
-            return student.name !== "Jay Park";
-        });
-        const storedStudentCount = students.length;
+        const storedStudentCount = countUniqueStudents(getStoredArray("pabasa_added_students"));
         const classStudentCount = classes.reduce(function (total, classData) {
             return total + (Number.parseInt(classData.students, 10) || 0);
         }, 0);
         const overviewStats = getStoredValue("pabasa_teacher_overview_stats", {});
+        const overviewStudentCount = Number.parseInt(overviewStats.total_students || overviewStats.totalStudents || "", 10);
+        const fallbackStudentCount = storedStudentCount || (Number.isFinite(overviewStudentCount) ? overviewStudentCount : 0) || classStudentCount;
         // server stores snake_case keys (materials_posted, assessments_posted); support both formats
         const storedMaterialsPosted = Number.parseInt(String(
             (Number(overviewStats.materials_posted || 0) || 0) + (Number(overviewStats.assessments_posted || overviewStats.assessmentsPosted || 0) || 0)
@@ -374,7 +389,7 @@ function initProfilePage() {
 
         return {
             activeClasses: classes.length,
-            totalStudents: Math.max(storedStudentCount, classStudentCount),
+            totalStudents: fallbackStudentCount,
             materialsPosted: Math.max(countClassReadings(), countStoredCollection("pabasa_materials") /* fallback */, flattenedMaterials.length, storedMaterialsPosted),
             reportsGenerated: countStoredCollection("pabasa_parent_notice_history")
         };
@@ -398,7 +413,7 @@ function initProfilePage() {
             // Fall back to the server-rendered profile role display when localStorage
             // or window globals were cleared (ensures profile page still fetches)
             const role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || profileRoleDisplay || '').toString().toLowerCase();
-            if (role === 'teacher') {
+            if (role === 'teacher' || role.startsWith('teacher -')) {
                 fetch('/dashboard/teacher/overview/', {
                     method: 'GET',
                     credentials: 'same-origin',

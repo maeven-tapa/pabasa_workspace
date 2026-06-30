@@ -901,6 +901,15 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertCountEqual(data["students"][0]["classes"], ["Reading One", "Reading Two"])
         self.assertCountEqual(data["students"][0]["class_codes"], ["READ-ONE", "READ-TWO"])
 
+    def test_teacher_overview_counts_unique_students_across_classes(self):
+        response = self.client.get(reverse("get_teacher_overview"))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["classes_count"], 2)
+        self.assertEqual(data["total_students"], 1)
+
     def test_students_template_uses_static_renderer_only(self):
         response = self.client.get(reverse("students"))
 
