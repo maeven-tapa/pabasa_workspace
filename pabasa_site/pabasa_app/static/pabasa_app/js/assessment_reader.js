@@ -63,8 +63,8 @@
         let audioMeterFrame = null;
         let lastHeardAt = 0;
         let hasHeardSinceLastChunk = false;
-        const speechChunkMs = 1100;
-        const speechLevelThreshold = 0.018;
+        const speechChunkMs = 2400;
+        const speechLevelThreshold = 0.012;
 
         function getCsrfToken() {
             const cookieToken = document.cookie.split('; ')
@@ -415,7 +415,7 @@
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Speech check failed.");
                 }
-                appendRawMicInput(data.transcript ? `Words: ${data.transcript}` : "Google returned an empty transcript for this audio slice.");
+                if (data.transcript) appendRawMicInput(`Words: ${data.transcript}`);
                 handleSpeechResult(data);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
@@ -465,7 +465,7 @@
                 );
             } else {
                 const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
-                setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", transcript ? `Words: ${transcript}` : "Read when you are ready. The microphone is active.", true);
+                setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", transcript ? `Words: ${transcript}` : "No words recognized yet. Keep reading clearly.", true);
             }
         }
 
