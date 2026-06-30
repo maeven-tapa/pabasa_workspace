@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 from pathlib import Path
 import re
 import urllib.error
@@ -125,10 +126,6 @@ def summarize_stt_error(exc):
 def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, location, credentials_file):
     if not project_id:
         raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp 3.")
-    credentials_path = Path(credentials_file or "")
-    if not credentials_path.exists():
-        raise RuntimeError(f"Google service account file was not found: {credentials_path}")
-
     try:
         from google.api_core.client_options import ClientOptions
         from google.cloud.speech_v2 import SpeechClient
@@ -137,10 +134,7 @@ def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, loc
     except ImportError as exc:
         raise RuntimeError("Install google-cloud-speech to use Chirp 3.") from exc
 
-    credentials = service_account.Credentials.from_service_account_file(
-        str(credentials_path),
-        scopes=["https://www.googleapis.com/auth/cloud-platform"],
-    )
+    credentials = google_stt_credentials(service_account, credentials_file)
     client_options = None
     if location and location != "global":
         client_options = ClientOptions(api_endpoint=f"{location}-speech.googleapis.com")
@@ -163,6 +157,43 @@ def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, loc
     if not alternatives:
         return ""
     return alternatives[0].transcript.strip()
+
+
+def google_stt_credentials(service_account, credentials_file):
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+    credentials_path = Path(credentials_file or "")
+    if credentials_path.exists():
+        return service_account.Credentials.from_service_account_file(
+            str(credentials_path),
+            scopes=scopes,
+        )
+
+    encoded_json = os.environ.get("GOOGLE_STT_SERVICE_ACCOUNT_JSON_B64", "").strip()
+    if encoded_json:
+        try:
+            credentials_info = json.loads(base64.b64decode(encoded_json).decode("utf-8"))
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise RuntimeError("GOOGLE_STT_SERVICE_ACCOUNT_JSON_B64 is not valid Base64 JSON.") from exc
+        return service_account.Credentials.from_service_account_info(
+            credentials_info,
+            scopes=scopes,
+        )
+
+    raw_json = os.environ.get("GOOGLE_STT_SERVICE_ACCOUNT_JSON", "").strip()
+    if raw_json:
+        try:
+            credentials_info = json.loads(raw_json)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("GOOGLE_STT_SERVICE_ACCOUNT_JSON is not valid JSON.") from exc
+        return service_account.Credentials.from_service_account_info(
+            credentials_info,
+            scopes=scopes,
+        )
+
+    raise RuntimeError(
+        f"Google service account file was not found: {credentials_path}. "
+        "Set GOOGLE_STT_SERVICE_ACCOUNT_JSON_B64 on hosting."
+    )
 
 
 def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type):
