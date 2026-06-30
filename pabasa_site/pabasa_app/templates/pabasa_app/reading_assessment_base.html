@@ -313,6 +313,10 @@
             word-wrap: break-word;
         }
 
+        .reading-word.is-changing {
+            animation: pabasaItemChange 0.34s ease both;
+        }
+
         .reading-word .syllable {
             display: inline-block;
             border-radius: 0.3em;
@@ -357,6 +361,17 @@
                 background-position: 0 0;
                 color: #2f9e44;
                 transform: translateY(0);
+            }
+        }
+
+        @keyframes pabasaItemChange {
+            0% {
+                opacity: 0;
+                transform: translateY(12px) scale(0.985);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
             }
         }
 

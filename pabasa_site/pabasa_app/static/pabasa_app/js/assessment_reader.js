@@ -169,6 +169,7 @@
             }
             currentIndex = 0;
             updateUI();
+            animateCurrentItem();
         }
 
         function normalizeWords(value) {
@@ -628,10 +629,7 @@
                 } else {
                     window.setTimeout(() => {
                         if (!isRecording || context.version !== itemResultVersion) return;
-                        currentIndex += 1;
-                        currentSyllableIndex = 0;
-                        updateUI();
-                        setSpeechStatus("Next item loaded.", "Keep reading clearly.", true);
+                        transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
                     }, 700);
                 }
                 return;
@@ -654,7 +652,7 @@
             readingWord.textContent = "";
             let readableWordIndex = 0;
             let animatedWordCount = 0;
-            const shouldAnimate = mode === "sentence" || mode === "paragraph";
+            const shouldAnimate = true;
             const parts = String(items[currentIndex] || "").split(/(\s+)/);
             parts.forEach((part) => {
                 if (!part) return;
@@ -722,6 +720,25 @@
             if (nextBtn) {
                 nextBtn.disabled = isReviewMode ? currentIndex === items.length - 1 : (!isRecording || (currentIndex === items.length - 1));
                 nextBtn.textContent = isReviewMode && currentIndex === items.length - 1 ? "Done" : "Next";
+            }
+        }
+
+        function animateCurrentItem() {
+            if (!readingWord) return;
+            readingWord.classList.remove("is-changing");
+            void readingWord.offsetWidth;
+            readingWord.classList.add("is-changing");
+            window.setTimeout(() => readingWord.classList.remove("is-changing"), 380);
+        }
+
+        function transitionToItem(nextIndex, statusMessage = "", detail = "") {
+            if (nextIndex < 0 || nextIndex >= items.length || nextIndex === currentIndex) return;
+            currentIndex = nextIndex;
+            currentSyllableIndex = 0;
+            updateUI();
+            animateCurrentItem();
+            if (statusMessage) {
+                setSpeechStatus(statusMessage, detail, Boolean(isRecording && !isMuted));
             }
         }
 
@@ -876,6 +893,7 @@
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
             updateUI();
+            animateCurrentItem();
             startSpeechRecognition();
             console.log("PABASA: Assessment recording and timer started.");
         };
@@ -1253,15 +1271,13 @@
 
         prevBtn?.addEventListener("click", () => { 
             if (currentIndex > 0) { 
-                currentIndex--; 
-                updateUI(); 
+                transitionToItem(currentIndex - 1);
             } 
         });
 
         nextBtn?.addEventListener("click", () => {
             if (currentIndex < items.length - 1) { 
-                currentIndex++; 
-                updateUI(); 
+                transitionToItem(currentIndex + 1);
             } 
             else if (!isReviewMode) { showCompletion(true); }
         });
@@ -1285,6 +1301,7 @@
             hasHeardSinceLastChunk = false;
             resetRawMicInput("Waiting for speech...");
             updateUI();
+            animateCurrentItem();
             setSpeechStatus("Ready to start reading");
             closePauseMenu();
         });
