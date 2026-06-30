@@ -66,8 +66,11 @@
         let audioMeterFrame = null;
         let lastHeardAt = 0;
         let hasHeardSinceLastChunk = false;
+        let ambientNoiseFloor = 0;
+        let speechFrameCount = 0;
         const speechChunkMs = 2400;
-        const speechLevelThreshold = 0.006;
+        const speechLevelThreshold = 0.014;
+        const speechNoiseMultiplier = 3.2;
 
         function getCsrfToken() {
             const cookieToken = document.cookie.split('; ')
@@ -408,6 +411,7 @@
                 audioAnalyser.fftSize = 1024;
                 source.connect(audioAnalyser);
                 const samples = new Uint8Array(audioAnalyser.fftSize);
+                const meterStartedAt = Date.now();
                 const tick = () => {
                     if (!audioAnalyser || !isRecording || isMuted) {
                         shell?.classList.remove("is-hearing");
@@ -421,11 +425,28 @@
                     }
                     const rms = Math.sqrt(sum / samples.length);
                     const now = Date.now();
-                    if (rms > speechLevelThreshold) {
+                    const isCalibrating = now - meterStartedAt < 800;
+                    if (!ambientNoiseFloor) {
+                        ambientNoiseFloor = rms;
+                    } else if (isCalibrating || rms < ambientNoiseFloor * 1.8) {
+                        ambientNoiseFloor = (ambientNoiseFloor * 0.94) + (rms * 0.06);
+                    }
+
+                    const activeSpeechThreshold = Math.max(
+                        speechLevelThreshold,
+                        (ambientNoiseFloor * speechNoiseMultiplier) + 0.004
+                    );
+                    if (!isCalibrating && rms > activeSpeechThreshold) {
+                        speechFrameCount += 1;
+                    } else {
+                        speechFrameCount = Math.max(0, speechFrameCount - 1);
+                    }
+
+                    if (speechFrameCount >= 3) {
                         lastHeardAt = now;
                         hasHeardSinceLastChunk = true;
                     }
-                    shell?.classList.toggle("is-hearing", now - lastHeardAt < 360);
+                    shell?.classList.toggle("is-hearing", now - lastHeardAt < 240);
                     audioMeterFrame = window.requestAnimationFrame(tick);
                 };
                 tick();
@@ -448,6 +469,8 @@
             }
             lastHeardAt = 0;
             hasHeardSinceLastChunk = false;
+            ambientNoiseFloor = 0;
+            speechFrameCount = 0;
         }
 
         function shouldSendAudioChunk() {
@@ -479,7 +502,7 @@
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Speech check failed.");
                 }
-                if (data.transcript) appendRawMicInput(`Words: ${data.transcript}`);
+                if (data.transcript) appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)} | Words: ${data.transcript}`);
                 handleSpeechResult(data);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
@@ -499,6 +522,12 @@
             if (type.includes("ogg")) return "ogg";
             if (type.includes("wav")) return "wav";
             return "webm";
+        }
+
+        function sttModelLabel(model) {
+            if (model === "chirp_3") return "Chirp 3";
+            if (model === "stt_v1") return "STT v1";
+            return model || "Google STT";
         }
 
         function handleSpeechResult(data) {

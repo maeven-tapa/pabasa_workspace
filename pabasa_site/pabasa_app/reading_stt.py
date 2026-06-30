@@ -58,6 +58,29 @@ def transcribe_audio_bytes(
     location="global",
     mime_type="audio/webm",
 ):
+    transcript, _model_used = transcribe_audio_bytes_with_model(
+        audio_bytes,
+        api_key,
+        language_code,
+        phrase_hints,
+        model,
+        project_id,
+        location,
+        mime_type,
+    )
+    return transcript
+
+
+def transcribe_audio_bytes_with_model(
+    audio_bytes,
+    api_key,
+    language_code="en-US",
+    phrase_hints=None,
+    model="chirp_3",
+    project_id="",
+    location="global",
+    mime_type="audio/webm",
+):
     if model == "chirp_3":
         fallback_model = "latest_short" if language_code == "en-US" else ""
         try:
@@ -69,7 +92,7 @@ def transcribe_audio_bytes(
                 location,
             )
             if transcript:
-                return transcript
+                return transcript, "chirp_3"
             return transcribe_audio_bytes_v1(
                 audio_bytes,
                 api_key,
@@ -77,7 +100,7 @@ def transcribe_audio_bytes(
                 phrase_hints,
                 fallback_model,
                 mime_type,
-            )
+            ), "stt_v1"
         except RuntimeError as exc:
             if is_chirp3_access_error(str(exc)):
                 return transcribe_audio_bytes_v1(
@@ -87,10 +110,10 @@ def transcribe_audio_bytes(
                     phrase_hints,
                     fallback_model,
                     mime_type,
-                )
+                ), "stt_v1"
             raise
 
-    return transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type)
+    return transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type), "stt_v1"
 
 
 def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type):

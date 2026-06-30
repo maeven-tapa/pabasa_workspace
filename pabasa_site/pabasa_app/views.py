@@ -33,7 +33,7 @@ from .reading_stt import (
     analyze_reading,
     language_code_for,
     phrase_hints_for,
-    transcribe_audio_bytes,
+    transcribe_audio_bytes_with_model,
 )
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
@@ -2454,7 +2454,7 @@ def reading_transcribe_api(request):
         return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
 
     try:
-        transcript = transcribe_audio_bytes(
+        transcript, stt_model = transcribe_audio_bytes_with_model(
             audio.read(),
             api_key,
             language_code=language_code,
@@ -2468,7 +2468,7 @@ def reading_transcribe_api(request):
         analysis.update({
             'success': True,
             'language_code': language_code,
-            'stt_model': 'chirp_3',
+            'stt_model': stt_model,
         })
         return JsonResponse(analysis)
     except Exception as exc:
