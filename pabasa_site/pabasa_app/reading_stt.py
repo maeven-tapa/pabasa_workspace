@@ -1,4 +1,5 @@
 import base64
+import html
 import json
 import os
 from pathlib import Path
@@ -229,10 +230,17 @@ def synthesize_read_aloud_audio(text, api_key, language_code="en-US"):
     if not clean_text:
         raise RuntimeError("Text is required for read aloud.")
 
-    tts_language = "fil-PH" if language_code == "fil-PH" else "en-US"
-    voice_name = "fil-PH-Wavenet-A" if tts_language == "fil-PH" else "en-US-Neural2-F"
+    tts_language = "en-US"
+    voice_name = "en-US-Chirp3-HD-Vindemiatrix"
+    teaching_ssml = (
+        '<speak>'
+        '<prosody rate="92%" pitch="+0st" volume="medium">'
+        f'{html.escape(clean_text)}'
+        '</prosody>'
+        '</speak>'
+    )
     payload = {
-        "input": {"text": clean_text},
+        "input": {"ssml": teaching_ssml},
         "voice": {
             "languageCode": tts_language,
             "name": voice_name,
@@ -240,9 +248,9 @@ def synthesize_read_aloud_audio(text, api_key, language_code="en-US"):
         },
         "audioConfig": {
             "audioEncoding": "MP3",
-            "speakingRate": 1.05,
-            "pitch": 3.2,
-            "volumeGainDb": 1.5,
+            "speakingRate": 0.95,
+            "pitch": 0,
+            "volumeGainDb": 0,
         },
     }
     return _post_google_tts(
