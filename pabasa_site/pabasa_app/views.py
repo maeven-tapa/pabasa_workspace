@@ -2463,7 +2463,7 @@ def reading_transcribe_api(request):
         return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
 
     try:
-        transcript, model_used = transcribe_audio_bytes_with_model(
+        transcript, model_used, fallback_reason = transcribe_audio_bytes_with_model(
             audio.read(),
             api_key,
             language_code=language_code,
@@ -2479,6 +2479,7 @@ def reading_transcribe_api(request):
             'success': True,
             'language_code': language_code,
             'stt_model': model_used,
+            'stt_fallback_reason': fallback_reason,
         })
         return JsonResponse(analysis)
     except Exception as exc:

@@ -60,7 +60,7 @@ def transcribe_audio_bytes(
     mime_type="audio/webm",
     credentials_file="",
 ):
-    transcript, _model_used = transcribe_audio_bytes_with_model(
+    transcript, _model_used, _fallback_reason = transcribe_audio_bytes_with_model(
         audio_bytes,
         api_key,
         language_code,
@@ -85,6 +85,7 @@ def transcribe_audio_bytes_with_model(
     mime_type="audio/webm",
     credentials_file="",
 ):
+    fallback_reason = ""
     if model == "chirp_3":
         try:
             transcript = transcribe_audio_bytes_v2_chirp3(
@@ -95,8 +96,9 @@ def transcribe_audio_bytes_with_model(
                 credentials_file,
             )
             if transcript:
-                return transcript, "chirp_3"
-        except Exception:
+                return transcript, "chirp_3", ""
+        except Exception as exc:
+            fallback_reason = summarize_stt_error(exc)
             if not api_key:
                 raise
 
@@ -110,7 +112,14 @@ def transcribe_audio_bytes_with_model(
         phrase_hints,
         v1_model,
         mime_type,
-    ), "stt_v1"
+    ), "stt_v1", fallback_reason
+
+
+def summarize_stt_error(exc):
+    message = str(exc).replace("\n", " ").strip()
+    if len(message) > 180:
+        message = f"{message[:177]}..."
+    return message or exc.__class__.__name__
 
 
 def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, location, credentials_file):
@@ -128,7 +137,10 @@ def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, loc
     except ImportError as exc:
         raise RuntimeError("Install google-cloud-speech to use Chirp 3.") from exc
 
-    credentials = service_account.Credentials.from_service_account_file(str(credentials_path))
+    credentials = service_account.Credentials.from_service_account_file(
+        str(credentials_path),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
     client_options = None
     if location and location != "global":
         client_options = ClientOptions(api_endpoint=f"{location}-speech.googleapis.com")

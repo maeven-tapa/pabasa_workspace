@@ -512,7 +512,10 @@
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Speech check failed.");
                 }
-                if (data.transcript) appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)} | Words: ${data.transcript}`);
+                if (data.transcript) {
+                    const fallbackNote = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : "";
+                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${fallbackNote} | Words: ${data.transcript}`);
+                }
                 handleSpeechResult(data);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
