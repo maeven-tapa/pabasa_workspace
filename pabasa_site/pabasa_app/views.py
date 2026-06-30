@@ -33,6 +33,7 @@ from .reading_stt import (
     analyze_reading,
     language_code_for,
     phrase_hints_for,
+    synthesize_read_aloud_audio,
     transcribe_audio_bytes_with_model,
 )
 
@@ -2484,6 +2485,36 @@ def reading_transcribe_api(request):
         return JsonResponse(analysis)
     except Exception as exc:
         logger.exception('Reading transcription failed')
+        return JsonResponse({'success': False, 'error': str(exc)}, status=502)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def reading_read_aloud_api(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    target_text = (request.POST.get('target_text') or '').strip()
+    mode = (request.POST.get('mode') or '').strip().lower()
+    language = (request.POST.get('language') or '').strip()
+    language_code = language_code_for(language, mode)
+    api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
+
+    if not target_text:
+        return JsonResponse({'success': False, 'error': 'Reading text is required.'}, status=400)
+    if not api_key:
+        return JsonResponse({'success': False, 'error': 'Google Text-to-Speech is not configured.'}, status=503)
+
+    try:
+        audio_content = synthesize_read_aloud_audio(target_text, api_key, language_code)
+        return JsonResponse({
+            'success': True,
+            'audio_content': audio_content,
+            'mime_type': 'audio/mpeg',
+            'language_code': language_code,
+        })
+    except Exception as exc:
+        logger.exception('Read aloud synthesis failed')
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 

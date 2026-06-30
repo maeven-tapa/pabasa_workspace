@@ -27,6 +27,7 @@
         const completionLevel = document.getElementById("completionLevel");
         const btnStartReading = document.getElementById("btnStartReading");
         const btnStopReading = document.getElementById("btnStopReading");
+        const btnReadAloud = document.getElementById("btnReadAloud");
         const btnToggleMic = document.getElementById("btnToggleMic");
         const btnTestMic = document.getElementById("btnTestMic") || document.getElementById("testMic");
         const micTestOverlay = document.getElementById("micTestOverlay");
@@ -34,6 +35,7 @@
         const micSampleRecordBtn = document.getElementById("micSampleRecordBtn");
         const micSamplePlayBtn = document.getElementById("micSamplePlayBtn");
         const micTestStatus = document.getElementById("micTestStatus");
+        const micDeviceSelect = document.getElementById("micDeviceSelect");
         const rawMicInput = document.getElementById("rawMicInput");
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -56,12 +58,22 @@
         let spokenTranscript = "";
         let correctWordCounts = [];
         let latestScores = null;
+        let readAloudAudio = null;
+        let readAloudAudioUrl = "";
+        let isReadAloudLoading = false;
         let isTestingMic = false;
         let micTestWasRecording = false;
         let micSampleAudioUrl = "";
         let micSampleAudio = null;
         let micTestRecorder = null;
         let micTestStream = null;
+        let selectedMicDeviceId = localStorage.getItem("pabasaSelectedMicDeviceId") || "";
+        let micTestAudioContext = null;
+        let micTestAnalyser = null;
+        let micTestMeterFrame = null;
+        let micTestLastHeardAt = 0;
+        let micTestNoiseFloor = 0;
+        let micTestSpeechFrameCount = 0;
         let rawMicLines = [];
         let mediaStream = null;
         let mediaRecorder = null;
@@ -70,6 +82,8 @@
         let stoppingSpeechRecognition = false;
         let isSendingChunk = false;
         let pendingAudioChunk = null;
+        let itemResultVersion = 0;
+        let isAdvancingItem = false;
         let currentSyllableIndex = 0;
         let currentMaterialLanguage = "";
         let audioContext = null;
@@ -307,6 +321,18 @@
             return candidates.find(type => window.MediaRecorder?.isTypeSupported?.(type)) || "";
         }
 
+        function microphoneConstraints() {
+            const audio = {
+                echoCancellation: true,
+                noiseSuppression: false,
+                autoGainControl: true,
+            };
+            if (selectedMicDeviceId) {
+                audio.deviceId = { exact: selectedMicDeviceId };
+            }
+            return { audio };
+        }
+
         async function startSpeechRecognition() {
             if (isReviewMode || isMuted || recognitionActive) return;
             if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
@@ -314,13 +340,7 @@
                 return;
             }
             try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: false,
-                        autoGainControl: true,
-                    },
-                });
+                mediaStream = await navigator.mediaDevices.getUserMedia(microphoneConstraints());
                 startAudioMeter(mediaStream);
                 stoppingSpeechRecognition = false;
                 startSpeechChunkRecorder();
@@ -335,7 +355,8 @@
         }
 
         function startSpeechChunkRecorder() {
-            if (!mediaStream || stoppingSpeechRecognition || isMuted || !isRecording) return;
+            if (!mediaStream || stoppingSpeechRecognition || isMuted || !isRecording || isAdvancingItem) return;
+            const recorderContext = currentSpeechContext();
             const mimeType = pickAudioMimeType();
             speechAudioChunks = [];
             try {
@@ -360,12 +381,12 @@
                 speechAudioChunks = [];
                 mediaRecorder = null;
 
-                if (chunks.length && isRecording && !isMuted && shouldSendAudioChunk()) {
+                if (chunks.length && isRecording && !isMuted && shouldSendAudioChunk() && isCurrentSpeechContext(recorderContext)) {
                     hasHeardSinceLastChunk = false;
-                    sendAudioChunk(new Blob(chunks, { type: recorderMimeType }));
+                    sendAudioChunk(new Blob(chunks, { type: recorderMimeType }), recorderContext);
                 }
 
-                if (!stoppingSpeechRecognition && isRecording && !isMuted) {
+                if (!stoppingSpeechRecognition && isRecording && !isMuted && !isAdvancingItem) {
                     startSpeechChunkRecorder();
                 }
             };
@@ -498,17 +519,36 @@
             return !audioAnalyser || hasHeardSinceLastChunk || Date.now() - lastHeardAt < speechChunkMs + 700;
         }
 
-        async function sendAudioChunk(blob) {
-            if (!items[currentIndex]) return;
+        function currentSpeechContext() {
+            return {
+                index: currentIndex,
+                itemText: items[currentIndex] || "",
+                syllableIndex: currentSyllableIndex,
+                version: itemResultVersion,
+            };
+        }
+
+        function isCurrentSpeechContext(context) {
+            return Boolean(
+                context
+                && context.index === currentIndex
+                && context.itemText === items[currentIndex]
+                && context.version === itemResultVersion
+                && !isAdvancingItem
+            );
+        }
+
+        async function sendAudioChunk(blob, context = currentSpeechContext()) {
+            if (!context.itemText || !isCurrentSpeechContext(context)) return;
             if (isSendingChunk) {
-                pendingAudioChunk = blob;
+                pendingAudioChunk = { blob, context };
                 return;
             }
             isSendingChunk = true;
             const formData = new FormData();
             formData.append("audio", blob, `reading-${Date.now()}.${audioExtensionForBlob(blob)}`);
-            formData.append("target_text", items[currentIndex]);
-            formData.append("current_syllable_index", String(currentSyllableIndex));
+            formData.append("target_text", context.itemText);
+            formData.append("current_syllable_index", String(context.syllableIndex));
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
 
@@ -523,20 +563,26 @@
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Speech check failed.");
                 }
+                if (!isCurrentSpeechContext(context)) return;
                 if (data.transcript) {
                     const fallbackNote = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : "";
                     appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${fallbackNote} | Words: ${data.transcript}`);
                 }
-                handleSpeechResult(data);
+                handleSpeechResult(data, context);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
-                setSpeechStatus("Speech check had trouble.", error.message || "Keep reading, then try again.");
+                if (isCurrentSpeechContext(context)) {
+                    setSpeechStatus("Speech check had trouble.", error.message || "Keep reading, then try again.");
+                }
             } finally {
                 isSendingChunk = false;
-                if (pendingAudioChunk && isRecording && !isMuted) {
-                    const nextChunk = pendingAudioChunk;
+                if (pendingAudioChunk && isRecording && !isMuted && isCurrentSpeechContext(pendingAudioChunk.context)) {
+                    const nextChunk = pendingAudioChunk.blob;
+                    const nextContext = pendingAudioChunk.context;
                     pendingAudioChunk = null;
-                    sendAudioChunk(nextChunk);
+                    sendAudioChunk(nextChunk, nextContext);
+                } else {
+                    pendingAudioChunk = null;
                 }
             }
         }
@@ -554,7 +600,8 @@
             return model || "Google STT";
         }
 
-        function handleSpeechResult(data) {
+        function handleSpeechResult(data, context = currentSpeechContext()) {
+            if (!isCurrentSpeechContext(context)) return;
             const transcript = (data.transcript || "").trim();
             if (transcript) {
                 spokenTranscript = [spokenTranscript, transcript].filter(Boolean).join(" ");
@@ -571,6 +618,8 @@
             }
 
             if (data.complete) {
+                isAdvancingItem = true;
+                pendingAudioChunk = null;
                 setSpeechStatus("Great job! You finished this item.", transcript ? `Words: ${transcript}` : "", true);
                 if (currentIndex >= items.length - 1) {
                     isRecording = false;
@@ -578,6 +627,7 @@
                     showCompletion(true);
                 } else {
                     window.setTimeout(() => {
+                        if (!isRecording || context.version !== itemResultVersion) return;
                         currentIndex += 1;
                         currentSyllableIndex = 0;
                         updateUI();
@@ -658,8 +708,12 @@
 
         function updateUI() {
             if (!items.length) return;
+            stopReadAloud();
             if (readingWord) readingWord.textContent = items[currentIndex];
             currentSyllableIndex = 0;
+            pendingAudioChunk = null;
+            isAdvancingItem = false;
+            itemResultVersion += 1;
             const label = mode.charAt(0).toUpperCase() + mode.slice(1);
             if (counter) counter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
             if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
@@ -672,6 +726,7 @@
         }
 
         function showCompletion(isFullCompletion) {
+            stopReadAloud();
             stopSpeechRecognition();
             shell.classList.add("is-complete");
             closePauseMenu();
@@ -820,8 +875,8 @@
             resetRawMicInput("Waiting for speech...");
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
-            startSpeechRecognition();
             updateUI();
+            startSpeechRecognition();
             console.log("PABASA: Assessment recording and timer started.");
         };
 
@@ -844,6 +899,84 @@
 
         btnStartReading?.addEventListener("click", startReading);
         btnStopReading?.addEventListener("click", stopReading);
+        btnReadAloud?.addEventListener("click", readCurrentItemAloud);
+
+        async function readCurrentItemAloud() {
+            if (!items[currentIndex] || isReadAloudLoading) return;
+            if (readAloudAudio && !readAloudAudio.paused) {
+                stopReadAloud();
+                return;
+            }
+
+            isReadAloudLoading = true;
+            btnReadAloud?.setAttribute("disabled", "disabled");
+            btnReadAloud?.classList.add("is-playing");
+            const originalHtml = btnReadAloud?.innerHTML || "";
+            if (btnReadAloud) btnReadAloud.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading';
+
+            const formData = new FormData();
+            formData.append("target_text", items[currentIndex]);
+            formData.append("mode", mode);
+            formData.append("language", currentMaterialLanguage || "");
+
+            try {
+                const response = await fetch("/api/reading/read-aloud/", {
+                    method: "POST",
+                    headers: { "X-CSRFToken": getCsrfToken() },
+                    credentials: "same-origin",
+                    body: formData,
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || "Read aloud failed.");
+                }
+                revokeReadAloudUrl();
+                const audioBlob = base64ToBlob(data.audio_content, data.mime_type || "audio/mpeg");
+                readAloudAudioUrl = URL.createObjectURL(audioBlob);
+                readAloudAudio = new Audio(readAloudAudioUrl);
+                readAloudAudio.onended = stopReadAloud;
+                readAloudAudio.onerror = stopReadAloud;
+                if (btnReadAloud) btnReadAloud.innerHTML = '<i class="bi bi-stop-fill"></i> Stop Audio';
+                btnReadAloud?.removeAttribute("disabled");
+                await readAloudAudio.play();
+            } catch (error) {
+                console.warn("PABASA: Read aloud failed", error);
+                setSpeechStatus("Read aloud had trouble.", error.message || "Please try again.");
+                if (btnReadAloud) btnReadAloud.innerHTML = originalHtml;
+                btnReadAloud?.classList.remove("is-playing");
+                btnReadAloud?.removeAttribute("disabled");
+            } finally {
+                isReadAloudLoading = false;
+            }
+        }
+
+        function stopReadAloud() {
+            if (readAloudAudio) {
+                readAloudAudio.pause();
+                readAloudAudio.currentTime = 0;
+            }
+            revokeReadAloudUrl();
+            btnReadAloud?.classList.remove("is-playing");
+            btnReadAloud?.removeAttribute("disabled");
+            if (btnReadAloud) btnReadAloud.innerHTML = '<i class="bi bi-volume-up-fill"></i> Read Aloud';
+        }
+
+        function revokeReadAloudUrl() {
+            if (readAloudAudioUrl) {
+                URL.revokeObjectURL(readAloudAudioUrl);
+                readAloudAudioUrl = "";
+            }
+            readAloudAudio = null;
+        }
+
+        function base64ToBlob(base64Value, mimeType) {
+            const binary = atob(base64Value || "");
+            const bytes = new Uint8Array(binary.length);
+            for (let index = 0; index < binary.length; index += 1) {
+                bytes[index] = binary.charCodeAt(index);
+            }
+            return new Blob([bytes], { type: mimeType });
+        }
         
         btnToggleMic?.addEventListener("click", () => {
             isMuted = !isMuted;
@@ -858,6 +991,16 @@
         if (btnTestMic) {
             btnTestMic.addEventListener("click", openMicTestDialog);
         }
+        micDeviceSelect?.addEventListener("change", () => {
+            selectedMicDeviceId = micDeviceSelect.value || "";
+            localStorage.setItem("pabasaSelectedMicDeviceId", selectedMicDeviceId);
+            revokeMicSampleUrl();
+            micSamplePlayBtn?.setAttribute("disabled", "disabled");
+            setMicTestStatus("Microphone selected. Record a sample to check it.");
+            if (micTestWasRecording && isRecording && !isMuted) {
+                stopSpeechRecognition();
+            }
+        });
         micTestCloseBtn?.addEventListener("click", closeMicTestDialog);
         micTestOverlay?.addEventListener("click", (event) => {
             if (event.target === micTestOverlay) closeMicTestDialog();
@@ -878,6 +1021,35 @@
             micTestOverlay.classList.remove("d-none");
             document.body.style.overflow = "hidden";
             setMicTestStatus(micTestWasRecording ? "Reading paused.\nReady for a sample recording." : "Ready for a sample recording.");
+            loadMicrophoneDevices();
+        }
+
+        async function loadMicrophoneDevices() {
+            if (!micDeviceSelect || !navigator.mediaDevices?.enumerateDevices) return;
+            try {
+                let devices = await navigator.mediaDevices.enumerateDevices();
+                if (!devices.some(device => device.kind === "audioinput" && device.label)) {
+                    const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    permissionStream.getTracks().forEach(track => track.stop());
+                    devices = await navigator.mediaDevices.enumerateDevices();
+                }
+                const audioInputs = devices.filter(device => device.kind === "audioinput");
+                micDeviceSelect.replaceChildren(new Option("Default microphone", ""));
+                audioInputs.forEach((device, index) => {
+                    const label = device.label || `Microphone ${index + 1}`;
+                    micDeviceSelect.appendChild(new Option(label, device.deviceId));
+                });
+                if (selectedMicDeviceId && audioInputs.some(device => device.deviceId === selectedMicDeviceId)) {
+                    micDeviceSelect.value = selectedMicDeviceId;
+                } else {
+                    selectedMicDeviceId = "";
+                    localStorage.removeItem("pabasaSelectedMicDeviceId");
+                    micDeviceSelect.value = "";
+                }
+            } catch (error) {
+                console.warn("PABASA: Could not load microphones", error);
+                setMicTestStatus("Could not load microphone list. Check browser permission.");
+            }
         }
 
         function closeMicTestDialog() {
@@ -909,7 +1081,8 @@
 
             try {
                 revokeMicSampleUrl();
-                micTestStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                micTestStream = await navigator.mediaDevices.getUserMedia(microphoneConstraints());
+                startMicTestMeter(micTestStream);
                 const mimeType = pickAudioMimeType();
                 micTestRecorder = new MediaRecorder(micTestStream, mimeType ? { mimeType } : undefined);
                 const chunks = [];
@@ -976,12 +1149,85 @@
         }
 
         function stopMicSampleCapture() {
+            stopMicTestMeter();
             if (micTestRecorder && micTestRecorder.state !== "inactive") {
                 try { micTestRecorder.stop(); } catch (error) { console.warn("PABASA: Mic sample stop failed", error); }
             }
             micTestRecorder = null;
             micTestStream?.getTracks().forEach(track => track.stop());
             micTestStream = null;
+        }
+
+        function startMicTestMeter(stream) {
+            stopMicTestMeter();
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            try {
+                micTestAudioContext = new AudioContextClass();
+                if (micTestAudioContext.state === "suspended") {
+                    micTestAudioContext.resume().catch(() => {});
+                }
+                const source = micTestAudioContext.createMediaStreamSource(stream);
+                micTestAnalyser = micTestAudioContext.createAnalyser();
+                micTestAnalyser.fftSize = 1024;
+                source.connect(micTestAnalyser);
+                const samples = new Uint8Array(micTestAnalyser.fftSize);
+                const meterStartedAt = Date.now();
+                const tick = () => {
+                    if (!micTestAnalyser || !isTestingMic) {
+                        micTestStatus?.classList.remove("is-hearing");
+                        return;
+                    }
+                    micTestAnalyser.getByteTimeDomainData(samples);
+                    let sum = 0;
+                    for (let index = 0; index < samples.length; index += 1) {
+                        const centered = (samples[index] - 128) / 128;
+                        sum += centered * centered;
+                    }
+                    const rms = Math.sqrt(sum / samples.length);
+                    const now = Date.now();
+                    const isCalibrating = now - meterStartedAt < 450;
+                    if (!micTestNoiseFloor) {
+                        micTestNoiseFloor = rms;
+                    } else if (isCalibrating || rms < micTestNoiseFloor * 1.8) {
+                        micTestNoiseFloor = (micTestNoiseFloor * 0.94) + (rms * 0.06);
+                    }
+                    const activeSpeechThreshold = Math.max(
+                        speechLevelThreshold,
+                        (micTestNoiseFloor * speechNoiseMultiplier) + 0.004
+                    );
+                    if (!isCalibrating && rms > activeSpeechThreshold) {
+                        micTestSpeechFrameCount += 1;
+                    } else {
+                        micTestSpeechFrameCount = Math.max(0, micTestSpeechFrameCount - 1);
+                    }
+                    if (micTestSpeechFrameCount >= 3) {
+                        micTestLastHeardAt = now;
+                    }
+                    micTestStatus?.classList.toggle("is-hearing", now - micTestLastHeardAt < 260);
+                    micTestMeterFrame = window.requestAnimationFrame(tick);
+                };
+                tick();
+            } catch (error) {
+                console.warn("PABASA: Mic test meter unavailable", error);
+                stopMicTestMeter();
+            }
+        }
+
+        function stopMicTestMeter() {
+            if (micTestMeterFrame) {
+                window.cancelAnimationFrame(micTestMeterFrame);
+                micTestMeterFrame = null;
+            }
+            micTestStatus?.classList.remove("is-hearing");
+            micTestAnalyser = null;
+            if (micTestAudioContext) {
+                micTestAudioContext.close().catch(() => {});
+                micTestAudioContext = null;
+            }
+            micTestLastHeardAt = 0;
+            micTestNoiseFloor = 0;
+            micTestSpeechFrameCount = 0;
         }
 
         function revokeMicSampleUrl() {
@@ -1030,6 +1276,7 @@
         retryBtn?.addEventListener("click", () => {
             if (isReviewMode) return;
             shell.classList.remove("is-complete");
+            stopReadAloud();
             currentIndex = 0;
             currentSyllableIndex = 0;
             spokenTranscript = "";

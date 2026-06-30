@@ -224,6 +224,61 @@ def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints,
     )
 
 
+def synthesize_read_aloud_audio(text, api_key, language_code="en-US"):
+    clean_text = " ".join(str(text or "").split())
+    if not clean_text:
+        raise RuntimeError("Text is required for read aloud.")
+
+    tts_language = "fil-PH" if language_code == "fil-PH" else "en-US"
+    voice_name = "fil-PH-Wavenet-A" if tts_language == "fil-PH" else "en-US-Neural2-F"
+    payload = {
+        "input": {"text": clean_text},
+        "voice": {
+            "languageCode": tts_language,
+            "name": voice_name,
+            "ssmlGender": "FEMALE",
+        },
+        "audioConfig": {
+            "audioEncoding": "MP3",
+            "speakingRate": 1.05,
+            "pitch": 3.2,
+            "volumeGainDb": 1.5,
+        },
+    }
+    return _post_google_tts(
+        f"https://texttospeech.googleapis.com/v1/text:synthesize?key={api_key}",
+        payload,
+    )
+
+
+def _post_google_tts(url, payload):
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="replace")
+        try:
+            error_message = json.loads(details).get("error", {}).get("message", details)
+        except json.JSONDecodeError:
+            error_message = details or exc.reason
+        raise RuntimeError(f"Google TTS HTTP {exc.code}: {error_message}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Network error while contacting Google TTS: {exc.reason}") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Google TTS returned an invalid response.") from exc
+
+    audio_content = result.get("audioContent", "")
+    if not audio_content:
+        raise RuntimeError("Google TTS returned no audio.")
+    return audio_content
+
+
 def _post_google_stt(url, payload, label):
     request = urllib.request.Request(
         url,
