@@ -846,7 +846,7 @@
             }
             micTestOverlay.classList.remove("d-none");
             document.body.style.overflow = "hidden";
-            setMicTestStatus(micTestWasRecording ? "Reading paused. Ready for a sample recording." : "Ready for a sample recording.");
+            setMicTestStatus(micTestWasRecording ? "Reading paused.\nReady for a sample recording." : "Ready for a sample recording.");
         }
 
         function closeMicTestDialog() {
@@ -936,7 +936,12 @@
         }
 
         function setMicTestStatus(message) {
-            if (micTestStatus) micTestStatus.textContent = message;
+            if (!micTestStatus) return;
+            micTestStatus.replaceChildren();
+            String(message || "").split("\n").forEach((line, index) => {
+                if (index) micTestStatus.appendChild(document.createElement("br"));
+                micTestStatus.appendChild(document.createTextNode(line));
+            });
         }
 
         function stopMicSampleCapture() {

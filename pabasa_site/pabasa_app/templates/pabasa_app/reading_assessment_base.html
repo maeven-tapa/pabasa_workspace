@@ -670,22 +670,24 @@
         .mic-test-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(27, 26, 23, 0.44);
+            background: rgba(27, 26, 23, 0.32);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
-            z-index: 30;
+            z-index: 999;
         }
 
         .mic-test-card {
-            width: min(430px, 100%);
-            background: var(--card);
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            box-shadow: 0 28px 70px rgba(27, 26, 23, 0.24);
+            width: min(460px, calc(100vw - 2rem));
+            background: #fffdf7;
+            border: 1px solid rgba(31, 111, 139, 0.18);
+            border-radius: 24px;
+            box-shadow: 0 24px 54px rgba(27, 26, 23, 0.2);
             color: var(--ink);
-            padding: 1.35rem;
+            padding: 1rem;
+            position: relative;
+            z-index: 1000;
         }
 
         .mic-test-head {
@@ -697,18 +699,20 @@
         }
 
         .mic-test-head h2 {
-            font-size: 1.2rem;
+            font-size: 1.7rem;
             margin: 0;
             font-weight: 900;
+            text-align: center;
+            flex: 1;
         }
 
         .mic-test-close {
-            width: 38px;
-            height: 38px;
-            border: 0;
-            border-radius: 50%;
-            background: rgba(27, 26, 23, 0.08);
-            color: var(--ink);
+            width: 42px;
+            height: 42px;
+            border: 1px solid rgba(31, 111, 139, 0.2);
+            border-radius: 16px;
+            background: #fff;
+            color: var(--accent-deep);
             cursor: pointer;
             display: inline-flex;
             align-items: center;
@@ -717,49 +721,67 @@
 
         .mic-test-card p {
             color: var(--muted);
-            margin: 0 0 1rem;
+            font-size: 0.95rem;
+            font-weight: 700;
             line-height: 1.45;
+            margin: 0.25rem 0 0.65rem;
+            text-align: center;
         }
 
         .mic-test-status {
-            background: rgba(31, 111, 139, 0.08);
-            border: 1px solid rgba(31, 111, 139, 0.18);
-            border-radius: 8px;
-            color: var(--accent);
-            font-weight: 800;
-            min-height: 52px;
+            background: #fff;
+            border: 1px solid rgba(31, 111, 139, 0.2);
+            border-radius: 16px;
+            color: var(--accent-deep);
+            font-weight: 900;
+            line-height: 1.35;
+            min-height: 64px;
             padding: 0.75rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
+            overflow-wrap: anywhere;
+            text-align: center;
         }
 
         .mic-test-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
+            display: grid;
+            gap: 0.55rem;
         }
 
         .mic-test-actions button {
-            border: 0;
-            border-radius: 999px;
+            width: 100%;
+            border: 1px solid rgba(31, 111, 139, 0.2);
+            border-radius: 16px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 0.45rem;
             font-weight: 900;
-            min-height: 44px;
-            padding: 0 1rem;
+            min-height: 48px;
+            padding: 0.8rem;
+            font-size: 1.05rem;
         }
 
         .mic-test-primary {
-            background: var(--accent);
-            color: #fff;
+            background: #fff;
+            color: var(--accent-deep);
         }
 
         .mic-test-secondary {
             background: #fff;
-            border: 2px solid var(--accent-soft) !important;
-            color: var(--accent);
+            color: var(--accent-deep);
+        }
+
+        .mic-test-close:hover,
+        .mic-test-actions button:hover:not(:disabled) {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .mic-test-actions button:disabled {
+            cursor: not-allowed;
+            opacity: 0.48;
         }
 
         .completion-page {
