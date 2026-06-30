@@ -29,6 +29,11 @@
         const btnStopReading = document.getElementById("btnStopReading");
         const btnToggleMic = document.getElementById("btnToggleMic");
         const btnTestMic = document.getElementById("btnTestMic") || document.getElementById("testMic");
+        const micTestOverlay = document.getElementById("micTestOverlay");
+        const micTestCloseBtn = document.getElementById("micTestCloseBtn");
+        const micSampleRecordBtn = document.getElementById("micSampleRecordBtn");
+        const micSamplePlayBtn = document.getElementById("micSamplePlayBtn");
+        const micTestStatus = document.getElementById("micTestStatus");
         const rawMicInput = document.getElementById("rawMicInput");
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -51,6 +56,11 @@
         let spokenTranscript = "";
         let latestScores = null;
         let isTestingMic = false;
+        let micTestWasRecording = false;
+        let micSampleAudioUrl = "";
+        let micSampleAudio = null;
+        let micTestRecorder = null;
+        let micTestStream = null;
         let rawMicLines = [];
         let mediaStream = null;
         let mediaRecorder = null;
@@ -525,7 +535,6 @@
         }
 
         function sttModelLabel(model) {
-            if (model === "chirp_3") return "Chirp 3";
             if (model === "stt_v1") return "STT v1";
             return model || "Google STT";
         }
@@ -816,17 +825,44 @@
         });
 
         if (btnTestMic) {
-            btnTestMic.addEventListener("click", runMicPlaybackTest);
+            btnTestMic.addEventListener("click", openMicTestDialog);
+        }
+        micTestCloseBtn?.addEventListener("click", closeMicTestDialog);
+        micTestOverlay?.addEventListener("click", (event) => {
+            if (event.target === micTestOverlay) closeMicTestDialog();
+        });
+        micSampleRecordBtn?.addEventListener("click", runMicPlaybackTest);
+        micSamplePlayBtn?.addEventListener("click", playMicSample);
+
+        function openMicTestDialog() {
+            if (!micTestOverlay) {
+                runMicPlaybackTest();
+                return;
+            }
+            micTestWasRecording = isRecording && recognitionActive;
+            if (micTestWasRecording) {
+                stopSpeechRecognition();
+                setSpeechStatus("Reading paused for microphone check.", "Close the microphone check to continue listening.", false);
+            }
+            micTestOverlay.classList.remove("d-none");
+            document.body.style.overflow = "hidden";
+            setMicTestStatus(micTestWasRecording ? "Reading paused. Ready for a sample recording." : "Ready for a sample recording.");
+        }
+
+        function closeMicTestDialog() {
+            stopMicSampleCapture();
+            micTestOverlay?.classList.add("d-none");
+            document.body.style.overflow = "";
+            if (micTestWasRecording && isRecording && !isMuted) {
+                startSpeechRecognition();
+            }
+            micTestWasRecording = false;
         }
 
         async function runMicPlaybackTest() {
             if (isTestingMic) return;
-            if (isRecording) {
-                showMicTestMessage("Microphone Check", "Finish the current reading first, then test the microphone.", "warning");
-                return;
-            }
             if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-                showMicTestMessage("Microphone Check", "This browser cannot record microphone audio. Use a current Chrome or Edge browser.", "error");
+                setMicTestStatus("This browser cannot record microphone audio. Use a current Chrome or Edge browser.");
                 return;
             }
 
@@ -835,62 +871,89 @@
             const originalIconClass = icon?.className || "";
             if (icon) icon.className = "bi bi-record-circle-fill";
             btnTestMic?.classList.add("btn-outline-danger");
-            setSpeechStatus("Recording mic test...", "Say a short phrase. Playback will start automatically.", false);
+            micSampleRecordBtn?.setAttribute("disabled", "disabled");
+            micSamplePlayBtn?.setAttribute("disabled", "disabled");
+            setMicTestStatus("Recording sample... say a short phrase now.");
             resetRawMicInput("Mic test recording... say something now.");
 
-            let testStream = null;
             try {
-                testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                revokeMicSampleUrl();
+                micTestStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const mimeType = pickAudioMimeType();
-                const recorder = new MediaRecorder(testStream, mimeType ? { mimeType } : undefined);
+                micTestRecorder = new MediaRecorder(micTestStream, mimeType ? { mimeType } : undefined);
                 const chunks = [];
-                recorder.ondataavailable = (event) => {
+                micTestRecorder.ondataavailable = (event) => {
                     if (event.data && event.data.size > 0) chunks.push(event.data);
                 };
 
                 await new Promise((resolve, reject) => {
-                    recorder.onerror = () => reject(new Error("The microphone test recorder failed."));
-                    recorder.onstop = resolve;
-                    recorder.start();
+                    micTestRecorder.onerror = () => reject(new Error("The microphone test recorder failed."));
+                    micTestRecorder.onstop = resolve;
+                    micTestRecorder.start();
                     window.setTimeout(() => {
-                        if (recorder.state !== "inactive") recorder.stop();
+                        if (micTestRecorder && micTestRecorder.state !== "inactive") micTestRecorder.stop();
                     }, 3000);
                 });
 
-                const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+                const blob = new Blob(chunks, { type: micTestRecorder?.mimeType || mimeType || "audio/webm" });
                 if (!blob.size) {
                     setRawMicInput("No audio was captured during the mic test.");
-                    showMicTestMessage("Microphone Check", "No audio was captured. Check the selected microphone and try again.", "warning");
+                    setMicTestStatus("No audio was captured. Check the selected microphone and try again.");
                     return;
                 }
 
-                setRawMicInput(`Mic test captured ${(blob.size / 1024).toFixed(1)} KB. Playing it back now.`);
-                const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
-                audio.controls = false;
-                audio.onended = () => URL.revokeObjectURL(url);
-                await audio.play();
-                showMicTestMessage("Microphone Check", "Playback started. If you hear your voice, your microphone is working.", "success");
+                micSampleAudioUrl = URL.createObjectURL(blob);
+                micSampleAudio = new Audio(micSampleAudioUrl);
+                micSampleAudio.controls = false;
+                micSamplePlayBtn?.removeAttribute("disabled");
+                setRawMicInput(`Mic test captured ${(blob.size / 1024).toFixed(1)} KB. Use Play Sample to listen.`);
+                setMicTestStatus("Sample captured. Play it back to check if your voice is clear.");
             } catch (error) {
                 console.warn("PABASA: Mic test failed", error);
                 setRawMicInput("Mic test failed: " + (error.message || "microphone access was not available."));
-                showMicTestMessage("Microphone Check", error.message || "Microphone access was not available.", "error");
+                setMicTestStatus(error.message || "Microphone access was not available.");
             } finally {
-                testStream?.getTracks().forEach(track => track.stop());
+                stopMicSampleCapture();
                 if (icon) icon.className = originalIconClass || "bi bi-headphones";
                 btnTestMic?.classList.remove("btn-outline-danger");
+                micSampleRecordBtn?.removeAttribute("disabled");
                 isTestingMic = false;
             }
         }
 
-        function showMicTestMessage(title, message, type = "success") {
-            if (typeof window.showDialog === "function") {
-                window.showDialog(title, message, type);
-            } else if (typeof window.showToast === "function") {
-                window.showToast(message, type);
-            } else {
-                alert(title + "\n\n" + message);
+        async function playMicSample() {
+            if (!micSampleAudio) {
+                setMicTestStatus("Record a sample first.");
+                return;
             }
+            try {
+                micSampleAudio.currentTime = 0;
+                await micSampleAudio.play();
+                setMicTestStatus("Playing sample. If you hear your voice clearly, the microphone is ready.");
+            } catch (error) {
+                setMicTestStatus(error.message || "Could not play the sample.");
+            }
+        }
+
+        function setMicTestStatus(message) {
+            if (micTestStatus) micTestStatus.textContent = message;
+        }
+
+        function stopMicSampleCapture() {
+            if (micTestRecorder && micTestRecorder.state !== "inactive") {
+                try { micTestRecorder.stop(); } catch (error) { console.warn("PABASA: Mic sample stop failed", error); }
+            }
+            micTestRecorder = null;
+            micTestStream?.getTracks().forEach(track => track.stop());
+            micTestStream = null;
+        }
+
+        function revokeMicSampleUrl() {
+            if (micSampleAudioUrl) {
+                URL.revokeObjectURL(micSampleAudioUrl);
+                micSampleAudioUrl = "";
+            }
+            micSampleAudio = null;
         }
 
         function closePauseMenu() {

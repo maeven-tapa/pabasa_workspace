@@ -667,6 +667,101 @@
             color: #fff;
         }
 
+        .mic-test-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(27, 26, 23, 0.44);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 30;
+        }
+
+        .mic-test-card {
+            width: min(430px, 100%);
+            background: var(--card);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 28px 70px rgba(27, 26, 23, 0.24);
+            color: var(--ink);
+            padding: 1.35rem;
+        }
+
+        .mic-test-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .mic-test-head h2 {
+            font-size: 1.2rem;
+            margin: 0;
+            font-weight: 900;
+        }
+
+        .mic-test-close {
+            width: 38px;
+            height: 38px;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(27, 26, 23, 0.08);
+            color: var(--ink);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mic-test-card p {
+            color: var(--muted);
+            margin: 0 0 1rem;
+            line-height: 1.45;
+        }
+
+        .mic-test-status {
+            background: rgba(31, 111, 139, 0.08);
+            border: 1px solid rgba(31, 111, 139, 0.18);
+            border-radius: 8px;
+            color: var(--accent);
+            font-weight: 800;
+            min-height: 52px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .mic-test-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .mic-test-actions button {
+            border: 0;
+            border-radius: 999px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            font-weight: 900;
+            min-height: 44px;
+            padding: 0 1rem;
+        }
+
+        .mic-test-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .mic-test-secondary {
+            background: #fff;
+            border: 2px solid var(--accent-soft) !important;
+            color: var(--accent);
+        }
+
         .completion-page {
             display: none;
             min-height: calc(100vh - clamp(0.85rem, 2vw, 1.5rem) * 2);
@@ -1046,6 +1141,27 @@
             <button id="resumeBtn" type="button" role="menuitem">Resume</button>
             <button id="retryBtn" type="button" role="menuitem">Start Again</button>
             <button id="quitBtn" type="button" role="menuitem">Go Back</button>
+        </div>
+
+        <div class="mic-test-overlay d-none" id="micTestOverlay" role="dialog" aria-modal="true" aria-labelledby="micTestTitle">
+            <section class="mic-test-card">
+                <div class="mic-test-head">
+                    <h2 id="micTestTitle">Microphone Check</h2>
+                    <button class="mic-test-close" id="micTestCloseBtn" type="button" aria-label="Close microphone check">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <p>Record a short sample, then listen to the playback to confirm your microphone is clear.</p>
+                <div class="mic-test-status" id="micTestStatus">Ready for a sample recording.</div>
+                <div class="mic-test-actions">
+                    <button class="mic-test-primary" id="micSampleRecordBtn" type="button">
+                        <i class="bi bi-record-circle-fill"></i> Sample Record
+                    </button>
+                    <button class="mic-test-secondary" id="micSamplePlayBtn" type="button" disabled>
+                        <i class="bi bi-play-fill"></i> Play Sample
+                    </button>
+                </div>
+            </section>
         </div>
 
         <section class="completion-page" id="completionPage" aria-live="polite" aria-atomic="true">

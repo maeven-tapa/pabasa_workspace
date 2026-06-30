@@ -2459,7 +2459,7 @@ def reading_transcribe_api(request):
             api_key,
             language_code=language_code,
             phrase_hints=phrase_hints,
-            model='chirp_3',
+            model='latest_short' if language_code == 'en-US' else '',
             project_id=project_id,
             location=location,
             mime_type=getattr(audio, 'content_type', '') or 'audio/webm',

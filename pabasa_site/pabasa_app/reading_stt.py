@@ -53,7 +53,7 @@ def transcribe_audio_bytes(
     api_key,
     language_code="en-US",
     phrase_hints=None,
-    model="chirp_3",
+    model="",
     project_id="",
     location="global",
     mime_type="audio/webm",
@@ -76,44 +76,20 @@ def transcribe_audio_bytes_with_model(
     api_key,
     language_code="en-US",
     phrase_hints=None,
-    model="chirp_3",
+    model="",
     project_id="",
     location="global",
     mime_type="audio/webm",
 ):
-    if model == "chirp_3":
-        fallback_model = "latest_short" if language_code == "en-US" else ""
-        try:
-            transcript = transcribe_audio_bytes_v2_chirp3(
-                audio_bytes,
-                api_key,
-                language_code,
-                project_id,
-                location,
-            )
-            if transcript:
-                return transcript, "chirp_3"
-            return transcribe_audio_bytes_v1(
-                audio_bytes,
-                api_key,
-                language_code,
-                phrase_hints,
-                fallback_model,
-                mime_type,
-            ), "stt_v1"
-        except RuntimeError as exc:
-            if is_chirp3_access_error(str(exc)):
-                return transcribe_audio_bytes_v1(
-                    audio_bytes,
-                    api_key,
-                    language_code,
-                    phrase_hints,
-                    fallback_model,
-                    mime_type,
-                ), "stt_v1"
-            raise
-
-    return transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type), "stt_v1"
+    v1_model = model or ("latest_short" if language_code == "en-US" else "")
+    return transcribe_audio_bytes_v1(
+        audio_bytes,
+        api_key,
+        language_code,
+        phrase_hints,
+        v1_model,
+        mime_type,
+    ), "stt_v1"
 
 
 def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type):
@@ -141,26 +117,6 @@ def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints,
         f"https://speech.googleapis.com/v1p1beta1/speech:recognize?key={api_key}",
         payload,
         "Google STT",
-    )
-
-
-def transcribe_audio_bytes_v2_chirp3(audio_bytes, api_key, language_code, project_id, location):
-    if not project_id:
-        raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp 3.")
-
-    payload = {
-        "config": {
-            "autoDecodingConfig": {},
-            "languageCodes": [language_code],
-            "model": "chirp_3",
-            "features": {"enableAutomaticPunctuation": language_code == "en-US"},
-        },
-        "content": base64.b64encode(audio_bytes).decode("utf-8"),
-    }
-    return _post_google_stt(
-        f"https://speech.googleapis.com/v2/projects/{project_id}/locations/{location}/recognizers/_:recognize?key={api_key}",
-        payload,
-        "Google STT V2 Chirp 3",
     )
 
 
@@ -192,16 +148,6 @@ def _post_google_stt(url, payload, label):
     if not alternatives:
         return ""
     return alternatives[0].get("transcript", "").strip()
-
-
-def is_chirp3_access_error(message):
-    lowered = message.lower()
-    return (
-        "permission" in lowered
-        or "denied" in lowered
-        or "may not exist" in lowered
-        or "troubleshooter" in lowered
-    )
 
 
 def analyze_reading(target_text, current_syllable_index=0, transcript=""):
