@@ -2456,26 +2456,29 @@ def reading_transcribe_api(request):
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
     location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()
+    stt_model = getattr(settings, 'GOOGLE_STT_MODEL', 'chirp_3').strip()
+    credentials_file = str(getattr(settings, 'GOOGLE_STT_CREDENTIALS_FILE', '') or '')
 
-    if not api_key:
+    if not api_key and stt_model != 'chirp_3':
         return JsonResponse({'success': False, 'error': 'Google Speech is not configured.'}, status=503)
 
     try:
-        transcript, stt_model = transcribe_audio_bytes_with_model(
+        transcript, model_used = transcribe_audio_bytes_with_model(
             audio.read(),
             api_key,
             language_code=language_code,
             phrase_hints=phrase_hints,
-            model='latest_short' if language_code == 'en-US' else '',
+            model=stt_model,
             project_id=project_id,
             location=location,
             mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
+            credentials_file=credentials_file,
         )
         analysis = analyze_reading(target_text, current_syllable_index, transcript)
         analysis.update({
             'success': True,
             'language_code': language_code,
-            'stt_model': stt_model,
+            'stt_model': model_used,
         })
         return JsonResponse(analysis)
     except Exception as exc:

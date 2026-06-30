@@ -535,6 +535,7 @@
         }
 
         function sttModelLabel(model) {
+            if (model === "chirp_3") return "Chirp 3";
             if (model === "stt_v1") return "STT v1";
             return model || "Google STT";
         }

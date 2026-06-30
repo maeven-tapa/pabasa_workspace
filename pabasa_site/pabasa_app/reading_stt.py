@@ -1,5 +1,6 @@
 import base64
 import json
+from pathlib import Path
 import re
 import urllib.error
 import urllib.request
@@ -57,6 +58,7 @@ def transcribe_audio_bytes(
     project_id="",
     location="global",
     mime_type="audio/webm",
+    credentials_file="",
 ):
     transcript, _model_used = transcribe_audio_bytes_with_model(
         audio_bytes,
@@ -67,6 +69,7 @@ def transcribe_audio_bytes(
         project_id,
         location,
         mime_type,
+        credentials_file,
     )
     return transcript
 
@@ -80,8 +83,26 @@ def transcribe_audio_bytes_with_model(
     project_id="",
     location="global",
     mime_type="audio/webm",
+    credentials_file="",
 ):
+    if model == "chirp_3":
+        try:
+            transcript = transcribe_audio_bytes_v2_chirp3(
+                audio_bytes,
+                language_code,
+                project_id,
+                location,
+                credentials_file,
+            )
+            if transcript:
+                return transcript, "chirp_3"
+        except Exception:
+            if not api_key:
+                raise
+
     v1_model = model or ("latest_short" if language_code == "en-US" else "")
+    if v1_model == "chirp_3":
+        v1_model = "latest_short" if language_code == "en-US" else ""
     return transcribe_audio_bytes_v1(
         audio_bytes,
         api_key,
@@ -90,6 +111,46 @@ def transcribe_audio_bytes_with_model(
         v1_model,
         mime_type,
     ), "stt_v1"
+
+
+def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, location, credentials_file):
+    if not project_id:
+        raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp 3.")
+    credentials_path = Path(credentials_file or "")
+    if not credentials_path.exists():
+        raise RuntimeError(f"Google service account file was not found: {credentials_path}")
+
+    try:
+        from google.api_core.client_options import ClientOptions
+        from google.cloud.speech_v2 import SpeechClient
+        from google.cloud.speech_v2.types import cloud_speech
+        from google.oauth2 import service_account
+    except ImportError as exc:
+        raise RuntimeError("Install google-cloud-speech to use Chirp 3.") from exc
+
+    credentials = service_account.Credentials.from_service_account_file(str(credentials_path))
+    client_options = None
+    if location and location != "global":
+        client_options = ClientOptions(api_endpoint=f"{location}-speech.googleapis.com")
+    client = SpeechClient(credentials=credentials, client_options=client_options)
+
+    config = cloud_speech.RecognitionConfig(
+        auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
+        language_codes=[language_code],
+        model="chirp_3",
+    )
+    request = cloud_speech.RecognizeRequest(
+        recognizer=f"projects/{project_id}/locations/{location or 'global'}/recognizers/_",
+        config=config,
+        content=audio_bytes,
+    )
+    response = client.recognize(request=request)
+    if not response.results:
+        return ""
+    alternatives = response.results[0].alternatives
+    if not alternatives:
+        return ""
+    return alternatives[0].transcript.strip()
 
 
 def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type):
