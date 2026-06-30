@@ -54,6 +54,7 @@
         let recognition = null;
         let recognitionActive = false;
         let spokenTranscript = "";
+        let correctWordCounts = [];
         let latestScores = null;
         let isTestingMic = false;
         let micTestWasRecording = false;
@@ -146,6 +147,7 @@
             });
 
             items = aggregatedItems;
+            correctWordCounts = new Array(items.length).fill(0);
             if (items.length === 0) {
                 if (readingWord) readingWord.textContent = "No assessment items assigned.";
                 if (nextBtn) nextBtn.disabled = true;
@@ -195,9 +197,9 @@
             const targetWords = normalizeWords(targetText);
             const spokenWords = normalizeWords(spokenTranscript);
             const durationSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
-            const wpm = Math.round((targetWords.length / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100;
+            const matchedWords = correctWordsRead();
+            const wpm = Math.round((matchedWords / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100;
             const targetWpm = targetWpmForMode();
-            const matchedWords = spokenWords.length ? lcsLength(targetWords, spokenWords) : 0;
             const speechRecognitionUsed = spokenWords.length > 0;
 
             const accuracy = targetWords.length && speechRecognitionUsed
@@ -224,7 +226,8 @@
                 classification: crlaClassification,
                 wpm,
                 duration_seconds: durationSeconds,
-                word_count: targetWords.length,
+                word_count: matchedWords,
+                target_word_count: targetWords.length,
                 transcript: spokenTranscript.trim(),
                 speech_recognition_used: speechRecognitionUsed,
                 needs_manual_review: needsManualReview,
@@ -232,6 +235,14 @@
                     ? "Speech recognition was unavailable or did not capture speech; teacher review is recommended."
                     : `CRLA classification: ${crlaClassification}.`
             };
+        }
+
+        function correctWordsRead() {
+            return correctWordCounts.reduce((sum, count) => sum + Number(count || 0), 0);
+        }
+
+        function readableWordCount(text) {
+            return normalizeWords(text).length;
         }
 
         function renderScoreSummary(scores) {
@@ -548,6 +559,11 @@
             if (transcript) {
                 spokenTranscript = [spokenTranscript, transcript].filter(Boolean).join(" ");
             }
+            const itemCorrectWords = Math.max(
+                Number(correctWordCounts[currentIndex] || 0),
+                Number(data.correct_word_count || data.current_word_index || 0)
+            );
+            correctWordCounts[currentIndex] = Math.min(itemCorrectWords, readableWordCount(items[currentIndex]));
             currentSyllableIndex = Number(data.current_syllable_index || currentSyllableIndex || 0);
             if (transcript || Number(data.matched || 0) > 0) {
                 renderSyllableDisplay(data);
@@ -572,7 +588,7 @@
 
             if (Number(data.matched || 0) > 0) {
                 setSpeechStatus(
-                    `Matched ${data.matched} syllable${Number(data.matched) === 1 ? "" : "s"}.`,
+                    `Matched ${correctWordCounts[currentIndex]} word${Number(correctWordCounts[currentIndex]) === 1 ? "" : "s"}.`,
                     `Words: ${transcript || "..."}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}`,
                     true
                 );
@@ -649,7 +665,7 @@
             stopSpeechRecognition();
             shell.classList.add("is-complete");
             closePauseMenu();
-            if (completionCount) completionCount.textContent = items.length;
+            if (completionCount) completionCount.textContent = correctWordsRead();
             if (completionLevel) completionLevel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
             latestScores = latestScores || calculateScores();
             renderScoreSummary(latestScores);
@@ -786,6 +802,7 @@
             isRecording = true;
             startTime = Date.now();
             spokenTranscript = "";
+            correctWordCounts = new Array(items.length).fill(0);
             latestScores = null;
             currentSyllableIndex = 0;
             pendingAudioChunk = null;
@@ -1006,6 +1023,7 @@
             currentIndex = 0;
             currentSyllableIndex = 0;
             spokenTranscript = "";
+            correctWordCounts = new Array(items.length).fill(0);
             pendingAudioChunk = null;
             hasHeardSinceLastChunk = false;
             resetRawMicInput("Waiting for speech...");

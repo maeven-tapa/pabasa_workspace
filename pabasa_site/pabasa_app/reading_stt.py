@@ -280,18 +280,38 @@ class ReadingMatcher:
             self.word_syllable_ranges.append((start, len(self.syllables)))
 
     def advance_for_spoken_text(self, transcript):
-        spoken_syllables = self.syllables_for_text(transcript)
-        if not spoken_syllables or self.current_syllable_index >= len(self.syllables):
+        spoken_words = self.normalize_spoken_words(transcript)
+        if not spoken_words or self.current_word_index >= len(self.words):
             return 0
 
-        new_syllable_index = self.find_best_read_position(spoken_syllables, self.syllables)
+        new_word_index = self.find_best_word_position(spoken_words)
+        if new_word_index <= self.current_word_index:
+            return 0
+
+        new_syllable_index = self.word_syllable_ranges[new_word_index - 1][1]
         if new_syllable_index <= self.current_syllable_index:
             return 0
 
         matched = new_syllable_index - self.current_syllable_index
         self.current_syllable_index = new_syllable_index
-        self.current_word_index = self.word_index_for_syllable(self.current_syllable_index)
+        self.current_word_index = new_word_index
         return matched
+
+    def find_best_word_position(self, spoken_words):
+        target_index = self.current_word_index
+        spoken_index = 0
+        while target_index < len(self.words) and spoken_index < len(spoken_words):
+            target_word = self.normalize_word(self.words[target_index])
+            matched_at = -1
+            for candidate_index in range(spoken_index, len(spoken_words)):
+                if self.words_match(spoken_words[candidate_index], target_word):
+                    matched_at = candidate_index
+                    break
+            if matched_at == -1:
+                break
+            target_index += 1
+            spoken_index = matched_at + 1
+        return target_index
 
     def find_best_read_position(self, spoken_words, target_words):
         best_index = self.current_syllable_index
@@ -317,6 +337,8 @@ class ReadingMatcher:
         longer = max(len(spoken_word), len(target_word))
         if longer <= 3:
             return False
+        if not spoken_word or not target_word or spoken_word[0] != target_word[0]:
+            return False
         allowed_distance = 1 if longer <= 5 else 2
         return self.edit_distance(spoken_word, target_word, allowed_distance) <= allowed_distance
 
@@ -341,6 +363,7 @@ class ReadingMatcher:
             "matched": matched,
             "current_syllable_index": self.current_syllable_index,
             "current_word_index": self.current_word_index,
+            "correct_word_count": self.current_word_index,
             "syllables": self.syllables,
             "word_syllable_ranges": self.word_syllable_ranges,
             "words": self.words,

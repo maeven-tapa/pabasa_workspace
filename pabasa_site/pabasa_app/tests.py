@@ -8,8 +8,31 @@ import uuid
 from unittest.mock import patch
 
 from .models import Material, User, Section, Assessment, Notification, Course, Note
+from .reading_stt import analyze_reading
 from .views import _create_notification
 from .weekly_digest import send_weekly_digest
+
+
+class ReadingMatcherTests(TestCase):
+    def test_wrong_word_does_not_complete_target(self):
+        result = analyze_reading("water", 0, "apple")
+
+        self.assertEqual(result["matched"], 0)
+        self.assertEqual(result["correct_word_count"], 0)
+        self.assertFalse(result["complete"])
+
+    def test_similar_wrong_word_does_not_match_when_first_sound_differs(self):
+        result = analyze_reading("house", 0, "mouse")
+
+        self.assertEqual(result["matched"], 0)
+        self.assertEqual(result["correct_word_count"], 0)
+        self.assertFalse(result["complete"])
+
+    def test_correct_words_advance_in_order_until_first_missing_target(self):
+        result = analyze_reading("the water is cold", 0, "the apple is cold")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertFalse(result["complete"])
 
 
 class PrincipalReportsExportTests(TestCase):
