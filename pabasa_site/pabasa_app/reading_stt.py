@@ -59,17 +59,27 @@ def transcribe_audio_bytes(
     mime_type="audio/webm",
 ):
     if model == "chirp_3":
+        fallback_model = "latest_short" if language_code == "en-US" else ""
         try:
-            return transcribe_audio_bytes_v2_chirp3(
+            transcript = transcribe_audio_bytes_v2_chirp3(
                 audio_bytes,
                 api_key,
                 language_code,
                 project_id,
                 location,
             )
+            if transcript:
+                return transcript
+            return transcribe_audio_bytes_v1(
+                audio_bytes,
+                api_key,
+                language_code,
+                phrase_hints,
+                fallback_model,
+                mime_type,
+            )
         except RuntimeError as exc:
             if is_chirp3_access_error(str(exc)):
-                fallback_model = "latest_short" if language_code == "en-US" else ""
                 return transcribe_audio_bytes_v1(
                     audio_bytes,
                     api_key,
