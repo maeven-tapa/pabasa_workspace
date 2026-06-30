@@ -166,7 +166,7 @@ DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
 # Google Cloud Speech-to-Text settings used by the reading assessment UI.
 GOOGLE_STT_API_KEY = 'AIzaSyD1NqLTpMSzmkAdFX6UpcuJ-y4bT9mrXbk'
 GOOGLE_CLOUD_PROJECT_ID = 'direct-outlet-499701-p6'
-GOOGLE_STT_LOCATION = 'global'
+GOOGLE_STT_LOCATION = 'us'
 GOOGLE_STT_MODEL = 'chirp_3'
 GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'
 
