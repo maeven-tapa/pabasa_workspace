@@ -488,6 +488,13 @@ def _section_active_students(section):
     return User.objects.filter(id__in=student_ids, role='student', is_archived=False)
 
 
+def _normalized_student_entry_id(entry):
+    student_id = entry.get('student_id') if isinstance(entry, dict) else None
+    if student_id is None or student_id == '':
+        return ''
+    return str(student_id).strip()
+
+
 def _latest_student_reading_report(student_user, sections=None, course=None):
     """Build the latest reading report for a student from assessment attempts/profile data."""
     profile = _get_profile_dict(student_user, 'student_profile')
@@ -3810,8 +3817,9 @@ def _compute_teacher_overview(teacher_user):
         unique_student_ids = set()
         for section in active_sections:
             for entry in section.get_enrolled_students(active_only=True):
-                if entry.get('student_id'):
-                    unique_student_ids.add(entry.get('student_id'))
+                student_id = _normalized_student_entry_id(entry)
+                if student_id:
+                    unique_student_ids.add(student_id)
         total_students = len(unique_student_ids)
 
         assessments_posted = Assessment.objects.filter(
@@ -4133,8 +4141,9 @@ def get_teacher_overview(request):
         unique_student_ids = set()
         for section in active_sections:
             for entry in section.get_enrolled_students(active_only=True):
-                if entry.get('student_id'):
-                    unique_student_ids.add(entry.get('student_id'))
+                student_id = _normalized_student_entry_id(entry)
+                if student_id:
+                    unique_student_ids.add(student_id)
         total_students = len(unique_student_ids)
 
         # Separate materials vs assessments counts so they are not conflated
