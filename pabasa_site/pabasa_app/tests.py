@@ -170,6 +170,119 @@ class MaterialCreationTests(TestCase):
         material = Material.objects.latest("id")
         self.assertEqual(material.content_json.get("language"), "Tagalog")
 
+    def test_add_reading_material_saves_shared_source_type(self):
+        user = User.objects.create(
+            custom_id="TCH-0003",
+            role="teacher",
+            first_name="Shared",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="shared@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Shared reading",
+                "content": "Araw\nBuwan",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "practice",
+                "class_code": "",
+                "language": "Tagalog",
+                "source_type": "shared",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["material"]["source_type"], "shared")
+
+        material = Material.objects.latest("id")
+        self.assertEqual(material.source_type, "shared")
+
+    def test_teacher_courses_api_includes_material_source_type(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0004",
+            role="teacher",
+            first_name="Course",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="course@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        section = Section.objects.create(
+            class_code="CRS-1001",
+            class_name="Course 1",
+            header="Reading Class",
+            description="",
+            teacher=teacher,
+            subject="Reading",
+        )
+        course = Course.objects.create(
+            code="C-1001",
+            title="Shared Course",
+            description="",
+            teacher=teacher,
+        )
+        course.sections.add(section)
+
+        material = Material.objects.create(
+            title="Imported reading",
+            item_type="word",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "English"},
+            type="practice",
+            source_type="shared",
+            status="published",
+            difficulty_level="",
+            is_active=True,
+            section=section,
+        )
+        course.materials.add(material)
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.get(reverse("get_teacher_courses_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        course_payload = next(item for item in payload["courses"] if item["id"] == course.id)
+        material_payload = next(item for item in course_payload["materials"] if item["id"] == material.id)
+        self.assertEqual(material_payload["source_type"], "shared")
+        self.assertTrue(material_payload["is_shared_material"])
+
 
 class PracticeReaderMaterialTests(TestCase):
     def test_word_reader_receives_active_published_practice_items(self):

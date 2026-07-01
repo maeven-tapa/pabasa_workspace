@@ -3541,9 +3541,10 @@ def get_teacher_courses_api(request):
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
-                    'material_source': material_source,
-                    'is_shared_material': is_shared_material,
-                    'shared_owner_teacher_name': material_teacher_name if is_shared_material else None,
+                    'source_type': getattr(m, 'source_type', 'personal') or 'personal',
+                    'material_source': getattr(m, 'source_type', 'personal') or 'personal',
+                    'is_shared_material': (getattr(m, 'source_type', 'personal') or 'personal') == 'shared',
+                    'shared_owner_teacher_name': material_teacher_name if (getattr(m, 'source_type', 'personal') or 'personal') == 'shared' else None,
                 })
 
             # Practices (normalized)
@@ -4091,6 +4092,22 @@ def get_teacher_classes(request):
         class_list = []
         for cls in classes:
             student_count = _section_student_count(cls)
+            section_materials = Material.objects.filter(
+                Q(section=cls) | Q(assigned_sections=cls) | Q(courses__sections=cls),
+                is_active=True,
+            ).distinct()
+            represented_asm_ids = section_materials.exclude(assessment=None).values_list('assessment_id', flat=True)
+            assessment_material_count = section_materials.filter(Q(type='assessment') | Q(type='both')).count()
+            assessment_material_count += Assessment.objects.filter(section=cls, is_active=True).exclude(id__in=represented_asm_ids).count()
+
+            practice_material_count = section_materials.filter(Q(type='practice') | Q(type='both')).count()
+            practice_material_count += Practice.objects.filter(
+                Q(section=cls) |
+                Q(teacher=teacher_user) |
+                Q(section__isnull=True, teacher=teacher_user) |
+                Q(section__isnull=True, teacher__role='admin'),
+                is_active=True,
+            ).count()
             class_list.append({
                 'id': cls.id,
                 'code': cls.class_code,
@@ -4101,6 +4118,8 @@ def get_teacher_classes(request):
                 'description': cls.description,
                 'header': cls.header,
                 'students': student_count,
+                'assessment_material_count': assessment_material_count,
+                'practice_material_count': practice_material_count,
                 'teacher_email': request.session.get('email', ''),
             })
 
@@ -4632,6 +4651,7 @@ def add_reading_material(request):
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
         usage_type   = (data.get('usage_type') or 'practice').strip()        # practice | assessment | both
         class_code   = (data.get('class_code') or '').strip()
+        source_type  = (data.get('source_type') or data.get('origin') or '').strip().lower()
         language     = (data.get('language') or 'English').strip() or 'English'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
@@ -4649,6 +4669,8 @@ def add_reading_material(request):
             errors['usage_type'] = 'Valid usage type is required.'
         if status not in ('published', 'draft', 'scheduled'):
             errors['status'] = 'Status is required.'
+        if source_type and source_type not in ('personal', 'shared'):
+            errors['source_type'] = 'Invalid source type.'
         if status == 'scheduled' and not scheduled_at_str:
             errors['scheduled_at'] = 'Scheduled date & time is required.'
         if week_error:
@@ -4657,6 +4679,8 @@ def add_reading_material(request):
         if errors:
             logger.warning(f"add_reading_material validation failed: {errors}")
             return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        source_type = source_type if source_type in ('personal', 'shared') else 'personal'
 
         # ── Auto-detect reading_type (Category) ──────────────────────────
         # Since we removed the field, we determine it by analyzing the content
@@ -4762,6 +4786,7 @@ def add_reading_material(request):
                 content_text=content,
                 content_json={'items': tokens, 'language': language},
                 type=usage_type,
+                source_type=source_type,
                 status=status,
                 scheduled_at=scheduled_at if status == 'scheduled' else None,
                 difficulty_level='', # This field is not set in this context, consider if it should be
@@ -4813,6 +4838,7 @@ def add_reading_material(request):
                 'title': m.title,
                 'item_type': m.item_type,
                 'type': m.type,
+                'source_type': m.source_type,
                 'content': m.content_text,
                 'status': m.status,
                 'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if m.scheduled_at else None,
@@ -5317,11 +5343,40 @@ def get_teacher_students_api(request):
     try:
         user_id = request.session.get('user_id')
         teacher = User.objects.get(id=user_id)
+
+        now = timezone.now()
+        thirty_days_ago = now - timedelta(days=30)
+        seven_days_ago = now - timedelta(days=7)
+
+        def _normalize_dashboard_level(value):
+            text = str(value or '').strip().lower().replace('_', ' ').replace('-', ' ')
+            if not text:
+                return None
+            if 'low' in text and 'emerging' in text:
+                return 'Low Emerging Readers'
+            if 'high' in text and 'emerging' in text:
+                return 'High Emerging Readers'
+            if 'develop' in text:
+                return 'Developing Readers'
+            if 'transition' in text:
+                return 'Transitioning Readers'
+            if 'grade' in text or text in {'g', 'gr'}:
+                return 'Readers at Grade Level'
+            return None
         
         # Get all active sections for this teacher
         sections = Section.objects.filter(teacher=teacher, is_active=True)
         
         student_map = {}
+        level_counts = {
+            'Low Emerging Readers': 0,
+            'High Emerging Readers': 0,
+            'Developing Readers': 0,
+            'Transitioning Readers': 0,
+            'Readers at Grade Level': 0,
+        }
+        attempt_history = {}
+        latest_scores = {}
         for section in sections:
             enrolled = section.get_enrolled_students(active_only=True)
             for entry in enrolled:
@@ -5377,12 +5432,30 @@ def get_teacher_students_api(request):
                 student_id = attempt.get('student_id')
                 if not student_id:
                     continue
-                completed_at = attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at') or ''
-                current = latest_scores.get(student_id)
-                if current and str(current.get('completed_at', '')) >= str(completed_at):
+                completed_dt = _parse_attempt_timestamp(
+                    attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at')
+                )
+                if not completed_dt:
+                    completed_dt = now
+
+                score_value = _as_float(attempt.get('total_score'), default=None)
+                if score_value is None:
+                    score_value = _as_float(attempt.get('accuracy'), default=None)
+                if score_value is None:
+                    score_value = _as_float(attempt.get('wpm'), default=None)
+
+                sid_key = str(student_id)
+                attempt_history.setdefault(sid_key, []).append({
+                    'completed_at': completed_dt,
+                    'score': score_value,
+                })
+
+                current = latest_scores.get(sid_key)
+                if current and current.get('completed_at_dt') and current['completed_at_dt'] >= completed_dt:
                     continue
-                latest_scores[student_id] = {
-                    'completed_at': completed_at,
+                latest_scores[sid_key] = {
+                    'completed_at_dt': completed_dt,
+                    'completed_at': completed_dt.isoformat(),
                     'assessment_title': assessment.title,
                     'assessment_type': assessment.assessment_type,
                     'level': attempt.get('crla_classification') or attempt.get('classification'),
@@ -5406,7 +5479,20 @@ def get_teacher_students_api(request):
                             profile = tag['student_profile']
                             break
                 
-                latest = latest_scores.get(user.id, {})
+                latest = latest_scores.get(str(user.id), {})
+                history = sorted(attempt_history.get(str(user.id), []), key=lambda item: item['completed_at'])
+                recent_history = [item for item in history if item.get('completed_at') and item['completed_at'] >= thirty_days_ago and item.get('score') is not None]
+                if len(recent_history) >= 2:
+                    first_score = recent_history[0]['score']
+                    last_score = recent_history[-1]['score']
+                    if first_score not in (None, 0):
+                        improvement = ((last_score - first_score) / first_score) * 100
+                    else:
+                        improvement = last_score - (first_score or 0)
+                else:
+                    improvement = 0
+
+                last_active = history[-1]['completed_at'] if history else None
                 sdata.update({
                     'level': latest.get('level') or user.reading_level or profile.get('reading_level', 'Developing Readers'),
                     'accuracy': latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy', '0'),
@@ -5419,9 +5505,63 @@ def get_teacher_students_api(request):
                     'assessment_title': latest.get('assessment_title', profile.get('last_assessment_title')),
                     'assessment_type': latest.get('assessment_type'),
                     'has_completed_assessment': bool(latest),
+                    'latest_score': latest.get('total_score') if latest.get('total_score') is not None else latest.get('accuracy') if latest.get('accuracy') is not None else latest.get('wpm'),
+                    'last_active_at': last_active.isoformat() if last_active else None,
+                    'improvement_30d': round(improvement, 1),
                 })
+                normalized_level = _normalize_dashboard_level(sdata.get('level'))
+                if normalized_level and normalized_level in level_counts:
+                    level_counts[normalized_level] += 1
                 results.append(sdata)
-        return JsonResponse({'success': True, 'students': results})
+
+        active_this_week = len({
+            sid for sid, attempts in attempt_history.items()
+            if any(item.get('completed_at') and item['completed_at'] >= seven_days_ago for item in attempts)
+        })
+
+        top_performer_name = '—'
+        top_performer_score = None
+        improvement_values = []
+
+        for student in results:
+            sid_key = str(student['id'])
+            latest = latest_scores.get(sid_key, {})
+            score_value = latest.get('total_score')
+            if score_value is None:
+                score_value = latest.get('accuracy')
+            if score_value is None:
+                score_value = latest.get('wpm')
+
+            try:
+                score_value = float(score_value) if score_value is not None else None
+            except (TypeError, ValueError):
+                score_value = None
+
+            if score_value is not None and (top_performer_score is None or score_value > top_performer_score):
+                top_performer_score = score_value
+                top_performer_name = student['name']
+
+            improvement_value = student.get('improvement_30d')
+            if improvement_value is not None:
+                improvement_values.append(float(improvement_value))
+
+        avg_improvement = round(sum(improvement_values) / len(improvement_values), 1) if improvement_values else 0
+        needs_support_count = level_counts['Low Emerging Readers'] + level_counts['High Emerging Readers']
+        grade_level_ready_count = level_counts['Readers at Grade Level']
+
+        dashboard_metrics = {
+            'total_students': len(results),
+            'needs_support_count': needs_support_count,
+            'grade_level_ready_count': grade_level_ready_count,
+            'avg_improvement_30d': avg_improvement,
+            'active_this_week_count': active_this_week,
+            'top_performer_name': top_performer_name,
+            'top_performer_score': top_performer_score,
+            'level_counts': level_counts,
+            'average_score': round(sum((float(s.get('latest_score')) for s in results if s.get('latest_score') not in (None, '')), 0) / max(1, len([s for s in results if s.get('latest_score') not in (None, '')])), 1) if any(s.get('latest_score') not in (None, '') for s in results) else 0,
+        }
+
+        return JsonResponse({'success': True, 'students': results, 'level_counts': level_counts, 'dashboard_metrics': dashboard_metrics, 'total_students': len(results)})
     except Exception as e:
         logger.error(f"Error in get_teacher_students_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
