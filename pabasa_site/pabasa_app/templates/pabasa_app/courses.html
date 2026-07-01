@@ -4472,44 +4472,62 @@
     };
 
     // Load aggregated course overview (readings, materials, students)
-    function loadCourseOverview(courseId) {
+    async function loadCourseOverview(courseId) {
         try {
             const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
             if (!course) return;
+
             const sections = Array.isArray(course.sections) ? course.sections : [];
-            const sectionCodes = sections.map(s => s.code || s.id || '').filter(Boolean);
+            const sectionNames = sections.map(s => String(s.name || '').trim()).filter(Boolean);
 
-            // Load stored class readings and aggregate per section
-            let stored = {};
-            try { stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}'); } catch (e) { stored = {}; }
+            let courseStudents = [];
+            try {
+                courseStudents = await fetchStudentsForCourse(course);
+            } catch (err) {
+                console.warn('Could not load students for course overview', err);
+            }
 
-            const aggregated = { word: [], sentence: [], paragraph: [] };
-            sectionCodes.forEach(code => {
-                const candidates = [code, String(code).toUpperCase(), String(code).toLowerCase()];
-                let r = null;
-                for (const k of candidates) { if (stored[k]) { r = stored[k]; break; } }
-                r = r || stored[code] || stored[String(code).toUpperCase()] || {};
-                ['word', 'sentence', 'paragraph'].forEach(type => {
-                    if (Array.isArray(r[type])) aggregated[type] = aggregated[type].concat(r[type]);
-                    else if (Array.isArray(r[type + 's'])) aggregated[type] = aggregated[type].concat(r[type + 's']);
-                });
+            if (!courseStudents.length) {
+                try {
+                    const storedStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                    courseStudents = (Array.isArray(storedStudents) ? storedStudents : []).filter(student => {
+                        const studentClass = String(student.class || '').trim();
+                        return studentClass && sectionNames.includes(studentClass) && String(student.name || '').trim() !== 'Jay Park';
+                    });
+                } catch (e) {
+                    console.warn('Could not load cached students for course overview', e);
+                }
+            }
+
+            const activeMaterials = activeRecords(Array.isArray(course.materials) ? course.materials : []);
+            const activeAssessments = activeRecords(Array.isArray(course.assessments) ? course.assessments : []);
+            const activePractices = activeRecords(Array.isArray(course.practices) ? course.practices : []);
+
+            const readingMaterials = activeMaterials.filter(material => {
+                const type = String(material.item_type || material.type || material.usage || '').toLowerCase();
+                return ['word', 'sentence', 'paragraph', 'reading', 'material'].includes(type) || !type;
             });
 
-            const totalReadings = (aggregated.word.length + aggregated.sentence.length + aggregated.paragraph.length) || 0;
-            const materialsCount = ((course.materials || []).length + (course.practices || []).length) || 0;
-            const assessmentCount = (course.assessments || []).length || 0;
+            const totalReadings = readingMaterials.reduce((sum, material) => {
+                const itemsCount = Number(material.items_count ?? material.items?.length ?? material.items ?? 0);
+                if (Number.isFinite(itemsCount) && itemsCount > 0) {
+                    return sum + itemsCount;
+                }
+                return sum + 1;
+            }, 0);
 
-            // Aggregate students across course sections
-            let allStudents = [];
-            try { allStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]'); } catch (e) { allStudents = []; }
-            const sectionNames = sections.map(s => s.name).filter(Boolean);
-            const courseStudents = allStudents.filter(s => s.class && sectionNames.includes(s.class) && s.name !== 'Jay Park');
+            const materialsCount = activeMaterials.length + activePractices.length;
+            const assessmentCount = activeAssessments.length;
             const totalStudents = courseStudents.length;
 
-            // Compute averages
-            let totalAccuracy = 0, totalWPM = 0;
-            courseStudents.forEach(s => { totalAccuracy += parseInt(s.accuracy) || 0; totalWPM += parseInt(s.wpm) || 0; });
-            const avgAccuracy = totalStudents ? Math.round(totalAccuracy / totalStudents) + '%' : '—';
+            let totalAccuracy = 0;
+            let totalWPM = 0;
+            courseStudents.forEach(student => {
+                totalAccuracy += Number(student.accuracy) || 0;
+                totalWPM += Number(student.wpm) || 0;
+            });
+
+            const avgAccuracy = totalStudents ? `${Math.round(totalAccuracy / totalStudents)}%` : '—';
             const avgWPM = totalStudents ? Math.round(totalWPM / totalStudents) : '—';
 
             const container = document.getElementById('courseOverviewStats');
