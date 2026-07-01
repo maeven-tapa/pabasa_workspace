@@ -3822,6 +3822,8 @@ def get_teacher_courses_api(request):
                     'items_count': items,
                     'minutes': minutes,
                     'average': f"{avg}%" if avg is not None else None,
+                    'attempt_count': len(attempts) if isinstance(attempts, list) else 0,
+                    'has_attempts': bool(attempts) if isinstance(attempts, list) else False,
                     'dueDate': a.scheduled_at.isoformat() if getattr(a, 'scheduled_at', None) else None,
                     'status': 'archived' if not a.is_active else a.status,
                     'is_active': a.is_active,
@@ -4023,6 +4025,23 @@ def get_teacher_assessment_api(request, assessment_id):
                 'crla_classification': _attempt_value(att, 'crla_classification', 'classification'),
             })
             enriched_attempts.append(enriched_attempt)
+
+        def _attempt_timestamp(attempt):
+            ts = attempt.get('completed_at') or attempt.get('started_at') or attempt.get('updated_at')
+            if not isinstance(ts, str):
+                return None
+            parsed = parse_datetime(ts)
+            if parsed is None:
+                return None
+            if parsed.tzinfo is None:
+                try:
+                    return timezone.make_aware(parsed)
+                except Exception:
+                    return parsed
+            return parsed
+
+        enriched_attempts.sort(key=lambda att: _attempt_timestamp(att) or datetime(1970, 1, 1, tzinfo=timezone.utc))
+
         avg = None
         try:
             accs = [

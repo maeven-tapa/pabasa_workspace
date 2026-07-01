@@ -4571,7 +4571,7 @@
             }, 0);
 
             const materialsCount = activeMaterials.length + activePractices.length;
-            const assessmentCount = activeAssessments.length;
+            const assessmentCount = activeAssessments.filter(assessment => assessment.has_attempts).length;
             const totalStudents = courseStudents.length;
 
             let totalAccuracy = 0;
@@ -4614,13 +4614,13 @@
                 const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
             const container = document.getElementById('courseDetailAssessments');
             if (!container) return;
-                const assessments = activeRecords(course?.assessments);
+                const assessments = activeRecords(course?.assessments).filter(a => Boolean(a.has_attempts || a.attempt_count));
                 if (assessments.length === 0) {
                     container.innerHTML = `
                         <div class="assessment-empty">
                             <i class="bi bi-clipboard2-check"></i>
-                            <h6>No assessments yet</h6>
-                            <p>Create an assessment to measure reading progress.</p>
+                            <h6>No assessment results yet</h6>
+                            <p>Student assessment attempts will appear here after they complete an assessment.</p>
                         </div>`;
                     return;
                 }
@@ -5544,11 +5544,12 @@
             const addMaterialTask = (material) => {
                 if (!material) return;
                 const assessmentId = material.assessment_id || (String(material.id || '').startsWith('assessment-') ? rawRecordId(material.id) : null);
-                const key = assessmentId ? `assessment-${assessmentId}` : `material-${material.id || material.raw_id || material.title || ''}`;
+                if (!assessmentId) return;
+                const key = `assessment-${assessmentId}`;
                 if (seen.has(key)) return;
                 seen.add(key);
                 tasks.push({
-                    title: material.title || 'Untitled reading task',
+                    title: material.title || 'Untitled assessment',
                     assessmentId,
                 });
             };
@@ -5567,6 +5568,7 @@
 
             activeRecords(course?.assessments || []).forEach(assessment => {
                 const assessmentId = assessment.raw_id || assessment.id;
+                if (!assessmentId) return;
                 const key = `assessment-${assessmentId}`;
                 if (seen.has(key)) return;
                 seen.add(key);
@@ -5608,7 +5610,7 @@
             if (!modalEl || !tbody) return;
 
             if (titleEl) titleEl.textContent = `${studentName || 'Student'} Progress`;
-            if (subtextEl) subtextEl.textContent = `${course.title || 'Course'} reading task attempts`;
+            if (subtextEl) subtextEl.textContent = `${course.title || 'Course'} assessment results`;
             tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading progress...</td></tr>`;
 
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -5616,34 +5618,47 @@
 
             const tasks = courseProgressTasks(course);
             if (tasks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">No reading tasks assigned in this course.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">No assessment results available yet.</td></tr>`;
                 return;
             }
 
             const assessmentDetails = await fetchAssessmentProgressDetails(tasks.map(task => task.assessmentId));
-            tbody.innerHTML = tasks.map(task => {
+            const rows = tasks.flatMap(task => {
                 const detail = task.assessmentId ? assessmentDetails[String(rawRecordId(task.assessmentId))] : null;
                 const allAttempts = Array.isArray(detail?.attempts) ? detail.attempts : [];
-                const attempts = allAttempts
+                const filteredAttempts = allAttempts
                     .filter(att => progressStudentMatches(att, studentId, studentName))
-                    .filter(att => String(att.status || '').toLowerCase() !== 'cancelled');
-                const status = normalizeProgressStatus(attempts);
-                const latestAttempt = attempts.length ? attempts[attempts.length - 1] : null;
-                return `
-                    <tr>
-                        <td><strong>${escapeHtml(task.title)}</strong></td>
-                        <td><span class="badge ${status.className}">${status.label}</span></td>
-                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'wpm', 'words_per_minute', 'reading_wpm'))}</td>
-                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'fluency_score', 'fluency'), '%')}</td>
-                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'accuracy', 'accuracy_score', 'reading_accuracy'), '%')}</td>
-                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'pronunciation_score', 'pronunciation'), '%')}</td>
-                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'time_score', 'time'), '%')}</td>
-                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'total_score', 'score'), '%')}</td>
-                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'crla_classification', 'classification'))}</td>
-                        <td class="text-end fw-semibold">${attempts.length}</td>
-                    </tr>
-                `;
-            }).join('');
+                    .filter(att => String(att.status || '').toLowerCase() !== 'cancelled')
+                    .sort((a, b) => {
+                        const aTime = Date.parse(a.completed_at || a.started_at || '') || 0;
+                        const bTime = Date.parse(b.completed_at || b.started_at || '') || 0;
+                        return aTime - bTime;
+                    });
+                return filteredAttempts.map((attempt, index) => {
+                    const status = normalizeProgressStatus([attempt]);
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(task.title)}</strong>${filteredAttempts.length > 1 ? `<div class="small text-muted">Attempt ${index + 1}</div>` : ''}</td>
+                            <td><span class="badge ${status.className}">${status.label}</span></td>
+                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'wpm', 'words_per_minute', 'reading_wpm'))}</td>
+                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'fluency_score', 'fluency'), '%')}</td>
+                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'accuracy', 'accuracy_score', 'reading_accuracy'), '%')}</td>
+                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'pronunciation_score', 'pronunciation'), '%')}</td>
+                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'time_score', 'time'), '%')}</td>
+                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'total_score', 'score'), '%')}</td>
+                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'crla_classification', 'classification'))}</td>
+                            <td class="text-end fw-semibold">${index + 1}</td>
+                        </tr>
+                    `;
+                });
+            });
+
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">No assessment attempts recorded yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.join('');
         }
 
         if (e.target.closest('.view-student-progress')) {
