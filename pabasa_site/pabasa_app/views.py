@@ -5159,7 +5159,6 @@ def add_reading_material(request):
                     title=title,
                     code=code,
                     assessment_type=reading_type,
-                    content=content,
                     status=status,
                     scheduled_at=scheduled_at if status == 'scheduled' else None,
                     teacher=teacher_user,
@@ -5376,7 +5375,6 @@ def teacher_update_material(request):
                         a = material.assessment
                         a.title = material.title
                         a.assessment_type = material.item_type
-                        a.content = material.content_text or material.prompt_text or ''
                         a.status = material.status
                         a.scheduled_at = material.scheduled_at if material.status == 'scheduled' else None
                         a.is_active = material.is_active
