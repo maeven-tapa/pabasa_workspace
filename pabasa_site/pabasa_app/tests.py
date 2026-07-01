@@ -1285,7 +1285,7 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertIn("No completed assessment yet", note.note_text)
 
     @patch("pabasa_app.views.EmailMultiAlternatives")
-    def test_send_course_update_commendation_sends_congratulatory_email_without_attachment(self, mock_email_cls):
+    def test_send_course_update_commendation_sends_certificate_attachment(self, mock_email_cls):
         course = Course.objects.create(
             teacher=self.teacher,
             title="Chapter 5",
@@ -1312,8 +1312,13 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(mock_email_cls.call_args[0][0], "Performance Commendation – PABASA")
         email_body = mock_email_cls.call_args[0][1]
         self.assertIn("Congratulations", email_body)
-        self.assertIn("keep up the excellent work", email_body)
-        mock_email_cls.return_value.attach.assert_not_called()
+        self.assertIn("certificate is attached", email_body.lower())
+        self.assertIn("outstanding reading performance", email_body.lower())
+        self.assertEqual(mock_email_cls.return_value.attach.call_count, 1)
+        attachment_name, attachment_bytes, mime_type = mock_email_cls.return_value.attach.call_args.args
+        self.assertIn("certificate", attachment_name.lower())
+        self.assertEqual(mime_type, "application/pdf")
+        self.assertTrue(attachment_bytes)
 
     @patch("pabasa_app.views.EmailMultiAlternatives")
     def test_send_course_update_assessment_notice_sends_details_without_attachment(self, mock_email_cls):

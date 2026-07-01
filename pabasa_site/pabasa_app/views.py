@@ -641,6 +641,79 @@ def _format_reading_report_text(report):
     return "\n".join(lines)
 
 
+def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA', teacher_name=''):
+    """Create a polished certificate PDF for performance commendation emails."""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import landscape, A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, HRFlowable
+    except ImportError as exc:
+        logger.exception("ReportLab is not installed")
+        raise RuntimeError(f"PDF export is unavailable: {exc}")
+
+    buffer = BytesIO()
+    page_size = landscape(A4)
+    left_margin = 0.8 * inch
+    right_margin = 0.8 * inch
+    top_margin = 0.8 * inch
+    bottom_margin = 0.8 * inch
+    available_width = page_size[0] - left_margin - right_margin
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CertificateTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=24,
+        leading=28, textColor=colors.HexColor('#1f4e79'), alignment=TA_CENTER, spaceAfter=14,
+    )
+    subtitle_style = ParagraphStyle(
+        'CertificateSubtitle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=13,
+        leading=16, textColor=colors.HexColor('#8B3E2F'), alignment=TA_CENTER, spaceAfter=10,
+    )
+    body_style = ParagraphStyle(
+        'CertificateBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=12,
+        leading=16, textColor=colors.HexColor('#111827'), alignment=TA_CENTER, spaceAfter=8,
+    )
+    name_style = ParagraphStyle(
+        'CertificateName', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18,
+        leading=20, textColor=colors.HexColor('#111827'), alignment=TA_CENTER, spaceAfter=12,
+    )
+    signature_style = ParagraphStyle(
+        'CertificateSignature', parent=styles['BodyText'], fontName='Helvetica', fontSize=10,
+        leading=14, textColor=colors.HexColor('#374151'), alignment=TA_CENTER, spaceAfter=4,
+    )
+
+    if issued_on is None:
+        issued_on = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
+
+    elements = []
+    elements.append(Paragraph('PABASA', title_style))
+    elements.append(Paragraph('Certificate of Achievement', subtitle_style))
+    elements.append(Spacer(1, 0.15 * inch))
+    elements.append(Paragraph('This certificate is proudly presented to', body_style))
+    elements.append(Spacer(1, 0.08 * inch))
+    elements.append(Paragraph(student_name or 'Student Name', name_style))
+    elements.append(Spacer(1, 0.12 * inch))
+    elements.append(Paragraph(
+        'In recognition of your outstanding reading performance and dedication to improving your reading skills through the PABASA Reading Assessment System. Your hard work, perseverance, and commitment to learning are truly commendable. Keep up the excellent work and continue striving for success.',
+        body_style,
+    ))
+    elements.append(Spacer(1, 0.2 * inch))
+    elements.append(Paragraph(f'Presented this {issued_on}.', body_style))
+    elements.append(Spacer(1, 0.35 * inch))
+    elements.append(HRFlowable(width=available_width * 0.5, thickness=0.6, color=colors.HexColor('#8B3E2F')))
+    elements.append(Spacer(1, 0.04 * inch))
+    elements.append(Paragraph(school_name or 'PABASA School', signature_style))
+    elements.append(Paragraph('Principal / School Representative', signature_style))
+    elements.append(Paragraph(teacher_name or 'Teacher', signature_style))
+
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=left_margin, rightMargin=right_margin, topMargin=top_margin, bottomMargin=bottom_margin)
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 def _build_reading_report_pdf(report, message='', course=None, teacher=None, recipient_email=''):
     """Create a polished PDF attachment for course update / report emails."""
     try:
@@ -3316,8 +3389,15 @@ def send_course_update(request):
             report_text = _format_reading_report_text(report)
             normalized_update_type = update_type.lower()
 
+            attachment_name = None
+            attachment_bytes = None
+            attachment_mime = 'application/pdf'
+            report_attachment_included = False
+
             if normalized_update_type == 'followup':
                 subject = "Student Reading Progress Report – PABASA"
+                report_attachment_included = True
+                attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
                 email_body = (
                     "Dear Parent/Guardian,\n\n"
                     "We hope you are doing well.\n\n"
@@ -3332,16 +3412,28 @@ def send_course_update(request):
                 include_attachment = True
             elif normalized_update_type == 'commendation':
                 subject = "Performance Commendation – PABASA"
+                certificate_date = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
+                certificate_pdf = _build_certificate_pdf(
+                    student_name=student_name,
+                    issued_on=certificate_date,
+                    school_name='PABASA',
+                    teacher_name=f"{teacher_user.first_name} {teacher_user.last_name}".strip() or 'Teacher',
+                )
                 email_body = (
                     f"Dear {student_name},\n\n"
                     "Congratulations on your continued effort and success in reading! "
                     "We are very proud of the progress you have made and the dedication you have shown.\n\n"
                     f"{personalized_message}\n\n"
-                    "Keep up the excellent work and continue practicing regularly. Your hard work is making a meaningful difference.\n\n"
+                    "A certificate is attached for your recognition. "
+                    "This Certificate of Achievement celebrates your outstanding reading performance and dedication to learning. "
+                    "Please keep it as a reminder of your outstanding reading achievement.\n\n"
                     "Sincerely,\n\n"
                     "PABASA Team"
                 )
-                include_attachment = False
+                include_attachment = True
+                attachment_name = f"{student_name.replace(' ', '_')}_certificate_of_achievement.pdf"
+                attachment_bytes = certificate_pdf
+                attachment_mime = 'application/pdf'
             elif normalized_update_type == 'assessment':
                 subject = "Scheduled Assessment Notice – PABASA"
                 assessment_title = str(data.get('assessment_title') or 'Reading Assessment').strip() or 'Reading Assessment'
@@ -3391,7 +3483,6 @@ def send_course_update(request):
                 f"{report_text}"
             )
 
-            attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
             email_message = EmailMultiAlternatives(
                 subject,
                 email_body,
@@ -3400,16 +3491,19 @@ def send_course_update(request):
             )
             if include_attachment:
                 try:
-                    pdf_bytes = _build_reading_report_pdf(
-                        report,
-                        message=personalized_message,
-                        course=course,
-                        teacher=teacher_user,
-                        recipient_email=student.email,
-                    )
-                    email_message.attach(attachment_name, pdf_bytes, 'application/pdf')
+                    if normalized_update_type == 'commendation':
+                        email_message.attach(attachment_name, attachment_bytes, attachment_mime)
+                    else:
+                        pdf_bytes = _build_reading_report_pdf(
+                            report,
+                            message=personalized_message,
+                            course=course,
+                            teacher=teacher_user,
+                            recipient_email=student.email,
+                        )
+                        email_message.attach(attachment_name, pdf_bytes, 'application/pdf')
                 except Exception:
-                    logger.exception('Failed to build reading report PDF attachment for course update')
+                    logger.exception('Failed to build PDF attachment for course update')
             email_message.send(fail_silently=False)
             Note.objects.create(
                 teacher=teacher_user,
@@ -3422,7 +3516,7 @@ def send_course_update(request):
                 'email': student.email,
                 'name': student_name,
                 'report_summary': report.get('summary'),
-                'report_included': include_attachment,
+                'report_included': report_attachment_included,
             })
 
         if not sent:
