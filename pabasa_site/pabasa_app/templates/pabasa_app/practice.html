@@ -95,29 +95,29 @@
 
     .subject-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+        gap: 1.15rem;
         align-items: stretch;
     }
 
     .subject-card {
-        border-radius: 28px;
+        border-radius: 24px;
         display: flex;
         flex-direction: column;
-        gap: 0.85rem;
         overflow: hidden;
-        padding: 1.25rem;
         position: relative;
         text-decoration: none;
     }
 
     .subject-card::before {
         content: "";
-        height: 7px;
-        left: 0;
+        height: 4px;
+        left: 1rem;
         position: absolute;
-        right: 0;
+        right: 1rem;
         top: 0;
+        border-radius: 0 0 999px 999px;
+        z-index: 1;
     }
 
     .subject-card[data-difficulty="easy"]::before { background: #16a34a; }
@@ -125,81 +125,230 @@
     .subject-card[data-difficulty="hard"]::before { background: #b95f44; }
 
     .practice-card {
-        border-radius: 28px;
-        display: grid;
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.74)),
+            rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        box-shadow: 0 18px 42px rgba(31, 38, 135, 0.07);
         gap: 1rem;
-        padding: 1.25rem;
-        position: relative;
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px solid rgba(31, 26, 23, 0.08);
-        box-shadow: 0 18px 40px rgba(31, 38, 135, 0.06);
+        min-height: 236px;
+        padding: 1.1rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .practice-card:hover {
+        border-color: rgba(31, 111, 139, 0.22);
+        box-shadow: 0 22px 48px rgba(31, 38, 135, 0.12);
+        transform: translateY(-2px);
     }
 
     .practice-card .card-header {
         align-items: flex-start;
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 0.85rem;
+        padding: 0;
+        background: transparent;
+        border: 0;
+    }
+
+    .practice-card .card-title-wrap {
+        min-width: 0;
+    }
+
+    .practice-card .material-icon {
+        align-items: center;
+        background: rgba(31, 111, 139, 0.1);
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 16px;
+        color: #1f6f8b;
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-size: 1.15rem;
+        height: 46px;
+        justify-content: center;
+        width: 46px;
+    }
+
+    .practice-card[data-difficulty="easy"] .material-icon {
+        background: rgba(22, 163, 74, 0.1);
+        border-color: rgba(22, 163, 74, 0.16);
+        color: #15803d;
+    }
+
+    .practice-card[data-difficulty="medium"] .material-icon {
+        background: rgba(245, 158, 11, 0.12);
+        border-color: rgba(245, 158, 11, 0.18);
+        color: #b45309;
+    }
+
+    .practice-card[data-difficulty="hard"] .material-icon {
+        background: rgba(185, 95, 68, 0.12);
+        border-color: rgba(185, 95, 68, 0.18);
+        color: #b95f44;
     }
 
     .practice-card .card-header h3 {
-        font-size: 1.1rem;
-        font-weight: 800;
+        color: var(--dash-text);
+        font-size: 1.08rem;
+        font-weight: 900;
+        line-height: 1.22;
         margin: 0 0 0.35rem;
+        overflow-wrap: anywhere;
+    }
+
+    .practice-card .card-header h3 .badge-done-marker {
+        margin-left: 0.45rem;
+        vertical-align: middle;
     }
 
     .practice-card .card-header p {
         color: var(--dash-muted);
         font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1.35;
         margin: 0;
     }
 
-    .practice-card .card-meta {
+    .practice-card .subject-code,
+    .practice-card .status-badge {
         align-items: center;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 0.72rem;
+        font-weight: 900;
+        gap: 0.35rem;
+        line-height: 1;
+        padding: 0.48rem 0.7rem;
+        white-space: nowrap;
+    }
+
+    .practice-card .subject-code {
+        background: rgba(31, 111, 139, 0.09);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        color: var(--sky);
+    }
+
+    .practice-card .status-badge {
+        background: rgba(22, 163, 74, 0.1);
+        border: 1px solid rgba(22, 163, 74, 0.16);
+        color: #15803d;
+    }
+
+    .practice-card .card-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
         font-size: 0.82rem;
     }
 
     .practice-card .meta-pill {
-        border-radius: 999px;
-        padding: 0.4rem 0.8rem;
-        background: rgba(31, 111, 139, 0.08);
+        align-items: center;
+        background: rgba(255, 253, 247, 0.72);
+        border: 1px solid rgba(27, 26, 23, 0.07);
+        border-radius: 16px;
         color: var(--dash-text);
-        font-weight: 700;
+        display: inline-flex;
+        font-weight: 800;
+        gap: 0.5rem;
+        min-height: 42px;
+        padding: 0.58rem 0.7rem;
+    }
+
+    .practice-card .meta-pill i {
+        color: var(--sky);
+        font-size: 0.95rem;
     }
 
     .practice-card .card-bottom {
         align-items: center;
+        border-top: 1px solid rgba(27, 26, 23, 0.07);
         display: flex;
         justify-content: space-between;
-        gap: 1rem;
-        flex-wrap: wrap;
+        gap: 0.85rem;
+        margin-top: auto;
+        padding-top: 0.95rem;
     }
 
-    .practice-card .item-count {
+    .practice-card .item-count,
+    .practice-card .card-status {
         color: var(--dash-muted);
-        font-size: 0.92rem;
+        font-size: 0.86rem;
+        font-weight: 800;
     }
 
     .practice-card .start-practice-btn {
-        min-width: 160px;
+        align-items: center;
+        border: 0;
+        border-radius: 16px;
+        box-shadow: 0 12px 26px rgba(31, 111, 139, 0.16);
+        display: inline-flex;
+        font-size: 0.9rem;
+        font-weight: 900;
+        gap: 0.45rem;
+        justify-content: center;
+        min-height: 44px;
+        min-width: 154px;
+        padding: 0.65rem 1rem;
         text-decoration: none;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
     }
 
     .practice-card .start-practice-btn:hover {
+        box-shadow: 0 16px 30px rgba(31, 111, 139, 0.22);
         transform: translateY(-1px);
     }
 
-    .practice-card.is-done {
-        background: rgba(240, 253, 244, 0.84);
-        border-color: rgba(22, 163, 74, 0.24);
+    .subject-card.practice-card.is-done,
+    .subject-card.practice-card.material-card-done {
+        background:
+            linear-gradient(180deg, rgba(240, 253, 244, 0.95), rgba(255, 255, 255, 0.78)),
+            rgba(240, 253, 244, 0.84) !important;
+        border-color: rgba(22, 163, 74, 0.22) !important;
     }
 
     .practice-status-done {
         color: #15803d;
         font-weight: 800;
+    }
+
+    body.dark-theme .subject-card.practice-card {
+        background:
+            linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.84)),
+            #1e293b !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .subject-card.practice-card.is-done,
+    body.dark-theme .subject-card.practice-card.material-card-done {
+        background:
+            linear-gradient(180deg, rgba(20, 83, 45, 0.5), rgba(15, 23, 42, 0.88)),
+            #102316 !important;
+        border-color: rgba(34, 197, 94, 0.24) !important;
+    }
+
+    body.dark-theme .practice-card .card-header h3,
+    body.dark-theme .practice-card .meta-pill {
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .practice-card .card-header p,
+    body.dark-theme .practice-card .card-status,
+    body.dark-theme .practice-card .item-count {
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme .practice-card .meta-pill,
+    body.dark-theme .practice-card .material-icon,
+    body.dark-theme .practice-card .subject-code {
+        background: rgba(15, 23, 42, 0.72) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme .practice-card .card-bottom {
+        border-top-color: rgba(255, 255, 255, 0.08);
     }
 
     .subject-info {
@@ -332,6 +481,32 @@
             width: 100%;
         }
     }
+
+    @media (max-width: 575.98px) {
+        .subject-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .practice-card {
+            min-height: 0;
+        }
+
+        .practice-card .card-header,
+        .practice-card .card-meta,
+        .practice-card .card-bottom {
+            grid-template-columns: 1fr;
+        }
+
+        .practice-card .card-bottom {
+            align-items: stretch;
+            display: grid;
+        }
+
+        .practice-card .subject-code,
+        .practice-card .start-practice-btn {
+            width: 100%;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -424,25 +599,27 @@
                 const href = `${typeMeta.url}?id=${encodeURIComponent(material.id)}`;
                 const isDone = Boolean(material.is_done);
                 const statusText = isDone ? "Done" : (material.status || "");
+                const createdDate = formatDate(material.created_at);
 
                 return `
                 <article class="subject-card practice-card ${isDone ? "is-done material-card-done" : ""}" data-material-id="${escapeHtml(material.id)}" data-difficulty="${escapeHtml(material.difficulty)}">
                     <div class="card-header">
-                        <div>
-                            <h3>${escapeHtml(material.title || `${difficultyLabel} ${typeMeta.label}`)}${isDone ? ' <span class="badge bg-success ms-2 badge-done-marker" style="font-size: 0.62rem; padding: 0.25em 0.5em;">DONE</span>' : ""}</h3>
+                        <span class="material-icon" aria-hidden="true"><i class="bi ${escapeHtml(typeMeta.icon)}"></i></span>
+                        <div class="card-title-wrap">
+                            <h3>${escapeHtml(material.title || `${difficultyLabel} ${typeMeta.label}`)}${isDone ? ' <span class="status-badge badge-done-marker"><i class="bi bi-check2"></i>Done</span>' : ""}</h3>
                             <p>${escapeHtml(`${difficultyLabel} • ${typeMeta.label}`)}</p>
                         </div>
                         <span class="subject-code">${escapeHtml(typeMeta.label)}</span>
                     </div>
                     <div class="card-meta">
-                        <span class="meta-pill">${escapeHtml(difficultyLabel)}</span>
-                        <span class="meta-pill">${escapeHtml(typeMeta.label)}</span>
-                        <span class="item-count">${itemCount} item${itemCount !== 1 ? "s" : ""}</span>
-                        ${material.created_at ? `<span class="item-count">Created ${escapeHtml(formatDate(material.created_at))}</span>` : ""}
+                        <span class="meta-pill"><i class="bi bi-speedometer2"></i>${escapeHtml(difficultyLabel)}</span>
+                        <span class="meta-pill"><i class="bi bi-list-check"></i>${itemCount} item${itemCount !== 1 ? "s" : ""}</span>
+                        ${createdDate ? `<span class="meta-pill"><i class="bi bi-calendar3"></i>${escapeHtml(createdDate)}</span>` : ""}
+                        <span class="meta-pill"><i class="bi bi-bookmark-check"></i>${escapeHtml(statusText || "Ready")}</span>
                     </div>
                     <div class="card-bottom">
-                        <span class="item-count ${isDone ? "practice-status-done" : ""}">${escapeHtml(statusText)}</span>
-                        <a href="${href}" class="btn ${isDone ? "btn-outline-success" : "btn-primary"} start-practice-btn">${isDone ? "Review" : "Start Practice"}</a>
+                        <span class="card-status ${isDone ? "practice-status-done" : ""}">${isDone ? '<i class="bi bi-check-circle me-1"></i>Completed' : '<i class="bi bi-play-circle me-1"></i>Ready to practice'}</span>
+                        <a href="${href}" class="btn ${isDone ? "btn-outline-success" : "btn-primary"} start-practice-btn"><i class="bi ${isDone ? "bi-arrow-repeat" : "bi-play-fill"}"></i>${isDone ? "Review" : "Start Practice"}</a>
                     </div>
                 </article>`;
             }).join("");
