@@ -485,6 +485,24 @@
             return div.innerHTML;
         };
 
+        const getMaterialLanguageLabel = (material) => {
+            const rawLanguage = material?.language
+                || (material?.content_json && typeof material.content_json === 'object' ? material.content_json.language : '')
+                || (material?.metadata && typeof material.metadata === 'object' ? material.metadata.language : '')
+                || '';
+            const normalized = String(rawLanguage || '').trim();
+            return normalized || 'Unknown';
+        };
+
+        const getMaterialLanguageBadgeHtml = (material) => {
+            const label = getMaterialLanguageLabel(material);
+            const isUnknown = label === 'Unknown';
+            const styles = isUnknown
+                ? 'background: rgba(148, 163, 184, 0.14); color: #64748b; border: 1px solid rgba(148, 163, 184, 0.22);'
+                : 'background: rgba(31, 111, 139, 0.08); color: var(--dash-primary); border: 1px solid rgba(31, 111, 139, 0.2);';
+            return `<span class="badge rounded-pill px-2 py-1" style="${styles} font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em;">${escapeHtml(label)}</span>`;
+        };
+
         const getStoredArray = (key) => {
             try {
                 const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
@@ -747,7 +765,13 @@
                         <a href="${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${classData.code}&id=${m.id}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''} mb-2">
                             <div class="type-meta">
                                 <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
-                                <div class="type-info"><strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-2" style="font-size: 0.6rem;">DONE</span>' : ''}</strong><span>${labelMap[m.category]} • ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span></div>
+                                <div class="type-info">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
+                                        ${getMaterialLanguageBadgeHtml(m)}
+                                    </div>
+                                    <span>${labelMap[m.category]} • ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span>
+                                </div>
                             </div>
                             <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-play-circle-fill text-primary'}"></i>
                         </a>`;

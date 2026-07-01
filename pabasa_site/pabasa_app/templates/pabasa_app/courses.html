@@ -3765,7 +3765,11 @@
                         const currentClass = teacherClasses.find(c => String(c.code) === String(currentClassCode));
                         if (currentClass) {
                             updateClassDetailBanner(currentClass);
+                        } else if (teacherClasses.length > 0) {
+                            updateClassDetailBanner(teacherClasses[0]);
                         }
+                    } else if (teacherClasses.length > 0) {
+                        updateClassDetailBanner(teacherClasses[0]);
                     }
                     return true;
                 }
@@ -5186,8 +5190,8 @@
             });
         }
 
-        if (assessmentEl && assessmentCount > 0) assessmentEl.textContent = String(assessmentCount);
-        if (practiceEl && practiceCount > 0) practiceEl.textContent = String(practiceCount);
+        if (assessmentEl) assessmentEl.textContent = String(assessmentCount);
+        if (practiceEl) practiceEl.textContent = String(practiceCount);
     }
 
     async function refreshOpenCourseAfterAssessmentChange(options = {}) {

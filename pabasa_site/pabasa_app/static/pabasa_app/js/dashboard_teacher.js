@@ -67,6 +67,18 @@
             }
         }
 
+        function updateBannerCountsFromClassData(classData) {
+            if (!classData) return;
+            const assessmentValue = Number(classData.assessment_material_count || classData.assessment_count || 0);
+            const practiceValue = Number(classData.practice_material_count || classData.practice_count || 0);
+            if (activeAssessmentCount) {
+                activeAssessmentCount.textContent = String(assessmentValue);
+            }
+            if (activePracticeCount) {
+                activePracticeCount.textContent = String(practiceValue);
+            }
+        }
+
         // Remove students from localStorage whose class no longer exists
         function cleanupLocalStudents(activeClasses) {
             try {
@@ -155,6 +167,10 @@
                         return;
                     }
 
+                    if (!classList.querySelector('.class-card')) {
+                        updateBannerCountsFromClassData(classData);
+                    }
+
                     const card = createClassCard(
                         classData.name,
                         classData.header || 'READ',
@@ -196,6 +212,8 @@
                 const firstCard = classList.querySelector('.class-card');
                 if (firstCard && activeClassName) {
                     selectClass(firstCard);
+                } else if (data.classes.length > 0) {
+                    updateBannerCountsFromClassData(data.classes[0]);
                 }
             })
             .catch(function (error) {
