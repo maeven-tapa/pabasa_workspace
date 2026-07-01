@@ -5003,12 +5003,45 @@ def extract_reading_material_file(request):
         return JsonResponse({'success': False, 'error': 'Could not extract text from that file.'}, status=500)
 
 
+def _detect_material_type(text, requested_reading_type=''):
+    normalized_type = (requested_reading_type or '').strip().lower()
+    if normalized_type in {'word', 'sentence', 'paragraph'}:
+        return normalized_type
+
+    if not text:
+        return 'word'
+
+    stripped = text.strip()
+    if not stripped:
+        return 'word'
+
+    blocks = [block.strip() for block in re.split(r'\n\s*\n', stripped) if block.strip()]
+    if len(blocks) > 1:
+        return 'paragraph'
+
+    lines = [line.strip() for line in stripped.splitlines() if line.strip()]
+    if len(lines) > 1:
+        if any(re.search(r'[.!?]', line) for line in lines):
+            return 'sentence'
+        return 'word'
+
+    if re.search(r'[.!?]', stripped):
+        sentence_candidates = [s.strip() for s in re.split(r'(?<=[.!?])\s+', stripped) if s.strip()]
+        if len(sentence_candidates) > 1 or len(stripped.split()) > 3:
+            return 'sentence'
+
+    return 'word'
+
+
 def _split_material_content(text, rtype, requested_reading_type=''):
     if not text:
         return []
     if rtype == 'word':
         return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
     if rtype == 'sentence':
+        line_items = [line.strip() for line in text.splitlines() if line.strip()]
+        if len(line_items) > 1 and '\n\n' not in text:
+            return line_items
         return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
     if rtype == 'paragraph':
         paragraphs = [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
@@ -5070,25 +5103,7 @@ def add_reading_material(request):
 
         source_type = source_type if source_type in ('personal', 'shared') else 'personal'
 
-        # ── Auto-detect reading_type (Category) ──────────────────────────
-        # Since we removed the field, we determine it by analyzing the content
-        def has_multiple_period_sentences(text):
-            return len([part for part in text.split('.') if part.strip()]) > 1
-
-        def detect_reading_type(text):
-            if has_multiple_period_sentences(text):
-                return 'paragraph'
-            # If there are double newlines, it's likely a paragraph
-            if len(re.split(r'\n{2,}', text.strip())) > 1:
-                return 'paragraph'
-            # If there are sentence delimiters and more than 3 words, it's likely a sentence
-            if re.search(r'[.!?]', text) and len(text.split()) > 3:
-                return 'sentence'
-            # Otherwise, treat as a word list
-            return 'word'
-
-        reading_type = requested_reading_type if requested_reading_type == 'paragraph' else detect_reading_type(content)
-
+        reading_type = _detect_material_type(content, requested_reading_type)
         tokens = _split_material_content(content, reading_type, requested_reading_type)
 
         # ── resolve teacher & class ─────────────────────────────────────────
@@ -5310,19 +5325,9 @@ def teacher_update_material(request):
         else:
             material.scheduled_at = None
 
-        if content != material.content_text or requested_reading_type == 'paragraph':
+        if content != material.content_text or requested_reading_type in {'word', 'sentence', 'paragraph'}:
             material.content_text = content
-            # Re-detect type and tokens if content changed
-            def has_multiple_period_sentences(text):
-                return len([part for part in text.split('.') if part.strip()]) > 1
-
-            def detect_type(text):
-                if has_multiple_period_sentences(text): return 'paragraph'
-                if len(re.split(r'\n{2,}', text.strip())) > 1: return 'paragraph'
-                if re.search(r'[.!?]', text) and len(text.split()) > 3: return 'sentence'
-                return 'word'
-            
-            material.item_type = 'paragraph' if requested_reading_type == 'paragraph' else detect_type(content)
+            material.item_type = _detect_material_type(content, requested_reading_type)
             content_json = dict(material.content_json or {})
             content_json['items'] = _split_material_content(content, material.item_type, requested_reading_type)
             content_json['language'] = language
