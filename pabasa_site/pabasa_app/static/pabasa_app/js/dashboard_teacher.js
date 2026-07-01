@@ -18,6 +18,8 @@
         const activeClassDescription = document.getElementById("activeClassDescription");
         const activeClassCode = document.getElementById("activeClassCode");
         const activeStudentCount = document.getElementById("activeStudentCount");
+        const activeAssessmentCount = document.getElementById("activeAssessmentCount");
+        const activePracticeCount = document.getElementById("activePracticeCount");
         const classBanner = document.getElementById("classBanner");
 
         // Fix: Do not exit early if only some elements are missing (banner might be on sub-pages)
@@ -160,6 +162,8 @@
                         classData.code,
                         classData.subject || '',
                         String(classData.students || '0'), // Use accurate count from server
+                        String(classData.assessment_material_count || 0),
+                        String(classData.practice_material_count || 0),
                         classTeacherEmail
                     );
 
@@ -215,12 +219,16 @@
             const header = card.getAttribute("data-header") || "READ";
             const description = card.getAttribute("data-description") || "Class reading workspace.";
             const actualStudentCount = card.getAttribute("data-students") || "0";
+            const actualAssessmentCount = card.getAttribute("data-assessment-count") || "0";
+            const actualPracticeCount = card.getAttribute("data-practice-count") || "0";
 
             activeClassName.textContent = name;
             activeClassSubject.textContent = subject;
             activeClassDescription.textContent = description;
             activeClassCode.textContent = code;
             activeStudentCount.textContent = actualStudentCount;
+            if (activeAssessmentCount) activeAssessmentCount.textContent = actualAssessmentCount;
+            if (activePracticeCount) activePracticeCount.textContent = actualPracticeCount;
             if (classBanner) classBanner.setAttribute("data-header", header);
             
             if (classBanner) {
@@ -252,7 +260,7 @@
             }
         }
 
-        function createClassCard(name, header, description, code, subject, students, teacherEmailArg) {
+        function createClassCard(name, header, description, code, subject, students, assessmentCount, practiceCount, teacherEmailArg) {
             const card = document.createElement("div");
             card.className = "class-card";
             card.setAttribute("data-class-name", name);
@@ -265,6 +273,8 @@
             card.setAttribute("data-teacher-email", email);
 
             card.setAttribute("data-students", students);
+            card.setAttribute("data-assessment-count", assessmentCount);
+            card.setAttribute("data-practice-count", practiceCount);
 
             const head = document.createElement("span");
             head.className = "class-card-head";
@@ -381,6 +391,8 @@
                         description,
                         data.class_code,
                         subject,
+                        "0",
+                        "0",
                         "0",
                         currentTeacherEmail
                     );

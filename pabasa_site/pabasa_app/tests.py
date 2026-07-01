@@ -1219,6 +1219,38 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["classes_count"], 2)
         self.assertEqual(data["total_students"], 1)
 
+    def test_teacher_students_api_uses_latest_assessment_classification(self):
+        assessment = Assessment.objects.create(
+            teacher=self.teacher,
+            section=self.section_a,
+            title="Oral Reading Check",
+            code="ASM-DIR-001",
+            assessment_type="paragraph",
+            status="published",
+            is_active=True,
+        )
+        assessment.record_attempt(
+            self.student,
+            status="completed",
+            completed_at="2026-06-01T09:00:00+00:00",
+            total_score=87,
+        )
+
+        response = self.client.get(reverse("get_teacher_students_api"))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["students"][0]["level"], "Transitioning Readers")
+        self.assertTrue(data["students"][0]["has_completed_assessment"])
+
+    def test_teacher_students_api_returns_pending_without_assessment_data(self):
+        response = self.client.get(reverse("get_teacher_students_api"))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["students"][0]["level"], "Pending")
+        self.assertFalse(data["students"][0]["has_completed_assessment"])
+
     def test_students_template_uses_static_renderer_only(self):
         response = self.client.get(reverse("students"))
 
