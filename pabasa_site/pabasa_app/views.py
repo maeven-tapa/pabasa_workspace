@@ -2180,14 +2180,15 @@ def _practice_difficulty_values():
     return [value for value, _label in AdminPracticeMaterialForm.DIFFICULTY_CHOICES]
 
 def _admin_practice_queryset():
-    # Practices are standalone and managed via the Practice model
+    # Practices are standalone and managed via the Practice model, with canonical content stored on linked Materials.
     return Practice.objects.filter(
-        section__isnull=True,
-        difficulty_type__in=_practice_difficulty_values(),
+        material__section__isnull=True,
+        material__difficulty_level__in=_practice_difficulty_values(),
+        material__type='practice',
     )
 
 def _get_admin_practice_material(practice_id):
-    return _admin_practice_queryset().filter(id=practice_id).first()
+    return _admin_practice_queryset().filter(id=practice_id).select_related('material').first()
 
 def _admin_practice_status(material):
     return 'Archived' if not material.is_active else material.get_status_display()
@@ -2213,14 +2214,14 @@ def _admin_practice_context(request, page_title):
     elif status_filter == 'archived':
         practice_items = practice_items.filter(is_active=False)
     elif status_filter in {value for value, _label in AdminPracticeMaterialForm.STATUS_CHOICES}:
-        practice_items = practice_items.filter(status=status_filter, is_active=True)
+        practice_items = practice_items.filter(material__status=status_filter, is_active=True)
 
     if difficulty_filter in _practice_difficulty_values():
-        practice_items = practice_items.filter(difficulty_type=difficulty_filter)
+        practice_items = practice_items.filter(material__difficulty_level=difficulty_filter)
 
     valid_types = {choice[0] for choice in Material.ITEM_TYPE_CHOICES}
     if type_filter in valid_types:
-        practice_items = practice_items.filter(practice_type=type_filter)
+        practice_items = practice_items.filter(material__item_type=type_filter)
 
     context = _admin_context(request, page_title, [
         'Title',
@@ -2231,7 +2232,7 @@ def _admin_practice_context(request, page_title):
         'Actions',
     ])
     context.update({
-        'practice_items': practice_items.order_by('difficulty_type', '-created_at'),
+        'practice_items': practice_items.order_by('material__difficulty_level', 'material__item_type', '-created_at'),
         'search_query': search_query,
         'status_filter': status_filter,
         'difficulty_filter': difficulty_filter,
@@ -2268,24 +2269,16 @@ def _save_admin_practice_material(form, material=None, request=None):
     cleaned = form.cleaned_data
     # Save as a Practice record (admin practice library). We accept an existing
     # Practice instance in `material` or create a new one.
-    practice = None
-    if material and isinstance(material, Practice):
-        practice = material
-    else:
-        practice = Practice()
-
+    practice = material if material and isinstance(material, Practice) else Practice()
     practice.title = cleaned['title']
     practice.practice_type = cleaned['item_type']
+    practice.difficulty_type = cleaned['difficulty_level']
     practice.prompt_text = cleaned.get('prompt_text', '')
-    # Keep canonical storage in `contents` and provide content_text alias on model
     practice.contents = cleaned['content_text']
     practice.status = cleaned['status']
-    # store difficulty into existing DB column difficulty_type
-    practice.difficulty_type = cleaned['difficulty_level']
-    practice.section = None
-    practice.is_active = (practice.status in ['published', 'scheduled'])
+    practice.is_active = practice.status in ['published', 'scheduled']
 
-    # Ensure a unique code
+    # Ensure a unique code before saving if needed
     if not getattr(practice, 'code', None):
         import uuid
         code = 'PR' + uuid.uuid4().hex[:8].upper()
@@ -2293,12 +2286,28 @@ def _save_admin_practice_material(form, material=None, request=None):
             code = 'PR' + uuid.uuid4().hex[:8].upper()
         practice.code = code
 
-    # Attach current admin user as owner if available
     admin_user = _current_user(request) if request is not None else None
     if not getattr(practice, 'teacher', None) and admin_user:
         practice.teacher = admin_user
 
     practice.save()
+
+    material_obj = practice.material if practice.material else Material()
+    material_obj.title = cleaned['title']
+    material_obj.item_type = cleaned['item_type']
+    material_obj.prompt_text = cleaned.get('prompt_text', '')
+    material_obj.content_text = cleaned['content_text']
+    material_obj.type = 'practice'
+    material_obj.status = cleaned['status']
+    material_obj.difficulty_level = cleaned['difficulty_level']
+    material_obj.section = None
+    material_obj.is_active = material_obj.status in ['published', 'scheduled']
+    material_obj.save()
+
+    if practice.material_id != material_obj.id:
+        practice.material = material_obj
+        practice.save(update_fields=['material'])
+
     return practice
 
 @admin_required
@@ -2520,11 +2529,12 @@ def reading_read_aloud_api(request):
 
 def _student_practice_queryset():
     return Practice.objects.filter(
-        section__isnull=True,
-        difficulty_type__in=_practice_difficulty_values(),
-        status='published',
+        material__section__isnull=True,
+        material__type='practice',
         is_active=True,
-    ).order_by('difficulty_type', 'practice_type', 'title')
+        status='published',
+        material__difficulty_level__in=_practice_difficulty_values(),
+    ).select_related('material').order_by('material__difficulty_level', 'material__item_type', 'title')
 
 def _serialize_student_practice_material(material):
     return {
@@ -4317,6 +4327,7 @@ def get_class_materials(request):
                     'title': title_value,
                     'item_type': m.item_type,
                     'type': m.type,
+                    'source_type': m.source_type,
                     'content': content_value,
                     'content_text': content_value,
                     'status': 'archived' if not m.is_active else (m.status or 'published'),
@@ -4630,14 +4641,21 @@ def add_reading_material(request):
         content      = (data.get('content') or '').strip()
         requested_reading_type = (data.get('reading_type') or '').strip().lower()
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
-        usage_type   = (data.get('usage_type') or 'practice').strip()        # practice | assessment | both
+        requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
+        source_type  = (data.get('source_type') or 'personal').strip().lower()
         class_code   = (data.get('class_code') or '').strip()
         language     = (data.get('language') or 'English').strip() or 'English'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
         assigned_week, week_error = parse_assigned_week(assigned_week_raw)
 
-        logger.debug(f"add_reading_material received: title={title}, status={status}, class_code={class_code}")
+        if source_type not in ('personal', 'shared'):
+            source_type = 'personal'
+
+        # Teachers may only create assessment materials from this endpoint.
+        usage_type = 'assessment'
+
+        logger.debug(f"add_reading_material received: title={title}, status={status}, class_code={class_code}, source_type={source_type}")
 
         # ── server-side validation ──────────────────────────────────────────
         errors = {}
@@ -4645,8 +4663,6 @@ def add_reading_material(request):
             errors['title'] = 'Material title is required.'
         if not content:
             errors['content'] = 'Material content is required.'
-        if usage_type not in ('practice', 'assessment', 'both'):
-            errors['usage_type'] = 'Valid usage type is required.'
         if status not in ('published', 'draft', 'scheduled'):
             errors['status'] = 'Status is required.'
         if status == 'scheduled' and not scheduled_at_str:
@@ -4762,6 +4778,7 @@ def add_reading_material(request):
                 content_text=content,
                 content_json={'items': tokens, 'language': language},
                 type=usage_type,
+                source_type=source_type,
                 status=status,
                 scheduled_at=scheduled_at if status == 'scheduled' else None,
                 difficulty_level='', # This field is not set in this context, consider if it should be
@@ -4821,20 +4838,21 @@ def add_reading_material(request):
                 'assigned_sections': [section.class_code] if section else [],
                 'assigned_week': m.assigned_week,
                 'assigned_week_display': format_assigned_week_display(m.assigned_week),
+                'source_type': m.source_type,
             }
 
-        return JsonResponse({
-            'success': True,
-            'message': 'Reading material(s) created successfully.',
-            'material_ids': created_ids,
-            'created_count': len(created_ids),
-            'material': material_payload,
-            'title': title,
-            'type': reading_type,
-            'status': status,
-            'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
-            'overview': _compute_teacher_overview(teacher_user),
-        })
+            return JsonResponse({
+                'success': True,
+                'message': 'Reading material(s) created successfully.',
+                'material_ids': created_ids,
+                'created_count': len(created_ids),
+                'material': material_payload,
+                'title': title,
+                'type': reading_type,
+                'status': status,
+                'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+                'overview': _compute_teacher_overview(teacher_user),
+            })
 
     except json.JSONDecodeError as e:
         logger.error(f"add_reading_material JSON decode error: {e}")
@@ -4877,7 +4895,11 @@ def teacher_update_material(request):
         requested_reading_type = (data.get('reading_type') or '').strip().lower()
         language = (data.get('language') or '').strip() or 'English'
         material.status = data.get('status', material.status)
-        material.type = data.get('usage_type', material.type)
+        material.type = 'assessment'
+
+        source_type = (data.get('source_type') or material.source_type).strip().lower()
+        if source_type in ('personal', 'shared'):
+            material.source_type = source_type
 
         if 'assigned_week' in data:
             assigned_week, week_error = parse_assigned_week(data.get('assigned_week'))
@@ -5018,9 +5040,16 @@ def teacher_update_practice(request):
             practice.title = title.strip()
         if content is not None:
             practice.content_text = content.strip()
+            if practice.material:
+                practice.material.content_text = practice.content_text
+                practice.material.save(update_fields=['content_text', 'updated_at'])
         if status is not None:
             practice.status = status
             practice.is_active = (status in ['published', 'scheduled'])
+            if practice.material:
+                practice.material.status = practice.status
+                practice.material.is_active = practice.is_active
+                practice.material.save(update_fields=['status', 'is_active', 'updated_at'])
 
         practice.save()
         return JsonResponse({'success': True, 'message': 'Practice updated successfully'})

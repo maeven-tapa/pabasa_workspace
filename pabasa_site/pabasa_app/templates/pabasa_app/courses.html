@@ -3055,9 +3055,7 @@
                                 <label class="form-label fw-bold small text-dark mb-1" for="materialType">Assignment Type</label>
                                 <div class="position-relative">
                                     <select id="materialType" class="form-select border-light shadow-sm" style="border-radius: 12px; appearance: none; padding-right: 2.5rem; min-height: 44px;">
-                                        <option value="practice">Practice Only</option>
                                         <option value="assessment">Assessment Only</option>
-                                        <option value="both">Both (Practice + Assessment)</option>
                                     </select>
                                     <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-3 text-muted pointer-events-none" style="font-size: 0.8rem;"></i>
                                 </div>
@@ -3188,9 +3186,7 @@
                     <div class="mb-3">
                         <label class="form-label" for="editMaterialUse">Use</label>
                         <select class="form-select" id="editMaterialUse">
-                            <option value="practice">Practice Only</option>
                             <option value="assessment">Assessment Only</option>
-                            <option value="both">Both (Practice + Assessment)</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -7642,7 +7638,6 @@
                         const materialId = editingCard.dataset.materialId;
                         
                         try {
-                            const usage = editingCard.dataset.usage || (editingCard.getAttribute('data-usage') || 'practice');
                             const recordKind = prefixedRecordKind(materialId) || editingCard.dataset.recordKind || editingCard.getAttribute('data-record-kind') || '';
                             let endpoint = '/dashboard/teacher/update-material/';
                             let payload = {
@@ -7650,11 +7645,11 @@
                                 title: newTitle.trim(),
                                 content: newContent.trim(),
                                 status: editPublicationStatusSelect.value,
-                                usage_type: editMaterialTypeSelect.value,
+                                usage_type: 'assessment',
                                 assigned_week: assignedWeekValue ? parseInt(assignedWeekValue, 10) : null
                             };
 
-                            if (recordKind === 'practice' || (!recordKind && usage && usage.toLowerCase() === 'practice')) {
+                            if (recordKind === 'practice') {
                                 endpoint = '/dashboard/teacher/update-practice/';
                                 payload = {
                                     practice_id: materialId,
@@ -7743,7 +7738,8 @@
                         const content = finalParagraphMode ? (currentItemsList[0] || '') : currentItemsList.join('\n');
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
-                        const usageType = materialTypeSelect ? materialTypeSelect.value : 'practice';
+                        const usageType = 'assessment';
+                        const sourceType = window._pendingSharedMaterialOrigin ? 'shared' : 'personal';
                         const language = materialLanguageSelect ? materialLanguageSelect.value : 'English';
                         const assignedWeekEl = document.getElementById('assignedWeek');
                         const assignedWeekRaw = assignedWeekEl ? assignedWeekEl.value.trim() : '';
@@ -7880,6 +7876,7 @@
                                             content: content,
                                             status: status,
                                             usage_type: usageType,
+                                            source_type: sourceType,
                                             class_code: saveClassCode,
                                             scheduled_at: schedule || null,
                                             assigned_week: assignedWeek,

@@ -169,6 +169,54 @@ class MaterialCreationTests(TestCase):
         self.assertTrue(response.json()["success"])
         material = Material.objects.latest("id")
         self.assertEqual(material.content_json.get("language"), "Tagalog")
+        self.assertEqual(material.type, "assessment")
+        self.assertEqual(material.source_type, "personal")
+
+    def test_add_reading_material_saves_shared_source_type(self):
+        user = User.objects.create(
+            custom_id="TCH-0003",
+            role="teacher",
+            first_name="Source",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="source@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Shared reading",
+                "content": "Araw\nBuwan",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "assessment",
+                "source_type": "shared",
+                "class_code": "",
+                "language": "Tagalog",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        material = Material.objects.latest("id")
+        self.assertEqual(material.type, "assessment")
+        self.assertEqual(material.source_type, "shared")
 
 
 class PracticeReaderMaterialTests(TestCase):

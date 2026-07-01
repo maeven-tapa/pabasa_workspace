@@ -49,7 +49,7 @@ class AssessmentAdmin(admin.ModelAdmin):
 @admin.register(Practice)
 class PracticeAdmin(admin.ModelAdmin):
 	list_display = all_model_fields(Practice)
-	list_filter = ("practice_type", "is_active", "created_at")
+	list_filter = ("is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")
 	ordering = ("-created_at",)
 

@@ -247,9 +247,8 @@ class Assessment(models.Model):
     title = models.CharField(max_length=150)
     code = models.CharField(max_length=30, unique=True)
     assessment_type = models.CharField(max_length=20, choices=ASSESSMENT_TYPE_CHOICES)
-    content = models.TextField(blank=True, default='')  # The actual reading material text
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
-    scheduled_at = models.DateTimeField(null=True, blank=True)  # When material becomes published
+    scheduled_at = models.DateTimeField(null=True, blank=True)  # When assessment becomes published
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assessments")
     section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="assessments", null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -258,6 +257,13 @@ class Assessment(models.Model):
     # store attempts and results within the assessments schema as a JSON list
     # each entry can be: {"student_id": ..., "started_at": ..., "completed_at": ..., "status": ..., "device_info": ..., "mic_used": ..., "accuracy": ..., "wpm": ..., "total_score": ..., "passed": ..., "remarks": ...}
     attempts = models.JSONField(default=list, blank=True)
+
+    @property
+    def content(self):
+        first_material = self.materials.order_by('created_at').first()
+        if first_material:
+            return first_material.content_text or first_material.prompt_text or ''
+        return ''
 
     class Meta:
         db_table = "assessments"
@@ -370,21 +376,19 @@ class Practice(models.Model):
 
     title = models.CharField(max_length=150)
     code = models.CharField(max_length=30, unique=True)
-    practice_type = models.CharField(max_length=20, choices=PRACTICE_TYPE_CHOICES)
-    # Original difficulty field name kept for backwards compatibility
-    difficulty_type = models.CharField(max_length=50, blank=True)
-    # Admin-facing prompt and status for publication control
-    prompt_text = models.TextField(blank=True, default='')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
-    # Primary content (kept as `contents` for historical reasons). Templates expect `content_text` so
-    # we provide a property alias below rather than duplicating data in DB.
-    contents = models.TextField(blank=True, default='')  # practice content / materials
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="practices")
+    material = models.OneToOneField(
+        "Material",
+        on_delete=models.SET_NULL,
+        related_name="practice_result",
+        null=True,
+        blank=True,
+    )
     section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="practices", null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # store attempts as JSON; we will keep one attempt per student (latest) by default
     attempts = models.JSONField(default=list, blank=True)
 
     class Meta:
@@ -394,21 +398,161 @@ class Practice(models.Model):
     def __str__(self):
         return f"{self.code} - {self.title}"
 
+    @property
+    def practice_type(self):
+        return getattr(self.material, "item_type", "") or getattr(self, "_practice_type", "")
+
+    @practice_type.setter
+    def practice_type(self, value):
+        value = value or ""
+        self._practice_type = value
+        if self.material:
+            self.material.item_type = value
+            self.material.save(update_fields=["item_type"])
+
+    @property
+    def difficulty_type(self):
+        return getattr(self.material, "difficulty_level", "") or getattr(self, "_difficulty_type", "")
+
+    @difficulty_type.setter
+    def difficulty_type(self, value):
+        value = value or ""
+        self._difficulty_type = value
+        if self.material:
+            self.material.difficulty_level = value
+            self.material.save(update_fields=["difficulty_level"])
+
+    @property
+    def prompt_text(self):
+        return getattr(self.material, "prompt_text", "") or getattr(self, "_prompt_text", "")
+
+    @prompt_text.setter
+    def prompt_text(self, value):
+        value = value or ""
+        self._prompt_text = value
+        if self.material:
+            self.material.prompt_text = value
+            self.material.save(update_fields=["prompt_text"])
+
+    @property
+    def contents(self):
+        return getattr(self.material, "content_text", "") or getattr(self, "_contents", "")
+
+    @contents.setter
+    def contents(self, value):
+        value = value or ""
+        self._contents = value
+        if self.material:
+            self.material.content_text = value
+            self.material.save(update_fields=["content_text"])
+
+    def save(self, *args, **kwargs):
+        pending_item_type = getattr(self, "_practice_type", None)
+        pending_difficulty = getattr(self, "_difficulty_type", None)
+        pending_prompt = getattr(self, "_prompt_text", None)
+        pending_contents = getattr(self, "_contents", None)
+
+        super().save(*args, **kwargs)
+
+        if not self.material:
+            material = Material.objects.create(
+                title=self.title or '',
+                item_type=pending_item_type or 'word',
+                prompt_text=pending_prompt or '',
+                content_text=pending_contents or '',
+                content_json={},
+                type='practice',
+                status=self.status or 'draft',
+                difficulty_level=pending_difficulty or '',
+                section=self.section,
+                is_active=self.is_active,
+            )
+            self.material = material
+            super().save(update_fields=['material'])
+            return
+
+        updated_fields = []
+        if self.material.title != self.title:
+            self.material.title = self.title or ''
+            updated_fields.append('title')
+        if pending_item_type is not None and self.material.item_type != pending_item_type:
+            self.material.item_type = pending_item_type or ''
+            updated_fields.append('item_type')
+        if pending_prompt is not None and self.material.prompt_text != pending_prompt:
+            self.material.prompt_text = pending_prompt or ''
+            updated_fields.append('prompt_text')
+        if pending_contents is not None and self.material.content_text != pending_contents:
+            self.material.content_text = pending_contents or ''
+            updated_fields.append('content_text')
+        if pending_difficulty is not None and self.material.difficulty_level != pending_difficulty:
+            self.material.difficulty_level = pending_difficulty or ''
+            updated_fields.append('difficulty_level')
+        if self.material.status != self.status:
+            self.material.status = self.status or 'draft'
+            updated_fields.append('status')
+        if self.material.is_active != self.is_active:
+            self.material.is_active = self.is_active
+            updated_fields.append('is_active')
+        if self.material.section_id != self.section_id:
+            self.material.section = self.section
+            updated_fields.append('section')
+        if updated_fields:
+            self.material.save(update_fields=updated_fields)
+
+    @property
+    def difficulty_level(self):
+        return getattr(self.material, "difficulty_level", "") or getattr(self, "_difficulty_type", "")
+
+    @property
+    def content_text(self):
+        return getattr(self.material, "content_text", "") or getattr(self, "_contents", "")
+
+    @content_text.setter
+    def content_text(self, value):
+        if self.material:
+            self.material.content_text = value or ''
+            self.material.save(update_fields=["content_text"])
+        else:
+            self._contents = value or ''
+
+    @property
+    def item_type(self):
+        return getattr(self.material, "item_type", "") or getattr(self, "_practice_type", "")
+
+    def get_item_type_display(self):
+        if self.material and hasattr(self.material, "get_item_type_display"):
+            return self.material.get_item_type_display()
+        return dict(self.PRACTICE_TYPE_CHOICES).get(self.practice_type or '', '')
+
+    def get_status_display(self):
+        if self.material and hasattr(self.material, "get_status_display"):
+            return self.material.get_status_display()
+        return dict(self.STATUS_CHOICES).get(self.status or '', '')
+
+    def get_practice_type_display(self):
+        return self.get_item_type_display()
+
+    def delete(self, *args, **kwargs):
+        linked_material = self.material
+        super().delete(*args, **kwargs)
+        if linked_material:
+            try:
+                linked_material.delete()
+            except Exception:
+                pass
+
     def get_attempts(self, student=None):
-        """Return attempts. If student is given return that student's attempts.
-        Without a student, returns one (latest) attempt per student."""
-        attempts = getattr(self, 'attempts', None) or []
+        attempts = getattr(self, "attempts", None) or []
         if not isinstance(attempts, list):
             return []
         if student:
-            return [a for a in attempts if a.get('student_id') == student.id]
-        # deduplicate: keep latest by `started_at` (ISO strings compare lexically)
+            return [a for a in attempts if a.get("student_id") == student.id]
         latest = {}
         for a in attempts:
-            sid = a.get('student_id')
+            sid = a.get("student_id")
             if sid is None:
                 continue
-            if sid not in latest or a.get('started_at', '') >= latest[sid].get('started_at', ''):
+            if sid not in latest or a.get("started_at", "") >= latest[sid].get("started_at", ""):
                 latest[sid] = a
         return list(latest.values())
 
@@ -416,19 +560,19 @@ class Practice(models.Model):
         student_attempts = self.get_attempts(student)
         return student_attempts[-1] if student_attempts else None
 
-    def _get_attempt_entry(self, student, status='started', started_at=None, **kwargs):
+    def _get_attempt_entry(self, student, status="started", started_at=None, **kwargs):
         entry = {
-            'student_id': student.id,
-            'started_at': started_at or timezone.now().isoformat(),
-            'status': status,
+            "student_id": student.id,
+            "started_at": started_at or timezone.now().isoformat(),
+            "status": status,
         }
         for key in [
-            'completed_at', 'device_info', 'mic_used', 'accuracy', 'wpm',
-            'fluency_score', 'pronunciation_score', 'time_score',
-            'total_score', 'crla_classification', 'classification',
-            'duration_seconds', 'word_count', 'transcript',
-            'speech_recognition_used', 'needs_manual_review',
-            'passed', 'remarks',
+            "completed_at", "device_info", "mic_used", "accuracy", "wpm",
+            "fluency_score", "pronunciation_score", "time_score",
+            "total_score", "crla_classification", "classification",
+            "duration_seconds", "word_count", "transcript",
+            "speech_recognition_used", "needs_manual_review",
+            "passed", "remarks",
         ]:
             if key in kwargs:
                 entry[key] = kwargs[key]
@@ -436,16 +580,13 @@ class Practice(models.Model):
 
     def _save_attempts(self):
         self.updated_at = timezone.now()
-        self.save(update_fields=['attempts', 'updated_at'])
+        self.save(update_fields=["attempts", "updated_at"])
 
     def record_attempt(self, student, replace=True, **attempt_data):
-        """Record a practice attempt.
-        If `replace` is True (default) any existing attempts by the student are removed
-        so the stored list keeps only the latest attempt per student."""
-        attempts = getattr(self, 'attempts', None) or []
+        attempts = getattr(self, "attempts", None) or []
         entry = self._get_attempt_entry(student, **attempt_data)
         if replace:
-            attempts = [a for a in attempts if a.get('student_id') != student.id]
+            attempts = [a for a in attempts if a.get("student_id") != student.id]
             attempts.append(entry)
         else:
             attempts.append(entry)
@@ -454,34 +595,23 @@ class Practice(models.Model):
         return entry
 
     def deactivate_student_attempts(self, student):
-        attempts = getattr(self, 'attempts', None) or []
+        attempts = getattr(self, "attempts", None) or []
         changed = False
         for attempt in attempts:
-            if attempt.get('student_id') == student.id and attempt.get('status') != 'cancelled':
-                attempt['status'] = 'cancelled'
+            if attempt.get("student_id") == student.id and attempt.get("status") != "cancelled":
+                attempt["status"] = "cancelled"
                 changed = True
         if changed:
             self.attempts = attempts
             self._save_attempts()
         return changed
 
-    # Compatibility aliases so existing templates/helpers that expect Material-like
-    # attributes work without changing many call sites.
-    @property
-    def difficulty_level(self):
-        return getattr(self, 'difficulty_type', '')
-
-    @property
-    def content_text(self):
-        return getattr(self, 'contents', '')
-
-    @property
-    def item_type(self):
-        return getattr(self, 'practice_type', '')
-
-    def get_item_type_display(self):
-        # Provide same helper name as Material.get_item_type_display used in templates
-        return self.get_practice_type_display()
+    def clear_all_attempts(self):
+        if self.attempts:
+            self.attempts = []
+            self._save_attempts()
+            return True
+        return False
 
 class Material(models.Model):
     ITEM_TYPE_CHOICES = [
@@ -516,6 +646,14 @@ class Material(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     scheduled_at = models.DateTimeField(null=True, blank=True)
     difficulty_level = models.CharField(max_length=50, blank=True)
+    source_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("personal", "Personal"),
+            ("shared", "Shared"),
+        ],
+        default="personal",
+    )
     # Optional week assignment (1-99) for grouping materials by week
     assigned_week = models.PositiveSmallIntegerField(
         null=True,
