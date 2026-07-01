@@ -5348,24 +5348,8 @@ def teacher_update_material(request):
         # assessments table. If switching to practice, detach the link.
         try:
             if material.type in ('assessment', 'both'):
-                if not getattr(material, 'assessment', None):
-                    code = 'AS' + uuid.uuid4().hex[:8].upper()
-                    while Assessment.objects.filter(code=code).exists():
-                        code = 'AS' + uuid.uuid4().hex[:8].upper()
-                    assessment = Assessment.objects.create(
-                        title=material.title,
-                        code=code,
-                        assessment_type=material.item_type,
-                        content=material.content_text or material.prompt_text or '',
-                        status=material.status,
-                        scheduled_at=material.scheduled_at if material.status == 'scheduled' else None,
-                        teacher=teacher_user,
-                        section=material.section,
-                        is_active=material.is_active,
-                    )
-                    material.assessment = assessment
-                else:
-                    # Keep assessment metadata in sync (best-effort)
+                if getattr(material, 'assessment', None):
+                    # Keep assessment metadata in sync only when the record already exists.
                     try:
                         a = material.assessment
                         a.title = material.title
