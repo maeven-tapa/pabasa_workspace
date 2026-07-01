@@ -124,33 +124,29 @@
             <table class="table align-middle mb-0 placeholder-table assessments-table">
                 <thead>
                     <tr>
-                        <th>Assessment Name</th>
-                        <th>Type</th>
+                        <th>Assessment</th>
+                        <th>Student</th>
+                        <th>Attempt</th>
                         <th>Status</th>
-                        <th>Participants</th>
-                        <th>Completion Rate</th>
-                        <th>Average Score</th>
+                        <th>Score</th>
+                        <th>Completed At</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in assessment_rows %}
+                    {% for row in assessment_attempt_rows %}
                     <tr>
                         <td>
-                            <strong>{{ row.title }}</strong>
-                            <div class="small text-muted">{{ row.code }} • {{ row.teacher_name }}</div>
+                            <strong>{{ row.assessment_title }}</strong>
+                            <div class="small text-muted">{{ row.assessment_code }} &bull; {{ row.assessment_type }}</div>
                         </td>
-                        <td>{{ row.assessment_type }}</td>
+                        <td>{{ row.student_name }}</td>
+                        <td>Attempt {{ row.attempt_number }}</td>
                         <td><span class="badge" style="background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%); color: #fff; padding: 0.45rem 0.7rem; border-radius: 999px;">{{ row.status }}</span></td>
-                        <td>{{ row.participants }}</td>
-                        <td>
-                            <div class="progress" style="height: 20px;">
-                                <div class="progress-bar" role="progressbar" style="width: {{ row.completion_rate }}%; background: linear-gradient(90deg, #7c2d12 0%, #b45309 100%);">{{ row.completion_rate }}%</div>
-                            </div>
-                        </td>
-                        <td>{{ row.avg_score }}%</td>
+                        <td>{{ row.total_score|default:'-' }}</td>
+                        <td>{{ row.completed_at|date:"M d, Y h:i A" }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted">No assessments available.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted">No assessment results available yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -180,9 +176,11 @@
                         <td>{{ row.in_progress }}</td>
                         <td>{{ row.not_started }}</td>
                         <td>
+                            {% with row.completion_pct|default:'0' as completion_pct %}
                             <div class="progress" style="height: 20px;">
-                                <div class="progress-bar" role="progressbar" style="width: {{ row.completion_pct }}%; background: linear-gradient(90deg, #7c2d12 0%, #b45309 100%);">{{ row.completion_pct }}%</div>
+                                <div class="progress-bar" role="progressbar" style="background: linear-gradient(90deg, #7c2d12 0%, #b45309 100%); width: {{ completion_pct }}%;" aria-valuenow="{{ completion_pct }}" aria-valuemin="0" aria-valuemax="100">{{ completion_pct }}%</div>
                             </div>
+                            {% endwith %}
                         </td>
                     </tr>
                     {% empty %}
