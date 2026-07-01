@@ -520,7 +520,7 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
     if sections is not None:
         assessments = Assessment.objects.filter(section__in=sections, is_active=True)
         for assessment in assessments:
-            attempts = getattr(assessment, 'attempts', None) or []
+            attempts = getattr(assessment, 'attempt_history', None) or []
             if not isinstance(attempts, list):
                 continue
             for attempt in attempts:
@@ -3797,7 +3797,7 @@ def get_teacher_courses_api(request):
 
                 avg = None
                 try:
-                    attempts = getattr(a, 'attempts', None) or []
+                    attempts = getattr(a, 'attempt_history', None) or []
                     accs = [att.get('accuracy') for att in attempts if isinstance(att.get('accuracy'), (int, float))]
                     if accs:
                         avg = round(sum(accs) / len(accs))
@@ -3983,7 +3983,7 @@ def get_teacher_assessment_api(request, assessment_id):
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
             })
 
-        attempts = getattr(assessment, 'attempts', None) or []
+        attempts = getattr(assessment, 'attempt_history', None) or []
         if not isinstance(attempts, list):
             attempts = []
         student_ids = {
@@ -5803,7 +5803,7 @@ def get_teacher_students_api(request):
             is_active=True,
         )
         for assessment in Assessment.objects.filter(section__in=teacher_sections, is_active=True):
-            attempts = getattr(assessment, 'attempts', None) or []
+            attempts = getattr(assessment, 'attempt_history', None) or []
             if not isinstance(attempts, list):
                 continue
             for attempt in attempts:

@@ -254,7 +254,16 @@ class Assessment(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    attempts = models.JSONField(default=list, blank=True)
+    attempt_no = models.PositiveIntegerField(default=0)
+    attempt_history = models.JSONField(default=list, blank=True)
+
+    @property
+    def attempts(self):
+        return self.attempt_history or []
+
+    @attempts.setter
+    def attempts(self, value):
+        self.attempt_history = value or []
 
     @staticmethod
     def _attempt_value(attempt, *keys, default=None):
@@ -307,7 +316,7 @@ class Assessment(models.Model):
 
     def get_attempts(self, student=None):
         """Get all attempts, optionally filtered by student."""
-        attempts = getattr(self, 'attempts', None) or []
+        attempts = getattr(self, 'attempt_history', None) or []
         if not isinstance(attempts, list):
             return []
         if student is not None:
@@ -368,11 +377,12 @@ class Assessment(models.Model):
         if extra_data:
             attempt['extra_data'] = extra_data
         attempts.append(attempt)
-        self.attempts = attempts
+        self.attempt_history = attempts
+        self.attempt_no = len(attempts)
         self.updated_at = timezone.now()
-        self.save(update_fields=['attempts', 'updated_at'])
+        self.save(update_fields=['attempt_history', 'attempt_no', 'updated_at'])
         return attempt
-    
+
     def update_attempt(self, student, **update_data):
         """Update the most recent attempt for a student. Returns True if updated."""
         attempts = list(self.get_attempts())
@@ -386,9 +396,10 @@ class Assessment(models.Model):
                         extra_data[key] = value
                 if extra_data:
                     attempts[i]['extra_data'] = extra_data
-                self.attempts = attempts
+                self.attempt_history = attempts
+                self.attempt_no = len(attempts)
                 self.updated_at = timezone.now()
-                self.save(update_fields=['attempts', 'updated_at'])
+                self.save(update_fields=['attempt_history', 'attempt_no', 'updated_at'])
                 return True
         return False
     
@@ -405,17 +416,19 @@ class Assessment(models.Model):
                 attempt['status'] = 'cancelled'
                 changed = True
         if changed:
-            self.attempts = attempts
+            self.attempt_history = attempts
+            self.attempt_no = len(attempts)
             self.updated_at = timezone.now()
-            self.save(update_fields=['attempts', 'updated_at'])
+            self.save(update_fields=['attempt_history', 'attempt_no', 'updated_at'])
         return changed
-    
+
     def clear_all_attempts(self):
         """Clear all attempts (hard delete). Used when assessment is deleted."""
-        if self.attempts:
-            self.attempts = []
+        if self.attempt_history:
+            self.attempt_history = []
+            self.attempt_no = 0
             self.updated_at = timezone.now()
-            self.save(update_fields=['attempts', 'updated_at'])
+            self.save(update_fields=['attempt_history', 'attempt_no', 'updated_at'])
             return True
         return False
 

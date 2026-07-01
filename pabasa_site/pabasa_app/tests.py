@@ -895,7 +895,7 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertTrue(response.json()["success"])
 
         self.assessment.refresh_from_db()
-        attempt = self.assessment.attempts[-1]
+        attempt = self.assessment.attempt_history[-1]
         self.assertEqual(attempt["fluency_score"], 90)
         self.assertEqual(attempt["accuracy"], 88)
         self.assertEqual(attempt["pronunciation_score"], 86)
