@@ -24,6 +24,7 @@ import zipfile
 import csv
 from io import BytesIO
 from .forms import AdminPracticeMaterialForm, parse_practice_items
+from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal_account
 from django.db import transaction
 import re
 import traceback
@@ -1600,6 +1601,9 @@ def login_user(request):
         data = request.POST
         custom_id = data.get('custom_id', '').strip()
         password = data.get('password', '')
+
+        if custom_id == PRINCIPAL_DEFAULT_CUSTOM_ID:
+            ensure_default_principal_account()
         
         if not custom_id or not password:
             return JsonResponse({'success': False, 'error': 'Custom ID and password are required'}, status=400)
@@ -6983,10 +6987,20 @@ def principal_reports(request):
     user = User.objects.filter(id=request.session.get('user_id')).first()
     analytics = _principal_analytics(user)
 
+    report_type_labels = {
+        'school': 'School Performance',
+        'grade': 'Grade-Level',
+        'assessment': 'Assessment',
+    }
+
     selected_report_type = (request.GET.get('report_type') or 'school').strip().lower()
     selected_grade = (request.GET.get('grade_level') or '').strip()
     export_type = (request.GET.get('export') or '').strip().lower()
     headers, rows = _principal_report_preview_rows(analytics, selected_report_type, selected_grade)
+    selected_report_label = f"{report_type_labels.get(selected_report_type, 'School Performance')} Report"
+
+    if selected_report_type == 'grade' and selected_grade:
+        selected_report_label = f'{report_type_labels.get(selected_report_type, "School Performance")} Report - {selected_grade}'
 
     if export_type == 'csv' or export_type == 'excel':
         return _principal_report_csv_response(selected_report_type, headers, rows)
@@ -7003,6 +7017,8 @@ def principal_reports(request):
         ],
         'selected_report_type': selected_report_type,
         'selected_grade': selected_grade,
+        'selected_report_label': selected_report_label,
+        'report_preview_count': len(rows),
         'report_preview_headers': headers,
         'report_preview_rows': rows,
     })

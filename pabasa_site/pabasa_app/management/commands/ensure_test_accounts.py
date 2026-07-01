@@ -3,11 +3,12 @@ from django.core.management.base import BaseCommand
 from pabasa_app.test_accounts import (
     DEFAULT_TEST_ACCOUNTS,
     ensure_default_test_accounts,
+    DEFAULT_PRINCIPAL_ACCOUNT,
 )
 
 
 class Command(BaseCommand):
-    help = "Ensure default teacher and student test accounts exist."
+    help = "Ensure default teacher, student, and principal accounts exist."
 
     def handle(self, *args, **options):
         results = ensure_default_test_accounts()
@@ -23,3 +24,6 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"  {account['custom_id']} / {account['password']} ({account['role']})"
             )
+        self.stdout.write(
+            f"  {DEFAULT_PRINCIPAL_ACCOUNT['custom_id']} / {DEFAULT_PRINCIPAL_ACCOUNT['password']} ({DEFAULT_PRINCIPAL_ACCOUNT['role']})"
+        )

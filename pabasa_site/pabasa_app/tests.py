@@ -13,6 +13,7 @@ from pypdf import PdfReader
 
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
+from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .views import _create_notification
 from .weekly_digest import send_weekly_digest
 
@@ -82,6 +83,149 @@ class PrincipalReportsExportTests(TestCase):
         extracted_text = "\n".join(page.extract_text() or "" for page in reader.pages)
 
         self.assertTrue(extracted_text or response.content.startswith(b"%PDF"))
+
+
+class PrincipalReportsPreviewTests(TestCase):
+    def setUp(self):
+        self.principal = User.objects.create(
+            custom_id="PRN-SES",
+            role="principal",
+            first_name="Jobelyn",
+            last_name="Valdez",
+            middle_initial="A",
+            suffix="",
+            sex="female",
+            birth_month=6,
+            birth_day=3,
+            birth_year=1980,
+            email="principal-preview@example.com",
+            password_hash=make_password("Principal@123"),
+        )
+        self.teacher = User.objects.create(
+            custom_id="TCH-PRV1",
+            role="teacher",
+            first_name="Rowan",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="teacher-preview@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        self.student = User.objects.create(
+            custom_id="STD-PRV1",
+            role="student",
+            first_name="Ava",
+            last_name="Learner",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=2,
+            birth_day=2,
+            birth_year=2012,
+            email="student-preview@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 2",
+        )
+        self.section = Section.objects.create(
+            class_code="G2-PRV",
+            class_name="Grade 2 Preview",
+            header="Reading Class",
+            description="Preview section",
+            teacher=self.teacher,
+            is_active=True,
+            subject="Reading",
+            students=[{
+                "student_id": self.student.id,
+                "custom_id": self.student.custom_id,
+                "first_name": self.student.first_name,
+                "last_name": self.student.last_name,
+                "email": self.student.email,
+                "joined_at": timezone.now().isoformat(),
+                "is_active": True,
+            }],
+        )
+        self.assessment = Assessment.objects.create(
+            title="Preview Assessment",
+            code="ASM-PRV1",
+            assessment_type="word",
+            status="published",
+            teacher=self.teacher,
+            section=self.section,
+            is_active=True,
+            attempt_no=1,
+            attempt_history=[
+                {
+                    "student_id": self.student.id,
+                    "status": "completed",
+                    "total_score": 87,
+                    "accuracy": 90,
+                    "pronunciation_score": 84,
+                    "completed_at": timezone.now().isoformat(),
+                }
+            ],
+        )
+        session = self.client.session
+        session["user_id"] = self.principal.id
+        session["user_role"] = self.principal.role
+        session["first_name"] = self.principal.first_name
+        session["last_name"] = self.principal.last_name
+        session["email"] = self.principal.email
+        session["custom_id"] = self.principal.custom_id
+        session.save()
+
+    def test_principal_reports_preview_shows_live_assessment_data(self):
+        response = self.client.get(reverse("principal_reports"), {"report_type": "assessment"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Assessment Report")
+        self.assertContains(response, "Preview Assessment")
+        self.assertContains(response, "87.0%")
+        self.assertContains(response, "100%")
+
+    def test_principal_reports_excel_export_still_returns_csv_response(self):
+        response = self.client.get(reverse("principal_reports"), {"report_type": "assessment", "export": "excel"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("attachment; filename=", response["Content-Disposition"])
+
+
+class PrincipalAccountBootstrapTests(TestCase):
+    def test_login_recreates_missing_principal_account_once(self):
+        self.assertFalse(User.objects.filter(custom_id=PRINCIPAL_DEFAULT_CUSTOM_ID).exists())
+
+        response = self.client.post(
+            reverse("login_user"),
+            {
+                "custom_id": PRINCIPAL_DEFAULT_CUSTOM_ID,
+                "password": PRINCIPAL_DEFAULT_PASSWORD,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        principal = User.objects.get(custom_id=PRINCIPAL_DEFAULT_CUSTOM_ID)
+        self.assertEqual(principal.role, "principal")
+        self.assertTrue(check_password(PRINCIPAL_DEFAULT_PASSWORD, principal.password_hash))
+        self.assertEqual(User.objects.filter(custom_id=PRINCIPAL_DEFAULT_CUSTOM_ID).count(), 1)
+
+        second_response = self.client.post(
+            reverse("login_user"),
+            {
+                "custom_id": PRINCIPAL_DEFAULT_CUSTOM_ID,
+                "password": PRINCIPAL_DEFAULT_PASSWORD,
+            },
+        )
+
+        self.assertEqual(second_response.status_code, 200)
+        self.assertTrue(second_response.json()["success"])
+        self.assertEqual(User.objects.filter(custom_id=PRINCIPAL_DEFAULT_CUSTOM_ID).count(), 1)
 
 
 class ProfileUpdateTests(TestCase):

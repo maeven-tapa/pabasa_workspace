@@ -69,6 +69,35 @@
         color: #263f4f !important;
     }
 
+    .password-field {
+        position: relative;
+    }
+
+    .password-field .form-control {
+        padding-right: 5rem;
+    }
+
+    .password-toggle-btn {
+        position: absolute;
+        top: 50%;
+        right: 0.9rem;
+        transform: translateY(-50%);
+        z-index: 2;
+        border: 0;
+        background: transparent;
+        color: #10466e;
+        font-size: 0.82rem;
+        font-weight: 700;
+        line-height: 1;
+        padding: 0.25rem 0;
+    }
+
+    .password-toggle-btn:hover,
+    .password-toggle-btn:focus {
+        color: #0f2f45;
+        text-decoration: underline;
+    }
+
     .generated-pabasa-id {
         display: none;
         margin-top: 1rem;
@@ -292,11 +321,17 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Password</label>
-                        <input class="form-control" type="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
+                        <div class="password-field">
+                            <input class="form-control" type="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
+                            <button class="password-toggle-btn" type="button" data-password-toggle data-target="password" aria-pressed="false" aria-label="Show password">Show</button>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Confirm password</label>
-                        <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required>
+                        <div class="password-field">
+                            <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required>
+                            <button class="password-toggle-btn" type="button" data-password-toggle data-target="confirm_password" aria-pressed="false" aria-label="Show password">Show</button>
+                        </div>
                         <div class="field-feedback" data-password-match-error>Passwords must match.</div>
                     </div>
                     <div class="col-12">
@@ -399,6 +434,30 @@
             uppercase: form.querySelector("[data-rule='uppercase']"),
             number: form.querySelector("[data-rule='number']"),
         };
+
+        const passwordToggles = form.querySelectorAll("[data-password-toggle]");
+
+        const syncPasswordToggle = (button, input) => {
+            const isHidden = input.type === "password";
+            button.textContent = isHidden ? "Show" : "Hide";
+            button.setAttribute("aria-pressed", String(!isHidden));
+            button.setAttribute("aria-label", isHidden ? "Show password" : "Hide password");
+        };
+
+        passwordToggles.forEach((button) => {
+            const targetName = button.getAttribute("data-target");
+            const input = form.elements[targetName];
+
+            if (!input) return;
+
+            button.addEventListener("click", () => {
+                input.type = input.type === "password" ? "text" : "password";
+                syncPasswordToggle(button, input);
+                input.focus();
+            });
+
+            syncPasswordToggle(button, input);
+        });
 
         const getPasswordState = () => ({
             length: passwordInput.value.length >= 8,
