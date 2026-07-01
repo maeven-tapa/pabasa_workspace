@@ -254,8 +254,6 @@ class Assessment(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # Store student attempt records inside the assessment row so reporting can
-    # stay tied to one assessment while still preserving per-student history.
     attempts = models.JSONField(default=list, blank=True)
 
     @staticmethod
@@ -281,13 +279,39 @@ class Assessment(models.Model):
         return f"{self.code} - {self.title}"
     
     # Attempt Management Methods
+    @staticmethod
+    def _attempt_field_names():
+        return {
+            'started_at',
+            'completed_at',
+            'status',
+            'device_info',
+            'mic_used',
+            'accuracy',
+            'wpm',
+            'fluency_score',
+            'pronunciation_score',
+            'time_score',
+            'total_score',
+            'crla_classification',
+            'classification',
+            'duration_seconds',
+            'word_count',
+            'transcript',
+            'speech_recognition_used',
+            'needs_manual_review',
+            'passed',
+            'remarks',
+            'extra_data',
+        }
+
     def get_attempts(self, student=None):
-        """Get all attempts, optionally filtered by student"""
+        """Get all attempts, optionally filtered by student."""
         attempts = getattr(self, 'attempts', None) or []
         if not isinstance(attempts, list):
             return []
-        if student:
-            return [a for a in attempts if a.get('student_id') == student.id]
+        if student is not None:
+            return [attempt for attempt in attempts if attempt.get('student_id') == student.id]
         return attempts
 
     def get_latest_attempt(self, student=None):
@@ -319,58 +343,52 @@ class Assessment(models.Model):
     
     def has_student_attempted(self, student):
         """Check if a student has attempted this assessment"""
-        return any(a.get('student_id') == student.id for a in self.get_attempts())
+        return any(attempt.get('student_id') == student.id for attempt in self.get_attempts())
 
     def has_student_completed(self, student):
         """Check if a student has a completed attempt for this assessment."""
         return any(
-            a.get('student_id') == student.id and a.get('status') == 'completed'
-            for a in self.get_attempts(student)
+            attempt.get('student_id') == student.id and attempt.get('status') == 'completed'
+            for attempt in self.get_attempts(student)
         )
     
-    def _get_attempt_entry(self, student, status='started', started_at=None, **kwargs):
-        """Create an attempt entry dict"""
-        entry = {
+    def record_attempt(self, student, **attempt_data):
+        """Record a student's assessment attempt and return the new row."""
+        attempts = list(self.get_attempts())
+        extra_data = dict(attempt_data.pop('extra_data', None) or {})
+        attempt = {
             'student_id': student.id,
-            'started_at': started_at or timezone.now().isoformat(),
-            'status': status,
+            'started_at': attempt_data.pop('started_at', None) or timezone.now().isoformat(),
         }
-        # Add optional fields if provided
-        for key in [
-            'completed_at', 'device_info', 'mic_used', 'accuracy', 'wpm',
-            'fluency_score', 'pronunciation_score', 'time_score',
-            'total_score', 'crla_classification', 'classification',
-            'duration_seconds', 'word_count', 'transcript',
-            'speech_recognition_used', 'needs_manual_review',
-            'passed', 'remarks',
-        ]:
-            if key in kwargs:
-                entry[key] = kwargs[key]
-        return entry
-    
-    def _save_attempts(self):
-        """Save updated attempts list to database"""
+        for key, value in list(attempt_data.items()):
+            if key in self._attempt_field_names():
+                attempt[key] = value
+            else:
+                extra_data[key] = value
+        if extra_data:
+            attempt['extra_data'] = extra_data
+        attempts.append(attempt)
+        self.attempts = attempts
         self.updated_at = timezone.now()
         self.save(update_fields=['attempts', 'updated_at'])
-    
-    def record_attempt(self, student, **attempt_data):
-        """Record a student's assessment attempt. Returns the attempt entry."""
-        attempts = self.get_attempts()
-        entry = self._get_attempt_entry(student, **attempt_data)
-        attempts.append(entry)
-        self.attempts = attempts
-        self._save_attempts()
-        return entry
+        return attempt
     
     def update_attempt(self, student, **update_data):
         """Update the most recent attempt for a student. Returns True if updated."""
-        attempts = self.get_attempts()
-        for i in range(len(attempts) - 1, -1, -1):  # Search from latest to earliest
+        attempts = list(self.get_attempts())
+        for i in range(len(attempts) - 1, -1, -1):
             if attempts[i].get('student_id') == student.id:
-                attempts[i].update(update_data)
-                attempts[i]['updated_at'] = timezone.now().isoformat()
+                extra_data = dict(attempts[i].get('extra_data') or {})
+                for key, value in update_data.items():
+                    if key in self._attempt_field_names():
+                        attempts[i][key] = value
+                    else:
+                        extra_data[key] = value
+                if extra_data:
+                    attempts[i]['extra_data'] = extra_data
                 self.attempts = attempts
-                self._save_attempts()
+                self.updated_at = timezone.now()
+                self.save(update_fields=['attempts', 'updated_at'])
                 return True
         return False
     
@@ -380,7 +398,7 @@ class Assessment(models.Model):
     
     def deactivate_student_attempts(self, student):
         """Mark all attempts for a student as inactive (soft delete). Returns True if changed."""
-        attempts = self.get_attempts()
+        attempts = list(self.get_attempts())
         changed = False
         for attempt in attempts:
             if attempt.get('student_id') == student.id and attempt.get('status') != 'cancelled':
@@ -388,14 +406,16 @@ class Assessment(models.Model):
                 changed = True
         if changed:
             self.attempts = attempts
-            self._save_attempts()
+            self.updated_at = timezone.now()
+            self.save(update_fields=['attempts', 'updated_at'])
         return changed
     
     def clear_all_attempts(self):
         """Clear all attempts (hard delete). Used when assessment is deleted."""
         if self.attempts:
             self.attempts = []
-            self._save_attempts()
+            self.updated_at = timezone.now()
+            self.save(update_fields=['attempts', 'updated_at'])
             return True
         return False
 
@@ -710,8 +730,7 @@ class Material(models.Model):
         return f"{parent} - {self.item_type}{title_part}"
 
 
-# Note: AssessmentAttempt and AssessmentResult tables removed. Attempts/results
-# are stored inside the Assessment `attempts` JSONField.
+# Assessment attempts are stored in the Assessment `attempts` JSONField.
 
 
 class Course(models.Model):

@@ -103,7 +103,6 @@ class AssessmentAdmin(admin.ModelAdmin):
 		return self._display_attempt_value(self._latest_attempt_summary(obj).get("crla_classification"))
 	latest_crla_level.short_description = "CRLA Level"
 
-
 @admin.register(Practice)
 class PracticeAdmin(admin.ModelAdmin):
 	list_display = all_model_fields(Practice)
@@ -127,7 +126,7 @@ class MaterialAdmin(admin.ModelAdmin):
 	content_preview.short_description = "Content"
 
 
-# AssessmentAttempt and AssessmentResult removed; attempts stored inside Assessment.attempts JSONField
+# Assessment attempts are stored in the Assessment `attempts` JSONField.
 
 
 @admin.register(Note)
