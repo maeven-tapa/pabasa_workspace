@@ -699,6 +699,101 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '"items": ["HA", "he", "hi", "ho", "hu"]', html=False)
 
+    def test_practice_completion_records_student_done_status(self):
+        material = Material.objects.create(
+            title="Completion syllables",
+            item_type="word",
+            content_text="HA\nhe",
+            content_json={"items": ["HA", "he"]},
+            type="practice",
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "material_id": f"practice-{material.id}",
+                "activity_type": "practice",
+                "stars_earned": 20,
+                "items_completed": 2,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["material_id"], f"practice-{material.id}")
+        self.assertEqual(payload["status"], "Done")
+
+        material.refresh_from_db()
+        completion = material.content_json["student_completions"][str(self.student.id)]
+        self.assertEqual(completion["status"], "completed")
+        self.assertEqual(completion["stars_earned"], 20)
+        self.assertEqual(completion["items_completed"], 2)
+        self.assertEqual(material.status, "published")
+
+    def test_practice_hub_marks_only_completed_student_material_done(self):
+        material = Material.objects.create(
+            title="Done for one student",
+            item_type="word",
+            content_text="HA\nhe",
+            content_json={
+                "items": ["HA", "he"],
+                "student_completions": {
+                    str(self.student.id): {
+                        "student_id": self.student.id,
+                        "status": "completed",
+                        "completed_at": timezone.now().isoformat(),
+                    }
+                },
+            },
+            type="practice",
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+
+        response = self.client.get(reverse("practice"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'"id": "practice-{material.id}"', html=False)
+        self.assertContains(response, '"status": "Done"', html=False)
+        self.assertContains(response, '"is_done": true', html=False)
+
+        other_student = User.objects.create(
+            custom_id="STD-OTHER-PRACT",
+            role="student",
+            first_name="Other",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2012,
+            email="other-practice-student@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 1",
+        )
+        session = self.client.session
+        session["user_id"] = other_student.id
+        session["user_role"] = other_student.role
+        session["first_name"] = other_student.first_name
+        session["last_name"] = other_student.last_name
+        session["email"] = other_student.email
+        session["custom_id"] = other_student.custom_id
+        session.save()
+
+        response = self.client.get(reverse("practice"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'"id": "practice-{material.id}"', html=False)
+        self.assertContains(response, '"status": "published"', html=False)
+        self.assertContains(response, '"is_done": false', html=False)
+
 
 class PracticeAccessControlTests(TestCase):
     def setUp(self):

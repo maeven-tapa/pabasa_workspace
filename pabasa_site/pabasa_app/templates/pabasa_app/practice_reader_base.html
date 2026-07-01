@@ -527,7 +527,10 @@
 
         /* Dark Theme Support */
         body.dark-theme {
-            background: #0f172a !important;
+            background:
+                radial-gradient(circle at 16% 18%, rgba(247, 200, 106, 0.12), transparent 24%),
+                radial-gradient(circle at 82% 20%, rgba(56, 189, 248, 0.12), transparent 28%),
+                linear-gradient(180deg, #0f172a 0%, #111827 100%) !important;
             color: #f1f5f9 !important;
             color-scheme: dark;
         }
@@ -550,10 +553,15 @@
         }
         body.dark-theme .practice-text,
         body.dark-theme .coach-panel h2,
-        body.dark-theme .coach-panel p,
         body.dark-theme .practice-complete-card h2,
-        body.dark-theme .practice-complete-card p {
+        body.dark-theme .practice-stat strong {
             color: #f1f5f9 !important;
+        }
+        body.dark-theme .practice-title p,
+        body.dark-theme .coach-panel p,
+        body.dark-theme .mini-step,
+        body.dark-theme .practice-complete-card p {
+            color: #cbd5e1 !important;
         }
         body.dark-theme .practice-progress {
             background: #334155 !important;
@@ -567,12 +575,12 @@
             color: #cbd5e1 !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
         }
-        body.dark-theme .record-btn {
+        body.dark-theme .practice-controls .record-btn {
             background: linear-gradient(135deg, #b45309, #c2410c) !important;
             color: #fff !important;
             box-shadow: 0 10px 20px rgba(185, 95, 68, 0.22) !important;
         }
-        body.dark-theme .next-btn {
+        body.dark-theme .practice-controls .next-btn {
             background: linear-gradient(135deg, #166534, #15803d) !important;
             color: #fff !important;
             box-shadow: 0 10px 20px rgba(22, 101, 52, 0.22) !important;
@@ -592,6 +600,9 @@
         body.dark-theme .play-card::before {
             border-color: rgba(255, 255, 255, 0.05) !important;
         }
+        body.dark-theme .play-card::after {
+            color: rgba(125, 211, 252, 0.08) !important;
+        }
         body.dark-theme .mini-step strong {
             background: rgba(31, 111, 139, 0.3) !important;
             color: #38bdf8 !important;
@@ -603,10 +614,15 @@
         }
         body.dark-theme .practice-paragraph .practice-text {
             background: #1e293b !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
             box-shadow: inset 0 0 0 8px rgba(31, 111, 139, 0.1) !important;
         }
         body.dark-theme .practice-complete-card::after {
             color: rgba(125, 211, 252, 0.08) !important;
+        }
+        body.dark-theme .complete-star,
+        body.dark-theme .star-counter span {
+            color: var(--sun) !important;
         }
         body.dark-theme .practice-stat {
             background: rgba(15, 23, 42, 0.88) !important;
@@ -714,6 +730,7 @@
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
     </script>
+    {% csrf_token %}
     {{ practice_materials|json_script:"practiceMaterialsData" }}
     <script src="{% static 'pabasa_app/js/practice_reader.js' %}?v={% now 'U' %}"></script>
 </body>

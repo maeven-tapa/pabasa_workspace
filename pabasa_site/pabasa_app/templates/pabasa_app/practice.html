@@ -192,6 +192,16 @@
         transform: translateY(-1px);
     }
 
+    .practice-card.is-done {
+        background: rgba(240, 253, 244, 0.84);
+        border-color: rgba(22, 163, 74, 0.24);
+    }
+
+    .practice-status-done {
+        color: #15803d;
+        font-weight: 800;
+    }
+
     .subject-info {
         align-items: flex-start;
         display: flex;
@@ -390,7 +400,8 @@
                 return aDate - bDate || String(a.id || "").localeCompare(String(b.id || ""));
             });
 
-            const totalSets = sortedMaterials.length;
+            const availableMaterials = sortedMaterials.filter((material) => !material.is_done);
+            const totalSets = availableMaterials.length;
             const meterCount = document.getElementById("practiceMeterCount");
             if (meterCount) meterCount.textContent = `${totalSets} practice set${totalSets !== 1 ? "s" : ""}`;
             const meterProgress = document.querySelector(".meter-track span");
@@ -411,12 +422,14 @@
                 const difficultyLabel = difficultyLabels[material.difficulty] || material.difficulty || "Unknown";
                 const itemCount = getItemCount(material);
                 const href = `${typeMeta.url}?id=${encodeURIComponent(material.id)}`;
+                const isDone = Boolean(material.is_done);
+                const statusText = isDone ? "Done" : (material.status || "");
 
                 return `
-                <article class="subject-card practice-card" data-difficulty="${escapeHtml(material.difficulty)}">
+                <article class="subject-card practice-card ${isDone ? "is-done material-card-done" : ""}" data-material-id="${escapeHtml(material.id)}" data-difficulty="${escapeHtml(material.difficulty)}">
                     <div class="card-header">
                         <div>
-                            <h3>${escapeHtml(material.title || `${difficultyLabel} ${typeMeta.label}`)}</h3>
+                            <h3>${escapeHtml(material.title || `${difficultyLabel} ${typeMeta.label}`)}${isDone ? ' <span class="badge bg-success ms-2 badge-done-marker" style="font-size: 0.62rem; padding: 0.25em 0.5em;">DONE</span>' : ""}</h3>
                             <p>${escapeHtml(`${difficultyLabel} • ${typeMeta.label}`)}</p>
                         </div>
                         <span class="subject-code">${escapeHtml(typeMeta.label)}</span>
@@ -428,8 +441,8 @@
                         ${material.created_at ? `<span class="item-count">Created ${escapeHtml(formatDate(material.created_at))}</span>` : ""}
                     </div>
                     <div class="card-bottom">
-                        <span class="item-count">${escapeHtml(material.status || "")}</span>
-                        <a href="${href}" class="btn btn-primary start-practice-btn">Start Practice</a>
+                        <span class="item-count ${isDone ? "practice-status-done" : ""}">${escapeHtml(statusText)}</span>
+                        <a href="${href}" class="btn ${isDone ? "btn-outline-success" : "btn-primary"} start-practice-btn">${isDone ? "Review" : "Start Practice"}</a>
                     </div>
                 </article>`;
             }).join("");

@@ -18,6 +18,7 @@
     const completeStars = document.getElementById("completeStars");
     const completeItems = document.getElementById("completeItems");
     const practiceAgainBtn = document.getElementById("practiceAgainBtn");
+    let completionSubmitted = false;
 
     const urlParams = new URLSearchParams(window.location.search);
     const materialId = urlParams.get("id");
@@ -104,6 +105,58 @@
         }
     }
 
+    function markMaterialSeen(completedId) {
+        if (!completedId) return;
+        const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+        const mId = String(completedId).trim();
+
+        if (!seenIds.includes(mId)) {
+            seenIds.push(mId);
+            localStorage.setItem("pabasa_seen_material_ids", JSON.stringify(seenIds));
+        }
+        window.dispatchEvent(new CustomEvent('pabasa:student-class-updated', { bubbles: true }));
+        try {
+            window.dispatchEvent(new StorageEvent('storage', { key: 'pabasa_seen_material_ids' }));
+        } catch (e) {
+            window.dispatchEvent(new Event('storage'));
+        }
+    }
+
+    function submitPracticeCompletion() {
+        if (viewMode === 'view' || !materialId || completionSubmitted) return;
+
+        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        if (!token) {
+            console.warn("PABASA: Missing CSRF token; practice completion was not saved.");
+            return;
+        }
+
+        completionSubmitted = true;
+        fetch('/record-assessment-completion/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+            body: JSON.stringify({
+                material_id: materialId,
+                activity_type: 'practice',
+                stars_earned: starsEarned,
+                items_completed: items.length,
+            })
+        })
+            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+                if (!ok || !data.success) {
+                    completionSubmitted = false;
+                    console.warn("PABASA: Practice completion was not saved.", data.error || data);
+                    return;
+                }
+                markMaterialSeen(data.material_id || materialId);
+            })
+            .catch(e => {
+                completionSubmitted = false;
+                console.warn("PABASA: Practice completion API error", e);
+            });
+    }
+
     function showCompletion() {
         shell.classList.add("is-complete");
         if (completeStars) completeStars.textContent = starsEarned;
@@ -116,18 +169,7 @@
         const currentTotal = parseInt(localStorage.getItem("pabasa_total_stars") || "0");
         localStorage.setItem("pabasa_total_stars", currentTotal + starsEarned);
 
-        // Mark material as seen
-        if (materialId) {
-            const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
-            const mId = String(materialId).trim();
-            
-            if (!seenIds.includes(mId)) {
-                seenIds.push(mId);
-                localStorage.setItem("pabasa_seen_material_ids", JSON.stringify(seenIds));
-                window.dispatchEvent(new CustomEvent('pabasa:student-class-updated'));
-                window.dispatchEvent(new Event('storage')); // Sync sidebar badges immediately
-            }
-        }
+        submitPracticeCompletion();
 
         // Notify admin that practice activity finished
         const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
@@ -162,21 +204,13 @@
         localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
         window.dispatchEvent(new Event('pabasa:notifications-updated'));
         
-        // Notify via API as well
-        const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-        if (materialId && token) {
-            fetch('/record-assessment-completion/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
-                body: JSON.stringify({ material_id: materialId, activity_type: 'practice' })
-            }).catch(e => console.warn("PABASA: Practice completion API error", e));
-        }
     }
 
     function restartPractice() {
         shell.classList.remove("is-complete");
         currentIndex = 0;
         starsEarned = 0;
+        completionSubmitted = false;
         practiceFeedback.textContent = "Ready when you are.";
         render();
     }

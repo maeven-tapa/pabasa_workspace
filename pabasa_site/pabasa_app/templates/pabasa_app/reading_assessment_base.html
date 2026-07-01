@@ -1088,8 +1088,17 @@
 
         /* Dark Theme Support */
         body.dark-theme {
-            background: #0f172a !important;
+            background:
+                linear-gradient(135deg, rgba(56, 189, 248, 0.1), transparent 38%),
+                linear-gradient(245deg, rgba(247, 200, 106, 0.08), transparent 44%),
+                #0f172a !important;
             color: #f1f5f9 !important;
+            color-scheme: dark;
+        }
+        body.dark-theme::before {
+            background-image:
+                linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
         }
         body.dark-theme .reader-top,
         body.dark-theme .reader-card,
@@ -1114,8 +1123,16 @@
         }
         body.dark-theme .reading-word,
         body.dark-theme .test-meta,
-        body.dark-theme .summary-tile strong {
+        body.dark-theme .summary-tile strong,
+        body.dark-theme .mic-test-head h2 {
             color: #f1f5f9 !important;
+        }
+        body.dark-theme .eyebrow,
+        body.dark-theme .read-helper,
+        body.dark-theme .pause-subtitle,
+        body.dark-theme .mic-test-card p,
+        body.dark-theme .mic-settings-label {
+            color: #cbd5e1 !important;
         }
         body.dark-theme .speech-panel {
             background: #0f172a !important;
@@ -1164,29 +1181,97 @@
         body.dark-theme .mic-chip {
             background: #000 !important;
         }
+        body.dark-theme .recording-controls {
+            background: rgba(15, 23, 42, 0.72) !important;
+        }
+        body.dark-theme #btnToggleMic,
+        body.dark-theme #btnTestMic,
+        body.dark-theme .mic-test-close,
+        body.dark-theme .mic-test-primary,
+        body.dark-theme .mic-test-secondary,
+        body.dark-theme .mic-device-select,
+        body.dark-theme .mic-test-status {
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme #btnToggleMic:hover,
+        body.dark-theme #btnTestMic:hover,
+        body.dark-theme .mic-test-close:hover,
+        body.dark-theme .mic-test-actions button:hover:not(:disabled) {
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+            color: #fff !important;
+        }
+        body.dark-theme .mic-test-card {
+            background: #1e293b !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .mic-test-divider {
+            border-top-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        body.dark-theme .mic-test-status.is-hearing {
+            background: linear-gradient(135deg, rgba(31, 111, 139, 0.24), rgba(122, 139, 95, 0.18), rgba(247, 200, 106, 0.16), rgba(185, 95, 68, 0.16)) !important;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+                0 14px 30px rgba(15, 23, 42, 0.34),
+                0 0 34px rgba(56, 189, 248, 0.16) !important;
+        }
         body.dark-theme .pause-btn {
             background: #334155 !important;
             color: #38bdf8 !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
         }
         body.dark-theme .reader-card::before {
             border-color: rgba(255, 255, 255, 0.05) !important;
         }
+        body.dark-theme .reader-card::after,
+        body.dark-theme .completion-card::after {
+            color: rgba(125, 211, 252, 0.08) !important;
+        }
         body.dark-theme .content-paragraph .reading-word {
             background: #1e293b !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
             box-shadow: inset 0 0 0 8px rgba(31, 111, 139, 0.1) !important;
         }
         body.dark-theme .completion-secondary {
             background: #334155 !important;
             color: #38bdf8 !important;
         }
+        body.dark-theme .completion-primary {
+            background: linear-gradient(135deg, #166534, #15803d) !important;
+            color: #fff !important;
+        }
+        body.dark-theme .completion-mark {
+            color: var(--sun) !important;
+        }
     </style>
 </head>
 <body>
     <script>
         (function() {
-            if (localStorage.getItem('pabasa_theme') === 'dark') {
-                document.body.classList.add('dark-theme');
-            }
+            const readTheme = () => {
+                let theme = localStorage.getItem('pabasa_theme');
+                try { theme = JSON.parse(theme); } catch (e) {}
+                return theme === 'dark';
+            };
+
+            const applyTheme = () => {
+                const isDark = readTheme();
+                document.documentElement.classList.toggle('dark-theme', isDark);
+                document.body.classList.toggle('dark-theme', isDark);
+            };
+
+            applyTheme();
+            window.addEventListener('storage', function (event) {
+                if (event.key === 'pabasa_theme') applyTheme();
+            });
+            window.addEventListener('pabasa:preferences-updated', applyTheme);
+            window.addEventListener('focus', applyTheme);
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) applyTheme();
+            });
         })();
     </script>
     <main class="reader-shell {% block mode_class %}{% endblock %}">

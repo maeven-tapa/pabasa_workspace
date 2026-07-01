@@ -2845,13 +2845,48 @@ def _student_practice_queryset():
         difficulty_level__in=_practice_difficulty_values(),
     ).order_by('created_at', 'id')
 
-def _serialize_student_practice_material(material):
+def _material_practice_completion(material, student_user):
+    if not material or not student_user:
+        return {}
+    content_json = getattr(material, 'content_json', None) or {}
+    if not isinstance(content_json, dict):
+        return {}
+    completions = content_json.get('student_completions') or {}
+    if not isinstance(completions, dict):
+        return {}
+    completion = completions.get(str(student_user.id)) or {}
+    return completion if isinstance(completion, dict) else {}
+
+def _record_material_practice_completion(material, student_user, attempt_payload):
+    content_json = dict(getattr(material, 'content_json', None) or {})
+    completions = dict(content_json.get('student_completions') or {})
+    completion = {
+        'student_id': student_user.id,
+        'status': 'completed',
+        'completed_at': attempt_payload.get('completed_at') or timezone.now().isoformat(),
+        'stars_earned': attempt_payload.get('stars_earned', 0),
+        'items_completed': attempt_payload.get('items_completed', 0),
+        'device_info': attempt_payload.get('device_info', {}),
+    }
+    completions[str(student_user.id)] = completion
+    content_json['student_completions'] = completions
+    material.content_json = content_json
+    material.save(update_fields=['content_json', 'updated_at'])
+    return completion
+
+def _serialize_student_practice_material(material, student_user=None):
+    completion = _material_practice_completion(material, student_user)
+    is_done = completion.get('status') in {'completed', 'done'}
     return {
         'id': f"practice-{material.id}",
+        'raw_id': material.id,
         'title': material.title,
         'difficulty': material.difficulty_level,
         'type': material.item_type,
-        'status': material.status,
+        'status': 'Done' if is_done else material.status,
+        'raw_status': material.status,
+        'is_done': is_done,
+        'completed_at': completion.get('completed_at', ''),
         'prompt': material.prompt_text,
         'content': material.content_text,
         'items': _practice_material_items(material),
@@ -2860,7 +2895,8 @@ def _serialize_student_practice_material(material):
 
 def _student_practice_context(request, mode=None):
     context = _dashboard_context(request, 'student')
-    materials = [_serialize_student_practice_material(material) for material in _student_practice_queryset()]
+    student_user = User.objects.filter(id=request.session.get('user_id')).first()
+    materials = [_serialize_student_practice_material(material, student_user) for material in _student_practice_queryset()]
     context.update({
         'practice_materials': materials,
         'practice_difficulties': AdminPracticeMaterialForm.DIFFICULTY_CHOICES,
@@ -5637,11 +5673,21 @@ def record_assessment_completion(request):
                 teacher_user = assessment.teacher
                 title_text = assessment.title
 
+        # Student practice hub sends practice-<material_id> for admin library materials.
+        if not assessment and not material and m_id and m_prefix and m_prefix.startswith('practice') and activity_type == 'practice':
+            material = Material.objects.filter(id=m_id, type='practice').first()
+            if material:
+                title_text = material.title or material.content_text or material.prompt_text or material.item_type
+                try:
+                    practice_obj = material.practice_result
+                except Practice.DoesNotExist:
+                    practice_obj = None
+
         # support practice ids (practice-<id>) that map to Practice model
         if not assessment and m_id and m_prefix and m_prefix.startswith('practice'):
             try:
                 from .models import Practice as PracticeModel
-                practice_obj = PracticeModel.objects.select_related('teacher').filter(id=m_id).first()
+                practice_obj = practice_obj or PracticeModel.objects.select_related('teacher').filter(id=m_id).first()
                 if practice_obj:
                     title_text = practice_obj.title or practice_obj.content_text or practice_obj.prompt_text
                     teacher_user = getattr(practice_obj, 'teacher', None)
@@ -5673,12 +5719,17 @@ def record_assessment_completion(request):
                 'status': 'completed',
                 'completed_at': timezone.now().isoformat(),
                 'device_info': device_info,
+                'stars_earned': data.get('stars_earned', 0),
+                'items_completed': data.get('items_completed', 0),
                 **score_payload,
             }
-            if assessment:
+            if is_practice:
+                if practice_obj:
+                    practice_obj.record_attempt(student_user, replace=True, **attempt_payload)
+                if material and material.type == 'practice':
+                    _record_material_practice_completion(material, student_user, attempt_payload)
+            elif assessment:
                 assessment.record_attempt(student_user, **attempt_payload)
-            elif practice_obj:
-                practice_obj.record_attempt(student_user, replace=True, **attempt_payload)
             elif material and getattr(material, 'assessment', None):
                 # Material linked to an Assessment
                 material.assessment.record_attempt(student_user, **attempt_payload)
@@ -5800,7 +5851,14 @@ def record_assessment_completion(request):
                     student_user,
                     send_email=False,
                 )
-        return JsonResponse({'success': True})
+        response_payload = {'success': True}
+        if is_practice and material:
+            response_payload.update({
+                'material_id': f"practice-{material.id}" if material.type == 'practice' else f"material-{material.id}",
+                'status': 'Done',
+                'is_done': True,
+            })
+        return JsonResponse(response_payload)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
