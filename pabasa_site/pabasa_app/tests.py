@@ -87,8 +87,9 @@ class PrincipalReportsExportTests(TestCase):
 
 class PrincipalReportsPreviewTests(TestCase):
     def setUp(self):
+        unique_suffix = uuid.uuid4().hex[:8].upper()
         self.principal = User.objects.create(
-            custom_id="PRN-SES",
+            custom_id=f"PRN-{unique_suffix}",
             role="principal",
             first_name="Jobelyn",
             last_name="Valdez",
@@ -102,7 +103,7 @@ class PrincipalReportsPreviewTests(TestCase):
             password_hash=make_password("Principal@123"),
         )
         self.teacher = User.objects.create(
-            custom_id="TCH-PRV1",
+            custom_id=f"TCH-{unique_suffix}",
             role="teacher",
             first_name="Rowan",
             last_name="Teacher",
@@ -117,7 +118,7 @@ class PrincipalReportsPreviewTests(TestCase):
             teacher_role="Teacher",
         )
         self.student = User.objects.create(
-            custom_id="STD-PRV1",
+            custom_id=f"STD-{unique_suffix}",
             role="student",
             first_name="Ava",
             last_name="Learner",
@@ -132,7 +133,7 @@ class PrincipalReportsPreviewTests(TestCase):
             grade_level="Grade 2",
         )
         self.section = Section.objects.create(
-            class_code="G2-PRV",
+            class_code=f"G2-{unique_suffix}",
             class_name="Grade 2 Preview",
             header="Reading Class",
             description="Preview section",
@@ -193,6 +194,40 @@ class PrincipalReportsPreviewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
         self.assertIn("attachment; filename=", response["Content-Disposition"])
+
+    def test_principal_reports_page_uses_a_single_report_workflow(self):
+        response = self.client.get(reverse("principal_reports"), {"report_type": "assessment"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Choose a report")
+        self.assertNotContains(response, "Recently Generated Reports")
+
+    def test_principal_reports_disables_grade_filter_for_non_grade_reports(self):
+        response = self.client.get(reverse("principal_reports"), {"report_type": "school"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="gradeLevel"')
+        self.assertContains(response, 'disabled')
+
+    def test_principal_reports_preview_uses_distinct_headers_for_each_report_type(self):
+        school_response = self.client.get(reverse("principal_reports"), {"report_type": "school"})
+        grade_response = self.client.get(reverse("principal_reports"), {"report_type": "grade"})
+        assessment_response = self.client.get(reverse("principal_reports"), {"report_type": "assessment"})
+
+        self.assertEqual(school_response.status_code, 200)
+        self.assertEqual(grade_response.status_code, 200)
+        self.assertEqual(assessment_response.status_code, 200)
+        self.assertContains(school_response, "School Name")
+        self.assertContains(grade_response, "Grade")
+        self.assertContains(assessment_response, "Assessment")
+
+    def test_principal_reports_export_buttons_submit_current_report_selection(self):
+        response = self.client.get(reverse("principal_reports"), {"report_type": "assessment"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="export"')
+        self.assertContains(response, 'value="pdf"')
+        self.assertContains(response, 'value="excel"')
 
 
 class PrincipalAccountBootstrapTests(TestCase):

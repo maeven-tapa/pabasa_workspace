@@ -6596,7 +6596,9 @@ def _principal_analytics(user):
 
 
 def _principal_report_preview_rows(analytics, report_type='school', grade_filter=''):
-    if report_type == 'grade':
+    normalized_report_type = (report_type or 'school').strip().lower()
+
+    if normalized_report_type == 'grade':
         rows = analytics.get('grade_rows', [])
         if grade_filter:
             rows = [row for row in rows if row.get('grade') == grade_filter]
@@ -6615,7 +6617,7 @@ def _principal_report_preview_rows(analytics, report_type='school', grade_filter
         ]
         return headers, values
 
-    if report_type == 'assessment':
+    if normalized_report_type == 'assessment':
         rows = analytics.get('assessment_rows', [])
         headers = ['Assessment', 'Type', 'Status', 'Participants', 'Completion %', 'Average Score']
         values = [
@@ -6631,17 +6633,28 @@ def _principal_report_preview_rows(analytics, report_type='school', grade_filter
         ]
         return headers, values
 
+    grade_rows = analytics.get('grade_rows', []) or []
+    top_grade = ''
+    struggling_grade = ''
+    if grade_rows:
+        sorted_grades = sorted(grade_rows, key=lambda row: row.get('average_score', 0), reverse=True)
+        top_grade = next((row.get('grade') for row in sorted_grades if row.get('grade')), '')
+        struggling_grade = next((row.get('grade') for row in grade_rows if row.get('average_score') and row.get('average_score') < 75), '')
+
     headers = ['Metric', 'Value']
     values = [
         ['School Name', analytics.get('school_name')],
         ['Total Students', analytics.get('total_students')],
         ['Total Teachers', analytics.get('total_teachers')],
+        ['Active Sections', analytics.get('total_sections')],
         ['Total Assessments', analytics.get('total_assessments')],
         ['Completed Assessments', analytics.get('completed_assessments')],
         ['In Progress Assessments', analytics.get('in_progress_assessments')],
         ['Pending Assessments', analytics.get('pending_assessments')],
         ['Overall Completion Rate', f"{analytics.get('completion_rate', 0)}%"],
         ['Average Reading Score', f"{analytics.get('average_score', 0)}%"],
+        ['Top Performing Grade', top_grade or 'N/A'],
+        ['Struggling Grade', struggling_grade or 'N/A'],
     ]
     return headers, values
 
@@ -6882,16 +6895,50 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
     elements.append(Paragraph('Summary Overview', section_style))
     elements.append(Spacer(1, 0.06 * inch))
 
-    summary_cards = [
-        _build_card('Total Students', _format_count(analytics.get('total_students', 0)), 'Enrollment overview', '#8B3E2F', '◉'),
-        _build_card('Total Teachers', _format_count(analytics.get('total_teachers', 0)), 'Active school staff', '#4CAF50', '◌'),
-        _build_card('Total Assessments', _format_count(analytics.get('total_assessments', 0)), 'Assigned reading tasks', '#4A90E2', '◍'),
-        _build_card('Completed', _format_count(analytics.get('completed_assessments', 0)), 'Finished assessments', '#2e7d32', '✓'),
-        _build_card('In Progress', _format_count(analytics.get('in_progress_assessments', 0)), 'Currently active', '#FFC107', '↺'),
-        _build_card('Pending', _format_count(analytics.get('pending_assessments', 0)), 'Awaiting action', '#E53935', '•'),
-        _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'Overall progress', '#8B3E2F', '%'),
-        _build_card('Average Score', _format_percentage(analytics.get('average_score', 0)), 'Reading mastery', '#4CAF50', '★'),
-    ]
+    if report_type == 'grade':
+        grade_rows = analytics.get('grade_rows', []) or []
+        filtered_grade_rows = [row for row in grade_rows if row.get('grade') == grade_filter] if grade_filter else grade_rows
+        selected_grade_label = grade_filter or 'All Grades'
+        total_students = sum(int(row.get('total_students', 0) or 0) for row in filtered_grade_rows)
+        completed = sum(int(row.get('completed', 0) or 0) for row in filtered_grade_rows)
+        in_progress = sum(int(row.get('in_progress', 0) or 0) for row in filtered_grade_rows)
+        not_started = sum(int(row.get('not_started', 0) or 0) for row in filtered_grade_rows)
+        completion_rate = _pct(completed, total_students) if total_students else 0
+        avg_score = round(sum(float(row.get('average_score', 0) or 0) for row in filtered_grade_rows) / len(filtered_grade_rows), 1) if filtered_grade_rows else 0
+        summary_cards = [
+            _build_card('Focused Grade', selected_grade_label, 'Selected performance scope', '#8B3E2F', '◉'),
+            _build_card('Students', _format_count(total_students), 'Students in scope', '#4CAF50', '◌'),
+            _build_card('Completed', _format_count(completed), 'Finished work', '#4A90E2', '◍'),
+            _build_card('In Progress', _format_count(in_progress), 'Still active', '#FFC107', '↺'),
+            _build_card('Not Started', _format_count(not_started), 'Pending participation', '#E53935', '•'),
+            _build_card('Completion Rate', _format_percentage(completion_rate), 'Grade-level progress', '#8B3E2F', '%'),
+            _build_card('Average Score', _format_percentage(avg_score), 'Reading mastery', '#4CAF50', '★'),
+        ]
+    elif report_type == 'assessment':
+        assessment_rows = analytics.get('assessment_rows', []) or []
+        completed_count = sum(1 for row in assessment_rows if str(row.get('status') or '').lower() == 'completed')
+        in_progress_count = sum(1 for row in assessment_rows if str(row.get('status') or '').lower() == 'in progress')
+        pending_count = sum(1 for row in assessment_rows if str(row.get('status') or '').lower() == 'pending')
+        avg_score = round(sum(float(row.get('avg_score', 0) or 0) for row in assessment_rows) / len(assessment_rows), 1) if assessment_rows else 0
+        summary_cards = [
+            _build_card('Assessments', _format_count(len(assessment_rows)), 'Available assessment tasks', '#8B3E2F', '◉'),
+            _build_card('Completed', _format_count(completed_count), 'Tasks finished', '#4CAF50', '◌'),
+            _build_card('In Progress', _format_count(in_progress_count), 'Currently active', '#4A90E2', '◍'),
+            _build_card('Pending', _format_count(pending_count), 'Awaiting action', '#E53935', '•'),
+            _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'School-wide completion', '#8B3E2F', '%'),
+            _build_card('Average Score', _format_percentage(avg_score), 'Assessment mastery', '#4CAF50', '★'),
+        ]
+    else:
+        summary_cards = [
+            _build_card('Total Students', _format_count(analytics.get('total_students', 0)), 'Enrollment overview', '#8B3E2F', '◉'),
+            _build_card('Total Teachers', _format_count(analytics.get('total_teachers', 0)), 'Active school staff', '#4CAF50', '◌'),
+            _build_card('Total Assessments', _format_count(analytics.get('total_assessments', 0)), 'Assigned reading tasks', '#4A90E2', '◍'),
+            _build_card('Completed', _format_count(analytics.get('completed_assessments', 0)), 'Finished assessments', '#2e7d32', '✓'),
+            _build_card('In Progress', _format_count(analytics.get('in_progress_assessments', 0)), 'Currently active', '#FFC107', '↺'),
+            _build_card('Pending', _format_count(analytics.get('pending_assessments', 0)), 'Awaiting action', '#E53935', '•'),
+            _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'Overall progress', '#8B3E2F', '%'),
+            _build_card('Average Score', _format_percentage(analytics.get('average_score', 0)), 'Reading mastery', '#4CAF50', '★'),
+        ]
     summary_rows = [summary_cards[i:i + 2] for i in range(0, len(summary_cards), 2)]
     summary_grid = Table(summary_rows, colWidths=[card_width, card_width], repeatRows=0)
     summary_grid.setStyle(TableStyle([
@@ -6904,10 +6951,19 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
     ]))
     elements.extend([summary_grid, Spacer(1, 0.12 * inch)])
 
+    if report_type == 'grade':
+        progress_label = 'Grade-Level Snapshot'
+        progress_detail = f"Selected Focus: {grade_filter or 'All Grades'}   Completion Rate: {_format_percentage(analytics.get('completion_rate', 0))}"
+    elif report_type == 'assessment':
+        progress_label = 'Assessment Snapshot'
+        progress_detail = f"Completed: {_format_count(analytics.get('completed_assessments', 0))}   In Progress: {_format_count(analytics.get('in_progress_assessments', 0))}   Pending: {_format_count(analytics.get('pending_assessments', 0))}"
+    else:
+        progress_label = 'School Snapshot'
+        progress_detail = f"Overall Completion: {_format_percentage(analytics.get('completion_rate', 0))}   Average Score: {_format_percentage(analytics.get('average_score', 0))}"
+
     progress_summary = Table([
-        [Paragraph('Assessment Snapshot', card_title_style)],
-        [Paragraph(f"Completed: {_format_count(analytics.get('completed_assessments', 0))}   In Progress: {_format_count(analytics.get('in_progress_assessments', 0))}   Pending: {_format_count(analytics.get('pending_assessments', 0))}", meta_style)],
-        [Paragraph(f"Overall Completion: {_format_percentage(analytics.get('completion_rate', 0))}   Average Score: {_format_percentage(analytics.get('average_score', 0))}", meta_style)],
+        [Paragraph(progress_label, card_title_style)],
+        [Paragraph(progress_detail, meta_style)],
     ], colWidths=[available_width], repeatRows=0)
     progress_summary.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f8f8')),
@@ -7057,12 +7113,21 @@ def principal_reports(request):
 
     selected_report_type = (request.GET.get('report_type') or 'school').strip().lower()
     selected_grade = (request.GET.get('grade_level') or '').strip()
+    if selected_report_type != 'grade':
+        selected_grade = ''
     export_type = (request.GET.get('export') or '').strip().lower()
     headers, rows = _principal_report_preview_rows(analytics, selected_report_type, selected_grade)
     selected_report_label = f"{report_type_labels.get(selected_report_type, 'School Performance')} Report"
+    selected_report_summary = 'School-wide participation, completion rate, and performance trends across the campus.'
 
-    if selected_report_type == 'grade' and selected_grade:
-        selected_report_label = f'{report_type_labels.get(selected_report_type, "School Performance")} Report - {selected_grade}'
+    if selected_report_type == 'grade':
+        if selected_grade:
+            selected_report_label = f'{report_type_labels.get(selected_report_type, "School Performance")} Report - {selected_grade}'
+            selected_report_summary = f'Grade-level performance data focused on {selected_grade}.'
+        else:
+            selected_report_summary = 'Grade-level comparison across all available grade levels.'
+    elif selected_report_type == 'assessment':
+        selected_report_summary = 'Assessment-specific results, completion status, and student performance by task.'
 
     if export_type == 'csv' or export_type == 'excel':
         return _principal_report_csv_response(selected_report_type, headers, rows)
@@ -7080,6 +7145,7 @@ def principal_reports(request):
         'selected_report_type': selected_report_type,
         'selected_grade': selected_grade,
         'selected_report_label': selected_report_label,
+        'report_preview_summary': selected_report_summary,
         'report_preview_count': len(rows),
         'report_preview_headers': headers,
         'report_preview_rows': rows,
