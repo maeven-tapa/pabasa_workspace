@@ -40,10 +40,68 @@ class SectionAdmin(admin.ModelAdmin):
 
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
-	list_display = all_model_fields(Assessment)
+	list_display = (
+		"id",
+		"title",
+		"code",
+		"assessment_type",
+		"status",
+		"scheduled_at",
+		"teacher",
+		"section",
+		"is_active",
+		"created_at",
+		"updated_at",
+		"attempt_count",
+		"latest_wpm",
+		"latest_fluency_score",
+		"latest_accuracy",
+		"latest_pronunciation_score",
+		"latest_time_score",
+		"latest_total_score",
+		"latest_crla_level",
+	)
 	list_filter = ("assessment_type", "is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")
 	ordering = ("-created_at",)
+
+	def _latest_attempt_summary(self, obj):
+		return obj.get_latest_attempt_summary() or {}
+
+	def _display_attempt_value(self, value):
+		return value if value is not None and value != '' else "-"
+
+	def attempt_count(self, obj):
+		return len(obj.get_attempts())
+	attempt_count.short_description = "Attempts"
+
+	def latest_wpm(self, obj):
+		return self._display_attempt_value(self._latest_attempt_summary(obj).get("wpm"))
+	latest_wpm.short_description = "WPM"
+
+	def latest_fluency_score(self, obj):
+		return self._display_attempt_value(self._latest_attempt_summary(obj).get("fluency_score"))
+	latest_fluency_score.short_description = "Fluency"
+
+	def latest_accuracy(self, obj):
+		return self._display_attempt_value(self._latest_attempt_summary(obj).get("accuracy"))
+	latest_accuracy.short_description = "Accuracy"
+
+	def latest_pronunciation_score(self, obj):
+		return self._display_attempt_value(self._latest_attempt_summary(obj).get("pronunciation_score"))
+	latest_pronunciation_score.short_description = "Pronunciation"
+
+	def latest_time_score(self, obj):
+		return self._display_attempt_value(self._latest_attempt_summary(obj).get("time_score"))
+	latest_time_score.short_description = "Time"
+
+	def latest_total_score(self, obj):
+		return self._display_attempt_value(self._latest_attempt_summary(obj).get("total_score"))
+	latest_total_score.short_description = "Total Score"
+
+	def latest_crla_level(self, obj):
+		return self._display_attempt_value(self._latest_attempt_summary(obj).get("crla_classification"))
+	latest_crla_level.short_description = "CRLA Level"
 
 
 @admin.register(Practice)

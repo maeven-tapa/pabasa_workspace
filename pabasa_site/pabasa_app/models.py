@@ -254,9 +254,17 @@ class Assessment(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # store attempts and results within the assessments schema as a JSON list
-    # each entry can be: {"student_id": ..., "started_at": ..., "completed_at": ..., "status": ..., "device_info": ..., "mic_used": ..., "accuracy": ..., "wpm": ..., "total_score": ..., "passed": ..., "remarks": ...}
+    # Store student attempt records inside the assessment row so reporting can
+    # stay tied to one assessment while still preserving per-student history.
     attempts = models.JSONField(default=list, blank=True)
+
+    @staticmethod
+    def _attempt_value(attempt, *keys, default=None):
+        for key in keys:
+            value = attempt.get(key)
+            if value is not None and value != '':
+                return value
+        return default
 
     @property
     def content(self):
@@ -281,6 +289,29 @@ class Assessment(models.Model):
         if student:
             return [a for a in attempts if a.get('student_id') == student.id]
         return attempts
+
+    def get_latest_attempt(self, student=None):
+        """Get the most recent attempt for the assessment or a specific student."""
+        attempts = self.get_attempts(student)
+        return attempts[-1] if attempts else None
+
+    def get_latest_attempt_summary(self, student=None):
+        """Return a normalized view of the latest attempt metrics."""
+        attempt = self.get_latest_attempt(student)
+        if not attempt:
+            return {}
+        return {
+            'student_id': attempt.get('student_id'),
+            'wpm': self._attempt_value(attempt, 'wpm', 'words_per_minute', 'reading_wpm'),
+            'fluency_score': self._attempt_value(attempt, 'fluency_score', 'fluency'),
+            'accuracy': self._attempt_value(attempt, 'accuracy', 'accuracy_score', 'reading_accuracy'),
+            'pronunciation_score': self._attempt_value(attempt, 'pronunciation_score', 'pronunciation'),
+            'time_score': self._attempt_value(attempt, 'time_score', 'time'),
+            'total_score': self._attempt_value(attempt, 'total_score', 'score'),
+            'crla_classification': self._attempt_value(attempt, 'crla_classification', 'classification'),
+            'status': attempt.get('status'),
+            'completed_at': attempt.get('completed_at'),
+        }
     
     def get_student_attempt_count(self, student):
         """Get count of attempts for a specific student"""
@@ -345,8 +376,7 @@ class Assessment(models.Model):
     
     def get_student_latest_attempt(self, student):
         """Get the most recent attempt for a student"""
-        student_attempts = self.get_attempts(student)
-        return student_attempts[-1] if student_attempts else None
+        return self.get_latest_attempt(student)
     
     def deactivate_student_attempts(self, student):
         """Mark all attempts for a student as inactive (soft delete). Returns True if changed."""

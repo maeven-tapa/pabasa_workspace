@@ -3393,13 +3393,19 @@
                             <tr>
                                 <th>Reading Task (Title)</th>
                                 <th>Status</th>
-                                <th>Reading Score</th>
+                                <th>WPM</th>
+                                <th>Fluency</th>
+                                <th>Accuracy</th>
+                                <th>Pronunciation</th>
+                                <th>Time</th>
+                                <th>Total Score</th>
+                                <th>CRLA Level</th>
                                 <th class="text-end">Attempts</th>
                             </tr>
                         </thead>
                         <tbody id="studentProgressTableBody">
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-4">Select a student to view progress.</td>
+                                <td colspan="10" class="text-center text-muted py-4">Select a student to view progress.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -5513,24 +5519,19 @@
             return { label: 'In Progress', className: 'bg-warning text-dark' };
         }
 
-        function formatAttemptScore(attempt, index) {
-            const wpm = attempt.wpm ?? attempt.words_per_minute ?? attempt.reading_wpm;
-            const accuracy = attempt.accuracy ?? attempt.accuracy_percent ?? attempt.reading_accuracy;
-            const fluency = attempt.fluency_score ?? attempt.fluency;
-            const pronunciation = attempt.pronunciation_score ?? attempt.pronunciation;
-            const timeScore = attempt.time_score ?? attempt.time;
-            const total = attempt.total_score ?? attempt.score;
-            const classification = attempt.crla_classification ?? attempt.classification;
-            const wpmText = (wpm !== undefined && wpm !== null && wpm !== '') ? `${escapeHtml(wpm)} WPM` : 'No WPM';
-            const accuracyText = (accuracy !== undefined && accuracy !== null && accuracy !== '') ? `${escapeHtml(accuracy)}% Accuracy` : 'No accuracy';
-            const scoreParts = [
-                fluency !== undefined && fluency !== null && fluency !== '' ? `Fluency ${escapeHtml(fluency)}%` : null,
-                pronunciation !== undefined && pronunciation !== null && pronunciation !== '' ? `Pronunciation ${escapeHtml(pronunciation)}%` : null,
-                timeScore !== undefined && timeScore !== null && timeScore !== '' ? `Time ${escapeHtml(timeScore)}%` : null,
-                total !== undefined && total !== null && total !== '' ? `Total ${escapeHtml(total)}%` : null,
-                classification ? `CRLA: ${escapeHtml(classification)}` : null,
-            ].filter(Boolean).join(' / ');
-            return `<div class="small"><span class="fw-semibold">Attempt ${index + 1}:</span> ${wpmText} / ${accuracyText}${scoreParts ? `<br>${scoreParts}` : ''}</div>`;
+        function latestAttemptValue(attempt, ...keys) {
+            if (!attempt) return null;
+            for (const key of keys) {
+                const value = attempt[key];
+                if (value !== undefined && value !== null && value !== '') {
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        function formatAttemptMetric(value, suffix = '') {
+            return (value !== undefined && value !== null && value !== '') ? `${escapeHtml(value)}${suffix}` : '—';
         }
 
         function courseProgressTasks(course) {
@@ -5604,14 +5605,14 @@
 
             if (titleEl) titleEl.textContent = `${studentName || 'Student'} Progress`;
             if (subtextEl) subtextEl.textContent = `${course.title || 'Course'} reading task attempts`;
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading progress...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading progress...</td></tr>`;
 
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
 
             const tasks = courseProgressTasks(course);
             if (tasks.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No reading tasks assigned in this course.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-4">No reading tasks assigned in this course.</td></tr>`;
                 return;
             }
 
@@ -5623,15 +5624,19 @@
                     .filter(att => progressStudentMatches(att, studentId, studentName))
                     .filter(att => String(att.status || '').toLowerCase() !== 'cancelled');
                 const status = normalizeProgressStatus(attempts);
-                const scoreHtml = attempts.length
-                    ? attempts.map(formatAttemptScore).join('')
-                    : '<span class="text-muted small">No attempts yet</span>';
+                const latestAttempt = attempts.length ? attempts[attempts.length - 1] : null;
                 return `
                     <tr>
                         <td><strong>${escapeHtml(task.title)}</strong></td>
                         <td><span class="badge ${status.className}">${status.label}</span></td>
-                        <td>${scoreHtml}</td>
-                        <td class="text-end fw-semibold">${Math.min(attempts.length, 3)}/3</td>
+                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'wpm', 'words_per_minute', 'reading_wpm'))}</td>
+                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'fluency_score', 'fluency'), '%')}</td>
+                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'accuracy', 'accuracy_score', 'reading_accuracy'), '%')}</td>
+                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'pronunciation_score', 'pronunciation'), '%')}</td>
+                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'time_score', 'time'), '%')}</td>
+                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'total_score', 'score'), '%')}</td>
+                        <td>${formatAttemptMetric(latestAttemptValue(latestAttempt, 'crla_classification', 'classification'))}</td>
+                        <td class="text-end fw-semibold">${attempts.length}</td>
                     </tr>
                 `;
             }).join('');

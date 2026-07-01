@@ -3995,6 +3995,13 @@ def get_teacher_assessment_api(request, assessment_id):
             student.id: student
             for student in User.objects.filter(id__in=student_ids)
         }
+        def _attempt_value(attempt, *keys, default=None):
+            for key in keys:
+                value = attempt.get(key)
+                if value is not None and value != '':
+                    return value
+            return default
+
         enriched_attempts = []
         for att in attempts:
             if not isinstance(att, dict):
@@ -4003,18 +4010,17 @@ def get_teacher_assessment_api(request, assessment_id):
             student_name = ''
             if student:
                 student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or student.email or f"Student {student.id}"
-            words_correct = (
-                att.get('words_correct')
-                or att.get('correct_words')
-                or att.get('correct_count')
-                or att.get('total_score')
-                or att.get('score')
-            )
             enriched_attempt = dict(att)
             enriched_attempt.update({
                 'student_name': student_name or f"Student {att.get('student_id')}",
                 'student_email': getattr(student, 'email', '') if student else '',
-                'words_correct': words_correct,
+                'wpm': _attempt_value(att, 'wpm', 'words_per_minute', 'reading_wpm'),
+                'fluency_score': _attempt_value(att, 'fluency_score', 'fluency'),
+                'accuracy': _attempt_value(att, 'accuracy', 'accuracy_score', 'reading_accuracy'),
+                'pronunciation_score': _attempt_value(att, 'pronunciation_score', 'pronunciation'),
+                'time_score': _attempt_value(att, 'time_score', 'time'),
+                'total_score': _attempt_value(att, 'total_score', 'score'),
+                'crla_classification': _attempt_value(att, 'crla_classification', 'classification'),
             })
             enriched_attempts.append(enriched_attempt)
         avg = None
