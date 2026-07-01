@@ -1730,6 +1730,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'profile_photo_url': profile_photo_url,
         'initials': initials,
         'joined_classes': joined_classes,
+        'active_teacher_class_count': len(joined_classes),
     }
     # Compute an account activity status label + class for UI chips
     account_status_label = 'Unknown'

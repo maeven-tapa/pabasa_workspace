@@ -284,6 +284,11 @@ function initProfilePage() {
         return 0;
     }
 
+    function normalizeOverviewCount(value, fallback) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+    }
+
     function countClassReadings() {
         const readingsByClass = getStoredValue("pabasa_class_readings", {});
         if (!readingsByClass || typeof readingsByClass !== "object" || Array.isArray(readingsByClass)) {
@@ -371,12 +376,18 @@ function initProfilePage() {
             return total + (Number.parseInt(classData.students, 10) || 0);
         }, 0);
         const overviewStats = getStoredValue("pabasa_teacher_overview_stats", {});
-        const overviewStudentCount = Number.parseInt(overviewStats.total_students || overviewStats.totalStudents || "", 10);
+        const overviewStudentCount = normalizeOverviewCount(overviewStats.total_students ?? overviewStats.totalStudents, null);
+        const overviewReportsGenerated = normalizeOverviewCount(overviewStats.reports_generated ?? overviewStats.reportsGenerated, null);
         const fallbackStudentCount = storedStudentCount || (Number.isFinite(overviewStudentCount) ? overviewStudentCount : 0) || classStudentCount;
         // server stores snake_case keys (materials_posted, assessments_posted); support both formats
-        const storedMaterialsPosted = Number.parseInt(String(
-            (Number(overviewStats.materials_posted || 0) || 0) + (Number(overviewStats.assessments_posted || overviewStats.assessmentsPosted || 0) || 0)
-        ), 10) || 0;
+        const storedMaterialsPosted = normalizeOverviewCount(
+            (normalizeOverviewCount(overviewStats.materials_posted, 0) || 0) +
+            (normalizeOverviewCount(overviewStats.assessments_posted || overviewStats.assessmentsPosted, 0) || 0),
+            0
+        );
+        const fallbackReportsGenerated = Number.isFinite(overviewReportsGenerated)
+            ? overviewReportsGenerated
+            : 0;
 
         // Ensure flattened materials are also filtered to active classes
         const activeClassCodes = classes.map(function(c) { return (c.code || c.class_code || "").toString().toUpperCase(); }).filter(Boolean);
@@ -391,9 +402,11 @@ function initProfilePage() {
             activeClasses: classes.length,
             totalStudents: fallbackStudentCount,
             materialsPosted: Math.max(countClassReadings(), countStoredCollection("pabasa_materials") /* fallback */, flattenedMaterials.length, storedMaterialsPosted),
-            reportsGenerated: countStoredCollection("pabasa_parent_notice_history")
+            reportsGenerated: fallbackReportsGenerated
         };
     }
+
+    let teacherOverviewRequestSeq = 0;
 
     function updateClassOverview() {
         const stats = getTeacherOverviewStats();
@@ -402,10 +415,16 @@ function initProfilePage() {
         const materialsPostedCount = document.getElementById("profileMaterialsPostedCount");
         const reportsGeneratedCount = document.getElementById("profileReportsGeneratedCount");
 
-        if (activeClassesCount) activeClassesCount.textContent = String(stats.activeClasses);
-        if (totalStudentsCount) totalStudentsCount.textContent = String(stats.totalStudents);
-        if (materialsPostedCount) materialsPostedCount.textContent = String(stats.materialsPosted);
-        if (reportsGeneratedCount) reportsGeneratedCount.textContent = String(stats.reportsGenerated);
+        const setCounterValue = function (element, value, fallback) {
+            if (!element) return;
+            const normalized = normalizeOverviewCount(value, fallback ?? 0);
+            element.textContent = String(normalized);
+        };
+
+        setCounterValue(activeClassesCount, stats.activeClasses, 0);
+        setCounterValue(totalStudentsCount, stats.totalStudents, 0);
+        setCounterValue(materialsPostedCount, stats.materialsPosted, 0);
+        setCounterValue(reportsGeneratedCount, stats.reportsGenerated, 0);
 
         // If the current user is a teacher, request authoritative overview from the server
         try {
@@ -414,6 +433,7 @@ function initProfilePage() {
             // or window globals were cleared (ensures profile page still fetches)
             const role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || profileRoleDisplay || '').toString().toLowerCase();
             if (role === 'teacher' || role.startsWith('teacher -')) {
+                const requestToken = ++teacherOverviewRequestSeq;
                 fetch('/dashboard/teacher/overview/', {
                     method: 'GET',
                     credentials: 'same-origin',
@@ -433,15 +453,20 @@ function initProfilePage() {
                     }
                     return r.json();
                 }).then(function (data) {
-                    if (!data) return;
+                    if (!data || requestToken !== teacherOverviewRequestSeq) return;
                     if (!data.success) {
                         console.warn('Teacher overview returned error', data.error || data);
                         return;
                     }
-                    if (activeClassesCount) activeClassesCount.textContent = String(data.classes_count || stats.activeClasses);
-                    if (totalStudentsCount) totalStudentsCount.textContent = String(data.total_students || stats.totalStudents);
-                    if (materialsPostedCount) materialsPostedCount.textContent = String((Number(data.materials_posted || 0) + Number(data.assessments_posted || data.assessmentsPosted || 0)) || stats.materialsPosted);
-                    if (reportsGeneratedCount) reportsGeneratedCount.textContent = String(data.reports_generated || stats.reportsGenerated);
+                    const safeClassesCount = normalizeOverviewCount(data.classes_count || data.classesCount || stats.activeClasses, stats.activeClasses);
+                    const safeStudentsCount = normalizeOverviewCount(data.total_students || data.totalStudents || stats.totalStudents, stats.totalStudents);
+                    const safeMaterialsCount = normalizeOverviewCount((Number(data.materials_posted || 0) + Number(data.assessments_posted || data.assessmentsPosted || 0)), stats.materialsPosted);
+                    const safeReportsCount = normalizeOverviewCount(data.reports_generated || data.reportsGenerated, stats.reportsGenerated);
+
+                    setCounterValue(activeClassesCount, safeClassesCount, stats.activeClasses);
+                    setCounterValue(totalStudentsCount, safeStudentsCount, stats.totalStudents);
+                    setCounterValue(materialsPostedCount, safeMaterialsCount, stats.materialsPosted);
+                    setCounterValue(reportsGeneratedCount, safeReportsCount, stats.reportsGenerated);
                 }).catch(function (err) {
                     console.warn('Network error fetching teacher overview', err);
                 });

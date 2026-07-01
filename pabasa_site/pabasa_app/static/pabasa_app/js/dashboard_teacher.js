@@ -703,7 +703,6 @@
         }
 
         loadSavedClasses();
-        updateClassCount();
         if (createClassForm) {
             setGeneratedCode();
         }

@@ -341,14 +341,14 @@ var getStudentClassData = window.getStudentClassData = function() {
                             .then(overviewData => {
                                 if (overviewData.success) {
                                     const totalEl = document.getElementById('profileTotalStudentsCount') || document.getElementById('studentCountMirror') || document.getElementById('totalStudentsJoined');
-                                    if (totalEl) totalEl.textContent = String(overviewData.total_students);
+                                    if (totalEl) totalEl.textContent = String(overviewData.total_students ?? overviewData.totalStudents ?? 0);
                                     try {
                                         const ov = {
-                                            materials_posted: overviewData.materials_posted || overviewData.materialsPosted || 0,
-                                            assessments_posted: overviewData.assessments_posted || overviewData.assessmentsPosted || 0,
-                                            classes_count: overviewData.classes_count || overviewData.classesCount || 0,
-                                            total_students: overviewData.total_students || overviewData.totalStudents || 0,
-                                            reports_generated: overviewData.reports_generated || overviewData.reportsGenerated || 0
+                                            materials_posted: Number(overviewData.materials_posted ?? overviewData.materialsPosted ?? 0),
+                                            assessments_posted: Number(overviewData.assessments_posted ?? overviewData.assessmentsPosted ?? 0),
+                                            classes_count: Number(overviewData.classes_count ?? overviewData.classesCount ?? 0),
+                                            total_students: Number(overviewData.total_students ?? overviewData.totalStudents ?? 0),
+                                            reports_generated: Number(overviewData.reports_generated ?? overviewData.reportsGenerated ?? 0)
                                         };
                                         localStorage.setItem('pabasa_teacher_overview_stats', JSON.stringify(ov));
                                     } catch (e) { /* ignore */ }
