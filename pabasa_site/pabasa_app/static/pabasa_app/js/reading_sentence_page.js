@@ -157,10 +157,15 @@
         // Notify teacher via API for database and email alert
         const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
         if (materialId && token) {
+            const payload = { material_id: materialId, activity_type: 'assessment' };
+            const normalizedId = String(materialId).trim();
+            if (normalizedId && !normalizedId.toLowerCase().startsWith('material-') && !normalizedId.toLowerCase().startsWith('practice-') && !normalizedId.toLowerCase().startsWith('assessment-')) {
+                payload.assessment_id = `assessment-${normalizedId}`;
+            }
             fetch('/record-assessment-completion/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
-                body: JSON.stringify({ material_id: materialId, activity_type: 'assessment' })
+                body: JSON.stringify(payload)
             }).catch(e => console.warn("PABASA: Assessment completion API error", e));
         }
     }

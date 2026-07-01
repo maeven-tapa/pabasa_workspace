@@ -60,6 +60,7 @@ class AssessmentAdmin(admin.ModelAdmin):
 		"latest_time_score",
 		"latest_total_score",
 		"latest_crla_level",
+		"attempt_history",
 	)
 	list_filter = ("assessment_type", "is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")

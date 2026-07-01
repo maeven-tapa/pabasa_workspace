@@ -895,7 +895,7 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertTrue(response.json()["success"])
 
         self.assessment.refresh_from_db()
-        attempt = self.assessment.attempt_history[-1]
+        attempt = self.assessment.get_attempts()[-1]
         self.assertEqual(attempt["fluency_score"], 90)
         self.assertEqual(attempt["accuracy"], 88)
         self.assertEqual(attempt["pronunciation_score"], 86)
@@ -910,6 +910,24 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(profile["accuracy"], "88")
         self.assertEqual(profile["wpm"], "72")
         self.assertEqual(profile["crla_classification"], "Transitioning Readers")
+
+    def test_numeric_material_id_records_assessment_attempt_by_assessment_id(self):
+        self._login_student()
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "material_id": str(self.assessment.id),
+                "activity_type": "assessment",
+                "class_code": self.section.class_code,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        self.assessment.refresh_from_db()
+        self.assertEqual(len(self.assessment.get_attempts(self.student)), 1)
+        self.assertEqual(self.assessment.get_student_attempt_count(self.student), 1)
 
     def test_duplicate_assessment_completion_does_not_create_second_notification(self):
         self._login_student()

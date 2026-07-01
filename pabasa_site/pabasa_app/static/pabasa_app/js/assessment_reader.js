@@ -865,8 +865,11 @@
                     const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
                     payload.attempt_number = retakeCounts[String(materialId).trim()] || 1;
                 }
-                if (String(materialId).toLowerCase().startsWith('assessment-')) {
-                    payload.assessment_id = materialId;
+                const normalizedId = String(materialId).trim();
+                if (normalizedId && !normalizedId.toLowerCase().startsWith('assessment-') && !normalizedId.toLowerCase().startsWith('material-') && !normalizedId.toLowerCase().startsWith('practice-')) {
+                    payload.assessment_id = `assessment-${normalizedId}`;
+                } else if (normalizedId.toLowerCase().startsWith('assessment-')) {
+                    payload.assessment_id = normalizedId;
                 }
                 fetch('/record-assessment-completion/', {
                     method: 'POST',

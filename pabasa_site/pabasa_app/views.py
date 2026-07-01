@@ -5545,6 +5545,15 @@ def record_assessment_completion(request):
                 elif material.section:
                     teacher_user = material.section.teacher
                 title_text = material.title or material.content_text or material.prompt_text or material.item_type
+
+        # Fallback: numeric material id may actually be an assessment id when no Material record exists.
+        if not assessment and not material and m_id is not None:
+            possible_assessment = Assessment.objects.select_related('teacher').filter(id=m_id).first()
+            if possible_assessment:
+                assessment = possible_assessment
+                teacher_user = assessment.teacher
+                title_text = assessment.title
+
         # support practice ids (practice-<id>) that map to Practice model
         if not assessment and m_id and m_prefix and m_prefix.startswith('practice'):
             try:
