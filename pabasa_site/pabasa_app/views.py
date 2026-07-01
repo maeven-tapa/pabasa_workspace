@@ -4470,6 +4470,11 @@ def get_teacher_classes(request):
                 Q(section__isnull=True, teacher__role='admin'),
                 is_active=True,
             ).count()
+            practice_material_count += Material.objects.filter(
+                section__isnull=True,
+                type='practice',
+                is_active=True,
+            ).count()
             class_list.append({
                 'id': cls.id,
                 'code': cls.class_code,
