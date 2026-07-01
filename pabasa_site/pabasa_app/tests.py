@@ -1030,6 +1030,25 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(item["completed_attempt_count"], 1)
         self.assertTrue(item["student_has_completed"])
 
+    def test_class_materials_include_latest_time_score_for_completed_attempt(self):
+        self._login_student()
+
+        self.assessment.record_attempt(
+            self.student,
+            status="completed",
+            time_score=82,
+            total_score=88,
+        )
+        response = self.client.get(
+            reverse("get_class_materials"),
+            {"class_code": self.section.class_code},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        item = response.json()["materials"]["word"][0]
+        self.assertEqual(item["latest_time_score"], 82)
+        self.assertEqual(item["latest_attempt_summary"]["time_score"], 82)
+
     def test_teacher_can_fetch_unread_notification(self):
         Notification.objects.create(
             recipient=self.teacher,
@@ -1289,6 +1308,30 @@ class TeacherStudentsDirectoryTests(TestCase):
         data = response.json()
         self.assertEqual(data["students"][0]["level"], "Transitioning Readers")
         self.assertTrue(data["students"][0]["has_completed_assessment"])
+
+    def test_teacher_students_api_exposes_latest_completion_duration(self):
+        assessment = Assessment.objects.create(
+            teacher=self.teacher,
+            section=self.section_a,
+            title="Oral Reading Check",
+            code="ASM-DIR-002",
+            assessment_type="paragraph",
+            status="published",
+            is_active=True,
+        )
+        assessment.record_attempt(
+            self.student,
+            status="completed",
+            completed_at="2026-06-01T09:00:00+00:00",
+            total_score=87,
+            duration_seconds=75,
+        )
+
+        response = self.client.get(reverse("get_teacher_students_api"))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["students"][0]["duration_seconds"], 75)
 
     def test_teacher_students_api_returns_pending_without_assessment_data(self):
         response = self.client.get(reverse("get_teacher_students_api"))

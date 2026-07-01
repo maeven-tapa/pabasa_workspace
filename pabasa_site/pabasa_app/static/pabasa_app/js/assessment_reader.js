@@ -260,6 +260,17 @@
             return normalizeWords(text).length;
         }
 
+        function formatDuration(seconds) {
+            const totalSeconds = Math.max(0, Math.round(Number(seconds || 0)));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const remainingSeconds = totalSeconds % 60;
+            if (hours > 0) {
+                return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+            }
+            return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+        }
+
         function renderScoreSummary(scores) {
             const summary = document.querySelector(".completion-summary");
             if (!summary || !scores) return;
@@ -268,7 +279,7 @@
                 [`${Math.round(scores.fluency_score)}%`, "fluency"],
                 [`${Math.round(scores.accuracy)}%`, "accuracy"],
                 [`${Math.round(scores.pronunciation_score)}%`, "pronunciation"],
-                [`${Math.round(scores.time_score)}%`, "time"],
+                [formatDuration(scores.duration_seconds), "time"],
                 [`${Math.round(scores.total_score)}%`, "total score"],
                 [scores.crla_classification, "CRLA level"],
             ];
@@ -854,11 +865,15 @@
             // Persist completion server-side so the teacher receives an in-app notification.
             const token = getCsrfToken();
             if (materialId && token) {
+                const elapsedSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
                 const payload = {
                     material_id: materialId,
                     activity_type: 'assessment',
                     class_code: testCode,
-                    scores: latestScores,
+                    scores: {
+                        ...(latestScores || {}),
+                        duration_seconds: latestScores?.duration_seconds || elapsedSeconds,
+                    },
                 };
                 if (isRetakeMode) {
                     payload.is_retake = true;
@@ -882,22 +897,31 @@
             }
         }
 
+        function startAssessmentTimer() {
+            if (!startTime || startTime === null) {
+                startTime = Date.now();
+            }
+            return startTime;
+        }
+
         const startReading = () => {
             if (isReviewMode) return;
-            isRecording = true;
-            startTime = Date.now();
-            spokenTranscript = "";
-            correctWordCounts = new Array(items.length).fill(0);
-            latestScores = null;
-            currentSyllableIndex = 0;
-            pendingAudioChunk = null;
-            hasHeardSinceLastChunk = false;
-            resetRawMicInput("Waiting for speech...");
-            btnStartReading?.classList.add("d-none");
-            btnStopReading?.classList.remove("d-none");
-            updateUI();
-            animateCurrentItem();
-            startSpeechRecognition();
+            startAssessmentTimer();
+            if (!isRecording) {
+                isRecording = true;
+                spokenTranscript = "";
+                correctWordCounts = new Array(items.length).fill(0);
+                latestScores = null;
+                currentSyllableIndex = 0;
+                pendingAudioChunk = null;
+                hasHeardSinceLastChunk = false;
+                resetRawMicInput("Waiting for speech...");
+                btnStartReading?.classList.add("d-none");
+                btnStopReading?.classList.remove("d-none");
+                updateUI();
+                animateCurrentItem();
+                startSpeechRecognition();
+            }
             console.log("PABASA: Assessment recording and timer started.");
         };
 
@@ -920,6 +944,10 @@
 
         btnStartReading?.addEventListener("click", startReading);
         btnStopReading?.addEventListener("click", stopReading);
+
+        if (!isReviewMode && items.length) {
+            startAssessmentTimer();
+        }
         btnReadAloud?.addEventListener("click", readCurrentItemAloud);
 
         async function readCurrentItemAloud() {

@@ -557,6 +557,7 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
                         'fluency_score': attempt.get('fluency_score'),
                         'pronunciation_score': attempt.get('pronunciation_score'),
                         'time_score': attempt.get('time_score'),
+                        'duration_seconds': attempt.get('duration_seconds'),
                         'total_score': attempt.get('total_score'),
                     }
 
@@ -574,6 +575,7 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
         'fluency_score': latest.get('fluency_score') if latest.get('fluency_score') is not None else profile.get('fluency_score'),
         'pronunciation_score': latest.get('pronunciation_score') if latest.get('pronunciation_score') is not None else profile.get('pronunciation_score'),
         'time_score': latest.get('time_score') if latest.get('time_score') is not None else profile.get('time_score'),
+        'duration_seconds': latest.get('duration_seconds') if latest.get('duration_seconds') is not None else profile.get('duration_seconds'),
         'total_score': latest.get('total_score') if latest.get('total_score') is not None else profile.get('total_score'),
         'completed_at': latest.get('completed_at') or profile.get('last_assessment_at') or '',
         'assessment_title': latest.get('assessment_title') or profile.get('last_assessment_title') or '',
@@ -619,6 +621,34 @@ def _format_reading_report_text(report):
         if value in (None, ''):
             return f"{label}: Not yet available"
         return f"{label}: {value}{suffix}"
+    
+    def format_duration(seconds):
+        """Format seconds into MM:SS or HH:MM:SS format."""
+        if seconds is None or seconds == '' or seconds == 0:
+            return 'Not yet available'
+        try:
+            total_seconds = int(round(float(seconds)))
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            secs = total_seconds % 60
+            if hours > 0:
+                return f'{hours}:{minutes:02d}:{secs:02d}'
+            return f'{minutes}:{secs:02d}'
+        except (TypeError, ValueError):
+            return 'Not yet available'
+    
+    def format_datetime(dt_str):
+        """Format datetime string from ISO format to user-friendly format."""
+        if not dt_str:
+            return 'Not yet available'
+        try:
+            parsed_dt = _parse_attempt_timestamp(dt_str)
+            if parsed_dt:
+                localized_dt = timezone.localtime(parsed_dt, timezone.get_default_timezone())
+                return localized_dt.strftime('%B %d, %Y, %I:%M %p')
+            return str(dt_str)
+        except Exception:
+            return str(dt_str)
 
     lines = [
         "Reading Performance Report",
@@ -631,13 +661,14 @@ def _format_reading_report_text(report):
         metric("Words Per Minute", report.get('wpm'), " WPM"),
         metric("Fluency Score", report.get('fluency_score'), "%"),
         metric("Pronunciation Score", report.get('pronunciation_score'), "%"),
+        metric("Time", format_duration(report.get('duration_seconds'))),
         metric("Time Score", report.get('time_score'), "%"),
         metric("Total Score", report.get('total_score'), "%"),
-        f"Latest Completed Assessment: {report.get('completed_at') or 'No completed assessment yet'}",
+        f"Latest Completed Assessment: {format_datetime(report.get('completed_at')) if report.get('completed_at') else 'No completed assessment yet'}",
         f"Suggested Home Support: {report.get('recommendation')}",
     ]
     if report.get('assessment_title'):
-        lines.insert(11, f"Assessment: {report.get('assessment_title')}")
+        lines.insert(12, f"Assessment: {report.get('assessment_title')}")
     return "\n".join(lines)
 
 
@@ -780,6 +811,34 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
         ]))
         return table
 
+    def _format_duration(seconds):
+        """Format seconds into MM:SS or HH:MM:SS format."""
+        if seconds is None or seconds == '' or seconds == 0:
+            return 'Not yet available'
+        try:
+            total_seconds = int(round(float(seconds)))
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            secs = total_seconds % 60
+            if hours > 0:
+                return f'{hours}:{minutes:02d}:{secs:02d}'
+            return f'{minutes}:{secs:02d}'
+        except (TypeError, ValueError):
+            return 'Not yet available'
+
+    def _format_datetime(dt_str):
+        """Format datetime string from ISO format to user-friendly format."""
+        if not dt_str:
+            return 'Not yet available'
+        try:
+            parsed_dt = _parse_attempt_timestamp(dt_str)
+            if parsed_dt:
+                localized_dt = timezone.localtime(parsed_dt, timezone.get_default_timezone())
+                return localized_dt.strftime('%B %d, %Y, %I:%M %p')
+            return str(dt_str)
+        except Exception:
+            return str(dt_str)
+
     generated_at = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y %I:%M %p')
     student_name = report.get('student_name') or 'Student'
     joined_classes = report.get('joined_classes') or []
@@ -840,6 +899,7 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
         ('Words Per Minute', f"{report.get('wpm') or 'Not yet available'} WPM" if report.get('wpm') not in (None, '') else 'Not yet available'),
         ('Fluency Score', f"{report.get('fluency_score') or 'Not yet available'}%" if report.get('fluency_score') not in (None, '') else 'Not yet available'),
         ('Pronunciation Score', f"{report.get('pronunciation_score') or 'Not yet available'}%" if report.get('pronunciation_score') not in (None, '') else 'Not yet available'),
+        ('Time', _format_duration(report.get('duration_seconds'))),
         ('Time Score', f"{report.get('time_score') or 'Not yet available'}%" if report.get('time_score') not in (None, '') else 'Not yet available'),
         ('Total Score', f"{report.get('total_score') or 'Not yet available'}%" if report.get('total_score') not in (None, '') else 'Not yet available'),
     ]
@@ -847,10 +907,11 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
     elements.append(Spacer(1, 0.12 * inch))
 
     elements.append(Paragraph('Assessment Results', section_style))
+    formatted_completed_at = _format_datetime(report.get('completed_at')) if report.get('completed_at') else 'No completed assessment yet'
     assessment_text = [
-        f"Latest completed assessment: {report.get('completed_at') or 'No completed assessment yet'}",
-        f"Assessment title: {report.get('assessment_title') or 'Not yet available'}",
-        f"Assessment type: {report.get('assessment_type') or 'Not yet available'}",
+        f"Latest Completed Assessment: {formatted_completed_at}",
+        f"Assessment Title: {report.get('assessment_title') or 'Not yet available'}",
+        f"Assessment Type: {report.get('assessment_type') or 'Not yet available'}",
         f"Summary: {report.get('summary') or 'No summary available'}",
     ]
     elements.extend([Paragraph(item, note_style) for item in assessment_text])
@@ -4698,6 +4759,8 @@ def get_class_materials(request):
                 attempt_count = 0
                 completed_attempt_count = 0
                 student_has_completed = False
+                latest_attempt_summary = {}
+                latest_time_score = None
                 if m.assessment:
                     if is_requesting_student and request_user:
                         attempt_count = m.assessment.get_student_attempt_count(request_user)
@@ -4706,6 +4769,9 @@ def get_class_materials(request):
                             if attempt.get('status') == 'completed'
                         ])
                         student_has_completed = completed_attempt_count > 0
+                        latest_attempt_summary = m.assessment.get_latest_attempt_summary(request_user)
+                        if latest_attempt_summary.get('time_score') is not None:
+                            latest_time_score = _clamp_score(latest_attempt_summary.get('time_score'))
                     elif teacher_user and teacher_user.role == 'teacher':
                         # Teachers see 0 completions for themselves on the hub
                         attempt_count = 0
@@ -4732,6 +4798,8 @@ def get_class_materials(request):
                     'attempt_count': attempt_count,
                     'completed_attempt_count': completed_attempt_count,
                     'student_has_completed': student_has_completed,
+                    'latest_time_score': latest_time_score,
+                    'latest_attempt_summary': latest_attempt_summary,
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
@@ -4747,6 +4815,8 @@ def get_class_materials(request):
                 # completed attempts only.
                 completed_attempt_count = 0
                 student_has_completed = False
+                latest_attempt_summary = {}
+                latest_time_score = None
                 if is_requesting_student and request_user:
                     attempt_count = a.get_student_attempt_count(request_user)
                     completed_attempt_count = len([
@@ -4754,6 +4824,9 @@ def get_class_materials(request):
                         if attempt.get('status') == 'completed'
                     ])
                     student_has_completed = completed_attempt_count > 0
+                    latest_attempt_summary = a.get_latest_attempt_summary(request_user)
+                    if latest_attempt_summary.get('time_score') is not None:
+                        latest_time_score = _clamp_score(latest_attempt_summary.get('time_score'))
                 elif teacher_user and teacher_user.role == 'teacher':
                     # Teachers see 0 completions for themselves on the hub
                     attempt_count = 0
@@ -4775,6 +4848,8 @@ def get_class_materials(request):
                     'attempt_count': attempt_count,
                     'completed_attempt_count': completed_attempt_count,
                     'student_has_completed': student_has_completed,
+                    'latest_time_score': latest_time_score,
+                    'latest_attempt_summary': latest_attempt_summary,
                     'assigned_sections': [a.section.class_code] if a.section else [],
                     'assigned_week': None,
                     'assigned_week_display': format_assigned_week_display(None),
@@ -5890,6 +5965,7 @@ def get_teacher_students_api(request):
                     'fluency_score': attempt.get('fluency_score'),
                     'pronunciation_score': attempt.get('pronunciation_score'),
                     'time_score': attempt.get('time_score'),
+                    'duration_seconds': attempt.get('duration_seconds'),
                     'total_score': attempt.get('total_score'),
                 }
         
@@ -5927,6 +6003,7 @@ def get_teacher_students_api(request):
                         latest.get('fluency_score'),
                         latest.get('pronunciation_score'),
                         latest.get('time_score'),
+                        latest.get('duration_seconds'),
                         latest.get('total_score'),
                         profile.get('accuracy'),
                         profile.get('wpm'),
@@ -5947,6 +6024,7 @@ def get_teacher_students_api(request):
                     'fluency_score': latest.get('fluency_score', profile.get('fluency_score')),
                     'pronunciation_score': latest.get('pronunciation_score', profile.get('pronunciation_score')),
                     'time_score': latest.get('time_score', profile.get('time_score')),
+                    'duration_seconds': latest.get('duration_seconds'),
                     'total_score': latest.get('total_score', profile.get('total_score')),
                     'completed_at': latest.get('completed_at') or profile.get('last_assessment_at'),
                     'assessment_title': latest.get('assessment_title', profile.get('last_assessment_title')),

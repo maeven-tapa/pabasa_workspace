@@ -4711,6 +4711,17 @@
             return `${escapeHtml(value)}${suffix}`;
         }
 
+        function formatCourseReportDuration(seconds) {
+            const totalSeconds = Math.max(0, Math.round(Number(seconds || 0)));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const remainingSeconds = totalSeconds % 60;
+            if (hours > 0) {
+                return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+            }
+            return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+        }
+
         function getCourseReportRecommendation(student) {
             const accuracy = Number(student?.accuracy);
             const wpm = Number(student?.wpm);
@@ -4723,6 +4734,7 @@
                 student?.fluency_score,
                 student?.pronunciation_score,
                 student?.time_score,
+                student?.duration_seconds,
                 student?.total_score
             ].some(value => value !== undefined && value !== null && value !== '' && String(value) !== '0');
 
@@ -4788,6 +4800,9 @@
             const studentName = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
             const latestAssessment = student.completed_at || 'No completed assessment yet';
             const assessmentTitle = student.assessment_title ? ` - ${escapeHtml(student.assessment_title)}` : '';
+            const latestDuration = student.duration_seconds != null && student.duration_seconds !== '' && Number(student.duration_seconds) > 0
+                ? formatCourseReportDuration(student.duration_seconds)
+                : null;
             preview.innerHTML = `
                 <div class="course-report-preview-head">
                     <div>
@@ -4801,7 +4816,7 @@
                     <div class="course-report-metric"><span>WPM</span><strong>${courseReportMetricValue(student.wpm, ' WPM')}</strong></div>
                     <div class="course-report-metric"><span>Fluency</span><strong>${courseReportMetricValue(student.fluency_score, '%')}</strong></div>
                     <div class="course-report-metric"><span>Pronunciation</span><strong>${courseReportMetricValue(student.pronunciation_score, '%')}</strong></div>
-                    <div class="course-report-metric"><span>Time Score</span><strong>${courseReportMetricValue(student.time_score, '%')}</strong></div>
+                    <div class="course-report-metric"><span>Time</span><strong>${courseReportMetricValue(latestDuration)}</strong></div>
                     <div class="course-report-metric"><span>Total Score</span><strong>${courseReportMetricValue(student.total_score, '%')}</strong></div>
                 </div>
                 <p class="course-report-recommendation"><strong>Suggested home support:</strong> ${escapeHtml(getCourseReportRecommendation(student))}</p>`;
@@ -4844,6 +4859,7 @@
                     const emailEnabled = settings.emailNotifications !== false && s.email;
                     const accuracyText = s.accuracy !== undefined && s.accuracy !== null && s.accuracy !== '' ? `${escapeHtml(s.accuracy)}%` : 'No accuracy';
                     const wpmText = s.wpm !== undefined && s.wpm !== null && s.wpm !== '' ? `${escapeHtml(s.wpm)} WPM` : 'No WPM';
+                    const durationText = s.duration_seconds != null && s.duration_seconds !== '' && Number(s.duration_seconds) > 0 ? formatCourseReportDuration(s.duration_seconds) : 'No time';
                     const levelText = s.level || s.reading_level || 'Level pending';
                     const item = document.createElement('div');
                     item.className = 'list-group-item p-3 border-0 border-bottom';
@@ -4856,6 +4872,7 @@
                                 <div class="course-report-pill-row">
                                     <span class="course-report-pill"><i class="bi bi-bullseye"></i>${accuracyText}</span>
                                     <span class="course-report-pill"><i class="bi bi-speedometer2"></i>${wpmText}</span>
+                                    <span class="course-report-pill"><i class="bi bi-stopwatch"></i>${escapeHtml(durationText)}</span>
                                     <span class="course-report-pill"><i class="bi bi-calendar-check"></i>${escapeHtml(s.completed_at || 'No assessment')}</span>
                                 </div>
                             </div>
