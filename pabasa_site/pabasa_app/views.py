@@ -5240,28 +5240,14 @@ def add_reading_material(request):
             return JsonResponse({'success': False, 'error': 'No items found in content to create.'}, status=400)
 
         with transaction.atomic():
-            # If this material is intended to be an assessment (or both), create
-            # an authoritative Assessment record first and attach it to the
-            # created Material so attempts can be persisted there.
+            # If this material is intended to be an assessment (or both), do not
+            # create an Assessment record until a student completes an attempt.
+            # This keeps the Assessments table empty for new materials until
+            # results exist.
             assessment_obj = None
-            if usage_type in ('assessment', 'both'):
-                # create a short unique assessment code
-                code = 'AS' + uuid.uuid4().hex[:8].upper()
-                while Assessment.objects.filter(code=code).exists():
-                    code = 'AS' + uuid.uuid4().hex[:8].upper()
-                assessment_obj = Assessment.objects.create(
-                    title=title,
-                    code=code,
-                    assessment_type=reading_type,
-                    status=status,
-                    scheduled_at=scheduled_at if status == 'scheduled' else None,
-                    teacher=teacher_user,
-                    section=section,
-                    is_active=(status in ['published', 'scheduled'])
-                )
 
             m = Material.objects.create(
-                assessment=assessment_obj,
+                assessment=None,
                 section=section,
                 item_type=reading_type,
                 title=title,
@@ -5437,24 +5423,8 @@ def teacher_update_material(request):
         # assessments table. If switching to practice, detach the link.
         try:
             if material.type in ('assessment', 'both'):
-                if not getattr(material, 'assessment', None):
-                    code = 'AS' + uuid.uuid4().hex[:8].upper()
-                    while Assessment.objects.filter(code=code).exists():
-                        code = 'AS' + uuid.uuid4().hex[:8].upper()
-                    assessment = Assessment.objects.create(
-                        title=material.title,
-                        code=code,
-                        assessment_type=material.item_type,
-                        content=material.content_text or material.prompt_text or '',
-                        status=material.status,
-                        scheduled_at=material.scheduled_at if material.status == 'scheduled' else None,
-                        teacher=teacher_user,
-                        section=material.section,
-                        is_active=material.is_active,
-                    )
-                    material.assessment = assessment
-                else:
-                    # Keep assessment metadata in sync (best-effort)
+                if getattr(material, 'assessment', None):
+                    # Keep assessment metadata in sync only when the record already exists.
                     try:
                         a = material.assessment
                         a.title = material.title
@@ -5673,7 +5643,11 @@ def record_assessment_completion(request):
             return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
 
         class_code = data.get('class_code')
-        is_practice = activity_type == 'practice' or (practice_obj is not None) or (material and material.section is None and material.assessment is None)
+        is_practice = (
+            activity_type == 'practice'
+            or practice_obj is not None
+            or (material and material.type == 'practice')
+        )
         already_completed = False
         if not is_practice:
             already_completed = _student_completed_assessment_before(assessment, material, student_user)
@@ -5699,6 +5673,33 @@ def record_assessment_completion(request):
             elif material and getattr(material, 'assessment', None):
                 # Material linked to an Assessment
                 material.assessment.record_attempt(student_user, **attempt_payload)
+            elif material and material.type in ('assessment', 'both'):
+                # Create an authoritative Assessment record when the first student
+                # result is recorded for this assessment material.
+                if teacher_user is None:
+                    if material.section and getattr(material.section, 'teacher', None):
+                        teacher_user = material.section.teacher
+                    else:
+                        first_section = material.assigned_sections.filter(is_active=True).select_related('teacher').first()
+                        if first_section and getattr(first_section, 'teacher', None):
+                            teacher_user = first_section.teacher
+                if teacher_user is not None:
+                    code = 'AS' + uuid.uuid4().hex[:8].upper()
+                    while Assessment.objects.filter(code=code).exists():
+                        code = 'AS' + uuid.uuid4().hex[:8].upper()
+                    assessment = Assessment.objects.create(
+                        title=material.title or material.content_text or material.prompt_text or 'Assessment',
+                        code=code,
+                        assessment_type=material.item_type,
+                        status=material.status,
+                        scheduled_at=material.scheduled_at if material.status == 'scheduled' else None,
+                        teacher=teacher_user,
+                        section=material.section,
+                        is_active=(material.status in ['published', 'scheduled']),
+                    )
+                    material.assessment = assessment
+                    material.save(update_fields=['assessment', 'updated_at'])
+                    assessment.record_attempt(student_user, **attempt_payload)
             # Note: standalone Material objects that are not linked to Assessment do not
             # currently have an attempts schema; they are handled by client-side notifications.
             if not is_practice:
@@ -6239,6 +6240,7 @@ def _principal_analytics(user):
     previous_month_start = previous_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     assessment_rows = []
+    assessment_attempt_rows = []
     status_counts = {'completed': 0, 'in_progress': 0, 'pending': 0}
     type_stats = {}
     latest_activity = []
@@ -6365,6 +6367,54 @@ def _principal_analytics(user):
             'updated_at': assessment.updated_at,
         })
 
+        attempts_for_students = assessment.get_attempts()
+        if attempts_for_students:
+            student_ids = {
+                int(attempt.get('student_id'))
+                for attempt in attempts_for_students
+                if attempt and attempt.get('student_id')
+            }
+            students_map = {
+                student.id: student
+                for student in User.objects.filter(id__in=student_ids)
+            }
+            attempt_counts = {}
+            for idx, attempt in enumerate(attempts_for_students, start=1):
+                if not isinstance(attempt, dict):
+                    continue
+                sid = attempt.get('student_id')
+                try:
+                    sid_int = int(sid)
+                except (TypeError, ValueError):
+                    sid_int = None
+                attempt_counts[sid_int] = attempt_counts.get(sid_int, 0) + 1
+                student = students_map.get(sid_int)
+                student_name = ''
+                if student:
+                    student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or student.email or f"Student {student.id}"
+                else:
+                    student_name = f"Student {sid_int or sid}"
+
+                attempt_key = f"{assessment.id}-{sid_int or 'unknown'}-{attempt_counts[sid_int]}"
+                completed_at = attempt.get('completed_at') or attempt.get('started_at') or attempt.get('updated_at')
+                assessment_attempt_rows.append({
+                    'attempt_key': attempt_key,
+                    'assessment_id': assessment.id,
+                    'assessment_code': assessment.code,
+                    'assessment_title': assessment.title,
+                    'assessment_type': assessment.get_assessment_type_display(),
+                    'student_id': sid_int,
+                    'student_name': student_name,
+                    'attempt_number': attempt_counts[sid_int],
+                    'status': str(attempt.get('status') or '').title(),
+                    'total_score': _as_float(attempt.get('total_score'), default=None),
+                    'accuracy': _as_float(attempt.get('accuracy'), default=None),
+                    'pronunciation_score': _as_float(attempt.get('pronunciation_score'), default=None),
+                    'wpm': _as_float(attempt.get('wpm'), default=None),
+                    'completed_at': completed_at,
+                    'updated_at': _parse_attempt_timestamp(completed_at) if completed_at else assessment.updated_at,
+                })
+
         if last_completed_at:
             latest_activity.append({
                 'title': 'Assessment Completed',
@@ -6471,6 +6521,7 @@ def _principal_analytics(user):
         'top_grades': top_grades,
         'intervention_grades': intervention_grades,
         'assessment_rows': assessment_rows,
+        'assessment_attempt_rows': assessment_attempt_rows,
         'assessment_type_cards': type_cards,
         'recent_activity': recent_activity,
         'report_rows': report_rows,

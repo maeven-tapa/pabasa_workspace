@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -291,6 +293,8 @@ class Assessment(models.Model):
     @staticmethod
     def _attempt_field_names():
         return {
+            'attempt_id',
+            'attempt_number',
             'started_at',
             'completed_at',
             'status',
@@ -365,7 +369,14 @@ class Assessment(models.Model):
         """Record a student's assessment attempt and return the new row."""
         attempts = list(self.get_attempts())
         extra_data = dict(attempt_data.pop('extra_data', None) or {})
+        attempt_id = attempt_data.pop('attempt_id', None) or str(uuid.uuid4())
+        attempt_number = attempt_data.pop('attempt_number', None)
+        if attempt_number is None:
+            attempt_number = self.get_student_attempt_count(student) + 1
+
         attempt = {
+            'attempt_id': str(attempt_id),
+            'attempt_number': attempt_number,
             'student_id': student.id,
             'started_at': attempt_data.pop('started_at', None) or timezone.now().isoformat(),
         }

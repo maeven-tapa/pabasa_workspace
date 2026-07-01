@@ -976,7 +976,74 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(len(self.assessment.get_attempts(self.student)), 1)
         self.assertEqual(self.assessment.get_student_attempt_count(self.student), 1)
 
-    def test_duplicate_assessment_completion_does_not_create_second_notification(self):
+    def test_duplicate_assessment_completion_records_multiple_attempts_with_unique_ids(self):
+        self._login_student()
+        payload = json.dumps({
+            "assessment_id": f"assessment-{self.assessment.id}",
+            "material_id": f"assessment-{self.assessment.id}",
+            "activity_type": "assessment",
+            "class_code": self.section.class_code,
+        })
+
+        first = self.client.post(
+            reverse("record_assessment_completion"),
+            data=payload,
+            content_type="application/json",
+        )
+        second = self.client.post(
+            reverse("record_assessment_completion"),
+            data=payload,
+            content_type="application/json",
+        )
+
+        self.assertTrue(first.json()["success"])
+        self.assertTrue(second.json()["success"])
+
+        self.assessment.refresh_from_db()
+        attempts = self.assessment.get_attempts(self.student)
+        self.assertEqual(len(attempts), 2)
+        self.assertNotEqual(attempts[0]["attempt_id"], attempts[1]["attempt_id"])
+        self.assertEqual(attempts[0]["attempt_number"], 1)
+        self.assertEqual(attempts[1]["attempt_number"], 2)
+
+    def test_teacher_update_material_does_not_create_assessment_record_when_none_exists(self):
+        teacher = self.teacher
+        material = Material.objects.create(
+            title="Draft Assessment",
+            item_type="word",
+            content_text="cat\ndog",
+            content_json={"items": ["cat", "dog"]},
+            type="assessment",
+            status="draft",
+            is_active=False,
+        )
+        self.assertIsNone(material.assessment)
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session.save()
+
+        response = self.client.post(
+            reverse("teacher_update_material"),
+            data=json.dumps({
+                "material_id": f"material-{material.id}",
+                "title": "Draft Assessment Updated",
+                "content": "cat dog",
+                "status": "published",
+                "usage_type": "assessment",
+                "language": "English",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        material.refresh_from_db()
+        self.assertIsNone(material.assessment)
+        self.assertEqual(Assessment.objects.filter(title="Draft Assessment Updated").count(), 0)
+
+    def test_numeric_material_id_records_assessment_attempt_by_assessment_id(self):
         self._login_student()
         payload = json.dumps({
             "assessment_id": f"assessment-{self.assessment.id}",
