@@ -233,9 +233,53 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(material.item_type, "paragraph")
         self.assertEqual(material.content_json.get("items"), ["First paragraph text.", "Second paragraph text."])
 
-    def test_add_reading_material_saves_shared_source_type(self):
+    @patch("pabasa_app.views._compute_teacher_overview")
+    def test_add_reading_material_skips_overview_by_default(self, mock_overview):
         user = User.objects.create(
             custom_id="TCH-0004",
+            role="teacher",
+            first_name="Fast",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="fast@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Fast create",
+                "content": "alpha",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "practice",
+                "class_code": "",
+                "language": "English",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        mock_overview.assert_not_called()
+
+    def test_add_reading_material_saves_shared_source_type(self):
+        user = User.objects.create(
+            custom_id="TCH-0005",
             role="teacher",
             first_name="Shared",
             last_name="Teacher",

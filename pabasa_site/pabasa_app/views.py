@@ -4861,7 +4861,6 @@ def add_reading_material(request):
             'type': reading_type,
             'status': status,
             'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
-            'overview': _compute_teacher_overview(teacher_user),
         })
 
     except json.JSONDecodeError as e:
