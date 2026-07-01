@@ -3310,20 +3310,78 @@ def send_course_update(request):
 
             student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or 'Student'
             personalized_message = message_template.replace('{name}', student_name)
-            subject = "Student Reading Progress Report – PABASA"
             report = _latest_student_reading_report(student, sections=course_sections, course=course)
+            scheduled_at_input = str(data.get('scheduled_at') or data.get('scheduledAt') or data.get('scheduled_at_input') or '').strip()
+            reading_material_input = str(data.get('reading_material') or '').strip()
             report_text = _format_reading_report_text(report)
-            email_body = (
-                "Dear Parent/Guardian,\n\n"
-                "We hope you are doing well.\n\n"
-                "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
-                "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
-                "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
-                "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
-                "Thank you for your continued support and partnership in your child's learning.\n\n"
-                "Sincerely,\n\n"
-                "PABASA Team"
-            )
+            normalized_update_type = update_type.lower()
+
+            if normalized_update_type == 'followup':
+                subject = "Student Reading Progress Report – PABASA"
+                email_body = (
+                    "Dear Parent/Guardian,\n\n"
+                    "We hope you are doing well.\n\n"
+                    "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+                    "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
+                    "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
+                    "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
+                    "Thank you for your continued support and partnership in your child's learning.\n\n"
+                    "Sincerely,\n\n"
+                    "PABASA Team"
+                )
+                include_attachment = True
+            elif normalized_update_type == 'commendation':
+                subject = "Performance Commendation – PABASA"
+                email_body = (
+                    f"Dear {student_name},\n\n"
+                    "Congratulations on your continued effort and success in reading! "
+                    "We are very proud of the progress you have made and the dedication you have shown.\n\n"
+                    f"{personalized_message}\n\n"
+                    "Keep up the excellent work and continue practicing regularly. Your hard work is making a meaningful difference.\n\n"
+                    "Sincerely,\n\n"
+                    "PABASA Team"
+                )
+                include_attachment = False
+            elif normalized_update_type == 'assessment':
+                subject = "Scheduled Assessment Notice – PABASA"
+                assessment_title = str(data.get('assessment_title') or 'Reading Assessment').strip() or 'Reading Assessment'
+                scheduled_at = str(scheduled_at_input or 'TBD').strip() or 'TBD'
+                reading_material = reading_material_input or str(data.get('reading_material') or 'Not specified').strip() or 'Not specified'
+
+                try:
+                    from datetime import datetime
+                    parsed_dt = datetime.fromisoformat(scheduled_at.replace('Z', '+00:00'))
+                    if parsed_dt.tzinfo is None:
+                        parsed_dt = parsed_dt.replace(tzinfo=timezone.get_current_timezone())
+                    scheduled_at_display = timezone.localtime(parsed_dt, timezone.get_default_timezone()).strftime('%B %d, %Y at %I:%M %p')
+                except Exception:
+                    scheduled_at_display = scheduled_at
+
+                email_body = (
+                    f"Dear {student_name},\n\n"
+                    f"This is a reminder that your scheduled reading assessment, {assessment_title}, is coming up.\n\n"
+                    f"Scheduled Date and Time: {scheduled_at_display}\n"
+                    f"Reading Material: {reading_material}\n\n"
+                    f"{personalized_message}\n\n"
+                    "Please prepare ahead of time and be ready to do your best.\n\n"
+                    "Sincerely,\n\n"
+                    "PABASA Team"
+                )
+                include_attachment = False
+            else:
+                subject = "Student Reading Progress Report – PABASA"
+                email_body = (
+                    "Dear Parent/Guardian,\n\n"
+                    "We hope you are doing well.\n\n"
+                    "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+                    "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
+                    "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
+                    "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
+                    "Thank you for your continued support and partnership in your child's learning.\n\n"
+                    "Sincerely,\n\n"
+                    "PABASA Team"
+                )
+                include_attachment = True
             note_text = (
                 f"Course: {course.title} ({course.code})\n"
                 f"Update Type: {update_type}\n"
@@ -3340,21 +3398,18 @@ def send_course_update(request):
                 sender,
                 [student.email],
             )
-            try:
-                pdf_bytes = _build_reading_report_pdf(
-                    report,
-                    message=personalized_message,
-                    course=course,
-                    teacher=teacher_user,
-                    recipient_email=student.email,
-                )
-                email_message.attach(attachment_name, pdf_bytes, 'application/pdf')
-            except Exception as pdf_exc:
-                logger.exception('Failed to build reading report PDF attachment for course update')
-                email_message.attach_alternative(
-                    f"<p>The attached reading report could not be generated. Please see the email body for details.</p>",
-                    "text/html",
-                )
+            if include_attachment:
+                try:
+                    pdf_bytes = _build_reading_report_pdf(
+                        report,
+                        message=personalized_message,
+                        course=course,
+                        teacher=teacher_user,
+                        recipient_email=student.email,
+                    )
+                    email_message.attach(attachment_name, pdf_bytes, 'application/pdf')
+                except Exception:
+                    logger.exception('Failed to build reading report PDF attachment for course update')
             email_message.send(fail_silently=False)
             Note.objects.create(
                 teacher=teacher_user,
@@ -3367,6 +3422,7 @@ def send_course_update(request):
                 'email': student.email,
                 'name': student_name,
                 'report_summary': report.get('summary'),
+                'report_included': include_attachment,
             })
 
         if not sent:
@@ -3381,7 +3437,7 @@ def send_course_update(request):
             'sent_count': len(sent),
             'sent': sent,
             'skipped': skipped,
-            'report_included': True,
+            'report_included': any(item.get('report_included', False) for item in sent),
         })
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)

@@ -2654,13 +2654,25 @@
                                                 </select>
                                             </div>
 
+                                            <div class="mb-3" id="parentAssessmentScheduleContainer" style="display:none;">
+                                                <label class="form-label small fw-bold" for="parentAssessmentScheduledAt">Assessment Date & Time</label>
+                                                <input class="form-control" id="parentAssessmentScheduledAt" type="datetime-local" style="border-radius:10px;">
+                                                <div class="form-text mt-2">This date and time will be included in the assessment notice email.</div>
+                                            </div>
+
+                                            <div class="mb-3" id="parentAssessmentMaterialContainer" style="display:none;">
+                                                <label class="form-label small fw-bold" for="parentAssessmentReadingMaterial">Reading Material</label>
+                                                <input class="form-control" id="parentAssessmentReadingMaterial" type="text" style="border-radius:10px;" placeholder="Enter the reading material for this assessment">
+                                                <div class="form-text mt-2">This will be included in the assessment notice email.</div>
+                                            </div>
+
                                             <div class="mb-3">
                                                 <label class="form-label d-flex justify-content-between" for="parentUpdateMessage">
                                                     <span class="small fw-bold">Teacher Comments</span>
                                                     <small class="text-primary">Tip: Use {name} for student name</small>
                                                 </label>
                                                 <textarea class="form-control" id="parentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
-                                                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Performance data and recommendations are auto-attached.</div>
+                                                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> PDF attachments are used for support updates only.</div>
                                             </div>
 
                                             <div class="d-flex justify-content-end">
@@ -2800,13 +2812,25 @@
                                                                     </select>
                                                                 </div>
 
+                                                                <div class="mb-3" id="courseParentAssessmentScheduleContainer" style="display:none;">
+                                                                    <label class="form-label small fw-bold" for="courseParentAssessmentScheduledAt">Assessment Date & Time</label>
+                                                                    <input class="form-control" id="courseParentAssessmentScheduledAt" type="datetime-local" style="border-radius:10px;">
+                                                                    <div class="form-text mt-2">This date and time will be included in the assessment notice email.</div>
+                                                                </div>
+
+                                                                <div class="mb-3" id="courseParentAssessmentMaterialContainer" style="display:none;">
+                                                                    <label class="form-label small fw-bold" for="courseParentAssessmentReadingMaterial">Reading Material</label>
+                                                                    <input class="form-control" id="courseParentAssessmentReadingMaterial" type="text" style="border-radius:10px;" placeholder="Enter the reading material for this assessment">
+                                                                    <div class="form-text mt-2">This will be included in the assessment notice email.</div>
+                                                                </div>
+
                                                                 <div class="mb-3">
                                                                     <label class="form-label d-flex justify-content-between" for="courseParentUpdateMessage">
                                                                         <span class="small fw-bold">Teacher Comments</span>
                                                                         <small class="text-primary">Tip: Use {name} for student name</small>
                                                                     </label>
                                                                     <textarea class="form-control" id="courseParentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
-                                                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Performance data and recommendations are auto-attached.</div>
+                                                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> PDF attachments are used for support updates only.</div>
                                                                 </div>
 
                                                                 <div class="d-flex justify-content-end">
@@ -4912,6 +4936,10 @@
             try {
                 const templateSelect = document.getElementById('courseParentUpdateTemplate');
                 const messageArea = document.getElementById('courseParentUpdateMessage');
+                const scheduleContainer = document.getElementById('courseParentAssessmentScheduleContainer');
+                const materialContainer = document.getElementById('courseParentAssessmentMaterialContainer');
+                const scheduleInput = document.getElementById('courseParentAssessmentScheduledAt');
+                const materialInput = document.getElementById('courseParentAssessmentReadingMaterial');
                 const form = document.getElementById('courseParentUpdateTabForm');
                 const sendButton = document.getElementById('courseBtnSendParentUpdate');
                 if (!templateSelect || !messageArea || !form) return;
@@ -4923,7 +4951,21 @@
                     assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PABASA dashboard."
                 };
 
-                templateSelect.onchange = () => { messageArea.value = templates[templateSelect.value] || ''; };
+                const toggleScheduleFields = () => {
+                    const showSchedule = templateSelect.value === 'assessment';
+                    if (scheduleContainer) scheduleContainer.style.display = showSchedule ? 'block' : 'none';
+                    if (materialContainer) materialContainer.style.display = showSchedule ? 'block' : 'none';
+                    if (!showSchedule) {
+                        if (scheduleInput) scheduleInput.value = '';
+                        if (materialInput) materialInput.value = '';
+                    }
+                };
+
+                templateSelect.onchange = () => {
+                    messageArea.value = templates[templateSelect.value] || '';
+                    toggleScheduleFields();
+                };
+                toggleScheduleFields();
                 messageArea.value = templates.general;
 
                 form.onsubmit = async (e) => {
@@ -4932,6 +4974,8 @@
                     if (checked.length === 0) return showToast('Please select at least one recipient.', 'error');
                     const message = (messageArea.value || '').trim();
                     if (!message) return showToast('Please enter teacher comments before sending.', 'error');
+                    const scheduledAt = (document.getElementById('courseParentAssessmentScheduledAt')?.value || '').trim();
+                    const readingMaterial = (document.getElementById('courseParentAssessmentReadingMaterial')?.value || '').trim();
 
                     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
                     const originalButtonHtml = sendButton ? sendButton.innerHTML : '';
@@ -4953,7 +4997,9 @@
                                 course_id: courseId,
                                 student_ids: checked,
                                 update_type: templateSelect.value || 'general',
-                                message
+                                message,
+                                scheduled_at: scheduledAt,
+                                reading_material: readingMaterial
                             })
                         });
                         const data = await res.json();
@@ -6318,6 +6364,10 @@
 
         const messageArea = document.getElementById("parentUpdateMessage");
         const templateSelect = document.getElementById("parentUpdateTemplate");
+        const scheduleContainer = document.getElementById("parentAssessmentScheduleContainer");
+        const materialContainer = document.getElementById("parentAssessmentMaterialContainer");
+        const scheduleInput = document.getElementById("parentAssessmentScheduledAt");
+        const materialInput = document.getElementById("parentAssessmentReadingMaterial");
 
         // Template logic
         const templates = {
@@ -6327,9 +6377,21 @@
             assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PABASA dashboard."
         };
 
+        const toggleScheduleFields = () => {
+            const showSchedule = templateSelect.value === "assessment";
+            if (scheduleContainer) scheduleContainer.style.display = showSchedule ? "block" : "none";
+            if (materialContainer) materialContainer.style.display = showSchedule ? "block" : "none";
+            if (!showSchedule) {
+                if (scheduleInput) scheduleInput.value = "";
+                if (materialInput) materialInput.value = "";
+            }
+        };
+
         templateSelect.onchange = () => {
             messageArea.value = templates[templateSelect.value] || "";
+            toggleScheduleFields();
         };
+        toggleScheduleFields();
         messageArea.value = templates.general;
     }
 

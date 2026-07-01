@@ -1285,6 +1285,73 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertIn("No completed assessment yet", note.note_text)
 
     @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_commendation_sends_congratulatory_email_without_attachment(self, mock_email_cls):
+        course = Course.objects.create(
+            teacher=self.teacher,
+            title="Chapter 5",
+            code="CRS-TEST-004",
+            description="Commendation test",
+        )
+        course.sections.add(self.section_a)
+
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": course.id,
+                "student_ids": [self.student.id],
+                "update_type": "commendation",
+                "message": "Congratulations {name}!",
+            }),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertFalse(response.json()["report_included"])
+        self.assertEqual(mock_email_cls.call_args[0][0], "Performance Commendation – PABASA")
+        email_body = mock_email_cls.call_args[0][1]
+        self.assertIn("Congratulations", email_body)
+        self.assertIn("keep up the excellent work", email_body)
+        mock_email_cls.return_value.attach.assert_not_called()
+
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_assessment_notice_sends_details_without_attachment(self, mock_email_cls):
+        course = Course.objects.create(
+            teacher=self.teacher,
+            title="Chapter 6",
+            code="CRS-TEST-005",
+            description="Assessment notice test",
+        )
+        course.sections.add(self.section_a)
+
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": course.id,
+                "student_ids": [self.student.id],
+                "update_type": "assessment",
+                "message": "Please prepare for your upcoming reading assessment.",
+                "assessment_title": "Oral Reading Check",
+                "scheduled_at": "2026-07-10 09:00",
+                "reading_material": "The Little Red Hen",
+            }),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertFalse(response.json()["report_included"])
+        self.assertEqual(mock_email_cls.call_args[0][0], "Scheduled Assessment Notice – PABASA")
+        email_body = mock_email_cls.call_args[0][1]
+        self.assertIn("Oral Reading Check", email_body)
+        self.assertIn("July 10, 2026 at 09:00 AM", email_body)
+        self.assertIn("The Little Red Hen", email_body)
+        self.assertIn("Please prepare", email_body)
+        mock_email_cls.return_value.attach.assert_not_called()
+
+    @patch("pabasa_app.views.EmailMultiAlternatives")
     def test_send_course_update_skips_unenrolled_and_missing_email_students(self, mock_email_cls):
         no_email_student = User.objects.create(
             custom_id="STD-NOEMAIL",
