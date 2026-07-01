@@ -717,6 +717,25 @@ function normalizeStudentLevel(level) {
     return 'Pending';
 }
 
+function getStoredDashboardMetrics() {
+    try {
+        return JSON.parse(localStorage.getItem('pabasa_dashboard_metrics') || '{}');
+    } catch (e) {
+        return {};
+    }
+}
+
+function persistDashboardMetrics(metrics) {
+    if (!metrics || typeof metrics !== 'object') {
+        return;
+    }
+    try {
+        localStorage.setItem('pabasa_dashboard_metrics', JSON.stringify(metrics));
+    } catch (e) {
+        console.warn('Could not persist dashboard metrics', e);
+    }
+}
+
 // Function to calculate and update statistics from localStorage
 function updateStudentStatistics() {
     let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
@@ -809,16 +828,28 @@ function updateStudentStatistics() {
             topStudentName = student.name;
         }
         
-        // Track activity based on when the record was created/updated
-        if (student.id && student.id > oneWeekAgo) {
+        // Track activity based on the most recent active timestamp from the API/local data.
+        const lastActiveAt = student.last_active_at ? Date.parse(student.last_active_at) : NaN;
+        if (!Number.isNaN(lastActiveAt) && lastActiveAt >= oneWeekAgo) {
             activeThisWeekCount++;
         }
     });
 
-    const avgWpmVal = totalStudents > 0 ? (totalWPM / totalStudents) : 0;
-    const improvementVal = avgWpmVal > 0 ? Math.round((avgWpmVal / 60) * 12) : 0; // Weighted improvement logic
+    const dashboardMetrics = getStoredDashboardMetrics();
+    if (dashboardMetrics && Number.isFinite(dashboardMetrics.active_this_week_count)) {
+        activeThisWeekCount = dashboardMetrics.active_this_week_count;
+    }
+    if (dashboardMetrics && dashboardMetrics.top_performer_name) {
+        topStudentName = dashboardMetrics.top_performer_name;
+    }
 
-    document.getElementById("avgImprovement").textContent = totalStudents > 0 ? `+${improvementVal}%` : "—";
+    const avgWpmVal = totalStudents > 0 ? (totalWPM / totalStudents) : 0;
+    const computedImprovementVal = avgWpmVal > 0 ? Math.round((avgWpmVal / 60) * 12) : 0; // Weighted improvement logic
+    const avgImprovementMetric = dashboardMetrics && typeof dashboardMetrics.avg_improvement_30d === 'number'
+        ? dashboardMetrics.avg_improvement_30d
+        : computedImprovementVal;
+
+    document.getElementById("avgImprovement").textContent = totalStudents > 0 ? `+${avgImprovementMetric}%` : "—";
     document.getElementById("activeThisWeek").textContent = totalStudents > 0 ? activeThisWeekCount : "0";
     document.getElementById("topPerformer").textContent = topStudentName;
     
@@ -946,9 +977,14 @@ async function refreshStudentOverview() {
         
         if (response && response.ok) {
             const data = await response.json();
-            if (data && data.success && Array.isArray(data.students)) {
-                // Save to localStorage for offline fallback
-                localStorage.setItem('pabasa_added_students', JSON.stringify(data.students));
+            if (data && data.success) {
+                if (Array.isArray(data.students)) {
+                    // Save to localStorage for offline fallback
+                    localStorage.setItem('pabasa_added_students', JSON.stringify(data.students));
+                }
+                if (data.dashboard_metrics && typeof data.dashboard_metrics === 'object') {
+                    persistDashboardMetrics(data.dashboard_metrics);
+                }
             }
         }
     } catch (error) {
@@ -962,6 +998,7 @@ async function refreshStudentOverview() {
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", function() {
     refreshStudentOverview();
+    setInterval(refreshStudentOverview, 60000);
 
 });
 </script>
