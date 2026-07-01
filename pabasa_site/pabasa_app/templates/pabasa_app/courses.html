@@ -4076,15 +4076,6 @@
         return `<span class="shared-material-badge" title="${escapeHtml(title)}">👥</span>`;
     }
 
-    function findCoursePractice(course, practiceId) {
-        const rawId = rawRecordId(practiceId);
-        return (course?.practices || []).find(item => {
-            return String(item.action_id || item.id || '') === String(practiceId)
-                || String(item.raw_id || '') === rawId
-                || String(item.id || '') === rawId;
-        });
-    }
-
     window.openCourseDetail = async function(courseId) {
         try {
             let course = findCourseById(courseId);
@@ -4165,49 +4156,13 @@
                 assignedSection.appendChild(assignedList);
                 materialsContainer.appendChild(assignedSection);
 
-                const coursePractices = Array.isArray(course.practices) ? course.practices : [];
-                if (coursePractices.length > 0) {
-                    const practiceSection = document.createElement('section');
-                    practiceSection.className = 'section-panel practice-section';
-                    practiceSection.innerHTML = `
-                        <div class="section-heading">
-                            <div>
-                                <h6 class="reading-section-title mb-1">Students' Practice Sets</h6>
-                                <p class="reading-section-note mb-0">Review curated practice materials available to students.</p>
-                            </div>
-                        </div>
-                    `;
-                    const practiceGrid = document.createElement('div');
-                    practiceGrid.className = 'practice-set-grid';
-
-                    coursePractices.forEach(p => {
-                        const typeLabel = p.item_type || 'Practice';
-                        const typeSlug = String(typeLabel || '').toLowerCase().replace(/\s+/g, '-');
-                        const item = document.createElement('div');
-                        item.className = 'material-card-modern practice-card';
-                        item.dataset.practiceId = p.action_id || p.id;
-                        item.innerHTML = `
-                            <div class="material-info">
-                                <p class="material-title">${p.title || 'Untitled practice set'}</p>
-                                <span class="material-type-badge ${typeSlug}">${typeLabel}</span>
-                            </div>
-                            <div class="material-actions">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" data-practice-action="preview" data-pid="${p.action_id || p.id}" title="View"><i class="bi bi-eye"></i>View</button>
-                            </div>
-                        `;
-                        practiceGrid.appendChild(item);
-                    });
-
-                    practiceSection.appendChild(practiceGrid);
-                    materialsContainer.appendChild(practiceSection);
-                }
             }
 
             // Attach a single delegated handler for material and practice actions
             if (!materialsContainer.dataset.bound) {
                 materialsContainer.dataset.bound = 'true';
                 materialsContainer.addEventListener('click', async function(e) {
-                    const btn = e.target.closest('[data-material-action], [data-practice-action]');
+                    const btn = e.target.closest('[data-material-action]');
                     if (!btn) return;
                     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 
@@ -4316,8 +4271,8 @@
                                         payload = { assessment_id: `assessment-${mat.assessment_id}` };
                                         archivedAssessmentId = payload.assessment_id;
                                     } else if (isPractice) {
-                                        endpoint = '/dashboard/teacher/delete-practice/';
-                                        payload = { practice_id: mid };
+                                        showToast('Practice materials are managed by Admin only.', 'info');
+                                        return;
                                     }
 
                                     const res = await fetch(endpoint, {
@@ -4384,28 +4339,6 @@
                         }
                     }
 
-                    // Practice actions (preview-only)
-                    if (btn.dataset.practiceAction) {
-                        const action = btn.dataset.practiceAction;
-                        const pid = btn.getAttribute('data-pid');
-                        if (action === 'preview') {
-                            const activeCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId || course.id;
-                            const activeCourse = findCourseById(activeCourseId) || course;
-                            const pr = findCoursePractice(activeCourse, pid);
-                            if (!pr) return showToast('Practice not found', 'error');
-
-                            const previewMaterial = {
-                                title: pr.title || 'Practice Preview',
-                                item_type: pr.item_type || 'Practice',
-                                type: 'practice',
-                                content: Array.isArray(pr.content) ? pr.content.join('\n') : (typeof pr.content === 'string' ? pr.content : ''),
-                                status: pr.status || 'published',
-                                assigned_week_display: pr.assigned_week_display ?? pr.assigned_week ?? pr.week
-                            };
-                            showMaterialPreviewModal(previewMaterial);
-                            return;
-                        }
-                    }
                 });
             }
 
@@ -5415,9 +5348,6 @@
                             endpoint = '/dashboard/teacher/archive-assessment/';
                             payload = { assessment_id: `assessment-${material.assessment_id}` };
                             archivedAssessmentId = payload.assessment_id;
-                        } else if (isPractice) {
-                            endpoint = '/dashboard/teacher/delete-practice/';
-                            payload = { practice_id: materialId };
                         }
 
                         const res = await fetch(endpoint, {
@@ -7745,16 +7675,12 @@
                             try {
                                 const csrfToken = await ensureCsrfToken();
 
-                                // Determine action: practice -> delete-practice, assessment -> archive-assessment, material -> delete-material
                                 const usage = (card.dataset.usage || (card.getAttribute('data-usage') || '')).toString().toLowerCase();
                                 let endpoint = '/dashboard/teacher/delete-material/';
                                 let bodyPayload = { material_id: materialId };
                                 let archivedAssessmentId = null;
 
-                                if (usage === 'practice') {
-                                    endpoint = '/dashboard/teacher/delete-practice/';
-                                    bodyPayload = { practice_id: materialId };
-                                } else if (String(materialId || '').startsWith('assessment-')) {
+                                if (String(materialId || '').startsWith('assessment-')) {
                                     // For assessment items in the Readings list, call archive-assessment (soft-delete)
                                     endpoint = '/dashboard/teacher/archive-assessment/';
                                     bodyPayload = { assessment_id: materialId };
@@ -7865,17 +7791,6 @@
                                 usage_type: 'assessment',
                                 assigned_week: assignedWeekValue ? parseInt(assignedWeekValue, 10) : null
                             };
-
-                            if (recordKind === 'practice') {
-                                endpoint = '/dashboard/teacher/update-practice/';
-                                payload = {
-                                    practice_id: materialId,
-                                    title: newTitle.trim(),
-                                    content: newContent.trim(),
-                                    status: editPublicationStatusSelect.value
-                                };
-                            }
-
                             console.log('[submitEditMaterial] POST', endpoint, payload);
                             const response = await fetch(endpoint, {
                                 method: 'POST',
@@ -8015,29 +7930,10 @@
                                     const recordKind = prefixedRecordKind(editingMaterialId) || (editingCard.dataset ? editingCard.dataset.recordKind : '') || '';
 
                                     if (recordKind === 'practice' || (!recordKind && detectedUsage === 'practice')) {
-                                        const opts = {
-                                            method: 'POST',
-                                            credentials: 'same-origin',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-CSRFToken': csrfToken,
-                                                'X-Requested-With': 'XMLHttpRequest'
-                                            },
-                                            body: JSON.stringify({ practice_id: editingMaterialId, title: title, content: content, status: status })
-                                        };
-                                        try { console.log('[AddMaterial] update-practice opts body', opts.body ? JSON.parse(opts.body) : opts.body); } catch(e) { console.log('[AddMaterial] update-practice opts body (raw)', opts.body); }
-                                        apiResponse = await fetch('/dashboard/teacher/update-practice/', opts);
-                                        if (apiResponse.status === 403) {
-                                            const refreshed = await ensureCsrfToken(true);
-                                            if (refreshed && refreshed !== csrfToken) {
-                                                opts.headers['X-CSRFToken'] = refreshed;
-                                                try { console.log('[AddMaterial] update-practice opts body', opts.body ? JSON.parse(opts.body) : opts.body); } catch(e) { console.log('[AddMaterial] update-practice opts body (raw)', opts.body); }
-                                                apiResponse = await fetch('/dashboard/teacher/update-practice/', opts);
-                                            } else {
-                                                const text = await apiResponse.text();
-                                                try { const errorData = JSON.parse(text); throw new Error(errorData.error || errorData.message || `API error: ${apiResponse.status}`); } catch (e) { throw new Error(`API error: ${apiResponse.status} - ${text.slice(0,200)}`); }
-                                            }
-                                        }
+                                        showToast('Practice materials are managed by Admin only.', 'info');
+                                        submitMaterialBtn.disabled = false;
+                                        submitMaterialBtn.innerHTML = '<i class="bi bi-save me-2"></i>Save Changes';
+                                        return;
                                     } else {
                                         const opts = {
                                             method: 'POST',

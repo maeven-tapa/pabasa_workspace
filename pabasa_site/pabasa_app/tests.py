@@ -631,6 +631,31 @@ class MaterialCreationTests(TestCase):
 
 
 class PracticeReaderMaterialTests(TestCase):
+    def setUp(self):
+        self.student = User.objects.create(
+            custom_id="STD-PRACT",
+            role="student",
+            first_name="Practice",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2012,
+            email="practice-student@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 1",
+        )
+        session = self.client.session
+        session["user_id"] = self.student.id
+        session["user_role"] = self.student.role
+        session["first_name"] = self.student.first_name
+        session["last_name"] = self.student.last_name
+        session["email"] = self.student.email
+        session["custom_id"] = self.student.custom_id
+        session.save()
+
     def test_word_reader_receives_active_published_practice_items(self):
         Material.objects.create(
             title="Easy syllables",
@@ -673,6 +698,69 @@ class PracticeReaderMaterialTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '"items": ["HA", "he", "hi", "ho", "hu"]', html=False)
+
+
+class PracticeAccessControlTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id="TCH-PRACT",
+            role="teacher",
+            first_name="Practice",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="practice-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        self.admin = User.objects.create(
+            custom_id="ADM-PRACT",
+            role="admin",
+            first_name="Practice",
+            last_name="Admin",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="practice-admin@example.com",
+            password_hash=make_password("admin-password"),
+        )
+
+    def test_teacher_is_redirected_from_practice_reader(self):
+        session = self.client.session
+        session["user_id"] = self.teacher.id
+        session["user_role"] = self.teacher.role
+        session["first_name"] = self.teacher.first_name
+        session["last_name"] = self.teacher.last_name
+        session["email"] = self.teacher.email
+        session["custom_id"] = self.teacher.custom_id
+        session.save()
+
+        response = self.client.get(reverse("practice_word_page"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("auth"), response.url)
+
+    def test_admin_can_open_practice_assessment_management(self):
+        session = self.client.session
+        session["user_id"] = self.admin.id
+        session["user_role"] = self.admin.role
+        session["first_name"] = self.admin.first_name
+        session["last_name"] = self.admin.last_name
+        session["email"] = self.admin.email
+        session["custom_id"] = self.admin.custom_id
+        session.save()
+
+        response = self.client.get(reverse("admin_practice_assessment"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Practice Content")
 
 
 class SettingsViewTests(TestCase):

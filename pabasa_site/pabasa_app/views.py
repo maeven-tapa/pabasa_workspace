@@ -2869,12 +2869,15 @@ def _student_practice_context(request, mode=None):
     })
     return context
 
+@login_required(role='student')
 def practice_word_page(request):
     return render(request, 'pabasa_app/practice_word_page.html', _student_practice_context(request, 'word'))
 
+@login_required(role='student')
 def practice_sentence_page(request):
     return render(request, 'pabasa_app/practice_sentence_page.html', _student_practice_context(request, 'sentence'))
 
+@login_required(role='student')
 def practice_para_page(request):
     return render(request, 'pabasa_app/practice_para_page.html', _student_practice_context(request, 'paragraph'))
 
@@ -2945,6 +2948,7 @@ def settings_view(request):
     context['notification_settings'] = notification_settings
     return render(request, 'pabasa_app/settings.html', context)
 
+@login_required(role='student')
 def practice(request):
     return render(request, 'pabasa_app/practice.html', _student_practice_context(request))
 
@@ -5462,9 +5466,9 @@ def teacher_update_material(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
-@login_required(role='teacher')
+@admin_required
 def teacher_update_practice(request):
-    """Allow teachers to update Practice items (title, content, status)."""
+    """Allow admins to update Practice items (title, content, status)."""
     try:
         data = json.loads(request.body)
         raw_id = data.get('practice_id')
@@ -5516,9 +5520,9 @@ def teacher_update_practice(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
-@login_required(role='teacher')
+@admin_required
 def delete_practice(request):
-    """Allow teachers to delete their own Practice items."""
+    """Allow admins to delete Practice items."""
     try:
         data = json.loads(request.body)
         raw_id = data.get('practice_id')
