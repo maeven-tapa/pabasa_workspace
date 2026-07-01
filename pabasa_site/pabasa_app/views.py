@@ -502,6 +502,19 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
     if not isinstance(profile, dict):
         profile = {}
 
+    joined_classes = []
+    if sections:
+        for section in sections:
+            if not section:
+                continue
+            label = getattr(section, 'class_name', '') or getattr(section, 'class_code', '') or ''
+            if label:
+                joined_classes.append(label)
+    if not joined_classes and getattr(course, 'title', ''):
+        joined_classes.append(getattr(course, 'title', ''))
+    if not isinstance(profile, dict):
+        profile = {}
+
     latest = {}
     latest_dt = None
     if sections is not None:
@@ -549,6 +562,10 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
 
     report = {
         'student_name': f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id or 'Student',
+        'student_id': getattr(student_user, 'custom_id', '') or '',
+        'email': getattr(student_user, 'email', '') or '',
+        'grade_level': getattr(student_user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
+        'joined_classes': joined_classes,
         'course_name': getattr(course, 'title', '') or '',
         'course_code': getattr(course, 'code', '') or '',
         'reading_level': latest.get('level') or student_user.reading_level or profile.get('reading_level') or profile.get('crla_classification') or '',
@@ -606,6 +623,8 @@ def _format_reading_report_text(report):
     lines = [
         "Reading Performance Report",
         f"Student: {report.get('student_name') or 'Student'}",
+        f"Grade Level: {report.get('grade_level') or 'Not yet available'}",
+        f"Joined Classes: {', '.join(report.get('joined_classes') or ['Not yet available'])}",
         f"Course: {report.get('course_name') or 'Course'} ({report.get('course_code') or 'No code'})",
         f"Reading Level / CRLA Classification: {report.get('reading_level') or 'Not yet available'}",
         metric("Accuracy", report.get('accuracy'), "%"),
@@ -620,6 +639,256 @@ def _format_reading_report_text(report):
     if report.get('assessment_title'):
         lines.insert(11, f"Assessment: {report.get('assessment_title')}")
     return "\n".join(lines)
+
+
+def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA', teacher_name=''):
+    """Create a polished certificate PDF for performance commendation emails."""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import landscape, A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, HRFlowable
+    except ImportError as exc:
+        logger.exception("ReportLab is not installed")
+        raise RuntimeError(f"PDF export is unavailable: {exc}")
+
+    buffer = BytesIO()
+    page_size = landscape(A4)
+    left_margin = 0.8 * inch
+    right_margin = 0.8 * inch
+    top_margin = 0.8 * inch
+    bottom_margin = 0.8 * inch
+    available_width = page_size[0] - left_margin - right_margin
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CertificateTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=24,
+        leading=28, textColor=colors.HexColor('#1f4e79'), alignment=TA_CENTER, spaceAfter=14,
+    )
+    subtitle_style = ParagraphStyle(
+        'CertificateSubtitle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=13,
+        leading=16, textColor=colors.HexColor('#8B3E2F'), alignment=TA_CENTER, spaceAfter=10,
+    )
+    body_style = ParagraphStyle(
+        'CertificateBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=12,
+        leading=16, textColor=colors.HexColor('#111827'), alignment=TA_CENTER, spaceAfter=8,
+    )
+    name_style = ParagraphStyle(
+        'CertificateName', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18,
+        leading=20, textColor=colors.HexColor('#111827'), alignment=TA_CENTER, spaceAfter=12,
+    )
+    signature_style = ParagraphStyle(
+        'CertificateSignature', parent=styles['BodyText'], fontName='Helvetica', fontSize=10,
+        leading=14, textColor=colors.HexColor('#374151'), alignment=TA_CENTER, spaceAfter=4,
+    )
+
+    if issued_on is None:
+        issued_on = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
+
+    elements = []
+    elements.append(Paragraph('PABASA', title_style))
+    elements.append(Paragraph('Certificate of Achievement', subtitle_style))
+    elements.append(Spacer(1, 0.15 * inch))
+    elements.append(Paragraph('This certificate is proudly presented to', body_style))
+    elements.append(Spacer(1, 0.08 * inch))
+    elements.append(Paragraph(student_name or 'Student Name', name_style))
+    elements.append(Spacer(1, 0.12 * inch))
+    elements.append(Paragraph(
+        'In recognition of your outstanding reading performance and dedication to improving your reading skills through the PABASA Reading Assessment System. Your hard work, perseverance, and commitment to learning are truly commendable. Keep up the excellent work and continue striving for success.',
+        body_style,
+    ))
+    elements.append(Spacer(1, 0.2 * inch))
+    elements.append(Paragraph(f'Presented this {issued_on}.', body_style))
+    elements.append(Spacer(1, 0.35 * inch))
+    elements.append(HRFlowable(width=available_width * 0.5, thickness=0.6, color=colors.HexColor('#8B3E2F')))
+    elements.append(Spacer(1, 0.04 * inch))
+    elements.append(Paragraph(school_name or 'PABASA School', signature_style))
+    elements.append(Paragraph('Principal / School Representative', signature_style))
+    elements.append(Paragraph(teacher_name or 'Teacher', signature_style))
+
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=left_margin, rightMargin=right_margin, topMargin=top_margin, bottomMargin=bottom_margin)
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def _build_reading_report_pdf(report, message='', course=None, teacher=None, recipient_email=''):
+    """Create a polished PDF attachment for course update / report emails."""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER
+        from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, HRFlowable
+    except ImportError as exc:
+        logger.exception("ReportLab is not installed")
+        raise RuntimeError(f"PDF export is unavailable: {exc}")
+
+    buffer = BytesIO()
+    page_size = A4
+    left_margin = 0.7 * inch
+    right_margin = 0.7 * inch
+    top_margin = 0.7 * inch
+    bottom_margin = 0.7 * inch
+    available_width = page_size[0] - left_margin - right_margin
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'ReportTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=20,
+        leading=24, textColor=colors.HexColor('#8B3E2F'), spaceAfter=4,
+    )
+    subtitle_style = ParagraphStyle(
+        'ReportSubtitle', parent=styles['BodyText'], fontName='Helvetica', fontSize=10,
+        leading=13, textColor=colors.HexColor('#4b5563'), spaceAfter=3,
+    )
+    section_style = ParagraphStyle(
+        'SectionTitle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12,
+        leading=14, textColor=colors.HexColor('#8B3E2F'), spaceAfter=6,
+    )
+    body_style = ParagraphStyle(
+        'ReportBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9.2,
+        leading=12, textColor=colors.HexColor('#111827'), spaceAfter=4,
+    )
+    meta_style = ParagraphStyle(
+        'MetaBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9.2,
+        leading=12, textColor=colors.HexColor('#111827'), spaceAfter=3,
+    )
+    note_style = ParagraphStyle(
+        'NoteBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9.2,
+        leading=12, textColor=colors.HexColor('#374151'), spaceAfter=4,
+    )
+
+    def _make_row(label, value):
+        return [Paragraph(str(label), body_style), Paragraph(str(value or 'Not yet available'), body_style)]
+
+    def _make_metrics_table(values):
+        rows = []
+        for label, value in values:
+            rows.append([Paragraph(str(label), body_style), Paragraph(str(value), body_style)])
+        table = Table(rows, colWidths=[2.3 * inch, available_width - 2.3 * inch], repeatRows=0)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f9fafb')),
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e5e7eb')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        return table
+
+    generated_at = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y %I:%M %p')
+    student_name = report.get('student_name') or 'Student'
+    joined_classes = report.get('joined_classes') or []
+    if isinstance(joined_classes, str):
+        class_text = joined_classes
+    else:
+        class_text = ', '.join([str(item) for item in joined_classes if item]) or 'Not yet available'
+
+    elements = []
+    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
+    header_parts = []
+    if logo_path.exists():
+        header_parts.append(Image(str(logo_path), width=0.75 * inch, height=0.75 * inch))
+    else:
+        header_parts.append(Paragraph('<b>PABASA</b>', title_style))
+    header_parts.append(Paragraph('PABASA Reading Report', title_style))
+    header_table = Table([[header_parts[0], header_parts[1]]], colWidths=[0.9 * inch, available_width - 0.9 * inch], repeatRows=0)
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    elements.extend([header_table, Spacer(1, 0.08 * inch)])
+    elements.append(Paragraph(f'Generated on {generated_at}', subtitle_style))
+    elements.append(Paragraph(f'Prepared for {student_name}', subtitle_style))
+    elements.append(Spacer(1, 0.08 * inch))
+    elements.append(HRFlowable(width=available_width, thickness=0.6, color=colors.HexColor('#8B3E2F')))
+    elements.append(Spacer(1, 0.12 * inch))
+
+    profile_rows = [
+        ['Student Name', report.get('student_name') or 'Student'],
+        ['Student ID', report.get('student_id') or 'Not yet available'],
+        ['Grade Level', report.get('grade_level') or 'Not yet available'],
+        ['Email', report.get('email') or 'Not yet available'],
+        ['Joined Classes', class_text],
+        ['Course', f"{report.get('course_name') or 'Course'} ({report.get('course_code') or 'No code'})"],
+    ]
+    profile_table = Table(profile_rows, colWidths=[1.7 * inch, available_width - 1.7 * inch], repeatRows=0)
+    profile_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fcfcfc')),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e5e7eb')),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(Paragraph('Student & Class Details', section_style))
+    elements.append(profile_table)
+    elements.append(Spacer(1, 0.12 * inch))
+
+    elements.append(Paragraph('Reading Overview', section_style))
+    metrics = [
+        ('Reading Level / CRLA Classification', report.get('reading_level') or 'Not yet available'),
+        ('Accuracy', f"{report.get('accuracy') or 'Not yet available'}%" if report.get('accuracy') not in (None, '') else 'Not yet available'),
+        ('Words Per Minute', f"{report.get('wpm') or 'Not yet available'} WPM" if report.get('wpm') not in (None, '') else 'Not yet available'),
+        ('Fluency Score', f"{report.get('fluency_score') or 'Not yet available'}%" if report.get('fluency_score') not in (None, '') else 'Not yet available'),
+        ('Pronunciation Score', f"{report.get('pronunciation_score') or 'Not yet available'}%" if report.get('pronunciation_score') not in (None, '') else 'Not yet available'),
+        ('Time Score', f"{report.get('time_score') or 'Not yet available'}%" if report.get('time_score') not in (None, '') else 'Not yet available'),
+        ('Total Score', f"{report.get('total_score') or 'Not yet available'}%" if report.get('total_score') not in (None, '') else 'Not yet available'),
+    ]
+    elements.append(_make_metrics_table(metrics))
+    elements.append(Spacer(1, 0.12 * inch))
+
+    elements.append(Paragraph('Assessment Results', section_style))
+    assessment_text = [
+        f"Latest completed assessment: {report.get('completed_at') or 'No completed assessment yet'}",
+        f"Assessment title: {report.get('assessment_title') or 'Not yet available'}",
+        f"Assessment type: {report.get('assessment_type') or 'Not yet available'}",
+        f"Summary: {report.get('summary') or 'No summary available'}",
+    ]
+    elements.extend([Paragraph(item, note_style) for item in assessment_text])
+    elements.append(Spacer(1, 0.12 * inch))
+
+    elements.append(Paragraph('Recommendations & Support', section_style))
+    elements.append(Paragraph(report.get('recommendation') or 'Continue regular reading practice and teacher-guided support.', note_style))
+
+    if message:
+        elements.append(Spacer(1, 0.08 * inch))
+        elements.append(Paragraph('Teacher Comments', section_style))
+        elements.append(Paragraph(message, note_style))
+
+    if teacher or recipient_email:
+        elements.append(Spacer(1, 0.08 * inch))
+        elements.append(Paragraph('Additional Details', section_style))
+        extra_lines = []
+        if teacher:
+            extra_lines.append(f"Teacher: {teacher.first_name} {teacher.last_name}".strip())
+        if recipient_email:
+            extra_lines.append(f"Recipient Email: {recipient_email}")
+        if course:
+            extra_lines.append(f"Course: {course.title} ({course.code})")
+        elements.extend([Paragraph(item, note_style) for item in extra_lines])
+
+    def _draw_footer(canvas_obj, doc_obj):
+        canvas_obj.saveState()
+        canvas_obj.setFont('Helvetica', 8)
+        canvas_obj.setFillColor(colors.HexColor('#6b7280'))
+        canvas_obj.drawString(left_margin, 0.38 * inch, 'PABASA Automated Reading Assessment System')
+        canvas_obj.drawCentredString(page_size[0] / 2.0, 0.38 * inch, f'Page {canvas_obj.getPageNumber()}')
+        canvas_obj.drawRightString(page_size[0] - right_margin, 0.38 * inch, f'Generated {generated_at}')
+        canvas_obj.restoreState()
+
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=left_margin, rightMargin=right_margin, topMargin=top_margin, bottomMargin=bottom_margin)
+    doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 # Authentication functions
 def generate_custom_id(role):
@@ -3124,16 +3393,97 @@ def send_course_update(request):
 
             student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or 'Student'
             personalized_message = message_template.replace('{name}', student_name)
-            subject = f"PABASA Course Update: {course.title}"
             report = _latest_student_reading_report(student, sections=course_sections, course=course)
+            scheduled_at_input = str(data.get('scheduled_at') or data.get('scheduledAt') or data.get('scheduled_at_input') or '').strip()
+            reading_material_input = str(data.get('reading_material') or '').strip()
             report_text = _format_reading_report_text(report)
-            email_body = (
-                f"Course: {course.title} ({course.code})\n"
-                f"Update Type: {update_type}\n\n"
-                f"Teacher Comments:\n"
-                f"{personalized_message}\n\n"
-                f"{report_text}"
-            )
+            normalized_update_type = update_type.lower()
+
+            attachment_name = None
+            attachment_bytes = None
+            attachment_mime = 'application/pdf'
+            report_attachment_included = False
+
+            if normalized_update_type == 'followup':
+                subject = "Student Reading Progress Report – PABASA"
+                report_attachment_included = True
+                attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
+                email_body = (
+                    "Dear Parent/Guardian,\n\n"
+                    "We hope you are doing well.\n\n"
+                    "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+                    "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
+                    "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
+                    "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
+                    "Thank you for your continued support and partnership in your child's learning.\n\n"
+                    "Sincerely,\n\n"
+                    "PABASA Team"
+                )
+                include_attachment = True
+            elif normalized_update_type == 'commendation':
+                subject = "Performance Commendation – PABASA"
+                certificate_date = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
+                certificate_pdf = _build_certificate_pdf(
+                    student_name=student_name,
+                    issued_on=certificate_date,
+                    school_name='PABASA',
+                    teacher_name=f"{teacher_user.first_name} {teacher_user.last_name}".strip() or 'Teacher',
+                )
+                email_body = (
+                    f"Dear {student_name},\n\n"
+                    "Congratulations on your continued effort and success in reading! "
+                    "We are very proud of the progress you have made and the dedication you have shown.\n\n"
+                    f"{personalized_message}\n\n"
+                    "A certificate is attached for your recognition. "
+                    "This Certificate of Achievement celebrates your outstanding reading performance and dedication to learning. "
+                    "Please keep it as a reminder of your outstanding reading achievement.\n\n"
+                    "Sincerely,\n\n"
+                    "PABASA Team"
+                )
+                include_attachment = True
+                attachment_name = f"{student_name.replace(' ', '_')}_certificate_of_achievement.pdf"
+                attachment_bytes = certificate_pdf
+                attachment_mime = 'application/pdf'
+            elif normalized_update_type == 'assessment':
+                subject = "Scheduled Assessment Notice – PABASA"
+                assessment_title = str(data.get('assessment_title') or 'Reading Assessment').strip() or 'Reading Assessment'
+                scheduled_at = str(scheduled_at_input or 'TBD').strip() or 'TBD'
+                reading_material = reading_material_input or str(data.get('reading_material') or 'Not specified').strip() or 'Not specified'
+
+                try:
+                    from datetime import datetime
+                    parsed_dt = datetime.fromisoformat(scheduled_at.replace('Z', '+00:00'))
+                    if parsed_dt.tzinfo is None:
+                        parsed_dt = parsed_dt.replace(tzinfo=timezone.get_current_timezone())
+                    scheduled_at_display = timezone.localtime(parsed_dt, timezone.get_default_timezone()).strftime('%B %d, %Y at %I:%M %p')
+                except Exception:
+                    scheduled_at_display = scheduled_at
+
+                email_body = (
+                    f"Dear {student_name},\n\n"
+                    f"This is a reminder that your scheduled reading assessment, {assessment_title}, is coming up.\n\n"
+                    f"Scheduled Date and Time: {scheduled_at_display}\n"
+                    f"Reading Material: {reading_material}\n\n"
+                    f"{personalized_message}\n\n"
+                    "Please prepare ahead of time and be ready to do your best.\n\n"
+                    "Sincerely,\n\n"
+                    "PABASA Team"
+                )
+                include_attachment = False
+            else:
+                subject = "Student Reading Progress Report – PABASA"
+                email_body = (
+                    "Dear Parent/Guardian,\n\n"
+                    "We hope you are doing well.\n\n"
+                    "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+                    "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
+                    "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
+                    "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
+                    "Thank you for your continued support and partnership in your child's learning.\n\n"
+                    "Sincerely,\n\n"
+                    "PABASA Team"
+                )
+                include_attachment = True
             note_text = (
                 f"Course: {course.title} ({course.code})\n"
                 f"Update Type: {update_type}\n"
@@ -3143,7 +3493,28 @@ def send_course_update(request):
                 f"{report_text}"
             )
 
-            send_mail(subject, email_body, sender, [student.email], fail_silently=False)
+            email_message = EmailMultiAlternatives(
+                subject,
+                email_body,
+                sender,
+                [student.email],
+            )
+            if include_attachment:
+                try:
+                    if normalized_update_type == 'commendation':
+                        email_message.attach(attachment_name, attachment_bytes, attachment_mime)
+                    else:
+                        pdf_bytes = _build_reading_report_pdf(
+                            report,
+                            message=personalized_message,
+                            course=course,
+                            teacher=teacher_user,
+                            recipient_email=student.email,
+                        )
+                        email_message.attach(attachment_name, pdf_bytes, 'application/pdf')
+                except Exception:
+                    logger.exception('Failed to build PDF attachment for course update')
+            email_message.send(fail_silently=False)
             Note.objects.create(
                 teacher=teacher_user,
                 student=student,
@@ -3155,6 +3526,7 @@ def send_course_update(request):
                 'email': student.email,
                 'name': student_name,
                 'report_summary': report.get('summary'),
+                'report_included': report_attachment_included,
             })
 
         if not sent:
@@ -3169,7 +3541,7 @@ def send_course_update(request):
             'sent_count': len(sent),
             'sent': sent,
             'skipped': skipped,
-            'report_included': True,
+            'report_included': any(item.get('report_included', False) for item in sent),
         })
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
@@ -3551,9 +3923,10 @@ def get_teacher_courses_api(request):
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
-                    'material_source': material_source,
-                    'is_shared_material': is_shared_material,
-                    'shared_owner_teacher_name': material_teacher_name if is_shared_material else None,
+                    'source_type': getattr(m, 'source_type', 'personal') or 'personal',
+                    'material_source': getattr(m, 'source_type', 'personal') or 'personal',
+                    'is_shared_material': (getattr(m, 'source_type', 'personal') or 'personal') == 'shared',
+                    'shared_owner_teacher_name': material_teacher_name if (getattr(m, 'source_type', 'personal') or 'personal') == 'shared' else None,
                 })
 
             # Practices (normalized)
@@ -4101,6 +4474,22 @@ def get_teacher_classes(request):
         class_list = []
         for cls in classes:
             student_count = _section_student_count(cls)
+            section_materials = Material.objects.filter(
+                Q(section=cls) | Q(assigned_sections=cls) | Q(courses__sections=cls),
+                is_active=True,
+            ).distinct()
+            represented_asm_ids = section_materials.exclude(assessment=None).values_list('assessment_id', flat=True)
+            assessment_material_count = section_materials.filter(Q(type='assessment') | Q(type='both')).count()
+            assessment_material_count += Assessment.objects.filter(section=cls, is_active=True).exclude(id__in=represented_asm_ids).count()
+
+            practice_material_count = section_materials.filter(Q(type='practice') | Q(type='both')).count()
+            practice_material_count += Practice.objects.filter(
+                Q(section=cls) |
+                Q(teacher=teacher_user) |
+                Q(section__isnull=True, teacher=teacher_user) |
+                Q(section__isnull=True, teacher__role='admin'),
+                is_active=True,
+            ).count()
             class_list.append({
                 'id': cls.id,
                 'code': cls.class_code,
@@ -4111,6 +4500,8 @@ def get_teacher_classes(request):
                 'description': cls.description,
                 'header': cls.header,
                 'students': student_count,
+                'assessment_material_count': assessment_material_count,
+                'practice_material_count': practice_material_count,
                 'teacher_email': request.session.get('email', ''),
             })
 
@@ -4627,6 +5018,21 @@ def extract_reading_material_file(request):
         return JsonResponse({'success': False, 'error': 'Could not extract text from that file.'}, status=500)
 
 
+def _split_material_content(text, rtype, requested_reading_type=''):
+    if not text:
+        return []
+    if rtype == 'word':
+        return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
+    if rtype == 'sentence':
+        return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+    if rtype == 'paragraph':
+        paragraphs = [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
+        if paragraphs:
+            return paragraphs
+        return [text.strip()]
+    return [text]
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -4644,6 +5050,7 @@ def add_reading_material(request):
         requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
         source_type  = (data.get('source_type') or 'personal').strip().lower()
         class_code   = (data.get('class_code') or '').strip()
+        source_type  = (data.get('source_type') or data.get('origin') or '').strip().lower()
         language     = (data.get('language') or 'English').strip() or 'English'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
@@ -4665,6 +5072,8 @@ def add_reading_material(request):
             errors['content'] = 'Material content is required.'
         if status not in ('published', 'draft', 'scheduled'):
             errors['status'] = 'Status is required.'
+        if source_type and source_type not in ('personal', 'shared'):
+            errors['source_type'] = 'Invalid source type.'
         if status == 'scheduled' and not scheduled_at_str:
             errors['scheduled_at'] = 'Scheduled date & time is required.'
         if week_error:
@@ -4673,6 +5082,8 @@ def add_reading_material(request):
         if errors:
             logger.warning(f"add_reading_material validation failed: {errors}")
             return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        source_type = source_type if source_type in ('personal', 'shared') else 'personal'
 
         # ── Auto-detect reading_type (Category) ──────────────────────────
         # Since we removed the field, we determine it by analyzing the content
@@ -4693,20 +5104,7 @@ def add_reading_material(request):
 
         reading_type = requested_reading_type if requested_reading_type == 'paragraph' else detect_reading_type(content)
 
-        def split_content(text, rtype):
-            if not text:
-                return []
-            if rtype == 'word':
-                return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
-            if rtype == 'sentence':
-                return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
-            if rtype == 'paragraph':
-                if requested_reading_type == 'paragraph' or has_multiple_period_sentences(text):
-                    return [text.strip()]
-                return [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
-            return [text]
-        
-        tokens = split_content(content, reading_type)
+        tokens = _split_material_content(content, reading_type, requested_reading_type)
 
         # ── resolve teacher & class ─────────────────────────────────────────
         user_id = request.session.get('user_id')
@@ -4830,6 +5228,7 @@ def add_reading_material(request):
                 'title': m.title,
                 'item_type': m.item_type,
                 'type': m.type,
+                'source_type': m.source_type,
                 'content': m.content_text,
                 'status': m.status,
                 'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if m.scheduled_at else None,
@@ -4941,7 +5340,7 @@ def teacher_update_material(request):
             
             material.item_type = 'paragraph' if requested_reading_type == 'paragraph' else detect_type(content)
             content_json = dict(material.content_json or {})
-            content_json['items'] = content.split('\n') if material.item_type == 'word' else [content]
+            content_json['items'] = _split_material_content(content, material.item_type, requested_reading_type)
             content_json['language'] = language
             material.content_json = content_json
         else:
@@ -5346,11 +5745,40 @@ def get_teacher_students_api(request):
     try:
         user_id = request.session.get('user_id')
         teacher = User.objects.get(id=user_id)
+
+        now = timezone.now()
+        thirty_days_ago = now - timedelta(days=30)
+        seven_days_ago = now - timedelta(days=7)
+
+        def _normalize_dashboard_level(value):
+            text = str(value or '').strip().lower().replace('_', ' ').replace('-', ' ')
+            if not text:
+                return None
+            if 'low' in text and 'emerging' in text:
+                return 'Low Emerging Readers'
+            if 'high' in text and 'emerging' in text:
+                return 'High Emerging Readers'
+            if 'develop' in text:
+                return 'Developing Readers'
+            if 'transition' in text:
+                return 'Transitioning Readers'
+            if 'grade' in text or text in {'g', 'gr'}:
+                return 'Readers at Grade Level'
+            return None
         
         # Get all active sections for this teacher
         sections = Section.objects.filter(teacher=teacher, is_active=True)
         
         student_map = {}
+        level_counts = {
+            'Low Emerging Readers': 0,
+            'High Emerging Readers': 0,
+            'Developing Readers': 0,
+            'Transitioning Readers': 0,
+            'Readers at Grade Level': 0,
+        }
+        attempt_history = {}
+        latest_scores = {}
         for section in sections:
             enrolled = section.get_enrolled_students(active_only=True)
             for entry in enrolled:
@@ -5406,12 +5834,30 @@ def get_teacher_students_api(request):
                 student_id = attempt.get('student_id')
                 if not student_id:
                     continue
-                completed_at = attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at') or ''
-                current = latest_scores.get(student_id)
-                if current and str(current.get('completed_at', '')) >= str(completed_at):
+                completed_dt = _parse_attempt_timestamp(
+                    attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at')
+                )
+                if not completed_dt:
+                    completed_dt = now
+
+                score_value = _as_float(attempt.get('total_score'), default=None)
+                if score_value is None:
+                    score_value = _as_float(attempt.get('accuracy'), default=None)
+                if score_value is None:
+                    score_value = _as_float(attempt.get('wpm'), default=None)
+
+                sid_key = str(student_id)
+                attempt_history.setdefault(sid_key, []).append({
+                    'completed_at': completed_dt,
+                    'score': score_value,
+                })
+
+                current = latest_scores.get(sid_key)
+                if current and current.get('completed_at_dt') and current['completed_at_dt'] >= completed_dt:
                     continue
-                latest_scores[student_id] = {
-                    'completed_at': completed_at,
+                latest_scores[sid_key] = {
+                    'completed_at_dt': completed_dt,
+                    'completed_at': completed_dt.isoformat(),
                     'assessment_title': assessment.title,
                     'assessment_type': assessment.assessment_type,
                     'level': attempt.get('crla_classification') or attempt.get('classification'),
@@ -5435,7 +5881,20 @@ def get_teacher_students_api(request):
                             profile = tag['student_profile']
                             break
                 
-                latest = latest_scores.get(user.id, {})
+                latest = latest_scores.get(str(user.id), {})
+                history = sorted(attempt_history.get(str(user.id), []), key=lambda item: item['completed_at'])
+                recent_history = [item for item in history if item.get('completed_at') and item['completed_at'] >= thirty_days_ago and item.get('score') is not None]
+                if len(recent_history) >= 2:
+                    first_score = recent_history[0]['score']
+                    last_score = recent_history[-1]['score']
+                    if first_score not in (None, 0):
+                        improvement = ((last_score - first_score) / first_score) * 100
+                    else:
+                        improvement = last_score - (first_score or 0)
+                else:
+                    improvement = 0
+
+                last_active = history[-1]['completed_at'] if history else None
                 sdata.update({
                     'level': latest.get('level') or user.reading_level or profile.get('reading_level', 'Developing Readers'),
                     'accuracy': latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy', '0'),
@@ -5448,9 +5907,63 @@ def get_teacher_students_api(request):
                     'assessment_title': latest.get('assessment_title', profile.get('last_assessment_title')),
                     'assessment_type': latest.get('assessment_type'),
                     'has_completed_assessment': bool(latest),
+                    'latest_score': latest.get('total_score') if latest.get('total_score') is not None else latest.get('accuracy') if latest.get('accuracy') is not None else latest.get('wpm'),
+                    'last_active_at': last_active.isoformat() if last_active else None,
+                    'improvement_30d': round(improvement, 1),
                 })
+                normalized_level = _normalize_dashboard_level(sdata.get('level'))
+                if normalized_level and normalized_level in level_counts:
+                    level_counts[normalized_level] += 1
                 results.append(sdata)
-        return JsonResponse({'success': True, 'students': results})
+
+        active_this_week = len({
+            sid for sid, attempts in attempt_history.items()
+            if any(item.get('completed_at') and item['completed_at'] >= seven_days_ago for item in attempts)
+        })
+
+        top_performer_name = '—'
+        top_performer_score = None
+        improvement_values = []
+
+        for student in results:
+            sid_key = str(student['id'])
+            latest = latest_scores.get(sid_key, {})
+            score_value = latest.get('total_score')
+            if score_value is None:
+                score_value = latest.get('accuracy')
+            if score_value is None:
+                score_value = latest.get('wpm')
+
+            try:
+                score_value = float(score_value) if score_value is not None else None
+            except (TypeError, ValueError):
+                score_value = None
+
+            if score_value is not None and (top_performer_score is None or score_value > top_performer_score):
+                top_performer_score = score_value
+                top_performer_name = student['name']
+
+            improvement_value = student.get('improvement_30d')
+            if improvement_value is not None:
+                improvement_values.append(float(improvement_value))
+
+        avg_improvement = round(sum(improvement_values) / len(improvement_values), 1) if improvement_values else 0
+        needs_support_count = level_counts['Low Emerging Readers'] + level_counts['High Emerging Readers']
+        grade_level_ready_count = level_counts['Readers at Grade Level']
+
+        dashboard_metrics = {
+            'total_students': len(results),
+            'needs_support_count': needs_support_count,
+            'grade_level_ready_count': grade_level_ready_count,
+            'avg_improvement_30d': avg_improvement,
+            'active_this_week_count': active_this_week,
+            'top_performer_name': top_performer_name,
+            'top_performer_score': top_performer_score,
+            'level_counts': level_counts,
+            'average_score': round(sum((float(s.get('latest_score')) for s in results if s.get('latest_score') not in (None, '')), 0) / max(1, len([s for s in results if s.get('latest_score') not in (None, '')])), 1) if any(s.get('latest_score') not in (None, '') for s in results) else 0,
+        }
+
+        return JsonResponse({'success': True, 'students': results, 'level_counts': level_counts, 'dashboard_metrics': dashboard_metrics, 'total_students': len(results)})
     except Exception as e:
         logger.error(f"Error in get_teacher_students_api: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -5907,10 +6420,11 @@ def _principal_report_csv_response(report_type, headers, rows):
 def _principal_report_pdf_response(request, analytics, report_type, grade_filter, headers, rows):
     try:
         from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import inch
-        from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        from reportlab.pdfgen import canvas
+        from reportlab.platypus import HRFlowable, Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
     except ImportError as exc:
         logger.exception("ReportLab is not installed")
         return HttpResponse(f"PDF export is unavailable: {exc}", status=500)
@@ -5925,11 +6439,11 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
             max_len = max(len(value) for value in values) if values else 0
             column_texts.append(max_len)
 
-        min_width = 0.95 * inch
+        min_width = 0.9 * inch
         max_width = 2.2 * inch
         widths = []
         for length in column_texts:
-            estimated = max(min_width, min(max_width, length * 4.7))
+            estimated = max(min_width, min(max_width, length * 4.5))
             widths.append(estimated)
 
         total_width = sum(widths)
@@ -5942,23 +6456,270 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
 
         return widths
 
+    def _format_percentage(value):
+        try:
+            return f"{float(value):.1f}%"
+        except (TypeError, ValueError):
+            return str(value or '0%')
+
+    def _format_count(value):
+        try:
+            return f"{int(float(value))}"
+        except (TypeError, ValueError):
+            return str(value or '0')
+
+    def _status_style(status):
+        normalized = str(status or '').strip().lower()
+        if normalized in {'completed', 'done', 'finished'}:
+            return '#2e7d32', '#e8f5e9', 'Completed'
+        if normalized in {'in progress', 'in-progress', 'ongoing'}:
+            return '#f9a825', '#fff8e1', 'In Progress'
+        return '#c62828', '#ffebee', 'Pending'
+
+    def _build_card(title, value, subtitle, accent, icon):
+        card = Table(
+            [[
+                Paragraph(f"<font color='{accent}' size='13'><b>{icon}</b></font>", card_icon_style),
+            ], [
+                Paragraph(f"<font size='16' color='{accent}'><b>{value}</b></font>", card_value_style),
+            ], [
+                Paragraph(f"<b>{title}</b>", card_title_style),
+            ], [
+                Paragraph(subtitle, card_subtitle_style),
+            ]],
+            colWidths=[card_width],
+            repeatRows=0,
+        )
+        card.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fcfcfc')),
+            ('LINEABOVE', (0, 0), (-1, 0), 0.8, colors.HexColor(accent)),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#ececec')),
+        ]))
+        return card
+
     buffer = BytesIO()
-    left_margin = 0.6 * inch
-    right_margin = 0.6 * inch
-    top_margin = 0.7 * inch
-    bottom_margin = 0.85 * inch
-    portrait_page = A4
-    landscape_page = landscape(A4)
-    portrait_available_width = portrait_page[0] - left_margin - right_margin
-    landscape_available_width = landscape_page[0] - left_margin - right_margin
+    left_margin = 0.8 * inch
+    right_margin = 0.8 * inch
+    top_margin = 0.8 * inch
+    bottom_margin = 0.8 * inch
+    page_size = A4
+    available_width = page_size[0] - left_margin - right_margin
+    card_width = (available_width - 0.2 * inch) / 2.0
 
     preview_headers = [str(header) for header in headers]
     preview_rows = [[str(value) for value in row] for row in rows]
-    portrait_widths = _estimate_column_widths(preview_headers, preview_rows, portrait_available_width)
-    landscape_widths = _estimate_column_widths(preview_headers, preview_rows, landscape_available_width)
-    use_landscape = sum(portrait_widths) > portrait_available_width or (len(preview_headers) > 5 and sum(landscape_widths) <= landscape_available_width)
-    page_size = landscape_page if use_landscape else portrait_page
-    available_width = landscape_available_width if use_landscape else portrait_available_width
+    column_widths = _estimate_column_widths(preview_headers, preview_rows, available_width)
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'ReportTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        leading=24,
+        textColor=colors.HexColor('#8B3E2F'),
+        spaceAfter=4,
+        fontName='Helvetica-Bold',
+    )
+    subtitle_style = ParagraphStyle(
+        'ReportSubtitle',
+        parent=styles['BodyText'],
+        fontSize=10,
+        leading=13,
+        textColor=colors.HexColor('#4b5563'),
+        spaceAfter=4,
+    )
+    section_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=13,
+        leading=15,
+        textColor=colors.HexColor('#8B3E2F'),
+        spaceAfter=6,
+        fontName='Helvetica-Bold',
+    )
+    table_font_size = 8.6 if len(preview_headers) >= 5 else 9.0
+    body_style = ParagraphStyle(
+        'ReportBody',
+        parent=styles['BodyText'],
+        fontSize=table_font_size,
+        leading=table_font_size + 1.2,
+        textColor=colors.HexColor('#111827'),
+        allowWidows=1,
+        allowOrphans=1,
+    )
+    card_title_style = ParagraphStyle(
+        'CardTitle',
+        parent=styles['BodyText'],
+        fontSize=9.5,
+        leading=11,
+        textColor=colors.HexColor('#374151'),
+        spaceAfter=1,
+        fontName='Helvetica-Bold',
+    )
+    card_value_style = ParagraphStyle(
+        'CardValue',
+        parent=styles['BodyText'],
+        fontSize=15,
+        leading=16,
+        textColor=colors.HexColor('#111827'),
+        spaceAfter=2,
+        fontName='Helvetica-Bold',
+    )
+    card_icon_style = ParagraphStyle(
+        'CardIcon',
+        parent=styles['BodyText'],
+        fontSize=12,
+        leading=13,
+        textColor=colors.HexColor('#8B3E2F'),
+        spaceAfter=2,
+    )
+    card_subtitle_style = ParagraphStyle(
+        'CardSubtitle',
+        parent=styles['BodyText'],
+        fontSize=8.4,
+        leading=10,
+        textColor=colors.HexColor('#6b7280'),
+        spaceAfter=2,
+    )
+    meta_style = ParagraphStyle(
+        'Meta',
+        parent=styles['BodyText'],
+        fontSize=8.6,
+        leading=10,
+        textColor=colors.HexColor('#6b7280'),
+        spaceAfter=2,
+    )
+
+    report_label = {
+        'school': 'School Performance',
+        'grade': 'Grade-Level',
+        'assessment': 'Assessment',
+    }.get(report_type, 'School Performance')
+
+    local_now = timezone.localtime(timezone.now(), timezone.get_default_timezone())
+    generated_at = local_now.strftime('%B %d, %Y %I:%M %p')
+    report_title = 'PABASA Principal Report'
+    school_name = analytics.get('school_name') or 'Salawag Elementary School'
+
+    elements = []
+    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
+    header_table = Table(
+        [[
+            Image(str(logo_path), width=0.7 * inch, height=0.7 * inch) if logo_path.exists() else Paragraph('<b>PABASA</b>', styles['Heading3']),
+            Paragraph(f"<b>{report_title}</b>", title_style),
+        ], [
+            '',
+            Paragraph(school_name, subtitle_style),
+        ], [
+            '',
+            Paragraph(f"Report Type: {report_label}", subtitle_style),
+        ], [
+            '',
+            Paragraph(f"Date Generated: {generated_at}", subtitle_style),
+        ]],
+        colWidths=[0.95 * inch, available_width - 0.95 * inch],
+        repeatRows=0,
+    )
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    elements.extend([header_table, Spacer(1, 0.12 * inch), HRFlowable(width=available_width, thickness=0.5, color=colors.HexColor('#8B3E2F')), Spacer(1, 0.16 * inch)])
+
+    if grade_filter:
+        elements.append(Paragraph(f'Grade Level: {grade_filter}', subtitle_style))
+        elements.append(Spacer(1, 0.06 * inch))
+
+    elements.append(Paragraph('Summary Overview', section_style))
+    elements.append(Spacer(1, 0.06 * inch))
+
+    summary_cards = [
+        _build_card('Total Students', _format_count(analytics.get('total_students', 0)), 'Enrollment overview', '#8B3E2F', '◉'),
+        _build_card('Total Teachers', _format_count(analytics.get('total_teachers', 0)), 'Active school staff', '#4CAF50', '◌'),
+        _build_card('Total Assessments', _format_count(analytics.get('total_assessments', 0)), 'Assigned reading tasks', '#4A90E2', '◍'),
+        _build_card('Completed', _format_count(analytics.get('completed_assessments', 0)), 'Finished assessments', '#2e7d32', '✓'),
+        _build_card('In Progress', _format_count(analytics.get('in_progress_assessments', 0)), 'Currently active', '#FFC107', '↺'),
+        _build_card('Pending', _format_count(analytics.get('pending_assessments', 0)), 'Awaiting action', '#E53935', '•'),
+        _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'Overall progress', '#8B3E2F', '%'),
+        _build_card('Average Score', _format_percentage(analytics.get('average_score', 0)), 'Reading mastery', '#4CAF50', '★'),
+    ]
+    summary_rows = [summary_cards[i:i + 2] for i in range(0, len(summary_cards), 2)]
+    summary_grid = Table(summary_rows, colWidths=[card_width, card_width], repeatRows=0)
+    summary_grid.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('SPACING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.extend([summary_grid, Spacer(1, 0.12 * inch)])
+
+    progress_summary = Table([
+        [Paragraph('Assessment Snapshot', card_title_style)],
+        [Paragraph(f"Completed: {_format_count(analytics.get('completed_assessments', 0))}   In Progress: {_format_count(analytics.get('in_progress_assessments', 0))}   Pending: {_format_count(analytics.get('pending_assessments', 0))}", meta_style)],
+        [Paragraph(f"Overall Completion: {_format_percentage(analytics.get('completion_rate', 0))}   Average Score: {_format_percentage(analytics.get('average_score', 0))}", meta_style)],
+    ], colWidths=[available_width], repeatRows=0)
+    progress_summary.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f8f8')),
+        ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#e5e7eb')),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.extend([progress_summary, Spacer(1, 0.12 * inch)])
+
+    elements.append(Paragraph('Detailed Report', section_style))
+    elements.append(Spacer(1, 0.06 * inch))
+
+    table_rows = [[Paragraph(str(value), body_style) for value in headers]]
+    for row in rows:
+        styled_row = []
+        for idx, value in enumerate(row):
+            cell_text = str(value)
+            if headers and str(headers[idx]).strip().lower() == 'status':
+                status_color, _, status_label = _status_style(value)
+                cell_text = f"<font color='{status_color}'><b>{status_label}</b></font>"
+            styled_row.append(Paragraph(cell_text, body_style))
+        table_rows.append(styled_row)
+
+    data_table = Table(table_rows, repeatRows=1, splitByRow=0, colWidths=column_widths)
+    data_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8B3E2F')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#d1d5db')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#fcfcfc'), colors.HexColor('#f8f8f8')]),
+        ('FONTSIZE', (0, 0), (-1, -1), table_font_size),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
+    ]))
+    elements.append(data_table)
+
+    def _draw_footer(canvas_obj, doc_obj):
+        canvas_obj.saveState()
+        canvas_obj.setFont('Helvetica', 8)
+        canvas_obj.setFillColor(colors.HexColor('#6b7280'))
+        canvas_obj.drawString(left_margin, 0.38 * inch, 'PABASA Automated Reading Assessment System')
+        canvas_obj.drawCentredString(page_size[0] / 2.0, 0.38 * inch, f'Page {canvas_obj.getPageNumber()}')
+        canvas_obj.drawRightString(page_size[0] - right_margin, 0.38 * inch, f'Confidential School Report • Generated {generated_at}')
+        canvas_obj.restoreState()
 
     doc = SimpleDocTemplate(
         buffer,
@@ -5968,146 +6729,10 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
         topMargin=top_margin,
         bottomMargin=bottom_margin,
     )
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'ReportTitle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        leading=22,
-        textColor=colors.HexColor('#7c2d12'),
-        spaceAfter=6,
-        fontName='Helvetica-Bold',
-    )
-    subtitle_style = ParagraphStyle(
-        'ReportSubtitle',
-        parent=styles['BodyText'],
-        fontSize=10,
-        leading=13,
-        textColor=colors.HexColor('#4b5563'),
-        spaceAfter=8,
-    )
-    section_style = ParagraphStyle(
-        'SectionTitle',
-        parent=styles['Heading2'],
-        fontSize=12,
-        leading=14,
-        textColor=colors.HexColor('#7c2d12'),
-        spaceAfter=6,
-        fontName='Helvetica-Bold',
-    )
-    table_font_size = 8.0 if len(preview_headers) >= 6 else 8.4
-    body_style = ParagraphStyle(
-        'ReportBody',
-        parent=styles['BodyText'],
-        fontSize=table_font_size,
-        leading=table_font_size + 1.4,
-        textColor=colors.HexColor('#111827'),
-        allowWidows=1,
-        allowOrphans=1,
-    )
-    header_style = ParagraphStyle(
-        'ReportHeader',
-        parent=body_style,
-        fontName='Helvetica-Bold',
-        textColor=colors.HexColor('#4c1d95'),
-    )
-
-    def _draw_footer(canvas, doc):
-        canvas.saveState()
-        canvas.setFont('Helvetica', 8)
-        canvas.setFillColor(colors.HexColor('#6b7280'))
-        canvas.drawString(left_margin, 0.35 * inch, 'PABASA Principal Report')
-        canvas.drawRightString(page_size[0] - right_margin, 0.35 * inch, f'Page {canvas.getPageNumber()}')
-        canvas.restoreState()
-
-    report_label = {
-        'school': 'School Performance',
-        'grade': 'Grade-Level',
-        'assessment': 'Assessment',
-    }.get(report_type, 'School Performance')
-
-    generated_at = timezone.localtime(timezone.now()).strftime('%B %d, %Y %I:%M %p')
-    report_title = 'PABASA Principal Report'
-    school_name = analytics.get('school_name') or 'Salawag Elementary School'
-
-    elements = []
-    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
-    if logo_path.exists():
-        elements.append(Image(str(logo_path), width=0.95 * inch, height=0.95 * inch))
-    else:
-        elements.append(Paragraph('<b>PABASA</b>', styles['Heading3']))
-
-    elements.extend([
-        Paragraph(report_title, title_style),
-        Paragraph(school_name, subtitle_style),
-        Paragraph(f'Generated: {generated_at}', subtitle_style),
-        Paragraph(f'Report Type: {report_label}', subtitle_style),
-    ])
-    if grade_filter:
-        elements.append(Paragraph(f'Grade Level: {grade_filter}', subtitle_style))
-    elements.append(Spacer(1, 0.12 * inch))
-
-    summary_rows = [
-        ['Metric', 'Value'],
-        ['School Name', school_name],
-        ['Total Students', analytics.get('total_students', 0)],
-        ['Total Teachers', analytics.get('total_teachers', 0)],
-        ['Total Assessments', analytics.get('total_assessments', 0)],
-        ['Completed Assessments', analytics.get('completed_assessments', 0)],
-        ['In Progress Assessments', analytics.get('in_progress_assessments', 0)],
-        ['Pending Assessments', analytics.get('pending_assessments', 0)],
-        ['Overall Completion Rate', f"{analytics.get('completion_rate', 0)}%"],
-        ['Average Score', f"{analytics.get('average_score', 0)}%"],
-    ]
-    summary_table = Table(summary_rows, repeatRows=1, colWidths=[2.3 * inch, 4.8 * inch])
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7c2d12')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#d1d5db')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('PADDING', (0, 0), (-1, -1), 5),
-    ]))
-    elements.extend([
-        Paragraph('Summary Metrics', section_style),
-        Spacer(1, 0.06 * inch),
-        summary_table,
-        Spacer(1, 0.2 * inch),
-        Paragraph('Detailed Report Data', section_style),
-        Spacer(1, 0.06 * inch),
-    ])
-
-    table_rows = [[Paragraph(value, body_style) for value in headers]]
-    for row in rows:
-        table_rows.append([Paragraph(str(value), body_style) for value in row])
-
-    column_widths = _estimate_column_widths(preview_headers, preview_rows, available_width)
-    data_table = Table(table_rows, repeatRows=1, splitByRow=1, colWidths=column_widths)
-    data_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3e8ff')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#4c1d95')),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#d1d5db')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#faf5ff')]),
-        ('FONTSIZE', (0, 0), (-1, -1), table_font_size),
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
-    ]))
-    elements.append(data_table)
-
     doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
     buffer.seek(0)
 
-    filename = f"principal_{report_type}_report_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    filename = f"principal_{report_type}_report_{local_now.strftime('%Y%m%d_%H%M%S')}.pdf"
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response

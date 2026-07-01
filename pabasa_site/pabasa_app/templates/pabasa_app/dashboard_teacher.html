@@ -836,7 +836,7 @@
 
 <script>
 // Update reading level statistics from localStorage using percentile formula
-function updateDashboardStatistics(providedStudents = null) {
+function updateDashboardStatistics(providedStudents = null, providedLevelCounts = null) {
     const studentsAll = providedStudents || 
         JSON.parse(localStorage.getItem("pabasa_added_students") || "[]")
             .filter(student => student && student.name && student.name !== "Jay Park");
@@ -848,13 +848,6 @@ function updateDashboardStatistics(providedStudents = null) {
         ? studentsAll.filter(s => (s.class_codes && s.class_codes.includes(activeCode)) || s.class === (document.getElementById('activeClassName')?.textContent || '').trim())
         : studentsAll.slice();
 
-    // Build array of numeric accuracy scores for percentile ranking
-    const scores = students.map(s => {
-        const a = parseFloat(s.accuracy);
-        return isNaN(a) ? null : a;
-    }).filter(v => v !== null);
-
-    // If no numeric scores available, fall back to pre-assigned `level` values
     const levelCounts = {
         "Low Emerging Readers": 0,
         "High Emerging Readers": 0,
@@ -863,27 +856,52 @@ function updateDashboardStatistics(providedStudents = null) {
         "Readers at Grade Level": 0
     };
 
-    if (scores.length === 0) {
-        // Tally existing `level` fields without mutating storage
-        students.forEach(student => {
-            if (student && student.level && levelCounts.hasOwnProperty(student.level)) {
-                levelCounts[student.level]++;
-            }
+    function normalizeLevelLabel(value) {
+        const text = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+        if (!text) return null;
+        if (text.includes('low') && text.includes('emerging')) return 'Low Emerging Readers';
+        if (text.includes('high') && text.includes('emerging')) return 'High Emerging Readers';
+        if (text.includes('develop')) return 'Developing Readers';
+        if (text.includes('transition')) return 'Transitioning Readers';
+        if (text.includes('grade')) return 'Readers at Grade Level';
+        return null;
+    }
+
+    const hasServerCounts = providedLevelCounts && Object.keys(providedLevelCounts).length > 0;
+    if (hasServerCounts) {
+        Object.keys(levelCounts).forEach(key => {
+            levelCounts[key] = Number(providedLevelCounts[key] || 0);
         });
     } else {
-        // Sort students by accuracy descending and assign percentile-based levels
-        const studentsWithScores = students.map(s => ({ s, score: (parseFloat(s.accuracy) || 0) }));
-        studentsWithScores.sort((a, b) => b.score - a.score);
-        const total = studentsWithScores.length || 1;
-        studentsWithScores.forEach((item, idx) => {
-            const pos = ((total - idx) / total) * 100; // match existing formula: top performers get highest pos
-            let level = "Readers at Grade Level";
-            if (pos <= 20) level = "Low Emerging Readers";
-            else if (pos <= 40) level = "High Emerging Readers";
-            else if (pos <= 60) level = "Developing Readers";
-            else if (pos <= 80) level = "Transitioning Readers";
-            levelCounts[level]++;
+        students.forEach(student => {
+            const normalized = normalizeLevelLabel(student?.level || student?.reading_level || student?.classification || student?.crla_classification);
+            if (normalized && levelCounts.hasOwnProperty(normalized)) {
+                levelCounts[normalized]++;
+            }
         });
+
+        // If the backend has no explicit level data, fall back to percentile ranking from accuracy.
+        if (!Object.values(levelCounts).some(count => count > 0)) {
+            const scores = students.map(s => {
+                const a = parseFloat(s.accuracy);
+                return isNaN(a) ? null : a;
+            }).filter(v => v !== null);
+
+            if (scores.length > 0) {
+                const studentsWithScores = students.map(s => ({ s, score: (parseFloat(s.accuracy) || 0) }));
+                studentsWithScores.sort((a, b) => b.score - a.score);
+                const total = studentsWithScores.length || 1;
+                studentsWithScores.forEach((item, idx) => {
+                    const pos = ((total - idx) / total) * 100;
+                    let level = "Readers at Grade Level";
+                    if (pos <= 20) level = "Low Emerging Readers";
+                    else if (pos <= 40) level = "High Emerging Readers";
+                    else if (pos <= 60) level = "Developing Readers";
+                    else if (pos <= 80) level = "Transitioning Readers";
+                    levelCounts[level]++;
+                });
+            }
+        }
     }
 
     // Update dashboard statistics
@@ -927,6 +945,11 @@ function updateDashboardStatistics(providedStudents = null) {
 async function loadPersistedStudents() {
     const studentRow = document.getElementById("dashboardStudentRow");
     if (!studentRow) return;
+
+    const activeClassCodeEl = document.getElementById('activeClassCode');
+    const activeClassNameEl = document.getElementById('activeClassName');
+    const selectedClassCode = activeClassCodeEl ? (activeClassCodeEl.textContent || '').trim() : '';
+    const selectedClassName = activeClassNameEl ? (activeClassNameEl.textContent || '').trim() : '';
     
     // Prefer server-backed authoritative student list for preview; fall back to localStorage
     let students = [];
@@ -938,6 +961,8 @@ async function loadPersistedStudents() {
                 students = data.students.map(s => ({
                     name: s.name || '',
                     class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
+                    classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
+                    class_codes: Array.isArray(s.class_codes) ? s.class_codes : [],
                     level: s.level || '',
                     wpm: s.wpm || '0',
                     accuracy: s.accuracy || '0',
@@ -960,21 +985,29 @@ async function loadPersistedStudents() {
         }
     }
     
-    // Determine currently selected class (if any) and filter students accordingly
-    const currentClassEl = document.getElementById('activeClassName');
-    const currentClass = currentClassEl ? (currentClassEl.textContent || '').trim() : '';
-
     const noStudentsMsg = document.getElementById("noStudentsMessage");
 
-    // If a class is selected, only show students enrolled in that class;
-    // otherwise show a preview across all students.
+    // If a class is selected, only show students enrolled in that class.
     let studentsToShow = students;
-    if (currentClass) {
-        studentsToShow = students.filter(s => s.class === currentClass);
+    if (selectedClassCode || selectedClassName) {
+        studentsToShow = students.filter(s => {
+            const studentClasses = Array.isArray(s.class_codes) ? s.class_codes : [];
+            const studentClassNames = Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []);
+            return (
+                (selectedClassCode && studentClasses.includes(selectedClassCode)) ||
+                (selectedClassName && studentClassNames.includes(selectedClassName)) ||
+                (selectedClassName && s.class === selectedClassName)
+            );
+        });
     }
 
     if (!studentsToShow || studentsToShow.length === 0) {
-        if (noStudentsMsg) noStudentsMsg.style.display = "block";
+        if (noStudentsMsg) {
+            noStudentsMsg.style.display = "block";
+            noStudentsMsg.innerHTML = selectedClassName || selectedClassCode
+                ? `<p class="small mb-0">No students are enrolled in ${selectedClassName || selectedClassCode} yet.</p>`
+                : `<p class="small mb-0">Select a class to see enrolled students.</p>`;
+        }
         // Clear existing student cards
         studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
         return;
@@ -995,13 +1028,10 @@ async function loadPersistedStudents() {
         }
     });
 
-    // Limit to first 4 students for dashboard preview
-    const previewStudents = dedupedStudents.slice(0, 4);
-    
     // Clear existing student cards (but not the no students message)
     studentRow.querySelectorAll(".student-card").forEach(card => card.remove());
     
-    previewStudents.forEach(studentData => {
+    dedupedStudents.forEach(studentData => {
         const levelClass = {
             "Low Emerging Readers": "level-low",
             "High Emerging Readers": "level-high",
@@ -1041,12 +1071,14 @@ document.addEventListener("DOMContentLoaded", async function() {
                     const mapped = data.students.map(s => ({
                         name: s.name || '',
                         class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
+                        classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
+                        class_codes: Array.isArray(s.class_codes) ? s.class_codes : [],
                         level: s.level || '',
                         accuracy: s.accuracy || '0',
                         wpm: s.wpm || '0',
                         email: s.email || ''
                     }));
-                    updateDashboardStatistics(mapped);
+                    updateDashboardStatistics(mapped, data.level_counts || null);
                     return;
                 }
             }

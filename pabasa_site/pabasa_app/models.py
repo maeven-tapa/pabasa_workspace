@@ -620,6 +620,11 @@ class Material(models.Model):
         ("paragraph", "Paragraph"),
     ]
 
+    SOURCE_TYPE_CHOICES = [
+        ("personal", "Personal"),
+        ("shared", "Shared"),
+    ]
+
     STATUS_CHOICES = [
         ("published", "Published"),
         ("draft", "Draft"),
@@ -643,6 +648,7 @@ class Material(models.Model):
     content_text = models.TextField(blank=True, default='')
     content_json = models.JSONField(default=dict, blank=True)
     type = models.CharField(max_length=20, choices=USAGE_TYPE_CHOICES, default='practice')
+    source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default='personal')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     scheduled_at = models.DateTimeField(null=True, blank=True)
     difficulty_level = models.CharField(max_length=50, blank=True)

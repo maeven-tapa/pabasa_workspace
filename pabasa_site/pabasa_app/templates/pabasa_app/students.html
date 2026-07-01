@@ -932,9 +932,33 @@ function updateReadingLevelChart(levelCounts) {
     });
 }
 
+// Fetch student data from the server API with localStorage fallback
+async function refreshStudentOverview() {
+    try {
+        const response = await fetch('/dashboard/teacher/students-api/', {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        
+        if (response && response.ok) {
+            const data = await response.json();
+            if (data && data.success && Array.isArray(data.students)) {
+                // Save to localStorage for offline fallback
+                localStorage.setItem('pabasa_added_students', JSON.stringify(data.students));
+            }
+        }
+    } catch (error) {
+        console.warn('Could not fetch students from API, using localStorage fallback', error);
+    }
+    
+    // Always update statistics (from either API data or localStorage)
+    updateStudentStatistics();
+}
+
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", function() {
-    updateStudentStatistics();
+    refreshStudentOverview();
 
 });
 </script>
@@ -993,6 +1017,16 @@ document.addEventListener("DOMContentLoaded", function() {
             updateStudentStatistics();
         }
     });
+
+    // Refresh data when Add Student Form is submitted
+    const addStudentForm = document.getElementById("addStudentForm");
+    if (addStudentForm) {
+        addStudentForm.addEventListener("submit", function(e) {
+            setTimeout(() => {
+                refreshStudentOverview();
+            }, 100);
+        });
+    }
 });
 
 // Also populate when the Add Student Form is submitted (so they appear immediately)

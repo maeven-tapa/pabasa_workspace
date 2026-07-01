@@ -1,11 +1,15 @@
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from datetime import timedelta
+from io import BytesIO
 import json
 import uuid
 from unittest.mock import patch
+
+from pypdf import PdfReader
 
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
@@ -36,6 +40,9 @@ class ReadingMatcherTests(TestCase):
 
 
 class PrincipalReportsExportTests(TestCase):
+    def test_default_timezone_is_asia_manila(self):
+        self.assertEqual(settings.TIME_ZONE, "Asia/Manila")
+
     def setUp(self):
         self.user = User.objects.create(
             custom_id=f"ADM-{uuid.uuid4().hex[:8].upper()}",
@@ -66,6 +73,15 @@ class PrincipalReportsExportTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_principal_reports_pdf_export_includes_summary_overview(self):
+        response = self.client.get(reverse("principal_reports"), {"report_type": "school", "export": "pdf"})
+
+        self.assertEqual(response.status_code, 200)
+        reader = PdfReader(BytesIO(response.content))
+        extracted_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+        self.assertTrue(extracted_text or response.content.startswith(b"%PDF"))
 
 
 class ProfileUpdateTests(TestCase):
@@ -217,6 +233,210 @@ class MaterialCreationTests(TestCase):
         material = Material.objects.latest("id")
         self.assertEqual(material.type, "assessment")
         self.assertEqual(material.source_type, "shared")
+
+    def test_add_reading_material_saves_multiple_paragraph_items(self):
+        user = User.objects.create(
+            custom_id="TCH-0003",
+            role="teacher",
+            first_name="Paragraph",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="paragraph@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Paragraph reading",
+                "content": "First paragraph text.\n\nSecond paragraph text.",
+                "reading_type": "paragraph",
+                "status": "published",
+                "usage_type": "practice",
+                "class_code": "",
+                "language": "English",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+
+        material = Material.objects.latest("id")
+        self.assertEqual(material.item_type, "paragraph")
+        self.assertEqual(material.content_json.get("items"), ["First paragraph text.", "Second paragraph text."])
+
+    @patch("pabasa_app.views._compute_teacher_overview")
+    def test_add_reading_material_skips_overview_by_default(self, mock_overview):
+        user = User.objects.create(
+            custom_id="TCH-0004",
+            role="teacher",
+            first_name="Fast",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="fast@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Fast create",
+                "content": "alpha",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "practice",
+                "class_code": "",
+                "language": "English",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        mock_overview.assert_not_called()
+
+    def test_add_reading_material_saves_shared_source_type(self):
+        user = User.objects.create(
+            custom_id="TCH-0005",
+            role="teacher",
+            first_name="Shared",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="shared@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Shared reading",
+                "content": "Araw\nBuwan",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "practice",
+                "class_code": "",
+                "language": "Tagalog",
+                "source_type": "shared",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["material"]["source_type"], "shared")
+
+        material = Material.objects.latest("id")
+        self.assertEqual(material.source_type, "shared")
+
+    def test_teacher_courses_api_includes_material_source_type(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0004",
+            role="teacher",
+            first_name="Course",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="course@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        section = Section.objects.create(
+            class_code="CRS-1001",
+            class_name="Course 1",
+            header="Reading Class",
+            description="",
+            teacher=teacher,
+            subject="Reading",
+        )
+        course = Course.objects.create(
+            code="C-1001",
+            title="Shared Course",
+            description="",
+            teacher=teacher,
+        )
+        course.sections.add(section)
+
+        material = Material.objects.create(
+            title="Imported reading",
+            item_type="word",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "English"},
+            type="practice",
+            source_type="shared",
+            status="published",
+            difficulty_level="",
+            is_active=True,
+            section=section,
+        )
+        course.materials.add(material)
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.get(reverse("get_teacher_courses_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        course_payload = next(item for item in payload["courses"] if item["id"] == course.id)
+        material_payload = next(item for item in course_payload["materials"] if item["id"] == material.id)
+        self.assertEqual(material_payload["source_type"], "shared")
+        self.assertTrue(material_payload["is_shared_material"])
 
 
 class PracticeReaderMaterialTests(TestCase):
@@ -1006,8 +1226,8 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="courseSelectedStudentReportPreview"', html=False)
 
-    @patch("pabasa_app.views.send_mail")
-    def test_send_course_update_emails_student_and_stores_note(self, mock_send_mail):
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_emails_student_and_stores_note(self, mock_email_cls):
         course = Course.objects.create(
             teacher=self.teacher,
             title="Chapter 2",
@@ -1055,13 +1275,20 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["sent_count"], 1)
         self.assertTrue(data["report_included"])
         self.assertIn("report_summary", data["sent"][0])
-        mock_send_mail.assert_called_once()
-        email_body = mock_send_mail.call_args[0][1]
-        self.assertIn("Hello Single Student, keep practicing.", email_body)
-        self.assertIn("Reading Performance Report", email_body)
-        self.assertIn("Accuracy: 88%", email_body)
-        self.assertIn("Words Per Minute: 72 WPM", email_body)
-        self.assertIn("Transitioning Readers", email_body)
+        mock_email_cls.assert_called_once()
+        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report – PABASA")
+        email_instance = mock_email_cls.return_value
+        email_body = mock_email_cls.call_args[0][1]
+        self.assertIn("Dear Parent/Guardian", email_body)
+        self.assertIn("Attached is the latest Reading Progress Report", email_body)
+        self.assertIn("PABASA Team", email_body)
+        self.assertNotIn("Reading Performance Report", email_body)
+        self.assertNotIn("Accuracy: 88%", email_body)
+        self.assertNotIn("Words Per Minute: 72 WPM", email_body)
+        email_instance.attach.assert_called_once()
+        self.assertEqual(email_instance.attach.call_args[0][0], "Single_Student_reading_report.pdf")
+        self.assertEqual(email_instance.attach.call_args[0][2], "application/pdf")
+        email_instance.send.assert_called_once_with(fail_silently=False)
 
         note = Note.objects.get(teacher=self.teacher, student=self.student)
         self.assertEqual(note.note_type, "course_update:general")
@@ -1070,8 +1297,8 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertIn("Reading Performance Report", note.note_text)
         self.assertIn("Suggested Home Support", note.note_text)
 
-    @patch("pabasa_app.views.send_mail")
-    def test_send_course_update_includes_baseline_message_when_metrics_missing(self, mock_send_mail):
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_includes_baseline_message_when_metrics_missing(self, mock_email_cls):
         course = Course.objects.create(
             teacher=self.teacher,
             title="Chapter 3",
@@ -1094,15 +1321,91 @@ class TeacherStudentsDirectoryTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
-        email_body = mock_send_mail.call_args[0][1]
-        self.assertIn("No completed assessment yet", email_body)
-        self.assertIn("baseline reading assessment", email_body)
+        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report – PABASA")
+        email_body = mock_email_cls.call_args[0][1]
+        self.assertIn("Dear Parent/Guardian", email_body)
+        self.assertIn("Attached is the latest Reading Progress Report", email_body)
+        self.assertIn("PABASA Team", email_body)
+        self.assertNotIn("No completed assessment yet", email_body)
+        mock_email_cls.return_value.attach.assert_called_once()
 
         note = Note.objects.get(teacher=self.teacher, student=self.student)
         self.assertIn("No completed assessment yet", note.note_text)
 
-    @patch("pabasa_app.views.send_mail")
-    def test_send_course_update_skips_unenrolled_and_missing_email_students(self, mock_send_mail):
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_commendation_sends_certificate_attachment(self, mock_email_cls):
+        course = Course.objects.create(
+            teacher=self.teacher,
+            title="Chapter 5",
+            code="CRS-TEST-004",
+            description="Commendation test",
+        )
+        course.sections.add(self.section_a)
+
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": course.id,
+                "student_ids": [self.student.id],
+                "update_type": "commendation",
+                "message": "Congratulations {name}!",
+            }),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertFalse(response.json()["report_included"])
+        self.assertEqual(mock_email_cls.call_args[0][0], "Performance Commendation – PABASA")
+        email_body = mock_email_cls.call_args[0][1]
+        self.assertIn("Congratulations", email_body)
+        self.assertIn("certificate is attached", email_body.lower())
+        self.assertIn("outstanding reading performance", email_body.lower())
+        self.assertEqual(mock_email_cls.return_value.attach.call_count, 1)
+        attachment_name, attachment_bytes, mime_type = mock_email_cls.return_value.attach.call_args.args
+        self.assertIn("certificate", attachment_name.lower())
+        self.assertEqual(mime_type, "application/pdf")
+        self.assertTrue(attachment_bytes)
+
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_assessment_notice_sends_details_without_attachment(self, mock_email_cls):
+        course = Course.objects.create(
+            teacher=self.teacher,
+            title="Chapter 6",
+            code="CRS-TEST-005",
+            description="Assessment notice test",
+        )
+        course.sections.add(self.section_a)
+
+        response = self.client.post(
+            reverse("send_course_update"),
+            data=json.dumps({
+                "course_id": course.id,
+                "student_ids": [self.student.id],
+                "update_type": "assessment",
+                "message": "Please prepare for your upcoming reading assessment.",
+                "assessment_title": "Oral Reading Check",
+                "scheduled_at": "2026-07-10 09:00",
+                "reading_material": "The Little Red Hen",
+            }),
+            content_type="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertFalse(response.json()["report_included"])
+        self.assertEqual(mock_email_cls.call_args[0][0], "Scheduled Assessment Notice – PABASA")
+        email_body = mock_email_cls.call_args[0][1]
+        self.assertIn("Oral Reading Check", email_body)
+        self.assertIn("July 10, 2026 at 09:00 AM", email_body)
+        self.assertIn("The Little Red Hen", email_body)
+        self.assertIn("Please prepare", email_body)
+        mock_email_cls.return_value.attach.assert_not_called()
+
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_skips_unenrolled_and_missing_email_students(self, mock_email_cls):
         no_email_student = User.objects.create(
             custom_id="STD-NOEMAIL",
             role="student",
@@ -1158,4 +1461,4 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["sent_count"], 1)
         self.assertEqual(len(data["skipped"]), 2)
         self.assertCountEqual([item["reason"] for item in data["skipped"]], ["missing_email", "not_enrolled"])
-        mock_send_mail.assert_called_once()
+        mock_email_cls.assert_called_once()

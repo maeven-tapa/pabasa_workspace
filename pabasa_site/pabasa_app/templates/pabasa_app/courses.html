@@ -215,6 +215,73 @@
         border-bottom: 2px solid rgba(31, 111, 139, 0.08);
         padding: 1.5rem 2rem;
         position: relative;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .class-banner-summary {
+        display: grid;
+        gap: 0.25rem;
+        min-width: 0;
+    }
+
+    .class-banner-subject {
+        color: var(--dash-muted);
+        font-size: 0.92rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .class-banner-meta {
+        color: var(--dash-muted);
+        font-size: 0.82rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .class-banner-stats {
+        display: grid;
+        gap: 0.65rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        min-width: 0;
+    }
+
+    .class-banner-stat {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 14px;
+        min-width: 0;
+        padding: 0.75rem 0.9rem;
+        text-align: center;
+    }
+
+    .class-banner-stat strong {
+        display: block;
+        font-size: 1.05rem;
+        line-height: 1.1;
+    }
+
+    .class-banner-stat span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        margin-top: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 991.98px) {
+        .course-modal-header {
+            flex-direction: column;
+        }
+
+        .class-banner-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            width: 100%;
+        }
     }
     
     .course-modal-header::before {
@@ -2465,9 +2532,28 @@
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content course-modal-content">
             <div class="modal-header course-modal-header">
-                <div>
+                <div class="class-banner-summary">
                     <h5 class="modal-title" id="classDetailModalLabel"></h5>
-                    <p class="small text-secondary mb-0 mt-1" id="classDetailInfo"></p>
+                    <p class="class-banner-subject" id="activeClassSubject"></p>
+                    <p class="class-banner-meta" id="classDetailInfo"></p>
+                </div>
+                <div class="class-banner-stats">
+                    <div class="class-banner-stat">
+                        <strong id="activeClassCode">—</strong>
+                        <span>Class Code</span>
+                    </div>
+                    <div class="class-banner-stat">
+                        <strong id="activeStudentCount">0</strong>
+                        <span>Students Joined</span>
+                    </div>
+                    <div class="class-banner-stat">
+                        <strong id="activeAssessmentCount">0</strong>
+                        <span>Assessment Materials</span>
+                    </div>
+                    <div class="class-banner-stat">
+                        <strong id="activePracticeCount">0</strong>
+                        <span>Practice Materials</span>
+                    </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -2568,13 +2654,25 @@
                                                 </select>
                                             </div>
 
+                                            <div class="mb-3" id="parentAssessmentScheduleContainer" style="display:none;">
+                                                <label class="form-label small fw-bold" for="parentAssessmentScheduledAt">Assessment Date & Time</label>
+                                                <input class="form-control" id="parentAssessmentScheduledAt" type="datetime-local" style="border-radius:10px;">
+                                                <div class="form-text mt-2">This date and time will be included in the assessment notice email.</div>
+                                            </div>
+
+                                            <div class="mb-3" id="parentAssessmentMaterialContainer" style="display:none;">
+                                                <label class="form-label small fw-bold" for="parentAssessmentReadingMaterial">Reading Material</label>
+                                                <input class="form-control" id="parentAssessmentReadingMaterial" type="text" style="border-radius:10px;" placeholder="Enter the reading material for this assessment">
+                                                <div class="form-text mt-2">This will be included in the assessment notice email.</div>
+                                            </div>
+
                                             <div class="mb-3">
                                                 <label class="form-label d-flex justify-content-between" for="parentUpdateMessage">
                                                     <span class="small fw-bold">Teacher Comments</span>
                                                     <small class="text-primary">Tip: Use {name} for student name</small>
                                                 </label>
                                                 <textarea class="form-control" id="parentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
-                                                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Performance data and recommendations are auto-attached.</div>
+                                                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> PDF attachments are used for support updates only.</div>
                                             </div>
 
                                             <div class="d-flex justify-content-end">
@@ -2714,13 +2812,25 @@
                                                                     </select>
                                                                 </div>
 
+                                                                <div class="mb-3" id="courseParentAssessmentScheduleContainer" style="display:none;">
+                                                                    <label class="form-label small fw-bold" for="courseParentAssessmentScheduledAt">Assessment Date & Time</label>
+                                                                    <input class="form-control" id="courseParentAssessmentScheduledAt" type="datetime-local" style="border-radius:10px;">
+                                                                    <div class="form-text mt-2">This date and time will be included in the assessment notice email.</div>
+                                                                </div>
+
+                                                                <div class="mb-3" id="courseParentAssessmentMaterialContainer" style="display:none;">
+                                                                    <label class="form-label small fw-bold" for="courseParentAssessmentReadingMaterial">Reading Material</label>
+                                                                    <input class="form-control" id="courseParentAssessmentReadingMaterial" type="text" style="border-radius:10px;" placeholder="Enter the reading material for this assessment">
+                                                                    <div class="form-text mt-2">This will be included in the assessment notice email.</div>
+                                                                </div>
+
                                                                 <div class="mb-3">
                                                                     <label class="form-label d-flex justify-content-between" for="courseParentUpdateMessage">
                                                                         <span class="small fw-bold">Teacher Comments</span>
                                                                         <small class="text-primary">Tip: Use {name} for student name</small>
                                                                     </label>
                                                                     <textarea class="form-control" id="courseParentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
-                                                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Performance data and recommendations are auto-attached.</div>
+                                                                    <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> PDF attachments are used for support updates only.</div>
                                                                 </div>
 
                                                                 <div class="d-flex justify-content-end">
@@ -3372,43 +3482,6 @@
             .substring(0, 2);
     }
 
-    const sharedMaterialIdsStorageKey = 'pabasa_shared_material_ids';
-    let sharedMaterialIds = new Set();
-
-    function normalizeSharedMaterialId(rawId) {
-        return rawRecordId(String(rawId || '').trim());
-    }
-
-    function loadSharedMaterialIdsFromStorage() {
-        try {
-            const stored = localStorage.getItem(sharedMaterialIdsStorageKey);
-            if (!stored) return;
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
-                sharedMaterialIds = new Set(parsed
-                    .map(id => normalizeSharedMaterialId(id))
-                    .filter(Boolean)
-                );
-            }
-        } catch (e) {
-            console.warn('Could not load shared material IDs from storage:', e);
-            sharedMaterialIds = new Set();
-        }
-    }
-
-    function saveSharedMaterialIdsToStorage() {
-        try {
-            localStorage.setItem(sharedMaterialIdsStorageKey, JSON.stringify(
-                Array.from(sharedMaterialIds).map(id => normalizeSharedMaterialId(id)).filter(Boolean)
-            ));
-        } catch (e) {
-            console.warn('Could not save shared material IDs to storage:', e);
-        }
-    }
-
-    loadSharedMaterialIdsFromStorage();
-    
-    console.log("Teacher Name:", CURRENT_TEACHER_NAME, "Initials:", CURRENT_TEACHER_INITIALS);
 </script>
 
 <script>
@@ -3461,6 +3534,18 @@
 
     function getMaterialContentItems(material) {
         if (!material) return [];
+        const contentJsonItems = material && material.content_json && Array.isArray(material.content_json.items)
+            ? material.content_json.items
+            : null;
+        if (Array.isArray(contentJsonItems)) {
+            return contentJsonItems.map(item => {
+                if (item === null || item === undefined) return '';
+                if (typeof item === 'object') {
+                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
+                }
+                return item;
+            }).map(item => String(item).trim()).filter(Boolean);
+        }
         if (Array.isArray(material.items)) {
             return material.items.map(item => {
                 if (item === null || item === undefined) return '';
@@ -3491,6 +3576,18 @@
 
     function getMaterialContentItemsForEdit(material) {
         if (!material) return [];
+        const contentJsonItems = material && material.content_json && Array.isArray(material.content_json.items)
+            ? material.content_json.items
+            : null;
+        if (Array.isArray(contentJsonItems)) {
+            return contentJsonItems.map(item => {
+                if (item === null || item === undefined) return '';
+                if (typeof item === 'object') {
+                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
+                }
+                return item;
+            }).map(item => String(item).trim()).filter(Boolean);
+        }
         if (Array.isArray(material.items)) {
             return material.items.map(item => {
                 if (item === null || item === undefined) return '';
@@ -3658,6 +3755,12 @@
                     const key = teacherClassesKey();
                     if (key) localStorage.setItem(key, JSON.stringify(teacherClasses));
                     console.log('✓ Loaded classes from server:', teacherClasses.length);
+                    if (currentClassCode) {
+                        const currentClass = teacherClasses.find(c => String(c.code) === String(currentClassCode));
+                        if (currentClass) {
+                            updateClassDetailBanner(currentClass);
+                        }
+                    }
                     return true;
                 }
             }
@@ -3683,6 +3786,32 @@
         return false;
     }
 
+    function updateClassDetailBanner(classData) {
+        const classNameEl = document.getElementById('classDetailModalLabel');
+        const subjectEl = document.getElementById('activeClassSubject');
+        const infoEl = document.getElementById('classDetailInfo');
+        const codeEl = document.getElementById('activeClassCode');
+        const studentCountEl = document.getElementById('activeStudentCount');
+        const assessmentCountEl = document.getElementById('activeAssessmentCount');
+        const practiceCountEl = document.getElementById('activePracticeCount');
+
+        const className = classData?.name || 'Class';
+        const subject = classData?.subject || 'Subject not set';
+        const code = classData?.code || currentClassCode || '—';
+        const studentCount = Number(classData?.students || 0);
+        const assessmentCount = Number(classData?.assessment_material_count || classData?.assessment_count || 0);
+        const practiceCount = Number(classData?.practice_material_count || classData?.practice_count || 0);
+        const headerLabel = classData?.header || 'Reading Class';
+
+        if (classNameEl) classNameEl.textContent = className;
+        if (subjectEl) subjectEl.textContent = subject;
+        if (infoEl) infoEl.textContent = `${headerLabel} · ${studentCount} student${studentCount === 1 ? '' : 's'} enrolled`;
+        if (codeEl) codeEl.textContent = code;
+        if (studentCountEl) studentCountEl.textContent = String(studentCount);
+        if (assessmentCountEl) assessmentCountEl.textContent = String(assessmentCount);
+        if (practiceCountEl) practiceCountEl.textContent = String(practiceCount);
+    }
+
     // Load teacher-created courses from server (fallback to localStorage)
     async function loadTeacherCoursesFromServer() {
         try {
@@ -3690,9 +3819,7 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.success && Array.isArray(data.courses)) {
-                    const previousCourses = Array.isArray(teacherCourses) ? teacherCourses : [];
                     teacherCourses = data.courses;
-                    mergeSharedMaterialFlags(previousCourses, teacherCourses);
                     const key = teacherCoursesKey();
                     if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
                     console.log('✓ Loaded courses from server:', teacherCourses.length);
@@ -3896,35 +4023,6 @@
         return String(value || '').replace(/^[a-z]+-/i, '');
     }
 
-    function getMaterialSharedKey(material) {
-        return rawRecordId(String(material?.id || material?.action_id || material?.raw_id || '').trim());
-    }
-
-    function mergeSharedMaterialFlags(oldCourses, newCourses) {
-        if (!Array.isArray(oldCourses) || !Array.isArray(newCourses)) return;
-        const oldMaterialMap = new Map();
-        oldCourses.forEach(course => {
-            (course.materials || []).forEach(material => {
-                const key = getMaterialSharedKey(material);
-                if (!key || oldMaterialMap.has(key)) return;
-                oldMaterialMap.set(key, material);
-            });
-        });
-        newCourses.forEach(course => {
-            (course.materials || []).forEach(material => {
-                const key = getMaterialSharedKey(material);
-                const previous = oldMaterialMap.get(key);
-                if (!key || !previous) return;
-                if (previous._is_shared_origin) material._is_shared_origin = true;
-                if (previous.is_shared_material) material.is_shared_material = true;
-                if (String(previous.material_source || '').toLowerCase() === 'shared') material.material_source = 'shared';
-                if (previous.shared_owner_teacher_name && !material.shared_owner_teacher_name) {
-                    material.shared_owner_teacher_name = previous.shared_owner_teacher_name;
-                }
-            });
-        });
-    }
-
     function findCourseById(courseId) {
         return (teacherCourses || []).find(c => String(c.id) === String(courseId));
     }
@@ -3957,12 +4055,8 @@
 
     function isSharedMaterial(material) {
         if (!material) return false;
-        if (material._is_shared_origin) return true;
-        if (material.is_shared_material) return true;
-        if (String(material.material_source || '').toLowerCase() === 'shared') return true;
-        const materialIdKey = rawRecordId(String(material.id || material.action_id || material.raw_id || '').trim());
-        if (materialIdKey && sharedMaterialIds.has(materialIdKey)) return true;
-        return false;
+        const sourceType = String(material.source_type || material.material_source || '').toLowerCase();
+        return sourceType === 'shared';
     }
 
     function renderSharedMaterialBadge(material) {
@@ -4042,11 +4136,6 @@
 
                         const typeLabel = m.item_type || m.type || '';
                         const typeSlug = String(typeLabel || '').toLowerCase().replace(/\s+/g, '-');
-
-                        const materialIdKey = rawRecordId(String(m.id || m.action_id || m.raw_id || '').trim());
-                        if (!m._is_shared_origin && materialIdKey && sharedMaterialIds.has(materialIdKey)) {
-                            m._is_shared_origin = true;
-                        }
 
                         item.innerHTML = `
                             <div class="material-info">
@@ -4427,44 +4516,62 @@
     };
 
     // Load aggregated course overview (readings, materials, students)
-    function loadCourseOverview(courseId) {
+    async function loadCourseOverview(courseId) {
         try {
             const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
             if (!course) return;
+
             const sections = Array.isArray(course.sections) ? course.sections : [];
-            const sectionCodes = sections.map(s => s.code || s.id || '').filter(Boolean);
+            const sectionNames = sections.map(s => String(s.name || '').trim()).filter(Boolean);
 
-            // Load stored class readings and aggregate per section
-            let stored = {};
-            try { stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}'); } catch (e) { stored = {}; }
+            let courseStudents = [];
+            try {
+                courseStudents = await fetchStudentsForCourse(course);
+            } catch (err) {
+                console.warn('Could not load students for course overview', err);
+            }
 
-            const aggregated = { word: [], sentence: [], paragraph: [] };
-            sectionCodes.forEach(code => {
-                const candidates = [code, String(code).toUpperCase(), String(code).toLowerCase()];
-                let r = null;
-                for (const k of candidates) { if (stored[k]) { r = stored[k]; break; } }
-                r = r || stored[code] || stored[String(code).toUpperCase()] || {};
-                ['word', 'sentence', 'paragraph'].forEach(type => {
-                    if (Array.isArray(r[type])) aggregated[type] = aggregated[type].concat(r[type]);
-                    else if (Array.isArray(r[type + 's'])) aggregated[type] = aggregated[type].concat(r[type + 's']);
-                });
+            if (!courseStudents.length) {
+                try {
+                    const storedStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                    courseStudents = (Array.isArray(storedStudents) ? storedStudents : []).filter(student => {
+                        const studentClass = String(student.class || '').trim();
+                        return studentClass && sectionNames.includes(studentClass) && String(student.name || '').trim() !== 'Jay Park';
+                    });
+                } catch (e) {
+                    console.warn('Could not load cached students for course overview', e);
+                }
+            }
+
+            const activeMaterials = activeRecords(Array.isArray(course.materials) ? course.materials : []);
+            const activeAssessments = activeRecords(Array.isArray(course.assessments) ? course.assessments : []);
+            const activePractices = activeRecords(Array.isArray(course.practices) ? course.practices : []);
+
+            const readingMaterials = activeMaterials.filter(material => {
+                const type = String(material.item_type || material.type || material.usage || '').toLowerCase();
+                return ['word', 'sentence', 'paragraph', 'reading', 'material'].includes(type) || !type;
             });
 
-            const totalReadings = (aggregated.word.length + aggregated.sentence.length + aggregated.paragraph.length) || 0;
-            const materialsCount = ((course.materials || []).length + (course.practices || []).length) || 0;
-            const assessmentCount = (course.assessments || []).length || 0;
+            const totalReadings = readingMaterials.reduce((sum, material) => {
+                const itemsCount = Number(material.items_count ?? material.items?.length ?? material.items ?? 0);
+                if (Number.isFinite(itemsCount) && itemsCount > 0) {
+                    return sum + itemsCount;
+                }
+                return sum + 1;
+            }, 0);
 
-            // Aggregate students across course sections
-            let allStudents = [];
-            try { allStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]'); } catch (e) { allStudents = []; }
-            const sectionNames = sections.map(s => s.name).filter(Boolean);
-            const courseStudents = allStudents.filter(s => s.class && sectionNames.includes(s.class) && s.name !== 'Jay Park');
+            const materialsCount = activeMaterials.length + activePractices.length;
+            const assessmentCount = activeAssessments.length;
             const totalStudents = courseStudents.length;
 
-            // Compute averages
-            let totalAccuracy = 0, totalWPM = 0;
-            courseStudents.forEach(s => { totalAccuracy += parseInt(s.accuracy) || 0; totalWPM += parseInt(s.wpm) || 0; });
-            const avgAccuracy = totalStudents ? Math.round(totalAccuracy / totalStudents) + '%' : '—';
+            let totalAccuracy = 0;
+            let totalWPM = 0;
+            courseStudents.forEach(student => {
+                totalAccuracy += Number(student.accuracy) || 0;
+                totalWPM += Number(student.wpm) || 0;
+            });
+
+            const avgAccuracy = totalStudents ? `${Math.round(totalAccuracy / totalStudents)}%` : '—';
             const avgWPM = totalStudents ? Math.round(totalWPM / totalStudents) : '—';
 
             const container = document.getElementById('courseOverviewStats');
@@ -4825,6 +4932,10 @@
             try {
                 const templateSelect = document.getElementById('courseParentUpdateTemplate');
                 const messageArea = document.getElementById('courseParentUpdateMessage');
+                const scheduleContainer = document.getElementById('courseParentAssessmentScheduleContainer');
+                const materialContainer = document.getElementById('courseParentAssessmentMaterialContainer');
+                const scheduleInput = document.getElementById('courseParentAssessmentScheduledAt');
+                const materialInput = document.getElementById('courseParentAssessmentReadingMaterial');
                 const form = document.getElementById('courseParentUpdateTabForm');
                 const sendButton = document.getElementById('courseBtnSendParentUpdate');
                 if (!templateSelect || !messageArea || !form) return;
@@ -4836,7 +4947,21 @@
                     assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PABASA dashboard."
                 };
 
-                templateSelect.onchange = () => { messageArea.value = templates[templateSelect.value] || ''; };
+                const toggleScheduleFields = () => {
+                    const showSchedule = templateSelect.value === 'assessment';
+                    if (scheduleContainer) scheduleContainer.style.display = showSchedule ? 'block' : 'none';
+                    if (materialContainer) materialContainer.style.display = showSchedule ? 'block' : 'none';
+                    if (!showSchedule) {
+                        if (scheduleInput) scheduleInput.value = '';
+                        if (materialInput) materialInput.value = '';
+                    }
+                };
+
+                templateSelect.onchange = () => {
+                    messageArea.value = templates[templateSelect.value] || '';
+                    toggleScheduleFields();
+                };
+                toggleScheduleFields();
                 messageArea.value = templates.general;
 
                 form.onsubmit = async (e) => {
@@ -4845,6 +4970,8 @@
                     if (checked.length === 0) return showToast('Please select at least one recipient.', 'error');
                     const message = (messageArea.value || '').trim();
                     if (!message) return showToast('Please enter teacher comments before sending.', 'error');
+                    const scheduledAt = (document.getElementById('courseParentAssessmentScheduledAt')?.value || '').trim();
+                    const readingMaterial = (document.getElementById('courseParentAssessmentReadingMaterial')?.value || '').trim();
 
                     const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
                     const originalButtonHtml = sendButton ? sendButton.innerHTML : '';
@@ -4866,7 +4993,9 @@
                                 course_id: courseId,
                                 student_ids: checked,
                                 update_type: templateSelect.value || 'general',
-                                message
+                                message,
+                                scheduled_at: scheduledAt,
+                                reading_material: readingMaterial
                             })
                         });
                         const data = await res.json();
@@ -5032,6 +5161,29 @@
         classAssessments[classCode] = synced;
     }
 
+    function syncClassBannerMaterialCounts(classCode) {
+        const assessmentEl = document.getElementById('activeAssessmentCount');
+        const practiceEl = document.getElementById('activePracticeCount');
+        const normalizedCode = String(classCode || '').trim().toUpperCase();
+
+        let assessmentCount = 0;
+        let practiceCount = 0;
+
+        if (normalizedCode && Array.isArray(teacherCourses)) {
+            teacherCourses.forEach(course => {
+                const courseSections = Array.isArray(course.sections) ? course.sections : [];
+                const belongsToClass = courseSections.some(section => String(section.code || '').trim().toUpperCase() === normalizedCode);
+                if (!belongsToClass) return;
+
+                assessmentCount += activeRecords(course.assessments || []).length;
+                practiceCount += activeRecords(course.practices || []).length;
+            });
+        }
+
+        if (assessmentEl && assessmentCount > 0) assessmentEl.textContent = String(assessmentCount);
+        if (practiceEl && practiceCount > 0) practiceEl.textContent = String(practiceCount);
+    }
+
     async function refreshOpenCourseAfterAssessmentChange(options = {}) {
         const courseModal = document.getElementById('courseDetailModal');
         const openCourseId = options.courseId || courseModal?.dataset?.courseId || null;
@@ -5044,6 +5196,7 @@
             try { syncClassAssessmentsFromCourses(classCode); } catch (e) { console.warn('Could not sync class assessments after assessment change', e); }
             try { if (typeof loadAssessments === 'function') loadAssessments(classCode); } catch (e) { console.warn('Could not refresh class assessments after assessment change', e); }
             try { if (typeof loadReadings === 'function') await loadReadings(classCode); } catch (e) { console.warn('Could not refresh class readings after assessment change', e); }
+            try { syncClassBannerMaterialCounts(classCode); } catch (e) { console.warn('Could not sync class banner counts after assessment change', e); }
         }
 
         if (openCourseId && courseModal && courseModal.classList.contains('show')) {
@@ -6022,26 +6175,44 @@
 
 
 
-    window.openClassDetail = function(classCode) {
-        const classData = teacherClasses.find(c => c.code === classCode);
-        if (!classData) return;
+    window.openClassDetail = async function(classCode) {
         currentClassCode = classCode;
-        const studentCount = getStudentCountForClass(classData.name);
 
-        // Update modal header
-        document.getElementById('classDetailModalLabel').textContent = classData.name;
-        document.getElementById('classDetailInfo').textContent = `${classData.code} - ${studentCount} students enrolled`;
+        const modalEl = document.getElementById('classDetailModal');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
 
-        // Load all content (loadReadings is now async)
-        if (classCode) loadReadings(classCode);
+        // Reset banner state immediately so stale counts never linger.
+        updateClassDetailBanner({ code: classCode, name: 'Loading class...', subject: 'Refreshing class data', students: 0, header: 'Reading Class' });
+
+        try {
+            await loadTeacherClassesFromServer();
+        } catch (e) {
+            console.warn('Could not refresh teacher classes before opening class detail', e);
+        }
+
+        try {
+            await loadTeacherCoursesFromServer();
+        } catch (e) {
+            console.warn('Could not refresh teacher courses before opening class detail', e);
+        }
+
+        const classData = (teacherClasses || []).find(c => String(c.code) === String(classCode));
+        if (classData) {
+            updateClassDetailBanner(classData);
+        } else {
+            updateClassDetailBanner({ code: classCode, name: classCode, subject: 'Subject not set', students: 0, header: 'Reading Class' });
+        }
+
+        // Load all content and then sync the banner from the latest course cache.
+        if (classCode) {
+            await loadReadings(classCode);
+        }
         loadAssessments(classCode);
         // Students tab removed from class modal — do not load student list here
         loadReports(classCode);
         setupUpdates(classCode);
-
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('classDetailModal'));
-        modal.show();
+        syncClassBannerMaterialCounts(classCode);
     };
 
     function formatDueDate(value) {
@@ -6108,6 +6279,8 @@
                 </div>
             </article>
         `).join('');
+
+        syncClassBannerMaterialCounts(classCode);
     }
 
     /* Students UI removed from class modal; student management remains in Class module */
@@ -6187,6 +6360,10 @@
 
         const messageArea = document.getElementById("parentUpdateMessage");
         const templateSelect = document.getElementById("parentUpdateTemplate");
+        const scheduleContainer = document.getElementById("parentAssessmentScheduleContainer");
+        const materialContainer = document.getElementById("parentAssessmentMaterialContainer");
+        const scheduleInput = document.getElementById("parentAssessmentScheduledAt");
+        const materialInput = document.getElementById("parentAssessmentReadingMaterial");
 
         // Template logic
         const templates = {
@@ -6196,9 +6373,21 @@
             assessment: "Notice: An oral reading assessment is scheduled for {name} next week. Please ensure they have a quiet place for practice using the PABASA dashboard."
         };
 
+        const toggleScheduleFields = () => {
+            const showSchedule = templateSelect.value === "assessment";
+            if (scheduleContainer) scheduleContainer.style.display = showSchedule ? "block" : "none";
+            if (materialContainer) materialContainer.style.display = showSchedule ? "block" : "none";
+            if (!showSchedule) {
+                if (scheduleInput) scheduleInput.value = "";
+                if (materialInput) materialInput.value = "";
+            }
+        };
+
         templateSelect.onchange = () => {
             messageArea.value = templates[templateSelect.value] || "";
+            toggleScheduleFields();
         };
+        toggleScheduleFields();
         messageArea.value = templates.general;
     }
 
@@ -6567,13 +6756,9 @@
             if (!itemInput) return;
             const val = itemInput.value.trim();
             if (!val) return;
-            if (isParagraphInput(val)) {
-                currentItemsList = [val];
-                resetDetectedParagraphState(true);
-            } else {
-                currentItemsList.push(val);
-                resetDetectedParagraphState(false);
-            }
+            const looksLikeParagraph = isParagraphInput(val);
+            currentItemsList.push(val);
+            resetDetectedParagraphState(looksLikeParagraph || currentItemsAreParagraph);
             itemInput.value = '';
             itemInput.focus();
             renderAddedItemsChips();
@@ -6642,6 +6827,7 @@
             if (scheduleDateTimeInput) scheduleDateTimeInput.value = '';
             if (materialLanguageSelect) materialLanguageSelect.value = 'English';
             buildAssignedWeekOptions('assignedWeek', null);
+            window._pendingSharedMaterialOrigin = false;
 
             const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
             if (addHeader) addHeader.textContent = 'Add Reading Material';
@@ -6836,14 +7022,7 @@
             const record = materials.find(item => String(item.id) === String(materialId));
             if (!record) return;
             const material = record.material || record;
-            material._is_shared_origin = true;
-            material.is_shared_material = true;
-            material.material_source = 'shared';
-            const materialIdKey = String(material.id || material.action_id || material.raw_id || '').trim();
-            if (materialIdKey) {
-                sharedMaterialIds.add(materialIdKey);
-                saveSharedMaterialIdsToStorage();
-            }
+            material.source_type = 'shared';
             window._pendingSharedMaterialOrigin = true;
 
             const currentCourse = window.courseAttachTarget ? findCourseById(window.courseAttachTarget) : null;
@@ -7361,23 +7540,7 @@
             ]);
 
             // Ensure renderAllReadingsList is available (may be defined later)
-            // Update per-class material counts (assessment vs practice) so the active class banner shows accurate numbers.
-            try {
-                let assessmentCount = 0, practiceCount = 0;
-                (allMaterials || []).forEach(m => {
-                    const t = (m.type || '').toString().toLowerCase();
-                    const mid = (m.id || '').toString();
-                    if (t === 'assessment') assessmentCount++;
-                    else if (t === 'practice') practiceCount++;
-                    else if (t === 'both') { assessmentCount++; practiceCount++; }
-                    else if (mid.startsWith('assessment-')) assessmentCount++;
-                    else if (mid.startsWith('practice-')) practiceCount++;
-                });
-                const aEl = document.getElementById('activeAssessmentCount');
-                const pEl = document.getElementById('activePracticeCount');
-                if (aEl) aEl.textContent = String(assessmentCount);
-                if (pEl) pEl.textContent = String(practiceCount);
-            } catch (e) { console.warn('Failed to update per-class material counts', e); }
+            try { syncClassBannerMaterialCounts(classCode); } catch (e) { console.warn('Failed to sync banner counts from live class data', e); }
 
             (function waitAndRender() {
                 if (typeof window.renderAllReadingsList === 'function') {
@@ -7723,19 +7886,14 @@
                         // Category is auto-detected by backend
                         const pendingInput = itemInput ? itemInput.value.trim() : '';
                         if (pendingInput) {
-                            if (isParagraphInput(pendingInput)) {
-                                currentItemsList = [pendingInput];
-                                resetDetectedParagraphState(true);
-                            } else {
-                                currentItemsList.push(pendingInput);
-                                resetDetectedParagraphState(false);
-                            }
+                            currentItemsList.push(pendingInput);
+                            resetDetectedParagraphState(isParagraphInput(pendingInput) || currentItemsAreParagraph);
                             itemInput.value = '';
                             renderAddedItemsChips();
                         }
                         const finalParagraphMode = currentItemsAreParagraph || (currentItemsList.length === 1 && isParagraphInput(currentItemsList[0]));
                         const readingType = finalParagraphMode ? 'paragraph' : '';
-                        const content = finalParagraphMode ? (currentItemsList[0] || '') : currentItemsList.join('\n');
+                        const content = finalParagraphMode ? currentItemsList.join('\n\n') : currentItemsList.join('\n');
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const usageType = 'assessment';
@@ -7880,7 +8038,8 @@
                                             class_code: saveClassCode,
                                             scheduled_at: schedule || null,
                                             assigned_week: assignedWeek,
-                                            language: language
+                                            language: language,
+                                            source_type: window._pendingSharedMaterialOrigin ? 'shared' : 'personal'
                                         })
                                     };
 
@@ -8102,18 +8261,9 @@
                                                         item_type: attachData.material?.item_type || apiData.material?.item_type || '',
                                                         type: apiData.material?.type || apiData.material?.usage || apiData.material?.usage_type || '',
                                                         status: apiData.material?.status || 'published',
-                                                        assigned_week_display: apiData.material?.assigned_week_display || apiData.material?.assigned_week || apiData.material?.week || null
+                                                        assigned_week_display: apiData.material?.assigned_week_display || apiData.material?.assigned_week || apiData.material?.week || null,
+                                                        source_type: apiData.material?.source_type || (window._pendingSharedMaterialOrigin ? 'shared' : 'personal')
                                                     };
-                                                    if (window._pendingSharedMaterialOrigin) {
-                                                        attachedMaterial._is_shared_origin = true;
-                                                        attachedMaterial.is_shared_material = true;
-                                                        attachedMaterial.material_source = 'shared';
-                                                        const attachedKey = rawRecordId(String(attachedMaterial.id || attachedMaterial.action_id || attachedMaterial.raw_id || '').trim());
-                                                        if (attachedKey) {
-                                                            sharedMaterialIds.add(attachedKey);
-                                                            saveSharedMaterialIdsToStorage();
-                                                        }
-                                                    }
                                                     const existing = findCourseMaterial(course, mid) || findCourseMaterial(course, attachedMaterial.id) || (course.materials.find(item => String(item.title || '').trim().toLowerCase() === String(attachedMaterial.title || '').trim().toLowerCase()) && attachedMaterial);
                                                     if (!existing) {
                                                         course.materials.push(attachedMaterial);
