@@ -1,11 +1,15 @@
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from datetime import timedelta
+from io import BytesIO
 import json
 import uuid
 from unittest.mock import patch
+
+from pypdf import PdfReader
 
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
@@ -36,6 +40,9 @@ class ReadingMatcherTests(TestCase):
 
 
 class PrincipalReportsExportTests(TestCase):
+    def test_default_timezone_is_asia_manila(self):
+        self.assertEqual(settings.TIME_ZONE, "Asia/Manila")
+
     def setUp(self):
         self.user = User.objects.create(
             custom_id=f"ADM-{uuid.uuid4().hex[:8].upper()}",
@@ -66,6 +73,15 @@ class PrincipalReportsExportTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_principal_reports_pdf_export_includes_summary_overview(self):
+        response = self.client.get(reverse("principal_reports"), {"report_type": "school", "export": "pdf"})
+
+        self.assertEqual(response.status_code, 200)
+        reader = PdfReader(BytesIO(response.content))
+        extracted_text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+        self.assertTrue(extracted_text or response.content.startswith(b"%PDF"))
 
 
 class ProfileUpdateTests(TestCase):

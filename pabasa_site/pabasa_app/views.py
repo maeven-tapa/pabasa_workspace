@@ -6018,10 +6018,11 @@ def _principal_report_csv_response(report_type, headers, rows):
 def _principal_report_pdf_response(request, analytics, report_type, grade_filter, headers, rows):
     try:
         from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import inch
-        from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        from reportlab.pdfgen import canvas
+        from reportlab.platypus import HRFlowable, Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
     except ImportError as exc:
         logger.exception("ReportLab is not installed")
         return HttpResponse(f"PDF export is unavailable: {exc}", status=500)
@@ -6036,11 +6037,11 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
             max_len = max(len(value) for value in values) if values else 0
             column_texts.append(max_len)
 
-        min_width = 0.95 * inch
+        min_width = 0.9 * inch
         max_width = 2.2 * inch
         widths = []
         for length in column_texts:
-            estimated = max(min_width, min(max_width, length * 4.7))
+            estimated = max(min_width, min(max_width, length * 4.5))
             widths.append(estimated)
 
         total_width = sum(widths)
@@ -6053,23 +6054,270 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
 
         return widths
 
+    def _format_percentage(value):
+        try:
+            return f"{float(value):.1f}%"
+        except (TypeError, ValueError):
+            return str(value or '0%')
+
+    def _format_count(value):
+        try:
+            return f"{int(float(value))}"
+        except (TypeError, ValueError):
+            return str(value or '0')
+
+    def _status_style(status):
+        normalized = str(status or '').strip().lower()
+        if normalized in {'completed', 'done', 'finished'}:
+            return '#2e7d32', '#e8f5e9', 'Completed'
+        if normalized in {'in progress', 'in-progress', 'ongoing'}:
+            return '#f9a825', '#fff8e1', 'In Progress'
+        return '#c62828', '#ffebee', 'Pending'
+
+    def _build_card(title, value, subtitle, accent, icon):
+        card = Table(
+            [[
+                Paragraph(f"<font color='{accent}' size='13'><b>{icon}</b></font>", card_icon_style),
+            ], [
+                Paragraph(f"<font size='16' color='{accent}'><b>{value}</b></font>", card_value_style),
+            ], [
+                Paragraph(f"<b>{title}</b>", card_title_style),
+            ], [
+                Paragraph(subtitle, card_subtitle_style),
+            ]],
+            colWidths=[card_width],
+            repeatRows=0,
+        )
+        card.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fcfcfc')),
+            ('LINEABOVE', (0, 0), (-1, 0), 0.8, colors.HexColor(accent)),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#ececec')),
+        ]))
+        return card
+
     buffer = BytesIO()
-    left_margin = 0.6 * inch
-    right_margin = 0.6 * inch
-    top_margin = 0.7 * inch
-    bottom_margin = 0.85 * inch
-    portrait_page = A4
-    landscape_page = landscape(A4)
-    portrait_available_width = portrait_page[0] - left_margin - right_margin
-    landscape_available_width = landscape_page[0] - left_margin - right_margin
+    left_margin = 0.8 * inch
+    right_margin = 0.8 * inch
+    top_margin = 0.8 * inch
+    bottom_margin = 0.8 * inch
+    page_size = A4
+    available_width = page_size[0] - left_margin - right_margin
+    card_width = (available_width - 0.2 * inch) / 2.0
 
     preview_headers = [str(header) for header in headers]
     preview_rows = [[str(value) for value in row] for row in rows]
-    portrait_widths = _estimate_column_widths(preview_headers, preview_rows, portrait_available_width)
-    landscape_widths = _estimate_column_widths(preview_headers, preview_rows, landscape_available_width)
-    use_landscape = sum(portrait_widths) > portrait_available_width or (len(preview_headers) > 5 and sum(landscape_widths) <= landscape_available_width)
-    page_size = landscape_page if use_landscape else portrait_page
-    available_width = landscape_available_width if use_landscape else portrait_available_width
+    column_widths = _estimate_column_widths(preview_headers, preview_rows, available_width)
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'ReportTitle',
+        parent=styles['Heading1'],
+        fontSize=20,
+        leading=24,
+        textColor=colors.HexColor('#8B3E2F'),
+        spaceAfter=4,
+        fontName='Helvetica-Bold',
+    )
+    subtitle_style = ParagraphStyle(
+        'ReportSubtitle',
+        parent=styles['BodyText'],
+        fontSize=10,
+        leading=13,
+        textColor=colors.HexColor('#4b5563'),
+        spaceAfter=4,
+    )
+    section_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=13,
+        leading=15,
+        textColor=colors.HexColor('#8B3E2F'),
+        spaceAfter=6,
+        fontName='Helvetica-Bold',
+    )
+    table_font_size = 8.6 if len(preview_headers) >= 5 else 9.0
+    body_style = ParagraphStyle(
+        'ReportBody',
+        parent=styles['BodyText'],
+        fontSize=table_font_size,
+        leading=table_font_size + 1.2,
+        textColor=colors.HexColor('#111827'),
+        allowWidows=1,
+        allowOrphans=1,
+    )
+    card_title_style = ParagraphStyle(
+        'CardTitle',
+        parent=styles['BodyText'],
+        fontSize=9.5,
+        leading=11,
+        textColor=colors.HexColor('#374151'),
+        spaceAfter=1,
+        fontName='Helvetica-Bold',
+    )
+    card_value_style = ParagraphStyle(
+        'CardValue',
+        parent=styles['BodyText'],
+        fontSize=15,
+        leading=16,
+        textColor=colors.HexColor('#111827'),
+        spaceAfter=2,
+        fontName='Helvetica-Bold',
+    )
+    card_icon_style = ParagraphStyle(
+        'CardIcon',
+        parent=styles['BodyText'],
+        fontSize=12,
+        leading=13,
+        textColor=colors.HexColor('#8B3E2F'),
+        spaceAfter=2,
+    )
+    card_subtitle_style = ParagraphStyle(
+        'CardSubtitle',
+        parent=styles['BodyText'],
+        fontSize=8.4,
+        leading=10,
+        textColor=colors.HexColor('#6b7280'),
+        spaceAfter=2,
+    )
+    meta_style = ParagraphStyle(
+        'Meta',
+        parent=styles['BodyText'],
+        fontSize=8.6,
+        leading=10,
+        textColor=colors.HexColor('#6b7280'),
+        spaceAfter=2,
+    )
+
+    report_label = {
+        'school': 'School Performance',
+        'grade': 'Grade-Level',
+        'assessment': 'Assessment',
+    }.get(report_type, 'School Performance')
+
+    local_now = timezone.localtime(timezone.now(), timezone.get_default_timezone())
+    generated_at = local_now.strftime('%B %d, %Y %I:%M %p')
+    report_title = 'PABASA Principal Report'
+    school_name = analytics.get('school_name') or 'Salawag Elementary School'
+
+    elements = []
+    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
+    header_table = Table(
+        [[
+            Image(str(logo_path), width=0.7 * inch, height=0.7 * inch) if logo_path.exists() else Paragraph('<b>PABASA</b>', styles['Heading3']),
+            Paragraph(f"<b>{report_title}</b>", title_style),
+        ], [
+            '',
+            Paragraph(school_name, subtitle_style),
+        ], [
+            '',
+            Paragraph(f"Report Type: {report_label}", subtitle_style),
+        ], [
+            '',
+            Paragraph(f"Date Generated: {generated_at}", subtitle_style),
+        ]],
+        colWidths=[0.95 * inch, available_width - 0.95 * inch],
+        repeatRows=0,
+    )
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    elements.extend([header_table, Spacer(1, 0.12 * inch), HRFlowable(width=available_width, thickness=0.5, color=colors.HexColor('#8B3E2F')), Spacer(1, 0.16 * inch)])
+
+    if grade_filter:
+        elements.append(Paragraph(f'Grade Level: {grade_filter}', subtitle_style))
+        elements.append(Spacer(1, 0.06 * inch))
+
+    elements.append(Paragraph('Summary Overview', section_style))
+    elements.append(Spacer(1, 0.06 * inch))
+
+    summary_cards = [
+        _build_card('Total Students', _format_count(analytics.get('total_students', 0)), 'Enrollment overview', '#8B3E2F', '◉'),
+        _build_card('Total Teachers', _format_count(analytics.get('total_teachers', 0)), 'Active school staff', '#4CAF50', '◌'),
+        _build_card('Total Assessments', _format_count(analytics.get('total_assessments', 0)), 'Assigned reading tasks', '#4A90E2', '◍'),
+        _build_card('Completed', _format_count(analytics.get('completed_assessments', 0)), 'Finished assessments', '#2e7d32', '✓'),
+        _build_card('In Progress', _format_count(analytics.get('in_progress_assessments', 0)), 'Currently active', '#FFC107', '↺'),
+        _build_card('Pending', _format_count(analytics.get('pending_assessments', 0)), 'Awaiting action', '#E53935', '•'),
+        _build_card('Completion Rate', _format_percentage(analytics.get('completion_rate', 0)), 'Overall progress', '#8B3E2F', '%'),
+        _build_card('Average Score', _format_percentage(analytics.get('average_score', 0)), 'Reading mastery', '#4CAF50', '★'),
+    ]
+    summary_rows = [summary_cards[i:i + 2] for i in range(0, len(summary_cards), 2)]
+    summary_grid = Table(summary_rows, colWidths=[card_width, card_width], repeatRows=0)
+    summary_grid.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('SPACING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.extend([summary_grid, Spacer(1, 0.12 * inch)])
+
+    progress_summary = Table([
+        [Paragraph('Assessment Snapshot', card_title_style)],
+        [Paragraph(f"Completed: {_format_count(analytics.get('completed_assessments', 0))}   In Progress: {_format_count(analytics.get('in_progress_assessments', 0))}   Pending: {_format_count(analytics.get('pending_assessments', 0))}", meta_style)],
+        [Paragraph(f"Overall Completion: {_format_percentage(analytics.get('completion_rate', 0))}   Average Score: {_format_percentage(analytics.get('average_score', 0))}", meta_style)],
+    ], colWidths=[available_width], repeatRows=0)
+    progress_summary.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f8f8')),
+        ('GRID', (0, 0), (-1, -1), 0.3, colors.HexColor('#e5e7eb')),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    elements.extend([progress_summary, Spacer(1, 0.12 * inch)])
+
+    elements.append(Paragraph('Detailed Report', section_style))
+    elements.append(Spacer(1, 0.06 * inch))
+
+    table_rows = [[Paragraph(str(value), body_style) for value in headers]]
+    for row in rows:
+        styled_row = []
+        for idx, value in enumerate(row):
+            cell_text = str(value)
+            if headers and str(headers[idx]).strip().lower() == 'status':
+                status_color, _, status_label = _status_style(value)
+                cell_text = f"<font color='{status_color}'><b>{status_label}</b></font>"
+            styled_row.append(Paragraph(cell_text, body_style))
+        table_rows.append(styled_row)
+
+    data_table = Table(table_rows, repeatRows=1, splitByRow=0, colWidths=column_widths)
+    data_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8B3E2F')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#d1d5db')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#fcfcfc'), colors.HexColor('#f8f8f8')]),
+        ('FONTSIZE', (0, 0), (-1, -1), table_font_size),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
+    ]))
+    elements.append(data_table)
+
+    def _draw_footer(canvas_obj, doc_obj):
+        canvas_obj.saveState()
+        canvas_obj.setFont('Helvetica', 8)
+        canvas_obj.setFillColor(colors.HexColor('#6b7280'))
+        canvas_obj.drawString(left_margin, 0.38 * inch, 'PABASA Automated Reading Assessment System')
+        canvas_obj.drawCentredString(page_size[0] / 2.0, 0.38 * inch, f'Page {canvas_obj.getPageNumber()}')
+        canvas_obj.drawRightString(page_size[0] - right_margin, 0.38 * inch, f'Confidential School Report • Generated {generated_at}')
+        canvas_obj.restoreState()
 
     doc = SimpleDocTemplate(
         buffer,
@@ -6079,146 +6327,10 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
         topMargin=top_margin,
         bottomMargin=bottom_margin,
     )
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'ReportTitle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        leading=22,
-        textColor=colors.HexColor('#7c2d12'),
-        spaceAfter=6,
-        fontName='Helvetica-Bold',
-    )
-    subtitle_style = ParagraphStyle(
-        'ReportSubtitle',
-        parent=styles['BodyText'],
-        fontSize=10,
-        leading=13,
-        textColor=colors.HexColor('#4b5563'),
-        spaceAfter=8,
-    )
-    section_style = ParagraphStyle(
-        'SectionTitle',
-        parent=styles['Heading2'],
-        fontSize=12,
-        leading=14,
-        textColor=colors.HexColor('#7c2d12'),
-        spaceAfter=6,
-        fontName='Helvetica-Bold',
-    )
-    table_font_size = 8.0 if len(preview_headers) >= 6 else 8.4
-    body_style = ParagraphStyle(
-        'ReportBody',
-        parent=styles['BodyText'],
-        fontSize=table_font_size,
-        leading=table_font_size + 1.4,
-        textColor=colors.HexColor('#111827'),
-        allowWidows=1,
-        allowOrphans=1,
-    )
-    header_style = ParagraphStyle(
-        'ReportHeader',
-        parent=body_style,
-        fontName='Helvetica-Bold',
-        textColor=colors.HexColor('#4c1d95'),
-    )
-
-    def _draw_footer(canvas, doc):
-        canvas.saveState()
-        canvas.setFont('Helvetica', 8)
-        canvas.setFillColor(colors.HexColor('#6b7280'))
-        canvas.drawString(left_margin, 0.35 * inch, 'PABASA Principal Report')
-        canvas.drawRightString(page_size[0] - right_margin, 0.35 * inch, f'Page {canvas.getPageNumber()}')
-        canvas.restoreState()
-
-    report_label = {
-        'school': 'School Performance',
-        'grade': 'Grade-Level',
-        'assessment': 'Assessment',
-    }.get(report_type, 'School Performance')
-
-    generated_at = timezone.localtime(timezone.now()).strftime('%B %d, %Y %I:%M %p')
-    report_title = 'PABASA Principal Report'
-    school_name = analytics.get('school_name') or 'Salawag Elementary School'
-
-    elements = []
-    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
-    if logo_path.exists():
-        elements.append(Image(str(logo_path), width=0.95 * inch, height=0.95 * inch))
-    else:
-        elements.append(Paragraph('<b>PABASA</b>', styles['Heading3']))
-
-    elements.extend([
-        Paragraph(report_title, title_style),
-        Paragraph(school_name, subtitle_style),
-        Paragraph(f'Generated: {generated_at}', subtitle_style),
-        Paragraph(f'Report Type: {report_label}', subtitle_style),
-    ])
-    if grade_filter:
-        elements.append(Paragraph(f'Grade Level: {grade_filter}', subtitle_style))
-    elements.append(Spacer(1, 0.12 * inch))
-
-    summary_rows = [
-        ['Metric', 'Value'],
-        ['School Name', school_name],
-        ['Total Students', analytics.get('total_students', 0)],
-        ['Total Teachers', analytics.get('total_teachers', 0)],
-        ['Total Assessments', analytics.get('total_assessments', 0)],
-        ['Completed Assessments', analytics.get('completed_assessments', 0)],
-        ['In Progress Assessments', analytics.get('in_progress_assessments', 0)],
-        ['Pending Assessments', analytics.get('pending_assessments', 0)],
-        ['Overall Completion Rate', f"{analytics.get('completion_rate', 0)}%"],
-        ['Average Score', f"{analytics.get('average_score', 0)}%"],
-    ]
-    summary_table = Table(summary_rows, repeatRows=1, colWidths=[2.3 * inch, 4.8 * inch])
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#7c2d12')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#d1d5db')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('PADDING', (0, 0), (-1, -1), 5),
-    ]))
-    elements.extend([
-        Paragraph('Summary Metrics', section_style),
-        Spacer(1, 0.06 * inch),
-        summary_table,
-        Spacer(1, 0.2 * inch),
-        Paragraph('Detailed Report Data', section_style),
-        Spacer(1, 0.06 * inch),
-    ])
-
-    table_rows = [[Paragraph(value, body_style) for value in headers]]
-    for row in rows:
-        table_rows.append([Paragraph(str(value), body_style) for value in row])
-
-    column_widths = _estimate_column_widths(preview_headers, preview_rows, available_width)
-    data_table = Table(table_rows, repeatRows=1, splitByRow=1, colWidths=column_widths)
-    data_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3e8ff')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#4c1d95')),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#d1d5db')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#faf5ff')]),
-        ('FONTSIZE', (0, 0), (-1, -1), table_font_size),
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('WORDWRAP', (0, 0), (-1, -1), 'CJK'),
-    ]))
-    elements.append(data_table)
-
     doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
     buffer.seek(0)
 
-    filename = f"principal_{report_type}_report_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    filename = f"principal_{report_type}_report_{local_now.strftime('%Y%m%d_%H%M%S')}.pdf"
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
