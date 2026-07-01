@@ -4798,7 +4798,7 @@
 
             const student = selectedStudents[0];
             const studentName = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
-            const latestAssessment = student.completed_at || 'No completed assessment yet';
+            const latestAssessment = student.completed_at ? formatDateTime(student.completed_at) : 'No completed assessment yet';
             const assessmentTitle = student.assessment_title ? ` - ${escapeHtml(student.assessment_title)}` : '';
             const latestDuration = student.duration_seconds != null && student.duration_seconds !== '' && Number(student.duration_seconds) > 0
                 ? formatCourseReportDuration(student.duration_seconds)
@@ -4873,7 +4873,7 @@
                                     <span class="course-report-pill"><i class="bi bi-bullseye"></i>${accuracyText}</span>
                                     <span class="course-report-pill"><i class="bi bi-speedometer2"></i>${wpmText}</span>
                                     <span class="course-report-pill"><i class="bi bi-stopwatch"></i>${escapeHtml(durationText)}</span>
-                                    <span class="course-report-pill"><i class="bi bi-calendar-check"></i>${escapeHtml(s.completed_at || 'No assessment')}</span>
+                                    <span class="course-report-pill"><i class="bi bi-calendar-check"></i>${escapeHtml(s.completed_at ? formatDateTime(s.completed_at) : 'No assessment')}</span>
                                 </div>
                             </div>
                         </div>`;
@@ -6260,6 +6260,19 @@
         if (!value) return 'No due date';
         const date = new Date(`${value}T00:00:00`);
         return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatDateTime(value) {
+        if (!value) return 'N/A';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        });
     }
 
     function loadAssessments(classCode) {
