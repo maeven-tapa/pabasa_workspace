@@ -502,6 +502,19 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
     if not isinstance(profile, dict):
         profile = {}
 
+    joined_classes = []
+    if sections:
+        for section in sections:
+            if not section:
+                continue
+            label = getattr(section, 'class_name', '') or getattr(section, 'class_code', '') or ''
+            if label:
+                joined_classes.append(label)
+    if not joined_classes and getattr(course, 'title', ''):
+        joined_classes.append(getattr(course, 'title', ''))
+    if not isinstance(profile, dict):
+        profile = {}
+
     latest = {}
     latest_dt = None
     if sections is not None:
@@ -549,6 +562,10 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
 
     report = {
         'student_name': f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id or 'Student',
+        'student_id': getattr(student_user, 'custom_id', '') or '',
+        'email': getattr(student_user, 'email', '') or '',
+        'grade_level': getattr(student_user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
+        'joined_classes': joined_classes,
         'course_name': getattr(course, 'title', '') or '',
         'course_code': getattr(course, 'code', '') or '',
         'reading_level': latest.get('level') or student_user.reading_level or profile.get('reading_level') or profile.get('crla_classification') or '',
@@ -606,6 +623,8 @@ def _format_reading_report_text(report):
     lines = [
         "Reading Performance Report",
         f"Student: {report.get('student_name') or 'Student'}",
+        f"Grade Level: {report.get('grade_level') or 'Not yet available'}",
+        f"Joined Classes: {', '.join(report.get('joined_classes') or ['Not yet available'])}",
         f"Course: {report.get('course_name') or 'Course'} ({report.get('course_code') or 'No code'})",
         f"Reading Level / CRLA Classification: {report.get('reading_level') or 'Not yet available'}",
         metric("Accuracy", report.get('accuracy'), "%"),
@@ -620,6 +639,183 @@ def _format_reading_report_text(report):
     if report.get('assessment_title'):
         lines.insert(11, f"Assessment: {report.get('assessment_title')}")
     return "\n".join(lines)
+
+
+def _build_reading_report_pdf(report, message='', course=None, teacher=None, recipient_email=''):
+    """Create a polished PDF attachment for course update / report emails."""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import inch
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER
+        from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, HRFlowable
+    except ImportError as exc:
+        logger.exception("ReportLab is not installed")
+        raise RuntimeError(f"PDF export is unavailable: {exc}")
+
+    buffer = BytesIO()
+    page_size = A4
+    left_margin = 0.7 * inch
+    right_margin = 0.7 * inch
+    top_margin = 0.7 * inch
+    bottom_margin = 0.7 * inch
+    available_width = page_size[0] - left_margin - right_margin
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'ReportTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=20,
+        leading=24, textColor=colors.HexColor('#8B3E2F'), spaceAfter=4,
+    )
+    subtitle_style = ParagraphStyle(
+        'ReportSubtitle', parent=styles['BodyText'], fontName='Helvetica', fontSize=10,
+        leading=13, textColor=colors.HexColor('#4b5563'), spaceAfter=3,
+    )
+    section_style = ParagraphStyle(
+        'SectionTitle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12,
+        leading=14, textColor=colors.HexColor('#8B3E2F'), spaceAfter=6,
+    )
+    body_style = ParagraphStyle(
+        'ReportBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9.2,
+        leading=12, textColor=colors.HexColor('#111827'), spaceAfter=4,
+    )
+    meta_style = ParagraphStyle(
+        'MetaBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9.2,
+        leading=12, textColor=colors.HexColor('#111827'), spaceAfter=3,
+    )
+    note_style = ParagraphStyle(
+        'NoteBody', parent=styles['BodyText'], fontName='Helvetica', fontSize=9.2,
+        leading=12, textColor=colors.HexColor('#374151'), spaceAfter=4,
+    )
+
+    def _make_row(label, value):
+        return [Paragraph(str(label), body_style), Paragraph(str(value or 'Not yet available'), body_style)]
+
+    def _make_metrics_table(values):
+        rows = []
+        for label, value in values:
+            rows.append([Paragraph(str(label), body_style), Paragraph(str(value), body_style)])
+        table = Table(rows, colWidths=[2.3 * inch, available_width - 2.3 * inch], repeatRows=0)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f9fafb')),
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e5e7eb')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        return table
+
+    generated_at = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y %I:%M %p')
+    student_name = report.get('student_name') or 'Student'
+    joined_classes = report.get('joined_classes') or []
+    if isinstance(joined_classes, str):
+        class_text = joined_classes
+    else:
+        class_text = ', '.join([str(item) for item in joined_classes if item]) or 'Not yet available'
+
+    elements = []
+    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
+    header_parts = []
+    if logo_path.exists():
+        header_parts.append(Image(str(logo_path), width=0.75 * inch, height=0.75 * inch))
+    else:
+        header_parts.append(Paragraph('<b>PABASA</b>', title_style))
+    header_parts.append(Paragraph('PABASA Reading Report', title_style))
+    header_table = Table([[header_parts[0], header_parts[1]]], colWidths=[0.9 * inch, available_width - 0.9 * inch], repeatRows=0)
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    elements.extend([header_table, Spacer(1, 0.08 * inch)])
+    elements.append(Paragraph(f'Generated on {generated_at}', subtitle_style))
+    elements.append(Paragraph(f'Prepared for {student_name}', subtitle_style))
+    elements.append(Spacer(1, 0.08 * inch))
+    elements.append(HRFlowable(width=available_width, thickness=0.6, color=colors.HexColor('#8B3E2F')))
+    elements.append(Spacer(1, 0.12 * inch))
+
+    profile_rows = [
+        ['Student Name', report.get('student_name') or 'Student'],
+        ['Student ID', report.get('student_id') or 'Not yet available'],
+        ['Grade Level', report.get('grade_level') or 'Not yet available'],
+        ['Email', report.get('email') or 'Not yet available'],
+        ['Joined Classes', class_text],
+        ['Course', f"{report.get('course_name') or 'Course'} ({report.get('course_code') or 'No code'})"],
+    ]
+    profile_table = Table(profile_rows, colWidths=[1.7 * inch, available_width - 1.7 * inch], repeatRows=0)
+    profile_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fcfcfc')),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e5e7eb')),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(Paragraph('Student & Class Details', section_style))
+    elements.append(profile_table)
+    elements.append(Spacer(1, 0.12 * inch))
+
+    elements.append(Paragraph('Reading Overview', section_style))
+    metrics = [
+        ('Reading Level / CRLA Classification', report.get('reading_level') or 'Not yet available'),
+        ('Accuracy', f"{report.get('accuracy') or 'Not yet available'}%" if report.get('accuracy') not in (None, '') else 'Not yet available'),
+        ('Words Per Minute', f"{report.get('wpm') or 'Not yet available'} WPM" if report.get('wpm') not in (None, '') else 'Not yet available'),
+        ('Fluency Score', f"{report.get('fluency_score') or 'Not yet available'}%" if report.get('fluency_score') not in (None, '') else 'Not yet available'),
+        ('Pronunciation Score', f"{report.get('pronunciation_score') or 'Not yet available'}%" if report.get('pronunciation_score') not in (None, '') else 'Not yet available'),
+        ('Time Score', f"{report.get('time_score') or 'Not yet available'}%" if report.get('time_score') not in (None, '') else 'Not yet available'),
+        ('Total Score', f"{report.get('total_score') or 'Not yet available'}%" if report.get('total_score') not in (None, '') else 'Not yet available'),
+    ]
+    elements.append(_make_metrics_table(metrics))
+    elements.append(Spacer(1, 0.12 * inch))
+
+    elements.append(Paragraph('Assessment Results', section_style))
+    assessment_text = [
+        f"Latest completed assessment: {report.get('completed_at') or 'No completed assessment yet'}",
+        f"Assessment title: {report.get('assessment_title') or 'Not yet available'}",
+        f"Assessment type: {report.get('assessment_type') or 'Not yet available'}",
+        f"Summary: {report.get('summary') or 'No summary available'}",
+    ]
+    elements.extend([Paragraph(item, note_style) for item in assessment_text])
+    elements.append(Spacer(1, 0.12 * inch))
+
+    elements.append(Paragraph('Recommendations & Support', section_style))
+    elements.append(Paragraph(report.get('recommendation') or 'Continue regular reading practice and teacher-guided support.', note_style))
+
+    if message:
+        elements.append(Spacer(1, 0.08 * inch))
+        elements.append(Paragraph('Teacher Comments', section_style))
+        elements.append(Paragraph(message, note_style))
+
+    if teacher or recipient_email:
+        elements.append(Spacer(1, 0.08 * inch))
+        elements.append(Paragraph('Additional Details', section_style))
+        extra_lines = []
+        if teacher:
+            extra_lines.append(f"Teacher: {teacher.first_name} {teacher.last_name}".strip())
+        if recipient_email:
+            extra_lines.append(f"Recipient Email: {recipient_email}")
+        if course:
+            extra_lines.append(f"Course: {course.title} ({course.code})")
+        elements.extend([Paragraph(item, note_style) for item in extra_lines])
+
+    def _draw_footer(canvas_obj, doc_obj):
+        canvas_obj.saveState()
+        canvas_obj.setFont('Helvetica', 8)
+        canvas_obj.setFillColor(colors.HexColor('#6b7280'))
+        canvas_obj.drawString(left_margin, 0.38 * inch, 'PABASA Automated Reading Assessment System')
+        canvas_obj.drawCentredString(page_size[0] / 2.0, 0.38 * inch, f'Page {canvas_obj.getPageNumber()}')
+        canvas_obj.drawRightString(page_size[0] - right_margin, 0.38 * inch, f'Generated {generated_at}')
+        canvas_obj.restoreState()
+
+    doc = SimpleDocTemplate(buffer, pagesize=page_size, leftMargin=left_margin, rightMargin=right_margin, topMargin=top_margin, bottomMargin=bottom_margin)
+    doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 # Authentication functions
 def generate_custom_id(role):
@@ -3114,15 +3310,19 @@ def send_course_update(request):
 
             student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or 'Student'
             personalized_message = message_template.replace('{name}', student_name)
-            subject = f"PABASA Course Update: {course.title}"
+            subject = "Student Reading Progress Report – PABASA"
             report = _latest_student_reading_report(student, sections=course_sections, course=course)
             report_text = _format_reading_report_text(report)
             email_body = (
-                f"Course: {course.title} ({course.code})\n"
-                f"Update Type: {update_type}\n\n"
-                f"Teacher Comments:\n"
-                f"{personalized_message}\n\n"
-                f"{report_text}"
+                "Dear Parent/Guardian,\n\n"
+                "We hope you are doing well.\n\n"
+                "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+                "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
+                "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
+                "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
+                "Thank you for your continued support and partnership in your child's learning.\n\n"
+                "Sincerely,\n\n"
+                "PABASA Team"
             )
             note_text = (
                 f"Course: {course.title} ({course.code})\n"
@@ -3133,7 +3333,29 @@ def send_course_update(request):
                 f"{report_text}"
             )
 
-            send_mail(subject, email_body, sender, [student.email], fail_silently=False)
+            attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
+            email_message = EmailMultiAlternatives(
+                subject,
+                email_body,
+                sender,
+                [student.email],
+            )
+            try:
+                pdf_bytes = _build_reading_report_pdf(
+                    report,
+                    message=personalized_message,
+                    course=course,
+                    teacher=teacher_user,
+                    recipient_email=student.email,
+                )
+                email_message.attach(attachment_name, pdf_bytes, 'application/pdf')
+            except Exception as pdf_exc:
+                logger.exception('Failed to build reading report PDF attachment for course update')
+                email_message.attach_alternative(
+                    f"<p>The attached reading report could not be generated. Please see the email body for details.</p>",
+                    "text/html",
+                )
+            email_message.send(fail_silently=False)
             Note.objects.create(
                 teacher=teacher_user,
                 student=student,

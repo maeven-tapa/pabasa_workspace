@@ -1178,8 +1178,8 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="courseSelectedStudentReportPreview"', html=False)
 
-    @patch("pabasa_app.views.send_mail")
-    def test_send_course_update_emails_student_and_stores_note(self, mock_send_mail):
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_emails_student_and_stores_note(self, mock_email_cls):
         course = Course.objects.create(
             teacher=self.teacher,
             title="Chapter 2",
@@ -1227,13 +1227,20 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["sent_count"], 1)
         self.assertTrue(data["report_included"])
         self.assertIn("report_summary", data["sent"][0])
-        mock_send_mail.assert_called_once()
-        email_body = mock_send_mail.call_args[0][1]
-        self.assertIn("Hello Single Student, keep practicing.", email_body)
-        self.assertIn("Reading Performance Report", email_body)
-        self.assertIn("Accuracy: 88%", email_body)
-        self.assertIn("Words Per Minute: 72 WPM", email_body)
-        self.assertIn("Transitioning Readers", email_body)
+        mock_email_cls.assert_called_once()
+        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report – PABASA")
+        email_instance = mock_email_cls.return_value
+        email_body = mock_email_cls.call_args[0][1]
+        self.assertIn("Dear Parent/Guardian", email_body)
+        self.assertIn("Attached is the latest Reading Progress Report", email_body)
+        self.assertIn("PABASA Team", email_body)
+        self.assertNotIn("Reading Performance Report", email_body)
+        self.assertNotIn("Accuracy: 88%", email_body)
+        self.assertNotIn("Words Per Minute: 72 WPM", email_body)
+        email_instance.attach.assert_called_once()
+        self.assertEqual(email_instance.attach.call_args[0][0], "Single_Student_reading_report.pdf")
+        self.assertEqual(email_instance.attach.call_args[0][2], "application/pdf")
+        email_instance.send.assert_called_once_with(fail_silently=False)
 
         note = Note.objects.get(teacher=self.teacher, student=self.student)
         self.assertEqual(note.note_type, "course_update:general")
@@ -1242,8 +1249,8 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertIn("Reading Performance Report", note.note_text)
         self.assertIn("Suggested Home Support", note.note_text)
 
-    @patch("pabasa_app.views.send_mail")
-    def test_send_course_update_includes_baseline_message_when_metrics_missing(self, mock_send_mail):
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_includes_baseline_message_when_metrics_missing(self, mock_email_cls):
         course = Course.objects.create(
             teacher=self.teacher,
             title="Chapter 3",
@@ -1266,15 +1273,19 @@ class TeacherStudentsDirectoryTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
-        email_body = mock_send_mail.call_args[0][1]
-        self.assertIn("No completed assessment yet", email_body)
-        self.assertIn("baseline reading assessment", email_body)
+        self.assertEqual(mock_email_cls.call_args[0][0], "Student Reading Progress Report – PABASA")
+        email_body = mock_email_cls.call_args[0][1]
+        self.assertIn("Dear Parent/Guardian", email_body)
+        self.assertIn("Attached is the latest Reading Progress Report", email_body)
+        self.assertIn("PABASA Team", email_body)
+        self.assertNotIn("No completed assessment yet", email_body)
+        mock_email_cls.return_value.attach.assert_called_once()
 
         note = Note.objects.get(teacher=self.teacher, student=self.student)
         self.assertIn("No completed assessment yet", note.note_text)
 
-    @patch("pabasa_app.views.send_mail")
-    def test_send_course_update_skips_unenrolled_and_missing_email_students(self, mock_send_mail):
+    @patch("pabasa_app.views.EmailMultiAlternatives")
+    def test_send_course_update_skips_unenrolled_and_missing_email_students(self, mock_email_cls):
         no_email_student = User.objects.create(
             custom_id="STD-NOEMAIL",
             role="student",
@@ -1330,4 +1341,4 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["sent_count"], 1)
         self.assertEqual(len(data["skipped"]), 2)
         self.assertCountEqual([item["reason"] for item in data["skipped"]], ["missing_email", "not_enrolled"])
-        mock_send_mail.assert_called_once()
+        mock_email_cls.assert_called_once()
