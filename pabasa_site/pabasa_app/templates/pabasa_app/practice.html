@@ -124,6 +124,74 @@
     .subject-card[data-difficulty="medium"]::before { background: #f59e0b; }
     .subject-card[data-difficulty="hard"]::before { background: #b95f44; }
 
+    .practice-card {
+        border-radius: 28px;
+        display: grid;
+        gap: 1rem;
+        padding: 1.25rem;
+        position: relative;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(31, 26, 23, 0.08);
+        box-shadow: 0 18px 40px rgba(31, 38, 135, 0.06);
+    }
+
+    .practice-card .card-header {
+        align-items: flex-start;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .practice-card .card-header h3 {
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin: 0 0 0.35rem;
+    }
+
+    .practice-card .card-header p {
+        color: var(--dash-muted);
+        font-size: 0.82rem;
+        margin: 0;
+    }
+
+    .practice-card .card-meta {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        font-size: 0.82rem;
+    }
+
+    .practice-card .meta-pill {
+        border-radius: 999px;
+        padding: 0.4rem 0.8rem;
+        background: rgba(31, 111, 139, 0.08);
+        color: var(--dash-text);
+        font-weight: 700;
+    }
+
+    .practice-card .card-bottom {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .practice-card .item-count {
+        color: var(--dash-muted);
+        font-size: 0.92rem;
+    }
+
+    .practice-card .start-practice-btn {
+        min-width: 160px;
+        text-decoration: none;
+    }
+
+    .practice-card .start-practice-btn:hover {
+        transform: translateY(-1px);
+    }
+
     .subject-info {
         align-items: flex-start;
         display: flex;
@@ -291,8 +359,12 @@
 <script>
     (() => {
         const practiceMaterials = JSON.parse(document.getElementById("practiceMaterialsData")?.textContent || "[]");
-        const materialTypes = ["word", "sentence", "paragraph"];
         const difficultyLabels = { easy: "Easy", medium: "Medium", hard: "Hard" };
+        const typeLabels = {
+            word: { label: "Word", icon: "bi-type", url: "{% url 'practice_word_page' %}" },
+            sentence: { label: "Sentence", icon: "bi-chat-left-text", url: "{% url 'practice_sentence_page' %}" },
+            paragraph: { label: "Paragraph", icon: "bi-card-text", url: "{% url 'practice_para_page' %}" },
+        };
 
         const escapeHtml = (value) => {
             const div = document.createElement("div");
@@ -300,62 +372,66 @@
             return div.innerHTML;
         };
 
-        const byDifficulty = (difficulty) => practiceMaterials.filter((item) => item && item.difficulty === difficulty);
-        const countItems = (materials) => materials.reduce((total, item) => total + (Array.isArray(item.items) ? item.items.length : 0), 0);
-        const countSets = (materials, type) => materials.filter((item) => item.type === type).length;
+        const getItemCount = (material) => Array.isArray(material.items) ? material.items.length : 0;
+        const formatDate = (value) => {
+            if (!value) return "";
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return "";
+            return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+        };
 
         const renderPracticeHub = () => {
             const grid = document.getElementById("subjectGrid");
             if (!grid) return;
 
-            const totalSets = practiceMaterials.length;
+            const sortedMaterials = practiceMaterials.slice().sort((a, b) => {
+                const aDate = new Date(a.created_at || 0).getTime();
+                const bDate = new Date(b.created_at || 0).getTime();
+                return aDate - bDate || String(a.id || "").localeCompare(String(b.id || ""));
+            });
+
+            const totalSets = sortedMaterials.length;
             const meterCount = document.getElementById("practiceMeterCount");
             if (meterCount) meterCount.textContent = `${totalSets} practice set${totalSets !== 1 ? "s" : ""}`;
             const meterProgress = document.querySelector(".meter-track span");
             if (meterProgress) meterProgress.style.width = (totalSets > 0 ? 100 : 0) + "%";
 
-            if (!practiceMaterials.length) {
+            if (!sortedMaterials.length) {
                 grid.innerHTML = `
                     <div class="practice-empty-state">
                         <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h3>No practice content yet</h3>
-                        <p>No practice content available for this difficulty.</p>
+                        <p>Practice content will appear here once your teacher or admin assigns it.</p>
                     </div>`;
                 return;
             }
 
-            grid.innerHTML = Object.entries(difficultyLabels).map(([difficulty, label]) => {
-                const materials = byDifficulty(difficulty);
-                const itemCount = countItems(materials);
+            grid.innerHTML = sortedMaterials.map((material) => {
+                const typeMeta = typeLabels[material.type] || { label: material.type || "Practice", icon: "bi-journal-text", url: "{% url 'practice_word_page' %}" };
+                const difficultyLabel = difficultyLabels[material.difficulty] || material.difficulty || "Unknown";
+                const itemCount = getItemCount(material);
+                const href = `${typeMeta.url}?id=${encodeURIComponent(material.id)}`;
 
                 return `
-                <div class="subject-card" data-difficulty="${difficulty}">
-                    <div class="subject-info">
+                <article class="subject-card practice-card" data-difficulty="${escapeHtml(material.difficulty)}">
+                    <div class="card-header">
                         <div>
-                            <h3>${escapeHtml(label)}</h3>
-                            <p class="small text-secondary mb-0">${itemCount ? `${itemCount} practice item${itemCount !== 1 ? "s" : ""}` : "No practice content available for this difficulty."}</p>
+                            <h3>${escapeHtml(material.title || `${difficultyLabel} ${typeMeta.label}`)}</h3>
+                            <p>${escapeHtml(`${difficultyLabel} • ${typeMeta.label}`)}</p>
                         </div>
-                        <span class="subject-code">${materials.length} sets</span>
+                        <span class="subject-code">${escapeHtml(typeMeta.label)}</span>
                     </div>
-
-                    ${materialTypes.map(type => {
-                        const urlMap = { word: "{% url 'practice_word_page' %}", sentence: "{% url 'practice_sentence_page' %}", paragraph: "{% url 'practice_para_page' %}" };
-                        const iconMap = { word: "bi-type", sentence: "bi-chat-left-text", paragraph: "bi-card-text" };
-                        const labelMap = { word: "Words", sentence: "Sentences", paragraph: "Paragraphs" };
-                        const setCount = countSets(materials, type);
-                        const href = `${urlMap[type]}?difficulty=${encodeURIComponent(difficulty)}`;
-                        const disabled = setCount === 0 ? "is-disabled" : "";
-
-                        return `
-                        <a href="${href}" class="practice-type-link type-${type} ${disabled}">
-                            <div class="type-meta">
-                                <span class="type-icon"><i class="bi ${iconMap[type]}"></i></span>
-                                <div class="type-info"><strong>${labelMap[type]}</strong><span>${setCount ? `${setCount} set${setCount !== 1 ? "s" : ""}` : "No content available"}</span></div>
-                            </div>
-                            <i class="bi ${setCount ? "bi-play-circle-fill text-primary" : "bi-lock text-secondary"}"></i>
-                        </a>`;
-                    }).join("")}
-                </div>`;
+                    <div class="card-meta">
+                        <span class="meta-pill">${escapeHtml(difficultyLabel)}</span>
+                        <span class="meta-pill">${escapeHtml(typeMeta.label)}</span>
+                        <span class="item-count">${itemCount} item${itemCount !== 1 ? "s" : ""}</span>
+                        ${material.created_at ? `<span class="item-count">Created ${escapeHtml(formatDate(material.created_at))}</span>` : ""}
+                    </div>
+                    <div class="card-bottom">
+                        <span class="item-count">${escapeHtml(material.status || "")}</span>
+                        <a href="${href}" class="btn btn-primary start-practice-btn">Start Practice</a>
+                    </div>
+                </article>`;
             }).join("");
         };
 

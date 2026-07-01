@@ -2777,7 +2777,7 @@ def _student_practice_queryset():
         is_active=True,
         status='published',
         difficulty_level__in=_practice_difficulty_values(),
-    ).order_by('difficulty_level', 'item_type', 'title')
+    ).order_by('created_at', 'id')
 
 def _serialize_student_practice_material(material):
     return {
