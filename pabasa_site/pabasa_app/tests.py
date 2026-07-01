@@ -186,9 +186,56 @@ class MaterialCreationTests(TestCase):
         material = Material.objects.latest("id")
         self.assertEqual(material.content_json.get("language"), "Tagalog")
 
-    def test_add_reading_material_saves_shared_source_type(self):
+    def test_add_reading_material_saves_multiple_paragraph_items(self):
         user = User.objects.create(
             custom_id="TCH-0003",
+            role="teacher",
+            first_name="Paragraph",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="paragraph@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Paragraph reading",
+                "content": "First paragraph text.\n\nSecond paragraph text.",
+                "reading_type": "paragraph",
+                "status": "published",
+                "usage_type": "practice",
+                "class_code": "",
+                "language": "English",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+
+        material = Material.objects.latest("id")
+        self.assertEqual(material.item_type, "paragraph")
+        self.assertEqual(material.content_json.get("items"), ["First paragraph text.", "Second paragraph text."])
+
+    def test_add_reading_material_saves_shared_source_type(self):
+        user = User.objects.create(
+            custom_id="TCH-0004",
             role="teacher",
             first_name="Shared",
             last_name="Teacher",

@@ -4635,6 +4635,21 @@ def extract_reading_material_file(request):
         return JsonResponse({'success': False, 'error': 'Could not extract text from that file.'}, status=500)
 
 
+def _split_material_content(text, rtype, requested_reading_type=''):
+    if not text:
+        return []
+    if rtype == 'word':
+        return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
+    if rtype == 'sentence':
+        return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+    if rtype == 'paragraph':
+        paragraphs = [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
+        if paragraphs:
+            return paragraphs
+        return [text.strip()]
+    return [text]
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -4701,20 +4716,7 @@ def add_reading_material(request):
 
         reading_type = requested_reading_type if requested_reading_type == 'paragraph' else detect_reading_type(content)
 
-        def split_content(text, rtype):
-            if not text:
-                return []
-            if rtype == 'word':
-                return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
-            if rtype == 'sentence':
-                return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
-            if rtype == 'paragraph':
-                if requested_reading_type == 'paragraph' or has_multiple_period_sentences(text):
-                    return [text.strip()]
-                return [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
-            return [text]
-        
-        tokens = split_content(content, reading_type)
+        tokens = _split_material_content(content, reading_type, requested_reading_type)
 
         # ── resolve teacher & class ─────────────────────────────────────────
         user_id = request.session.get('user_id')
@@ -4945,7 +4947,7 @@ def teacher_update_material(request):
             
             material.item_type = 'paragraph' if requested_reading_type == 'paragraph' else detect_type(content)
             content_json = dict(material.content_json or {})
-            content_json['items'] = content.split('\n') if material.item_type == 'word' else [content]
+            content_json['items'] = _split_material_content(content, material.item_type, requested_reading_type)
             content_json['language'] = language
             material.content_json = content_json
         else:

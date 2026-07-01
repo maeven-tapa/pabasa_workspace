@@ -3514,6 +3514,18 @@
 
     function getMaterialContentItems(material) {
         if (!material) return [];
+        const contentJsonItems = material && material.content_json && Array.isArray(material.content_json.items)
+            ? material.content_json.items
+            : null;
+        if (Array.isArray(contentJsonItems)) {
+            return contentJsonItems.map(item => {
+                if (item === null || item === undefined) return '';
+                if (typeof item === 'object') {
+                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
+                }
+                return item;
+            }).map(item => String(item).trim()).filter(Boolean);
+        }
         if (Array.isArray(material.items)) {
             return material.items.map(item => {
                 if (item === null || item === undefined) return '';
@@ -3544,6 +3556,18 @@
 
     function getMaterialContentItemsForEdit(material) {
         if (!material) return [];
+        const contentJsonItems = material && material.content_json && Array.isArray(material.content_json.items)
+            ? material.content_json.items
+            : null;
+        if (Array.isArray(contentJsonItems)) {
+            return contentJsonItems.map(item => {
+                if (item === null || item === undefined) return '';
+                if (typeof item === 'object') {
+                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
+                }
+                return item;
+            }).map(item => String(item).trim()).filter(Boolean);
+        }
         if (Array.isArray(material.items)) {
             return material.items.map(item => {
                 if (item === null || item === undefined) return '';
@@ -6674,13 +6698,9 @@
             if (!itemInput) return;
             const val = itemInput.value.trim();
             if (!val) return;
-            if (isParagraphInput(val)) {
-                currentItemsList = [val];
-                resetDetectedParagraphState(true);
-            } else {
-                currentItemsList.push(val);
-                resetDetectedParagraphState(false);
-            }
+            const looksLikeParagraph = isParagraphInput(val);
+            currentItemsList.push(val);
+            resetDetectedParagraphState(looksLikeParagraph || currentItemsAreParagraph);
             itemInput.value = '';
             itemInput.focus();
             renderAddedItemsChips();
@@ -7809,19 +7829,14 @@
                         // Category is auto-detected by backend
                         const pendingInput = itemInput ? itemInput.value.trim() : '';
                         if (pendingInput) {
-                            if (isParagraphInput(pendingInput)) {
-                                currentItemsList = [pendingInput];
-                                resetDetectedParagraphState(true);
-                            } else {
-                                currentItemsList.push(pendingInput);
-                                resetDetectedParagraphState(false);
-                            }
+                            currentItemsList.push(pendingInput);
+                            resetDetectedParagraphState(isParagraphInput(pendingInput) || currentItemsAreParagraph);
                             itemInput.value = '';
                             renderAddedItemsChips();
                         }
                         const finalParagraphMode = currentItemsAreParagraph || (currentItemsList.length === 1 && isParagraphInput(currentItemsList[0]));
                         const readingType = finalParagraphMode ? 'paragraph' : '';
-                        const content = finalParagraphMode ? (currentItemsList[0] || '') : currentItemsList.join('\n');
+                        const content = finalParagraphMode ? currentItemsList.join('\n\n') : currentItemsList.join('\n');
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const usageType = materialTypeSelect ? materialTypeSelect.value : 'practice';
