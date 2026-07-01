@@ -198,30 +198,15 @@ function initStudentsPage() {
             }
         });
 
-        // Apply Percentile Ranking before rendering directory
-        // Sort by Accuracy Descending (Highest score = Top)
-        // Separate students with numeric accuracy from those without (pending)
-        const withScore = consolidated.filter(s => !isNaN(parseFloat(s.accuracy)));
-        const pending = consolidated.filter(s => isNaN(parseFloat(s.accuracy)));
-
-        withScore.sort((a, b) => (parseFloat(b.accuracy) || 0) - (parseFloat(a.accuracy) || 0));
-        const totalC = withScore.length;
-
-        // Assign percentile-based levels to students with scores
-        withScore.forEach((item, idx) => {
-            const pos = ((totalC - idx) / Math.max(1, totalC)) * 100;
-            if (pos <= 20) item.level = "Low Emerging Readers";
-            else if (pos <= 40) item.level = "High Emerging Readers";
-            else if (pos <= 60) item.level = "Developing Readers";
-            else if (pos <= 80) item.level = "Transitioning Readers";
-            else item.level = "Readers at Grade Level";
+        // Preserve the authoritative server-supplied level for each student and only
+        // fall back to Pending when the API has not provided a classification yet.
+        consolidated = consolidated.map(student => {
+            const normalizedLevel = normalizeStudentLevel(student.level || student.reading_level || student.classification || '');
+            return {
+                ...student,
+                level: normalizedLevel
+            };
         });
-
-        // Mark pending students clearly
-        pending.forEach(s => s.level = "Pending");
-
-        // Reconstruct consolidated preserving scored first then pending
-        consolidated = withScore.concat(pending);
 
         if (studentDirectory) {
             const emptyState = studentDirectory.querySelector(".student-empty-state");
@@ -396,6 +381,19 @@ function initStudentsPage() {
         });
     })();
 
+    function normalizeStudentLevel(level) {
+        const text = String(level || '').trim();
+        if (!text) return 'Pending';
+        const normalized = text.toLowerCase();
+        if (normalized.includes('pending')) return 'Pending';
+        if (normalized.includes('low') && normalized.includes('emerging')) return 'Low Emerging Readers';
+        if (normalized.includes('high') && normalized.includes('emerging')) return 'High Emerging Readers';
+        if (normalized.includes('develop')) return 'Developing Readers';
+        if (normalized.includes('transition')) return 'Transitioning Readers';
+        if (normalized.includes('grade') || normalized.includes('ready')) return 'Readers at Grade Level';
+        return text;
+    }
+
     function getLevelClass(level) {
         const levelMap = {
             "Low Emerging Readers": "level-low",
@@ -405,7 +403,7 @@ function initStudentsPage() {
             "Readers at Grade Level": "level-grade",
             "Pending": "level-pending"
         };
-        return levelMap[level] || "level-high";
+        return levelMap[normalizeStudentLevel(level)] || "level-pending";
     }
 
     function showSuccessMessage(message) {

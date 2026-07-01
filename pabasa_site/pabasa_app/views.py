@@ -5732,6 +5732,8 @@ def get_teacher_students_api(request):
             text = str(value or '').strip().lower().replace('_', ' ').replace('-', ' ')
             if not text:
                 return None
+            if 'pending' in text:
+                return 'Pending'
             if 'low' in text and 'emerging' in text:
                 return 'Low Emerging Readers'
             if 'high' in text and 'emerging' in text:
@@ -5824,6 +5826,12 @@ def get_teacher_students_api(request):
                 if score_value is None:
                     score_value = _as_float(attempt.get('wpm'), default=None)
 
+                derived_level = None
+                if attempt.get('crla_classification') or attempt.get('classification'):
+                    derived_level = attempt.get('crla_classification') or attempt.get('classification')
+                elif score_value is not None:
+                    derived_level = _crla_classification(score_value)
+
                 sid_key = str(student_id)
                 attempt_history.setdefault(sid_key, []).append({
                     'completed_at': completed_dt,
@@ -5838,7 +5846,7 @@ def get_teacher_students_api(request):
                     'completed_at': completed_dt.isoformat(),
                     'assessment_title': assessment.title,
                     'assessment_type': assessment.assessment_type,
-                    'level': attempt.get('crla_classification') or attempt.get('classification'),
+                    'level': derived_level,
                     'accuracy': attempt.get('accuracy'),
                     'wpm': attempt.get('wpm'),
                     'fluency_score': attempt.get('fluency_score'),
@@ -5873,8 +5881,29 @@ def get_teacher_students_api(request):
                     improvement = 0
 
                 last_active = history[-1]['completed_at'] if history else None
+                has_score_data = any(
+                    value not in (None, '', '0', 0)
+                    for value in [
+                        latest.get('accuracy'),
+                        latest.get('wpm'),
+                        latest.get('fluency_score'),
+                        latest.get('pronunciation_score'),
+                        latest.get('time_score'),
+                        latest.get('total_score'),
+                        profile.get('accuracy'),
+                        profile.get('wpm'),
+                        profile.get('fluency_score'),
+                        profile.get('pronunciation_score'),
+                        profile.get('time_score'),
+                        profile.get('total_score'),
+                    ]
+                )
+                display_level = latest.get('level') or profile.get('reading_level') or (user.reading_level if has_score_data else None)
+                normalized_level = _normalize_dashboard_level(display_level)
+                if normalized_level is None and not has_score_data:
+                    normalized_level = 'Pending'
                 sdata.update({
-                    'level': latest.get('level') or user.reading_level or profile.get('reading_level', 'Developing Readers'),
+                    'level': normalized_level or 'Pending',
                     'accuracy': latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy', '0'),
                     'wpm': latest.get('wpm') if latest.get('wpm') is not None else profile.get('wpm', '0'),
                     'fluency_score': latest.get('fluency_score', profile.get('fluency_score')),
@@ -5889,7 +5918,6 @@ def get_teacher_students_api(request):
                     'last_active_at': last_active.isoformat() if last_active else None,
                     'improvement_30d': round(improvement, 1),
                 })
-                normalized_level = _normalize_dashboard_level(sdata.get('level'))
                 if normalized_level and normalized_level in level_counts:
                     level_counts[normalized_level] += 1
                 results.append(sdata)
