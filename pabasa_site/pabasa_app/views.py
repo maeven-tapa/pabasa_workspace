@@ -5738,13 +5738,13 @@ def record_assessment_completion(request):
 
         # Prefer explicit assessment identifier
         if a_id and (a_prefix is None or a_prefix.startswith('assessment')):
-            assessment = Assessment.objects.select_related('teacher').filter(id=a_id).first()
+            assessment = Assessment.objects.select_related('teacher').filter(id=a_id, source_assessment__isnull=True).first()
             if assessment:
                 teacher_user = assessment.teacher
                 title_text = assessment.title
         # material_id may refer to an Assessment (prefixed), Material, or Practice record
         if not assessment and m_id and m_prefix and m_prefix.startswith('assessment'):
-            assessment = Assessment.objects.select_related('teacher').filter(id=m_id).first()
+            assessment = Assessment.objects.select_related('teacher').filter(id=m_id, source_assessment__isnull=True).first()
             if assessment:
                 teacher_user = assessment.teacher
                 title_text = assessment.title
@@ -5754,14 +5754,16 @@ def record_assessment_completion(request):
             if material:
                 if material.assessment:
                     assessment = material.assessment
-                    teacher_user = material.assessment.teacher
+                    if assessment and assessment.source_assessment_id is not None:
+                        assessment = assessment.source_assessment or assessment._group_assessment()
+                    teacher_user = assessment.teacher if assessment else None
                 elif material.section:
                     teacher_user = material.section.teacher
                 title_text = material.title or material.content_text or material.prompt_text or material.item_type
 
         # Fallback: numeric material id may actually be an assessment id when no Material record exists.
         if not assessment and not material and m_id is not None:
-            possible_assessment = Assessment.objects.select_related('teacher').filter(id=m_id).first()
+            possible_assessment = Assessment.objects.select_related('teacher').filter(id=m_id, source_assessment__isnull=True).first()
             if possible_assessment:
                 assessment = possible_assessment
                 teacher_user = assessment.teacher
@@ -5828,8 +5830,9 @@ def record_assessment_completion(request):
                 # Material linked to an Assessment
                 material.assessment.record_attempt(student_user, **attempt_payload)
             elif material and material.type in ('assessment', 'both'):
-                # Create an authoritative Assessment record when the first student
-                # result is recorded for this assessment material.
+                # Create a parent assessment record when the first completion arrives.
+                # Subsequent completions are stored as separate attempt rows through
+                # Assessment.record_attempt(), keeping the data model consistent.
                 if teacher_user is None:
                     if material.section and getattr(material.section, 'teacher', None):
                         teacher_user = material.section.teacher
