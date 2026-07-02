@@ -145,8 +145,8 @@ def build_teacher_weekly_digest(user, start, end):
     }
 
     for assessment in assessments:
-        attempts = getattr(assessment, "attempt_history", None) or []
-        if not isinstance(attempts, list):
+        attempts = assessment.get_attempts()
+        if not attempts:
             continue
         completed_student_ids = set()
         for attempt in attempts:

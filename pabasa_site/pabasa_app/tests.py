@@ -159,16 +159,14 @@ class PrincipalReportsPreviewTests(TestCase):
             section=self.section,
             is_active=True,
             attempt_no=1,
-            attempt_history=[
-                {
-                    "student_id": self.student.id,
-                    "status": "completed",
-                    "total_score": 87,
-                    "accuracy": 90,
-                    "pronunciation_score": 84,
-                    "completed_at": timezone.now().isoformat(),
-                }
-            ],
+        )
+        self.assessment.record_attempt(
+            self.student,
+            status="completed",
+            total_score=87,
+            accuracy=90,
+            pronunciation_score=84,
+            completed_at=timezone.now(),
         )
         session = self.client.session
         session["user_id"] = self.principal.id
@@ -1371,7 +1369,7 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(Assessment.objects.count(), 1)
         self.assertEqual(material.assessment.get_student_attempt_count(self.student), 1)
 
-    def test_repeated_assessment_completions_append_attempts_to_assessment_history(self):
+    def test_repeated_assessment_completions_create_separate_assessment_rows(self):
         material = Material.objects.create(
             title="Retake Assessment",
             item_type="word",
@@ -1397,6 +1395,7 @@ class AssessmentCompletionNotificationTests(TestCase):
 
         material.refresh_from_db()
         self.assertIsNotNone(material.assessment)
+        self.assertGreaterEqual(Assessment.objects.filter(code__startswith=material.assessment.code).count(), 2)
         attempts = material.assessment.get_attempts(self.student)
         self.assertEqual(len(attempts), 2)
         self.assertEqual(attempts[0]["attempt_number"], 1)

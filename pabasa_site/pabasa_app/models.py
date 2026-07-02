@@ -257,15 +257,48 @@ class Assessment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     attempt_no = models.PositiveIntegerField(default=0)
-    attempt_history = models.JSONField(default=list, blank=True)
+    source_assessment = models.ForeignKey("self", null=True, blank=True, related_name="attempt_rows", on_delete=models.CASCADE)
+    student = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="assessment_attempt_rows")
+    attempt_id = models.CharField(max_length=64, blank=True, default="")
+    attempt_number = models.PositiveIntegerField(default=1)
+    attempt_status = models.CharField(max_length=20, default="started")
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    device_info = models.TextField(blank=True, default="")
+    mic_used = models.BooleanField(default=False)
+    accuracy = models.FloatField(null=True, blank=True)
+    wpm = models.FloatField(null=True, blank=True)
+    fluency_score = models.FloatField(null=True, blank=True)
+    pronunciation_score = models.FloatField(null=True, blank=True)
+    time_score = models.FloatField(null=True, blank=True)
+    total_score = models.FloatField(null=True, blank=True)
+    crla_classification = models.CharField(max_length=100, blank=True, default="")
+    classification = models.CharField(max_length=100, blank=True, default="")
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    word_count = models.PositiveIntegerField(null=True, blank=True)
+    transcript = models.TextField(blank=True, default="")
+    speech_recognition_used = models.BooleanField(default=False)
+    needs_manual_review = models.BooleanField(default=False)
+    passed = models.BooleanField(null=True, blank=True)
+    remarks = models.TextField(blank=True, default="")
+    stars_earned = models.PositiveIntegerField(default=0)
+    items_completed = models.PositiveIntegerField(default=0)
+
+    @property
+    def attempt_history(self):
+        return self.get_attempts()
+
+    @attempt_history.setter
+    def attempt_history(self, value):
+        return None
 
     @property
     def attempts(self):
-        return self.attempt_history or []
+        return self.attempt_history
 
     @attempts.setter
     def attempts(self, value):
-        self.attempt_history = value or []
+        return None
 
     @staticmethod
     def _attempt_value(attempt, *keys, default=None):
@@ -290,42 +323,126 @@ class Assessment(models.Model):
         return f"{self.code} - {self.title}"
     
     # Attempt Management Methods
-    @staticmethod
-    def _attempt_field_names():
+    def _group_assessment(self):
+        return self.source_assessment or self
+
+    def _build_attempt_code(self, base_code, attempt_number):
+        base = (base_code or self.code or 'ASSESSMENT').strip()
+        candidate = f"{base}-{attempt_number}"
+        while Assessment.objects.filter(code=candidate).exists():
+            candidate = f"{base}-{attempt_number}-{uuid.uuid4().hex[:6].upper()}"
+        return candidate
+
+    def _serialize_attempt(self):
         return {
-            'attempt_id',
-            'attempt_number',
-            'started_at',
-            'completed_at',
-            'status',
-            'device_info',
-            'mic_used',
-            'accuracy',
-            'wpm',
-            'fluency_score',
-            'pronunciation_score',
-            'time_score',
-            'total_score',
-            'crla_classification',
-            'classification',
-            'duration_seconds',
-            'word_count',
-            'transcript',
-            'speech_recognition_used',
-            'needs_manual_review',
-            'passed',
-            'remarks',
-            'extra_data',
+            'attempt_id': self.attempt_id or str(self.id),
+            'attempt_number': self.attempt_number or self.attempt_no or 1,
+            'student_id': self.student_id,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'status': self.attempt_status,
+            'device_info': self.device_info,
+            'mic_used': self.mic_used,
+            'accuracy': self.accuracy,
+            'wpm': self.wpm,
+            'fluency_score': self.fluency_score,
+            'pronunciation_score': self.pronunciation_score,
+            'time_score': self.time_score,
+            'total_score': self.total_score,
+            'crla_classification': self.crla_classification,
+            'classification': self.classification,
+            'duration_seconds': self.duration_seconds,
+            'word_count': self.word_count,
+            'transcript': self.transcript,
+            'speech_recognition_used': self.speech_recognition_used,
+            'needs_manual_review': self.needs_manual_review,
+            'passed': self.passed,
+            'remarks': self.remarks,
+            'stars_earned': self.stars_earned,
+            'items_completed': self.items_completed,
         }
+
+    def _sync_attempt_count(self):
+        group = self._group_assessment()
+        count = Assessment.objects.filter(source_assessment=group).count()
+        if group.pk:
+            group.attempt_no = count
+            group.save(update_fields=['attempt_no', 'updated_at'])
+
+    def _apply_attempt_payload(self, attempt_row, attempt_data):
+        status_value = attempt_data.pop('status', None)
+        if status_value is not None:
+            attempt_row.attempt_status = str(status_value)
+        started_at = attempt_data.pop('started_at', None)
+        if started_at is not None:
+            try:
+                attempt_row.started_at = started_at
+            except Exception:
+                attempt_row.started_at = timezone.now()
+        completed_at = attempt_data.pop('completed_at', None)
+        if completed_at is not None:
+            try:
+                attempt_row.completed_at = completed_at
+            except Exception:
+                attempt_row.completed_at = timezone.now()
+        for key, value in attempt_data.items():
+            if key in {'attempt_id', 'attempt_number', 'student', 'student_id'}:
+                continue
+            if key == 'device_info':
+                attempt_row.device_info = str(value or '')
+            elif key == 'mic_used':
+                attempt_row.mic_used = bool(value)
+            elif key == 'speech_recognition_used':
+                attempt_row.speech_recognition_used = bool(value)
+            elif key == 'needs_manual_review':
+                attempt_row.needs_manual_review = bool(value)
+            elif key == 'passed':
+                attempt_row.passed = value
+            elif key == 'accuracy':
+                attempt_row.accuracy = value
+            elif key == 'wpm':
+                attempt_row.wpm = value
+            elif key == 'fluency_score':
+                attempt_row.fluency_score = value
+            elif key == 'pronunciation_score':
+                attempt_row.pronunciation_score = value
+            elif key == 'time_score':
+                attempt_row.time_score = value
+            elif key == 'total_score':
+                attempt_row.total_score = value
+            elif key == 'crla_classification':
+                attempt_row.crla_classification = str(value or '')
+            elif key == 'classification':
+                attempt_row.classification = str(value or '')
+            elif key == 'duration_seconds':
+                attempt_row.duration_seconds = value
+            elif key == 'word_count':
+                attempt_row.word_count = value
+            elif key == 'transcript':
+                attempt_row.transcript = str(value or '')
+            elif key == 'stars_earned':
+                attempt_row.stars_earned = value
+            elif key == 'items_completed':
+                attempt_row.items_completed = value
+            elif key == 'remarks':
+                attempt_row.remarks = str(value or '')
+            elif key == 'attempt_id':
+                attempt_row.attempt_id = str(value or '')
+            elif key == 'attempt_number':
+                attempt_row.attempt_number = value
+            elif key == 'student':
+                attempt_row.student = value
+        attempt_row.updated_at = timezone.now()
+        attempt_row.save()
+        return attempt_row
 
     def get_attempts(self, student=None):
         """Get all attempts, optionally filtered by student."""
-        attempts = getattr(self, 'attempt_history', None) or []
-        if not isinstance(attempts, list):
-            return []
+        group = self._group_assessment()
+        rows = Assessment.objects.filter(source_assessment=group).order_by('attempt_number', 'created_at', 'id')
         if student is not None:
-            return [attempt for attempt in attempts if attempt.get('student_id') == student.id]
-        return attempts
+            rows = rows.filter(student_id=student.id)
+        return [row._serialize_attempt() for row in rows]
 
     def get_latest_attempt(self, student=None):
         """Get the most recent attempt for the assessment or a specific student."""
@@ -367,52 +484,50 @@ class Assessment(models.Model):
     
     def record_attempt(self, student, **attempt_data):
         """Record a student's assessment attempt and return the new row."""
-        attempts = list(self.get_attempts())
-        extra_data = dict(attempt_data.pop('extra_data', None) or {})
+        group_assessment = self._group_assessment()
         attempt_id = attempt_data.pop('attempt_id', None) or str(uuid.uuid4())
         attempt_number = attempt_data.pop('attempt_number', None)
         if attempt_number is None:
             attempt_number = self.get_student_attempt_count(student) + 1
 
-        attempt = {
-            'attempt_id': str(attempt_id),
-            'attempt_number': attempt_number,
-            'student_id': student.id,
-            'started_at': attempt_data.pop('started_at', None) or timezone.now().isoformat(),
-        }
-        for key, value in list(attempt_data.items()):
-            if key in self._attempt_field_names():
-                attempt[key] = value
-            else:
-                extra_data[key] = value
-        if extra_data:
-            attempt['extra_data'] = extra_data
-        attempts.append(attempt)
-        self.attempt_history = attempts
-        self.attempt_no = len(attempts)
-        self.updated_at = timezone.now()
-        self.save(update_fields=['attempt_history', 'attempt_no', 'updated_at'])
-        return attempt
+        started_at_value = attempt_data.pop('started_at', None) or timezone.now()
+        completed_at_value = attempt_data.pop('completed_at', None)
+        attempt_row = Assessment.objects.create(
+            title=self.title,
+            code=self._build_attempt_code(group_assessment.code, attempt_number),
+            assessment_type=self.assessment_type,
+            status=self.status,
+            scheduled_at=self.scheduled_at,
+            teacher=self.teacher,
+            section=self.section,
+            is_active=self.is_active,
+            source_assessment=group_assessment,
+            student=student,
+            attempt_id=str(attempt_id),
+            attempt_number=attempt_number,
+            attempt_status=str(attempt_data.pop('status', 'completed') or 'completed'),
+            started_at=started_at_value,
+            completed_at=completed_at_value,
+        )
+
+        self._apply_attempt_payload(attempt_row, attempt_data)
+        if completed_at_value is None and attempt_row.attempt_status == 'completed':
+            attempt_row.completed_at = timezone.now()
+            attempt_row.save(update_fields=['completed_at', 'updated_at'])
+        self._sync_attempt_count()
+        return attempt_row._serialize_attempt()
 
     def update_attempt(self, student, **update_data):
         """Update the most recent attempt for a student. Returns True if updated."""
-        attempts = list(self.get_attempts())
-        for i in range(len(attempts) - 1, -1, -1):
-            if attempts[i].get('student_id') == student.id:
-                extra_data = dict(attempts[i].get('extra_data') or {})
-                for key, value in update_data.items():
-                    if key in self._attempt_field_names():
-                        attempts[i][key] = value
-                    else:
-                        extra_data[key] = value
-                if extra_data:
-                    attempts[i]['extra_data'] = extra_data
-                self.attempt_history = attempts
-                self.attempt_no = len(attempts)
-                self.updated_at = timezone.now()
-                self.save(update_fields=['attempt_history', 'attempt_no', 'updated_at'])
-                return True
-        return False
+        group_assessment = self._group_assessment()
+        attempt_row = Assessment.objects.filter(source_assessment=group_assessment, student=student).order_by('-attempt_number', '-created_at', '-id').first()
+        if attempt_row is None and group_assessment.student_id == student.id:
+            attempt_row = group_assessment
+        if attempt_row is None:
+            return False
+        self._apply_attempt_payload(attempt_row, dict(update_data))
+        self._sync_attempt_count()
+        return True
     
     def get_student_latest_attempt(self, student):
         """Get the most recent attempt for a student"""
@@ -420,26 +535,27 @@ class Assessment(models.Model):
     
     def deactivate_student_attempts(self, student):
         """Mark all attempts for a student as inactive (soft delete). Returns True if changed."""
-        attempts = list(self.get_attempts())
+        group_assessment = self._group_assessment()
+        attempt_rows = Assessment.objects.filter(source_assessment=group_assessment, student=student)
         changed = False
-        for attempt in attempts:
-            if attempt.get('student_id') == student.id and attempt.get('status') != 'cancelled':
-                attempt['status'] = 'cancelled'
+        for attempt_row in attempt_rows:
+            if attempt_row.attempt_status != 'cancelled':
+                attempt_row.attempt_status = 'cancelled'
+                attempt_row.updated_at = timezone.now()
+                attempt_row.save(update_fields=['attempt_status', 'updated_at'])
                 changed = True
-        if changed:
-            self.attempt_history = attempts
-            self.attempt_no = len(attempts)
-            self.updated_at = timezone.now()
-            self.save(update_fields=['attempt_history', 'attempt_no', 'updated_at'])
         return changed
 
     def clear_all_attempts(self):
         """Clear all attempts (hard delete). Used when assessment is deleted."""
-        if self.attempt_history:
-            self.attempt_history = []
-            self.attempt_no = 0
-            self.updated_at = timezone.now()
-            self.save(update_fields=['attempt_history', 'attempt_no', 'updated_at'])
+        group = self._group_assessment()
+        child_rows = Assessment.objects.filter(source_assessment=group)
+        if child_rows.exists():
+            child_rows.delete()
+        if group.pk:
+            group.attempt_no = 0
+            group.updated_at = timezone.now()
+            group.save(update_fields=['attempt_no', 'updated_at'])
             return True
         return False
 
