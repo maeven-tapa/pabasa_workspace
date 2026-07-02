@@ -54,17 +54,17 @@
                         {% endif %}
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-2">
-                            <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_teacher_detail' user.id %}">
-                                <i class="bi bi-eye me-1"></i>View
+                        <div class="admin-table-actions">
+                            <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_teacher_detail' user.id %}">
+                                <i class="bi bi-eye"></i><span>View</span>
                             </a>
-                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin_teacher_edit' user.id %}">
-                                <i class="bi bi-pencil me-1"></i>Edit
+                            <a class="btn btn-sm admin-action-btn admin-action-edit" href="{% url 'admin_teacher_edit' user.id %}">
+                                <i class="bi bi-pencil"></i><span>Edit</span>
                             </a>
                             <form method="post" action="{% url 'admin_teacher_archive' user.id %}">
                                 {% csrf_token %}
-                                <button class="btn btn-sm btn-outline-danger" type="submit" {% if user.is_archived %}disabled{% endif %}>
-                                    <i class="bi bi-archive me-1"></i>Archive
+                                <button class="btn btn-sm admin-action-btn admin-action-archive" type="submit" {% if user.is_archived %}disabled{% endif %}>
+                                    <i class="bi bi-archive"></i><span>Archive</span>
                                 </button>
                             </form>
                         </div>

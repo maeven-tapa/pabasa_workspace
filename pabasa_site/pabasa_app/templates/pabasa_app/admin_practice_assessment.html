@@ -44,11 +44,11 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-12 col-sm-6 col-lg-2 d-flex gap-2">
-            <button class="btn btn-primary flex-fill" type="submit">
-                <i class="bi bi-funnel me-1"></i>Apply
+        <div class="col-12 col-sm-6 col-lg-2 d-flex gap-2 align-items-end">
+            <button class="btn btn-primary flex-fill admin-filter-apply-btn" type="submit">
+                <i class="bi bi-funnel"></i><span>Apply</span>
             </button>
-            <a class="btn btn-outline-secondary" href="{% url 'admin_practice_assessment' %}" aria-label="Clear filters">
+            <a class="btn btn-outline-secondary admin-filter-clear-btn" href="{% url 'admin_practice_assessment' %}" aria-label="Clear filters">
                 <i class="bi bi-x-lg"></i>
             </a>
         </div>
@@ -83,24 +83,24 @@
                     </td>
                     <td>{{ item.created_at|date:"M d, Y g:i A" }}</td>
                     <td>
-                        <div class="d-flex flex-wrap gap-2">
-                            <a class="btn btn-sm btn-outline-primary" href="{% url 'admin_practice_detail' item.id %}">
-                                <i class="bi bi-eye me-1"></i>View
+                        <div class="admin-table-actions">
+                            <a class="btn btn-sm admin-action-btn admin-action-view" href="{% url 'admin_practice_detail' item.id %}">
+                                <i class="bi bi-eye"></i><span>View</span>
                             </a>
-                            <a class="btn btn-sm btn-outline-secondary" href="{% url 'admin_practice_edit' item.id %}">
-                                <i class="bi bi-pencil me-1"></i>Edit
+                            <a class="btn btn-sm admin-action-btn admin-action-edit" href="{% url 'admin_practice_edit' item.id %}">
+                                <i class="bi bi-pencil"></i><span>Edit</span>
                             </a>
                             <form method="post" action="{% url 'admin_practice_archive' item.id %}">
                                 {% csrf_token %}
                                 {% if item.is_active %}
                                 <input type="hidden" name="action" value="archive">
-                                <button class="btn btn-sm btn-outline-danger" type="submit">
-                                    <i class="bi bi-archive me-1"></i>Archive
+                                <button class="btn btn-sm admin-action-btn admin-action-archive" type="submit">
+                                    <i class="bi bi-archive"></i><span>Archive</span>
                                 </button>
                                 {% else %}
                                 <input type="hidden" name="action" value="restore">
-                                <button class="btn btn-sm btn-outline-success" type="submit">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+                                <button class="btn btn-sm admin-action-btn admin-action-edit" type="submit">
+                                    <i class="bi bi-arrow-counterclockwise"></i><span>Restore</span>
                                 </button>
                                 {% endif %}
                             </form>
