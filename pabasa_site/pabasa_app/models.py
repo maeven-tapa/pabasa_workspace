@@ -253,6 +253,7 @@ class Assessment(models.Model):
     scheduled_at = models.DateTimeField(null=True, blank=True)  # When assessment becomes published
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assessments")
     section = models.ForeignKey("Section", on_delete=models.CASCADE, related_name="assessments", null=True, blank=True)
+    material = models.ForeignKey("Material", on_delete=models.SET_NULL, related_name="assessment_results", null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -830,11 +831,13 @@ class Material(models.Model):
         ("both", "Both"),
     ]
 
-    # Materials may be standalone (not tied to an Assessment record) so allow
-    # a nullable FK to Assessment and also attach directly to a Section.
+    # Materials are the assignable reading content. Assessment rows store
+    # student result attempts and point back here through Assessment.material.
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="materials", null=True, blank=True)
     section = models.ForeignKey("Section", on_delete=models.SET_NULL, related_name="materials", null=True, blank=True)
     assigned_sections = models.ManyToManyField("Section", related_name="assigned_materials", blank=True)
+    code = models.CharField(max_length=30, unique=True, blank=True, default="")
+    teacher = models.ForeignKey(User, on_delete=models.SET_NULL, related_name="materials", null=True, blank=True)
     title = models.CharField(max_length=150, blank=True, default='')
     item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES)
     prompt_text = models.TextField(blank=True, default='')
@@ -868,9 +871,71 @@ class Material(models.Model):
         ordering = ["section", "created_at"]
 
     def __str__(self):
-        parent = self.assessment.code if self.assessment else (self.section.class_code if self.section else 'UNLINKED')
+        parent = self.code or (self.section.class_code if self.section else 'UNLINKED')
         title_part = f" - {self.title}" if self.title else ''
         return f"{parent} - {self.item_type}{title_part}"
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self._generate_code()
+        if self.teacher_id is None and self.section_id and getattr(self.section, "teacher_id", None):
+            self.teacher = self.section.teacher
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def _generate_code(cls):
+        candidate = "MAT" + uuid.uuid4().hex[:8].upper()
+        while cls.objects.filter(code=candidate).exists():
+            candidate = "MAT" + uuid.uuid4().hex[:8].upper()
+        return candidate
+
+    def _build_result_code(self, attempt_number):
+        base = (self.code or self._generate_code()).strip()
+        candidate = f"{base}-R{attempt_number}"
+        while Assessment.objects.filter(code=candidate).exists():
+            candidate = f"{base}-R{attempt_number}-{uuid.uuid4().hex[:6].upper()}"
+        return candidate
+
+    def student_result_count(self, student):
+        return self.assessment_results.filter(student=student).count()
+
+    def has_student_completed(self, student):
+        return self.assessment_results.filter(student=student, attempt_status="completed").exists()
+
+    def record_assessment_result(self, student, **attempt_data):
+        attempt_id = attempt_data.pop("attempt_id", None) or str(uuid.uuid4())
+        attempt_number = attempt_data.pop("attempt_number", None)
+        if not attempt_number:
+            attempt_number = self.student_result_count(student) + 1
+
+        status_value = str(attempt_data.pop("status", "completed") or "completed")
+        completed_at_value = attempt_data.pop("completed_at", None)
+        if isinstance(completed_at_value, str):
+            completed_at_value = timezone.now()
+        started_at_value = attempt_data.pop("started_at", None) or timezone.now()
+        if isinstance(started_at_value, str):
+            started_at_value = timezone.now()
+
+        teacher = self.teacher or (self.section.teacher if self.section_id and self.section else None)
+        result = Assessment.objects.create(
+            title=self.title or self.prompt_text or "Assessment Result",
+            code=self._build_result_code(attempt_number),
+            assessment_type=self.item_type,
+            status=self.status,
+            scheduled_at=self.scheduled_at if self.status == "scheduled" else None,
+            teacher=teacher,
+            section=self.section,
+            material=self,
+            student=student,
+            attempt_id=str(attempt_id),
+            attempt_number=attempt_number,
+            attempt_status=status_value,
+            started_at=started_at_value,
+            completed_at=completed_at_value or (timezone.now() if status_value == "completed" else None),
+            is_active=True,
+        )
+        result._apply_attempt_payload(result, attempt_data)
+        return result._serialize_attempt()
 
 
 # Assessment attempts are stored in the Assessment `attempts` JSONField.

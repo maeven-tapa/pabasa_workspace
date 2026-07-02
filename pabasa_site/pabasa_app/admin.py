@@ -42,71 +42,30 @@ class SectionAdmin(admin.ModelAdmin):
 class AssessmentAdmin(admin.ModelAdmin):
 	list_display = (
 		"id",
-		"title",
 		"code",
+		"material",
+		"title",
 		"assessment_type",
-		"status",
-		"scheduled_at",
-		"teacher",
-		"section",
-		"is_active",
-		"created_at",
-		"updated_at",
-		"attempt_count",
-		"latest_wpm",
-		"latest_fluency_score",
-		"latest_accuracy",
-		"latest_pronunciation_score",
-		"latest_time_score",
-		"latest_total_score",
-		"latest_crla_level",
+		"student",
+		"attempt_number",
+		"attempt_status",
+		"accuracy",
+		"wpm",
+		"fluency_score",
+		"pronunciation_score",
+		"time_score",
+		"total_score",
+		"crla_classification",
+		"completed_at",
 	)
-	list_filter = ("assessment_type", "is_active", "created_at")
-	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")
+	list_filter = ("assessment_type", "attempt_status", "completed_at", "created_at")
+	search_fields = ("code", "title", "student__custom_id", "student__last_name", "material__code", "material__title")
 	ordering = ("-created_at",)
 
 	def get_queryset(self, request):
-		"""Only display parent assessments, not attempt rows"""
-		qs = super().get_queryset(request)
-		return qs.filter(source_assessment__isnull=True)
-
-	def _latest_attempt_summary(self, obj):
-		return obj.get_latest_attempt_summary() or {}
-
-	def _display_attempt_value(self, value):
-		return value if value is not None and value != '' else "-"
-
-	def attempt_count(self, obj):
-		return len(obj.get_attempts())
-	attempt_count.short_description = "Attempts"
-
-	def latest_wpm(self, obj):
-		return self._display_attempt_value(self._latest_attempt_summary(obj).get("wpm"))
-	latest_wpm.short_description = "WPM"
-
-	def latest_fluency_score(self, obj):
-		return self._display_attempt_value(self._latest_attempt_summary(obj).get("fluency_score"))
-	latest_fluency_score.short_description = "Fluency"
-
-	def latest_accuracy(self, obj):
-		return self._display_attempt_value(self._latest_attempt_summary(obj).get("accuracy"))
-	latest_accuracy.short_description = "Accuracy"
-
-	def latest_pronunciation_score(self, obj):
-		return self._display_attempt_value(self._latest_attempt_summary(obj).get("pronunciation_score"))
-	latest_pronunciation_score.short_description = "Pronunciation"
-
-	def latest_time_score(self, obj):
-		return self._display_attempt_value(self._latest_attempt_summary(obj).get("time_score"))
-	latest_time_score.short_description = "Time"
-
-	def latest_total_score(self, obj):
-		return self._display_attempt_value(self._latest_attempt_summary(obj).get("total_score"))
-	latest_total_score.short_description = "Total Score"
-
-	def latest_crla_level(self, obj):
-		return self._display_attempt_value(self._latest_attempt_summary(obj).get("crla_classification"))
-	latest_crla_level.short_description = "CRLA Level"
+		"""Display assessment result rows. Legacy parent rows are hidden."""
+		qs = super().get_queryset(request).select_related("material", "student", "section", "teacher")
+		return qs.filter(student__isnull=False)
 
 @admin.register(Practice)
 class PracticeAdmin(admin.ModelAdmin):
@@ -118,9 +77,24 @@ class PracticeAdmin(admin.ModelAdmin):
 
 @admin.register(Material)
 class MaterialAdmin(admin.ModelAdmin):
-	list_display = all_model_fields(Material)
-	list_filter = ("item_type", "status", "is_active", "created_at")
-	search_fields = ("assessment__code", "section__class_code", "prompt_text", "content_text", "title")
+	list_display = (
+		"id",
+		"code",
+		"title",
+		"type",
+		"item_type",
+		"status",
+		"teacher",
+		"section",
+		"assigned_week",
+		"is_active",
+		"result_count",
+		"created_at",
+		"updated_at",
+		"content_preview",
+	)
+	list_filter = ("type", "item_type", "status", "is_active", "teacher", "section", "created_at")
+	search_fields = ("code", "section__class_code", "teacher__custom_id", "teacher__last_name", "prompt_text", "content_text", "title")
 	ordering = ("section", "created_at")
 
 	def content_preview(self, obj):
@@ -130,8 +104,13 @@ class MaterialAdmin(admin.ModelAdmin):
 
 	content_preview.short_description = "Content"
 
+	def result_count(self, obj):
+		return obj.assessment_results.count()
 
-# Assessment attempts are stored in the Assessment `attempts` JSONField.
+	result_count.short_description = "Results"
+
+
+# Assessment rows represent student result attempts linked back to Material.
 
 
 @admin.register(Note)
@@ -167,4 +146,3 @@ class CourseAdmin(admin.ModelAdmin):
 	list_filter = ("is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id")
 	ordering = ("-created_at",)
-

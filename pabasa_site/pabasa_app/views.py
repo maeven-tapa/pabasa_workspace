@@ -325,6 +325,8 @@ def _teachers_for_assessment_completion(assessment=None, material=None, student_
     if assessment and assessment.teacher:
         add_teacher(assessment.teacher)
     if material:
+        if getattr(material, 'teacher', None):
+            add_teacher(material.teacher)
         if material.assessment and material.assessment.teacher:
             add_teacher(material.assessment.teacher)
         if material.section and material.section.teacher:
@@ -375,6 +377,8 @@ def _assessment_completion_notif_exists(recipient, student_user, message, is_ret
 
 def _student_completed_assessment_before(assessment, material, student_user):
     """Return True if the student already has a completed attempt recorded."""
+    if material and hasattr(material, "has_student_completed") and material.has_student_completed(student_user):
+        return True
     if assessment and assessment.has_student_completed(student_user):
         return True
     if material and material.assessment and material.assessment.has_student_completed(student_user):
@@ -4437,16 +4441,15 @@ def _compute_teacher_overview(teacher_user):
                     unique_student_ids.add(student_id)
         total_students = len(unique_student_ids)
 
-        assessments_posted = Assessment.objects.filter(
-            Q(teacher=teacher_user) | Q(section__teacher=teacher_user),
+        materials_posted = Material.objects.filter(
+            Q(teacher=teacher_user) | Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
             is_active=True,
-            source_assessment__isnull=True
         ).distinct().count()
 
-        materials_posted = Material.objects.filter(
-            Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
+        assessments_posted = Material.objects.filter(
+            Q(teacher=teacher_user) | Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
+            type__in=["assessment", "both"],
             is_active=True,
-            assessment__isnull=True,
         ).distinct().count()
 
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
@@ -5388,6 +5391,7 @@ def add_reading_material(request):
             m = Material.objects.create(
                 assessment=None,
                 section=section,
+                teacher=teacher_user,
                 item_type=reading_type,
                 title=title,
                 prompt_text=(tokens[0] if tokens else title) or title,
@@ -5442,7 +5446,7 @@ def add_reading_material(request):
             created_ids = [m.id]
             material_payload = {
                 'id': f"material-{m.id}",
-                'code': None,
+                'code': m.code,
                 'title': m.title,
                 'item_type': m.item_type,
                 'type': m.type,
@@ -5495,6 +5499,7 @@ def teacher_update_material(request):
             
         material = Material.objects.filter(
             Q(id=material_id) & (
+                Q(teacher_id=user_id) |
                 Q(section__teacher_id=user_id) |
                 Q(assigned_sections__teacher_id=user_id) |
                 Q(courses__teacher_id=user_id) |
@@ -5527,6 +5532,8 @@ def teacher_update_material(request):
         material.is_active = (material.status in ['published', 'scheduled'])
         # current teacher for any potential Assessment creation
         teacher_user = User.objects.filter(id=user_id).first()
+        if material.teacher_id is None and teacher_user:
+            material.teacher = teacher_user
 
         # Handle schedule update
         if material.status == 'scheduled':
@@ -5692,6 +5699,7 @@ def delete_reading_material(request):
         # Find the material. We check both the direct section link and assigned_sections
         material = Material.objects.filter(
             Q(id=material_id) & (
+                Q(teacher_id=user_id) |
                 Q(section__teacher_id=user_id) |
                 Q(assigned_sections__teacher_id=user_id) |
                 Q(courses__teacher_id=user_id) |
@@ -5824,39 +5832,22 @@ def record_assessment_completion(request):
                     practice_obj.record_attempt(student_user, replace=True, **attempt_payload)
                 if material and material.type == 'practice':
                     _record_material_practice_completion(material, student_user, attempt_payload)
-            elif assessment:
-                assessment.record_attempt(student_user, **attempt_payload)
-            elif material and getattr(material, 'assessment', None):
-                # Material linked to an Assessment
-                material.assessment.record_attempt(student_user, **attempt_payload)
             elif material and material.type in ('assessment', 'both'):
-                # Create a parent assessment record when the first completion arrives.
-                # Subsequent completions are stored as separate attempt rows through
-                # Assessment.record_attempt(), keeping the data model consistent.
                 if teacher_user is None:
-                    if material.section and getattr(material.section, 'teacher', None):
+                    if getattr(material, 'teacher', None):
+                        teacher_user = material.teacher
+                    elif material.section and getattr(material.section, 'teacher', None):
                         teacher_user = material.section.teacher
                     else:
                         first_section = material.assigned_sections.filter(is_active=True).select_related('teacher').first()
                         if first_section and getattr(first_section, 'teacher', None):
                             teacher_user = first_section.teacher
-                if teacher_user is not None:
-                    code = 'AS' + uuid.uuid4().hex[:8].upper()
-                    while Assessment.objects.filter(code=code).exists():
-                        code = 'AS' + uuid.uuid4().hex[:8].upper()
-                    assessment = Assessment.objects.create(
-                        title=material.title or material.content_text or material.prompt_text or 'Assessment',
-                        code=code,
-                        assessment_type=material.item_type,
-                        status=material.status,
-                        scheduled_at=material.scheduled_at if material.status == 'scheduled' else None,
-                        teacher=teacher_user,
-                        section=material.section,
-                        is_active=(material.status in ['published', 'scheduled']),
-                    )
-                    material.assessment = assessment
-                    material.save(update_fields=['assessment', 'updated_at'])
-                    assessment.record_attempt(student_user, **attempt_payload)
+                if material.teacher_id is None and teacher_user is not None:
+                    material.teacher = teacher_user
+                    material.save(update_fields=['teacher', 'updated_at'])
+                material.record_assessment_result(student_user, **attempt_payload)
+            elif assessment:
+                assessment.record_attempt(student_user, **attempt_payload)
             # Note: standalone Material objects that are not linked to Assessment do not
             # currently have an attempts schema; they are handled by client-side notifications.
             if not is_practice:
