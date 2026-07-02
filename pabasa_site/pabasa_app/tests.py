@@ -1339,6 +1339,70 @@ class AssessmentCompletionNotificationTests(TestCase):
         session["user_role"] = self.teacher.role
         session.save()
 
+    def test_assessment_material_creation_leaves_assessments_table_empty_until_completion(self):
+        material = Material.objects.create(
+            title="New Assessment Material",
+            item_type="word",
+            content_text="cat\ndog",
+            content_json={"items": ["cat", "dog"]},
+            type="assessment",
+            status="published",
+            is_active=True,
+        )
+
+        self.assertIsNone(material.assessment)
+        self.assertEqual(Assessment.objects.count(), 0)
+
+        self._login_student()
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "material_id": f"material-{material.id}",
+                "activity_type": "assessment",
+                "class_code": self.section.class_code,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        material.refresh_from_db()
+        self.assertIsNotNone(material.assessment)
+        self.assertEqual(Assessment.objects.count(), 1)
+        self.assertEqual(material.assessment.get_student_attempt_count(self.student), 1)
+
+    def test_repeated_assessment_completions_append_attempts_to_assessment_history(self):
+        material = Material.objects.create(
+            title="Retake Assessment",
+            item_type="word",
+            content_text="cat\ndog",
+            content_json={"items": ["cat", "dog"]},
+            type="assessment",
+            status="published",
+            is_active=True,
+        )
+        self._login_student()
+
+        payload = json.dumps({
+            "material_id": f"material-{material.id}",
+            "activity_type": "assessment",
+            "class_code": self.section.class_code,
+        })
+
+        first = self.client.post(reverse("record_assessment_completion"), data=payload, content_type="application/json")
+        second = self.client.post(reverse("record_assessment_completion"), data=payload, content_type="application/json")
+
+        self.assertTrue(first.json()["success"])
+        self.assertTrue(second.json()["success"])
+
+        material.refresh_from_db()
+        self.assertIsNotNone(material.assessment)
+        attempts = material.assessment.get_attempts(self.student)
+        self.assertEqual(len(attempts), 2)
+        self.assertEqual(attempts[0]["attempt_number"], 1)
+        self.assertEqual(attempts[1]["attempt_number"], 2)
+        self.assertNotEqual(attempts[0]["attempt_id"], attempts[1]["attempt_id"])
+
     def test_assessment_completion_creates_teacher_notification(self):
         self._login_student()
         response = self.client.post(
