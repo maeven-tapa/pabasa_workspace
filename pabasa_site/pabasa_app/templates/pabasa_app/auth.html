@@ -121,7 +121,7 @@
                             name="custom_id"
                             placeholder="TCH-1234 or G2-1234"
                             maxlength="20"
-                            pattern="^(ADM|TCH|G2|STD|PRN)-[A-Z0-9]{1,12}$"
+                            pattern="^((ADM|TCH|G2|STD)-[A-Z0-9]{1,12}|PRN-[A-Z0-9]{1,12}-[0-9]{3})$"
                             required
                         >
                     </div>
@@ -148,7 +148,7 @@
         const passwordToggle = document.getElementById("passwordToggle");
         const loginBtn = document.getElementById("loginBtn");
         const errorMessage = document.getElementById("errorMessage");
-        const pabasaIdPattern = /^(ADM|TCH|G2|STD|PRN)-[A-Z0-9]{1,12}$/;
+        const pabasaIdPattern = /^((ADM|TCH|G2|STD)-[A-Z0-9]{1,12}|PRN-[A-Z0-9]{1,12}-[0-9]{3})$/;
 
         const updatePasswordToggle = () => {
             const isHidden = password.type === "password";
@@ -166,8 +166,21 @@
         updatePasswordToggle();
 
         const formatPabasaId = (value) => {
-            const cleaned = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").replace(/-+/g, "-").replace(/(^-|-$)/g, "");
+            const cleaned = value.toUpperCase().replace(/[^A-Z0-9-]/g, "").replace(/-+/g, "-").replace(/^-/, "");
             if (!cleaned) return "";
+
+            if (cleaned.startsWith("PRN")) {
+                const principalBody = cleaned.slice(3).replace(/^-/, "");
+                const [rawSchoolInitials = "", rawSequence = ""] = principalBody.split("-");
+                const compactMatch = rawSchoolInitials.match(/^([A-Z]+)(\d*)$/);
+                const inferredInitials = compactMatch ? compactMatch[1] : rawSchoolInitials;
+                const inferredSequence = compactMatch ? compactMatch[2] : "";
+                const schoolInitials = inferredInitials.replace(/[^A-Z0-9]/g, "").slice(0, 12);
+                const sequence = (rawSequence || inferredSequence).replace(/\D/g, "").slice(0, 3);
+                if (!schoolInitials) return "PRN-";
+                if (sequence || principalBody.includes("-") || cleaned.endsWith("-")) return `PRN-${schoolInitials}-${sequence}`;
+                return `PRN-${schoolInitials}`;
+            }
 
             const [prefix, ...rest] = cleaned.split("-");
             const suffix = rest.join("");
@@ -183,12 +196,7 @@
                 return digits ? `G2-${digits}` : "G2-";
             }
 
-            if (prefix === "PRN") {
-                const code = suffix.replace(/[^A-Z0-9]/g, "").slice(0, 12);
-                return code ? `PRN-${code}` : "PRN-";
-            }
-
-            return cleaned.slice(0, 20);
+            return cleaned.replace(/-$/, "").slice(0, 20);
         };
 
         pabasaId.addEventListener("input", () => {
@@ -202,7 +210,7 @@
             event.preventDefault();
             
             if (!pabasaIdPattern.test(pabasaId.value)) {
-                pabasaId.setCustomValidity("PABASA ID must be in the form TCH-1234 or G2-1234.");
+                pabasaId.setCustomValidity("PABASA ID must be in the form TCH-1234, G2-1234, or PRN-SES-001.");
                 pabasaId.reportValidity();
                 return;
             }

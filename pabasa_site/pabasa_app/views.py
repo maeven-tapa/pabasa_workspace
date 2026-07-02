@@ -10,6 +10,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.db import IntegrityError
 from django.db.models import Q
+from django.utils.text import slugify
 from functools import wraps
 import logging
 import json
@@ -1686,7 +1687,7 @@ def login_user(request):
     """Authenticate user and create session"""
     try:
         data = request.POST
-        custom_id = data.get('custom_id', '').strip()
+        custom_id = data.get('custom_id', '').strip().upper()
         password = data.get('password', '')
 
         if custom_id == PRINCIPAL_DEFAULT_CUSTOM_ID:
@@ -1697,7 +1698,7 @@ def login_user(request):
         
         # Find user by custom_id
         try:
-            user = User.objects.get(custom_id=custom_id)
+            user = User.objects.get(custom_id__iexact=custom_id)
         except User.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Invalid custom ID or password'}, status=401)
         
@@ -2108,6 +2109,163 @@ def admin_students(request):
 def admin_teachers(request):
     return render(request, 'pabasa_app/admin_teachers.html', _admin_users_context(request, 'teacher', 'Teachers'))
 
+PRINCIPAL_DEFAULT_PASSWORD = 'Principal@123'
+PRINCIPAL_LOGOS_DIR = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'uploads' / 'school_logos'
+PRINCIPAL_LOGOS_STATIC_PREFIX = 'pabasa_app/uploads/school_logos'
+
+def _principal_school_initials(school_name):
+    words = re.findall(r"[A-Za-z0-9]+", school_name or "")
+    ignored_words = {'of', 'the', 'and', 'at', 'in', 'for'}
+    initials = ''.join(word[0].upper() for word in words if word.lower() not in ignored_words)
+    return initials or 'SCH'
+
+def _generate_principal_custom_id(school_name):
+    initials = _principal_school_initials(school_name)
+    prefix = f'PRN-{initials}-'
+    existing_ids = User.objects.filter(role='principal', custom_id__startswith=prefix).values_list('custom_id', flat=True)
+    highest = 0
+    for custom_id in existing_ids:
+        match = re.match(rf"^{re.escape(prefix)}(\d+)$", custom_id)
+        if match:
+            highest = max(highest, int(match.group(1)))
+    next_number = highest + 1
+    candidate = f'{prefix}{next_number:03d}'
+    while User.objects.filter(custom_id=candidate).exists():
+        next_number += 1
+        candidate = f'{prefix}{next_number:03d}'
+    return candidate
+
+def _split_full_name(full_name):
+    parts = [part for part in (full_name or '').strip().split() if part]
+    if not parts:
+        return '', ''
+    if len(parts) == 1:
+        return parts[0], parts[0]
+    return ' '.join(parts[:-1]), parts[-1]
+
+def _save_principal_logo(logo_file, custom_id):
+    allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+    file_ext = (logo_file.name.rsplit('.', 1)[-1] if '.' in logo_file.name else '').lower()
+    if file_ext not in allowed_extensions:
+        raise ValueError('School logo must be an image file.')
+
+    PRINCIPAL_LOGOS_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f'{slugify(custom_id) or uuid.uuid4().hex}.{file_ext}'
+    destination = PRINCIPAL_LOGOS_DIR / filename
+    with open(destination, 'wb+') as target:
+        for chunk in logo_file.chunks():
+            target.write(chunk)
+    return f'{PRINCIPAL_LOGOS_STATIC_PREFIX}/{filename}'
+
+def _send_principal_credentials_email(request, user, school_name):
+    auth_url = request.build_absolute_uri(reverse('auth'))
+    subject = 'Your PABASA Principal Account is Ready'
+    message = (
+        f"Hello {user.first_name} {user.last_name},\n\n"
+        "A PABASA Principal account has been created for you.\n\n"
+        f"Full Name: {user.first_name} {user.last_name}\n"
+        f"School Name: {school_name}\n"
+        f"PABASA ID / Username: {user.custom_id}\n"
+        f"Default Password: {PRINCIPAL_DEFAULT_PASSWORD}\n\n"
+        "Log in using the existing PABASA login page:\n"
+        f"{auth_url}\n\n"
+        "After logging in, you will be redirected to the Principal Dashboard.\n\n"
+        "Thank you,\nPABASA Team"
+    )
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+
+@admin_required
+def admin_principals(request):
+    context = _admin_context(request, 'Principals', [])
+    context.update({
+        'form_data': {},
+        'created_principal': None,
+        'default_password': PRINCIPAL_DEFAULT_PASSWORD,
+        'principals': User.objects.filter(role='principal').order_by('last_name', 'first_name'),
+    })
+
+    if request.method == 'POST':
+        form_data = {
+            'full_name': request.POST.get('full_name', '').strip(),
+            'school_name': request.POST.get('school_name', '').strip(),
+            'school_address': request.POST.get('school_address', '').strip(),
+            'email': request.POST.get('email', '').strip().lower(),
+            'contact_no': request.POST.get('contact_no', '').strip(),
+        }
+        context['form_data'] = form_data
+        logo_file = request.FILES.get('school_logo')
+        errors = []
+
+        for label, value in [
+            ('Full name', form_data['full_name']),
+            ('School name', form_data['school_name']),
+            ('School address', form_data['school_address']),
+            ('Email address', form_data['email']),
+            ('Contact number', form_data['contact_no']),
+        ]:
+            if not value:
+                errors.append(f'{label} is required.')
+        if not logo_file:
+            errors.append('School logo is required.')
+        if form_data['email'] and User.objects.filter(email__iexact=form_data['email']).exists():
+            errors.append('An account with this email address already exists.')
+
+        if errors:
+            context['principal_error'] = ' '.join(errors)
+            return render(request, 'pabasa_app/admin_principals.html', context)
+
+        try:
+            with transaction.atomic():
+                first_name, last_name = _split_full_name(form_data['full_name'])
+                custom_id = _generate_principal_custom_id(form_data['school_name'])
+                logo_path = _save_principal_logo(logo_file, custom_id)
+                current_year = timezone.now().year
+                user = User.objects.create(
+                    custom_id=custom_id,
+                    role='principal',
+                    first_name=first_name,
+                    last_name=last_name,
+                    middle_initial='',
+                    suffix='',
+                    sex='N/A',
+                    birth_month=1,
+                    birth_day=1,
+                    birth_year=current_year,
+                    email=form_data['email'],
+                    contact_no=form_data['contact_no'],
+                    password_hash=make_password(PRINCIPAL_DEFAULT_PASSWORD),
+                    school=form_data['school_name'],
+                    profile_picture=logo_path,
+                )
+                _set_profile_dict(user, 'principal_school_info', {
+                    'name': form_data['school_name'],
+                    'address': form_data['school_address'],
+                    'contact': form_data['contact_no'],
+                    'email': form_data['email'],
+                    'logo': logo_path,
+                })
+                _set_profile_dict(user, 'principal_profile_info', {
+                    'position': 'Principal',
+                    'full_name': form_data['full_name'],
+                })
+                _send_principal_credentials_email(request, user, form_data['school_name'])
+
+            context['principal_success'] = 'Principal account created and credentials email sent.'
+            context['created_principal'] = user
+            context['created_principal_name'] = _admin_user_full_name(user)
+            context['created_school_name'] = form_data['school_name']
+            context['form_data'] = {}
+            context['principals'] = User.objects.filter(role='principal').order_by('last_name', 'first_name')
+        except ValueError as exc:
+            context['principal_error'] = str(exc)
+        except IntegrityError:
+            context['principal_error'] = 'A principal account with the generated PABASA ID or email already exists. Please try again.'
+        except Exception:
+            logger.exception('Failed to create principal account')
+            context['principal_error'] = 'The account could not be created or the email could not be sent. Please check the mail settings and try again.'
+
+    return render(request, 'pabasa_app/admin_principals.html', context)
+
 def _admin_user_status(user):
     return 'Archived' if getattr(user, 'is_archived', False) else 'Active'
 
@@ -2158,7 +2316,11 @@ def _admin_users_context(request, role, page_title):
     return context
 
 def _admin_user_redirect_name(role):
-    return 'admin_students' if role == 'student' else 'admin_teachers'
+    if role == 'student':
+        return 'admin_students'
+    if role == 'principal':
+        return 'admin_principals'
+    return 'admin_teachers'
 
 def _admin_user_template_context(request, user, page_title):
     context = _admin_context(request, page_title, [])
@@ -2189,6 +2351,20 @@ def admin_teacher_detail(request, user_id):
     return render(request, 'pabasa_app/admin_user_detail.html', _admin_user_template_context(request, user, 'Teacher Details'))
 
 @admin_required
+def admin_principal_detail(request, user_id):
+    user = _get_managed_user(user_id, 'principal')
+    if not user:
+        return redirect('admin_principals')
+    context = _admin_user_template_context(request, user, 'Principal Details')
+    school_info = _get_profile_dict(user, 'principal_school_info') or {}
+    profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
+    context.update({
+        'school_info': school_info if isinstance(school_info, dict) else {},
+        'principal_profile_info': profile_info if isinstance(profile_info, dict) else {},
+    })
+    return render(request, 'pabasa_app/admin_principal_detail.html', context)
+
+@admin_required
 @require_http_methods(["GET", "POST"])
 def admin_student_edit(request, user_id):
     return _admin_edit_user(request, user_id, 'student')
@@ -2197,6 +2373,77 @@ def admin_student_edit(request, user_id):
 @require_http_methods(["GET", "POST"])
 def admin_teacher_edit(request, user_id):
     return _admin_edit_user(request, user_id, 'teacher')
+
+@admin_required
+@require_http_methods(["GET", "POST"])
+def admin_principal_edit(request, user_id):
+    user = _get_managed_user(user_id, 'principal')
+    if not user:
+        return redirect('admin_principals')
+
+    school_info = _get_profile_dict(user, 'principal_school_info') or {}
+    profile_info = _get_profile_dict(user, 'principal_profile_info') or {}
+    if not isinstance(school_info, dict):
+        school_info = {}
+    if not isinstance(profile_info, dict):
+        profile_info = {}
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        school_name = request.POST.get('school_name', '').strip()
+        school_address = request.POST.get('school_address', '').strip()
+        contact_no = request.POST.get('contact_no', '').strip()
+
+        context = _admin_user_template_context(request, user, 'Edit Principal')
+        context.update({'school_info': school_info, 'principal_profile_info': profile_info})
+
+        if not request.POST.get('first_name', '').strip() or not request.POST.get('last_name', '').strip():
+            context['error_message'] = 'First name and last name are required.'
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+        if not email or not school_name or not school_address or not contact_no:
+            context['error_message'] = 'School name, school address, email, and contact number are required.'
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+        if User.objects.filter(email__iexact=email).exclude(id=user.id).exists():
+            context['error_message'] = 'Email is already used by another account.'
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+
+        try:
+            logo_file = request.FILES.get('school_logo')
+            logo_path = school_info.get('logo') or user.profile_picture or ''
+            if logo_file:
+                logo_path = _save_principal_logo(logo_file, user.custom_id)
+
+            user.first_name = request.POST.get('first_name', '').strip()
+            user.middle_initial = request.POST.get('middle_initial', '').strip()[:1]
+            user.last_name = request.POST.get('last_name', '').strip()
+            user.suffix = request.POST.get('suffix', '').strip()
+            user.email = email
+            user.contact_no = contact_no
+            user.school = school_name
+            user.profile_picture = logo_path
+            user.save(update_fields=['first_name', 'middle_initial', 'last_name', 'suffix', 'email', 'contact_no', 'school', 'profile_picture', 'updated_at'])
+
+            school_info.update({
+                'name': school_name,
+                'address': school_address,
+                'contact': contact_no,
+                'email': email,
+                'logo': logo_path,
+            })
+            profile_info.update({
+                'position': request.POST.get('position', '').strip() or 'Principal',
+                'full_name': _admin_user_full_name(user),
+            })
+            _set_profile_dict(user, 'principal_school_info', school_info)
+            _set_profile_dict(user, 'principal_profile_info', profile_info)
+            return redirect('admin_principal_detail', user_id=user.id)
+        except ValueError as exc:
+            context['error_message'] = str(exc)
+            return render(request, 'pabasa_app/admin_principal_edit.html', context, status=400)
+
+    context = _admin_user_template_context(request, user, 'Edit Principal')
+    context.update({'school_info': school_info, 'principal_profile_info': profile_info})
+    return render(request, 'pabasa_app/admin_principal_edit.html', context)
 
 def _admin_edit_user(request, user_id, role):
     user = _get_managed_user(user_id, role)
@@ -2240,6 +2487,20 @@ def admin_student_archive(request, user_id):
 @require_http_methods(["POST"])
 def admin_teacher_archive(request, user_id):
     return _admin_archive_user(request, user_id, 'teacher')
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_principal_deactivate(request, user_id):
+    user = _get_managed_user(user_id, 'principal')
+    if not user:
+        return redirect('admin_principals')
+
+    if not user.is_archived:
+        user.is_archived = True
+        user.archived_at = timezone.now()
+        user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
+
+    return redirect('admin_principal_detail', user_id=user.id)
 
 def _admin_archive_user(request, user_id, role):
     user = _get_managed_user(user_id, role)
@@ -6772,6 +7033,7 @@ def _principal_analytics(user):
 
     return {
         'school_name': school_name,
+        'school_logo': school_info.get('logo') if isinstance(school_info, dict) else '',
         'total_students': total_students,
         'total_teachers': total_teachers,
         'total_sections': sections.count(),
@@ -6865,6 +7127,15 @@ def _principal_report_csv_response(report_type, headers, rows):
     for row in rows:
         writer.writerow(row)
     return response
+
+
+def _principal_report_logo_path(analytics):
+    logo_value = (analytics or {}).get('school_logo') or ''
+    if logo_value.startswith('pabasa_app/'):
+        candidate = settings.BASE_DIR / 'pabasa_app' / 'static' / logo_value
+        if candidate.exists():
+            return candidate
+    return settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
 
 
 def _principal_report_pdf_response(request, analytics, report_type, grade_filter, headers, rows):
@@ -7058,7 +7329,7 @@ def _principal_report_pdf_response(request, analytics, report_type, grade_filter
     school_name = analytics.get('school_name') or 'Salawag Elementary School'
 
     elements = []
-    logo_path = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'images' / 'pabasalogo.png'
+    logo_path = _principal_report_logo_path(analytics)
     header_table = Table(
         [[
             Image(str(logo_path), width=0.7 * inch, height=0.7 * inch) if logo_path.exists() else Paragraph('<b>PABASA</b>', styles['Heading3']),
@@ -7363,15 +7634,15 @@ def principal_settings(request):
     notification_settings = _notification_settings_for_user(user)
 
     default_school_info = {
-        'name': 'Salawag Elementary School',
-        'code': 'SES-2024',
-        'municipality': 'Imus',
-        'province': 'Cavite',
-        'district': 'District 4',
-        'region': 'CALABARZON',
-        'address': 'Salawag, Imus, Cavite',
-        'contact': '(046) 555-0123',
-        'email': 'salawag.elementary@deped.gov.ph',
+        'name': getattr(user, 'school', '') or '',
+        'code': '',
+        'municipality': '',
+        'province': '',
+        'district': '',
+        'region': '',
+        'address': '',
+        'contact': getattr(user, 'contact_no', '') or '',
+        'email': getattr(user, 'email', '') or '',
     }
     default_academic_settings = {
         'academic_year': '2024-2025',
@@ -7395,15 +7666,16 @@ def principal_settings(request):
 
         if action == 'save_school_info':
             school_info = {
-                'name': request.POST.get('school_name', '').strip() or default_school_info['name'],
-                'code': request.POST.get('school_code', '').strip() or default_school_info['code'],
-                'municipality': request.POST.get('municipality', '').strip() or default_school_info['municipality'],
-                'province': request.POST.get('province', '').strip() or default_school_info['province'],
-                'district': request.POST.get('district', '').strip() or default_school_info['district'],
-                'region': request.POST.get('region', '').strip() or default_school_info['region'],
-                'address': request.POST.get('address', '').strip() or default_school_info['address'],
-                'contact': request.POST.get('contact', '').strip() or default_school_info['contact'],
-                'email': request.POST.get('email', '').strip() or default_school_info['email'],
+                'name': request.POST.get('school_name', '').strip(),
+                'code': request.POST.get('school_code', '').strip(),
+                'municipality': request.POST.get('municipality', '').strip(),
+                'province': request.POST.get('province', '').strip(),
+                'district': request.POST.get('district', '').strip(),
+                'region': request.POST.get('region', '').strip(),
+                'address': request.POST.get('address', '').strip(),
+                'contact': request.POST.get('contact', '').strip(),
+                'email': request.POST.get('email', '').strip(),
+                'logo': school_info.get('logo', ''),
             }
             _set_profile_dict(user, 'principal_school_info', school_info)
             context['settings_success'] = 'School information updated.'

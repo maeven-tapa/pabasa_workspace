@@ -925,6 +925,7 @@
                 <a class="admin-nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}" href="{% url 'dashboard_admin' %}"><i class="bi bi-grid"></i>Dashboard</a>
                 <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_students' %}active{% endif %}" href="{% url 'admin_students' %}"><i class="bi bi-mortarboard"></i>Students</a>
                 <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_teachers' %}active{% endif %}" href="{% url 'admin_teachers' %}"><i class="bi bi-person-workspace"></i>Teachers</a>
+                <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_principals' %}active{% endif %}" href="{% url 'admin_principals' %}"><i class="bi bi-person-vcard"></i>Principal</a>
                 <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_classes' %}active{% endif %}" href="{% url 'admin_classes' %}"><i class="bi bi-door-open"></i>Classes</a>
                 <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_courses' %}active{% endif %}" href="{% url 'admin_courses' %}"><i class="bi bi-folder2-open"></i>Courses</a>
                 <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_practice_assessment' %}active{% endif %}" href="{% url 'admin_practice_assessment' %}"><i class="bi bi-journal-check"></i>Practice</a>
