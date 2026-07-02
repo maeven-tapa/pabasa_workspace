@@ -855,8 +855,7 @@ var getStudentClassData = window.getStudentClassData = function() {
         if (count > 0) {
             if (!badge) {
                 badge = document.createElement('span');
-                badge.className = 'badge rounded-pill bg-danger badge-notif ms-auto';
-                badge.style.fontSize = '0.65rem';
+                badge.className = 'badge rounded-pill bg-danger badge-notif';
                 link.appendChild(badge);
             }
             badge.textContent = count > 99 ? '99+' : count;
