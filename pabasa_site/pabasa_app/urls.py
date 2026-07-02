@@ -87,6 +87,7 @@ urlpatterns = [
     path('dashboard/teacher/students-api/', views.get_teacher_students_api, name='get_teacher_students_api'),
     # Courses API for teachers
     path('dashboard/teacher/courses/', views.get_teacher_courses_api, name='get_teacher_courses_api'),
+    path('dashboard/teacher/assessments/', views.get_teacher_assessments_api, name='get_teacher_assessments_api'),
     path('dashboard/teacher/assessment/<int:assessment_id>/', views.get_teacher_assessment_api, name='get_teacher_assessment_api'),
     path('dashboard/teacher/update-assessment/', views.teacher_update_assessment, name='teacher_update_assessment'),
     path('dashboard/teacher/archive-assessment/', views.teacher_archive_assessment, name='teacher_archive_assessment'),

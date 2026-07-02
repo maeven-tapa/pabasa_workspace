@@ -4428,6 +4428,60 @@ def get_teacher_courses_api(request):
 
 @require_http_methods(["GET"])
 @login_required(role='teacher')
+def get_teacher_assessments_api(request):
+    try:
+        teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
+        if not teacher_user:
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        course_id = request.GET.get('course_id')
+        assessments_qs = Assessment.objects.filter(
+            teacher=teacher_user,
+            source_assessment__isnull=True,
+            is_active=True
+        )
+
+        if course_id is not None:
+            course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
+            if course:
+                assessments_qs = assessments_qs.filter(Q(courses=course) | Q(section__in=course.sections.all()))
+
+        assessments_qs = assessments_qs.prefetch_related('materials').order_by('-created_at').distinct()
+
+        def _average(values):
+            values = [v for v in values if isinstance(v, (int, float))]
+            if not values:
+                return None
+            return round(sum(values) / len(values), 1)
+
+        assessment_list = []
+        for a in assessments_qs:
+            attempts = a.get_attempts()
+            assessment_list.append({
+                'id': a.id,
+                'raw_id': a.id,
+                'code': a.code,
+                'title': a.title,
+                'assessment_type': a.assessment_type,
+                'status': a.status,
+                'is_active': a.is_active,
+                'attempt_count': len(attempts),
+                'avg_accuracy': _average([att.get('accuracy') for att in attempts]),
+                'avg_wpm': _average([att.get('wpm') for att in attempts]),
+                'avg_fluency': _average([att.get('fluency_score') for att in attempts]),
+                'avg_pronunciation': _average([att.get('pronunciation_score') for att in attempts]),
+                'avg_time_score': _average([att.get('time_score') for att in attempts]),
+                'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
+            })
+
+        return JsonResponse({'success': True, 'assessments': assessment_list})
+    except Exception as e:
+        logger.exception('Unhandled error in get_teacher_assessments_api')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
 def get_teacher_assessment_api(request, assessment_id):
     """Return detailed data for a single assessment (teacher-only)."""
     try:
