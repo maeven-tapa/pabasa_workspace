@@ -4509,7 +4509,18 @@ def add_material_to_course(request):
             except Exception:
                 pass
 
-        return JsonResponse({'success': True, 'material': {'id': material.id, 'title': material.title, 'item_type': getattr(material, 'item_type', '' )}})
+        source_type = getattr(material, 'source_type', 'personal') or 'personal'
+        return JsonResponse({
+            'success': True,
+            'material': {
+                'id': material.id,
+                'title': material.title,
+                'item_type': getattr(material, 'item_type', ''),
+                'source_type': source_type,
+                'material_source': source_type,
+                'is_shared_material': source_type == 'shared',
+            }
+        })
     except Exception as e:
         logger.exception('Error adding material to course')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -5451,6 +5462,8 @@ def add_reading_material(request):
                 'item_type': m.item_type,
                 'type': m.type,
                 'source_type': m.source_type,
+                'material_source': m.source_type,
+                'is_shared_material': m.source_type == 'shared',
                 'content': m.content_text,
                 'status': m.status,
                 'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if m.scheduled_at else None,
@@ -5459,7 +5472,6 @@ def add_reading_material(request):
                 'assigned_sections': [section.class_code] if section else [],
                 'assigned_week': m.assigned_week,
                 'assigned_week_display': format_assigned_week_display(m.assigned_week),
-                'source_type': m.source_type,
             }
 
             return JsonResponse({

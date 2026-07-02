@@ -4073,7 +4073,7 @@
         if (!isSharedMaterial(material)) return '';
         const owner = material.shared_owner_teacher_name || material.teacher_name || '';
         const title = owner ? `Shared material from ${owner}` : 'Shared material';
-        return `<span class="shared-material-badge" title="${escapeHtml(title)}">👥</span>`;
+        return `<span class="shared-material-badge" title="${escapeHtml(title)}">&#128101;</span>`;
     }
 
     window.openCourseDetail = async function(courseId) {
@@ -7007,7 +7007,6 @@
             if (!record) return;
             const material = record.material || record;
             material.source_type = 'shared';
-            window._pendingSharedMaterialOrigin = true;
 
             const currentCourse = window.courseAttachTarget ? findCourseById(window.courseAttachTarget) : null;
             if (currentCourse && isCourseMaterialAlreadyAssigned(currentCourse, material)) {
@@ -7020,6 +7019,7 @@
             }
 
             resetAddMaterialModalState({ clearEditing: true, clearAttachTarget: false, resetForm: true });
+            window._pendingSharedMaterialOrigin = true;
             setAddMaterialMode('personal');
 
             if (materialTitleInput) materialTitleInput.value = material.title || '';
@@ -8212,7 +8212,7 @@
                                                         type: apiData.material?.type || apiData.material?.usage || apiData.material?.usage_type || '',
                                                         status: apiData.material?.status || 'published',
                                                         assigned_week_display: apiData.material?.assigned_week_display || apiData.material?.assigned_week || apiData.material?.week || null,
-                                                        source_type: apiData.material?.source_type || (window._pendingSharedMaterialOrigin ? 'shared' : 'personal')
+                                                        source_type: attachData.material?.source_type || apiData.material?.source_type || (window._pendingSharedMaterialOrigin ? 'shared' : 'personal')
                                                     };
                                                     const existing = findCourseMaterial(course, mid) || findCourseMaterial(course, attachedMaterial.id) || (course.materials.find(item => String(item.title || '').trim().toLowerCase() === String(attachedMaterial.title || '').trim().toLowerCase()) && attachedMaterial);
                                                     if (!existing) {
