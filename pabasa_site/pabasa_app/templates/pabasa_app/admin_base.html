@@ -97,6 +97,45 @@
             position: relative;
             z-index: 1;
             height: 100%;
+            min-height: 0;
+        }
+
+        .admin-sidebar-top {
+            flex: 0 0 auto;
+        }
+
+        .admin-sidebar-scroll {
+            flex: 1 1 auto;
+            min-height: 0;
+            margin: 0.7rem -0.35rem 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 0 0.35rem 0.5rem;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.36) transparent;
+        }
+
+        .admin-sidebar-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .admin-sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .admin-sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.34);
+            border-radius: 999px;
+        }
+
+        .admin-sidebar-footer {
+            flex: 0 0 auto;
+            background: linear-gradient(180deg, rgba(16, 70, 110, 0), rgba(16, 70, 110, 0.16) 28%, rgba(16, 70, 110, 0.28));
+            margin: 0.3rem -0.2rem -0.2rem;
+            padding: 0.85rem 0.2rem 0.2rem;
+            position: sticky;
+            bottom: 0;
+            z-index: 2;
         }
 
         .admin-main {
@@ -168,7 +207,7 @@
         }
 
         .admin-sidebar nav {
-            padding-top: 0.25rem;
+            padding-top: 0;
         }
 
         .admin-nav-link {
@@ -894,10 +933,15 @@
                 position: static;
                 width: 100%;
                 min-height: auto;
+                max-height: 100vh;
             }
 
             .admin-main {
                 margin-left: 0;
+            }
+
+            .admin-sidebar-scroll {
+                max-height: min(48vh, 360px);
             }
         }
     </style>
@@ -905,34 +949,38 @@
 <body>
     <aside class="admin-sidebar">
         <div class="d-flex flex-column h-100">
-            <a class="admin-brand" href="{% url 'dashboard_admin' %}">
-                <span class="admin-brand-icon">
-                    <img class="admin-brand-avatar" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="Admin avatar">
-                </span>
-                <span>
-                    <strong class="d-block">{{ admin_username|default:"ADM-0001" }}</strong>
-                    <span class="small text-secondary">PABASA Admin</span>
-                </span>
-            </a>
+            <div class="admin-sidebar-top">
+                <a class="admin-brand" href="{% url 'dashboard_admin' %}">
+                    <span class="admin-brand-icon">
+                        <img class="admin-brand-avatar" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="Admin avatar">
+                    </span>
+                    <span>
+                        <strong class="d-block">{{ admin_username|default:"ADM-0001" }}</strong>
+                        <span class="small text-secondary">PABASA Admin</span>
+                    </span>
+                </a>
 
-            <div class="admin-role-card mt-3">
-                <span class="small d-block">Admin workspace</span>
-                <strong class="text-dark">Manage module foundation</strong>
+                <div class="admin-role-card mt-3">
+                    <span class="small d-block">Admin workspace</span>
+                    <strong class="text-dark">Manage module foundation</strong>
+                </div>
             </div>
 
-            <nav class="mt-2">
-                <div class="admin-nav-label">Main</div>
-                <a class="admin-nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}" href="{% url 'dashboard_admin' %}"><i class="bi bi-grid"></i>Dashboard</a>
-                <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_students' %}active{% endif %}" href="{% url 'admin_students' %}"><i class="bi bi-mortarboard"></i>Students</a>
-                <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_teachers' %}active{% endif %}" href="{% url 'admin_teachers' %}"><i class="bi bi-person-workspace"></i>Teachers</a>
-                <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_principals' %}active{% endif %}" href="{% url 'admin_principals' %}"><i class="bi bi-person-vcard"></i>Principal</a>
-                <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_classes' %}active{% endif %}" href="{% url 'admin_classes' %}"><i class="bi bi-door-open"></i>Classes</a>
-                <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_courses' %}active{% endif %}" href="{% url 'admin_courses' %}"><i class="bi bi-folder2-open"></i>Courses</a>
-                <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_practice_assessment' %}active{% endif %}" href="{% url 'admin_practice_assessment' %}"><i class="bi bi-journal-check"></i>Practice</a>
-                <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}" href="{% url 'admin_settings' %}"><i class="bi bi-gear"></i>Settings</a>
-            </nav>
+            <div class="admin-sidebar-scroll">
+                <nav>
+                    <div class="admin-nav-label">Main</div>
+                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}" href="{% url 'dashboard_admin' %}"><i class="bi bi-grid"></i>Dashboard</a>
+                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_students' %}active{% endif %}" href="{% url 'admin_students' %}"><i class="bi bi-mortarboard"></i>Students</a>
+                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_teachers' %}active{% endif %}" href="{% url 'admin_teachers' %}"><i class="bi bi-person-workspace"></i>Teachers</a>
+                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_principals' %}active{% endif %}" href="{% url 'admin_principals' %}"><i class="bi bi-person-vcard"></i>Principal</a>
+                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_classes' %}active{% endif %}" href="{% url 'admin_classes' %}"><i class="bi bi-door-open"></i>Classes</a>
+                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_courses' %}active{% endif %}" href="{% url 'admin_courses' %}"><i class="bi bi-folder2-open"></i>Courses</a>
+                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_practice_assessment' %}active{% endif %}" href="{% url 'admin_practice_assessment' %}"><i class="bi bi-journal-check"></i>Practice</a>
+                    <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}" href="{% url 'admin_settings' %}"><i class="bi bi-gear"></i>Settings</a>
+                </nav>
+            </div>
 
-            <div class="mt-auto pt-3">
+            <div class="admin-sidebar-footer">
                 <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#adminLogoutModal">
                     <i class="bi bi-box-arrow-right me-1"></i>Logout
                 </button>
