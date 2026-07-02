@@ -60,6 +60,10 @@ body {
     position: relative;
 }
 
+main.flex-grow-1.py-4 {
+    padding-top: 0 !important;
+}
+
 /* ============================================================
    WATERMARK BACKGROUND PATTERN
    Educational themed: subtle PABASA text + open books + stars

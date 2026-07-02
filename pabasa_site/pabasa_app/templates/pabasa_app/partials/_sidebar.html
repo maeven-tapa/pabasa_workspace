@@ -8,8 +8,9 @@
                     {% endif %}
                 </span>
                 <div class="sidebar-text">
-                    <div class="fs-6 fw-bold lh-1" data-sidebar-brand-id>{{ user_id|default:"PABASA ID" }}</div>
-                    <div class="brand-note mt-1 small">PABASA</div>
+                    <div class="fs-6 fw-bold lh-1 sidebar-user-id" data-sidebar-brand-id>{{ user_id|default:"PABASA ID" }}</div>
+                    <div class="sidebar-user-name">{{ user_full_name|default:first_name|default:"PABASA User" }}</div>
+                    <div class="brand-note mt-1 small">{% if nav_role == 'teacher' %}Teacher Workspace{% else %}Student Workspace{% endif %}</div>
                 </div>
             </a>
             <button class="btn btn-sm btn-light sidebar-collapse-btn d-none d-lg-inline-flex" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">

@@ -162,6 +162,27 @@
             color: #fff !important;
         }
 
+        .admin-brand-id,
+        .admin-brand-name,
+        .admin-brand-workspace {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .admin-brand-name {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.82rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-top: 0.2rem;
+        }
+
+        .admin-brand-workspace {
+            display: block;
+        }
+
         .admin-brand:hover {
             color: #fff;
             background: rgba(255, 255, 255, 0.16);
@@ -930,18 +951,97 @@
 
         @media (max-width: 991.98px) {
             .admin-sidebar {
-                position: static;
-                width: 100%;
-                min-height: auto;
+                width: clamp(300px, 86vw, 320px);
+                min-height: 100vh;
                 max-height: 100vh;
+                position: static;
+                padding: 1rem;
             }
 
             .admin-main {
                 margin-left: 0;
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .admin-brand,
+            .admin-role-card,
+            .admin-nav-label,
+            .admin-nav-link,
+            .admin-sidebar-footer .btn {
+                max-width: 100%;
+                overflow: visible;
+                text-overflow: clip;
+                white-space: normal;
+            }
+
+            .admin-brand > span:last-child,
+            .admin-nav-link {
+                min-width: 0;
+            }
+
+            .admin-brand {
+                gap: 0.75rem;
+                padding: 0.75rem;
+            }
+
+            .admin-brand-icon {
+                flex-basis: 44px;
+                height: 44px;
+                width: 44px;
+            }
+
+            .admin-brand-id,
+            .admin-brand-name {
+                display: block;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .admin-brand-workspace {
+                display: -webkit-box;
+                line-height: 1.25;
+                margin-top: 0.25rem;
+                max-width: 100%;
+                overflow: hidden;
+                overflow-wrap: anywhere;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                white-space: normal;
+            }
+
+            .admin-role-card {
+                display: none;
+            }
+
+            .admin-nav-link {
+                justify-content: flex-start;
+                overflow-wrap: anywhere;
+                padding: 0.68rem 0.75rem;
+                width: 100%;
+            }
+
+            .admin-nav-link i {
+                flex: 0 0 24px;
             }
 
             .admin-sidebar-scroll {
-                max-height: min(48vh, 360px);
+                flex: 1 1 auto;
+                max-height: none;
+                min-height: 0;
+                overflow-y: auto;
+                padding-bottom: 0.25rem;
+            }
+
+            .admin-sidebar-footer {
+                margin-top: auto;
+                padding-top: 0.85rem;
+            }
+
+            .admin-sidebar-footer .btn {
+                min-height: 48px;
             }
         }
     </style>
@@ -955,8 +1055,9 @@
                         <img class="admin-brand-avatar" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="Admin avatar">
                     </span>
                     <span>
-                        <strong class="d-block">{{ admin_username|default:"ADM-0001" }}</strong>
-                        <span class="small text-secondary">PABASA Admin</span>
+                        <strong class="d-block admin-brand-id">{{ admin_username|default:"ADM-0001" }}</strong>
+                        <span class="admin-brand-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</span>
+                        <span class="small text-secondary admin-brand-workspace">PABASA Admin</span>
                     </span>
                 </a>
 

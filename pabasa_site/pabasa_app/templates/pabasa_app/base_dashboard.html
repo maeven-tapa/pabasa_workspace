@@ -157,6 +157,160 @@
             .dashboard-main {
                 margin-left: 0 !important;
             }
+
+            #dashboardSidebar {
+                --bs-offcanvas-width: clamp(300px, 86vw, 320px);
+                background:
+                    linear-gradient(145deg, #13507a 0%, var(--dash-primary-deep) 70%, #0b3552 100%);
+                color: #fff;
+                overflow: hidden;
+            }
+
+            #dashboardSidebar .offcanvas-header {
+                background: rgba(255, 255, 255, 0.08);
+                border-color: rgba(255, 255, 255, 0.14) !important;
+                color: #fff;
+                flex: 0 0 auto;
+            }
+
+            #dashboardSidebar .btn-close {
+                filter: invert(1) grayscale(100%) brightness(200%);
+                opacity: 0.9;
+            }
+
+            #dashboardSidebar .offcanvas-body {
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                overflow: hidden;
+            }
+
+            #dashboardSidebar .sidebar-inner {
+                height: 100%;
+                min-height: 0;
+                overflow: hidden;
+                padding: 1rem !important;
+                width: 100%;
+            }
+
+            #dashboardSidebar .sidebar-inner > .mb-5 {
+                flex: 0 0 auto;
+                margin-bottom: 0.85rem !important;
+            }
+
+            #dashboardSidebar .sidebar-text,
+            #dashboardSidebar .sidebar-subtext,
+            #dashboardSidebar .sidebar-section-label,
+            #dashboardSidebar .sidebar-role-card,
+            #dashboardSidebar .brand-note {
+                display: initial !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                max-width: none !important;
+                overflow: visible !important;
+                white-space: normal !important;
+                text-overflow: clip !important;
+            }
+
+            #dashboardSidebar .sidebar-brand-row {
+                align-items: center;
+                flex-wrap: nowrap;
+                gap: 0.75rem !important;
+                margin-bottom: 0.75rem !important;
+                padding: 0.75rem;
+            }
+
+            #dashboardSidebar .sidebar-brand-row .sidebar-text,
+            #dashboardSidebar .dash-link .sidebar-text,
+            #dashboardSidebar .btn-outline-danger .sidebar-text {
+                min-width: 0;
+                overflow-wrap: anywhere;
+            }
+
+            #dashboardSidebar .sidebar-brand-row a {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            #dashboardSidebar .dash-brand-mark {
+                flex: 0 0 44px;
+                height: 44px;
+                width: 44px;
+            }
+
+            #dashboardSidebar .sidebar-user-id,
+            #dashboardSidebar .sidebar-user-name {
+                display: block !important;
+                max-width: 100% !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+            }
+
+            #dashboardSidebar .sidebar-user-id {
+                font-size: 0.95rem;
+                line-height: 1.15;
+            }
+
+            #dashboardSidebar .sidebar-user-name {
+                font-size: 0.82rem;
+            }
+
+            #dashboardSidebar .brand-note {
+                display: -webkit-box !important;
+                font-size: 0.66rem;
+                letter-spacing: 0.08em;
+                line-height: 1.25;
+                margin-top: 0.25rem !important;
+                max-width: 100% !important;
+                overflow: hidden !important;
+                overflow-wrap: anywhere;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                white-space: normal !important;
+            }
+
+            #dashboardSidebar .sidebar-role-card {
+                display: none !important;
+            }
+
+            #dashboardSidebar .dash-link {
+                justify-content: flex-start;
+                min-height: 46px;
+                padding: 0.68rem 0.75rem;
+                width: 100%;
+            }
+
+            #dashboardSidebar .dash-link i {
+                flex: 0 0 24px;
+                margin-right: 0 !important;
+            }
+
+            #dashboardSidebar nav.nav {
+                flex: 1 1 auto;
+                min-height: 0;
+                margin-bottom: 0.75rem !important;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                padding: 0.1rem 0.15rem 0.25rem 0;
+                scrollbar-width: thin;
+            }
+
+            #dashboardSidebar .d-grid {
+                flex: 0 0 auto;
+                margin-bottom: 0.75rem;
+            }
+
+            #dashboardSidebar .mt-auto {
+                flex: 0 0 auto;
+                margin-top: auto !important;
+                background: linear-gradient(180deg, rgba(16, 70, 110, 0), rgba(16, 70, 110, 0.26) 34%, rgba(16, 70, 110, 0.36));
+                padding-top: 0.85rem !important;
+            }
+
+            #dashboardSidebar .btn-outline-danger {
+                min-height: 48px;
+            }
         }
 
         .dashboard-topbar {
@@ -388,6 +542,22 @@
             line-height: 1.1;
             display: block;
             margin-bottom: 0.1rem;
+        }
+
+        .sidebar-user-id,
+        .sidebar-user-name {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-user-name {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.82rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-top: 0.2rem;
         }
 
         .brand-note {
