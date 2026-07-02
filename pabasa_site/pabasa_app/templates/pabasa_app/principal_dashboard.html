@@ -15,8 +15,8 @@
         background-image: url('{% static "pabasa_app/images/ses_logo.jpg" %}');
         background-repeat: no-repeat;
         background-position: center;
-        background-size: 55%;
-        opacity: 1.40;
+        background-size: 60%;
+        opacity: 0.32;
         pointer-events: none;
         z-index: -1;
     }
@@ -27,75 +27,76 @@
     }
 
     .dashboard-hero {
-        background: linear-gradient(135deg, rgba(124, 45, 18, 0.14) 0%, rgba(255, 247, 237, 0.98) 100%);
-        border: 1px solid rgba(124, 45, 18, 0.16);
-        box-shadow: 0 18px 40px rgba(124, 45, 18, 0.14);
+        background: linear-gradient(135deg, rgba(255, 214, 57, 0.22) 0%, rgba(46, 168, 229, 0.12) 45%, rgba(255, 255, 255, 0.98) 100%);
+        border: 1px solid rgba(16, 70, 110, 0.16);
+        box-shadow: 0 18px 40px rgba(16, 70, 110, 0.14);
         border-radius: 22px;
     }
 
     .dashboard-hero-icon {
         width: 64px;
         height: 64px;
-        background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%);
+        background: linear-gradient(135deg, #2EA8E5 0%, #10466E 100%);
         border-radius: 18px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: #fff;
-        box-shadow: 0 12px 28px rgba(124, 45, 18, 0.2);
+        box-shadow: 0 12px 28px rgba(46, 168, 229, 0.2);
         flex-shrink: 0;
     }
 
     .dashboard-eyebrow {
-        color: #7c2d12;
+        color: #10466E;
         font-size: 0.78rem;
         font-weight: 800;
         letter-spacing: 0.16em;
         margin-bottom: 0.25rem;
         text-transform: uppercase;
-        background: rgba(124, 45, 18, 0.08);
+        background: rgba(46, 168, 229, 0.12);
         display: inline-block;
         padding: 0.28rem 0.6rem;
         border-radius: 999px;
     }
 
     .dashboard-kpi-card {
-        border: 1px solid rgba(124, 45, 18, 0.12);
-        box-shadow: 0 12px 28px rgba(124, 45, 18, 0.08);
+        border: 1px solid rgba(16, 70, 110, 0.12);
+        box-shadow: 0 12px 28px rgba(16, 70, 110, 0.08);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         border-radius: 18px;
+        background: linear-gradient(135deg, rgba(234, 247, 253, 0.98) 0%, rgba(255, 255, 255, 0.96) 100%);
     }
 
     .dashboard-kpi-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 16px 32px rgba(124, 45, 18, 0.12);
+        box-shadow: 0 16px 32px rgba(16, 70, 110, 0.12);
     }
 
     .dashboard-section-title {
-        color: #7c2d12;
+        color: #10466E;
         font-weight: 800;
         letter-spacing: 0.02em;
         margin-bottom: 0.7rem;
         padding-bottom: 0.35rem;
-        border-bottom: 2px solid rgba(124, 45, 18, 0.12);
+        border-bottom: 2px solid rgba(16, 70, 110, 0.12);
         display: inline-block;
     }
 
     .dashboard-activity-item {
         padding: 1rem;
-        background: linear-gradient(90deg, rgba(124, 45, 18, 0.05) 0%, rgba(255, 247, 237, 0.85) 100%);
-        border-left: 3px solid #7c2d12;
+        background: linear-gradient(90deg, rgba(46, 168, 229, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%);
+        border-left: 3px solid #2EA8E5;
         border-radius: 12px;
         transition: background 0.2s ease;
     }
 
     .dashboard-activity-item:hover {
-        background: rgba(124, 45, 18, 0.06);
+        background: rgba(46, 168, 229, 0.12);
     }
 
     .dashboard-table thead th {
-        border-bottom: 2px solid rgba(124, 45, 18, 0.12) !important;
-        color: #7c2d12;
+        border-bottom: 2px solid rgba(16, 70, 110, 0.12) !important;
+        color: #10466E;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -107,7 +108,27 @@
     }
 
     .dashboard-table tbody tr:hover {
-        background: rgba(124, 45, 18, 0.03);
+        background: rgba(46, 168, 229, 0.05);
+    }
+
+    .dashboard-hero [id="greeting-time"] {
+        color: #10466E !important;
+    }
+
+    .dashboard-hero h4 {
+        color: #10466E !important;
+    }
+
+    .dashboard-hero .text-muted {
+        color: #4A6680 !important;
+    }
+
+    .dashboard-kpi-card .bi {
+        color: #10466E !important;
+    }
+
+    .dashboard-kpi-card > div > div:first-child {
+        background: rgba(46, 168, 229, 0.16) !important;
     }
 </style>
 <div class="principal-content">
@@ -118,7 +139,7 @@
             </div>
             <div>
                 <p class="dashboard-eyebrow">School Leadership Dashboard</p>
-                <p class="mb-0" style="font-size: 0.95rem; color: #7c2d12;"><strong id="greeting-time">Good Morning</strong>,</p>
+                <p class="mb-0" style="font-size: 0.95rem; color: #10466E;"><strong id="greeting-time">Good Morning</strong>,</p>
                 <h4 class="mb-0" style="color: #1b1a17; font-weight: 800;">{{ greeting_name }}</h4>
                 <p class="small text-muted mb-0">{{ greeting_title }}</p>
                 <p class="small text-muted mb-0">{{ school_name }}</p>
@@ -130,7 +151,7 @@
         <div class="col-md-4 mb-3">
             <div class="principal-panel dashboard-kpi-card" style="height: 100%; display: flex; align-items: center; background: linear-gradient(135deg, rgba(254, 215, 170, 0.3) 0%, rgba(254, 215, 170, 0.1) 100%);">
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 50px; height: 50px; background: rgba(124, 45, 18, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-mortarboard" style="font-size: 1.5rem; color: #7c2d12;"></i></div>
+                    <div style="width: 50px; height: 50px; background: rgba(46, 168, 229, 0.16); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-mortarboard" style="font-size: 1.5rem; color: #10466E;"></i></div>
                     <div>
                         <p class="text-secondary mb-2" style="font-size: 0.85rem;">Total PABASA Students</p>
                         <strong style="font-size: 1.8rem; color: #1b1a17;">{{ total_students }}</strong>
@@ -141,7 +162,7 @@
         <div class="col-md-4 mb-3">
             <div class="principal-panel dashboard-kpi-card" style="height: 100%; display: flex; align-items: center; background: linear-gradient(135deg, rgba(254, 215, 170, 0.3) 0%, rgba(254, 215, 170, 0.1) 100%);">
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 50px; height: 50px; background: rgba(124, 45, 18, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-person-workspace" style="font-size: 1.5rem; color: #7c2d12;"></i></div>
+                    <div style="width: 50px; height: 50px; background: rgba(46, 168, 229, 0.16); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-person-workspace" style="font-size: 1.5rem; color: #10466E;"></i></div>
                     <div>
                         <p class="text-secondary mb-2" style="font-size: 0.85rem;">Total PABASA Teachers</p>
                         <strong style="font-size: 1.8rem; color: #1b1a17;">{{ total_teachers }}</strong>
@@ -152,7 +173,7 @@
         <div class="col-md-4 mb-3">
             <div class="principal-panel dashboard-kpi-card" style="height: 100%; display: flex; align-items: center; background: linear-gradient(135deg, rgba(254, 215, 170, 0.3) 0%, rgba(254, 215, 170, 0.1) 100%);">
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 50px; height: 50px; background: rgba(124, 45, 18, 0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-journal-check" style="font-size: 1.5rem; color: #7c2d12;"></i></div>
+                    <div style="width: 50px; height: 50px; background: rgba(46, 168, 229, 0.16); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-journal-check" style="font-size: 1.5rem; color: #10466E;"></i></div>
                     <div>
                         <p class="text-secondary mb-2" style="font-size: 0.85rem;">Total Assessments</p>
                         <strong style="font-size: 1.8rem; color: #1b1a17;">{{ total_assessments }}</strong>
@@ -186,9 +207,9 @@
             </div>
         </div>
         <div class="col-md-4 mb-3">
-            <div class="principal-panel dashboard-kpi-card" style="height: 100%; display: flex; align-items: center; background: linear-gradient(135deg, rgba(124, 45, 18, 0.08) 0%, rgba(254, 215, 170, 0.08) 100%);">
+            <div class="principal-panel dashboard-kpi-card" style="height: 100%; display: flex; align-items: center; background: linear-gradient(135deg, rgba(46, 168, 229, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%);">
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="width: 50px; height: 50px; background: rgba(124, 45, 18, 0.12); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-building" style="font-size: 1.5rem; color: #7c2d12;"></i></div>
+                    <div style="width: 50px; height: 50px; background: rgba(46, 168, 229, 0.16); border-radius: 12px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-building" style="font-size: 1.5rem; color: #10466E;"></i></div>
                     <div>
                         <p class="text-secondary mb-2" style="font-size: 0.85rem;">Active Classes</p>
                         <strong style="font-size: 1.8rem; color: #1b1a17;">{{ total_sections }}</strong>
@@ -230,7 +251,7 @@
                     {% for row in assessment_rows|slice:":8" %}
                     <tr>
                         <td><strong>{{ row.title }}</strong><div class="small text-muted">{{ row.assessment_type }} • {{ row.code }}</div></td>
-                        <td><span class="badge" style="background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%); color: #fff; padding: 0.45rem 0.7rem; border-radius: 999px;">{{ row.status }}</span></td>
+                        <td><span class="badge" style="background: linear-gradient(135deg, #2EA8E5 0%, #10466E 100%); color: #fff; padding: 0.45rem 0.7rem; border-radius: 999px;">{{ row.status }}</span></td>
                         <td>{{ row.participants }}</td>
                         <td>
                             <div class="progress" style="height: 20px;">

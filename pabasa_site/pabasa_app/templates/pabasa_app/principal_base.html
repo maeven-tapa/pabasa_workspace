@@ -13,25 +13,26 @@
     <link rel="stylesheet" href="{% static 'pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css' %}">
     <style>
         :root {
-            --principal-primary: #7c2d12;
-            --principal-primary-deep: #5d1f0a;
-            --principal-primary-soft: #fed7aa;
-            --principal-accent: #b45309;
-            --principal-accent-soft: #fff7ed;
-            --principal-bg: #fef6f3;
-            --principal-border: rgba(124, 45, 18, 0.08);
-            --principal-text: #1b1a17;
-            --principal-muted: #5f645f;
-            --principal-shadow: 0 22px 44px rgba(124, 45, 18, 0.11);
+            --principal-primary: #2EA8E5;
+            --principal-primary-deep: #10466E;
+            --principal-primary-soft: #EAF7FD;
+            --principal-accent: #FFD639;
+            --principal-accent-soft: #F8FCFF;
+            --principal-accent-deep: #F5B800;
+            --principal-bg: #F0F8FF;
+            --principal-surface: #FFFFFF;
+            --principal-border: rgba(16, 70, 110, 0.14);
+            --principal-text: #0F2D45;
+            --principal-muted: #4A6680;
+            --principal-shadow: 0 18px 40px rgba(16, 70, 110, 0.12);
             --principal-sidebar-width: 300px;
         }
 
         body {
             min-height: 100vh;
             background:
-                linear-gradient(115deg, rgba(254, 215, 170, 0.58), transparent 34%),
-                linear-gradient(245deg, rgba(247, 231, 207, 0.72), transparent 38%),
-                linear-gradient(180deg, #fbfbf8 0%, #fef6f3 58%, #faf5f2 100%);
+                radial-gradient(circle at top left, rgba(255, 214, 57, 0.12), transparent 30%),
+                linear-gradient(135deg, #eef8ff 0%, #f6fbff 42%, var(--principal-primary-soft) 100%);
             color: var(--principal-text);
             font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         }
@@ -45,11 +46,30 @@
             min-height: 100vh;
             position: fixed;
             inset: 0 auto 0 0;
-            background: rgba(255, 255, 255, 0.68);
-            border-right: 1px solid rgba(124, 45, 18, 0.12);
-            box-shadow: 10px 0 40px rgba(124, 45, 18, 0.04);
+            background:
+                linear-gradient(145deg, #13507a 0%, var(--principal-primary-deep) 70%, #0b3552 100%);
+            border-right: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 16px 0 40px rgba(6, 23, 38, 0.24);
             backdrop-filter: blur(22px) saturate(170%);
             padding: 1.15rem;
+        }
+
+        .principal-sidebar::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at top right, rgba(255, 214, 57, 0.16), transparent 28%);
+            pointer-events: none;
+        }
+
+        .principal-sidebar,
+        .principal-sidebar a,
+        .principal-sidebar .principal-brand,
+        .principal-sidebar .principal-role-card,
+        .principal-sidebar .principal-nav-label,
+        .principal-sidebar .principal-nav-link,
+        .principal-sidebar .principal-logout-btn {
+            color: #ffffff !important;
         }
 
         .principal-main {
@@ -60,38 +80,41 @@
 
         .principal-brand {
             align-items: center;
-            background: rgba(255, 255, 255, 0.72);
-            border: 1px solid rgba(255, 255, 255, 0.55);
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
             border-radius: 18px;
             display: flex;
             gap: 0.85rem;
             padding: 0.8rem;
             text-decoration: none;
-            color: inherit;
+            color: #fff;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
         }
 
         .principal-brand-icon {
             width: 44px;
             height: 44px;
             border-radius: 12px;
-            background: var(--principal-primary);
-            color: #fff;
+            background: linear-gradient(135deg, var(--principal-accent) 0%, var(--principal-accent-deep) 100%);
+            color: var(--principal-primary-deep);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             flex: 0 0 auto;
+            box-shadow: 0 10px 22px rgba(245, 184, 0, 0.22);
         }
 
         .principal-role-card {
-            background: rgba(255, 255, 255, 0.72);
-            border: 1px solid rgba(124, 45, 18, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
             border-radius: 18px;
-            color: var(--principal-muted);
+            color: #ffffff;
             padding: 0.85rem;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
         .principal-nav-label {
-            color: #94a3b8;
+            color: rgba(255, 255, 255, 0.72);
             font-size: 0.68rem;
             font-weight: 800;
             letter-spacing: 0.12em;
@@ -103,37 +126,62 @@
             align-items: center;
             border: 1px solid transparent;
             border-radius: 14px;
-            color: #475569;
+            color: rgba(255, 255, 255, 0.92);
             display: flex;
             gap: 0.65rem;
             font-weight: 700;
             min-height: 46px;
             padding: 0.72rem 0.82rem;
             text-decoration: none;
+            margin-bottom: 0.35rem;
+            position: relative;
+            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
         }
 
         .principal-nav-link i {
             width: 24px;
             height: 24px;
             border-radius: 10px;
-            background: rgba(124, 45, 18, 0.08);
-            color: #7c2d12;
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--principal-accent);
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
 
         .principal-nav-link:hover,
         .principal-nav-link.active {
-            background: rgba(255, 255, 255, 0.92);
-            border-color: rgba(124, 45, 18, 0.15);
-            color: #7c2d12;
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.16);
+            color: #fff;
+            transform: translateX(2px);
+        }
+
+        .principal-nav-link.active::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 22px;
+            border-radius: 999px;
+            background: var(--principal-accent);
+            box-shadow: 0 0 0 2px rgba(255, 214, 57, 0.16);
+        }
+
+        .principal-nav-link.active i {
+            background: var(--principal-accent);
+            color: var(--principal-primary-deep);
         }
 
         .principal-topbar,
         .principal-panel {
-            background: rgba(255, 253, 247, 0.84);
-            border: 1px solid var(--principal-border);
+            background: rgba(255, 255, 255, 0.78);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border: 1px solid rgba(255, 255, 255, 0.7);
             border-radius: 18px;
             box-shadow: var(--principal-shadow);
         }
@@ -151,6 +199,28 @@
         .principal-content {
             max-width: 1180px;
             margin: 0 auto;
+            position: relative;
+            isolation: isolate;
+        }
+
+        .principal-content::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url('{% static "pabasa_app/images/ses_logo.jpg" %}');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 58%;
+            opacity: 0.22;
+            filter: saturate(1.1) contrast(1.05);
+            transform: translateZ(0);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .principal-content > * {
+            position: relative;
+            z-index: 1;
         }
 
         .principal-panel {
@@ -181,52 +251,53 @@
         .btn-primary {
             background: linear-gradient(135deg, var(--principal-primary) 0%, var(--principal-accent) 100%);
             border: 1px solid transparent;
-            box-shadow: 0 10px 24px rgba(124, 45, 18, 0.18);
-            color: #fff;
+            box-shadow: 0 10px 24px rgba(16, 70, 110, 0.18);
+            color: var(--principal-primary-deep);
         }
 
         .btn-primary:hover,
         .btn-primary:focus {
-            background: linear-gradient(135deg, var(--principal-primary-deep) 0%, #9a2c0f 100%);
+            background: linear-gradient(135deg, var(--principal-primary-deep) 0%, #2a89c4 100%);
             border-color: transparent;
-            box-shadow: 0 12px 26px rgba(124, 45, 18, 0.2);
+            box-shadow: 0 12px 26px rgba(16, 70, 110, 0.2);
             color: #fff;
         }
 
         .btn-outline-secondary {
             background: rgba(255, 255, 255, 0.78);
-            border-color: rgba(124, 45, 18, 0.18);
-            color: var(--principal-primary);
+            border-color: rgba(16, 70, 110, 0.18);
+            color: var(--principal-primary-deep);
         }
 
         .btn-outline-secondary:hover,
         .btn-outline-secondary:focus {
             background: var(--principal-accent-soft);
-            border-color: rgba(124, 45, 18, 0.24);
-            color: var(--principal-primary);
+            border-color: rgba(16, 70, 110, 0.24);
+            color: var(--principal-primary-deep);
         }
 
         .principal-logout-btn {
-            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-            border: 1px solid rgba(124, 45, 18, 0.16);
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
             border-radius: 14px;
-            color: #9a2c0f;
+            color: #fff;
             font-weight: 800;
             padding: 0.8rem 0.95rem;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
         }
 
         .principal-logout-btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 8px 20px rgba(124, 45, 18, 0.14);
-            color: #9a2c0f;
+            box-shadow: 0 8px 20px rgba(16, 70, 110, 0.14);
+            color: #fff;
         }
 
         .principal-logout-modal .modal-content {
             border: 0;
             border-radius: 24px;
             overflow: hidden;
-            box-shadow: 0 24px 60px rgba(124, 45, 18, 0.18);
+            box-shadow: 0 24px 60px rgba(16, 70, 110, 0.18);
         }
 
         .principal-logout-modal .modal-body {
@@ -235,9 +306,9 @@
 
         .principal-logout-icon {
             align-items: center;
-            background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%);
+            background: linear-gradient(135deg, var(--principal-primary) 0%, var(--principal-accent) 100%);
             border-radius: 999px;
-            color: #fff;
+            color: var(--principal-primary-deep);
             display: inline-flex;
             font-size: 1.4rem;
             height: 56px;
@@ -247,14 +318,14 @@
         }
 
         .principal-logout-title {
-            color: #5d1f0a;
+            color: var(--principal-primary-deep);
             font-size: 1.15rem;
             font-weight: 800;
             margin-bottom: 0.4rem;
         }
 
         .principal-logout-copy {
-            color: #6b7280;
+            color: var(--principal-muted);
             margin: 0 auto;
             max-width: 320px;
         }
@@ -272,7 +343,7 @@
         }
 
         .principal-logout-actions .btn-danger {
-            background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%);
+            background: linear-gradient(135deg, var(--principal-primary-deep) 0%, var(--principal-primary) 100%);
             color: #fff;
             border: 0;
         }
@@ -297,7 +368,7 @@
                 <span class="principal-brand-icon"><i class="bi bi-mortarboard"></i></span>
                 <span>
                     <strong class="d-block">{{ principal_id|default:"PRN-SES" }}</strong>
-                    <span class="small text-secondary">PABASA Principal</span>
+                    <span class="small" style="color: #ffffff;">PABASA Principal</span>
                 </span>
             </a>
 

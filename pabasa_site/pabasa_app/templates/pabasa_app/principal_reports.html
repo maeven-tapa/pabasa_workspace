@@ -4,44 +4,44 @@
 {% block content %}
 <style>
     .reports-hero {
-        background: linear-gradient(135deg, rgba(124, 45, 18, 0.16) 0%, rgba(255, 247, 237, 0.98) 100%);
-        border: 1px solid rgba(124, 45, 18, 0.16);
-        box-shadow: 0 18px 42px rgba(124, 45, 18, 0.12);
+        background: linear-gradient(135deg, rgba(255, 214, 57, 0.16) 0%, rgba(46, 168, 229, 0.18) 45%, rgba(240, 248, 255, 0.98) 100%);
+        border: 1px solid rgba(16, 70, 110, 0.16);
+        box-shadow: 0 18px 42px rgba(16, 70, 110, 0.12);
         border-radius: 24px;
         padding: 1.25rem 1.35rem;
     }
 
     .reports-section-title {
-        color: #7c2d12;
+        color: #10466E;
         font-weight: 800;
         letter-spacing: 0.03em;
         margin-bottom: 0.9rem;
         padding-bottom: 0.35rem;
-        border-bottom: 2px solid rgba(124, 45, 18, 0.12);
+        border-bottom: 2px solid rgba(16, 70, 110, 0.12);
         display: inline-block;
     }
 
     .reports-card {
-        border: 1px solid rgba(124, 45, 18, 0.12);
+        border: 1px solid rgba(16, 70, 110, 0.12);
         border-radius: 20px;
-        box-shadow: 0 10px 24px rgba(124, 45, 18, 0.07);
+        box-shadow: 0 10px 24px rgba(16, 70, 110, 0.07);
         transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-        background: linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(254, 247, 237, 0.93) 100%);
+        background: linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(234, 247, 253, 0.93) 100%);
         min-height: 100%;
         padding: 1rem 1rem 0.95rem;
     }
 
     .reports-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 16px 34px rgba(124, 45, 18, 0.12);
-        border-color: rgba(124, 45, 18, 0.2);
+        box-shadow: 0 16px 34px rgba(16, 70, 110, 0.12);
+        border-color: rgba(16, 70, 110, 0.2);
     }
 
     .reports-card-icon {
         width: 42px;
         height: 42px;
         border-radius: 12px;
-        background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%);
+        background: linear-gradient(135deg, #2EA8E5 0%, #10466E 100%);
         color: #fff;
         display: inline-flex;
         align-items: center;
@@ -57,22 +57,22 @@
 
     .reports-form-control {
         border-radius: 12px;
-        border: 1px solid rgba(124, 45, 18, 0.16);
+        border: 1px solid rgba(16, 70, 110, 0.16);
         background: rgba(255,255,255,0.95);
-        box-shadow: inset 0 1px 2px rgba(124, 45, 18, 0.04);
+        box-shadow: inset 0 1px 2px rgba(16, 70, 110, 0.04);
     }
 
     .reports-panel {
-        border: 1px solid rgba(124, 45, 18, 0.12);
+        border: 1px solid rgba(16, 70, 110, 0.12);
         border-radius: 20px;
         background: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 10px 24px rgba(124, 45, 18, 0.06);
+        box-shadow: 0 10px 24px rgba(16, 70, 110, 0.06);
         padding: 1rem 1rem 0.95rem;
     }
 
     .reports-table thead th {
-        border-bottom: 2px solid rgba(124, 45, 18, 0.12) !important;
-        color: #7c2d12;
+        border-bottom: 2px solid rgba(16, 70, 110, 0.12) !important;
+        color: #10466E;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -84,30 +84,30 @@
     }
 
     .reports-table tbody tr:hover {
-        background: rgba(124, 45, 18, 0.032);
+        background: rgba(46, 168, 229, 0.05);
     }
 
     .reports-subtle-text {
-        color: #6b7280;
+        color: #4A6680;
         font-size: 0.92rem;
     }
 
     .reports-badge {
-        background: linear-gradient(135deg, rgba(124, 45, 18, 0.1) 0%, rgba(180, 83, 9, 0.14) 100%);
-        color: #7c2d12;
-        border: 1px solid rgba(124, 45, 18, 0.12);
+        background: linear-gradient(135deg, rgba(46, 168, 229, 0.12) 0%, rgba(255, 214, 57, 0.14) 100%);
+        color: #10466E;
+        border: 1px solid rgba(16, 70, 110, 0.12);
     }
 
     .reports-preview-banner {
-        border: 1px solid rgba(124, 45, 18, 0.12);
+        border: 1px solid rgba(16, 70, 110, 0.12);
         border-radius: 18px;
-        background: linear-gradient(135deg, rgba(124, 45, 18, 0.06) 0%, rgba(255, 247, 237, 0.96) 100%);
+        background: linear-gradient(135deg, rgba(46, 168, 229, 0.06) 0%, rgba(255, 255, 255, 0.96) 100%);
         padding: 0.95rem 1rem;
         margin-bottom: 1rem;
     }
 
     .reports-preview-label {
-        color: #7c2d12;
+        color: #10466E;
         font-weight: 800;
         letter-spacing: 0.03em;
         text-transform: uppercase;
@@ -119,11 +119,11 @@
     <div class="principal-panel mb-4 reports-hero">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div>
-                <p style="background: rgba(124, 45, 18, 0.08); color: #7c2d12; display: inline-block; padding: 0.28rem 0.6rem; border-radius: 999px; font-weight: 700; font-size: 0.76rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.4rem;">Reporting Hub</p>
+                <p style="background: rgba(46, 168, 229, 0.12); color: #10466E; display: inline-block; padding: 0.28rem 0.6rem; border-radius: 999px; font-weight: 700; font-size: 0.76rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 0.4rem;">Reporting Hub</p>
                 <h4 class="mb-1" style="color: #1b1a17; font-weight: 800;">Review school reports in one place</h4>
                 <p class="mb-0 reports-subtle-text">Choose a report type, optionally filter by grade level, and review the live preview before exporting.</p>
             </div>
-            <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
+            <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #2EA8E5 0%, #10466E 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
                 <i class="bi bi-file-earmark-bar-graph"></i>
             </div>
         </div>

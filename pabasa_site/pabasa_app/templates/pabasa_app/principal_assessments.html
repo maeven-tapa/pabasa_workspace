@@ -4,37 +4,38 @@
 {% block content %}
 <style>
     .assessments-hero {
-        background: linear-gradient(135deg, rgba(124, 45, 18, 0.14) 0%, rgba(255, 247, 237, 0.98) 100%);
-        border: 1px solid rgba(124, 45, 18, 0.16);
-        box-shadow: 0 16px 36px rgba(124, 45, 18, 0.12);
+        background: linear-gradient(135deg, rgba(255, 214, 57, 0.16) 0%, rgba(46, 168, 229, 0.18) 45%, rgba(240, 248, 255, 0.98) 100%);
+        border: 1px solid rgba(16, 70, 110, 0.16);
+        box-shadow: 0 16px 36px rgba(16, 70, 110, 0.12);
         border-radius: 22px;
     }
 
     .assessments-kpi-card {
-        border: 1px solid rgba(124, 45, 18, 0.12);
-        box-shadow: 0 12px 28px rgba(124, 45, 18, 0.08);
+        border: 1px solid rgba(16, 70, 110, 0.12);
+        box-shadow: 0 12px 28px rgba(16, 70, 110, 0.08);
         border-radius: 18px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background: linear-gradient(135deg, rgba(255, 214, 57, 0.16) 0%, rgba(234, 247, 253, 0.96) 48%, rgba(255, 255, 255, 0.98) 100%);
     }
 
     .assessments-kpi-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 16px 32px rgba(124, 45, 18, 0.12);
+        box-shadow: 0 16px 32px rgba(16, 70, 110, 0.12);
     }
 
     .assessments-section-title {
-        color: #7c2d12;
+        color: #10466E;
         font-weight: 800;
         letter-spacing: 0.02em;
         margin-bottom: 0.8rem;
         padding-bottom: 0.35rem;
-        border-bottom: 2px solid rgba(124, 45, 18, 0.12);
+        border-bottom: 2px solid rgba(16, 70, 110, 0.12);
         display: inline-block;
     }
 
     .assessments-table thead th {
-        border-bottom: 2px solid rgba(124, 45, 18, 0.12) !important;
-        color: #7c2d12;
+        border-bottom: 2px solid rgba(16, 70, 110, 0.12) !important;
+        color: #10466E;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -46,24 +47,25 @@
     }
 
     .assessments-table tbody tr:hover {
-        background: rgba(124, 45, 18, 0.03);
+        background: rgba(46, 168, 229, 0.05);
     }
 
     .assessments-type-card {
-        border: 1px solid rgba(124, 45, 18, 0.12);
+        border: 1px solid rgba(16, 70, 110, 0.12);
         border-radius: 18px;
-        box-shadow: 0 10px 24px rgba(124, 45, 18, 0.08);
+        box-shadow: 0 10px 24px rgba(16, 70, 110, 0.08);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(234, 247, 253, 0.95) 100%);
     }
 
     .assessments-type-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 14px 28px rgba(124, 45, 18, 0.12);
+        box-shadow: 0 14px 28px rgba(16, 70, 110, 0.12);
     }
 
     .assessments-pill {
-        background: rgba(124, 45, 18, 0.08);
-        color: #7c2d12;
+        background: rgba(46, 168, 229, 0.12);
+        color: #10466E;
         display: inline-block;
         padding: 0.28rem 0.6rem;
         border-radius: 999px;
@@ -81,7 +83,7 @@
                 <h4 class="mb-1" style="color: #1b1a17; font-weight: 800;">Assessment Overview</h4>
                 <p class="text-muted mb-0">Track assessment progress, participation, and school-wide performance in one view.</p>
             </div>
-            <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
+            <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #2EA8E5 0%, #10466E 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
                 <i class="bi bi-journal-check"></i>
             </div>
         </div>
@@ -89,9 +91,9 @@
 
     <div class="row mb-4">
         <div class="col-md-3 mb-3">
-            <div class="principal-panel assessments-kpi-card" style="background: linear-gradient(135deg, rgba(124, 45, 18, 0.08) 0%, rgba(254, 215, 170, 0.1) 100%);">
+            <div class="principal-panel assessments-kpi-card" style="background: linear-gradient(135deg, rgba(46, 168, 229, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%);">
                 <p class="text-secondary small mb-2">Total Active Assessments</p>
-                <strong style="font-size: 2.2rem; color: #7c2d12;">{{ total_assessments }}</strong>
+                <strong style="font-size: 2.2rem; color: #10466E;">{{ total_assessments }}</strong>
                 <p class="small text-muted mt-2 mb-0">Across all grades</p>
             </div>
         </div>
@@ -141,7 +143,7 @@
                         </td>
                         <td>{{ row.student_name }}</td>
                         <td>Attempt {{ row.attempt_number }}</td>
-                        <td><span class="badge" style="background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%); color: #fff; padding: 0.45rem 0.7rem; border-radius: 999px;">{{ row.status }}</span></td>
+                        <td><span class="badge" style="background: linear-gradient(135deg, #2EA8E5 0%, #10466E 100%); color: #fff; padding: 0.45rem 0.7rem; border-radius: 999px;">{{ row.status }}</span></td>
                         <td>{{ row.total_score|default:'-' }}</td>
                         <td>{{ row.completed_at|date:"M d, Y h:i A" }}</td>
                     </tr>
@@ -178,7 +180,7 @@
                         <td>
                             {% with row.completion_pct|default:'0' as completion_pct %}
                             <div class="progress" style="height: 20px;">
-                                <div class="progress-bar" role="progressbar" style="background: linear-gradient(90deg, #7c2d12 0%, #b45309 100%); width: {{ completion_pct }}%;" aria-valuenow="{{ completion_pct }}" aria-valuemin="0" aria-valuemax="100">{{ completion_pct }}%</div>
+                                <div class="progress-bar" role="progressbar" style="background: linear-gradient(90deg, #2EA8E5 0%, #10466E 100%); width: {{ completion_pct }}%;" aria-valuenow="{{ completion_pct }}" aria-valuemin="0" aria-valuemax="100">{{ completion_pct }}%</div>
                             </div>
                             {% endwith %}
                         </td>

@@ -4,39 +4,40 @@
 {% block content %}
 <style>
     .performance-hero {
-        background: linear-gradient(135deg, rgba(124, 45, 18, 0.16) 0%, rgba(255, 247, 237, 0.98) 100%);
-        border: 1px solid rgba(124, 45, 18, 0.16);
-        box-shadow: 0 18px 42px rgba(124, 45, 18, 0.12);
+        background: linear-gradient(135deg, rgba(255, 214, 57, 0.16) 0%, rgba(46, 168, 229, 0.18) 45%, rgba(240, 248, 255, 0.98) 100%);
+        border: 1px solid rgba(16, 70, 110, 0.16);
+        box-shadow: 0 18px 42px rgba(16, 70, 110, 0.12);
         border-radius: 24px;
         padding: 1.2rem 1.3rem;
     }
 
     .performance-kpi-card {
-        border: 1px solid rgba(124, 45, 18, 0.12);
-        box-shadow: 0 10px 24px rgba(124, 45, 18, 0.07);
+        border: 1px solid rgba(16, 70, 110, 0.12);
+        box-shadow: 0 10px 24px rgba(16, 70, 110, 0.07);
         border-radius: 20px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         padding: 1rem 1rem 0.95rem;
+        background: linear-gradient(135deg, rgba(255, 214, 57, 0.16) 0%, rgba(234, 247, 253, 0.96) 48%, rgba(255, 255, 255, 0.98) 100%);
     }
 
     .performance-kpi-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 16px 32px rgba(124, 45, 18, 0.12);
+        box-shadow: 0 16px 32px rgba(16, 70, 110, 0.12);
     }
 
     .performance-section-title {
-        color: #7c2d12;
+        color: #10466E;
         font-weight: 800;
         letter-spacing: 0.02em;
         margin-bottom: 0.8rem;
         padding-bottom: 0.35rem;
-        border-bottom: 2px solid rgba(124, 45, 18, 0.12);
+        border-bottom: 2px solid rgba(16, 70, 110, 0.12);
         display: inline-block;
     }
 
     .performance-table thead th {
-        border-bottom: 2px solid rgba(124, 45, 18, 0.12) !important;
-        color: #7c2d12;
+        border-bottom: 2px solid rgba(16, 70, 110, 0.12) !important;
+        color: #10466E;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -48,12 +49,12 @@
     }
 
     .performance-table tbody tr:hover {
-        background: rgba(124, 45, 18, 0.03);
+        background: rgba(46, 168, 229, 0.05);
     }
 
     .performance-pill {
-        background: rgba(124, 45, 18, 0.08);
-        color: #7c2d12;
+        background: rgba(46, 168, 229, 0.12);
+        color: #10466E;
         display: inline-block;
         padding: 0.28rem 0.6rem;
         border-radius: 999px;
@@ -67,11 +68,15 @@
         padding: 0.8rem 0.95rem;
         border-radius: 12px;
         transition: background 0.2s ease;
-        border: 1px solid rgba(124, 45, 18, 0.08);
+        border: 1px solid rgba(16, 70, 110, 0.08);
     }
 
     .performance-callout:hover {
-        background: rgba(124, 45, 18, 0.04);
+        background: rgba(46, 168, 229, 0.06);
+    }
+
+    .performance-hero .bi {
+        color: #10466E !important;
     }
 </style>
 <div class="principal-content">
@@ -83,7 +88,7 @@
                 <p class="text-muted mb-0">A clear view of learning progress across grades and reading outcomes.</p>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #7c2d12 0%, #b45309 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
+                <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #2EA8E5 0%, #10466E 100%); display: flex; align-items: center; justify-content: center; color: #fff;">
                     <i class="bi bi-bar-chart-line"></i>
                 </div>
             </div>
@@ -115,7 +120,7 @@
     </div>
 
     <h5 class="performance-section-title mb-3">Reading and Speech Performance by Grade</h5>
-    <div class="principal-panel mb-4" style="border-radius: 20px; box-shadow: 0 10px 24px rgba(124, 45, 18, 0.06);">
+    <div class="principal-panel mb-4" style="border-radius: 20px; box-shadow: 0 10px 24px rgba(16, 70, 110, 0.06);">
         <div class="table-responsive">
             <table class="table align-middle mb-0 placeholder-table performance-table">
                 <thead>
@@ -149,7 +154,7 @@
     </div>
 
     <h5 class="performance-section-title mb-3">Completion Rate by Grade</h5>
-    <div class="principal-panel mb-4" style="border-radius: 20px; box-shadow: 0 10px 24px rgba(124, 45, 18, 0.06);">
+    <div class="principal-panel mb-4" style="border-radius: 20px; box-shadow: 0 10px 24px rgba(16, 70, 110, 0.06);">
         <div class="table-responsive">
             <table class="table align-middle mb-0 placeholder-table performance-table">
                 <thead>
