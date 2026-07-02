@@ -78,11 +78,35 @@
             });
         };
 
+        const setActiveNav = () => {
+            const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+            document.querySelectorAll('.dash-link').forEach(link => {
+                const href = link.getAttribute('href') || '';
+                if (!href) return;
+                try {
+                    const linkPath = new URL(href, window.location.origin).pathname.replace(/\/+$/, '') || '/';
+                    const isMatch = currentPath === linkPath || (currentPath.startsWith(linkPath + '/') && linkPath !== '/');
+                    link.classList.toggle('is-active', isMatch);
+                    if (isMatch) {
+                        link.setAttribute('aria-current', 'page');
+                    } else {
+                        link.removeAttribute('aria-current');
+                    }
+                } catch (error) {
+                    // Ignore malformed href values.
+                }
+            });
+        };
+
         // Update on page load
         if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", updateBrandId);
+            document.addEventListener("DOMContentLoaded", () => {
+                updateBrandId();
+                setActiveNav();
+            });
         } else {
             updateBrandId();
+            setActiveNav();
         }
         
         // Update when localStorage changes
