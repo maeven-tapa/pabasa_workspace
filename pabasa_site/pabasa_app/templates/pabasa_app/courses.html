@@ -3869,7 +3869,7 @@
                     console.log('✓ Loaded shared courses from server:', sharedTeacherCourses.length);
                     const otherMaterialPanel = document.getElementById('otherMaterialPanel');
                     if (otherMaterialPanel && !otherMaterialPanel.classList.contains('d-none')) {
-                        renderOtherMaterialsPanel();
+                        renderOtherMaterialPanel();
                     }
                     return true;
                 }
@@ -6812,6 +6812,7 @@
             if (materialLanguageSelect) materialLanguageSelect.value = 'English';
             buildAssignedWeekOptions('assignedWeek', null);
             window._pendingSharedMaterialOrigin = false;
+            window._pendingSharedMaterialSourceId = null;
 
             const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
             if (addHeader) addHeader.textContent = 'Add Reading Material';
@@ -6886,12 +6887,13 @@
 
                 const addItem = (item) => {
                     if (!item) return;
+                    const itemAuthor = item.author || item.teacher_name || course.teacher_name || authorName;
                     const publishedAt = item.published_at || item.schedule || item.scheduled_at || item.created_at || item.createdAt || item.updated_at || item.publishedAt || '';
                     const status = (item.status || item.publication_status || item.state || 'published').toString().toLowerCase();
                     items.push({
                         id: item.id || item.material_id || item.raw_id || item.action_id || `${course.id}-${item.title || item.name || ''}`,
                         title: item.title || item.name || item.content_title || 'Untitled material',
-                        author: item.author || item.teacher_name || course.teacher_name || authorName,
+                        author: itemAuthor,
                         published_at: publishedAt,
                         status: status,
                         originalStatus: item.status || item.publication_status || item.state || 'published',
@@ -6906,10 +6908,18 @@
             });
 
             const seenIds = new Set();
+            const seenFingerprints = new Set();
             return items.filter(item => {
                 const key = String(item.id || `${item.title}|${item.author}|${item.published_at}`);
-                if (seenIds.has(key)) return false;
+                const material = item.material || {};
+                const content = String(material.content || material.content_text || material.prompt_text || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                const title = String(item.title || material.title || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                const type = String(material.item_type || material.reading_type || material.type || '').trim().toLowerCase();
+                const author = String(item.author || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                const fingerprint = `${title}|${type}|${content}|${author}`;
+                if (seenIds.has(key) || (fingerprint.trim() !== '|||' && seenFingerprints.has(fingerprint))) return false;
                 seenIds.add(key);
+                if (fingerprint.trim() !== '|||') seenFingerprints.add(fingerprint);
                 return true;
             });
         }
@@ -7006,7 +7016,7 @@
             const record = materials.find(item => String(item.id) === String(materialId));
             if (!record) return;
             const material = record.material || record;
-            material.source_type = 'shared';
+            window._pendingSharedMaterialSourceId = material.raw_id || material.material_id || material.id || record.id || null;
 
             const currentCourse = window.courseAttachTarget ? findCourseById(window.courseAttachTarget) : null;
             if (currentCourse && isCourseMaterialAlreadyAssigned(currentCourse, material)) {
@@ -7866,7 +7876,7 @@
                         const status  = publicationStatusSelect ? publicationStatusSelect.value   : 'published';
                         const schedule = scheduleDateTimeInput  ? scheduleDateTimeInput.value      : '';
                         const usageType = 'assessment';
-                        const sourceType = window._pendingSharedMaterialOrigin ? 'shared' : 'personal';
+                        const sourceType = 'shared';
                         const language = materialLanguageSelect ? materialLanguageSelect.value : 'English';
                         const assignedWeekEl = document.getElementById('assignedWeek');
                         const assignedWeekRaw = assignedWeekEl ? assignedWeekEl.value.trim() : '';
@@ -7984,12 +7994,12 @@
                                             content: content,
                                             status: status,
                                             usage_type: usageType,
-                                            source_type: sourceType,
                                             class_code: saveClassCode,
                                             scheduled_at: schedule || null,
                                             assigned_week: assignedWeek,
                                             language: language,
-                                            source_type: window._pendingSharedMaterialOrigin ? 'shared' : 'personal'
+                                            source_type: sourceType,
+                                            source_material_id: window._pendingSharedMaterialSourceId || null
                                         })
                                     };
 
@@ -8239,10 +8249,13 @@
                                 } finally {
                                     window.courseAttachTarget = null;
                                     window._pendingSharedMaterialOrigin = false;
+                                    window._pendingSharedMaterialSourceId = null;
                                 }
                             }
 
                             // ── Step 4: Reset form ────────────────────────────────
+                            window._pendingSharedMaterialOrigin = false;
+                            window._pendingSharedMaterialSourceId = null;
                             const addMaterialFormEl = document.getElementById('addMaterialForm');
                             if (addMaterialFormEl) addMaterialFormEl.reset();
                             resetDetectedParagraphState(false);

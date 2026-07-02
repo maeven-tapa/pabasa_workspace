@@ -3944,7 +3944,8 @@ def get_teacher_courses_api(request):
 
         # Prefetch related objects to avoid N+1 queries
         if shared:
-            # Shared mode: return all active courses from all teachers (including current teacher)
+            # Shared mode feeds the Others library. Include all active courses,
+            # including the current teacher's own shared resources.
             courses_qs = Course.objects.filter(is_active=True)
         else:
             # Personal mode: return only current teacher's courses
@@ -4038,6 +4039,8 @@ def get_teacher_courses_api(request):
             materials_list = []
             for m in c.materials.all():
                 if not getattr(m, 'is_active', True):
+                    continue
+                if shared and (getattr(m, 'source_type', 'personal') or 'personal') != 'shared':
                     continue
                 cj = getattr(m, 'content_json', None) or {}
                 items_count = 0
@@ -4495,8 +4498,9 @@ def add_material_to_course(request):
         if not material:
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
 
-        # Basic ownership check: allow if material is unassigned (section=None) or belongs to one of the teacher's sections
-        if material.section and material.section.teacher_id != teacher_user.id:
+        # Basic ownership check: allow shared library materials, unassigned
+        # materials, or materials owned through one of the teacher's sections.
+        if material.source_type != 'shared' and material.section and material.section.teacher_id != teacher_user.id:
             # Also allow if the underlying assessment (if any) belongs to the teacher
             if not (getattr(material, 'assessment', None) and material.assessment.teacher_id == teacher_user.id):
                 return JsonResponse({'success': False, 'error': 'You do not have permission to use this material'}, status=403)
@@ -5298,6 +5302,63 @@ def _split_material_content(text, rtype, requested_reading_type=''):
     return [text]
 
 
+def _shared_material_fingerprint(title, content, item_type, language=''):
+    def normalize(value):
+        return re.sub(r'\s+', ' ', (value or '').strip()).lower()
+
+    return (
+        normalize(title),
+        normalize(content),
+        normalize(item_type),
+        normalize(language),
+    )
+
+
+def _find_existing_shared_material(title, content, item_type, language='', source_material_id=None):
+    qs = Material.objects.filter(source_type='shared', is_active=True)
+    if source_material_id:
+        _, parsed_id = _parse_prefixed_id(source_material_id)
+        if parsed_id:
+            material = qs.filter(id=parsed_id).first()
+            if material:
+                return material
+
+    target = _shared_material_fingerprint(title, content, item_type, language)
+    for material in qs.filter(title__iexact=(title or '').strip(), item_type=item_type).order_by('created_at', 'id'):
+        material_language = ''
+        if isinstance(material.content_json, dict):
+            material_language = material.content_json.get('language') or ''
+        if _shared_material_fingerprint(material.title, material.content_text, material.item_type, material_language) == target:
+            return material
+    return None
+
+
+def _material_response_payload(material, tokens=None, section=None):
+    item_count = len(tokens) if tokens is not None else 1
+    if tokens is None and isinstance(material.content_json, dict) and isinstance(material.content_json.get('items'), list):
+        item_count = len(material.content_json.get('items'))
+
+    return {
+        'id': f"material-{material.id}",
+        'raw_id': material.id,
+        'code': material.code,
+        'title': material.title,
+        'item_type': material.item_type,
+        'type': material.type,
+        'source_type': material.source_type,
+        'material_source': material.source_type,
+        'is_shared_material': material.source_type == 'shared',
+        'content': material.content_text,
+        'status': material.status,
+        'schedule': timezone.localtime(material.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if material.scheduled_at else None,
+        'items': item_count,
+        'created_at': material.created_at.isoformat() if getattr(material, 'created_at', None) else None,
+        'assigned_sections': [section.class_code] if section else [s.class_code for s in material.assigned_sections.all()],
+        'assigned_week': material.assigned_week,
+        'assigned_week_display': format_assigned_week_display(material.assigned_week),
+    }
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -5313,16 +5374,17 @@ def add_reading_material(request):
         requested_reading_type = (data.get('reading_type') or '').strip().lower()
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
         requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
-        source_type  = (data.get('source_type') or 'personal').strip().lower()
+        source_type  = (data.get('source_type') or 'shared').strip().lower()
         class_code   = (data.get('class_code') or '').strip()
-        source_type  = (data.get('source_type') or data.get('origin') or '').strip().lower()
+        source_type  = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
         language     = (data.get('language') or 'English').strip() or 'English'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
         assigned_week, week_error = parse_assigned_week(assigned_week_raw)
+        source_material_id = data.get('source_material_id')
 
         if source_type not in ('personal', 'shared'):
-            source_type = 'personal'
+            source_type = 'shared'
 
         # Teachers may only create assessment materials from this endpoint.
         usage_type = 'assessment'
@@ -5348,7 +5410,10 @@ def add_reading_material(request):
             logger.warning(f"add_reading_material validation failed: {errors}")
             return JsonResponse({'success': False, 'errors': errors}, status=400)
 
-        source_type = source_type if source_type in ('personal', 'shared') else 'personal'
+        # New teacher-created materials are teacher-owned and shared by default:
+        # Personal is the ownership view, while Others is the shared-library view
+        # over the same Material row.
+        source_type = 'shared'
 
         reading_type = _detect_material_type(content, requested_reading_type)
         tokens = _split_material_content(content, reading_type, requested_reading_type)
@@ -5393,6 +5458,32 @@ def add_reading_material(request):
             return JsonResponse({'success': False, 'error': 'No items found in content to create.'}, status=400)
 
         with transaction.atomic():
+            existing_shared = None
+            if source_type == 'shared':
+                existing_shared = _find_existing_shared_material(
+                    title,
+                    content,
+                    reading_type,
+                    language,
+                    source_material_id=source_material_id,
+                )
+            if existing_shared:
+                material_payload = _material_response_payload(existing_shared)
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Shared reading material already exists.',
+                    'material_ids': [existing_shared.id],
+                    'material_id': existing_shared.id,
+                    'created_count': 0,
+                    'reused': True,
+                    'material': material_payload,
+                    'title': existing_shared.title,
+                    'type': existing_shared.item_type,
+                    'status': existing_shared.status,
+                    'created_at': existing_shared.created_at.isoformat() if getattr(existing_shared, 'created_at', None) else None,
+                    'overview': _compute_teacher_overview(teacher_user),
+                })
+
             # If this material is intended to be an assessment (or both), do not
             # create an Assessment record until a student completes an attempt.
             # This keeps the Assessments table empty for new materials until
@@ -5455,24 +5546,7 @@ def add_reading_material(request):
                 teacher_user,
             )
             created_ids = [m.id]
-            material_payload = {
-                'id': f"material-{m.id}",
-                'code': m.code,
-                'title': m.title,
-                'item_type': m.item_type,
-                'type': m.type,
-                'source_type': m.source_type,
-                'material_source': m.source_type,
-                'is_shared_material': m.source_type == 'shared',
-                'content': m.content_text,
-                'status': m.status,
-                'schedule': timezone.localtime(m.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if m.scheduled_at else None,
-                'items': len(tokens),
-                'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
-                'assigned_sections': [section.class_code] if section else [],
-                'assigned_week': m.assigned_week,
-                'assigned_week_display': format_assigned_week_display(m.assigned_week),
-            }
+            material_payload = _material_response_payload(m, tokens=tokens, section=section)
 
             return JsonResponse({
                 'success': True,

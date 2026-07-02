@@ -363,9 +363,9 @@ class MaterialCreationTests(TestCase):
         material = Material.objects.latest("id")
         self.assertEqual(material.content_json.get("language"), "Tagalog")
         self.assertEqual(material.type, "assessment")
-        self.assertEqual(material.source_type, "personal")
+        self.assertEqual(material.source_type, "shared")
 
-    def test_add_reading_material_saves_shared_source_type(self):
+    def test_add_reading_material_response_includes_shared_source_type(self):
         user = User.objects.create(
             custom_id="TCH-0003",
             role="teacher",
@@ -410,6 +410,67 @@ class MaterialCreationTests(TestCase):
         material = Material.objects.latest("id")
         self.assertEqual(material.type, "assessment")
         self.assertEqual(material.source_type, "shared")
+
+    def test_add_reading_material_reuses_existing_shared_material(self):
+        user = User.objects.create(
+            custom_id="TCH-0006",
+            role="teacher",
+            first_name="Reuse",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="reuse@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        existing = Material.objects.create(
+            teacher=user,
+            title="Shared reading",
+            item_type="word",
+            prompt_text="Araw",
+            content_text="Araw\nBuwan",
+            content_json={"items": ["Araw", "Buwan"], "language": "Tagalog"},
+            type="assessment",
+            source_type="shared",
+            status="published",
+            is_active=True,
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Shared reading",
+                "content": "Araw\nBuwan",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "assessment",
+                "source_type": "shared",
+                "source_material_id": existing.id,
+                "class_code": "",
+                "language": "Tagalog",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertTrue(payload["reused"])
+        self.assertEqual(payload["created_count"], 0)
+        self.assertEqual(payload["material_ids"], [existing.id])
+        self.assertEqual(Material.objects.filter(source_type="shared", title="Shared reading").count(), 1)
 
     def test_add_reading_material_saves_multiple_paragraph_items(self):
         user = User.objects.create(
@@ -661,6 +722,111 @@ class MaterialCreationTests(TestCase):
         material_payload = next(item for item in course_payload["materials"] if item["id"] == material.id)
         self.assertEqual(material_payload["source_type"], "shared")
         self.assertTrue(material_payload["is_shared_material"])
+
+    def test_shared_courses_api_includes_own_shared_materials_without_personal_rows(self):
+        current_teacher = User.objects.create(
+            custom_id="TCH-0010",
+            role="teacher",
+            first_name="Current",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="current-shared@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        other_teacher = User.objects.create(
+            custom_id="TCH-0011",
+            role="teacher",
+            first_name="Other",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="other-shared@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        current_course = Course.objects.create(
+            code="C-CURRENT-1",
+            title="Current Course",
+            description="",
+            teacher=current_teacher,
+        )
+        other_course = Course.objects.create(
+            code="C-OTHER-1",
+            title="Other Course",
+            description="",
+            teacher=other_teacher,
+        )
+        personal_material = Material.objects.create(
+            teacher=current_teacher,
+            title="Legacy private reading",
+            item_type="word",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "Tagalog"},
+            type="assessment",
+            source_type="personal",
+            status="published",
+            is_active=True,
+        )
+        current_shared_material = Material.objects.create(
+            teacher=current_teacher,
+            title="Current shared reading",
+            item_type="word",
+            content_text="Buwan",
+            content_json={"items": ["Buwan"], "language": "Tagalog"},
+            type="assessment",
+            source_type="shared",
+            status="published",
+            is_active=True,
+        )
+        shared_material = Material.objects.create(
+            teacher=other_teacher,
+            title="Original shared reading",
+            item_type="word",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "Tagalog"},
+            type="assessment",
+            source_type="shared",
+            status="published",
+            is_active=True,
+        )
+        current_course.materials.add(personal_material, current_shared_material)
+        other_course.materials.add(shared_material)
+
+        session = self.client.session
+        session["user_id"] = current_teacher.id
+        session["user_role"] = current_teacher.role
+        session["first_name"] = current_teacher.first_name
+        session["last_name"] = current_teacher.last_name
+        session["email"] = current_teacher.email
+        session["custom_id"] = current_teacher.custom_id
+        session.save()
+
+        response = self.client.get(reverse("get_teacher_courses_api"), {"shared": "true"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        course_ids = {course["id"] for course in payload["courses"]}
+        self.assertIn(current_course.id, course_ids)
+        self.assertIn(other_course.id, course_ids)
+        material_ids = {
+            material["id"]
+            for course in payload["courses"]
+            for material in course["materials"]
+        }
+        self.assertNotIn(personal_material.id, material_ids)
+        self.assertIn(current_shared_material.id, material_ids)
+        self.assertIn(shared_material.id, material_ids)
 
     def test_add_material_to_course_response_includes_material_source_type(self):
         teacher = User.objects.create(
