@@ -4081,8 +4081,12 @@ def get_teacher_courses_api(request):
                     except Exception:
                         material_owner_teacher_id = None
 
-                is_shared_material = bool(material_owner_teacher_id and teacher_user and material_owner_teacher_id != teacher_user.id)
-                material_source = 'shared' if is_shared_material else 'personal'
+                if material_owner_teacher_id is None and getattr(m, 'teacher_id', None):
+                    material_owner_teacher_id = m.teacher_id
+                    if getattr(m, 'teacher', None):
+                        material_teacher_name = f"{m.teacher.first_name} {m.teacher.last_name}".strip() or material_teacher_name
+
+                is_shared_from_other_teacher = bool(material_owner_teacher_id and teacher_user and material_owner_teacher_id != teacher_user.id)
 
                 materials_list.append({
                     'id': m.id,
@@ -4108,8 +4112,8 @@ def get_teacher_courses_api(request):
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
                     'source_type': getattr(m, 'source_type', 'personal') or 'personal',
                     'material_source': getattr(m, 'source_type', 'personal') or 'personal',
-                    'is_shared_material': (getattr(m, 'source_type', 'personal') or 'personal') == 'shared',
-                    'shared_owner_teacher_name': material_teacher_name if (getattr(m, 'source_type', 'personal') or 'personal') == 'shared' else None,
+                    'is_shared_material': is_shared_from_other_teacher,
+                    'shared_owner_teacher_name': material_teacher_name if is_shared_from_other_teacher else None,
                 })
 
             # Practices (normalized)
@@ -5333,7 +5337,7 @@ def _find_existing_shared_material(title, content, item_type, language='', sourc
     return None
 
 
-def _material_response_payload(material, tokens=None, section=None):
+def _material_response_payload(material, tokens=None, section=None, is_shared_material=None, shared_owner_teacher_name=None):
     item_count = len(tokens) if tokens is not None else 1
     if tokens is None and isinstance(material.content_json, dict) and isinstance(material.content_json.get('items'), list):
         item_count = len(material.content_json.get('items'))
@@ -5347,7 +5351,8 @@ def _material_response_payload(material, tokens=None, section=None):
         'type': material.type,
         'source_type': material.source_type,
         'material_source': material.source_type,
-        'is_shared_material': material.source_type == 'shared',
+        'is_shared_material': bool(is_shared_material) if is_shared_material is not None else material.source_type == 'shared',
+        'shared_owner_teacher_name': shared_owner_teacher_name,
         'content': material.content_text,
         'status': material.status,
         'schedule': timezone.localtime(material.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if material.scheduled_at else None,
@@ -5468,7 +5473,16 @@ def add_reading_material(request):
                     source_material_id=source_material_id,
                 )
             if existing_shared:
-                material_payload = _material_response_payload(existing_shared)
+                existing_owner_id = existing_shared.teacher_id or getattr(getattr(existing_shared, 'section', None), 'teacher_id', None)
+                existing_is_from_other_teacher = bool(existing_owner_id and teacher_user and existing_owner_id != teacher_user.id)
+                existing_owner_name = ''
+                if existing_is_from_other_teacher and getattr(existing_shared, 'teacher', None):
+                    existing_owner_name = f"{existing_shared.teacher.first_name} {existing_shared.teacher.last_name}".strip()
+                material_payload = _material_response_payload(
+                    existing_shared,
+                    is_shared_material=existing_is_from_other_teacher,
+                    shared_owner_teacher_name=existing_owner_name or None,
+                )
                 return JsonResponse({
                     'success': True,
                     'message': 'Shared reading material already exists.',
@@ -5546,7 +5560,7 @@ def add_reading_material(request):
                 teacher_user,
             )
             created_ids = [m.id]
-            material_payload = _material_response_payload(m, tokens=tokens, section=section)
+            material_payload = _material_response_payload(m, tokens=tokens, section=section, is_shared_material=False)
 
             return JsonResponse({
                 'success': True,

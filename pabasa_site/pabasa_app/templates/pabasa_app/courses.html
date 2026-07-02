@@ -4065,8 +4065,7 @@
 
     function isSharedMaterial(material) {
         if (!material) return false;
-        const sourceType = String(material.source_type || material.material_source || '').toLowerCase();
-        return sourceType === 'shared';
+        return material.is_shared_material === true || String(material.is_shared_material).toLowerCase() === 'true';
     }
 
     function renderSharedMaterialBadge(material) {
