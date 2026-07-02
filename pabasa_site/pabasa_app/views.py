@@ -604,7 +604,7 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
     latest = {}
     latest_dt = None
     if sections is not None:
-        assessments = Assessment.objects.filter(section__in=sections, is_active=True)
+        assessments = Assessment.objects.filter(section__in=sections, is_active=True, source_assessment__isnull=True)
         for assessment in assessments:
             attempts = assessment.get_attempts()
             for attempt in attempts:
@@ -1842,7 +1842,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
                     _section_student_count(cls) > 0
                     for cls in Section.objects.filter(teacher=tp_user, is_active=True)
                 )
-                has_attempts = Assessment.objects.filter(teacher=tp_user).exists()
+                has_attempts = Assessment.objects.filter(teacher=tp_user, source_assessment__isnull=True).exists()
                 has_activity = has_classes or has_materials or has_joined_students or has_attempts
 
                 # Get latest timestamps
@@ -1852,7 +1852,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 cls_max = Section.objects.filter(teacher=tp_user).aggregate(m=Max('updated_at'))['m']
                 if cls_max:
                     candidate_dates.append(cls_max)
-                asm_max = Assessment.objects.filter(teacher=tp_user).aggregate(m=Max('updated_at'))['m']
+                asm_max = Assessment.objects.filter(teacher=tp_user, source_assessment__isnull=True).aggregate(m=Max('updated_at'))['m']
                 if asm_max:
                     candidate_dates.append(asm_max)
                 # Include latest material timestamp for teacher (if any)
@@ -2057,8 +2057,8 @@ def _get_dashboard_data():
             'paragraph_count': Material.objects.filter(item_type='paragraph', is_active=True).count(),
             
             # Assessment statistics (verified fields: is_active, status)
-            'active_assessments': Assessment.objects.filter(is_active=True).count(),
-            'published_assessments': Assessment.objects.filter(status='published', is_active=True).count(),
+            'active_assessments': Assessment.objects.filter(is_active=True, source_assessment__isnull=True).count(),
+            'published_assessments': Assessment.objects.filter(status='published', is_active=True, source_assessment__isnull=True).count(),
         },
         
         'activities': {
@@ -3964,7 +3964,8 @@ def get_teacher_courses_api(request):
             assessments_list = []
             course_assessments_qs = Assessment.objects.filter(
                 Q(courses=c) |
-                Q(section__in=course_sections, teacher=teacher_user)
+                Q(section__in=course_sections, teacher=teacher_user),
+                source_assessment__isnull=True
             ).prefetch_related('materials', 'teacher').distinct()
             for a in course_assessments_qs:
                 if not getattr(a, 'is_active', True):
@@ -4289,7 +4290,7 @@ def teacher_update_assessment(request):
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        assessment = Assessment.objects.filter(id=aid).first()
+        assessment = Assessment.objects.filter(id=aid, source_assessment__isnull=True).first()
         if not assessment:
             return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
 
@@ -4350,7 +4351,7 @@ def teacher_archive_assessment(request):
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
 
-        assessment = Assessment.objects.filter(id=aid).first()
+        assessment = Assessment.objects.filter(id=aid, source_assessment__isnull=True).first()
         if not assessment:
             return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
 
@@ -4438,7 +4439,8 @@ def _compute_teacher_overview(teacher_user):
 
         assessments_posted = Assessment.objects.filter(
             Q(teacher=teacher_user) | Q(section__teacher=teacher_user),
-            is_active=True
+            is_active=True,
+            source_assessment__isnull=True
         ).distinct().count()
 
         materials_posted = Material.objects.filter(
@@ -4676,7 +4678,7 @@ def get_teacher_classes(request):
             ).distinct()
             represented_asm_ids = section_materials.exclude(assessment=None).values_list('assessment_id', flat=True)
             assessment_material_count = section_materials.filter(Q(type='assessment') | Q(type='both')).count()
-            assessment_material_count += Assessment.objects.filter(section=cls, is_active=True).exclude(id__in=represented_asm_ids).count()
+            assessment_material_count += Assessment.objects.filter(section=cls, is_active=True, source_assessment__isnull=True).exclude(id__in=represented_asm_ids).count()
 
             practice_material_count = section_materials.filter(Q(type='practice') | Q(type='both')).count()
             practice_material_count += Practice.objects.filter(
@@ -4786,7 +4788,8 @@ def get_teacher_overview(request):
         # Separate materials vs assessments counts so they are not conflated
         assessments_posted = Assessment.objects.filter(
             Q(teacher=teacher_user) | Q(section__teacher=teacher_user),
-            is_active=True
+            is_active=True,
+            source_assessment__isnull=True
         ).distinct().count()
 
         # Materials that are standalone (not representing an Assessment)
@@ -4841,7 +4844,7 @@ def get_class_materials(request):
         # Avoid duplication: exclude assessments that are already represented by a Material record.
         # Material records act as the primary container for metadata like "Assigned Week".
         represented_asm_ids = materials_qs.exclude(assessment=None).values_list('assessment_id', flat=True)
-        assessments_qs = Assessment.objects.filter(section=section).exclude(id__in=represented_asm_ids)
+        assessments_qs = Assessment.objects.filter(section=section, source_assessment__isnull=True).exclude(id__in=represented_asm_ids)
         # Practice sets: include those that belong to this section or were created by the
         # class' teacher (so teacher-created practice sets show up in their class view)
         practices_qs = Practice.objects.filter(
@@ -5087,7 +5090,7 @@ def delete_reading_class(request):
             teacher_user.remove_tag(section.get_tag_label())
 
             # Deactivate assessments and materials tied to this section
-            Assessment.objects.filter(section=section, is_active=True).update(is_active=False)
+            Assessment.objects.filter(section=section, is_active=True, source_assessment__isnull=True).update(is_active=False)
             Material.objects.filter(section=section, is_active=True).update(is_active=False)
 
             # Notify affected students (in-app + email)
@@ -6087,7 +6090,7 @@ def get_teacher_students_api(request):
             ],
             is_active=True,
         )
-        for assessment in Assessment.objects.filter(section__in=teacher_sections, is_active=True):
+        for assessment in Assessment.objects.filter(section__in=teacher_sections, is_active=True, source_assessment__isnull=True):
             attempts = assessment.get_attempts()
             for attempt in attempts:
                 if not isinstance(attempt, dict) or attempt.get('status') != 'completed':
@@ -6365,7 +6368,7 @@ def _principal_analytics(user):
     students_qs = User.objects.filter(role='student', is_archived=False)
     teachers_qs = User.objects.filter(role='teacher', is_archived=False)
     sections = Section.objects.filter(is_active=True).select_related('teacher')
-    assessments = Assessment.objects.filter(is_active=True).select_related('section', 'teacher')
+    assessments = Assessment.objects.filter(is_active=True, source_assessment__isnull=True).select_related('section', 'teacher')
 
     school_info = _get_profile_dict(user, 'principal_school_info') if user else {}
     school_name = (

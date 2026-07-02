@@ -65,6 +65,11 @@ class AssessmentAdmin(admin.ModelAdmin):
 	search_fields = ("code", "title", "teacher__custom_id", "section__class_code")
 	ordering = ("-created_at",)
 
+	def get_queryset(self, request):
+		"""Only display parent assessments, not attempt rows"""
+		qs = super().get_queryset(request)
+		return qs.filter(source_assessment__isnull=True)
+
 	def _latest_attempt_summary(self, obj):
 		return obj.get_latest_attempt_summary() or {}
 
