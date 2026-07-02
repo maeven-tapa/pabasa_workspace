@@ -646,7 +646,10 @@ class Practice(models.Model):
             "total_score", "crla_classification", "classification",
             "duration_seconds", "word_count", "transcript",
             "speech_recognition_used", "needs_manual_review",
-            "passed", "remarks",
+            "passed", "remarks", "score", "correct_responses",
+            "incorrect_responses", "reading_time_seconds",
+            "attempt_number", "stars_earned", "items_completed",
+            "total_practice_items", "total_read_words", "total_skipped_words",
         ]:
             if key in kwargs:
                 entry[key] = kwargs[key]

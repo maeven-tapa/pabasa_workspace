@@ -459,6 +459,91 @@ def _assessment_score_payload(data):
     }
 
 
+def _practice_score_payload(data):
+    """Build a lightweight practice score payload from student reading actions."""
+    raw = data.get('scores') if isinstance(data.get('scores'), dict) else data
+    correct_responses = int(raw.get('correct_responses', raw.get('correct', 0)) or 0)
+    incorrect_responses = int(raw.get('incorrect_responses', raw.get('incorrect', 0)) or 0)
+    items_completed = int(raw.get('items_completed') or 0)
+    try:
+        total_practice_items = max(0, int(raw.get('total_practice_items') or items_completed or 0))
+    except (TypeError, ValueError):
+        total_practice_items = items_completed
+    try:
+        total_read_words = max(0, int(raw.get('total_read_words') or 0))
+    except (TypeError, ValueError):
+        total_read_words = 0
+    try:
+        total_skipped_words = max(0, int(raw.get('total_skipped_words') or 0))
+    except (TypeError, ValueError):
+        total_skipped_words = 0
+    total_attempts = correct_responses + incorrect_responses
+    if total_attempts <= 0 and items_completed > 0:
+        total_attempts = items_completed
+    if total_attempts <= 0:
+        accuracy = 0
+    else:
+        accuracy = round((correct_responses / total_attempts) * 100, 2)
+    score = raw.get('score')
+    if score is None:
+        score = accuracy
+    score = _clamp_score(score)
+
+    reading_time_seconds = raw.get('reading_time_seconds') or raw.get('duration_seconds') or 0
+    try:
+        reading_time_seconds = max(0, float(reading_time_seconds))
+    except (TypeError, ValueError):
+        reading_time_seconds = 0
+
+    duration_seconds = reading_time_seconds
+    if duration_seconds > 0:
+        wpm = round((correct_responses / (duration_seconds / 60.0)), 2) if correct_responses else 0
+    else:
+        wpm = 0
+
+    attempt_number = raw.get('attempt_number') or 1
+    try:
+        attempt_number = int(attempt_number)
+    except (TypeError, ValueError):
+        attempt_number = 1
+
+    return {
+        'score': score,
+        'accuracy': accuracy,
+        'total_score': score,
+        'correct_responses': correct_responses,
+        'incorrect_responses': incorrect_responses,
+        'reading_time_seconds': duration_seconds,
+        'duration_seconds': duration_seconds,
+        'wpm': wpm,
+        'attempt_number': attempt_number,
+        'items_completed': items_completed or total_attempts,
+        'total_practice_items': total_practice_items,
+        'total_read_words': total_read_words,
+        'total_skipped_words': total_skipped_words,
+        'passed': score >= 75,
+        'remarks': _practice_feedback_message(score),
+    }
+
+
+PRACTICE_FEEDBACK_RULES = (
+    (90, "🎉 Excellent work! You're all ready for when an assessment comes. Keep up the amazing reading!"),
+    (80, "🌟 Great job! You're doing very well. A little more practice and you'll be assessment-ready!"),
+    (70, "👏 Good work! You're making great progress. Keep practicing to become an even stronger reader."),
+    (60, "📖 Nice effort! You're improving every time you practice. Keep reading and you'll continue to get better."),
+    (50, "💪 Keep going! You're learning with every practice session. Read carefully and don't give up!"),
+    (0, "💙 Don't worry! Every great reader starts with practice. Keep trying—you'll improve one word at a time!"),
+)
+
+
+def _practice_feedback_message(score):
+    normalized_score = max(0, min(100, float(score or 0)))
+    for threshold, message in PRACTICE_FEEDBACK_RULES:
+        if normalized_score >= threshold:
+            return message
+    return PRACTICE_FEEDBACK_RULES[-1][1]
+
+
 def _update_student_reading_profile(student_user, score_payload):
     profile = _get_profile_dict(student_user, 'student_profile')
     if not isinstance(profile, dict):
@@ -2866,6 +2951,16 @@ def _record_material_practice_completion(material, student_user, attempt_payload
         'completed_at': attempt_payload.get('completed_at') or timezone.now().isoformat(),
         'stars_earned': attempt_payload.get('stars_earned', 0),
         'items_completed': attempt_payload.get('items_completed', 0),
+        'total_practice_items': attempt_payload.get('total_practice_items', 0),
+        'total_read_words': attempt_payload.get('total_read_words', 0),
+        'total_skipped_words': attempt_payload.get('total_skipped_words', 0),
+        'correct_responses': attempt_payload.get('correct_responses', 0),
+        'incorrect_responses': attempt_payload.get('incorrect_responses', 0),
+        'reading_time_seconds': attempt_payload.get('reading_time_seconds', 0),
+        'score': attempt_payload.get('score', 0),
+        'accuracy': attempt_payload.get('accuracy', 0),
+        'wpm': attempt_payload.get('wpm', 0),
+        'attempt_number': attempt_payload.get('attempt_number', 1),
         'device_info': attempt_payload.get('device_info', {}),
     }
     completions[str(student_user.id)] = completion
@@ -5706,7 +5801,7 @@ def record_assessment_completion(request):
         already_completed = False
         if not is_practice:
             already_completed = _student_completed_assessment_before(assessment, material, student_user)
-        score_payload = _assessment_score_payload(data)
+        score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
 
         # Record attempt server-side (authoritative). We mark attempts as completed
         # because this endpoint is called when the student finishes the reading flow.
@@ -5857,10 +5952,21 @@ def record_assessment_completion(request):
                 'material_id': f"practice-{material.id}" if material.type == 'practice' else f"material-{material.id}",
                 'status': 'Done',
                 'is_done': True,
+                'score': score_payload.get('score', 0),
+                'accuracy': score_payload.get('accuracy', 0),
+                'correct_responses': score_payload.get('correct_responses', 0),
+                'incorrect_responses': score_payload.get('incorrect_responses', 0),
+                'wpm': score_payload.get('wpm', 0),
+                'reading_time_seconds': score_payload.get('reading_time_seconds', 0),
+                'redirect_url': f"/dashboard/practice/results/?id=practice-{material.id}",
             })
         return JsonResponse(response_payload)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required(role='student')
+def practice_results(request):
+    return redirect('practice')
 
 @require_http_methods(["GET"])
 @login_required()

@@ -770,6 +770,93 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(completion["items_completed"], 2)
         self.assertEqual(material.status, "published")
 
+    def test_practice_completion_saves_detailed_results_metrics(self):
+        material = Material.objects.create(
+            title="Scored practice",
+            item_type="word",
+            content_text="HA\nhe",
+            content_json={"items": ["HA", "he"]},
+            type="practice",
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "material_id": f"practice-{material.id}",
+                "activity_type": "practice",
+                "stars_earned": 20,
+                "items_completed": 2,
+                "correct_responses": 2,
+                "incorrect_responses": 0,
+                "reading_time_seconds": 45,
+                "attempt_number": 1,
+                "total_practice_items": 2,
+                "total_read_words": 2,
+                "total_skipped_words": 0,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+
+        material.refresh_from_db()
+        completion = material.content_json["student_completions"][str(self.student.id)]
+        self.assertEqual(completion["score"], 100)
+        self.assertEqual(completion["accuracy"], 100)
+        self.assertEqual(completion["correct_responses"], 2)
+        self.assertEqual(completion["incorrect_responses"], 0)
+        self.assertEqual(completion["reading_time_seconds"], 45)
+        self.assertEqual(completion["attempt_number"], 1)
+        self.assertEqual(completion["total_practice_items"], 2)
+        self.assertEqual(completion["total_read_words"], 2)
+        self.assertEqual(completion["total_skipped_words"], 0)
+
+    def test_practice_results_route_redirects_to_shared_practice_flow(self):
+        material = Material.objects.create(
+            title="Results practice",
+            item_type="word",
+            content_text="HA\nhe",
+            content_json={
+                "items": ["HA", "he"],
+                "student_completions": {
+                    str(self.student.id): {
+                        "student_id": self.student.id,
+                        "status": "completed",
+                        "completed_at": timezone.now().isoformat(),
+                        "score": 80,
+                        "accuracy": 80,
+                        "correct_responses": 2,
+                        "incorrect_responses": 1,
+                        "reading_time_seconds": 60,
+                        "attempt_number": 1,
+                    }
+                },
+            },
+            type="practice",
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+
+        response = self.client.get(reverse("practice_results"), {"id": f"practice-{material.id}"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("practice"))
+
+    def test_practice_reader_template_shows_results_breakdown(self):
+        response = self.client.get(reverse("practice_word_page"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Score Breakdown")
+        self.assertContains(response, "Total Practice Items")
+        self.assertContains(response, "Total Read Words")
+        self.assertContains(response, "Total Skipped Words")
+
     def test_practice_hub_marks_only_completed_student_material_done(self):
         material = Material.objects.create(
             title="Done for one student",

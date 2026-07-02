@@ -6,6 +6,10 @@
     let items = [];
     let currentIndex = 0;
     let starsEarned = 0;
+    let correctResponses = 0;
+    let incorrectResponses = 0;
+    let itemOutcomes = [];
+    let sessionStartedAt = Date.now();
 
     const practiceText = document.getElementById("practiceText");
     const practiceCounter = document.getElementById("practiceCounter");
@@ -15,10 +19,27 @@
     const skipBtn = document.getElementById("skipBtn");
     const recordBtn = document.getElementById("recordBtn");
     const nextBtn = document.getElementById("practiceNextBtn");
-    const completeStars = document.getElementById("completeStars");
-    const completeItems = document.getElementById("completeItems");
+    const completeScore = document.getElementById("completeScore");
+    const completeAccuracy = document.getElementById("completeAccuracy");
+    const completeTotalPracticeItems = document.getElementById("completeTotalPracticeItems");
+    const completeTotalReadWords = document.getElementById("completeTotalReadWords");
+    const completeTotalSkippedWords = document.getElementById("completeTotalSkippedWords");
+    const completePronunciation = document.getElementById("completePronunciation");
+    const pronunciationMetricCard = document.getElementById("pronunciationMetricCard");
+    const completeReadingTime = document.getElementById("completeReadingTime");
+    const feedbackIcon = document.getElementById("feedbackIcon");
+    const resultsSummaryText = document.getElementById("resultsSummaryText");
     const practiceAgainBtn = document.getElementById("practiceAgainBtn");
     let completionSubmitted = false;
+
+    const PERFORMANCE_FEEDBACK_RULES = Object.freeze([
+        { minScore: 90, icon: "🎉", description: "Excellent work! You're all ready for when an assessment comes. Keep up the amazing reading!" },
+        { minScore: 80, icon: "🌟", description: "Great job! You're doing very well. A little more practice and you'll be assessment-ready!" },
+        { minScore: 70, icon: "👏", description: "Good work! You're making great progress. Keep practicing to become an even stronger reader." },
+        { minScore: 60, icon: "📖", description: "Nice effort! You're improving every time you practice. Keep reading and you'll continue to get better." },
+        { minScore: 50, icon: "💪", description: "Keep going! You're learning with every practice session. Read carefully and don't give up!" },
+        { minScore: 0, icon: "💙", description: "Don't worry! Every great reader starts with practice. Keep trying—you'll improve one word at a time!" }
+    ]);
 
     const urlParams = new URLSearchParams(window.location.search);
     const materialId = urlParams.get("id");
@@ -77,15 +98,98 @@
         if (serverItems.length > 0) {
             items = serverItems.slice();
             currentIndex = 0;
+            itemOutcomes = Array(items.length).fill(null);
             render();
             return;
         }
 
         items = [];
+        itemOutcomes = [];
         if (practiceText) practiceText.textContent = "No materials available.";
         if (practiceCounter) practiceCounter.textContent = "No items";
         if (practiceProgress) practiceProgress.style.width = "0%";
         if (nextBtn) nextBtn.disabled = true;
+    }
+
+    function countWords(value) {
+        return String(value || "")
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean).length;
+    }
+
+    function getItemWordCount(index) {
+        return Math.max(0, countWords(items[index]));
+    }
+
+    function setCurrentItemOutcome(status) {
+        if (currentIndex < 0 || currentIndex >= items.length) return;
+        itemOutcomes[currentIndex] = status;
+
+        correctResponses = itemOutcomes.filter((outcome) => outcome === "read").length;
+        incorrectResponses = itemOutcomes.filter((outcome) => outcome === "skipped").length;
+        starsEarned = correctResponses * 10;
+    }
+
+    function getCompletionMetrics() {
+        const totalItems = items.reduce((total, item) => total + countWords(item), 0);
+        const totalReadWords = itemOutcomes.reduce((total, outcome, index) => {
+            return outcome === "read" ? total + getItemWordCount(index) : total;
+        }, 0);
+        const totalSkippedWords = itemOutcomes.reduce((total, outcome, index) => {
+            return outcome === "skipped" ? total + getItemWordCount(index) : total;
+        }, 0);
+        const totalAttempts = correctResponses + incorrectResponses;
+        const accuracy = totalAttempts > 0 ? Math.round((correctResponses / totalAttempts) * 100) : 0;
+        const score = totalAttempts > 0 ? accuracy : 0;
+        const readingTimeSeconds = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 1000));
+        const earnedStars = correctResponses * 10;
+
+        return {
+            totalItems,
+            totalReadWords,
+            totalSkippedWords,
+            correctResponses,
+            incorrectResponses,
+            accuracy,
+            score,
+            readingTimeSeconds,
+            earnedStars,
+        };
+    }
+
+    function getPerformanceFeedback(score) {
+        const normalizedScore = Math.max(0, Math.min(100, Number(score) || 0));
+        return PERFORMANCE_FEEDBACK_RULES.find((rule) => normalizedScore >= rule.minScore) || PERFORMANCE_FEEDBACK_RULES[PERFORMANCE_FEEDBACK_RULES.length - 1];
+    }
+
+    function formatReadingTime(seconds) {
+        const safeSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+        const minutes = Math.floor(safeSeconds / 60);
+        const remainingSeconds = safeSeconds % 60;
+        return `${minutes}m ${remainingSeconds}s`;
+    }
+
+    function updateCompletionSummary() {
+        const metrics = getCompletionMetrics();
+        const pronunciationScore = Number(window.PABASA_PRACTICE_PRONUNCIATION_SCORE || 0);
+        const hasPronunciationScore = Number.isFinite(pronunciationScore) && pronunciationScore > 0;
+        const feedback = getPerformanceFeedback(metrics.score);
+
+        if (completeScore) completeScore.textContent = `${metrics.score}%`;
+        if (completeAccuracy) completeAccuracy.textContent = `${metrics.accuracy}%`;
+        if (completeTotalPracticeItems) completeTotalPracticeItems.textContent = metrics.totalItems;
+        if (completeTotalReadWords) completeTotalReadWords.textContent = metrics.totalReadWords;
+        if (completeTotalSkippedWords) completeTotalSkippedWords.textContent = metrics.totalSkippedWords;
+        if (completePronunciation) completePronunciation.textContent = hasPronunciationScore ? `${Math.round(pronunciationScore)}%` : "—";
+        if (pronunciationMetricCard) {
+            pronunciationMetricCard.hidden = !hasPronunciationScore;
+            pronunciationMetricCard.classList.toggle("is-hidden", !hasPronunciationScore);
+        }
+        if (completeReadingTime) completeReadingTime.textContent = formatReadingTime(metrics.readingTimeSeconds);
+        if (feedbackIcon) feedbackIcon.textContent = feedback.icon;
+        if (resultsSummaryText) resultsSummaryText.textContent = feedback.description;
+        if (starCount) starCount.textContent = `${metrics.earnedStars} stars`;
     }
 
     function render() {
@@ -98,7 +202,7 @@
         const label = mode.charAt(0).toUpperCase() + mode.slice(1);
         practiceCounter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
         practiceProgress.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
-        if (starCount) starCount.textContent = `${starsEarned} stars`;
+        updateCompletionSummary();
         if (nextBtn) {
             nextBtn.textContent = currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next";
             nextBtn.disabled = false;
@@ -131,16 +235,31 @@
             return;
         }
 
+        const metrics = getCompletionMetrics();
         completionSubmitted = true;
+        const completionPayload = {
+            material_id: materialId,
+            activity_type: 'practice',
+            stars_earned: metrics.earnedStars,
+            items_completed: items.length,
+            total_practice_items: metrics.totalItems,
+            total_read_words: metrics.totalReadWords,
+            total_skipped_words: metrics.totalSkippedWords,
+            correct_responses: metrics.correctResponses,
+            incorrect_responses: metrics.incorrectResponses,
+            reading_time_seconds: metrics.readingTimeSeconds,
+            attempt_number: 1,
+            score: metrics.score,
+            accuracy: metrics.accuracy,
+            wpm: metrics.correctResponses && metrics.readingTimeSeconds > 0
+                ? Math.round(metrics.correctResponses / (metrics.readingTimeSeconds / 60))
+                : 0,
+        };
+
         fetch('/record-assessment-completion/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
-            body: JSON.stringify({
-                material_id: materialId,
-                activity_type: 'practice',
-                stars_earned: starsEarned,
-                items_completed: items.length,
-            })
+            body: JSON.stringify(completionPayload)
         })
             .then(response => response.json().then(data => ({ ok: response.ok, data })))
             .then(({ ok, data }) => {
@@ -150,6 +269,9 @@
                     return;
                 }
                 markMaterialSeen(data.material_id || materialId);
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                }
             })
             .catch(e => {
                 completionSubmitted = false;
@@ -159,15 +281,16 @@
 
     function showCompletion() {
         shell.classList.add("is-complete");
-        if (completeStars) completeStars.textContent = starsEarned;
-        if (completeItems) completeItems.textContent = items.length;
+        updateCompletionSummary();
 
         // Skip updating stats if in view mode
         if (viewMode === 'view') return;
 
+        const metrics = getCompletionMetrics();
+
         // Persist stars to total progress
         const currentTotal = parseInt(localStorage.getItem("pabasa_total_stars") || "0");
-        localStorage.setItem("pabasa_total_stars", currentTotal + starsEarned);
+        localStorage.setItem("pabasa_total_stars", currentTotal + metrics.earnedStars);
 
         submitPracticeCompletion();
 
@@ -210,21 +333,30 @@
         shell.classList.remove("is-complete");
         currentIndex = 0;
         starsEarned = 0;
+        correctResponses = 0;
+        incorrectResponses = 0;
+        itemOutcomes = Array(items.length).fill(null);
+        sessionStartedAt = Date.now();
         completionSubmitted = false;
         practiceFeedback.textContent = "Ready when you are.";
+        practiceFeedback.style.color = "";
+        updateCompletionSummary();
         render();
     }
 
     skipBtn?.addEventListener("click", function () {
-        starsEarned = Math.max(0, starsEarned - 5);
-        practiceFeedback.textContent = "Word skipped. -5 stars deducted.";
+        setCurrentItemOutcome("skipped");
+        practiceFeedback.textContent = "Skipped. That item will count as a chance to improve next time.";
         practiceFeedback.style.color = "#b95f44";
+        updateCompletionSummary();
         render();
     });
 
     recordBtn?.addEventListener("click", function () {
-        starsEarned += 10;
+        setCurrentItemOutcome("read");
         practiceFeedback.textContent = "Nice reading. You earned a practice star.";
+        practiceFeedback.style.color = "#0f766e";
+        updateCompletionSummary();
         render();
     });
 

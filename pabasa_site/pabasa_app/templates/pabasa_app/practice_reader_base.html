@@ -382,88 +382,163 @@
         }
 
         .practice-complete-card {
-            background:
-                radial-gradient(circle at 16% 18%, rgba(247, 200, 106, 0.42), transparent 26%),
-                linear-gradient(135deg, rgba(217, 238, 244, 0.82), transparent 44%),
-                #fffdf7;
-            border: 1px solid var(--line);
-            border-radius: clamp(28px, 5vw, 42px);
-            box-shadow: var(--shadow);
+            background: linear-gradient(135deg, #F7FCFF 0%, #EAF7FD 100%);
+            border: 1px solid #E5EEF5;
+            border-radius: clamp(24px, 4vw, 34px);
+            box-shadow: 0 16px 40px rgba(16, 70, 110, 0.08);
             display: grid;
             gap: 1rem;
-            max-width: 760px;
+            max-width: 780px;
             overflow: hidden;
             padding: clamp(1.25rem, 4vw, 2.4rem);
             position: relative;
             text-align: center;
-            width: min(100%, 760px);
+            width: min(100%, 780px);
         }
 
         .practice-complete-card::after {
-            content: "stars";
+            content: "";
             position: absolute;
-            bottom: -1.2rem;
-            right: -0.6rem;
-            color: rgba(31, 111, 139, 0.07);
-            font-size: clamp(5rem, 15vw, 10rem);
-            font-weight: 900;
-            line-height: 1;
+            inset: auto -2rem -2rem auto;
+            width: 140px;
+            height: 140px;
+            border-radius: 999px;
+            background: rgba(46, 168, 229, 0.07);
             pointer-events: none;
         }
 
         .complete-star {
-            background: #1b1a17;
-            border-radius: 26px;
-            color: var(--sun);
+            background: #ffffff;
+            border-radius: 22px;
+            color: #2EA8E5;
             display: grid;
-            font-size: 2.2rem;
-            font-weight: 900;
-            height: 82px;
+            font-size: 2rem;
+            font-weight: 800;
+            height: 76px;
             margin-inline: auto;
             place-items: center;
-            width: 82px;
+            width: 76px;
+            box-shadow: 0 10px 24px rgba(16, 70, 110, 0.08);
         }
 
         .practice-complete-card h2 {
-            font-size: clamp(2rem, 5vw, 3.4rem);
-            font-weight: 900;
-            line-height: 1;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 800;
+            line-height: 1.1;
             margin: 0;
+            color: #0F2D45;
         }
 
         .practice-complete-card p {
-            color: var(--muted);
-            font-size: clamp(1rem, 2vw, 1.16rem);
-            font-weight: 800;
+            color: #4A6680;
+            font-size: clamp(1rem, 2vw, 1.08rem);
+            font-weight: 600;
             line-height: 1.5;
             margin: 0 auto;
             max-width: 560px;
         }
 
-        .practice-complete-stats {
+        .practice-feedback-card {
+            align-items: flex-start;
+            background: #EAF7FD;
+            border: 1px solid #D6ECF8;
+            border-radius: 16px;
+            box-shadow: 0 6px 18px rgba(16, 70, 110, 0.08);
+            display: flex;
+            gap: 0.8rem;
+            padding: 1.25rem 1.3rem;
+            text-align: left;
+        }
+
+        .practice-feedback-icon {
+            align-items: center;
+            background: #FFFFFF;
+            border-radius: 14px;
+            box-shadow: 0 6px 16px rgba(16, 70, 110, 0.08);
+            display: inline-flex;
+            font-size: 1.4rem;
+            height: 46px;
+            justify-content: center;
+            min-width: 46px;
+        }
+
+        .practice-feedback-copy h3 {
+            color: #10466E;
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin: 0 0 0.2rem;
+        }
+
+        .practice-feedback-copy p {
+            color: #4A6680;
+            font-size: 0.96rem;
+            font-weight: 600;
+            line-height: 1.45;
+            margin: 0;
+            max-width: none;
+            text-align: left;
+        }
+
+        .practice-metrics-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.75rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
-        .practice-stat {
-            background: rgba(255, 255, 255, 0.76);
-            border: 1px solid rgba(27, 26, 23, 0.08);
-            border-radius: 18px;
+        .practice-breakdown-title {
+            color: #10466E;
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin: 0;
+            text-align: left;
+        }
+
+        .practice-metric-card {
+            align-items: center;
+            background: #FFFFFF;
+            border: 1px solid #E5EEF5;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(16, 70, 110, 0.06);
+            display: flex;
+            gap: 0.8rem;
+            min-height: 104px;
+            padding: 1rem 1.05rem;
+        }
+
+        .practice-metric-icon {
+            align-items: center;
+            background: #EAF7FD;
+            border-radius: 12px;
+            color: #2EA8E5;
             display: grid;
-            gap: 0.15rem;
-            padding: 0.85rem;
+            flex-shrink: 0;
+            font-size: 1.2rem;
+            height: 44px;
+            place-items: center;
+            width: 44px;
         }
 
-        .practice-stat strong {
-            font-size: 1.35rem;
-            font-weight: 900;
+        .practice-metric-body {
+            display: grid;
+            gap: 0.12rem;
+            min-width: 0;
         }
 
-        .practice-stat span {
-            color: var(--muted);
-            font-size: 0.88rem;
-            font-weight: 900;
+        .practice-metric-body strong {
+            color: #10466E;
+            font-size: clamp(1.2rem, 2.6vw, 1.55rem);
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .practice-metric-body span {
+            color: #4A6680;
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .practice-metric-card.is-hidden {
+            display: none;
         }
 
         .practice-complete-actions {
@@ -478,26 +553,43 @@
         .practice-complete-actions button,
         .practice-complete-actions a {
             border: 0;
-            border-radius: 17px;
+            border-radius: 12px;
             cursor: pointer;
             font-family: inherit;
             font-size: 1rem;
-            font-weight: 900;
-            min-height: 52px;
+            font-weight: 700;
+            min-height: 48px;
             min-width: 150px;
             padding: 0.7rem 1rem;
             text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .practice-complete-actions button:hover,
+        .practice-complete-actions a:hover {
+            transform: translateY(-1px);
         }
 
         .complete-primary {
-            background: var(--leaf);
+            background: #2EA8E5;
+            color: #fff;
+            box-shadow: 0 10px 20px rgba(46, 168, 229, 0.18);
+        }
+
+        .complete-primary:hover {
+            background: #2398D1;
             color: #fff;
         }
 
         .complete-secondary {
             background: #fff;
-            border: 1px solid rgba(31, 111, 139, 0.18) !important;
-            color: var(--sky-deep);
+            border: 1px solid #2EA8E5 !important;
+            color: #10466E;
+        }
+
+        .complete-secondary:hover {
+            background: #EAF7FD;
+            color: #10466E;
         }
 
         @media (max-width: 900px) {
@@ -521,6 +613,16 @@
             }
 
             .practice-complete-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .practice-metrics-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 560px) {
+            .practice-metrics-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -705,17 +807,65 @@
 
         <section class="practice-complete" id="practiceComplete" aria-live="polite" aria-atomic="true">
             <article class="practice-complete-card">
-                <div class="complete-star">*</div>
+                <div class="complete-star">📖</div>
                 <h2>Practice complete.</h2>
-                <p>You finished the set. Te a short rest, then try again if you want to make your reading smoother.</p>
-                <div class="practice-complete-stats">
-                    <div class="practice-stat">
-                        <strong id="completeStars">0</strong>
-                        <span>stars earned</span>
+                <div class="practice-feedback-card" aria-live="polite">
+                    <div class="practice-feedback-icon" id="feedbackIcon" aria-hidden="true">🎉</div>
+                    <div class="practice-feedback-copy">
+                        <h3>Performance Feedback</h3>
+                        <p id="resultsSummaryText">Great effort! Your practice summary is ready below.</p>
                     </div>
-                    <div class="practice-stat">
-                        <strong id="completeItems">5</strong>
-                        <span>items practiced</span>
+                </div>
+                <h3 class="practice-breakdown-title">Score Breakdown</h3>
+                <div class="practice-metrics-grid" aria-label="Performance metrics">
+                    <div class="practice-metric-card">
+                        <div class="practice-metric-icon"><i class="bi bi-book" aria-hidden="true"></i></div>
+                        <div class="practice-metric-body">
+                            <strong id="completeTotalPracticeItems">0</strong>
+                            <span>Total Practice Items</span>
+                        </div>
+                    </div>
+                    <div class="practice-metric-card">
+                        <div class="practice-metric-icon"><i class="bi bi-check-circle" aria-hidden="true"></i></div>
+                        <div class="practice-metric-body">
+                            <strong id="completeTotalReadWords">0</strong>
+                            <span>Total Read Words</span>
+                        </div>
+                    </div>
+                    <div class="practice-metric-card">
+                        <div class="practice-metric-icon"><i class="bi bi-skip-forward" aria-hidden="true"></i></div>
+                        <div class="practice-metric-body">
+                            <strong id="completeTotalSkippedWords">0</strong>
+                            <span>Total Skipped Words</span>
+                        </div>
+                    </div>
+                    <div class="practice-metric-card">
+                        <div class="practice-metric-icon">🏆</div>
+                        <div class="practice-metric-body">
+                            <strong id="completeScore">0%</strong>
+                            <span>Total Score</span>
+                        </div>
+                    </div>
+                    <div class="practice-metric-card">
+                        <div class="practice-metric-icon">🎯</div>
+                        <div class="practice-metric-body">
+                            <strong id="completeAccuracy">0%</strong>
+                            <span>Accuracy</span>
+                        </div>
+                    </div>
+                    <div class="practice-metric-card is-hidden" id="pronunciationMetricCard" hidden>
+                        <div class="practice-metric-icon">🗣️</div>
+                        <div class="practice-metric-body">
+                            <strong id="completePronunciation">—</strong>
+                            <span>Pronunciation</span>
+                        </div>
+                    </div>
+                    <div class="practice-metric-card">
+                        <div class="practice-metric-icon">⏱️</div>
+                        <div class="practice-metric-body">
+                            <strong id="completeReadingTime">0m 0s</strong>
+                            <span>Reading Time</span>
+                        </div>
                     </div>
                 </div>
                 <div class="practice-complete-actions">

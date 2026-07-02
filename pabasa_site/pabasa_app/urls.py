@@ -60,6 +60,7 @@ urlpatterns = [
     path('dashboard/practice/word/', views.practice_word_page, name='practice_word_page'),
     path('dashboard/practice/sentence/', views.practice_sentence_page, name='practice_sentence_page'),
     path('dashboard/practice/paragraph/', views.practice_para_page, name='practice_para_page'),
+    path('dashboard/practice/results/', views.practice_results, name='practice_results'),
     path('dashboard/courses/teacher-view/', views.course_teacher_view, name='course_teacher_view'),
     path('dashboard/courses/student-view/', views.course_student_view, name='course_student_view'),
     path('dashboard/students/', views.students, name='students'),
