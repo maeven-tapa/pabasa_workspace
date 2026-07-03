@@ -3,119 +3,473 @@
 
 {% block extra_head %}
 <style>
-    body {
-        background: url("{% static 'pabasa_app/images/teacher_bg.jpg' %}") no-repeat center center fixed !important;
-        background-size: cover !important;
+    :root {
+        --page-spacing-xs: 8px;
+        --page-spacing-sm: 16px;
+        --page-spacing-md: 24px;
+        --page-spacing-lg: 32px;
+        --surface-bg: rgba(255, 255, 255, 0.96);
+        --surface-border: rgba(15, 23, 42, 0.08);
+        --surface-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+        --text-high: #111827;
+        --text-medium: #475569;
+        --text-muted: #6b7280;
+        --primary: #165f8f;
+        --primary-soft: rgba(22, 95, 143, 0.08);
     }
 
-    .management-grid { 
-        display: grid; 
-        gap: 1.5rem; 
-        grid-template-columns: 1fr; 
-    }
-    .manage-card { 
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        border-radius: 22px; 
-        box-shadow: var(--dash-shadow); 
-        padding: 1.5rem; 
-    }
-    .manage-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .student-table-container { 
-        overflow-x: auto; 
-        border-radius: 12px; 
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        background: rgba(255, 255, 255, 0.5) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-    }
-    .student-table { width: 100%; border-collapse: collapse; min-width: 600px; }
-    .student-table th { background: #f8faff; color: var(--dash-muted); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; padding: 1rem; text-align: left; border-bottom: 1px solid var(--dash-border); }
-    .student-table td { padding: 1rem; border-bottom: 1px solid rgba(27, 26, 23, 0.04); font-size: 0.9rem; word-break: break-word; vertical-align: middle; }
-    .pabasa-id-pill { background: var(--dash-primary-soft); color: var(--dash-primary-deep); padding: 0.25rem 0.6rem; border-radius: 6px; font-family: monospace; font-weight: 700; font-size: 0.85rem; }
-    
-    @media (max-width: 768px) {
-        .manage-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
-        .dash-page-head { flex-direction: column; gap: 1rem; align-items: flex-start !important; }
-        .class-switcher-pill { width: 100%; }
-        .manage-card { padding: 1rem; }
-        .student-table { min-width: 500px; }
-        .student-table th, .student-table td { padding: 0.75rem 0.5rem; font-size: 0.85rem; }
+    body,
+    body.dashboard-body {
+        min-height: 100vh;
+        background-color: #0f172a;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14)),
+            url("{% static 'pabasa_app/images/teacher_bg.jpg' %}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+        background-blend-mode: normal;
+        background-clip: border-box;
+        position: relative;
+        z-index: 0;
     }
 
-    .class-switcher-pill {
-        background: linear-gradient(90deg, rgba(255,255,255,0.8), rgba(255,255,255,0.6));
-        border: 1px solid rgba(31,111,139,0.15);
+    body.dashboard-body::before {
+        background-image: none;
+    }
+
+    .page-head,
+    .page-back-btn {
+        position: relative;
+        z-index: 1;
+    }
+
+    .dashboard-content-wrap {
+        padding: clamp(1rem, 2vw, 1.4rem);
+        max-width: 1120px;
+        width: 100%;
+    }
+
+    .page-shell {
+        display: grid;
+        gap: var(--page-spacing-lg);
+    }
+
+    .page-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--page-spacing-sm);
+        padding: 1rem 1.25rem;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+        min-height: 88px;
+        max-height: 100px;
+    }
+
+    .page-head-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 0;
+    }
+
+    .page-back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
         border-radius: 999px;
-        padding: 0.35rem 1rem;
-        font-weight: 800;
-        color: var(--dash-primary-deep);
-        cursor: pointer;
-        outline: none;
-        font-size: 0.85rem;
-        transition: border-color 0.2s;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.96);
+        color: var(--primary);
+        font-weight: 700;
+        padding: 0.65rem 0.95rem;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+        text-decoration: none;
+        font-size: 0.92rem;
     }
-    .class-switcher-pill:hover { border-color: var(--dash-primary); }
+
+    .page-back-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    }
+
+    .page-head-title {
+        min-width: 0;
+    }
+
+    .page-head-title h1 {
+        margin: 0;
+        font-size: 1.15rem;
+        line-height: 1.2;
+        font-weight: 800;
+        color: var(--text-high);
+    }
+
+    .page-subtitle {
+        margin: 4px 0 0;
+        color: var(--text-medium);
+        font-size: 0.9rem;
+        line-height: 1.4;
+        max-width: 54ch;
+    }
+
+    .page-head-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 220px;
+    }
+
+    .class-switcher {
+        width: 100%;
+        border-radius: 999px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.94);
+        color: var(--text-high);
+        padding: 0.72rem 1rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        font-size: 0.92rem;
+        appearance: none;
+        cursor: pointer;
+    }
+
+    .page-body {
+        display: grid;
+        gap: var(--page-spacing-lg);
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 14px;
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+        padding: 18px;
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--page-spacing-sm);
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .card-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--text-high);
+    }
+
+    .card-subtitle {
+        margin: 4px 0 0;
+        color: var(--text-medium);
+        font-size: 0.88rem;
+    }
+
+    .card-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-primary,
+    .btn-outline-secondary {
+        min-height: 42px !important;
+        border-radius: 14px !important;
+        font-weight: 700 !important;
+        padding: 0.72rem 0.95rem !important;
+        font-size: 0.92rem !important;
+    }
+
+    .btn-sm {
+        padding: 0.58rem 0.9rem !important;
+        font-size: 0.9rem !important;
+    }
+
+    .class-form {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .form-group {
+        display: grid;
+        gap: 8px;
+    }
+
+    .form-group label {
+        margin: 0;
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--text-medium);
+        text-transform: uppercase;
+    }
+
+    .form-control,
+    .form-select,
+    textarea {
+        min-height: 42px;
+        border-radius: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: rgba(248, 249, 250, 0.95);
+        padding: 0.72rem 0.95rem;
+        font-size: 0.95rem;
+        color: var(--text-high);
+        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus,
+    textarea:focus {
+        border-color: rgba(22, 95, 143, 0.35);
+        box-shadow: 0 0 0 4px rgba(22, 95, 143, 0.08);
+        outline: none;
+    }
+
+    textarea {
+        min-height: 88px;
+        resize: none;
+    }
+
+    .col-span-8 {
+        grid-column: span 8;
+    }
+
+    .col-span-12 {
+        grid-column: span 12;
+    }
+
+    .section-title-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .section-heading {
+        display: grid;
+        gap: 4px;
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--text-high);
+    }
+
+    .student-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        border: 1px solid rgba(22, 95, 143, 0.14);
+        background: rgba(22, 95, 143, 0.08);
+        color: var(--primary);
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 0.32rem 0.75rem;
+    }
+
+    .table-frame {
+        overflow: hidden;
+        border-radius: 14px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        background: rgba(255, 255, 255, 0.98);
+    }
+
+    .student-table {
+        width: 100%;
+        min-width: 680px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .student-table th,
+    .student-table td {
+        padding: 0.75rem 0.95rem;
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .student-table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f8fbff;
+        color: var(--text-medium);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .student-table td {
+        color: #334155;
+        font-size: 0.92rem;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    }
+
+    .student-table tbody tr {
+        transition: background-color 0.18s ease;
+    }
+
+    .student-table tbody tr:hover {
+        background: rgba(22, 95, 143, 0.06);
+    }
+
+    .student-table tbody tr:nth-child(odd) {
+        background: rgba(15, 23, 42, 0.02);
+    }
+
+    .pabasa-badge,
+    .status-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 0.34rem 0.7rem;
+    }
+
+    .pabasa-badge {
+        background: rgba(22, 95, 143, 0.08);
+        color: var(--primary);
+    }
+
+    .status-chip {
+        background: rgba(15, 23, 42, 0.05);
+        color: #334155;
+    }
+
+    .student-table .text-center {
+        text-align: center;
+    }
+
+    .modal-content {
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.96) !important;
+        border: 1px solid rgba(15, 23, 42, 0.08) !important;
+        box-shadow: 0 28px 80px rgba(15, 23, 42, 0.14) !important;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        padding-bottom: 1rem;
+    }
+
+    .modal-title {
+        font-weight: 800;
+        font-size: 1rem;
+    }
+
+    .modal-body {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .modal .form-control,
+    .modal .form-select {
+        border-radius: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: rgba(243, 244, 246, 0.95);
+    }
+
+    .student-search-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+        gap: 16px;
+    }
+
+    .class-switcher {
+        position: relative;
+        background-color: rgba(255, 255, 255, 0.95);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%23475569' d='M0 0l5 5 5-5z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 10px 6px;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        padding-right: 2.5rem;
+    }
 
     .student-add-loading-modal {
-        align-items: center;
-        background: rgba(15, 23, 42, 0.48);
-        bottom: 0;
         display: none;
+        align-items: center;
         justify-content: center;
-        left: 0;
-        padding: 1rem;
         position: fixed;
-        right: 0;
-        top: 0;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
         z-index: 3000;
+        padding: 1rem;
     }
+
     .student-add-loading-modal.is-visible {
         display: flex;
     }
+
     .student-add-loading-dialog {
+        max-width: 380px;
+        width: 100%;
         background: rgba(255, 255, 255, 0.96);
-        border-radius: 20px;
-        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
-        max-width: 420px;
-        padding: 2rem;
+        border-radius: 18px;
+        padding: 1.5rem;
+        box-shadow: 0 28px 80px rgba(15, 23, 42, 0.14);
         text-align: center;
-        width: min(100%, 420px);
     }
 
-    /* Dark Mode Overrides */
-    body.dark-theme .manage-card {
-        background: rgba(30, 41, 59, 0.7) !important;
-        border-color: rgba(255, 255, 255, 0.1) !important;
+    @media (max-width: 860px) {
+        .class-form {
+            grid-template-columns: 1fr;
+        }
+
+        .col-span-8,
+        .col-span-12 {
+            grid-column: span 1;
+        }
+
+        .page-head {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .page-head-actions {
+            width: 100%;
+        }
     }
-    body.dark-theme .student-table-container {
-        background: rgba(15, 23, 42, 0.5) !important;
-        border-color: rgba(255, 255, 255, 0.1) !important;
-    }
-    body.dark-theme .student-table th {
-        background: #0f172a;
-        color: #94a3b8;
-        border-bottom-color: rgba(255, 255, 255, 0.1);
-    }
-    body.dark-theme .student-table td {
-        border-bottom-color: rgba(255, 255, 255, 0.05);
-        color: #f1f5f9;
-    }
-    body.dark-theme .class-switcher-pill {
-        background: linear-gradient(90deg, rgba(30, 41, 59, 0.8), rgba(30, 41, 59, 0.6));
-        border-color: rgba(56, 189, 248, 0.2);
-        color: #38bdf8;
-    }
-    body.dark-theme .pabasa-id-pill {
-        background: rgba(56, 189, 248, 0.1);
-        color: #38bdf8;
-    }
-    body.dark-theme .modal-content {
-        background: #1e293b !important;
-        border-color: rgba(255, 255, 255, 0.1) !important;
-        color: #f1f5f9 !important;
+
+    @media (max-width: 720px) {
+        .page-head {
+            gap: 12px;
+        }
+
+        .class-switcher {
+            width: 100%;
+        }
+
+        .student-table {
+            min-width: 560px;
+        }
+
+        .card {
+            padding: 16px;
+        }
+
+        .student-search-row {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {% endblock %}
@@ -125,93 +479,112 @@
 {% endblock %}
 
 {% block content %}
-<div class="management-grid">
-    <div class="dash-page-head d-flex justify-content-between align-items-center">
-        <a href="{% url 'dashboard_teacher' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
-        <div class="d-flex align-items-center gap-2">
-            <span class="small text-muted fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.05em;">Viewing Class:</span>
-            <select class="class-switcher-pill" onchange="location.href='?code=' + this.value" aria-label="Switch Class">
+<div class="page-shell">
+    <header class="page-head">
+        <div class="page-head-left">
+            <div class="page-head-title">
+                <h1>Class Details</h1>
+                <p class="page-subtitle">Manage class information and enrolled students.</p>
+            </div>
+        </div>
+
+        <div class="page-head-actions">
+            <label class="visually-hidden" for="classSwitcher">Viewing Class</label>
+            <select id="classSwitcher" class="class-switcher" onchange="location.href='?code=' + this.value" aria-label="Switch Class">
                 {% for s in sections %}
                 <option value="{{ s.class_code }}" {% if s.class_code == section.class_code %}selected{% endif %}>{{ s.class_code }} ({{ s.class_name }})</option>
                 {% endfor %}
             </select>
         </div>
-    </div>
+    </header>
 
-    <article class="manage-card">
-        <div class="manage-header">
-            <h2 class="h5 mb-0"><i class="bi bi-pencil-square me-2 text-primary"></i>Class Details</h2>
-            <button type="submit" form="updateClassForm" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i> Save Changes</button>
-        </div>
-        <form id="updateClassForm" class="row g-3">
-            {% csrf_token %}
-            <input type="hidden" name="class_code" value="{{ section.class_code }}">
-            <div class="col-md-6">
-                <label class="form-label small fw-bold">Title / Class Name</label>
-                <input type="text" class="form-control" name="class_name" value="{{ section.class_name }}" required>
+    <main class="page-body">
+        <section class="card">
+            <div class="card-header">
+                <div class="section-heading">
+                    <p class="card-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Class Information</p>
+                    <p class="card-subtitle">Keep the classroom title and description concise for easy scanning.</p>
+                </div>
+                <div class="card-actions">
+                    <button type="submit" form="updateClassForm" class="btn btn-primary btn-sm"><i class="bi bi-check2-circle me-1"></i> Save Changes</button>
+                </div>
             </div>
-            <!-- Grade level and per-class 'section' removed from model; only title and description are editable -->
-            <div class="col-md-12">
-                <label class="form-label small fw-bold">Description</label>
-                <textarea class="form-control" name="description" rows="2" maxlength="100" style="resize: none;" placeholder="Short description (max 100 characters)">{{ section.description }}</textarea>
-            </div>
-        </form>
-    </article>
 
-    <article class="manage-card">
-        <div class="manage-header">
-            <h2 class="h5 mb-0"><i class="bi bi-people me-2 text-primary"></i>Enrolled Students</h2>
-            <div class="d-flex align-items-center gap-2">
-                <span class="item-badge">{{ students_table|length }} Enrolled</span>
-                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus-fill me-1"></i> Add Student</button>
+            <form id="updateClassForm" class="class-form">
+                {% csrf_token %}
+                <input type="hidden" name="class_code" value="{{ section.class_code }}">
+
+                <div class="form-group col-span-8">
+                    <label for="className">Title / Class Name</label>
+                    <input id="className" type="text" class="form-control" name="class_name" value="{{ section.class_name }}" required>
+                </div>
+
+                <div class="form-group col-span-12">
+                    <label for="classDescription">Description</label>
+                    <textarea id="classDescription" class="form-control" name="description" maxlength="100" placeholder="Short description (max 100 characters)">{{ section.description }}</textarea>
+                </div>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <div class="section-title-group">
+                    <div class="section-heading">
+                        <h2>Enrolled Students</h2>
+                    </div>
+                    <span class="student-count">{{ students_table|length }} enrolled</span>
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStudentModal"><i class="bi bi-person-plus-fill me-1"></i> Add Student</button>
+                </div>
             </div>
-        </div>
-        <div class="student-table-container">
-            <table class="student-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>PABASA ID</th>
-                        <th>Email</th>
-                        <th>Reading Level</th>
-                        <th>Joined Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in students_table %}
-                    <tr>
-                        <td><strong>{{ student.name }}</strong></td>
-                        <td><span class="pabasa-id-pill">{{ student.pabasa_id }}</span></td>
-                        <td>{{ student.email }}</td>
-                        <td><span class="level-chip level-developing">{{ student.reading_level }}</span></td>
-                        <td><small class="text-muted">{{ student.joined_at }}</small></td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center py-4 text-muted">No students have joined yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </article>
+
+            <div class="table-frame">
+                <table class="student-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>PABASA ID</th>
+                            <th>Email</th>
+                            <th>Reading Level</th>
+                            <th>Joined Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students_table %}
+                        <tr>
+                            <td><strong>{{ student.name }}</strong></td>
+                            <td><span class="pabasa-badge">{{ student.pabasa_id }}</span></td>
+                            <td>{{ student.email }}</td>
+                            <td><span class="status-chip">{{ student.reading_level }}</span></td>
+                            <td><small class="text-muted">{{ student.joined_at }}</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">No students have joined yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
 </div>
 
 <!-- Add Student Modal -->
 <div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 20px; background: rgba(255, 255, 255, 0.75) !important;
-        backdrop-filter: blur(20px) saturate(160%);
-        -webkit-backdrop-filter: blur(20px) saturate(160%);
-        border: 1px solid rgba(255, 255, 255, 0.4) !important;">
-            <div class="modal-header border-0">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2 text-primary"></i>Manual Enrollment</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-2 mb-3">
-                    <div class="col-12 col-md-8">
-                        <input type="text" id="studentSearch" class="form-control bg-light" placeholder="Enter Student Name or PABASA ID">
+                <div class="student-search-row">
+                    <div>
+                        <input type="text" id="studentSearch" class="form-control" placeholder="Enter Student Name or PABASA ID">
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div>
                         <select id="studentFilter" class="form-select fw-bold">
                             <option value="all">Filter: All Fields</option>
                             <option value="name">Filter: Name</option>
@@ -223,9 +596,9 @@
                 <div id="noStudentsFoundMessage" class="alert alert-warning d-none" role="alert">
                     No matching students found.
                 </div>
-                <div class="student-table-container" style="max-height: 400px; overflow-y: auto; border-radius: 14px;">
+                <div class="table-frame" style="max-height: 400px; overflow-y: auto;">
                     <table class="student-table" id="availableStudentsTable">
-                        <thead class="sticky-top">
+                        <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>PABASA ID</th>
@@ -237,10 +610,10 @@
                             {% for s in available_students %}
                             <tr data-name="{{ s.name|lower }}" data-id="{{ s.pabasa_id|lower }}" data-grade="{{ s.grade|lower }}">
                                 <td><strong>{{ s.name }}</strong></td>
-                                <td><span class="pabasa-id-pill">{{ s.pabasa_id }}</span></td>
+                                <td><span class="pabasa-badge">{{ s.pabasa_id }}</span></td>
                                 <td>{{ s.grade }}</td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-primary add-student-btn px-3" data-student-id="{{ s.id }}" style="border-radius: 8px;" onclick="window.showClassStudentLoading && window.showClassStudentLoading();">Add Student</button>
+                                    <button class="btn btn-sm btn-primary add-student-btn px-3" data-student-id="{{ s.id }}" style="border-radius: 12px;" onclick="window.showClassStudentLoading && window.showClassStudentLoading();">Add Student</button>
                                 </td>
                             </tr>
                             {% endfor %}
