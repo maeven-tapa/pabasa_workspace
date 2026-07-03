@@ -335,9 +335,10 @@
                     return;
                 }
                 markMaterialSeen(data.material_id || materialId);
-                if (data.redirect_url) {
-                    window.location.href = data.redirect_url;
-                }
+                // NOTE: Intentionally do NOT follow `data.redirect_url` here.
+                // Keeping the results screen visible prevents automatic refresh/redirect
+                // so students can review their score. Servers may include a redirect_url
+                // for other flows; we ignore it to honor the UI requirement.
             })
             .catch(e => {
                 completionSubmitted = false;
@@ -404,6 +405,7 @@
         itemOutcomes = Array(items.length).fill(null);
         sessionStartedAt = Date.now();
         completionSubmitted = false;
+        // No deferred Done button to clear.
         practiceFeedback.textContent = "Ready when you are.";
         practiceFeedback.style.color = "";
         updateCompletionSummary();
