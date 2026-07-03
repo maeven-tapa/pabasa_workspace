@@ -1824,6 +1824,39 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'joined_classes': joined_classes,
         'active_teacher_class_count': len(joined_classes),
     }
+    # Include teacher-created courses for server-side rendering to avoid
+    # a blank page while client-side JS fetches them.
+    try:
+        teacher_courses = []
+        if user and (user.role in ['teacher', 'admin'] or effective_role in ['teacher', 'admin']):
+            from .models import Course
+            qs = Course.objects.filter(teacher=user, is_active=True)
+            for c in qs:
+                sections_count = c.sections.count()
+                assessments_count = c.assessments.count()
+                materials_count = c.materials.count()
+                # Approximate student count by summing section student counts
+                students_count = 0
+                for s in c.sections.all():
+                    try:
+                        students_count += _section_student_count(s)
+                    except Exception:
+                        continue
+                teacher_courses.append({
+                    'id': c.id,
+                    'code': c.code,
+                    'title': c.title,
+                    'description': c.description,
+                    'metrics': {
+                        'sections': sections_count,
+                        'assessments': assessments_count,
+                        'materials': materials_count,
+                        'students': students_count,
+                    }
+                })
+    except Exception:
+        teacher_courses = []
+    context['teacher_courses'] = teacher_courses
     # Compute an account activity status label + class for UI chips
     account_status_label = 'Unknown'
     account_status_class = ''
@@ -4220,7 +4253,7 @@ def get_teacher_courses_api(request):
 
         course_list = []
         for c in courses_qs:
-            course_sections = list(c.sections.all())
+            course_sections = list(c.sections.filter(is_active=True))
             secs = [{'id': s.id, 'code': s.class_code, 'name': s.class_name} for s in course_sections]
             course_teacher_name = ''
             if getattr(c, 'teacher', None):
@@ -4409,6 +4442,20 @@ def get_teacher_courses_api(request):
             except Exception:
                 practices_list = []
 
+            unique_student_ids = set()
+            for section in course_sections:
+                for entry in section.get_enrolled_students(active_only=True):
+                    student_id = _normalized_student_entry_id(entry)
+                    if student_id:
+                        unique_student_ids.add(student_id)
+
+            metrics = {
+                'sections': len(course_sections),
+                'assessments': len(assessments_list),
+                'materials': len(materials_list) + len(practices_list),
+                'students': len(unique_student_ids),
+            }
+
             course_list.append({
                 'id': c.id,
                 'code': c.code,
@@ -4418,6 +4465,7 @@ def get_teacher_courses_api(request):
                 'assessments': assessments_list,
                 'materials': materials_list,
                 'practices': practices_list,
+                'metrics': metrics,
             })
 
         return JsonResponse({'success': True, 'courses': course_list})
