@@ -78,6 +78,38 @@
             padding: clamp(1rem, 2vw, 1.6rem);
         }
 
+        .principal-sidebar.offcanvas {
+            transition: transform 0.25s ease, visibility 0.25s ease;
+        }
+
+        .principal-sidebar.offcanvas.show {
+            visibility: visible !important;
+            transform: translateX(0) !important;
+        }
+
+        .principal-sidebar.offcanvas:not(.show) {
+            visibility: hidden;
+            transform: translateX(-100%);
+        }
+
+        .principal-sidebar .offcanvas-body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            overflow-y: auto;
+            padding-right: 0;
+            padding-left: 0;
+        }
+
+        .principal-sidebar .offcanvas-header {
+            padding: 0;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .principal-brand {
             align-items: center;
             background: rgba(255, 255, 255, 0.12);
@@ -350,20 +382,97 @@
 
         @media (max-width: 991.98px) {
             .principal-sidebar {
-                position: static;
-                width: 100%;
-                min-height: auto;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: min(320px, 86vw);
+                max-width: 320px;
+                height: 100%;
+                min-height: 100vh;
+                transform: translateX(-100%);
+                visibility: hidden;
+                z-index: 1085;
+                overflow: hidden;
+                background: linear-gradient(145deg, #13507a 0%, var(--principal-primary-deep) 70%, #0b3552 100%);
+                padding: 0;
+            }
+
+            .principal-sidebar.offcanvas.show {
+                visibility: visible !important;
+                transform: translateX(0) !important;
+            }
+
+            .principal-sidebar .offcanvas-body {
+                display: flex;
+                flex-direction: column;
+                min-height: 100%;
+                overflow-y: auto;
+                padding: 1.15rem;
+            }
+
+            .principal-sidebar .offcanvas-header {
+                padding: 0.85rem 1.15rem 0;
+            }
+
+            .principal-sidebar .principal-role-card {
+                margin-bottom: 1rem;
+            }
+
+            .principal-sidebar nav {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
             }
 
             .principal-main {
                 margin-left: 0;
             }
+
+            .principal-topbar {
+                flex-wrap: wrap;
+                align-items: flex-start;
+                gap: 0.75rem;
+                padding: 0.95rem 1rem;
+            }
+
+            .principal-topbar > div {
+                min-width: 0;
+                flex: 1 1 100%;
+            }
+
+            .principal-topbar .text-end {
+                text-align: left !important;
+            }
+
+            .principal-topbar button[data-bs-toggle="offcanvas"] {
+                order: -1;
+            }
+
+            .principal-logout-btn {
+                width: 100%;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .principal-sidebar.offcanvas {
+                visibility: visible !important;
+                transform: none !important;
+                position: fixed !important;
+                inset: 0 auto 0 0;
+                width: var(--principal-sidebar-width) !important;
+                height: 100vh !important;
+            }
         }
     </style>
 </head>
 <body>
-    <aside class="principal-sidebar">
-        <div class="d-flex flex-column h-100">
+    <aside class="principal-sidebar offcanvas offcanvas-start" tabindex="-1" id="principalSidebar" aria-label="Principal sidebar" data-bs-scroll="true" data-bs-backdrop="true">
+        <div class="offcanvas-header d-lg-none justify-content-end">
+            <button type="button" class="btn btn-sm btn-outline-light" data-bs-dismiss="offcanvas" aria-label="Close navigation">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column h-100">
             <a class="principal-brand" href="{% url 'dashboard_principal' %}">
                 <span class="principal-brand-icon"><i class="bi bi-mortarboard"></i></span>
                 <span>
@@ -396,6 +505,9 @@
 
     <main class="principal-main">
         <header class="principal-topbar">
+            <button class="btn btn-link text-dark d-lg-none p-0 me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#principalSidebar" aria-controls="principalSidebar" aria-label="Open navigation menu">
+                <i class="bi bi-list fs-4"></i>
+            </button>
             <div>
                 <p class="small text-secondary text-uppercase fw-bold mb-1">Principal Module</p>
                 <h1 class="h3 fw-bold mb-0">{{ page_title }}</h1>
