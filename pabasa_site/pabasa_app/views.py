@@ -4444,7 +4444,12 @@ def get_teacher_assessments_api(request):
         if course_id is not None:
             course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
             if course:
-                assessments_qs = assessments_qs.filter(Q(courses=course) | Q(section__in=course.sections.all()))
+                # Include teacher-owned assessments plus assessments linked to this course or its sections.
+                assessments_qs = Assessment.objects.filter(
+                    Q(teacher=teacher_user) | Q(courses=course) | Q(section__in=course.sections.all()),
+                    source_assessment__isnull=True,
+                    is_active=True
+                ).distinct()
 
         assessments_qs = assessments_qs.prefetch_related('materials').order_by('-created_at').distinct()
 
@@ -4567,17 +4572,15 @@ def get_teacher_assessment_api(request, assessment_id):
 
         enriched_attempts.sort(key=lambda att: _attempt_timestamp(att) or datetime(1970, 1, 1, tzinfo=timezone.utc))
 
-        avg = None
-        try:
-            accs = [
-                att.get('accuracy')
-                for att in attempts
-                if isinstance(att, dict) and isinstance(att.get('accuracy'), (int, float))
-            ]
-            if accs:
-                avg = round(sum(accs) / len(accs))
-        except Exception:
-            avg = None
+        # Compute per-metric averages only when there are at least 2 numeric attempts
+        def _average_list(values):
+            nums = [v for v in values if isinstance(v, (int, float))]
+            if len(nums) < 2:
+                return None
+            try:
+                return round(sum(nums) / len(nums), 1)
+            except Exception:
+                return None
 
         payload = {
             'id': assessment.id,
@@ -4587,7 +4590,12 @@ def get_teacher_assessment_api(request, assessment_id):
             'level': assessment.get_assessment_type_display() if hasattr(assessment, 'get_assessment_type_display') else assessment.assessment_type,
             'items': sum((m.get('items') or 0) for m in mats),
             'minutes': 0,
-            'average': f"{avg}%" if avg is not None else None,
+            'average': None,
+            'avg_accuracy': _average_list([att.get('accuracy') for att in attempts]),
+            'avg_wpm': _average_list([att.get('wpm') for att in attempts]),
+            'avg_fluency': _average_list([att.get('fluency_score') for att in attempts]),
+            'avg_pronunciation': _average_list([att.get('pronunciation_score') for att in attempts]),
+            'avg_time_score': _average_list([att.get('time_score') for att in attempts]),
             'dueDate': assessment.scheduled_at.isoformat() if getattr(assessment, 'scheduled_at', None) else None,
             'status': 'archived' if not assessment.is_active else assessment.status,
             'is_active': assessment.is_active,

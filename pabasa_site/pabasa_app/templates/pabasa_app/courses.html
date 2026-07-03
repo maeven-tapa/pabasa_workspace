@@ -4985,7 +4985,7 @@
                         <td>${s.wpm || '—'}</td>
                         <td class="text-end">
                             <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || ''}" data-student-name="${escapeHtml(s.name)}" title="View progress"><i class="bi bi-bar-chart"></i></button>
+                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || s.custom_id || ''}" data-student-name="${escapeHtml(s.name)}" title="View progress"><i class="bi bi-bar-chart"></i></button>
                                 <button class="btn btn-sm btn-outline-danger" type="button" title="Remove from section" onclick="window.removeStudentFromCourse('${s.id || s.custom_id || ''}', '${matchCode}', '${s.name.replace(/'/g, "\\'")}', '${courseId}')"><i class="bi bi-trash"></i></button>
                             </div>
                         </td>
