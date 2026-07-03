@@ -917,6 +917,31 @@ class Material(models.Model):
             started_at_value = timezone.now()
 
         teacher = self.teacher or (self.section.teacher if self.section_id and self.section else None)
+        
+        # Ensure parent assessment exists for this material
+        parent_assessment = self.assessment
+        if parent_assessment is None:
+            # Create a parent assessment if one doesn't exist
+            # Generate a unique code for the parent assessment
+            candidate_code = f"ASS{uuid.uuid4().hex[:8].upper()}"
+            while Assessment.objects.filter(code=candidate_code).exists():
+                candidate_code = f"ASS{uuid.uuid4().hex[:8].upper()}"
+            
+            parent_assessment = Assessment.objects.create(
+                title=self.title or self.prompt_text or "Assessment",
+                code=candidate_code,
+                assessment_type=self.item_type,
+                status=self.status,
+                scheduled_at=self.scheduled_at if self.status == "scheduled" else None,
+                teacher=teacher,
+                section=self.section,
+                is_active=True,
+                source_assessment=None,  # This is a parent assessment
+            )
+            # Link the material to this parent assessment
+            self.assessment = parent_assessment
+            self.save(update_fields=['assessment', 'updated_at'])
+        
         result = Assessment.objects.create(
             title=self.title or self.prompt_text or "Assessment Result",
             code=self._build_result_code(attempt_number),
@@ -933,6 +958,7 @@ class Material(models.Model):
             started_at=started_at_value,
             completed_at=completed_at_value or (timezone.now() if status_value == "completed" else None),
             is_active=True,
+            source_assessment=parent_assessment,  # Link to parent assessment
         )
         result._apply_attempt_payload(result, attempt_data)
         return result._serialize_attempt()
