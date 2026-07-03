@@ -4376,14 +4376,6 @@ def get_teacher_courses_api(request):
                     continue
                 if shared and (getattr(m, 'source_type', 'personal') or 'personal') != 'shared':
                     continue
-                
-                # Skip assessment-type materials that have no attempt results
-                # (these create duplicate empty rows in the assessment table)
-                material_type = getattr(m, 'type', 'practice') or 'practice'
-                if material_type in ['assessment', 'both']:
-                    attempt_rows = Assessment.objects.filter(material=m).exists()
-                    if not attempt_rows:
-                        continue
                 cj = getattr(m, 'content_json', None) or {}
                 items_count = 0
                 items_array = None
