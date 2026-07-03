@@ -4301,7 +4301,10 @@ def get_teacher_courses_api(request):
                 Q(section__in=course_sections, teacher=teacher_user)
             ).prefetch_related('materials', 'teacher').distinct()
             for a in course_assessments_qs:
+                # Skip inactive or archived assessments so they don't appear in the UI
                 if not getattr(a, 'is_active', True):
+                    continue
+                if str(getattr(a, 'status', '') or '').strip().lower() == 'archived':
                     continue
                 items = 0
                 minutes = 0
@@ -4366,7 +4369,10 @@ def get_teacher_courses_api(request):
             # Serialize materials with normalized metadata
             materials_list = []
             for m in c.materials.all():
+                # Skip inactive or archived materials so they don't appear in the UI
                 if not getattr(m, 'is_active', True):
+                    continue
+                if str(getattr(m, 'status', '') or '').strip().lower() == 'archived':
                     continue
                 if shared and (getattr(m, 'source_type', 'personal') or 'personal') != 'shared':
                     continue
@@ -4542,7 +4548,8 @@ def get_teacher_assessments_api(request):
                     Q(material__assigned_sections__in=course.sections.all(), teacher=teacher_user)
                 ).distinct()
 
-        assessments_qs = assessments_qs.prefetch_related('materials').order_by('-created_at').distinct()
+        # Always exclude records explicitly marked as archived (status field)
+        assessments_qs = assessments_qs.exclude(status__iexact='archived').prefetch_related('materials').order_by('-created_at').distinct()
 
         def _average(values):
             # Compute averages when there is at least one numeric value.
@@ -4587,6 +4594,8 @@ def get_teacher_assessments_api(request):
                     type__in=['assessment', 'both'],
                     is_active=True,
                 )
+
+            materials_qs = materials_qs.exclude(status__iexact='archived')
 
             existing_assessment_ids = set(assessments_qs.values_list('id', flat=True))
 
@@ -5360,14 +5369,14 @@ def get_teacher_overview(request):
             Q(teacher=teacher_user) | Q(section__teacher=teacher_user),
             is_active=True,
             source_assessment__isnull=True
-        ).distinct().count()
+        ).exclude(status__iexact='archived').distinct().count()
 
         # Materials that are standalone (not representing an Assessment)
         materials_posted = Material.objects.filter(
             Q(section__teacher=teacher_user) | Q(assigned_sections__teacher=teacher_user),
             is_active=True,
             assessment__isnull=True,
-        ).distinct().count()
+        ).exclude(status__iexact='archived').distinct().count()
 
         reports_generated = Note.objects.filter(teacher=teacher_user).count()
 
@@ -5437,9 +5446,9 @@ def get_class_materials(request):
         request_user = User.objects.filter(id=user_id).first() if user_id else None
         is_requesting_student = bool(request_user and request_user.role == 'student')
         # Archived records should not appear in class/course readings, even for the owning teacher.
-        materials_qs = materials_qs.filter(is_active=True)
-        assessments_qs = assessments_qs.filter(is_active=True)
-        practices_qs = practices_qs.filter(is_active=True)
+        materials_qs = materials_qs.filter(is_active=True).exclude(status__iexact='archived')
+        assessments_qs = assessments_qs.filter(is_active=True).exclude(status__iexact='archived')
+        practices_qs = practices_qs.filter(is_active=True).exclude(status__iexact='archived')
 
         # If requester is not the class owner teacher, only include published practice items
         if not (teacher_user and teacher_user.role == 'teacher' and section.teacher_id == teacher_user.id):
