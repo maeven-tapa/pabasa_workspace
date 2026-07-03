@@ -777,6 +777,49 @@ section.pb-md-5 h2::after {
 }
 
 /* ============================================================
+   ADDITIONAL RESPONSIVE FIXES FOR ABOUT PAGE
+   Preserve desktop design; add safe adjustments for tablet/mobile
+   ============================================================ */
+
+@media (max-width: 1024px) {
+    .modern-hero { padding: 2rem; }
+    .modern-hero h1, .modern-hero h2 { font-size: clamp(1.4rem, 3.2vw, 2rem); }
+    .insight-cards-with-images { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 430px) {
+    .modern-hero { padding: 1.25rem; }
+    .modern-hero .col-lg-7, .modern-hero .col-lg-5 { width: 100%; }
+    .insight-cards-with-images { grid-template-columns: 1fr; }
+    .card-image-wrapper { height: 160px; }
+    .principles-board { grid-template-columns: 1fr; }
+    .project-context-layout { grid-template-columns: 1fr; }
+    .team-container { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+}
+
+@media (max-width: 390px) {
+    .card-image-wrapper { height: 140px; }
+    .modern-chip { padding: 0.3rem 0.8rem; font-size: 0.7rem; }
+    .modern-hero h1 { font-size: 1.4rem; }
+}
+
+/* Ensure modals/drawers fit within viewport */
+.modal-dialog { max-width: 96vw; margin: 1.5rem; }
+.modal-content { max-height: calc(100vh - 3.5rem); overflow: auto; }
+
+/* Forms: stack form rows and input groups on small screens */
+@media (max-width: 576px) {
+    .form-row { display: flex; flex-direction: column; gap: 0.75rem; }
+    .form-row .col, .form-row [class*="col-"] { width: 100% !important; padding-right: 0; padding-left: 0; }
+    .input-group { flex-direction: column; align-items: stretch; }
+}
+
+/* Horizontal-scroll fallback for wide content instead of shrinking columns */
+.wide-scroll, .horizontal-fallback { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.wide-scroll > * { flex-shrink: 0; }
+
+
+/* ============================================================
    DEVELOPMENT TEAM SECTION
    ============================================================ */
 .development-team-section { padding-top: 0.75rem; }
@@ -1244,6 +1287,43 @@ section.pb-md-5 h2::after {
     border-radius: var(--r-xl) !important;
 }
 
+/* Ensure overlay is centered and fits viewport on all small devices */
+@media (max-width: 768px) {
+    .team-member-overlay,
+    .development-team-section .team-member-overlay {
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: calc(100vw - 2rem) !important;
+        max-width: 680px !important;
+        max-height: calc(100vh - 2rem) !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
+        overflow: auto !important;
+        border-radius: var(--r-md) !important;
+    }
+    .team-member-overlay.active,
+    .development-team-section .team-member-overlay.active {
+        pointer-events: auto !important;
+        z-index: 10001 !important;
+    }
+}
+
+@media (max-width: 420px) {
+    /* Keep centered but slightly inset so it's never off-screen */
+    .team-member-overlay,
+    .development-team-section .team-member-overlay {
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: calc(100vw - 2rem) !important;
+        height: auto !important;
+        max-height: calc(100vh - 3rem) !important;
+        border-radius: var(--r-sm) !important;
+    }
+}
+
 .development-team-section .team-member-overlay {
     overflow: hidden !important;  
 }
@@ -1274,12 +1354,221 @@ section.pb-md-5 h2::after {
     .development-team-section .team-member-card { height: 320px !important; }
 }
 
+/* Robust mobile stack: use flex column to guarantee centered cards on phones/tablets */
+@media (max-width: 768px) {
+    .development-team-section .team-container {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 680px !important;
+        margin: 0 auto !important;
+    }
+
+    .development-team-section .team-member-card {
+        width: 100% !important;
+        max-width: 640px !important;
+        height: auto !important;
+        margin: 0 auto !important;
+        border-radius: var(--r-md) !important;
+    }
+
+    .development-team-section .team-member-card img {
+        position: relative !important;
+        width: 100% !important;
+        height: 220px !important;
+        object-fit: cover !important;
+        margin: 0 auto !important;
+        border-radius: calc(var(--r-md)) calc(var(--r-md)) 0 0 !important;
+    }
+
+    .development-team-section .team-member-initial-overlay {
+        padding: 0.85rem 1rem 1rem !important;
+    }
+}
+
 @media (max-width: 480px) {
     .development-team-section .team-container {
         grid-template-columns: 1fr !important;
         max-width: 280px !important;
     }
 }
+
+/* Mobile refinements for Development Team: stack cards, make images consistent, and use full-screen overlays */
+@media (max-width: 420px) {
+    .development-team-section .team-container {
+        grid-template-columns: 1fr !important;
+        max-width: 100% !important;
+        padding: 0.5rem 1rem 1rem !important;
+        gap: 0.85rem !important;
+        justify-items: stretch;
+    }
+
+    .development-team-section .team-member-card {
+        width: 100% !important;
+        height: auto !important;
+        display: block;
+        padding: 0 !important;
+        border-radius: var(--r-md) !important;
+        overflow: visible !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    /* Make the image area a block at the top of the card so content flows underneath */
+    .development-team-section .team-member-card img {
+        position: relative !important;
+        width: 100% !important;
+        height: 220px !important;
+        object-fit: cover !important;
+        border-radius: calc(var(--r-md)) calc(var(--r-md)) 0 0 !important;
+        top: 0 !important;
+        left: 0 !important;
+    }
+
+    .development-team-section .team-member-initial-overlay {
+        position: relative !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        background: linear-gradient(to top, rgba(16, 70, 110, 0.92), rgba(16, 70, 110, 0.42), transparent) !important;
+        padding: 0.9rem 0.9rem 1.1rem !important;
+        border-radius: 0 0 calc(var(--r-md)) calc(var(--r-md)) !important;
+    }
+
+    .development-team-section .team-member-name { font-size: 1rem; }
+    .development-team-section .team-member-role-hover { font-size: 0.75rem; }
+
+    /* Make the numeric badge slightly larger and ensure it sits above the image */
+    .development-team-section .team-member-card::before {
+        top: 0.6rem; left: 0.6rem;
+        width: 40px; height: 40px; font-size: 0.92rem;
+        box-shadow: 0 0 0 2px var(--pabasa-yellow-soft), 0 6px 14px rgba(16,70,110,0.28) !important;
+    }
+
+    /* Overlay becomes a full-screen sheet on phones for better readability and touch targets */
+    .development-team-section .team-member-overlay {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        transform: none !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: stretch !important;
+        justify-content: center !important;
+    }
+
+    .development-team-section .team-member-overlay.active {
+        overflow: hidden !important;
+    }
+
+    .development-team-section .team-member-overlay-content-wrapper {
+        padding: 1rem !important;
+        width: 100% !important;
+        max-height: calc(100vh - 64px) !important;
+    }
+
+    .development-team-section .team-member-modal-close,
+    .team-member-modal-close {
+        width: 48px; height: 48px; font-size: 1.35rem; top: 0.8rem; right: 0.8rem;
+    }
+
+    /* Ensure skill badges wrap nicely and message is readable */
+    .development-team-section .team-member-skills { gap: 0.45rem; }
+    .development-team-section .team-member-message { padding: 0.85rem; }
+
+    /* Make legacy modal full screen as well */
+    .team-member-modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100vh !important;
+        border-radius: 0 !important;
+        padding: 1rem !important;
+    }
+
+    .team-member-modal-image { width: 84px; height: 84px; }
+}
+
+/* Strong centering enforcement for phones to override any competing rules */
+@media (max-width: 420px) {
+    .development-team-section .team-container {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        width: calc(100% - 2rem) !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        justify-content: center !important;
+        justify-items: center !important;
+        align-items: start !important;
+    }
+
+    .development-team-section .team-member-card {
+        width: 100% !important;
+        max-width: 640px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        box-sizing: border-box !important;
+        display: block !important;
+    }
+
+    .development-team-section .team-member-card img {
+        margin-left: auto !important;
+        margin-right: auto !important;
+        left: auto !important;
+        right: auto !important;
+        display: block !important;
+    }
+}
+
+    /* Final override: ensure team cards and images are centered on very small screens */
+    @media (max-width: 420px) {
+        .development-team-section .team-container {
+            grid-template-columns: 1fr !important;
+            max-width: 100% !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            gap: 0.85rem !important;
+            justify-items: center !important;
+            align-items: start !important;
+        }
+
+        .development-team-section .team-member-card {
+            width: 100% !important;
+            margin: 0 auto !important;
+            display: block !important;
+            height: auto !important;
+        }
+
+        .development-team-section .team-member-card img {
+            position: relative !important;
+            display: block !important;
+            margin: 0 auto !important;
+            left: auto !important;
+            right: auto !important;
+            width: 100% !important;
+            height: 220px !important;
+            object-fit: cover !important;
+        }
+
+        .development-team-section .team-member-initial-overlay {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            text-align: left !important;
+        }
+
+        /* Slightly increase card inner spacing so content is not flush against edges */
+        .development-team-section .team-member-overlay-content-wrapper,
+        .development-team-section .team-member-modal-content {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    }
 
 @media (max-width: 576px) {
     .team-container {

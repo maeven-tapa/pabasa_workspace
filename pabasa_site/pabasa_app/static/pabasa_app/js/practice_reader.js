@@ -121,10 +121,13 @@
 
         bufferPlayer.pause();
         bufferPlayer.removeAttribute('src');
-        bufferPlayer.load();
+        bufferPlayer.muted = true;
+        bufferPlayer.playsInline = true;
+        bufferPlayer.setAttribute('playsinline', '');
+        bufferPlayer.setAttribute('webkit-playsinline', '');
+        bufferPlayer.loop = false;
         bufferPlayer.classList.remove('visible');
         bufferPlayer.src = videoUrl;
-        bufferPlayer.loop = false;
 
         const onLoadedMetadata = () => {
             try {
@@ -150,6 +153,11 @@
 
         bufferPlayer.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
         bufferPlayer.addEventListener('canplay', onCanPlay, { once: true });
+        bufferPlayer.addEventListener('error', () => {
+            // Keep the current active player visible if the new video cannot load.
+            bufferPlayer.classList.remove('visible');
+            activePlayer.classList.add('visible');
+        }, { once: true });
         bufferPlayer.load();
     }
 
