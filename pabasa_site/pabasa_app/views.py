@@ -2210,12 +2210,30 @@ def _send_principal_credentials_email(request, user, school_name):
 @admin_required
 def admin_principals(request):
     context = _admin_context(request, 'Principals', [])
+    search_query = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '')
+
     context.update({
         'form_data': {},
         'created_principal': None,
+        'created_principal_id': None,
         'default_password': PRINCIPAL_DEFAULT_PASSWORD,
-        'principals': User.objects.filter(role='principal').order_by('last_name', 'first_name'),
+        'search_query': search_query,
+        'status_filter': status_filter,
     })
+
+    principals = User.objects.filter(role='principal')
+    if search_query:
+        principals = principals.filter(
+            Q(first_name__icontains=search_query)
+            | Q(last_name__icontains=search_query)
+            | Q(custom_id__icontains=search_query)
+            | Q(email__icontains=search_query)
+        )
+    if status_filter == 'active':
+        principals = principals.filter(is_archived=False)
+    elif status_filter == 'inactive':
+        principals = principals.filter(is_archived=True)
 
     if request.method == 'POST':
         form_data = {
@@ -2245,6 +2263,7 @@ def admin_principals(request):
 
         if errors:
             context['principal_error'] = ' '.join(errors)
+            context['principals'] = principals.order_by('last_name', 'first_name')
             return render(request, 'pabasa_app/admin_principals.html', context)
 
         try:
@@ -2285,10 +2304,23 @@ def admin_principals(request):
 
             context['principal_success'] = 'Principal account created and credentials email sent.'
             context['created_principal'] = user
+            context['created_principal_id'] = user.id
             context['created_principal_name'] = _admin_user_full_name(user)
             context['created_school_name'] = form_data['school_name']
             context['form_data'] = {}
-            context['principals'] = User.objects.filter(role='principal').order_by('last_name', 'first_name')
+
+            principals = User.objects.filter(role='principal')
+            if search_query:
+                principals = principals.filter(
+                    Q(first_name__icontains=search_query)
+                    | Q(last_name__icontains=search_query)
+                    | Q(custom_id__icontains=search_query)
+                    | Q(email__icontains=search_query)
+                )
+            if status_filter == 'active':
+                principals = principals.filter(is_archived=False)
+            elif status_filter == 'inactive':
+                principals = principals.filter(is_archived=True)
         except ValueError as exc:
             context['principal_error'] = str(exc)
         except IntegrityError:
@@ -2297,6 +2329,7 @@ def admin_principals(request):
             logger.exception('Failed to create principal account')
             context['principal_error'] = 'The account could not be created or the email could not be sent. Please check the mail settings and try again.'
 
+    context['principals'] = principals.order_by('last_name', 'first_name')
     return render(request, 'pabasa_app/admin_principals.html', context)
 
 def _admin_user_status(user):

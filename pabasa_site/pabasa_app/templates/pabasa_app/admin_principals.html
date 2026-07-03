@@ -2,90 +2,62 @@
 
 {% block content %}
 <style>
-    .principal-account-grid {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.8fr);
-    }
-
-    .principal-form-card {
+    .principal-table-card {
         border: 1px solid rgba(16, 70, 110, 0.12);
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.82);
-        padding: clamp(1rem, 2vw, 1.25rem);
+        border-radius: 20px;
+        background: #fff;
+        padding: 1.25rem;
     }
 
-    .principal-summary-card {
-        border: 1px solid rgba(46, 168, 229, 0.18);
-        border-radius: 18px;
-        background: linear-gradient(135deg, rgba(234, 247, 253, 0.96), rgba(255, 255, 255, 0.9));
-        padding: 1rem;
-        align-self: start;
-    }
-
-    .principal-form-card .form-control,
-    .principal-form-card .form-select {
+    .principal-filter-form .form-control,
+    .principal-filter-form .form-select {
+        min-height: 44px;
         border-radius: 12px;
         border-color: rgba(16, 70, 110, 0.16);
-        min-height: 44px;
     }
 
-    .generated-id-badge {
-        border-radius: 14px;
-        background: #10466E;
-        color: #fff;
-        display: inline-flex;
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-weight: 800;
-        letter-spacing: 0.03em;
-        padding: 0.55rem 0.8rem;
+    .principal-row-highlight {
+        background: rgba(13, 110, 253, 0.08);
     }
 
-    .principal-success-state {
-        border: 1px solid rgba(25, 135, 84, 0.22);
-        border-radius: 18px;
-        background: linear-gradient(135deg, rgba(232, 246, 238, 0.96), rgba(255, 255, 255, 0.94));
-        padding: clamp(1.1rem, 2vw, 1.4rem);
+    .principal-modal .modal-content {
+        border-radius: 22px;
+        overflow: hidden;
     }
 
-    .principal-success-icon {
-        align-items: center;
-        background: #198754;
-        border-radius: 999px;
-        color: #fff;
-        display: inline-flex;
-        font-size: 1.8rem;
-        height: 64px;
-        justify-content: center;
-        width: 64px;
+    .principal-modal .form-control,
+    .principal-modal .form-select,
+    .principal-modal textarea {
+        border-radius: 12px;
+        border-color: rgba(16, 70, 110, 0.16);
     }
 
-    .principal-success-summary {
-        border: 1px solid rgba(16, 70, 110, 0.12);
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.84);
-        padding: 1rem;
+    .principal-modal .modal-header {
+        border-bottom: 1px solid rgba(16, 70, 110, 0.08);
     }
 
-    .principal-account-table {
-        margin-top: 1rem;
+    .principal-modal .modal-footer {
+        border-top: 1px solid rgba(16, 70, 110, 0.08);
     }
 
-    @media (max-width: 900px) {
-        .principal-account-grid {
-            grid-template-columns: 1fr;
-        }
+    .principal-modal .form-text {
+        font-size: 0.92rem;
     }
 </style>
 
 <div class="admin-panel">
-    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-4">
         <div>
-            <p class="text-secondary fw-bold text-uppercase small mb-1">Principal Provisioning</p>
-            <h2 class="h4 mb-1">Create Principal Account</h2>
-            <p class="text-secondary mb-0">Provision access for the existing Principal dashboard and login flow.</p>
+            <p class="text-secondary fw-bold text-uppercase small mb-1">Principal Management</p>
+            <h2 class="h4 mb-1">Principal Accounts</h2>
+            <p class="text-secondary mb-0">Manage active and inactive Principal accounts, and create a new account when needed.</p>
         </div>
-        <span class="badge rounded-pill text-bg-primary px-3 py-2">Role: Principal</span>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createPrincipalModal">
+                <i class="bi bi-plus-lg me-1"></i>Create Principal
+            </button>
+            <span class="badge rounded-pill text-bg-primary px-3 py-2">Role: Principal</span>
+        </div>
     </div>
 
     {% if principal_error %}
@@ -93,124 +65,44 @@
     {% endif %}
 
     {% if principal_success and created_principal %}
-    <div class="principal-success-state">
-        <div class="d-flex align-items-start gap-3 flex-wrap mb-4">
-            <span class="principal-success-icon"><i class="bi bi-check-lg"></i></span>
-            <div>
-                <p class="text-success fw-bold text-uppercase small mb-1">Account Created</p>
-                <h2 class="h4 fw-bold mb-1">Principal Account Created Successfully</h2>
-                <p class="text-secondary mb-0">The account is active and the welcome email with login credentials has been sent.</p>
-            </div>
+    <div class="alert alert-success d-flex align-items-start gap-3" role="alert">
+        <span class="fs-4 mt-1 text-success"><i class="bi bi-check-circle-fill"></i></span>
+        <div>
+            <p class="mb-1 fw-bold">Principal account created</p>
+            <p class="mb-0">Login credentials were emailed to <strong>{{ created_principal.email }}</strong>.</p>
         </div>
-
-        <div class="principal-success-summary mb-4">
-            <dl class="row mb-0">
-                <dt class="col-sm-4 text-secondary">Principal Name</dt>
-                <dd class="col-sm-8">{{ created_principal_name }}</dd>
-                <dt class="col-sm-4 text-secondary">School Name</dt>
-                <dd class="col-sm-8">{{ created_school_name }}</dd>
-                <dt class="col-sm-4 text-secondary">Generated PABASA ID</dt>
-                <dd class="col-sm-8"><span class="generated-id-badge">{{ created_principal.custom_id }}</span></dd>
-                <dt class="col-sm-4 text-secondary">Account Status</dt>
-                <dd class="col-sm-8 mb-0"><span class="badge rounded-pill text-bg-success">Active</span></dd>
-            </dl>
-        </div>
-
-        <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-primary" href="{% url 'admin_principal_detail' created_principal.id %}">
-                <i class="bi bi-eye me-1"></i>View
-            </a>
-            <a class="btn btn-outline-primary" href="{% url 'admin_principal_edit' created_principal.id %}">
-                <i class="bi bi-pencil me-1"></i>Edit
-            </a>
-            <form method="post" action="{% url 'admin_principal_deactivate' created_principal.id %}" onsubmit="return confirm('Deactivate this Principal account? The Principal will no longer be able to log in, but all associated school data, reports, reading materials, assessments, and historical records will remain intact.');">
-                {% csrf_token %}
-                <button class="btn btn-outline-danger" type="submit">
-                    <i class="bi bi-person-x me-1"></i>Deactivate
-                </button>
-            </form>
-            <a class="btn btn-outline-secondary ms-md-auto" href="{% url 'admin_principals' %}">
-                <i class="bi bi-plus-lg me-1"></i>Create Another Principal
-            </a>
-        </div>
-    </div>
-    {% else %}
-    <div class="principal-account-grid">
-        <form class="principal-form-card" method="post" enctype="multipart/form-data" id="principalAccountForm">
-            {% csrf_token %}
-            <div class="row g-3">
-                <div class="col-12">
-                    <label class="form-label fw-bold" for="fullName">Full Name</label>
-                    <input class="form-control" id="fullName" name="full_name" type="text" value="{{ form_data.full_name }}" required>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold" for="schoolName">School Name</label>
-                    <input class="form-control" id="schoolName" name="school_name" type="text" value="{{ form_data.school_name }}" required>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold" for="principalRole">Role</label>
-                    <input class="form-control" id="principalRole" type="text" value="Principal" disabled>
-                </div>
-
-                <div class="col-12">
-                    <label class="form-label fw-bold" for="schoolLogo">School Logo</label>
-                    <input class="form-control" id="schoolLogo" name="school_logo" type="file" accept="image/*" required>
-                    <div class="form-text">Used as the official school logo for generated principal reports and documents.</div>
-                </div>
-
-                <div class="col-12">
-                    <label class="form-label fw-bold" for="schoolAddress">School Address</label>
-                    <textarea class="form-control" id="schoolAddress" name="school_address" rows="3" required>{{ form_data.school_address }}</textarea>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold" for="emailAddress">Email Address</label>
-                    <input class="form-control" id="emailAddress" name="email" type="email" value="{{ form_data.email }}" required>
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold" for="contactNumber">Contact Number</label>
-                    <input class="form-control" id="contactNumber" name="contact_no" type="tel" value="{{ form_data.contact_no }}" required>
-                </div>
-
-                <div class="col-12 d-flex justify-content-end">
-                    <button class="btn btn-primary" type="submit" id="principalSubmitBtn">
-                        <span class="submit-label"><i class="bi bi-person-plus me-1"></i>Create Principal Account</span>
-                        <span class="submit-loading d-none">
-                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Creating account
-                        </span>
-                    </button>
-                </div>
-            </div>
-        </form>
-
-        <aside class="principal-summary-card">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <span class="admin-brand-icon" style="width: 40px; height: 40px;"><i class="bi bi-envelope-check"></i></span>
-                <div>
-                    <h3 class="h6 mb-0">Login Credentials</h3>
-                    <p class="text-secondary small mb-0">Sent automatically by email.</p>
-                </div>
-            </div>
-            <p class="text-secondary mb-3">
-                The Principal's login credentials will be generated automatically when the account is created.
-            </p>
-            <p class="text-secondary mb-0">
-                A welcome email containing the login credentials and sign-in instructions will be sent to the Principal's registered email address.
-            </p>
-        </aside>
     </div>
     {% endif %}
 
-    <div class="principal-account-table border rounded-3 bg-white p-3">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div class="principal-table-card">
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 mb-3">
             <div>
                 <h3 class="h5 fw-bold mb-1">Principal Accounts</h3>
-                <p class="text-secondary mb-0">View, edit, or deactivate existing Principal accounts.</p>
+                <p class="text-secondary mb-0">Search, filter, and manage Principal account access from one place.</p>
             </div>
         </div>
+
+        <form method="get" class="row g-3 align-items-center principal-filter-form mb-3">
+            <div class="col-12 col-md-6">
+                <label class="form-label visually-hidden" for="principalSearch">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                    <input id="principalSearch" name="q" type="search" class="form-control border-start-0" placeholder="Search by name, email, or PABASA ID" value="{{ search_query }}">
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label visually-hidden" for="principalStatusFilter">Status</label>
+                <select id="principalStatusFilter" name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="" {% if not status_filter %}selected{% endif %}>All statuses</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3 text-md-end">
+                <button type="submit" class="btn btn-outline-secondary w-100">Apply</button>
+            </div>
+        </form>
+
         <div class="table-responsive">
             <table class="table placeholder-table align-middle mb-0">
                 <thead>
@@ -224,7 +116,7 @@
                 </thead>
                 <tbody>
                     {% for principal in principals %}
-                    <tr>
+                    <tr id="principalRow{{ principal.id }}" class="{% if created_principal_id == principal.id %}principal-row-highlight{% endif %}">
                         <td>
                             <span class="fw-bold d-block">{{ principal.first_name }}{% if principal.middle_initial %} {{ principal.middle_initial }}.{% endif %} {{ principal.last_name }}</span>
                             <span class="text-secondary small">{{ principal.email }}</span>
@@ -266,18 +158,90 @@
     </div>
 </div>
 
+<div class="modal fade principal-modal" id="createPrincipalModal" tabindex="-1" aria-labelledby="createPrincipalModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-sm">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="createPrincipalModalLabel">Create Principal Account</h5>
+                    <p class="text-secondary mb-0">Provision a new Principal account and send credentials automatically by email.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" enctype="multipart/form-data" id="principalAccountForm">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold" for="fullName">Full Name</label>
+                            <input class="form-control" id="fullName" name="full_name" type="text" value="{{ form_data.full_name }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold" for="schoolName">School Name</label>
+                            <input class="form-control" id="schoolName" name="school_name" type="text" value="{{ form_data.school_name }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold" for="schoolLogo">School Logo</label>
+                            <input class="form-control" id="schoolLogo" name="school_logo" type="file" accept="image/*" required>
+                            <div class="form-text">Used as the official school logo for generated principal reports and documents.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold" for="schoolAddress">School Address</label>
+                            <textarea class="form-control" id="schoolAddress" name="school_address" rows="3" required>{{ form_data.school_address }}</textarea>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold" for="emailAddress">Email Address</label>
+                            <input class="form-control" id="emailAddress" name="email" type="email" value="{{ form_data.email }}" required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-bold" for="contactNumber">Contact Number</label>
+                            <input class="form-control" id="contactNumber" name="contact_no" type="tel" value="{{ form_data.contact_no }}" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" type="submit" form="principalAccountForm" id="principalSubmitBtn">
+                    <span class="submit-label"><i class="bi bi-person-plus me-1"></i>Create Principal</span>
+                    <span class="submit-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Creating account
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     (function () {
         const form = document.getElementById("principalAccountForm");
         const button = document.getElementById("principalSubmitBtn");
-        if (!form || !button) return;
+        if (form && button) {
+            form.addEventListener("submit", function () {
+                if (!form.checkValidity()) return;
+                button.disabled = true;
+                button.querySelector(".submit-label").classList.add("d-none");
+                button.querySelector(".submit-loading").classList.remove("d-none");
+            });
+        }
 
-        form.addEventListener("submit", function () {
-            if (!form.checkValidity()) return;
-            button.disabled = true;
-            button.querySelector(".submit-label").classList.add("d-none");
-            button.querySelector(".submit-loading").classList.remove("d-none");
-        });
+        {% if principal_error and not principal_success %}
+        const createModal = new bootstrap.Modal(document.getElementById('createPrincipalModal'));
+        createModal.show();
+        {% endif %}
+
+        {% if principal_success and created_principal_id %}
+        const createdRow = document.getElementById('principalRow{{ created_principal_id }}');
+        if (createdRow) {
+            createdRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        {% endif %}
     })();
 </script>
 {% endblock %}
