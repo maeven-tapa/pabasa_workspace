@@ -2285,6 +2285,9 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(len(data["assessments"]), 1)
         self.assertEqual(data["assessments"][0]["title"], "Shared Assessment")
         self.assertEqual(data["assessments"][0]["attempt_count"], 1)
+        self.assertIn("created_at", data["assessments"][0])
+        self.assertIn("updated_at", data["assessments"][0])
+        self.assertIsNotNone(data["assessments"][0]["updated_at"])
 
     def test_students_template_uses_static_renderer_only(self):
         response = self.client.get(reverse("students"))

@@ -3023,7 +3023,7 @@
                                                 <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
                                                     <div class="input-group">
                                                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                                        <input id="courseAssessmentSearch" class="form-control" type="search" placeholder="Search assessments by name" aria-label="Search assessments">
+                                                        <input id="courseAssessmentSearch" class="form-control" type="search" placeholder="Search assessments by name, date, or metrics" aria-label="Search assessments">
                                                     </div>
                                                     <select id="courseAssessmentSortField" class="form-select" aria-label="Sort field" style="min-width:180px;">
                                                         <option value="name">Name</option>
@@ -3049,6 +3049,8 @@
                                                             <th>Avg Pronunciation</th>
                                                             <th>Avg Time</th>
                                                             <th class="text-end">Attempts</th>
+                                                            <th>Created At</th>
+                                                            <th>Updated At</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="courseAssessmentTableBody"></tbody>
@@ -4136,7 +4138,12 @@
             if (!searchTerm) return true;
             const nameHit = String(assessment.title || '').toLowerCase().includes(searchTerm);
             const codeHit = String(assessment.code || '').toLowerCase().includes(searchTerm);
-            if (nameHit || codeHit) return true;
+            const createdAtText = String(assessment.created_at || '').toLowerCase();
+            const updatedAtText = String(assessment.updated_at || '').toLowerCase();
+            const createdAtDisplay = String(typeof formatDateTime === 'function' ? formatDateTime(assessment.created_at) : assessment.created_at || '').toLowerCase();
+            const updatedAtDisplay = String(typeof formatDateTime === 'function' ? formatDateTime(assessment.updated_at) : assessment.updated_at || '').toLowerCase();
+            const dateHit = [createdAtText, updatedAtText, createdAtDisplay, updatedAtDisplay].some(value => value.includes(searchTerm));
+            if (nameHit || codeHit || dateHit) return true;
             const numeric = Number(searchTerm);
             if (!Number.isNaN(numeric)) {
                 return [assessment.avg_accuracy, assessment.avg_wpm, assessment.avg_fluency, assessment.avg_pronunciation, assessment.avg_time_score].some(value => Number(value) === numeric);
@@ -4154,7 +4161,7 @@
         });
 
         if (filtered.length === 0) {
-            body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No assessments match your search.</td></tr>';
+            body.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No assessments match your search.</td></tr>';
             empty.classList.add('d-none');
             return;
         }
@@ -4172,6 +4179,8 @@
                 <td>${formatAssessmentMetric(assessment.avg_pronunciation)}</td>
                 <td>${formatAssessmentMetric(assessment.avg_time_score)}</td>
                 <td class="text-end">${Number(assessment.attempt_count || 0)}</td>
+                <td>${formatDateTime(assessment.created_at)}</td>
+                <td>${formatDateTime(assessment.updated_at)}</td>
             </tr>
         `).join('');
     }

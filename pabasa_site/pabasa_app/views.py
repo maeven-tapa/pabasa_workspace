@@ -4581,6 +4581,7 @@ def get_teacher_assessments_api(request):
                 'avg_pronunciation': _average([att.get('pronunciation_score') for att in attempts]),
                 'avg_time_score': _average([att.get('time_score') for att in attempts]),
                 'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
+                'updated_at': a.updated_at.isoformat() if getattr(a, 'updated_at', None) else None,
             })
 
         # Also include Materials that are marked as assessment-type (materials table)
@@ -4659,6 +4660,7 @@ def get_teacher_assessments_api(request):
                     'avg_pronunciation': avg_list(prs),
                     'avg_time_score': avg_list(tms),
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+                    'updated_at': m.updated_at.isoformat() if getattr(m, 'updated_at', None) else None,
                 })
         except Exception:
             logger.exception('Failed to include material-based assessments in teacher assessments API')
