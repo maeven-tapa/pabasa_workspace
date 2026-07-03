@@ -4595,7 +4595,22 @@ def get_teacher_assessments_api(request):
                     continue
 
                 # collect attempt rows linked to this material
+                # Only include materials that either:
+                # 1. Have no assessment_id, OR
+                # 2. Have an assessment_id that's a valid parent assessment
+                # If a material has an assessment_id not in existing_assessment_ids,
+                # it means the assessment was filtered out (archived, wrong course, etc.)
+                if m.assessment_id and m.assessment_id not in existing_assessment_ids:
+                    # Skip materials with invalid assessment references
+                    continue
+                    
                 attempts_qs = Assessment.objects.filter(material=m).order_by('created_at')
+                
+                # Only include materials that have attempt rows
+                # (materials with no assessment_id and no attempts shouldn't be displayed)
+                if not attempts_qs.exists():
+                    continue
+                    
                 accs = [a.accuracy for a in attempts_qs if a.accuracy is not None]
                 wpms = [a.wpm for a in attempts_qs if a.wpm is not None]
                 fls = [a.fluency_score for a in attempts_qs if a.fluency_score is not None]
