@@ -5344,8 +5344,16 @@ def get_class_materials(request):
         ).distinct()
         # Avoid duplication: exclude assessments that are already represented by a Material record.
         # Material records act as the primary container for metadata like "Assigned Week".
+        # Some assessment attempts are stored as Assessment rows tied to a Material via material_id,
+        # so exclude those here as well to prevent a material from appearing twice.
         represented_asm_ids = materials_qs.exclude(assessment=None).values_list('assessment_id', flat=True)
-        assessments_qs = Assessment.objects.filter(section=section, source_assessment__isnull=True).exclude(id__in=represented_asm_ids)
+        represented_material_ids = materials_qs.values_list('id', flat=True)
+        assessments_qs = Assessment.objects.filter(
+            section=section,
+            source_assessment__isnull=True
+        ).exclude(
+            Q(id__in=represented_asm_ids) | Q(material_id__in=represented_material_ids)
+        )
         # Practice sets: include those that belong to this section or were created by the
         # class' teacher (so teacher-created practice sets show up in their class view)
         practices_qs = Practice.objects.filter(

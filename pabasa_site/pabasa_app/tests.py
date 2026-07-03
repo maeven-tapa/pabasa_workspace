@@ -1901,6 +1901,41 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(item["latest_time_score"], 82)
         self.assertEqual(item["latest_attempt_summary"]["time_score"], 82)
 
+    def test_class_materials_do_not_duplicate_materials_with_assessment_rows(self):
+        self._login_student()
+        material = Material.objects.create(
+            title="Duplicate Prevention Assessment",
+            item_type="word",
+            content_text="cat\ndog",
+            content_json={"items": ["cat", "dog"]},
+            type="assessment",
+            status="published",
+            section=self.section,
+            is_active=True,
+        )
+        self.assertIsNone(material.assessment)
+
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "material_id": f"material-{material.id}",
+                "activity_type": "assessment",
+                "class_code": self.section.class_code,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        response = self.client.get(
+            reverse("get_class_materials"),
+            {"class_code": self.section.class_code},
+        )
+        self.assertEqual(response.status_code, 200)
+        items = response.json()["materials"]["word"]
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["id"], f"material-{material.id}")
+
     def test_teacher_can_fetch_unread_notification(self):
         Notification.objects.create(
             recipient=self.teacher,
