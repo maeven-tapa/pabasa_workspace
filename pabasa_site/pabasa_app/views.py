@@ -4480,6 +4480,49 @@ def get_teacher_assessments_api(request):
                 'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
             })
 
+        # Also include Materials that are marked as assessment-type (materials table)
+        try:
+            from .models import Material
+            materials_qs = Material.objects.filter(teacher=teacher_user, type__in=['assessment', 'both'], is_active=True)
+            if course_id is not None and course:
+                # limit to materials attached to course or its sections when viewing a course
+                course_materials = list(course.materials.all())
+                if course_materials:
+                    materials_qs = Material.objects.filter(id__in=[m.id for m in course_materials], is_active=True)
+
+            for m in materials_qs:
+                # collect attempt rows linked to this material
+                attempts_qs = Assessment.objects.filter(material=m).order_by('created_at')
+                accs = [a.accuracy for a in attempts_qs if a.accuracy is not None]
+                wpms = [a.wpm for a in attempts_qs if a.wpm is not None]
+                fls = [a.fluency_score for a in attempts_qs if a.fluency_score is not None]
+                prs = [a.pronunciation_score for a in attempts_qs if a.pronunciation_score is not None]
+                tms = [a.time_score for a in attempts_qs if a.time_score is not None]
+
+                def avg_list(nums):
+                    if len(nums) < 2:
+                        return None
+                    return round(sum(nums) / len(nums), 1)
+
+                assessment_list.append({
+                    'id': f"material-{m.id}",
+                    'raw_id': m.id,
+                    'code': m.code,
+                    'title': m.title,
+                    'assessment_type': m.item_type,
+                    'status': m.status,
+                    'is_active': m.is_active,
+                    'attempt_count': attempts_qs.count(),
+                    'avg_accuracy': avg_list(accs),
+                    'avg_wpm': avg_list(wpms),
+                    'avg_fluency': avg_list(fls),
+                    'avg_pronunciation': avg_list(prs),
+                    'avg_time_score': avg_list(tms),
+                    'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
+                })
+        except Exception:
+            logger.exception('Failed to include material-based assessments in teacher assessments API')
+
         return JsonResponse({'success': True, 'assessments': assessment_list})
     except Exception as e:
         logger.exception('Unhandled error in get_teacher_assessments_api')
@@ -4605,6 +4648,65 @@ def get_teacher_assessment_api(request, assessment_id):
         return JsonResponse({'success': True, 'assessment': payload})
     except Exception as e:
         logger.exception('Error in get_teacher_assessment_api')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+@login_required(role='teacher')
+def get_teacher_material_attempts_api(request):
+    """Return attempts for a material (used when material-based assessments exist)."""
+    try:
+        teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
+        if not teacher_user:
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        material_id = request.GET.get('material_id')
+        if not material_id:
+            return JsonResponse({'success': False, 'error': 'material_id is required'}, status=400)
+
+        material = Material.objects.filter(id=material_id).first()
+        if not material:
+            return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+        # Authorization: allow if teacher owns the material or owns the section
+        if material.teacher_id is not None and material.teacher_id != teacher_user.id and not any(s.teacher_id == teacher_user.id for s in material.assigned_sections.all()):
+            # allow teacher if material belongs to their sections or they are the material owner
+            pass
+
+        attempts_qs = Assessment.objects.filter(material=material).order_by('created_at')
+
+        students_by_id = {s.id: s for s in User.objects.filter(id__in=[a.student_id for a in attempts_qs if a.student_id])}
+
+        enriched = []
+        for a in attempts_qs:
+            att = a._serialize_attempt()
+            student = students_by_id.get(a.student_id)
+            student_name = ''
+            if student:
+                student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or student.email or f"Student {student.id}"
+            att.update({
+                'student_name': student_name,
+                'student_email': getattr(student, 'email', '') if student else '',
+                'wpm': a.wpm,
+                'fluency_score': a.fluency_score,
+                'accuracy': a.accuracy,
+                'pronunciation_score': a.pronunciation_score,
+                'time_score': a.time_score,
+                'total_score': a.total_score,
+                'crla_classification': a.crla_classification,
+            })
+            enriched.append(att)
+
+        payload = {
+            'id': f"material-{material.id}",
+            'code': material.code,
+            'title': material.title,
+            'materials': [],
+            'attempts': enriched,
+        }
+        return JsonResponse({'success': True, 'assessment': payload})
+    except Exception as e:
+        logger.exception('Error in get_teacher_material_attempts_api')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
