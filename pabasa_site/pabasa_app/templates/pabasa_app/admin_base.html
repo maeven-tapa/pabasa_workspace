@@ -204,28 +204,30 @@
         }
 
         body.admin-sidebar-collapsed .admin-profile-card {
-            width: 90px;
-            height: 90px;
-            padding: 0.75rem;
+            width: 66px;
+            height: 52px;
+            padding: 0.2rem;
             gap: 0;
-            border-radius: 22px;
-            justify-content: space-between;
+            border-radius: 14px;
+            justify-content: center;
             align-items: center;
             display: flex;
-            margin-bottom: 0.75rem;
+            position: relative;
+            margin: 0.5rem auto 0.6rem;
             text-align: center;
+            overflow: visible;
         }
 
         body.admin-sidebar-collapsed .admin-brand-link {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 44px;
-            min-width: 44px;
+            width: 100%;
+            height: 100%;
             padding: 0;
             gap: 0;
-            margin: 0 auto;
-            flex: 0 0 auto;
+            margin: 0;
+            flex: 1 1 auto;
         }
 
         body.admin-sidebar-collapsed .admin-brand-text,
@@ -238,17 +240,35 @@
         }
 
         body.admin-sidebar-collapsed .admin-brand-icon {
-            width: 44px;
-            height: 44px;
-            padding: 4px;
-            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 12px;
             box-shadow: none;
-            margin: 0 auto;
+            margin: 0;
             background: linear-gradient(135deg, var(--admin-accent) 0%, var(--admin-accent-deep) 100%);
             box-sizing: border-box;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+        }
+
+        body.admin-sidebar-collapsed .sidebar-collapse-btn {
+            position: absolute;
+            top: 50%;
+            right: -6px;
+            transform: translateY(-50%);
+            width: 32px;
+            min-width: 34px;
+            height: 32px;
+            padding: 0;
+            border-radius: 50%;
+            justify-content: center;
+            align-items: center;
+            display: inline-flex !important;
+            opacity: 1;
+            z-index: 2;
         }
 
         body.admin-sidebar-collapsed .admin-brand-avatar {
