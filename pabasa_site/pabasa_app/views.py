@@ -4574,14 +4574,26 @@ def get_teacher_assessments_api(request):
         # Also include Materials that are marked as assessment-type (materials table)
         try:
             from .models import Material
-            materials_qs = Material.objects.filter(teacher=teacher_user, type__in=['assessment', 'both'], is_active=True)
             if course_id is not None and course:
-                # limit to materials attached to course or its sections when viewing a course
-                course_materials = list(course.materials.all())
-                if course_materials:
-                    materials_qs = Material.objects.filter(id__in=[m.id for m in course_materials], is_active=True)
+                # Only include teacher-owned assessment materials attached to this course.
+                materials_qs = course.materials.filter(
+                    teacher=teacher_user,
+                    type__in=['assessment', 'both'],
+                    is_active=True,
+                )
+            else:
+                materials_qs = Material.objects.filter(
+                    teacher=teacher_user,
+                    type__in=['assessment', 'both'],
+                    is_active=True,
+                )
+
+            existing_assessment_ids = set(assessments_qs.values_list('id', flat=True))
 
             for m in materials_qs:
+                if m.assessment_id and m.assessment_id in existing_assessment_ids:
+                    continue
+
                 # collect attempt rows linked to this material
                 attempts_qs = Assessment.objects.filter(material=m).order_by('created_at')
                 accs = [a.accuracy for a in attempts_qs if a.accuracy is not None]
