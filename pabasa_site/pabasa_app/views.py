@@ -4492,10 +4492,13 @@ def get_teacher_assessments_api(request):
         if course_id is not None:
             course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
             if course:
-                # Include teacher-owned assessments plus assessments linked to this course,
-                # its direct course materials, and materials assigned to the course sections.
+                # When viewing a specific course, only include assessments
+                # that are explicitly linked to that course (via the
+                # Course.assessments M2M), assessments attached to the
+                # course's sections, or assessments produced by materials
+                # that belong to the course or its assigned sections.
+                # Do NOT include all teacher-owned assessments across other courses.
                 assessments_qs = Assessment.objects.filter(
-                    Q(teacher=teacher_user) |
                     Q(courses=course) |
                     Q(section__in=course.sections.all()) |
                     Q(material__courses=course) |
@@ -4507,9 +4510,9 @@ def get_teacher_assessments_api(request):
         assessments_qs = assessments_qs.prefetch_related('materials').order_by('-created_at').distinct()
 
         def _average(values):
-            # Only compute meaningful averages when there are at least 2 numeric attempts
+            # Compute averages when there is at least one numeric value.
             nums = [v for v in values if isinstance(v, (int, float))]
-            if len(nums) < 2:
+            if not nums:
                 return None
             return round(sum(nums) / len(nums), 1)
 
@@ -4553,7 +4556,7 @@ def get_teacher_assessments_api(request):
                 tms = [a.time_score for a in attempts_qs if a.time_score is not None]
 
                 def avg_list(nums):
-                    if len(nums) < 2:
+                    if not nums:
                         return None
                     return round(sum(nums) / len(nums), 1)
 
@@ -4668,10 +4671,10 @@ def get_teacher_assessment_api(request, assessment_id):
 
         enriched_attempts.sort(key=lambda att: _attempt_timestamp(att) or datetime(1970, 1, 1, tzinfo=timezone.utc))
 
-        # Compute per-metric averages only when there are at least 2 numeric attempts
+        # Compute per-metric averages when there is at least one numeric attempt
         def _average_list(values):
             nums = [v for v in values if isinstance(v, (int, float))]
-            if len(nums) < 2:
+            if not nums:
                 return None
             try:
                 return round(sum(nums) / len(nums), 1)
