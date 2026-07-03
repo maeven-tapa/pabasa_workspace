@@ -2193,6 +2193,64 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["students"][0]["level"], "Pending")
         self.assertFalse(data["students"][0]["has_completed_assessment"])
 
+    def test_teacher_course_assessments_api_includes_section_assigned_material_assessments(self):
+        course = Course.objects.create(
+            teacher=self.teacher,
+            title="Course Assigned Material",
+            code="CRS-MAT-001",
+            description="Course with section-assigned assessment material",
+        )
+        course.sections.add(self.section_a)
+
+        other_teacher = User.objects.create(
+            custom_id="TCH-SHARED",
+            role="teacher",
+            first_name="Shared",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="shared-teacher@example.com",
+            password_hash=make_password("shared-password"),
+            teacher_role="Teacher",
+        )
+        material = Material.objects.create(
+            title="Shared Assessment",
+            teacher=other_teacher,
+            item_type="paragraph",
+            type="assessment",
+            status="published",
+            is_active=True,
+        )
+        material.assigned_sections.add(self.section_a)
+
+        material.record_assessment_result(
+            self.student,
+            status="completed",
+            completed_at="2026-06-01T09:00:00+00:00",
+            accuracy=82,
+            wpm=65,
+            fluency_score=78,
+            pronunciation_score=80,
+            time_score=85,
+            total_score=83,
+        )
+
+        response = self.client.get(
+            reverse("get_teacher_assessments_api"),
+            {"course_id": course.id},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(len(data["assessments"]), 1)
+        self.assertEqual(data["assessments"][0]["title"], "Shared Assessment")
+        self.assertEqual(data["assessments"][0]["attempt_count"], 1)
+
     def test_students_template_uses_static_renderer_only(self):
         response = self.client.get(reverse("students"))
 
