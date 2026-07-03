@@ -4295,9 +4295,10 @@ def get_teacher_courses_api(request):
             # Serialize assessments with helpful metadata used by the frontend
             assessments_list = []
             course_assessments_qs = Assessment.objects.filter(
-                Q(courses=c) |
-                Q(section__in=course_sections, teacher=teacher_user),
                 source_assessment__isnull=True
+            ).filter(
+                Q(courses=c, teacher=teacher_user) |
+                Q(section__in=course_sections, teacher=teacher_user)
             ).prefetch_related('materials', 'teacher').distinct()
             for a in course_assessments_qs:
                 if not getattr(a, 'is_active', True):
@@ -4532,12 +4533,13 @@ def get_teacher_assessments_api(request):
                 # that belong to the course or its assigned sections.
                 # Do NOT include all teacher-owned assessments across other courses.
                 assessments_qs = Assessment.objects.filter(
-                    Q(courses=course) |
-                    Q(section__in=course.sections.all()) |
-                    Q(material__courses=course) |
-                    Q(material__assigned_sections__in=course.sections.all()),
                     source_assessment__isnull=True,
                     is_active=True
+                ).filter(
+                    Q(courses=course, teacher=teacher_user) |
+                    Q(section__in=course.sections.all(), teacher=teacher_user) |
+                    Q(material__courses=course, teacher=teacher_user) |
+                    Q(material__assigned_sections__in=course.sections.all(), teacher=teacher_user)
                 ).distinct()
 
         assessments_qs = assessments_qs.prefetch_related('materials').order_by('-created_at').distinct()
