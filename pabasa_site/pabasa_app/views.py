@@ -4444,9 +4444,14 @@ def get_teacher_assessments_api(request):
         if course_id is not None:
             course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
             if course:
-                # Include teacher-owned assessments plus assessments linked to this course or its sections.
+                # Include teacher-owned assessments plus assessments linked to this course,
+                # its direct course materials, and materials assigned to the course sections.
                 assessments_qs = Assessment.objects.filter(
-                    Q(teacher=teacher_user) | Q(courses=course) | Q(section__in=course.sections.all()),
+                    Q(teacher=teacher_user) |
+                    Q(courses=course) |
+                    Q(section__in=course.sections.all()) |
+                    Q(material__courses=course) |
+                    Q(material__assigned_sections__in=course.sections.all()),
                     source_assessment__isnull=True,
                     is_active=True
                 ).distinct()
