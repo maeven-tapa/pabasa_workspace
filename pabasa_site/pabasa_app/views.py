@@ -4449,10 +4449,11 @@ def get_teacher_assessments_api(request):
         assessments_qs = assessments_qs.prefetch_related('materials').order_by('-created_at').distinct()
 
         def _average(values):
-            values = [v for v in values if isinstance(v, (int, float))]
-            if not values:
+            # Only compute meaningful averages when there are at least 2 numeric attempts
+            nums = [v for v in values if isinstance(v, (int, float))]
+            if len(nums) < 2:
                 return None
-            return round(sum(values) / len(values), 1)
+            return round(sum(nums) / len(nums), 1)
 
         assessment_list = []
         for a in assessments_qs:
