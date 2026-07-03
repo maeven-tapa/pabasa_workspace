@@ -4598,9 +4598,17 @@ def get_teacher_assessments_api(request):
             materials_qs = materials_qs.exclude(status__iexact='archived')
 
             existing_assessment_ids = set(assessments_qs.values_list('id', flat=True))
+            # Also track materials that are already represented by parent assessments
+            # to avoid adding a separate "material-<id>" row that duplicates
+            # the parent assessment row in the UI.
+            existing_material_ids = set(assessments_qs.filter(material_id__isnull=False).values_list('material_id', flat=True))
 
             for m in materials_qs:
-                if m.assessment_id and m.assessment_id in existing_assessment_ids:
+                # If the material is linked to a parent assessment that's
+                # already in `assessments_qs`, skip it. Also skip materials
+                # whose id is already present as a material on one of the
+                # parent assessment rows we will display.
+                if (m.assessment_id and m.assessment_id in existing_assessment_ids) or (m.id in existing_material_ids):
                     continue
 
                 # collect attempt rows linked to this material
