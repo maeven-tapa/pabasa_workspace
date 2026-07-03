@@ -4441,7 +4441,6 @@ def get_teacher_assessments_api(request):
             is_active=True
         )
 
-        course = None
         if course_id is not None:
             course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
             if course:
@@ -4455,6 +4454,7 @@ def get_teacher_assessments_api(request):
         assessments_qs = assessments_qs.prefetch_related('materials').order_by('-created_at').distinct()
 
         def _average(values):
+            # Only compute meaningful averages when there are at least 2 numeric attempts
             nums = [v for v in values if isinstance(v, (int, float))]
             if len(nums) < 2:
                 return None
@@ -4462,13 +4462,7 @@ def get_teacher_assessments_api(request):
 
         assessment_list = []
         for a in assessments_qs:
-            attempt_rows = Assessment.objects.filter(source_assessment=a).order_by('attempt_number', 'created_at', 'id')
-            accs = [attempt.accuracy for attempt in attempt_rows if attempt.accuracy is not None]
-            wpms = [attempt.wpm for attempt in attempt_rows if attempt.wpm is not None]
-            fls = [attempt.fluency_score for attempt in attempt_rows if attempt.fluency_score is not None]
-            prs = [attempt.pronunciation_score for attempt in attempt_rows if attempt.pronunciation_score is not None]
-            tms = [attempt.time_score for attempt in attempt_rows if attempt.time_score is not None]
-
+            attempts = a.get_attempts()
             assessment_list.append({
                 'id': a.id,
                 'raw_id': a.id,
@@ -4477,12 +4471,12 @@ def get_teacher_assessments_api(request):
                 'assessment_type': a.assessment_type,
                 'status': a.status,
                 'is_active': a.is_active,
-                'attempt_count': attempt_rows.count(),
-                'avg_accuracy': _average(accs),
-                'avg_wpm': _average(wpms),
-                'avg_fluency': _average(fls),
-                'avg_pronunciation': _average(prs),
-                'avg_time_score': _average(tms),
+                'attempt_count': len(attempts),
+                'avg_accuracy': _average([att.get('accuracy') for att in attempts]),
+                'avg_wpm': _average([att.get('wpm') for att in attempts]),
+                'avg_fluency': _average([att.get('fluency_score') for att in attempts]),
+                'avg_pronunciation': _average([att.get('pronunciation_score') for att in attempts]),
+                'avg_time_score': _average([att.get('time_score') for att in attempts]),
                 'created_at': a.created_at.isoformat() if getattr(a, 'created_at', None) else None,
             })
 
@@ -4491,17 +4485,24 @@ def get_teacher_assessments_api(request):
             from .models import Material
             materials_qs = Material.objects.filter(teacher=teacher_user, type__in=['assessment', 'both'], is_active=True)
             if course_id is not None and course:
+                # limit to materials attached to course or its sections when viewing a course
                 course_materials = list(course.materials.all())
                 if course_materials:
                     materials_qs = Material.objects.filter(id__in=[m.id for m in course_materials], is_active=True)
 
             for m in materials_qs:
+                # collect attempt rows linked to this material
                 attempts_qs = Assessment.objects.filter(material=m).order_by('created_at')
-                accs = [attempt.accuracy for attempt in attempts_qs if attempt.accuracy is not None]
-                wpms = [attempt.wpm for attempt in attempts_qs if attempt.wpm is not None]
-                fls = [attempt.fluency_score for attempt in attempts_qs if attempt.fluency_score is not None]
-                prs = [attempt.pronunciation_score for attempt in attempts_qs if attempt.pronunciation_score is not None]
-                tms = [attempt.time_score for attempt in attempts_qs if attempt.time_score is not None]
+                accs = [a.accuracy for a in attempts_qs if a.accuracy is not None]
+                wpms = [a.wpm for a in attempts_qs if a.wpm is not None]
+                fls = [a.fluency_score for a in attempts_qs if a.fluency_score is not None]
+                prs = [a.pronunciation_score for a in attempts_qs if a.pronunciation_score is not None]
+                tms = [a.time_score for a in attempts_qs if a.time_score is not None]
+
+                def avg_list(nums):
+                    if len(nums) < 2:
+                        return None
+                    return round(sum(nums) / len(nums), 1)
 
                 assessment_list.append({
                     'id': f"material-{m.id}",
@@ -4512,11 +4513,11 @@ def get_teacher_assessments_api(request):
                     'status': m.status,
                     'is_active': m.is_active,
                     'attempt_count': attempts_qs.count(),
-                    'avg_accuracy': _average(accs),
-                    'avg_wpm': _average(wpms),
-                    'avg_fluency': _average(fls),
-                    'avg_pronunciation': _average(prs),
-                    'avg_time_score': _average(tms),
+                    'avg_accuracy': avg_list(accs),
+                    'avg_wpm': avg_list(wpms),
+                    'avg_fluency': avg_list(fls),
+                    'avg_pronunciation': avg_list(prs),
+                    'avg_time_score': avg_list(tms),
                     'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
                 })
         except Exception:

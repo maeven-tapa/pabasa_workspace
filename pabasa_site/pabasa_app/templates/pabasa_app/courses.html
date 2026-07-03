@@ -3834,26 +3834,14 @@
 
         let filtered = courseAssessmentsTableData.filter(assessment => {
             if (!searchTerm) return true;
-            if (sortBy === 'name') {
-                const titleMatch = String(assessment.title || '').toLowerCase().includes(searchTerm);
-                const codeMatch = String(assessment.code || '').toLowerCase().includes(searchTerm);
-                return titleMatch || codeMatch;
-            }
-
-            const fieldKey = sortBy === 'accuracy'
-                ? 'avg_accuracy'
-                : sortBy === 'fluency'
-                    ? 'avg_fluency'
-                    : sortBy === 'time'
-                        ? 'avg_time_score'
-                        : 'avg_accuracy';
-
-            const value = assessment[fieldKey];
+            const nameHit = String(assessment.title || '').toLowerCase().includes(searchTerm);
+            const codeHit = String(assessment.code || '').toLowerCase().includes(searchTerm);
+            if (nameHit || codeHit) return true;
             const numeric = Number(searchTerm);
             if (!Number.isNaN(numeric)) {
-                return Number(value) === numeric;
+                return [assessment.avg_accuracy, assessment.avg_wpm, assessment.avg_fluency, assessment.avg_pronunciation, assessment.avg_time_score].some(value => Number(value) === numeric);
             }
-            return String(value || '').toLowerCase().includes(searchTerm);
+            return false;
         });
 
         filtered.sort((a, b) => {
