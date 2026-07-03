@@ -2791,9 +2791,11 @@
                 (function(){
                     try {
                         window.__PABASA_SERVER_RENDERED_COURSES__ = true;
-                        window.__PABASA_SERVER_COURSE_IDS__ = [
-                            {% for course in teacher_courses %}{{ course.id|stringformat:'s' }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                        ];
+                        const serverCoursesJson = document.getElementById('teacherCoursesInitial')?.textContent || '[]';
+                        const serverCourses = JSON.parse(serverCoursesJson);
+                        window.__PABASA_SERVER_COURSE_IDS__ = Array.isArray(serverCourses)
+                            ? serverCourses.map(course => String(course.id))
+                            : [];
                     } catch(e) { /* ignore */ }
                 })();
             </script>
@@ -3012,48 +3014,50 @@
                                     </div>
 
                                     <div class="tab-pane fade" id="assessmentsPane" role="tabpanel" aria-labelledby="assessments-tab">
-                                        <div class="mb-3 d-flex flex-column flex-md-row justify-content-between gap-2 align-items-start align-items-md-center">
-                                            <div>
-                                                <h6 class="mb-1">Assessments</h6>
-                                                <p class="small text-muted mb-0">Review assessment materials created by this teacher. Use search and sort to find scores quickly.</p>
-                                            </div>
-                                            <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
-                                                <div class="input-group">
-                                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                                    <input id="courseAssessmentSearch" class="form-control" type="search" placeholder="Search assessments by name" aria-label="Search assessments">
+                                        <div id="courseDetailAssessments">
+                                            <div class="mb-3 d-flex flex-column flex-md-row justify-content-between gap-2 align-items-start align-items-md-center">
+                                                <div>
+                                                    <h6 class="mb-1">Assessments</h6>
+                                                    <p class="small text-muted mb-0">Review assessment materials created by this teacher. Use search and sort to find scores quickly.</p>
                                                 </div>
-                                                <select id="courseAssessmentSortField" class="form-select" aria-label="Sort field" style="min-width:180px;">
-                                                    <option value="name">Name</option>
-                                                    <option value="accuracy">Accuracy</option>
-                                                    <option value="fluency">Fluency</option>
-                                                    <option value="time">Time</option>
-                                                </select>
-                                                <select id="courseAssessmentSortOrder" class="form-select" aria-label="Sort order" style="min-width:150px;">
-                                                    <option value="desc">Descending</option>
-                                                    <option value="asc">Ascending</option>
-                                                </select>
+                                                <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                                        <input id="courseAssessmentSearch" class="form-control" type="search" placeholder="Search assessments by name" aria-label="Search assessments">
+                                                    </div>
+                                                    <select id="courseAssessmentSortField" class="form-select" aria-label="Sort field" style="min-width:180px;">
+                                                        <option value="name">Name</option>
+                                                        <option value="accuracy">Accuracy</option>
+                                                        <option value="fluency">Fluency</option>
+                                                        <option value="time">Time</option>
+                                                    </select>
+                                                    <select id="courseAssessmentSortOrder" class="form-select" aria-label="Sort order" style="min-width:150px;">
+                                                        <option value="desc">Descending</option>
+                                                        <option value="asc">Ascending</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div class="table-responsive">
-                                            <table class="table table-hover table-borderless align-middle mb-0">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Name</th>
-                                                        <th>Avg Accuracy</th>
-                                                        <th>Avg WPM</th>
-                                                        <th>Avg Fluency</th>
-                                                        <th>Avg Pronunciation</th>
-                                                        <th>Avg Time</th>
-                                                        <th class="text-end">Attempts</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="courseAssessmentTableBody"></tbody>
-                                            </table>
-                                        </div>
-                                        <div id="courseAssessmentEmpty" class="text-center text-muted py-4 d-none">
-                                            <i class="bi bi-clipboard2-check" style="font-size:2rem;"></i>
-                                            <p class="mt-3 mb-0">No assessments found. Create assessment materials to see them here.</p>
+                                            <div class="table-responsive">
+                                                <table class="table table-hover table-borderless align-middle mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Name</th>
+                                                            <th>Avg Accuracy</th>
+                                                            <th>Avg WPM</th>
+                                                            <th>Avg Fluency</th>
+                                                            <th>Avg Pronunciation</th>
+                                                            <th>Avg Time</th>
+                                                            <th class="text-end">Attempts</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="courseAssessmentTableBody"></tbody>
+                                                </table>
+                                            </div>
+                                            <div id="courseAssessmentEmpty" class="text-center text-muted py-4 d-none">
+                                                <i class="bi bi-clipboard2-check" style="font-size:2rem;"></i>
+                                                <p class="mt-3 mb-0">No assessments found. Create assessment materials to see them here.</p>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -5037,9 +5041,6 @@
     }
 
         async function loadCourseAssessments(courseId) {
-            const container = document.getElementById('courseDetailAssessments');
-            if (!container) return;
-
             initializeCourseAssessmentTableHandlers();
             courseAssessmentsTableData = [];
 
