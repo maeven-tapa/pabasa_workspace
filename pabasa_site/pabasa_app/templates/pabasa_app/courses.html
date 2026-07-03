@@ -5340,7 +5340,7 @@
                         <td>${s.wpm || '—'}</td>
                         <td class="text-end">
                             <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || ''}" data-student-name="${escapeHtml(s.name)}" title="View progress"><i class="bi bi-bar-chart"></i></button>
+                                <button class="btn btn-sm btn-outline-secondary view-student-progress" data-student-id="${s.id || s.custom_id || ''}" data-student-name="${escapeHtml(s.name)}" title="View progress"><i class="bi bi-bar-chart"></i></button>
                                 <button class="btn btn-sm btn-outline-danger" type="button" title="Remove from section" onclick="window.removeStudentFromCourse('${s.id || s.custom_id || ''}', '${matchCode}', '${s.name.replace(/'/g, "\\'")}', '${courseId}')"><i class="bi bi-trash"></i></button>
                             </div>
                         </td>
@@ -5950,7 +5950,8 @@
             const seen = new Set();
             const addMaterialTask = (material) => {
                 if (!material) return;
-                const assessmentId = material.assessment_id || (String(material.id || '').startsWith('assessment-') ? rawRecordId(material.id) : null);
+                // Prefer explicit assessment_id; if absent use a material-prefixed id so we can fetch attempts for the material
+                const assessmentId = material.assessment_id || (material.id ? `material-${material.id}` : null);
                 if (!assessmentId) return;
                 const key = `assessment-${assessmentId}`;
                 if (seen.has(key)) return;
@@ -5988,20 +5989,44 @@
         }
 
         async function fetchAssessmentProgressDetails(assessmentIds) {
-            const uniqueIds = [...new Set(assessmentIds.filter(Boolean).map(id => rawRecordId(id)))];
-            const entries = await Promise.all(uniqueIds.map(async id => {
+            const uniqueIds = [...new Set(assessmentIds.filter(Boolean))];
+            const entries = await Promise.all(uniqueIds.map(async rawId => {
                 try {
-                    const res = await fetch(`/dashboard/teacher/assessment/${id}/`, {
+                    // If id is prefixed with 'material-' call material attempts endpoint
+                    if (String(rawId).toString().startsWith('material-')) {
+                        const id = String(rawId).replace(/^material-/, '');
+                        const res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
+                        return [String(rawId), null];
+                    }
+
+                    // otherwise, try assessment endpoint
+                    const id = rawRecordId(rawId);
+                    let res = await fetch(`/dashboard/teacher/assessment/${id}/`, {
                         method: 'GET',
                         credentials: 'same-origin',
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
-                    const data = await res.json();
-                    if (res.ok && data.success && data.assessment) return [String(id), data.assessment];
+                    let data = await res.json();
+                    if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
+
+                    // fallback: if assessment endpoint failed, try material endpoint using rawId
+                    res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    data = await res.json();
+                    if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
                 } catch (err) {
-                    console.warn('Failed to load assessment progress', id, err);
+                    console.warn('Failed to load assessment or material progress', rawId, err);
                 }
-                return [String(id), null];
+                return [String(rawId), null];
             }));
             return Object.fromEntries(entries);
         }
@@ -6032,13 +6057,23 @@
             const assessmentDetails = await fetchAssessmentProgressDetails(tasks.map(task => task.assessmentId));
             const rows = tasks.flatMap(task => {
                 const detail = task.assessmentId ? assessmentDetails[String(rawRecordId(task.assessmentId))] : null;
-                const allAttempts = Array.isArray(detail?.attempts) ? detail.attempts : [];
+                // support both new Assessment rows (array of attempt dicts) and legacy Material-based attempts
+                let allAttempts = [];
+                if (detail) {
+                    if (Array.isArray(detail.attempts)) {
+                        allAttempts = detail.attempts;
+                    } else if (Array.isArray(detail.attempt_history)) {
+                        allAttempts = detail.attempt_history;
+                    } else if (Array.isArray(detail.attempts_list)) {
+                        allAttempts = detail.attempts_list;
+                    }
+                }
                 const filteredAttempts = allAttempts
                     .filter(att => progressStudentMatches(att, studentId, studentName))
                     .filter(att => String(att.status || '').toLowerCase() !== 'cancelled')
                     .sort((a, b) => {
-                        const aTime = Date.parse(a.completed_at || a.started_at || '') || 0;
-                        const bTime = Date.parse(b.completed_at || b.started_at || '') || 0;
+                        const aTime = Date.parse(a.completed_at || a.started_at || a.updated_at || '') || 0;
+                        const bTime = Date.parse(b.completed_at || b.started_at || b.updated_at || '') || 0;
                         return aTime - bTime;
                     });
                 return filteredAttempts.map((attempt, index) => {
