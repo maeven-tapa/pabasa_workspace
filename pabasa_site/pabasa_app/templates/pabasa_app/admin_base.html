@@ -1100,11 +1100,8 @@
 
         @media (max-width: 991.98px) {
             .admin-sidebar {
-                width: clamp(300px, 86vw, 320px);
-                min-height: 100vh;
-                max-height: 100vh;
-                position: static;
-                padding: 1rem;
+                /* hide the fixed sidebar on small screens; use offcanvas drawer instead */
+                display: none !important;
             }
 
             .admin-main {
@@ -1211,6 +1208,117 @@
                 min-height: 48px;
             }
         }
+        /* Additional responsive rules to satisfy mobile/tablet requirements */
+        /* Ensure admin sidebar inside offcanvas remains visible on small screens */
+        .offcanvas .admin-sidebar {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            box-shadow: none !important;
+        }
+        @media (max-width: 1024px) {
+            /* Tables: allow horizontal scroll instead of shrinking */
+            .admin-content .table-responsive,
+            .admin-content table.table,
+            .admin-content .table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Forms: stack fields vertically */
+            .admin-content .row > [class*="col-"] {
+                flex: 0 0 100% !important;
+                max-width: 100% !important;
+            }
+
+            /* Cards/widgets: responsive column reflow using grid */
+            .admin-content .admin-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-content .admin-grid {
+                grid-template-columns: repeat(1, 1fr);
+            }
+
+            /* Modals: fit within viewport */
+            .modal-dialog {
+                max-width: calc(100% - 2rem) !important;
+                margin: 1rem auto !important;
+            }
+
+            /* Topbar: show sidebar toggle on tablet/mobile */
+            .admin-topbar .admin-sidebar-toggle {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                margin-right: 0.5rem;
+            }
+        }
+
+        @media (max-width: 430px) {
+            /* Tight mobile spacing adjustments */
+            .admin-topbar {
+                padding: 0.75rem 0.75rem;
+            }
+            .admin-main {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
+        /* Small-screen fixed toggle: does not affect desktop layout */
+        .admin-sidebar-fixed-toggle {
+            display: none;
+        }
+        @media (max-width: 991.98px) {
+            .admin-sidebar-fixed-toggle {
+                display: inline-flex !important;
+                position: fixed !important;
+                left: 12px !important;
+                top: 12px !important;
+                z-index: 1205 !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 44px !important;
+                height: 44px !important;
+                border-radius: 10px !important;
+                background: var(--admin-surface) !important;
+                border: 1px solid var(--admin-border) !important;
+                box-shadow: 0 6px 16px rgba(6,23,38,0.12) !important;
+                padding: 0 !important;
+            }
+        }
+        /* Ensure quick logout is always reachable on small screens */
+        .admin-quick-logout-btn {
+            display: none;
+        }
+        @media (max-width: 991.98px) {
+            .admin-quick-logout-btn {
+                display: inline-flex !important;
+                position: fixed !important;
+                right: 12px !important;
+                bottom: 12px !important;
+                z-index: 1300 !important;
+                width: 56px !important;
+                height: 56px !important;
+                border-radius: 999px !important;
+                align-items: center !important;
+                justify-content: center !important;
+                background: linear-gradient(135deg, var(--admin-primary) 0%, #4bb8e8 100%) !important;
+                color: #fff !important;
+                box-shadow: 0 12px 30px rgba(16,70,110,0.18) !important;
+                border: 0 !important;
+                padding: 0 !important;
+            }
+            .admin-quick-logout-btn i {
+                font-size: 1.1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1262,7 +1370,63 @@
         </div>
     </aside>
 
+    <!-- Mobile/Tablet offcanvas sidebar (same content as desktop sidebar, shown on small screens) -->
+    <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="adminSidebarCanvas" aria-labelledby="adminSidebarCanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="adminSidebarCanvasLabel">Menu</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <aside class="admin-sidebar p-3" aria-hidden="false" style="position:static; width:100%; box-shadow:none;">
+                <div class="d-flex flex-column h-100">
+                    <div class="admin-sidebar-top">
+                        <div class="admin-profile-card">
+                            <a class="admin-brand-link" href="{% url 'dashboard_admin' %}">
+                                <span class="admin-brand-icon">
+                                    <img class="admin-brand-avatar" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="Admin avatar">
+                                </span>
+                                <span class="admin-brand-text">
+                                    <strong class="d-block admin-brand-id">{{ admin_username|default:"ADM-0001" }}</strong>
+                                    <span class="admin-brand-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</span>
+                                </span>
+                            </a>
+                        </div>
+
+                        <div class="admin-role-card mt-3">
+                            <span class="small d-block">Admin workspace</span>
+                            <strong class="text-dark">Manage module foundation</strong>
+                        </div>
+                    </div>
+
+                    <div class="admin-sidebar-scroll">
+                        <nav>
+                            <div class="admin-nav-label">Main</div>
+                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}" href="{% url 'dashboard_admin' %}" data-admin-tooltip title="Dashboard"><i class="bi bi-grid"></i><span class="admin-nav-text">Dashboard</span></a>
+                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_students' %}active{% endif %}" href="{% url 'admin_students' %}" data-admin-tooltip title="Students"><i class="bi bi-mortarboard"></i><span class="admin-nav-text">Students</span></a>
+                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_teachers' %}active{% endif %}" href="{% url 'admin_teachers' %}" data-admin-tooltip title="Teachers"><i class="bi bi-person-workspace"></i><span class="admin-nav-text">Teachers</span></a>
+                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_principals' %}active{% endif %}" href="{% url 'admin_principals' %}" data-admin-tooltip title="Principal"><i class="bi bi-person-vcard"></i><span class="admin-nav-text">Principal</span></a>
+                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_classes' %}active{% endif %}" href="{% url 'admin_classes' %}" data-admin-tooltip title="Classes"><i class="bi bi-door-open"></i><span class="admin-nav-text">Classes</span></a>
+                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_courses' %}active{% endif %}" href="{% url 'admin_courses' %}" data-admin-tooltip title="Courses"><i class="bi bi-folder2-open"></i><span class="admin-nav-text">Courses</span></a>
+                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_practice_assessment' %}active{% endif %}" href="{% url 'admin_practice_assessment' %}" data-admin-tooltip title="Practice"><i class="bi bi-journal-check"></i><span class="admin-nav-text">Practice</span></a>
+                            <a class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}" href="{% url 'admin_settings' %}" data-admin-tooltip title="Settings"><i class="bi bi-gear"></i><span class="admin-nav-text">Settings</span></a>
+                        </nav>
+                    </div>
+
+                    <div class="admin-sidebar-footer p-3">
+                        <button class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2" type="button" data-bs-toggle="modal" data-bs-target="#adminLogoutModal" data-admin-tooltip title="Logout" aria-label="Logout" style="border-radius: 14px; font-weight: 700; min-height: 46px;">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span class="admin-logout-text">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
     <main class="admin-main">
+        <button class="btn btn-link text-dark p-0 admin-sidebar-fixed-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebarCanvas" aria-controls="adminSidebarCanvas" aria-label="Open menu">
+            <i class="bi bi-list fs-4"></i>
+        </button>
         <header class="admin-topbar">
             <div>
                 <p class="small text-secondary text-uppercase fw-bold mb-1">Admin Module</p>
@@ -1312,6 +1476,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Mobile quick-logout button (always accessible on small screens) -->
+    <button class="btn admin-quick-logout-btn d-lg-none" type="button" data-bs-toggle="modal" data-bs-target="#adminLogoutModal" aria-label="Logout">
+        <i class="bi bi-box-arrow-right"></i>
+    </button>
     <script>
         (function() {
             // Initialize tooltips for admin nav items (show when collapsed)

@@ -141,9 +141,11 @@
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-collapse-btn {
             position: absolute;
-            right: 50%;
-            top: 88px;
-            transform: translateX(50%);
+            /* place the collapse/expand control near the top-right of the collapsed sidebar
+               to avoid overlapping the first nav icon */
+            right: 8px;
+            top: 18px;
+            transform: none;
         }
 
         .dashboard-main {
