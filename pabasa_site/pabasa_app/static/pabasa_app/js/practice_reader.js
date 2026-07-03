@@ -19,6 +19,8 @@
     const skipBtn = document.getElementById("skipBtn");
     const recordBtn = document.getElementById("recordBtn");
     const nextBtn = document.getElementById("practiceNextBtn");
+    const coachAnimationPlayerActive = document.getElementById("coachAnimationPlayerActive");
+    const coachAnimationPlayerBuffer = document.getElementById("coachAnimationPlayerBuffer");
     const completeScore = document.getElementById("completeScore");
     const completeAccuracy = document.getElementById("completeAccuracy");
     const completeTotalPracticeItems = document.getElementById("completeTotalPracticeItems");
@@ -93,6 +95,68 @@
         }, []);
     }
 
+    const coachVideoBase = window.PABASA_COACH_VIDEO_BASE || "/static/pabasa_app/videos/";
+    const coachAnimationFiles = {
+        read: 'Greetings.mp4',
+        next: 'Excited Win.mp4',
+        skip: 'Deep Thinker.mp4'
+    };
+    const initialCoachAnimation = 'Explaining.mp4';
+    const coachAnimationStartTime = 4;
+    let currentCoachAnimation = null;
+
+    function setCoachAnimationSource(filename) {
+        if (!coachAnimationPlayerActive || !coachAnimationPlayerBuffer || !filename) return;
+        const videoUrl = coachVideoBase + encodeURIComponent(filename);
+
+        if (currentCoachAnimation === filename) {
+            coachAnimationPlayerActive.currentTime = coachAnimationStartTime;
+            coachAnimationPlayerActive.play().catch(() => {});
+            return;
+        }
+
+        currentCoachAnimation = filename;
+        const activePlayer = coachAnimationPlayerActive.classList.contains('visible') ? coachAnimationPlayerActive : coachAnimationPlayerBuffer;
+        const bufferPlayer = activePlayer === coachAnimationPlayerActive ? coachAnimationPlayerBuffer : coachAnimationPlayerActive;
+
+        bufferPlayer.pause();
+        bufferPlayer.removeAttribute('src');
+        bufferPlayer.load();
+        bufferPlayer.classList.remove('visible');
+        bufferPlayer.src = videoUrl;
+        bufferPlayer.loop = false;
+
+        const onLoadedMetadata = () => {
+            try {
+                bufferPlayer.currentTime = coachAnimationStartTime;
+            } catch (err) {
+                // ignore invalid seek if time not ready
+            }
+        };
+
+        const onCanPlay = () => {
+            try {
+                bufferPlayer.currentTime = coachAnimationStartTime;
+            } catch (err) {
+                // ignore invalid seek if time not ready
+            }
+            bufferPlayer.play().catch(() => {});
+            bufferPlayer.classList.add('visible');
+            activePlayer.classList.remove('visible');
+            activePlayer.pause();
+            bufferPlayer.removeEventListener('loadedmetadata', onLoadedMetadata);
+            bufferPlayer.removeEventListener('canplay', onCanPlay);
+        };
+
+        bufferPlayer.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+        bufferPlayer.addEventListener('canplay', onCanPlay, { once: true });
+        bufferPlayer.load();
+    }
+
+    function playCoachAnimation(action) {
+        setCoachAnimationSource(coachAnimationFiles[action]);
+    }
+
     function loadItems() {
         const serverItems = loadServerPracticeItems();
         if (serverItems.length > 0) {
@@ -100,6 +164,7 @@
             currentIndex = 0;
             itemOutcomes = Array(items.length).fill(null);
             render();
+            setCoachAnimationSource(initialCoachAnimation);
             return;
         }
 
@@ -109,6 +174,7 @@
         if (practiceCounter) practiceCounter.textContent = "No items";
         if (practiceProgress) practiceProgress.style.width = "0%";
         if (nextBtn) nextBtn.disabled = true;
+        setCoachAnimationSource(initialCoachAnimation);
     }
 
     function countWords(value) {
@@ -348,6 +414,7 @@
         setCurrentItemOutcome("skipped");
         practiceFeedback.textContent = "Skipped. That item will count as a chance to improve next time.";
         practiceFeedback.style.color = "#b95f44";
+        playCoachAnimation('skip');
         updateCompletionSummary();
         render();
     });
@@ -356,6 +423,7 @@
         setCurrentItemOutcome("read");
         practiceFeedback.textContent = "Nice reading. You earned a practice star.";
         practiceFeedback.style.color = "#0f766e";
+        playCoachAnimation('read');
         updateCompletionSummary();
         render();
     });
@@ -364,6 +432,7 @@
         if (currentIndex < items.length - 1) {
             currentIndex += 1;
             practiceFeedback.textContent = "New item ready. Take your time.";
+            playCoachAnimation('next');
             render();
             return;
         }
