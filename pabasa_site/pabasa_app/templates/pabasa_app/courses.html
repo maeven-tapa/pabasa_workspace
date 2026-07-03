@@ -3030,6 +3030,8 @@
                                                         <option value="accuracy">Accuracy</option>
                                                         <option value="fluency">Fluency</option>
                                                         <option value="time">Time</option>
+                                                        <option value="created_at">Date Created</option>
+                                                        <option value="updated_at">Date Updated</option>
                                                     </select>
                                                     <select id="courseAssessmentSortOrder" class="form-select" aria-label="Sort order" style="min-width:150px;">
                                                         <option value="desc">Descending</option>
@@ -4108,6 +4110,10 @@
                 return Number(assessment.avg_fluency) || 0;
             case 'time':
                 return Number(assessment.avg_time_score) || 0;
+            case 'created_at':
+                return assessment.created_at ? new Date(assessment.created_at).getTime() : 0;
+            case 'updated_at':
+                return assessment.updated_at ? new Date(assessment.updated_at).getTime() : 0;
             case 'name':
             default:
                 return String(assessment.title || '').toLowerCase();
