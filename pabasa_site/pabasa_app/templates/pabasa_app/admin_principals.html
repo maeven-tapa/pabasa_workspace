@@ -138,11 +138,19 @@
                                 <a class="btn btn-sm admin-action-btn admin-action-edit" href="{% url 'admin_principal_edit' principal.id %}">
                                     <i class="bi bi-pencil"></i><span>Edit</span>
                                 </a>
-                                <form method="post" action="{% url 'admin_principal_deactivate' principal.id %}" onsubmit="return confirm('Deactivate this Principal account? The Principal will no longer be able to log in, but all associated school data, reports, reading materials, assessments, and historical records will remain intact.');">
+                                <form method="post" action="{% url 'admin_principal_deactivate' principal.id %}" class="principal-action-form" data-action="{% if principal.is_archived %}reactivate{% else %}deactivate{% endif %}" data-action-label="{% if principal.is_archived %}Reactivate{% else %}Deactivate{% endif %}" data-action-message="{% if principal.is_archived %}Reactivate this Principal account? The Principal will be able to log in again.{% else %}Deactivate this Principal account? The Principal will no longer be able to log in, but all associated school data, reports, reading materials, assessments, and historical records will remain intact.{% endif %}">
                                     {% csrf_token %}
-                                    <button class="btn btn-sm admin-action-btn admin-action-archive" type="submit" {% if principal.is_archived %}disabled{% endif %}>
+                                    {% if principal.is_archived %}
+                                    <input type="hidden" name="action" value="reactivate">
+                                    <button class="btn btn-sm admin-action-btn admin-action-edit" type="button">
+                                        <i class="bi bi-arrow-counterclockwise"></i><span>Reactivate</span>
+                                    </button>
+                                    {% else %}
+                                    <input type="hidden" name="action" value="deactivate">
+                                    <button class="btn btn-sm admin-action-btn admin-action-archive" type="button">
                                         <i class="bi bi-person-x"></i><span>Deactivate</span>
                                     </button>
+                                    {% endif %}
                                 </form>
                             </div>
                         </td>
@@ -219,7 +227,7 @@
 </div>
 
 <script>
-    (function () {
+    document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById("principalAccountForm");
         const button = document.getElementById("principalSubmitBtn");
         if (form && button) {
@@ -242,6 +250,49 @@
             createdRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         {% endif %}
-    })();
+
+        const actionModalEl = document.getElementById('principalActionConfirmModal');
+        const actionModal = actionModalEl ? new bootstrap.Modal(actionModalEl) : null;
+        const actionMessage = document.getElementById('principalActionConfirmMessage');
+        const actionConfirmButton = document.getElementById('principalActionConfirmButton');
+        let pendingActionForm = null;
+
+        if (actionModalEl && actionConfirmButton) {
+            document.querySelectorAll('.principal-action-form button[type="button"]').forEach(function (button) {
+                button.addEventListener('click', function (event) {
+                    const form = button.closest('.principal-action-form');
+                    if (!form) return;
+                    pendingActionForm = form;
+                    const message = form.getAttribute('data-action-message') || 'Are you sure?';
+                    actionMessage.textContent = message;
+                    actionModal.show();
+                });
+            });
+
+            actionConfirmButton.addEventListener('click', function () {
+                if (pendingActionForm) {
+                    pendingActionForm.submit();
+                }
+            });
+        }
+    });
 </script>
+
+<div class="modal fade principal-modal" id="principalActionConfirmModal" tabindex="-1" aria-labelledby="principalActionConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-sm">
+            <div class="modal-header">
+                <h5 class="modal-title" id="principalActionConfirmModalLabel">Confirm action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" id="principalActionConfirmMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="principalActionConfirmButton">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
