@@ -682,6 +682,29 @@ class MaterialCreationTests(TestCase):
             teacher=teacher,
             subject="Reading",
         )
+        student = User.objects.create(
+            custom_id="STD-1001",
+            role="student",
+            first_name="Metric",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2015,
+            email="metric.student@example.com",
+            password_hash="hashed-password",
+        )
+        section.students = [{
+            "student_id": student.id,
+            "custom_id": student.custom_id,
+            "first_name": student.first_name,
+            "last_name": student.last_name,
+            "email": student.email,
+            "is_active": True,
+        }]
+        section.save(update_fields=["students"])
         course = Course.objects.create(
             code="C-1001",
             title="Shared Course",
@@ -703,6 +726,17 @@ class MaterialCreationTests(TestCase):
             section=section,
         )
         course.materials.add(material)
+        assessment = Assessment.objects.create(
+            title="Course assessment",
+            code="ASM-1001",
+            assessment_type="word",
+            status="published",
+            teacher=teacher,
+            section=section,
+            is_active=True,
+            attempt_no=1,
+        )
+        course.assessments.add(assessment)
 
         session = self.client.session
         session["user_id"] = teacher.id
@@ -722,6 +756,12 @@ class MaterialCreationTests(TestCase):
         material_payload = next(item for item in course_payload["materials"] if item["id"] == material.id)
         self.assertEqual(material_payload["source_type"], "shared")
         self.assertTrue(material_payload["is_shared_material"])
+        self.assertEqual(course_payload["metrics"], {
+            "sections": 1,
+            "assessments": 1,
+            "materials": 1,
+            "students": 1,
+        })
 
     def test_shared_courses_api_includes_own_shared_materials_without_personal_rows(self):
         current_teacher = User.objects.create(

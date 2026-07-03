@@ -142,6 +142,220 @@
         flex: 1;
     }
 
+    .course-dashboard-card {
+        background: #ffffff;
+        border: 1px solid rgba(31, 111, 139, 0.16);
+        border-radius: 18px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+        cursor: default;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        height: 100%;
+        min-height: 320px;
+        padding: 1.25rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .course-dashboard-card:hover {
+        border-color: rgba(31, 111, 139, 0.28);
+        box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12);
+        transform: translateY(-3px);
+    }
+
+    .course-card-badges {
+        align-items: center;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+    }
+
+    .course-code-pill,
+    .course-status-pill {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 0.72rem;
+        font-weight: 800;
+        line-height: 1;
+        min-height: 28px;
+        padding: 0.45rem 0.7rem;
+        white-space: nowrap;
+    }
+
+    .course-code-pill {
+        background: var(--dash-primary-soft);
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        color: var(--dash-primary-deep);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .course-status-pill {
+        background: rgba(22, 163, 74, 0.1);
+        border: 1px solid rgba(22, 163, 74, 0.16);
+        color: #15803d;
+        gap: 0.35rem;
+    }
+
+    .course-status-dot {
+        background: #22c55e;
+        border-radius: 999px;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+        height: 0.5rem;
+        width: 0.5rem;
+    }
+
+    .course-card-title {
+        color: var(--dash-ink);
+        font-size: 1.28rem;
+        font-weight: 850;
+        line-height: 1.22;
+        margin: 0;
+    }
+
+    .course-card-subtitle {
+        color: var(--dash-ink-soft);
+        font-size: 0.92rem;
+        line-height: 1.45;
+        margin: 0.45rem 0 0;
+    }
+
+    .course-card-divider {
+        background: rgba(31, 111, 139, 0.12);
+        height: 1px;
+        width: 100%;
+    }
+
+    .course-card-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.5rem;
+    }
+
+    .course-card-metric {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        padding: 0.25rem 0.125rem;
+        text-align: center;
+    }
+
+    .course-card-metric i {
+        color: var(--dash-primary);
+        font-size: 1rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .course-card-metric strong {
+        color: var(--dash-ink);
+        display: block;
+        font-size: 1.45rem;
+        font-weight: 850;
+        line-height: 1;
+    }
+
+    .course-card-metric span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        margin-top: 0.45rem;
+        text-transform: uppercase;
+    }
+
+    .course-card-action {
+        align-items: center;
+        border-radius: 14px;
+        display: inline-flex;
+        font-weight: 800;
+        justify-content: center;
+        min-height: 48px;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        width: 100%;
+    }
+
+    .course-card-action:hover {
+        box-shadow: 0 12px 24px rgba(31, 111, 139, 0.22);
+        transform: translateY(-1px);
+    }
+
+    /* Modern course card footer action (clean SaaS style) */
+    .course-card-footer {
+        border-top: 1px solid rgba(27, 26, 23, 0.06);
+        padding: 0.9rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        transition: background-color 200ms ease, color 200ms ease;
+        border-radius: 0 0 12px 12px;
+        margin-top: auto;
+        user-select: none;
+    }
+
+    .course-card-footer .ccf-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        color: var(--dash-primary);
+        flex: 0 0 auto;
+    }
+
+    .course-card-footer .ccf-label {
+        font-weight: 600;
+        color: var(--dash-ink);
+        font-size: 0.95rem;
+        line-height: 1;
+    }
+
+    .course-card-footer .ccf-arrow {
+        margin-left: auto;
+        color: var(--dash-muted);
+        transition: transform 200ms ease, color 200ms ease;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .course-card-footer:hover {
+        background: rgba(31, 111, 139, 0.03);
+    }
+
+    .course-card-footer:hover .ccf-arrow {
+        transform: translateX(6px);
+        color: var(--dash-primary-deep);
+    }
+
+    @media (max-width: 420px) {
+        .course-card-metrics {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            row-gap: 1rem;
+        }
+    }
+
+    body.dark-theme .course-dashboard-card {
+        background: #111827;
+        border-color: rgba(148, 163, 184, 0.18);
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+    }
+
+    body.dark-theme .course-card-title,
+    body.dark-theme .course-card-metric strong {
+        color: #f8fafc;
+    }
+
+    body.dark-theme .course-card-subtitle {
+        color: #cbd5e1;
+    }
+
+    body.dark-theme .course-card-divider {
+        background: rgba(148, 163, 184, 0.18);
+    }
+
     .class-card-delete-btn {
         align-items: center;
         background: rgba(199, 39, 59, 0.08);
@@ -2431,6 +2645,10 @@
     window.TEACHER_PHOTO = "{{ profile_photo_url|default:''|escapejs }}";
 </script>
 
+{% if teacher_courses %}
+    {{ teacher_courses|json_script:"teacherCoursesInitial" }}
+{% endif %}
+
 <style>
     /* Reaction button styling */
     .reaction-btn {
@@ -2522,7 +2740,70 @@
         </div>
     </div>
     <div class="classes-grid" id="coursesGrid">
-        <!-- Courses will be rendered here -->
+        {% if teacher_courses %}
+            {% for course in teacher_courses %}
+                <article class="course-dashboard-card" data-course-id="{{ course.id }}">
+                    <div class="course-card-badges">
+                        <span class="course-code-pill">{{ course.code }}</span>
+                        <span class="course-status-pill"><span class="course-status-dot" aria-hidden="true"></span>Active</span>
+                    </div>
+
+                    <div>
+                        <h3 class="course-card-title">{{ course.title }}</h3>
+                        <p class="course-card-subtitle">{{ course.description|default_if_none:"" }}{% if course.metrics %}{% with s=course.metrics.sections %}{% if s %}Reading Materials • {{ s }} section{% if s|add:-1 %}s{% endif %}{% endif %}{% endwith %}{% endif %}</p>
+                    </div>
+
+                    <div class="course-card-divider" aria-hidden="true"></div>
+
+                    <div class="course-card-metrics" aria-label="Course statistics">
+                        <div class="course-card-metric">
+                            <i class="bi bi-building" aria-hidden="true"></i>
+                            <strong>{{ course.metrics.sections|default:0 }}</strong>
+                            <span>Sections</span>
+                        </div>
+                        <div class="course-card-metric">
+                            <i class="bi bi-journal-check" aria-hidden="true"></i>
+                            <strong>{{ course.metrics.assessments|default:0 }}</strong>
+                            <span>Assessments</span>
+                        </div>
+                        <div class="course-card-metric">
+                            <i class="bi bi-bookshelf" aria-hidden="true"></i>
+                            <strong>{{ course.metrics.materials|default:0 }}</strong>
+                            <span>Materials</span>
+                        </div>
+                        <div class="course-card-metric">
+                            <i class="bi bi-people" aria-hidden="true"></i>
+                            <strong>{{ course.metrics.students|default:0 }}</strong>
+                            <span>Students</span>
+                        </div>
+                    </div>
+
+                    <div class="course-card-divider" aria-hidden="true"></div>
+
+                    <div class="course-card-footer" role="button" onclick="openCourseDetail('{{ course.id }}')" aria-label="Open Course">
+                        <span class="ccf-icon"><i class="bi bi-book"></i></span>
+                        <span class="ccf-label">Open Course</span>
+                        <span class="ccf-arrow"><i class="bi bi-arrow-right"></i></span>
+                    </div>
+                </article>
+            {% endfor %}
+            <script>
+                (function(){
+                    try {
+                        window.__PABASA_SERVER_RENDERED_COURSES__ = true;
+                        window.__PABASA_SERVER_COURSE_IDS__ = [
+                            {% for course in teacher_courses %}{{ course.id|stringformat:'s' }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        ];
+                    } catch(e) { /* ignore */ }
+                })();
+            </script>
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-journal-bookmark"></i>
+                <h3>No Courses Yet</h3>
+                <p>Create a course to schedule assessments across multiple sections.</p>
+            </div>
+        {% endif %}
     </div>
 </section>
 
@@ -3751,7 +4032,6 @@
                     return materialId !== prefixedId && materialId !== idText && materialAssessmentId !== idText && !codeMatches && !titleMatches;
                 });
             });
-            const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
         } catch (e) { console.warn('Could not update teacher course cache after archive', e); }
 
         try {
@@ -3779,7 +4059,23 @@
         } catch (e) { console.warn('Could not update rendered readings cache after archive', e); }
     }
 
-    let teacherCourses = [];
+    let teacherCourses = (function(){
+        try {
+            const el = document.getElementById('teacherCoursesInitial');
+            if (el && el.textContent) return JSON.parse(el.textContent);
+        } catch (e) { console.warn('Could not parse initial teacher courses', e); }
+        return [];
+    })();
+    // Small checksum to avoid unnecessary DOM rewrites when server markup matches client data
+    (function(){
+        try {
+            function _simpleHash(s) { let h=0; for (let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h |= 0; } return String(h); }
+            const grid = document.getElementById('coursesGrid');
+            if (!grid) return;
+            const json = JSON.stringify(teacherCourses || []);
+            grid.dataset.coursesHash = _simpleHash(json);
+        } catch (e) { /* ignore */ }
+    })();
     let sharedTeacherCourses = null;
     let courseAssessmentsTableData = [];
     let courseAssessmentTableInitialized = false;
@@ -3963,17 +4259,29 @@
         if (practiceCountEl) practiceCountEl.textContent = String(practiceCount);
     }
 
-    // Load teacher-created courses from server (fallback to localStorage)
+    // Load teacher-created courses from server so course metrics stay database-driven.
     async function loadTeacherCoursesFromServer() {
         try {
             const res = await fetch('/dashboard/teacher/courses/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.success && Array.isArray(data.courses)) {
-                    teacherCourses = data.courses;
-                    const key = teacherCoursesKey();
-                    if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                    console.log('✓ Loaded courses from server:', teacherCourses.length);
+                    const fetched = data.courses;
+                    try {
+                        const existing = Array.isArray(teacherCourses) ? teacherCourses : [];
+                        const equal = JSON.stringify(existing) === JSON.stringify(fetched);
+                        if (!equal) {
+                            teacherCourses = fetched;
+                            const key = teacherCoursesKey();
+                            if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
+                            console.log('✓ Loaded courses from server (updated):', teacherCourses.length);
+                        } else {
+                            console.log('✓ Loaded courses from server (no change)');
+                        }
+                    } catch (e) {
+                        teacherCourses = fetched;
+                        console.log('✓ Loaded courses from server:', teacherCourses.length);
+                    }
                     return true;
                 }
             }
@@ -3981,20 +4289,7 @@
             console.warn('Failed to fetch courses from server:', err);
         }
 
-        try {
-            const key = teacherCoursesKey();
-            const stored = key ? localStorage.getItem(key) : null;
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                teacherCourses = Array.isArray(parsed) ? parsed : [];
-                if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                console.log('✓ Loaded courses from localStorage:', teacherCourses.length);
-                return false;
-            }
-        } catch (e) {
-            console.warn('Could not load courses from localStorage:', e);
-        }
-        teacherCourses = [];
+        // Do not clear existing `teacherCourses` on failure; preserve server-initialized values.
         return false;
     }
 
@@ -4054,6 +4349,10 @@
 
     function loadTeacherCoursesFromCache() {
         try {
+            // If server provided initial courses, prefer those to avoid flicker
+            if (Array.isArray(teacherCourses) && teacherCourses.length > 0) {
+                return true;
+            }
             const key = teacherCoursesKey();
             const stored = key ? localStorage.getItem(key) : null;
             if (stored) {
@@ -4064,7 +4363,7 @@
         } catch (e) {
             console.warn('Could not load courses from cache:', e);
         }
-        teacherCourses = [];
+        teacherCourses = teacherCourses || [];
         return false;
     }
 
@@ -4105,7 +4404,6 @@
     }
 
     function renderTeacherDataFromCache() {
-        const hasCourses = loadTeacherCoursesFromCache();
         loadTeacherClassesFromCache();
         loadSharedTeacherCoursesFromCache();
         loadTeacherOverviewFromCache();
@@ -4113,18 +4411,20 @@
         if (typeof renderClasses === 'function') {
             try { renderClasses(); } catch (e) { console.warn('Could not render classes from cache:', e); }
         }
-        if (typeof renderCourses === 'function') {
-            try { renderCourses(); } catch (e) { console.warn('Could not render courses from cache:', e); }
-        }
 
-        return hasCourses;
+        return false;
     }
 
     // Render teacher-created courses
     async function renderCourses() {
         const grid = document.getElementById('coursesGrid');
         if (!grid) return;
+        // If client data hasn't been loaded yet but server rendered cards exist,
+        // keep the server-rendered DOM to avoid flicker/incorrect counts.
         if (!teacherCourses || teacherCourses.length === 0) {
+            if (grid.querySelector('[data-course-id]')) {
+                return; // preserve server-rendered markup
+            }
             grid.innerHTML = `
                 <div class="empty-state">
                     <i class="bi bi-journal-bookmark"></i>
@@ -4135,32 +4435,89 @@
             return;
         }
 
-        grid.innerHTML = teacherCourses.map(course => `
-            <article class="class-card-full" data-course-id="${course.id}">
-                <div class="class-card-header" style="cursor: default;">
-                    <span class="class-code-badge">${course.code}</span>
-                    <h3>${course.title}</h3>
-                    <p class="class-description">${course.description || ''}</p>
-                </div>
-                <div class="class-card-stats">
-                    <div class="class-stat">
-                        <strong>${(course.sections || []).length}</strong>
-                        <span>Sections</span>
+        // If the grid already contains server-rendered markup matching the
+        // current `teacherCourses` checksum, skip re-render to avoid flicker.
+        try {
+            function _simpleHash(s) { let h=0; for (let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h |= 0; } return String(h); }
+            const existingHash = grid.dataset.coursesHash || '';
+            const currentHash = _simpleHash(JSON.stringify(teacherCourses || []));
+            if (existingHash && existingHash === currentHash) return;
+            // If server rendered cards were present and the server-provided ID list
+            // matches the client `teacherCourses` IDs, skip re-render to preserve
+            // the server metrics (avoids brief incorrect values).
+            try {
+                if (window.__PABASA_SERVER_RENDERED_COURSES__ && Array.isArray(window.__PABASA_SERVER_COURSE_IDS__)) {
+                    const clientIds = (teacherCourses || []).map(c => String(c.id));
+                    const serverIds = window.__PABASA_SERVER_COURSE_IDS__.map(String);
+                    if (clientIds.length === serverIds.length && clientIds.every((v,i)=>v===serverIds[i])) {
+                        grid.dataset.coursesHash = currentHash;
+                        return;
+                    }
+                }
+            } catch(e) { /* ignore */ }
+            grid.dataset.coursesHash = currentHash;
+        } catch (e) { /* ignore and continue rendering */ }
+
+        grid.innerHTML = teacherCourses.map(course => {
+            const metrics = course.metrics || {};
+            const sectionsCount = Number(metrics.sections ?? 0);
+            const assessmentsCount = Number(metrics.assessments ?? 0);
+            const materialsCount = Number(metrics.materials ?? 0);
+            const studentsCount = Number(metrics.students ?? 0);
+            const subtitle = course.description || `Reading Materials • ${sectionsCount || 0} section${sectionsCount === 1 ? '' : 's'}`;
+
+            return `
+                <article class="course-dashboard-card" data-course-id="${escapeHtml(course.id)}">
+                    <div class="course-card-badges">
+                        <span class="course-code-pill">${escapeHtml(course.code || 'Course')}</span>
+                        <span class="course-status-pill"><span class="course-status-dot" aria-hidden="true"></span>Active</span>
                     </div>
-                    <div class="class-stat">
-                        <strong>${(course.assessments || []).length}</strong>
-                        <span>Assessments</span>
+
+                    <div>
+                        <h3 class="course-card-title">${escapeHtml(course.title || 'Untitled Course')}</h3>
+                        <p class="course-card-subtitle">${escapeHtml(subtitle)}</p>
                     </div>
-                    <div class="class-stat">
-                        <strong>${((course.materials || []).length + (course.practices || []).length)}</strong>
-                        <span>Materials</span>
+
+                    <div class="course-card-divider" aria-hidden="true"></div>
+
+                    <div class="course-card-metrics" aria-label="Course statistics">
+                        <div class="course-card-metric">
+                            <i class="bi bi-building" aria-hidden="true"></i>
+                            <strong>${sectionsCount}</strong>
+                            <span>Sections</span>
+                        </div>
+                        <div class="course-card-metric">
+                            <i class="bi bi-journal-check" aria-hidden="true"></i>
+                            <strong>${assessmentsCount}</strong>
+                            <span>Assessments</span>
+                        </div>
+                        <div class="course-card-metric">
+                            <i class="bi bi-bookshelf" aria-hidden="true"></i>
+                            <strong>${materialsCount}</strong>
+                            <span>Materials</span>
+                        </div>
+                        <div class="course-card-metric">
+                            <i class="bi bi-people" aria-hidden="true"></i>
+                            <strong>${studentsCount}</strong>
+                            <span>Students</span>
+                        </div>
                     </div>
-                </div>
-                <div class="class-card-actions">
-                    <button class="btn btn-outline-primary" type="button" onclick="openCourseDetail(${course.id})">Open Course</button>
-                </div>
-            </article>
-        `).join('');
+
+                    <div class="course-card-divider" aria-hidden="true"></div>
+
+                    <div class="course-card-footer" role="button" onclick="openCourseDetail(${JSON.stringify(course.id)})" aria-label="Open Course">
+                        <span class="ccf-icon"><i class="bi bi-book"></i></span>
+                        <span class="ccf-label">Open Course</span>
+                        <span class="ccf-arrow"><i class="bi bi-arrow-right"></i></span>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    async function refreshCourseCardsFromServer() {
+        await loadTeacherCoursesFromServer();
+        await renderCourses();
     }
 
     function courseMaterialActionId(material) {
@@ -4340,8 +4697,7 @@
                                 const d = await res.json();
                                 if (res.ok && d.success) {
                                     mat.title = newTitle;
-                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                    renderCourses();
+                                    await refreshCourseCardsFromServer();
                                     openCourseDetail(course.id);
                                     showToast('Material updated', 'success');
 
@@ -4426,8 +4782,7 @@
                                         if (archivedAssessmentId) markAssessmentArchivedLocally(archivedAssessmentId);
                                         // Remove from course materials listing
                                         activeCourse.materials = (activeCourse.materials || []).filter(x => rawRecordId(x.id || x.raw_id) !== rawRecordId(mid));
-                                        const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                        renderCourses();
+                                        await refreshCourseCardsFromServer();
                                         openCourseDetail(activeCourse.id);
                                         showToast(isAssessment ? 'Assessment archived' : 'Material archived', 'success');
 
@@ -4532,7 +4887,7 @@
                                             assessment.status = 'archived';
                                             assessment.is_active = false;
                                             markAssessmentArchivedLocally(assessmentId);
-                                            renderCourses();
+                                            await refreshCourseCardsFromServer();
                                             openCourseDetail(activeCourse.id);
                                             showToast('Assessment archived', 'success');
 
@@ -5140,12 +5495,7 @@
             });
             const data = await resp.json();
             if (resp.ok && data.success) {
-                // Add to local cache and render
-                const newCourse = { id: data.course.id, code: data.course.code, title: data.course.title, description: description, sections: (teacherClasses || []).filter(c => checked.includes(String(c.id))).map(s => ({ id: s.id, code: s.code, name: s.name })), assessments: [], materials: [] };
-                teacherCourses = teacherCourses || [];
-                teacherCourses.unshift(newCourse);
-                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                renderCourses();
+                await refreshCourseCardsFromServer();
                 showToast('Course created successfully', 'success');
                 const modalEl = document.getElementById('createCourseModal');
                 const modal = bootstrap.Modal.getInstance(modalEl);
@@ -6055,7 +6405,7 @@
                         showToast(`${studentName} removed from course`, 'error');
                         // Refresh course students list
                         try { loadCourseStudents(courseId || document.getElementById('courseDetailModal')?.dataset?.courseId); } catch(e){}
-                        try { renderCourses(); } catch(e){}
+                        try { await refreshCourseCardsFromServer(); } catch(e){}
                     } else {
                         showToast(data.error || 'Could not remove student', 'error');
                     }
@@ -8298,11 +8648,11 @@
                                     cacheCreatedMaterialForClass(effectiveRefreshCode, apiData.material);
                                     await loadReadings(effectiveRefreshCode);
                                 }
-                                if (typeof renderCourses === 'function') await renderCourses();
+                                await refreshCourseCardsFromServer();
                                 await renderClasses();
                             } else {
                                 if (effectiveRefreshCode) await loadReadings(effectiveRefreshCode);
-                                if (typeof renderCourses === 'function') await renderCourses();
+                                await refreshCourseCardsFromServer();
                                 await renderClasses();
                             }
 
@@ -8338,14 +8688,13 @@
                                                     if (!existing) {
                                                         course.materials.push(attachedMaterial);
                                                     }
-                                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
                                                 }
                                             } catch (e) { console.warn('Failed to update local course cache after attach', e); }
                                         } else {
                                             console.warn('Failed to attach material to course', attachData.error || attachResp.status);
                                         }
                                     }
-                                    try { await renderCourses(); } catch (e) { /* ignore */ }
+                                    try { await refreshCourseCardsFromServer(); } catch (e) { /* ignore */ }
                                     try { await refreshOpenCourseAfterAssessmentChange({ courseId: window.courseAttachTarget, classCode: currentClassCode }); } catch (e) { console.warn('Could not refresh course after material attach', e); }
 
                                     const cModal = document.getElementById('courseDetailModal');
@@ -8545,8 +8894,7 @@
                                             course.assessments = (course.assessments || []).filter(a => Number(a.id) !== assessmentId);
                                         }
                                     });
-                                    const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                    try { renderCourses(); } catch (e) { /* ignore */ }
+                                    refreshCourseCardsFromServer().catch(e => console.warn('Could not refresh course cards after assessment delete', e));
                                     const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
                                     if (openCourseId) {
                                         teacherCourses.forEach(course => {
@@ -8608,8 +8956,7 @@
                                         });
                                     }
                                 });
-                                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                try { renderCourses(); } catch (e) { /* ignore */ }
+                                refreshCourseCardsFromServer().catch(e => console.warn('Could not refresh course cards after assessment edit', e));
                                 const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
                                 if (openCourseId) {
                                     teacherCourses.forEach(course => {
@@ -8650,8 +8997,7 @@
                                         affectedCourseIds.push(course.id);
                                     }
                                 });
-                                const key = teacherCoursesKey(); if (key) localStorage.setItem(key, JSON.stringify(teacherCourses));
-                                try { renderCourses(); } catch (e) { /* ignore */ }
+                                refreshCourseCardsFromServer().catch(e => console.warn('Could not refresh course cards after assessment create', e));
 
                                 // If a course detail modal for an affected course is open, refresh its assessments/readings/overview
                                 const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
