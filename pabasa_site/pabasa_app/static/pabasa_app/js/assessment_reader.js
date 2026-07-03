@@ -1313,6 +1313,46 @@
             else if (!isReviewMode) { showCompletion(true); }
         });
 
+        function isInteractiveElement(element) {
+            if (!element) return false;
+            const tagName = element.tagName;
+            if (!tagName) return false;
+            if (["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A"].includes(tagName)) return true;
+            return element.isContentEditable;
+        }
+
+        document.addEventListener("keydown", function (event) {
+            if (event.defaultPrevented) return;
+            const activeElement = document.activeElement;
+            if (isInteractiveElement(activeElement)) return;
+
+            const isSpace = event.key === " " || event.key === "Spacebar" || event.code === "Space";
+            if (isSpace) {
+                if (btnStartReading && !btnStartReading.classList.contains("d-none")) {
+                    btnStartReading.click();
+                    event.preventDefault();
+                    return;
+                }
+
+                if (nextBtn && !nextBtn.disabled) {
+                    nextBtn.click();
+                    event.preventDefault();
+                }
+                return;
+            }
+
+            if (event.key === "Escape") {
+                if (!shell.classList.contains("is-complete") && !isReviewMode) {
+                    showCompletion(true);
+                } else if (finishBtn) {
+                    finishBtn.click();
+                } else {
+                    goBackToAssessments();
+                }
+                event.preventDefault();
+            }
+        });
+
         pauseBtn?.addEventListener("click", () => {
             const isHidden = pauseMenu?.classList.contains("d-none");
             pauseMenu?.classList.toggle("d-none", !isHidden);

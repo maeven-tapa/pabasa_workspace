@@ -2201,7 +2201,7 @@ def _send_principal_credentials_email(request, user, school_name):
         f"PABASA ID / Username: {user.custom_id}\n"
         f"Default Password: {PRINCIPAL_DEFAULT_PASSWORD}\n\n"
         "Log in using the existing PABASA login page:\n"
-        f"{auth_url}\n\n"
+        f"{auth_url}\n\n" 
         "After logging in, you will be redirected to the Principal Dashboard.\n\n"
         "Thank you,\nPABASA Team"
     )
