@@ -4720,6 +4720,10 @@ def get_teacher_material_attempts_api(request):
         if not material_id:
             return JsonResponse({'success': False, 'error': 'material_id is required'}, status=400)
 
+        _, material_id = _parse_prefixed_id(material_id)
+        if not material_id:
+            return JsonResponse({'success': False, 'error': 'Invalid material id'}, status=400)
+
         material = Material.objects.filter(id=material_id).first()
         if not material:
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
