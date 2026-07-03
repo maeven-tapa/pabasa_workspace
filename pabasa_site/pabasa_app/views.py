@@ -2561,7 +2561,12 @@ def admin_principal_deactivate(request, user_id):
     if not user:
         return redirect('admin_principals')
 
-    if not user.is_archived:
+    action = request.POST.get('action', 'deactivate').strip().lower()
+    if action == 'reactivate' and user.is_archived:
+        user.is_archived = False
+        user.archived_at = None
+        user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
+    elif action == 'deactivate' and not user.is_archived:
         user.is_archived = True
         user.archived_at = timezone.now()
         user.save(update_fields=['is_archived', 'archived_at', 'updated_at'])
