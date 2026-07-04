@@ -268,6 +268,58 @@
             pointer-events: none;
         }
 
+        .live-countdown-overlay {
+            align-items: center;
+            background: rgba(2, 6, 23, 0.86);
+            display: flex;
+            inset: 0;
+            justify-content: center;
+            padding: 1.5rem;
+            position: fixed;
+            z-index: 4000;
+        }
+
+        .live-countdown-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 28px;
+            box-shadow: 0 24px 60px rgba(2, 6, 23, 0.34);
+            max-width: 460px;
+            padding: 2rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        .live-countdown-icon {
+            align-items: center;
+            background: rgba(31, 111, 139, 0.12);
+            border-radius: 999px;
+            color: var(--accent);
+            display: inline-flex;
+            font-size: 1.6rem;
+            height: 56px;
+            justify-content: center;
+            margin-bottom: 1rem;
+            width: 56px;
+        }
+
+        .live-countdown-card h2 {
+            color: var(--ink);
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .live-countdown-card p {
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .live-countdown-number {
+            color: var(--accent);
+            font-size: clamp(3rem, 8vw, 4.6rem);
+            font-weight: 900;
+            margin: 0.8rem 0;
+        }
+
         .read-helper {
             display: flex;
             align-items: center;
@@ -1338,6 +1390,16 @@
                 </div>
             </article>
         </section>
+
+        <div class="live-countdown-overlay d-none" id="liveCountdownOverlay" role="dialog" aria-modal="true" aria-labelledby="liveCountdownTitle">
+            <div class="live-countdown-card">
+                <div class="live-countdown-icon"><i class="bi bi-broadcast"></i></div>
+                <h2 id="liveCountdownTitle">Assessment starting live...</h2>
+                <p>Get ready to read.</p>
+                <div class="live-countdown-number" id="liveCountdownNumber">10</div>
+                <p id="liveCountdownSubtext">Get ready to read.</p>
+            </div>
+        </div>
 
         <div class="pause-overlay d-none" id="pauseOverlay"></div>
         <div class="pause-menu d-none" id="pauseMenu" role="menu" aria-label="Pause menu">

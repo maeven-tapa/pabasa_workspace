@@ -12,6 +12,7 @@ from django.db import IntegrityError
 from django.db.models import Q
 from django.utils.text import slugify
 from functools import wraps
+from urllib.parse import quote
 import logging
 import json
 import os
@@ -3334,6 +3335,146 @@ def _student_practice_context(request, mode=None):
         'selected_practice_difficulty': request.GET.get('difficulty', '').strip().lower(),
     })
     return context
+
+
+def _build_live_assessment_action_url(material, session_id, start_at):
+    if not material:
+        return ''
+
+    item_type = (material.item_type or '').strip().lower()
+    if item_type == 'sentence':
+        mode = 'sentence'
+    elif item_type == 'paragraph':
+        mode = 'para'
+    else:
+        mode = 'word'
+
+    title = (material.title or material.prompt_text or 'Assessment').strip() or 'Assessment'
+    code = (material.code or '').strip() or 'LIVE'
+    content = (material.content_text or material.prompt_text or '').strip()
+    content_json = material.content_json or {}
+    if isinstance(content_json, dict):
+        content = content or (content_json.get('content_text') or '').strip()
+    language = (content_json.get('language') if isinstance(content_json, dict) else '') or 'English'
+    params = {
+        'id': str(material.id),
+        'test': title,
+        'code': code,
+        'live': '1',
+        'live_session_id': session_id,
+        'start_at': start_at,
+        'countdown': '10',
+        'content': content,
+        'item_type': item_type or 'word',
+        'language': language,
+    }
+    query = '&'.join(f'{key}={quote(str(value), safe="")}' for key, value in params.items())
+    return f'/dashboard/assessment/reading_ui/{mode}/?{query}'
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def start_live_assessment(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.session.get('user_role') not in ['teacher', 'admin']:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        data = {}
+
+    course_id = data.get('course_id')
+    material_id = data.get('material_id')
+    teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not teacher_user:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    course = None
+    if course_id:
+        course = Course.objects.filter(id=course_id).first()
+        if course and teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+            return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
+
+    material = None
+    if material_id:
+        material = Material.objects.filter(id=material_id).first()
+        if material and teacher_user.role != 'admin' and material.teacher_id != teacher_user.id:
+            is_course_linked = bool(
+                course and (
+                    course.sections.filter(id=material.section_id).exists()
+                    or material.assigned_sections.filter(id__in=course.sections.values_list('id', flat=True)).exists()
+                    or material.courses.filter(id=course.id).exists()
+                )
+            )
+            if not is_course_linked:
+                return JsonResponse({'success': False, 'error': 'Material access denied'}, status=403)
+
+    if not material:
+        return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+    sections = []
+    if course:
+        sections = list(course.sections.filter(is_active=True))
+        if not sections and material.section and material.section.is_active:
+            sections = [material.section]
+    elif material.section and material.section.is_active:
+        sections = [material.section]
+
+    if not sections:
+        return JsonResponse({'success': False, 'error': 'No class sections available for this material'}, status=400)
+
+    student_ids = []
+    seen_student_ids = set()
+    for section in sections:
+        for entry in section.get_enrolled_students(active_only=True):
+            student_id = entry.get('student_id')
+            if not student_id or str(student_id) in seen_student_ids:
+                continue
+            student_user = User.objects.filter(id=student_id, role='student', is_archived=False).first()
+            if student_user:
+                seen_student_ids.add(str(student_id))
+                student_ids.append(student_user.id)
+
+    if not student_ids:
+        return JsonResponse({'success': False, 'error': 'No active students found for this course'}, status=400)
+
+    session_id = uuid.uuid4().hex
+    start_at = timezone.now().isoformat()
+    action_url = _build_live_assessment_action_url(material, session_id, start_at)
+    title = 'Live Assessment Starting'
+    message = (
+        f"Your teacher has started a live assessment for {material.title or 'this reading'}. "
+        "You'll be redirected automatically and begin together in a moment."
+    )
+
+    for student_id in student_ids:
+        student_user = User.objects.filter(id=student_id).first()
+        if not student_user:
+            continue
+        _create_notification(
+            student_user,
+            title,
+            message,
+            'assessment',
+            action_url,
+            teacher_user,
+            send_email=False,
+            force_in_app=True,
+        )
+
+    return JsonResponse({
+        'success': True,
+        'session': {
+            'id': session_id,
+            'start_at': start_at,
+            'student_count': len(student_ids),
+            'action_url': action_url,
+        },
+    })
+
 
 @login_required(role='student')
 def practice_word_page(request):

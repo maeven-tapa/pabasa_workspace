@@ -95,6 +95,7 @@ urlpatterns = [
     path('dashboard/teacher/create-course/', views.create_course, name='create_course'),
     path('dashboard/teacher/delete-course/', views.delete_course, name='delete_course'),
     path('dashboard/teacher/course/send-update/', views.send_course_update, name='send_course_update'),
+    path('dashboard/teacher/start-live-assessment/', views.start_live_assessment, name='start_live_assessment'),
     path('dashboard/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes'),
     path('dashboard/teacher/course/add-material/', views.add_material_to_course, name='add_material_to_course'),
     path('dashboard/teacher/course/remove-material/', views.remove_material_from_course, name='remove_material_from_course'),

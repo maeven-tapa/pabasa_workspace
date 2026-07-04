@@ -28,6 +28,9 @@
         const btnStartReading = document.getElementById("btnStartReading");
         const btnStopReading = document.getElementById("btnStopReading");
         const btnReadAloud = document.getElementById("btnReadAloud");
+        const liveCountdownOverlay = document.getElementById("liveCountdownOverlay");
+        const liveCountdownNumber = document.getElementById("liveCountdownNumber");
+        const liveCountdownSubtext = document.getElementById("liveCountdownSubtext");
         const btnToggleMic = document.getElementById("btnToggleMic");
         const btnTestMic = document.getElementById("btnTestMic") || document.getElementById("testMic");
         const micTestOverlay = document.getElementById("micTestOverlay");
@@ -43,6 +46,9 @@
         const testCode = urlParams.get("code") || "TST-000";
         const materialId = urlParams.get("id");
         const viewMode = urlParams.get("viewMode");
+        const liveContent = urlParams.get("content") || "";
+        const liveItemType = (urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
+        const liveLanguage = urlParams.get("language") || "";
         const isReviewMode = viewMode === "view";
         const isRetakeMode = viewMode === "retake";
         if (testMeta) testMeta.textContent = `${testTitle} - ${testCode}`;
@@ -86,6 +92,8 @@
         let isAdvancingItem = false;
         let currentSyllableIndex = 0;
         let currentMaterialLanguage = "";
+        let liveCountdownTimer = null;
+        let liveCountdownStarted = false;
         let audioContext = null;
         let audioAnalyser = null;
         let audioMeterFrame = null;
@@ -121,7 +129,39 @@
             return [];
         }
 
+        function parseLiveContent(content, readingType) {
+            const normalizedType = String(readingType || liveItemType || mode || "word").toLowerCase();
+            const source = String(content || "").trim();
+            if (!source) return [];
+            if (normalizedType === "sentence") {
+                const lines = source.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+                if (lines.length > 1 && !/\n\n/.test(source)) {
+                    return lines;
+                }
+                return source.split(/(?<=[.!?])\s+/).map(item => item.trim()).filter(Boolean);
+            }
+            if (normalizedType === "paragraph" || normalizedType === "para") {
+                return source.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
+            }
+            return source.match(/\b[\w']+\b/g) || [];
+        }
+
         function loadItems() {
+            if (liveContent) {
+                items = parseLiveContent(liveContent, liveItemType || mode);
+                currentMaterialLanguage = liveLanguage || "";
+                correctWordCounts = new Array(items.length).fill(0);
+                if (items.length === 0) {
+                    if (readingWord) readingWord.textContent = "No assessment items assigned.";
+                    if (nextBtn) nextBtn.disabled = true;
+                    return;
+                }
+                currentIndex = 0;
+                updateUI();
+                animateCurrentItem();
+                return;
+            }
+
             // Prioritize the specific class code from the URL to prevent mixing materials from other classes
             const targetCode = (testCode && testCode !== "TST-000") ? testCode.toUpperCase() : null;
             let codes = targetCode ? [targetCode] : getStoredData(studentClassCodesKey, []).map(c => String(c).toUpperCase());
@@ -904,6 +944,51 @@
             return startTime;
         }
 
+        function clearLiveCountdown() {
+            if (liveCountdownTimer) {
+                window.clearInterval(liveCountdownTimer);
+                liveCountdownTimer = null;
+            }
+        }
+
+        function showLiveCountdown() {
+            if (!liveCountdownOverlay) return;
+            liveCountdownOverlay.classList.remove('d-none');
+        }
+
+        function hideLiveCountdown() {
+            if (!liveCountdownOverlay) return;
+            liveCountdownOverlay.classList.add('d-none');
+        }
+
+        function startLiveCountdown() {
+            if (isReviewMode || liveCountdownStarted || !items.length) return;
+            const isLiveAssessment = urlParams.get('live') === '1' || Boolean(urlParams.get('live_session_id'));
+            if (!isLiveAssessment) return;
+
+            liveCountdownStarted = true;
+            showLiveCountdown();
+            let remaining = Number.parseInt(urlParams.get('countdown') || '10', 10);
+            if (!Number.isFinite(remaining) || remaining < 1) remaining = 10;
+            if (liveCountdownNumber) liveCountdownNumber.textContent = String(remaining);
+            if (liveCountdownSubtext) liveCountdownSubtext.textContent = 'Get ready to read.';
+
+            const tick = () => {
+                remaining -= 1;
+                if (liveCountdownNumber) liveCountdownNumber.textContent = String(Math.max(remaining, 0));
+                if (remaining <= 0) {
+                    clearLiveCountdown();
+                    hideLiveCountdown();
+                    startReading();
+                    return;
+                }
+                if (liveCountdownSubtext) liveCountdownSubtext.textContent = 'Everyone will begin together in a moment.';
+            };
+
+            tick();
+            liveCountdownTimer = window.setInterval(tick, 1000);
+        }
+
         const startReading = () => {
             if (isReviewMode) return;
             startAssessmentTimer();
@@ -1400,6 +1485,7 @@
         }
 
         loadItems();
+        startLiveCountdown();
     };
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initReader);

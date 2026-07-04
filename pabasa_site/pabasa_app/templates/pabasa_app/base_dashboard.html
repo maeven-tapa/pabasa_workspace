@@ -1924,6 +1924,19 @@
                 }
             }
 
+            if (window.PABASA_USER_ROLE === 'student') {
+                const liveNotification = notifications.find(n => (n.action_url || '').includes('live_session_id='));
+                if (liveNotification) {
+                    const seenKey = `pabasa_seen_live_session_${encodeURIComponent(liveNotification.action_url || '')}`;
+                    const alreadySeen = window.sessionStorage.getItem(seenKey);
+                    if (!alreadySeen && liveNotification.action_url) {
+                        window.sessionStorage.setItem(seenKey, '1');
+                        window.location.replace(liveNotification.action_url);
+                        return;
+                    }
+                }
+            }
+
             if (notifications.length === 0) {
                 container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i> No notifications yet</div>';
                 return;

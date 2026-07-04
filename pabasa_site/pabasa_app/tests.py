@@ -229,6 +229,108 @@ class PrincipalReportsPreviewTests(TestCase):
         self.assertContains(response, 'value="excel"')
 
 
+class LiveAssessmentStartTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}",
+            role="teacher",
+            first_name="Tina",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=5,
+            birth_day=10,
+            birth_year=1988,
+            email="live-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        self.student = User.objects.create(
+            custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}",
+            role="student",
+            first_name="Lia",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=6,
+            birth_day=2,
+            birth_year=2012,
+            email="live-student@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 2",
+        )
+        self.section = Section.objects.create(
+            class_code=f"LIV-{uuid.uuid4().hex[:6].upper()}",
+            class_name="Live Assessment Class",
+            header="Reading",
+            description="Live assessment test class",
+            teacher=self.teacher,
+            is_active=True,
+            subject="Reading",
+            students=[{
+                "student_id": self.student.id,
+                "custom_id": self.student.custom_id,
+                "first_name": self.student.first_name,
+                "last_name": self.student.last_name,
+                "email": self.student.email,
+                "joined_at": timezone.now().isoformat(),
+                "is_active": True,
+            }],
+        )
+        self.material = Material.objects.create(
+            title="Live Assessment Material",
+            code="MAT-LIVE-1",
+            item_type="word",
+            type="assessment",
+            status="published",
+            teacher=self.teacher,
+            section=self.section,
+            is_active=True,
+        )
+        self.course = Course.objects.create(
+            code=f"CRS-{uuid.uuid4().hex[:6].upper()}",
+            title="Live Course",
+            description="Course for live assessment tests",
+            teacher=self.teacher,
+            is_active=True,
+        )
+        self.course.sections.add(self.section)
+        self.course.materials.add(self.material)
+
+        session = self.client.session
+        session["user_id"] = self.teacher.id
+        session["user_role"] = self.teacher.role
+        session["first_name"] = self.teacher.first_name
+        session["last_name"] = self.teacher.last_name
+        session["email"] = self.teacher.email
+        session["custom_id"] = self.teacher.custom_id
+        session.save()
+
+    def test_teacher_can_start_live_assessment_and_notify_students(self):
+        response = self.client.post(
+            reverse("start_live_assessment"),
+            json.dumps({
+                "course_id": self.course.id,
+                "material_id": self.material.id,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertIn("session", body)
+        self.assertTrue(body["session"]["start_at"])
+
+        notif = Notification.objects.filter(recipient=self.student).order_by("-created_at").first()
+        self.assertIsNotNone(notif)
+        self.assertIn("live", notif.title.lower())
+        self.assertIn("live_session_id", notif.action_url)
+        self.assertIn("start_at", notif.action_url)
+
+
 class PrincipalAccountBootstrapTests(TestCase):
     def test_login_recreates_missing_principal_account_once(self):
         self.assertFalse(User.objects.filter(custom_id=PRINCIPAL_DEFAULT_CUSTOM_ID).exists())
