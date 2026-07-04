@@ -3337,7 +3337,7 @@ def _student_practice_context(request, mode=None):
     return context
 
 
-def _build_live_assessment_action_url(material, session_id, start_at):
+def _build_live_assessment_action_url(material, session_id, start_at, countdown_seconds=10):
     if not material:
         return ''
 
@@ -3363,7 +3363,7 @@ def _build_live_assessment_action_url(material, session_id, start_at):
         'live': '1',
         'live_session_id': session_id,
         'start_at': start_at,
-        'countdown': '10',
+        'countdown': str(countdown_seconds),
         'content': content,
         'item_type': item_type or 'word',
         'language': language,
@@ -3443,7 +3443,8 @@ def start_live_assessment(request):
 
     session_id = uuid.uuid4().hex
     start_at = timezone.now().isoformat()
-    action_url = _build_live_assessment_action_url(material, session_id, start_at)
+    countdown_seconds = 10
+    action_url = _build_live_assessment_action_url(material, session_id, start_at, countdown_seconds)
     title = 'Live Assessment Starting'
     message = (
         f"Your teacher has started a live assessment for {material.title or 'this reading'}. "

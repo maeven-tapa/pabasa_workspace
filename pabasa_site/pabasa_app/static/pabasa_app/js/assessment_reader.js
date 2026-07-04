@@ -987,34 +987,33 @@
                 if (!Number.isFinite(liveStartAt)) {
                     return Math.max(1, countdownDuration);
                 }
-                const effectiveStartTime = liveStartAt + (countdownDuration * 1000);
-                return Math.max(0, Math.ceil((effectiveStartTime - Date.now()) / 1000));
+                const now = Date.now();
+                const startedAt = liveStartAt;
+                const elapsedSeconds = Math.floor((now - startedAt) / 1000);
+                const remaining = countdownDuration - elapsedSeconds;
+                return Math.max(0, remaining);
             };
 
-            let remaining = getRemainingSeconds();
-            if (!Number.isFinite(remaining) || remaining < 1) {
-                clearLiveCountdown();
-                hideLiveCountdown();
-                startReading();
-                return;
-            }
-            if (liveCountdownNumber) liveCountdownNumber.textContent = String(remaining);
-            if (liveCountdownSubtext) liveCountdownSubtext.textContent = 'Get ready to read.';
-
-            const tick = () => {
-                remaining = getRemainingSeconds();
-                if (liveCountdownNumber) liveCountdownNumber.textContent = String(Math.max(remaining, 0));
+            const syncCountdownToStart = () => {
+                let remaining = getRemainingSeconds();
+                if (!Number.isFinite(remaining) || remaining < 0) remaining = 0;
+                if (liveCountdownNumber) liveCountdownNumber.textContent = String(remaining);
                 if (remaining <= 0) {
                     clearLiveCountdown();
                     hideLiveCountdown();
                     startReading();
-                    return;
+                    return true;
                 }
                 if (liveCountdownSubtext) liveCountdownSubtext.textContent = 'Everyone will begin together in a moment.';
+                return false;
             };
 
-            tick();
-            liveCountdownTimer = window.setInterval(tick, 1000);
+            if (syncCountdownToStart()) return;
+            liveCountdownTimer = window.setInterval(() => {
+                if (syncCountdownToStart()) {
+                    clearLiveCountdown();
+                }
+            }, 1000);
         }
 
         const startReading = () => {
