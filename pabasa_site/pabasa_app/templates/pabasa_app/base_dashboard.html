@@ -1886,6 +1886,87 @@
             return div.innerHTML;
         }
 
+        let liveAssessmentWatchTimer = null;
+        let liveAssessmentWatchBusy = false;
+
+        function stopLiveAssessmentWatch() {
+            if (liveAssessmentWatchTimer) {
+                window.clearInterval(liveAssessmentWatchTimer);
+                liveAssessmentWatchTimer = null;
+            }
+        }
+
+        async function handleLiveAssessmentNotification(notification) {
+            if (!notification) return false;
+            const actionUrl = notification.action_url || '';
+            if (!actionUrl) return false;
+
+            const seenKey = `pabasa_seen_live_session_${encodeURIComponent(actionUrl)}`;
+            const alreadySeen = window.sessionStorage.getItem(seenKey);
+            const liveParams = new URLSearchParams(actionUrl.split('?')[1] || '');
+            const startAt = liveParams.get('start_at');
+            const createdAt = notification.created_at ? Date.parse(notification.created_at) : 0;
+            const isFresh = Boolean(startAt) && (createdAt ? (Date.now() - createdAt) <= 5 * 60 * 1000 : true);
+            if (!alreadySeen && actionUrl && isFresh) {
+                window.sessionStorage.setItem(seenKey, '1');
+                try {
+                    await fetch("{% url 'mark_notification_read' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getNotificationCsrfToken(),
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ notification_id: notification.id })
+                    });
+                } catch (error) {
+                    console.warn('Could not mark live notification as read before redirect', error);
+                }
+                window.location.replace(actionUrl);
+                return true;
+            }
+            return false;
+        }
+
+        async function checkForLiveAssessmentNotification() {
+            if (window.PABASA_USER_ROLE !== 'student' || liveAssessmentWatchBusy) return false;
+            const pabasaCurrentUserId = window.localStorage.getItem('pabasaCurrentUserId') || '';
+            if (!pabasaCurrentUserId) return false;
+
+            liveAssessmentWatchBusy = true;
+            try {
+                const response = await fetch("{% url 'get_notifications' %}", {
+                    headers: { "Accept": "application/json" },
+                    credentials: "same-origin"
+                });
+                const data = await response.json();
+                if (!data.success) throw new Error(data.error || "Unable to load notifications.");
+                const notifications = Array.isArray(data.notifications) ? data.notifications : [];
+                const liveNotification = notifications.find(n => (n.action_url || '').includes('live_session_id='));
+                if (liveNotification && !liveNotification.is_read) {
+                    return handleLiveAssessmentNotification(liveNotification);
+                }
+                return false;
+            } catch (error) {
+                console.warn('Live assessment detection failed', error);
+                return false;
+            } finally {
+                liveAssessmentWatchBusy = false;
+            }
+        }
+
+        function startLiveAssessmentWatch() {
+            if (window.PABASA_USER_ROLE !== 'student') return;
+            if (liveAssessmentWatchTimer) return;
+            checkForLiveAssessmentNotification();
+            liveAssessmentWatchTimer = window.setInterval(() => {
+                if (!liveAssessmentWatchBusy) {
+                    checkForLiveAssessmentNotification();
+                }
+            }, 500);
+        }
+
         async function updateInAppNotifications() {
             const container = document.getElementById('notifContainer');
             const badge = document.getElementById('notifBadge');
@@ -1927,30 +2008,8 @@
             if (window.PABASA_USER_ROLE === 'student') {
                 const liveNotification = notifications.find(n => (n.action_url || '').includes('live_session_id='));
                 if (liveNotification && !liveNotification.is_read) {
-                    const actionUrl = liveNotification.action_url || '';
-                    const seenKey = `pabasa_seen_live_session_${encodeURIComponent(actionUrl)}`;
-                    const alreadySeen = window.sessionStorage.getItem(seenKey);
-                    const liveParams = new URLSearchParams(actionUrl.split('?')[1] || '');
-                    const startAt = liveParams.get('start_at');
-                    const createdAt = liveNotification.created_at ? Date.parse(liveNotification.created_at) : 0;
-                    const isFresh = Boolean(startAt) && (createdAt ? (Date.now() - createdAt) <= 5 * 60 * 1000 : true);
-                    if (!alreadySeen && actionUrl && isFresh) {
-                        window.sessionStorage.setItem(seenKey, '1');
-                        try {
-                            await fetch("{% url 'mark_notification_read' %}", {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': getNotificationCsrfToken(),
-                                    'Accept': 'application/json'
-                                },
-                                credentials: 'same-origin',
-                                body: JSON.stringify({ notification_id: liveNotification.id })
-                            });
-                        } catch (error) {
-                            console.warn('Could not mark live notification as read before redirect', error);
-                        }
-                        window.location.replace(actionUrl);
+                    const handled = await handleLiveAssessmentNotification(liveNotification);
+                    if (handled) {
                         return;
                     }
                 }
@@ -1996,11 +2055,23 @@
             }
         };
 
-        document.addEventListener('DOMContentLoaded', updateInAppNotifications);
-        window.addEventListener('pabasa:notifications-updated', updateInAppNotifications);
-        window.addEventListener('pabasa:preferences-updated', updateInAppNotifications);
+        document.addEventListener('DOMContentLoaded', () => {
+            updateInAppNotifications();
+            startLiveAssessmentWatch();
+        });
+        window.addEventListener('pabasa:notifications-updated', () => {
+            updateInAppNotifications();
+            startLiveAssessmentWatch();
+        });
+        window.addEventListener('pabasa:preferences-updated', () => {
+            updateInAppNotifications();
+            startLiveAssessmentWatch();
+        });
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') updateInAppNotifications();
+            if (document.visibilityState === 'visible') {
+                updateInAppNotifications();
+                startLiveAssessmentWatch();
+            }
         });
         window.setInterval(updateInAppNotifications, 10000);
     </script>

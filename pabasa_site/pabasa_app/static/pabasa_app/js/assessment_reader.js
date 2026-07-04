@@ -1000,20 +1000,13 @@
                 return;
             }
 
-            await syncLiveServerTime();
             liveCountdownStarted = true;
             showLiveCountdown();
             const countdownDuration = Number.parseInt(urlParams.get('countdown') || '10', 10);
-            const liveStartAtRaw = urlParams.get('start_at');
-            const liveStartAt = liveStartAtRaw ? Date.parse(liveStartAtRaw) : NaN;
+            const countdownStartedAt = Date.now();
             const getRemainingSeconds = () => {
-                if (!Number.isFinite(liveStartAt)) {
-                    return Math.max(1, countdownDuration);
-                }
-                const now = getAdjustedServerTime();
-                const elapsedSeconds = Math.floor((now - liveStartAt) / 1000);
-                const remaining = countdownDuration - elapsedSeconds;
-                return Math.max(0, remaining);
+                const elapsedSeconds = Math.floor((Date.now() - countdownStartedAt) / 1000);
+                return Math.max(0, countdownDuration - elapsedSeconds);
             };
 
             const syncCountdownToStart = () => {
@@ -1030,6 +1023,7 @@
                 return false;
             };
 
+            if (liveCountdownNumber) liveCountdownNumber.textContent = String(countdownDuration);
             if (syncCountdownToStart()) return;
             liveCountdownTimer = window.setInterval(() => {
                 if (syncCountdownToStart()) {
