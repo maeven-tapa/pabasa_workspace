@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.utils import timezone
 from datetime import timedelta
 from io import BytesIO
+from pathlib import Path
 import json
 import uuid
 from unittest.mock import patch
@@ -737,6 +738,21 @@ class MaterialCreationTests(TestCase):
             attempt_no=1,
         )
         course.assessments.add(assessment)
+        Assessment.objects.create(
+            title="Material progress",
+            code="ASM-1002",
+            assessment_type="word",
+            status="published",
+            teacher=teacher,
+            section=section,
+            material=material,
+            student=student,
+            attempt_status="completed",
+            is_active=True,
+            attempt_no=1,
+            items_completed=2,
+            total_score=100,
+        )
 
         session = self.client.session
         session["user_id"] = teacher.id
@@ -761,7 +777,196 @@ class MaterialCreationTests(TestCase):
             "assessments": 1,
             "materials": 1,
             "students": 1,
+            "average_progress": 100.0,
         })
+
+    def test_teacher_courses_api_keeps_personal_materials_unmarked_as_shared(self):
+        current_teacher = User.objects.create(
+            custom_id="TCH-0012",
+            role="teacher",
+            first_name="Current",
+            last_name="Owner",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="current-owner@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        other_teacher = User.objects.create(
+            custom_id="TCH-0013",
+            role="teacher",
+            first_name="Other",
+            last_name="Owner",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="other-owner@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        course = Course.objects.create(
+            code="C-PERSONAL-1",
+            title="Personal Course",
+            description="",
+            teacher=current_teacher,
+        )
+        material = Material.objects.create(
+            teacher=other_teacher,
+            title="Private reading",
+            item_type="word",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "Tagalog"},
+            type="assessment",
+            source_type="personal",
+            status="published",
+            is_active=True,
+        )
+        course.materials.add(material)
+
+        session = self.client.session
+        session["user_id"] = current_teacher.id
+        session["user_role"] = current_teacher.role
+        session["first_name"] = current_teacher.first_name
+        session["last_name"] = current_teacher.last_name
+        session["email"] = current_teacher.email
+        session["custom_id"] = current_teacher.custom_id
+        session.save()
+
+        response = self.client.get(reverse("get_teacher_courses_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        course_payload = next(item for item in payload["courses"] if item["id"] == course.id)
+        material_payload = next(item for item in course_payload["materials"] if item["id"] == material.id)
+        self.assertEqual(material_payload["source_type"], "personal")
+        self.assertEqual(material_payload["material_source"], "personal")
+        self.assertFalse(material_payload["is_shared_material"])
+
+    def test_delete_course_removes_course_and_related_records(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0014",
+            role="teacher",
+            first_name="Delete",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="delete-course@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        section = Section.objects.create(
+            class_code="DEL-1001",
+            class_name="Delete Course Section",
+            header="Reading Class",
+            description="",
+            teacher=teacher,
+            subject="Reading",
+        )
+        course = Course.objects.create(
+            code="C-DELETE-1",
+            title="Delete Course",
+            description="",
+            teacher=teacher,
+        )
+        course.sections.add(section)
+        material = Material.objects.create(
+            teacher=teacher,
+            title="Course material",
+            item_type="word",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "Tagalog"},
+            type="assessment",
+            source_type="personal",
+            status="published",
+            is_active=True,
+        )
+        assessment = Assessment.objects.create(
+            title="Course assessment",
+            code="ASM-DELETE-1",
+            assessment_type="word",
+            status="published",
+            teacher=teacher,
+            section=section,
+            is_active=True,
+            attempt_no=1,
+        )
+        course.materials.add(material)
+        course.assessments.add(assessment)
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("delete_course"),
+            json.dumps({"course_id": course.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertFalse(Course.objects.filter(id=course.id).exists())
+        self.assertFalse(material.refresh_from_db().is_active)
+        self.assertFalse(assessment.refresh_from_db().is_active)
+
+    def test_delete_course_accepts_prefixed_course_id(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0015",
+            role="teacher",
+            first_name="Delete",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="delete-course-prefixed@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        course = Course.objects.create(
+            code="C-DELETE-2",
+            title="Delete Course Prefixed",
+            description="",
+            teacher=teacher,
+        )
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("delete_course"),
+            json.dumps({"course_id": f"course-{course.id}"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertFalse(Course.objects.filter(id=course.id).exists())
 
     def test_shared_courses_api_includes_own_shared_materials_without_personal_rows(self):
         current_teacher = User.objects.create(
@@ -867,6 +1072,14 @@ class MaterialCreationTests(TestCase):
         self.assertNotIn(personal_material.id, material_ids)
         self.assertIn(current_shared_material.id, material_ids)
         self.assertIn(shared_material.id, material_ids)
+
+    def test_courses_template_uses_selected_source_type_for_new_materials(self):
+        template_path = Path(settings.BASE_DIR) / "pabasa_app" / "templates" / "pabasa_app" / "courses.html"
+        template_content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("const sourceType = ", template_content)
+        self.assertIn("source_type: sourceType", template_content)
+        self.assertNotIn("const sourceType = 'shared';", template_content)
 
     def test_add_material_to_course_response_includes_material_source_type(self):
         teacher = User.objects.create(
@@ -2295,6 +2508,15 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "pabasa_app/js/students.js", html=False)
         self.assertNotContains(response, "Students directory: prefer server")
+
+    def test_course_detail_refresh_script_reloads_students_after_assessment_change(self):
+        response = self.client.get(reverse("courses"))
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("async function refreshOpenCourseAfterAssessmentChange", content)
+        self.assertIn("loadCourseStudents(openCourseId)", content)
+        self.assertIn("Could not refresh course students after assessment change", content)
 
     def test_course_report_recipients_do_not_use_local_storage_students(self):
         response = self.client.get(reverse("courses"))

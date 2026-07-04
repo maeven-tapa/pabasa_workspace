@@ -1852,6 +1852,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
                         'assessments': assessments_count,
                         'materials': materials_count,
                         'students': students_count,
+                        'average_progress': _compute_course_average_progress(c),
                     }
                 })
     except Exception:
@@ -4249,6 +4250,106 @@ def class_management_view(request):
 
 
 # ===== Course APIs =====
+def _derive_attempt_completion_percentage(attempt):
+    if not isinstance(attempt, dict):
+        return 0.0
+
+    for key in ['completion_percentage', 'progress_percentage', 'progress_percent', 'completionPercent', 'progressPercent']:
+        value = attempt.get(key)
+        if value in (None, ''):
+            continue
+        try:
+            percentage = float(value)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= percentage <= 100:
+            return percentage
+
+    items_completed = attempt.get('items_completed')
+    total_items = attempt.get('total_practice_items') or attempt.get('total_items') or attempt.get('total_material_items')
+    if items_completed is not None and total_items not in (None, ''):
+        try:
+            return max(0.0, min(100.0, (float(items_completed) / float(total_items)) * 100.0))
+        except (TypeError, ValueError):
+            pass
+
+    status = str(attempt.get('status') or '').lower()
+    if status == 'completed':
+        return 100.0
+    return 0.0
+
+
+def _compute_course_average_progress(course):
+    try:
+        enrolled_students = []
+        for section in course.sections.filter(is_active=True):
+            for entry in section.get_enrolled_students(active_only=True):
+                student_id = _normalized_student_entry_id(entry)
+                if student_id:
+                    enrolled_students.append(student_id)
+        if not enrolled_students:
+            return 0.0
+
+        material_ids = []
+        for material in course.materials.filter(is_active=True):
+            if str(getattr(material, 'status', '') or '').strip().lower() == 'archived':
+                continue
+            material_ids.append(material.id)
+
+        if not material_ids:
+            return 0.0
+
+        progress_values = []
+        for student_id in enrolled_students:
+            try:
+                student_user = User.objects.filter(id=int(student_id), role='student').first()
+            except Exception:
+                student_user = None
+            if not student_user:
+                continue
+
+            completion_total = 0.0
+            completion_count = 0
+            for material_id in material_ids:
+                material = Material.objects.filter(id=material_id).first()
+                if not material:
+                    continue
+                try:
+                    if getattr(material, 'assessment_id', None) is not None:
+                        assessment = material.assessment
+                        if assessment is None:
+                            continue
+                        latest_attempt = assessment.get_attempts(student_user)
+                        if latest_attempt:
+                            completion_total += _derive_attempt_completion_percentage(latest_attempt[-1])
+                            completion_count += 1
+                    else:
+                        latest_result = Assessment.objects.filter(
+                            material=material,
+                            student=student_user,
+                            is_active=True,
+                            source_assessment__isnull=True,
+                        ).order_by('-created_at').first()
+                        if latest_result:
+                            completion_total += _derive_attempt_completion_percentage({
+                                'status': getattr(latest_result, 'attempt_status', ''),
+                                'items_completed': getattr(latest_result, 'items_completed', None),
+                                'total_practice_items': getattr(latest_result, 'total_practice_items', None),
+                            })
+                            completion_count += 1
+                except Exception:
+                    continue
+
+            if completion_count:
+                progress_values.append(completion_total / completion_count)
+
+        if not progress_values:
+            return 0.0
+        return round(sum(progress_values) / len(progress_values), 2)
+    except Exception:
+        return 0.0
+
+
 @require_http_methods(["GET"])
 @login_required()
 def get_teacher_courses_api(request):
@@ -4379,8 +4480,6 @@ def get_teacher_courses_api(request):
                     continue
                 if str(getattr(m, 'status', '') or '').strip().lower() == 'archived':
                     continue
-                if shared and (getattr(m, 'source_type', 'personal') or 'personal') != 'shared':
-                    continue
                 cj = getattr(m, 'content_json', None) or {}
                 items_count = 0
                 items_array = None
@@ -4425,7 +4524,8 @@ def get_teacher_courses_api(request):
                     if getattr(m, 'teacher', None):
                         material_teacher_name = f"{m.teacher.first_name} {m.teacher.last_name}".strip() or material_teacher_name
 
-                is_shared_from_other_teacher = bool(material_owner_teacher_id and teacher_user and material_owner_teacher_id != teacher_user.id)
+                source_type = str(getattr(m, 'source_type', 'personal') or 'personal').strip().lower()
+                is_shared_material = source_type == 'shared'
 
                 materials_list.append({
                     'id': m.id,
@@ -4451,8 +4551,8 @@ def get_teacher_courses_api(request):
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
                     'source_type': getattr(m, 'source_type', 'personal') or 'personal',
                     'material_source': getattr(m, 'source_type', 'personal') or 'personal',
-                    'is_shared_material': is_shared_from_other_teacher,
-                    'shared_owner_teacher_name': material_teacher_name if is_shared_from_other_teacher else None,
+                    'is_shared_material': is_shared_material,
+                    'shared_owner_teacher_name': material_teacher_name if is_shared_material else None,
                 })
 
             # Practices (normalized)
@@ -4494,11 +4594,14 @@ def get_teacher_courses_api(request):
                     if student_id:
                         unique_student_ids.add(student_id)
 
+            average_progress = _compute_course_average_progress(c)
+
             metrics = {
                 'sections': len(course_sections),
                 'assessments': len(assessments_list),
                 'materials': len(materials_list) + len(practices_list),
                 'students': len(unique_student_ids),
+                'average_progress': average_progress,
             }
 
             course_list.append({
@@ -5004,6 +5107,68 @@ def create_course(request):
         return JsonResponse({'success': True, 'course': {'id': course.id, 'code': course.code, 'title': course.title}})
     except Exception as e:
         logger.exception('Error creating course')
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='teacher')
+def delete_course(request):
+    try:
+        data = json.loads(request.body or '{}')
+        course_id = data.get('course_id')
+
+        if not course_id:
+            return JsonResponse({'success': False, 'error': 'Course ID is required'}, status=400)
+
+        _, parsed_course_id = _parse_prefixed_id(course_id)
+        if parsed_course_id:
+            course_id = parsed_course_id
+
+        teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
+        if not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+
+        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
+        if not course:
+            return JsonResponse({'success': False, 'error': 'Course not found or not owned by you'}, status=404)
+
+        with transaction.atomic():
+            related_materials = list(course.materials.all())
+            related_assessments = list(course.assessments.all())
+
+            course.sections.clear()
+            course.materials.clear()
+            course.assessments.clear()
+
+            for material in related_materials:
+                try:
+                    material.is_active = False
+                    material.status = 'archived'
+                    material.save(update_fields=['is_active', 'status', 'updated_at'])
+                except Exception:
+                    logger.exception('Failed to archive material %s during course delete', material.id)
+
+            for assessment in related_assessments:
+                try:
+                    assessment.is_active = False
+                    assessment.status = 'archived'
+                    assessment.save(update_fields=['is_active', 'status', 'updated_at'])
+                except Exception:
+                    logger.exception('Failed to archive assessment %s during course delete', assessment.id)
+
+            try:
+                Note.objects.filter(assessment__in=related_assessments).delete()
+            except Exception:
+                pass
+
+            course.is_active = False
+            course.save(update_fields=['is_active', 'updated_at'])
+            course.delete()
+
+        return JsonResponse({'success': True, 'message': 'Course deleted successfully'})
+    except Exception as e:
+        logger.exception('Error deleting course')
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
@@ -5922,6 +6087,9 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
     if tokens is None and isinstance(material.content_json, dict) and isinstance(material.content_json.get('items'), list):
         item_count = len(material.content_json.get('items'))
 
+    source_type = str(getattr(material, 'source_type', 'personal') or 'personal').strip().lower()
+    resolved_shared = bool(is_shared_material) if is_shared_material is not None else (source_type == 'shared')
+
     return {
         'id': f"material-{material.id}",
         'raw_id': material.id,
@@ -5929,10 +6097,10 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'title': material.title,
         'item_type': material.item_type,
         'type': material.type,
-        'source_type': material.source_type,
-        'material_source': material.source_type,
-        'is_shared_material': bool(is_shared_material) if is_shared_material is not None else material.source_type == 'shared',
-        'shared_owner_teacher_name': shared_owner_teacher_name,
+        'source_type': source_type,
+        'material_source': source_type,
+        'is_shared_material': resolved_shared,
+        'shared_owner_teacher_name': shared_owner_teacher_name if resolved_shared else None,
         'content': material.content_text,
         'status': material.status,
         'schedule': timezone.localtime(material.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if material.scheduled_at else None,
@@ -5959,9 +6127,9 @@ def add_reading_material(request):
         requested_reading_type = (data.get('reading_type') or '').strip().lower()
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
         requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
-        source_type  = (data.get('source_type') or 'shared').strip().lower()
+        requested_source_type = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
+        source_type = requested_source_type if requested_source_type in ('personal', 'shared') else 'shared'
         class_code   = (data.get('class_code') or '').strip()
-        source_type  = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
         language     = (data.get('language') or 'English').strip() or 'English'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
@@ -5994,11 +6162,6 @@ def add_reading_material(request):
         if errors:
             logger.warning(f"add_reading_material validation failed: {errors}")
             return JsonResponse({'success': False, 'errors': errors}, status=400)
-
-        # New teacher-created materials are teacher-owned and shared by default:
-        # Personal is the ownership view, while Others is the shared-library view
-        # over the same Material row.
-        source_type = 'shared'
 
         reading_type = _detect_material_type(content, requested_reading_type)
         tokens = _split_material_content(content, reading_type, requested_reading_type)
@@ -6140,7 +6303,7 @@ def add_reading_material(request):
                 teacher_user,
             )
             created_ids = [m.id]
-            material_payload = _material_response_payload(m, tokens=tokens, section=section, is_shared_material=False)
+            material_payload = _material_response_payload(m, tokens=tokens, section=section)
 
             return JsonResponse({
                 'success': True,
