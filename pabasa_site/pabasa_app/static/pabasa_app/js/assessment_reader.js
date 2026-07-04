@@ -980,13 +980,29 @@
 
             liveCountdownStarted = true;
             showLiveCountdown();
-            let remaining = Number.parseInt(urlParams.get('countdown') || '10', 10);
-            if (!Number.isFinite(remaining) || remaining < 1) remaining = 10;
+            const countdownDuration = Number.parseInt(urlParams.get('countdown') || '10', 10);
+            const liveStartAtRaw = urlParams.get('start_at');
+            const liveStartAt = liveStartAtRaw ? Date.parse(liveStartAtRaw) : NaN;
+            const getRemainingSeconds = () => {
+                if (!Number.isFinite(liveStartAt)) {
+                    return Math.max(1, countdownDuration);
+                }
+                const effectiveStartTime = liveStartAt + (countdownDuration * 1000);
+                return Math.max(0, Math.ceil((effectiveStartTime - Date.now()) / 1000));
+            };
+
+            let remaining = getRemainingSeconds();
+            if (!Number.isFinite(remaining) || remaining < 1) {
+                clearLiveCountdown();
+                hideLiveCountdown();
+                startReading();
+                return;
+            }
             if (liveCountdownNumber) liveCountdownNumber.textContent = String(remaining);
             if (liveCountdownSubtext) liveCountdownSubtext.textContent = 'Get ready to read.';
 
             const tick = () => {
-                remaining -= 1;
+                remaining = getRemainingSeconds();
                 if (liveCountdownNumber) liveCountdownNumber.textContent = String(Math.max(remaining, 0));
                 if (remaining <= 0) {
                     clearLiveCountdown();
