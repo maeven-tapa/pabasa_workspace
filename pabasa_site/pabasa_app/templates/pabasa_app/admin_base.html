@@ -488,10 +488,42 @@
             align-items: center;
             display: flex;
             justify-content: space-between;
-            gap: 1rem;
+            gap: 0.9rem;
             margin: 0 auto 1rem;
             max-width: 1180px;
             padding: 1rem 1.15rem;
+            min-height: 78px;
+            flex-wrap: wrap;
+        }
+
+        .admin-topbar-start {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .admin-topbar-title {
+            min-width: 0;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .admin-topbar-title h1 {
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .admin-topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+            flex-shrink: 0;
         }
 
         .admin-topbar .btn-link {
@@ -1291,54 +1323,6 @@
                 padding-right: 0.5rem;
             }
         }
-        /* Small-screen fixed toggle: does not affect desktop layout */
-        .admin-sidebar-fixed-toggle {
-            display: none;
-        }
-        @media (max-width: 991.98px) {
-            .admin-sidebar-fixed-toggle {
-                display: inline-flex !important;
-                position: fixed !important;
-                left: 12px !important;
-                top: 12px !important;
-                z-index: 1205 !important;
-                align-items: center !important;
-                justify-content: center !important;
-                width: 44px !important;
-                height: 44px !important;
-                border-radius: 10px !important;
-                background: var(--admin-surface) !important;
-                border: 1px solid var(--admin-border) !important;
-                box-shadow: 0 6px 16px rgba(6,23,38,0.12) !important;
-                padding: 0 !important;
-            }
-        }
-        /* Ensure quick logout is always reachable on small screens */
-        .admin-quick-logout-btn {
-            display: none;
-        }
-        @media (max-width: 991.98px) {
-            .admin-quick-logout-btn {
-                display: inline-flex !important;
-                position: fixed !important;
-                right: 12px !important;
-                bottom: 12px !important;
-                z-index: 1300 !important;
-                width: 56px !important;
-                height: 56px !important;
-                border-radius: 999px !important;
-                align-items: center !important;
-                justify-content: center !important;
-                background: linear-gradient(135deg, var(--admin-primary) 0%, #4bb8e8 100%) !important;
-                color: #fff !important;
-                box-shadow: 0 12px 30px rgba(16,70,110,0.18) !important;
-                border: 0 !important;
-                padding: 0 !important;
-            }
-            .admin-quick-logout-btn i {
-                font-size: 1.1rem;
-            }
-        }
     </style>
 </head>
 <body>
@@ -1444,22 +1428,26 @@
     </div>
 
     <main class="admin-main">
-        <button class="btn btn-link text-dark p-0 admin-sidebar-fixed-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebarCanvas" aria-controls="adminSidebarCanvas" aria-label="Open menu">
-            <i class="bi bi-list fs-4"></i>
-        </button>
         <header class="admin-topbar">
-            <div>
-                <p class="small text-secondary text-uppercase fw-bold mb-1">Admin Module</p>
-                <h1 class="h3 fw-bold mb-0">{{ page_title }}</h1>
+            <div class="admin-topbar-start">
+                <button class="btn btn-link text-dark p-0 admin-sidebar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebarCanvas" aria-controls="adminSidebarCanvas" aria-label="Open menu">
+                    <i class="bi bi-list fs-4"></i>
+                </button>
+                <div class="admin-topbar-title">
+                    <p class="small text-secondary text-uppercase fw-bold mb-1">Admin Module</p>
+                    <h1 class="h3 fw-bold mb-0">{{ page_title }}</h1>
+                </div>
             </div>
-            <div class="text-end">
-                <span class="small text-secondary d-block">Logged in as</span>
-                <strong>{{ admin_username }}</strong>
+            <div class="admin-topbar-actions">
+                <div class="text-end admin-topbar-user">
+                    <span class="small text-secondary d-block">Logged in as</span>
+                    <strong>{{ admin_username }}</strong>
+                </div>
+                <button class="btn btn-link text-dark p-0 position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminNotificationPane" aria-label="View notifications">
+                    <i class="bi bi-bell fs-5"></i>
+                    <span class="admin-notif-badge is-hidden" id="notifBadge">0</span>
+                </button>
             </div>
-            <button class="btn btn-link text-dark p-0 position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminNotificationPane" aria-label="View notifications">
-                <i class="bi bi-bell fs-5"></i>
-                <span class="admin-notif-badge is-hidden" id="notifBadge">0</span>
-            </button>
         </header>
 
         <div class="offcanvas offcanvas-end" tabindex="-1" id="adminNotificationPane" aria-labelledby="adminNotificationPaneLabel">
@@ -1496,10 +1484,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <!-- Mobile quick-logout button (always accessible on small screens) -->
-    <button class="btn admin-quick-logout-btn d-lg-none" type="button" data-bs-toggle="modal" data-bs-target="#adminLogoutModal" aria-label="Logout">
-        <i class="bi bi-box-arrow-right"></i>
-    </button>
     <script>
         (function() {
             // Initialize tooltips for admin nav items (show when collapsed)
