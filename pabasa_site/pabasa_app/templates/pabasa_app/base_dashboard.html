@@ -68,9 +68,40 @@
             top: 0;
             left: 0;
             transition: width 0.2s ease;
+            /* Allow vertical scrolling inside the nav area only; hide any horizontal overflow
+               to prevent a horizontal scrollbar appearing on desktop. */
             overflow-y: hidden;
             overflow-x: hidden;
             z-index: 1030;
+        }
+
+        /* Prevent horizontal overflow caused by oversized children (badges, long text, pseudo elements).
+           Ensure sidebar and its inner containers clip horizontally and use border-box sizing. */
+        .dashboard-sidebar,
+        .dashboard-sidebar * {
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        .dashboard-sidebar .sidebar-inner,
+        .dashboard-sidebar .sidebar-nav-section {
+            overflow-x: hidden !important;
+        }
+
+        /* Keep link text clipped and badges from pushing layout horizontally */
+        .dashboard-sidebar .dash-link {
+            max-width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .dashboard-sidebar .dash-link .badge-notif {
+            /* Only constrain badge size to avoid it causing horizontal overflow.
+               Do not change positioning here so the original placement (left/transform)
+               defined later remains in effect and the badge doesn't shift. */
+            max-width: 2.4rem;
+            overflow: hidden;
         }
 
         .dashboard-sidebar::before {
@@ -96,6 +127,27 @@
             font-weight: 800;
             line-height: 1;
             pointer-events: none;
+        }
+
+        /* Strong guardrails to prevent any horizontal scrolling caused by
+           sidebar children or scrollbar layout shifts. This ensures the
+           sidebar never introduces a horizontal scrollbar on any viewport. */
+        html, body.dashboard-body {
+            overflow-x: hidden !important;
+        }
+
+        .dashboard-sidebar,
+        .dashboard-sidebar * {
+            overflow-x: hidden !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Reserve space for scrollbars to avoid content reflow causing
+           a temporary horizontal scrollbar on some platforms. */
+        .dashboard-sidebar .sidebar-nav-section {
+            scrollbar-gutter: stable both-edges;
+            overflow-x: hidden !important;
         }
 
         body.sidebar-collapsed .dashboard-sidebar {
@@ -252,6 +304,68 @@
                 white-space: nowrap !important;
             }
 
+            #dashboardSidebar .brand-note {
+                display: -webkit-box !important;
+                font-size: 0.66rem;
+                letter-spacing: 0.08em;
+                line-height: 1.25;
+                margin-top: 0.25rem !important;
+                max-width: 100% !important;
+                overflow: hidden !important;
+                overflow-wrap: anywhere;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                white-space: normal !important;
+            }
+
+            #dashboardSidebar .sidebar-role-card {
+                display: none !important;
+            }
+
+            #dashboardSidebar .dash-link {
+                justify-content: flex-start;
+                min-height: 46px;
+                padding: 0.68rem 0.75rem;
+                width: 100%;
+            }
+
+            #dashboardSidebar .dash-link i {
+                flex: 0 0 24px;
+                margin-right: 0 !important;
+            }
+
+            #dashboardSidebar .sidebar-nav-section {
+                flex: 1 1 auto;
+                min-height: 0;
+                margin-bottom: 0.75rem !important;
+                overflow-y: hidden;
+                overscroll-behavior: contain;
+                padding: 0.1rem 0.15rem 0.25rem 0;
+                /* Keep scrolling functional but hide the native vertical scrollbar visuals */
+                -ms-overflow-style: none; /* IE and Edge */
+                scrollbar-width: none; /* Firefox */
+            }
+
+            #dashboardSidebar .sidebar-nav-section::-webkit-scrollbar {
+                width: 0px;
+                background: transparent;
+            }
+
+            #dashboardSidebar .d-grid {
+                flex: 0 0 auto;
+                margin-bottom: 0.75rem;
+            }
+
+            #dashboardSidebar .sidebar-footer {
+                flex: 0 0 auto;
+                margin-top: auto !important;
+                background: linear-gradient(180deg, rgba(16, 70, 110, 0), rgba(16, 70, 110, 0.26) 34%, rgba(16, 70, 110, 0.36));
+                padding-top: 0.85rem !important;
+                padding-bottom: calc(0.85rem + env(safe-area-inset-bottom));
+                padding-left: 0.15rem;
+                padding-right: 0.15rem;
+            }
+
             #dashboardSidebar .sidebar-user-id {
                 font-size: 0.95rem;
                 line-height: 1.15;
@@ -295,7 +409,7 @@
                 flex: 1 1 auto;
                 min-height: 0;
                 margin-bottom: 0.75rem !important;
-                overflow-y: auto;
+                overflow-y: hidden;
                 overscroll-behavior: contain;
                 padding: 0.1rem 0.15rem 0.25rem 0;
                 scrollbar-width: thin;
@@ -525,6 +639,38 @@
             padding: 1.25rem 1rem !important;
         }
 
+        /* Ensure teacher sidebar nav items form a single vertical column
+           and each item spans full width without wrapping into multiple columns. */
+        .dashboard-sidebar .sidebar-nav-section {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+            flex-wrap: nowrap !important;
+            align-items: stretch !important;
+        }
+
+        .dashboard-sidebar .sidebar-nav-section .dash-link,
+        .dashboard-sidebar .sidebar-nav-section .nav-link {
+            display: flex !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .dashboard-sidebar .sidebar-nav-section .dash-link i {
+            flex: 0 0 28px !important;
+            margin-right: 0.6rem !important;
+        }
+
+        .dashboard-sidebar .sidebar-nav-section .dash-link .sidebar-text {
+            flex: 1 1 auto !important;
+            min-width: 0 !important;
+        }
+
         .sidebar-top-section {
             flex-shrink: 0;
         }
@@ -534,9 +680,49 @@
             min-height: 0;
             overflow-y: auto;
             overscroll-behavior: contain;
-            scrollbar-width: thin;
+            /* Hide scrollbar visuals but keep scrolling functional */
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
             -webkit-overflow-scrolling: touch;
             padding-right: 0.1rem;
+        }
+
+        /* WebKit browsers: hide the scrollbar and any scrollbar buttons/arrows.
+           Apply aggressively with !important and target both the container and all
+           descendants to override other styles. */
+        .dashboard-sidebar::-webkit-scrollbar,
+        .dashboard-sidebar *::-webkit-scrollbar,
+        .dashboard-sidebar .sidebar-nav-section::-webkit-scrollbar {
+            width: 0 !important;
+            height: 0 !important;
+        }
+        .dashboard-sidebar::-webkit-scrollbar-thumb,
+        .dashboard-sidebar *::-webkit-scrollbar-thumb,
+        .dashboard-sidebar .sidebar-nav-section::-webkit-scrollbar-thumb {
+            background: transparent !important;
+        }
+        .dashboard-sidebar::-webkit-scrollbar-track,
+        .dashboard-sidebar *::-webkit-scrollbar-track,
+        .dashboard-sidebar .sidebar-nav-section::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+        .dashboard-sidebar::-webkit-scrollbar-button,
+        .dashboard-sidebar *::-webkit-scrollbar-button,
+        .dashboard-sidebar .sidebar-nav-section::-webkit-scrollbar-button {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+
+        /* For student sidebar: prevent the nav section from stretching so the
+           Account block sits directly beneath the Main links. Logout remains pinned. */
+        .dashboard-sidebar .sidebar-inner.student-sidebar .sidebar-nav-section {
+            flex: 0 0 auto;
+            margin-bottom: 0.25rem;
+        }
+        #dashboardSidebar .sidebar-inner.student-sidebar .sidebar-nav-section {
+            flex: 0 0 auto;
+            margin-bottom: 0.25rem;
         }
 
         .sidebar-footer {

@@ -1,4 +1,4 @@
-<div class="sidebar-inner d-flex flex-column p-3 p-xl-4">
+<div class="sidebar-inner d-flex flex-column p-3 p-xl-4{% if nav_role == 'student' %} student-sidebar{% endif %}">
     <div class="sidebar-top-section flex-shrink-0 mb-4">
         <div class="sidebar-brand-row d-flex align-items-center justify-content-between gap-2 mb-3">
             <a class="d-flex align-items-center gap-2 text-decoration-none text-reset" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
