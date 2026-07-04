@@ -57,15 +57,8 @@
             if (isReviewMode || isRetakeMode) return false;
             const liveParam = urlParams.get('live');
             const liveSessionId = urlParams.get('live_session_id');
-            const liveStartAt = urlParams.get('start_at');
-            if (liveParam !== '1' || !liveSessionId || !liveStartAt) return false;
-            try {
-                const startedAt = new Date(liveStartAt);
-                const ageMs = Date.now() - startedAt.getTime();
-                return Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 30 * 60 * 1000;
-            } catch (error) {
-                return false;
-            }
+            const countdown = Number.parseInt(urlParams.get('countdown') || '10', 10);
+            return liveParam === '1' && Boolean(liveSessionId) && Number.isFinite(countdown) && countdown > 0;
         }
 
         let items = [];
@@ -977,9 +970,13 @@
         }
 
         function startLiveCountdown() {
-            if (isReviewMode || liveCountdownStarted || !items.length) return;
+            if (isReviewMode || liveCountdownStarted) return;
             const isLiveAssessment = isCurrentLiveAssessment();
             if (!isLiveAssessment) return;
+            if (!items.length) {
+                window.setTimeout(() => startLiveCountdown(), 120);
+                return;
+            }
 
             liveCountdownStarted = true;
             showLiveCountdown();
