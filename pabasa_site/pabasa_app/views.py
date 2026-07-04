@@ -3372,6 +3372,14 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
     return f'/dashboard/assessment/reading_ui/{mode}/?{query}'
 
 
+@require_http_methods(["GET"])
+def live_assessment_server_time(request):
+    return JsonResponse({
+        'success': True,
+        'server_time': timezone.now().isoformat(),
+    })
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 def start_live_assessment(request):

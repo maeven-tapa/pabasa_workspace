@@ -102,6 +102,7 @@
         let currentMaterialLanguage = "";
         let liveCountdownTimer = null;
         let liveCountdownStarted = false;
+        let liveServerTimeOffsetMs = 0;
         let audioContext = null;
         let audioAnalyser = null;
         let audioMeterFrame = null;
@@ -969,7 +970,28 @@
             liveCountdownOverlay.classList.add('d-none');
         }
 
-        function startLiveCountdown() {
+        async function syncLiveServerTime() {
+            if (liveServerTimeOffsetMs !== 0 || !isCurrentLiveAssessment()) return Promise.resolve();
+            try {
+                const response = await fetch('/api/live-assessment/server-time/', { credentials: 'same-origin' });
+                const data = await response.json();
+                if (data.success && data.server_time) {
+                    const serverTime = Date.parse(data.server_time);
+                    const localTime = Date.now();
+                    if (Number.isFinite(serverTime)) {
+                        liveServerTimeOffsetMs = serverTime - localTime;
+                    }
+                }
+            } catch (error) {
+                console.warn('PABASA: Unable to sync live assessment server time', error);
+            }
+        }
+
+        function getAdjustedServerTime() {
+            return Date.now() + liveServerTimeOffsetMs;
+        }
+
+        async function startLiveCountdown() {
             if (isReviewMode || liveCountdownStarted) return;
             const isLiveAssessment = isCurrentLiveAssessment();
             if (!isLiveAssessment) return;
@@ -978,6 +1000,7 @@
                 return;
             }
 
+            await syncLiveServerTime();
             liveCountdownStarted = true;
             showLiveCountdown();
             const countdownDuration = Number.parseInt(urlParams.get('countdown') || '10', 10);
@@ -987,9 +1010,8 @@
                 if (!Number.isFinite(liveStartAt)) {
                     return Math.max(1, countdownDuration);
                 }
-                const now = Date.now();
-                const startedAt = liveStartAt;
-                const elapsedSeconds = Math.floor((now - startedAt) / 1000);
+                const now = getAdjustedServerTime();
+                const elapsedSeconds = Math.floor((now - liveStartAt) / 1000);
                 const remaining = countdownDuration - elapsedSeconds;
                 return Math.max(0, remaining);
             };

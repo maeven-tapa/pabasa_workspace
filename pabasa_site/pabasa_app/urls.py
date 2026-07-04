@@ -77,6 +77,7 @@ urlpatterns = [
     path('api/notifications/', views.get_notifications, name='get_notifications'),
     path('api/notifications/unread-count/', views.get_unread_notification_count, name='get_unread_notification_count'),
     path('api/notifications/mark-read/', views.mark_notification_read, name='mark_notification_read'),
+    path('api/live-assessment/server-time/', views.live_assessment_server_time, name='live_assessment_server_time'),
     path('record-assessment-completion/', views.record_assessment_completion, name='record_assessment_completion'),
     path('what-is-pabasa/', views.pabasa_info, name='pabasa_info'),
     path('about/', views.about, name='about'),
