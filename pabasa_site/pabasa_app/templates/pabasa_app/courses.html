@@ -6404,18 +6404,15 @@
 
                         if (action === 'live') {
                             if (!mat) return showToast('Material not found', 'error');
-                            const loadingModalEl = document.getElementById('liveAssessmentLoadingModal');
-                            const confirmModalEl = document.getElementById('liveAssessmentConfirmModal');
-                            const cleanupLiveAssessmentModals = () => {
-                                [loadingModalEl, confirmModalEl].forEach((modalEl) => {
-                                    if (!modalEl) return;
-                                    try {
-                                        const instance = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
-                                        instance.hide();
-                                    } catch (e) {
-                                        console.warn('Could not hide live assessment modal', e);
-                                    }
-                                });
+                            const liveModalEl = document.getElementById('liveAssessmentLoadingModal');
+                            const closeLiveModal = () => {
+                                if (!liveModalEl) return;
+                                try {
+                                    const instance = bootstrap.Modal.getInstance(liveModalEl) || bootstrap.Modal.getOrCreateInstance(liveModalEl);
+                                    instance.hide();
+                                } catch (e) {
+                                    console.warn('Could not hide live assessment modal', e);
+                                }
                                 setTimeout(() => {
                                     document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
                                     document.body.classList.remove('modal-open');
@@ -6424,9 +6421,8 @@
                                 }, 50);
                             };
                             try {
-                                const loadingModal = bootstrap.Modal.getOrCreateInstance(loadingModalEl);
-                                const confirmModal = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
-                                loadingModal.show();
+                                const liveModal = bootstrap.Modal.getOrCreateInstance(liveModalEl);
+                                liveModal.show();
                                 const materialIdForBackend = String(mat.id || mat.raw_id || rawRecordId(mid) || '').trim();
                                 const res = await fetch('/dashboard/teacher/start-live-assessment/', {
                                     method: 'POST',
@@ -6438,24 +6434,13 @@
                                 if (!res.ok || !d.success) {
                                     throw new Error(d.error || 'Unable to start live assessment');
                                 }
-                                loadingModal.hide();
-                                document.getElementById('liveAssessmentConfirmMessage').textContent = 'Assessment starting live...';
-                                confirmModal.show();
-                                if (window.__pabasaLiveConfirmTimer) {
-                                    window.clearTimeout(window.__pabasaLiveConfirmTimer);
-                                }
-                                window.__pabasaLiveConfirmTimer = window.setTimeout(() => {
-                                    try {
-                                        confirmModal.hide();
-                                        cleanupLiveAssessmentModals();
-                                    } catch (e) {
-                                        console.warn('Could not auto-hide live assessment confirmation', e);
-                                    }
+                                window.setTimeout(() => {
+                                    closeLiveModal();
+                                    showToast('Live assessment started', 'success');
                                 }, 4000);
-                                showToast('Live assessment started', 'success');
                             } catch (err) {
                                 console.error('live assessment error', err);
-                                cleanupLiveAssessmentModals();
+                                closeLiveModal();
                                 showToast(err.message || 'Could not start live assessment', 'error');
                             }
                             return;
@@ -11381,20 +11366,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <h5 class="fw-bold mb-1">Preparing live assessment</h5>
                 <p class="text-muted mb-0">Gathering students and launching the session…</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="liveAssessmentConfirmModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-body text-center py-4">
-                <div class="mb-3 text-success">
-                    <i class="bi bi-broadcast fs-1"></i>
-                </div>
-                <h5 class="fw-bold mb-2">Assessment starting live...</h5>
-                <p class="text-muted mb-0" id="liveAssessmentConfirmMessage">Students are being notified and will be redirected automatically.</p>
             </div>
         </div>
     </div>

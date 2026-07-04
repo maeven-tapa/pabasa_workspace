@@ -53,6 +53,21 @@
         const isRetakeMode = viewMode === "retake";
         if (testMeta) testMeta.textContent = `${testTitle} - ${testCode}`;
 
+        function isCurrentLiveAssessment() {
+            if (isReviewMode || isRetakeMode) return false;
+            const liveParam = urlParams.get('live');
+            const liveSessionId = urlParams.get('live_session_id');
+            const liveStartAt = urlParams.get('start_at');
+            if (liveParam !== '1' || !liveSessionId || !liveStartAt) return false;
+            try {
+                const startedAt = new Date(liveStartAt);
+                const ageMs = Date.now() - startedAt.getTime();
+                return Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 30 * 60 * 1000;
+            } catch (error) {
+                return false;
+            }
+        }
+
         let items = [];
         let currentIndex = 0;
         let isRecording = false;
@@ -963,7 +978,7 @@
 
         function startLiveCountdown() {
             if (isReviewMode || liveCountdownStarted || !items.length) return;
-            const isLiveAssessment = urlParams.get('live') === '1' || Boolean(urlParams.get('live_session_id'));
+            const isLiveAssessment = isCurrentLiveAssessment();
             if (!isLiveAssessment) return;
 
             liveCountdownStarted = true;
@@ -1378,11 +1393,7 @@
         }
 
         function goBackToAssessments() {
-            if (window.history.length > 1) {
-                window.history.back();
-                return;
-            }
-            window.location.href = '/dashboard/assessment/';
+            window.location.assign('/dashboard/assessment/');
         }
 
         prevBtn?.addEventListener("click", () => { 
