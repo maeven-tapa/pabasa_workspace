@@ -48,16 +48,19 @@
 
         .principal-sidebar {
             width: var(--principal-sidebar-width);
-            min-height: 100vh;
+            min-height: 100dvh;
+            height: 100dvh;
             position: fixed;
             inset: 0 auto 0 0;
+            display: flex;
+            flex-direction: column;
             background:
                 linear-gradient(145deg, #13507a 0%, var(--principal-primary-deep) 70%, #0b3552 100%);
             border-right: 1px solid rgba(255, 255, 255, 0.12);
             box-shadow: 16px 0 40px rgba(6, 23, 38, 0.24);
             backdrop-filter: blur(22px) saturate(170%);
             padding: 1.15rem;
-            overflow-x: hidden;
+            overflow: visible;
         }
 
         .principal-sidebar::before {
@@ -101,14 +104,37 @@
         .principal-sidebar .offcanvas-body {
             display: flex;
             flex-direction: column;
-            min-height: 100%;
+            flex: 1 1 auto;
+            min-height: 0;
+            height: 100%;
             overflow-x: hidden;
-            overflow-y: auto;
+            overflow-y: hidden;
             padding-right: 0;
             padding-left: 0;
+            padding-bottom: calc(1.15rem + env(safe-area-inset-bottom));
             width: 100%;
             box-sizing: border-box;
             min-width: 0;
+        }
+
+        .principal-sidebar-top {
+            flex-shrink: 0;
+            padding: 0 1rem;
+        }
+
+        .principal-sidebar-nav {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 1rem 0.5rem;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .principal-sidebar-footer {
+            margin-top: auto;
+            flex-shrink: 0;
+            padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
         }
 
         .principal-sidebar .offcanvas-header {
@@ -226,7 +252,6 @@
             color: var(--principal-primary-deep);
         }
 
-        .principal-topbar,
         .principal-panel {
             background: rgba(255, 255, 255, 0.78);
             backdrop-filter: blur(12px) saturate(140%);
@@ -236,14 +261,115 @@
             box-shadow: var(--principal-shadow);
         }
 
-        .principal-topbar {
+        .admin-topbar {
             align-items: center;
+            background: rgba(255, 255, 255, 0.78);
+            backdrop-filter: blur(12px) saturate(140%);
+            -webkit-backdrop-filter: blur(12px) saturate(140%);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 18px;
+            box-shadow: var(--principal-shadow);
             display: flex;
+            gap: 0.85rem;
             justify-content: space-between;
-            gap: 1rem;
             margin: 0 auto 1rem;
             max-width: 1180px;
-            padding: 1rem 1.15rem;
+            min-height: 72px;
+            padding: 0.8rem 1rem;
+            flex-wrap: nowrap;
+        }
+
+        .admin-topbar-start {
+            align-items: center;
+            display: flex;
+            flex: 1 1 auto;
+            gap: 0.7rem;
+            min-width: 0;
+        }
+
+        .admin-topbar-title {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .admin-topbar-title h1 {
+            font-size: 1.1rem;
+            line-height: 1.2;
+            margin: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .admin-topbar-title p {
+            margin-bottom: 0.1rem;
+        }
+
+        .admin-topbar-actions {
+            align-items: center;
+            display: flex;
+            flex-shrink: 0;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .admin-topbar .btn-link {
+            color: var(--principal-primary-deep);
+        }
+
+        .admin-topbar .btn-link.position-relative {
+            align-items: center;
+            border-radius: 999px;
+            display: inline-flex;
+            height: 40px;
+            justify-content: center;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            width: 40px;
+            padding: 0;
+        }
+
+        .admin-topbar .btn-link.position-relative:hover {
+            background-color: var(--principal-primary-soft);
+            transform: translateY(-1px);
+        }
+
+        .admin-topbar .btn-link .bi-bell {
+            color: var(--principal-primary-deep);
+            font-weight: 600;
+        }
+
+        .admin-notif-badge {
+            align-items: center;
+            background: #dc3545;
+            border-radius: 999px;
+            color: #fff;
+            display: inline-flex;
+            font-size: 0.68rem;
+            font-weight: 700;
+            height: 18px;
+            justify-content: center;
+            line-height: 1.1;
+            min-width: 18px;
+            padding: 0 0.3rem;
+            position: absolute;
+            right: 2px;
+            top: 2px;
+        }
+
+        .admin-notif-badge.is-hidden {
+            display: none;
+        }
+
+        .admin-topbar-user {
+            text-align: end;
+            line-height: 1.15;
+        }
+
+        .admin-topbar-user .small {
+            font-size: 0.72rem;
+            letter-spacing: 0.04em;
         }
 
         .principal-content {
@@ -332,6 +458,7 @@
             border-radius: 14px;
             color: #fff;
             font-weight: 800;
+            min-height: 48px;
             padding: 0.8rem 0.95rem;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
@@ -405,12 +532,12 @@
                 left: 0;
                 width: min(320px, 86vw);
                 max-width: 320px;
-                height: 100%;
-                min-height: 100vh;
+                height: 100dvh;
+                min-height: 100dvh;
                 transform: translateX(-100%);
                 visibility: hidden;
                 z-index: 1085;
-                overflow: hidden;
+                overflow: visible;
                 background: linear-gradient(145deg, #13507a 0%, var(--principal-primary-deep) 70%, #0b3552 100%);
                 padding: 0;
             }
@@ -423,9 +550,10 @@
             .principal-sidebar .offcanvas-body {
                 display: flex;
                 flex-direction: column;
-                min-height: 100%;
+                min-height: 0;
+                height: 100%;
                 overflow-x: hidden;
-                overflow-y: auto;
+                overflow-y: hidden;
                 padding: 1.15rem;
                 width: 100%;
                 box-sizing: border-box;
@@ -450,30 +578,55 @@
 
             .principal-main {
                 margin-left: 0;
+                padding-left: 1rem;
+                padding-right: 1rem;
             }
 
-            .principal-topbar {
-                flex-wrap: wrap;
-                align-items: flex-start;
+            .admin-topbar {
+                align-items: center;
+                flex-wrap: nowrap;
                 gap: 0.75rem;
-                padding: 0.95rem 1rem;
+                padding: 0.75rem 0.75rem;
             }
 
-            .principal-topbar > div {
+            .admin-topbar-start {
+                flex: 1 1 auto;
                 min-width: 0;
-                flex: 1 1 100%;
             }
 
-            .principal-topbar .text-end {
-                text-align: left !important;
+            .admin-topbar-actions {
+                flex-shrink: 0;
+                margin-left: auto;
             }
 
-            .principal-topbar button[data-bs-toggle="offcanvas"] {
-                order: -1;
+            .admin-topbar-user {
+                text-align: right !important;
+            }
+
+            .admin-topbar .admin-sidebar-toggle {
+                align-items: center;
+                display: inline-flex !important;
+                justify-content: center;
+                margin-right: 0.25rem;
+            }
+
+            .admin-topbar button[data-bs-toggle="offcanvas"] {
+                order: 0;
             }
 
             .principal-logout-btn {
                 width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .principal-topbar {
+                padding: 0.75rem 0.75rem;
+            }
+
+            .principal-main {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
             }
         }
 
@@ -496,21 +649,23 @@
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
-        <div class="offcanvas-body d-flex flex-column h-100">
-            <a class="principal-brand" href="{% url 'dashboard_principal' %}">
-                <span class="principal-brand-icon"><i class="bi bi-mortarboard"></i></span>
-                <span>
-                    <strong class="d-block">{{ principal_id|default:"PRN-SES" }}</strong>
-                    <span class="small" style="color: #ffffff;">PABASA Principal</span>
-                </span>
-            </a>
+        <div class="offcanvas-body d-flex flex-column">
+            <div class="principal-sidebar-top">
+                <a class="principal-brand" href="{% url 'dashboard_principal' %}">
+                    <span class="principal-brand-icon"><i class="bi bi-mortarboard"></i></span>
+                    <span>
+                        <strong class="d-block">{{ principal_id|default:"PRN-SES" }}</strong>
+                        <span class="small" style="color: #ffffff;">PABASA Principal</span>
+                    </span>
+                </a>
 
-            <div class="principal-role-card mt-3">
-                <span class="small d-block">Principal workspace</span>
-                <strong class="text-dark">School Management & Performance</strong>
+                <div class="principal-role-card mt-3">
+                    <span class="small d-block">Principal workspace</span>
+                    <strong class="text-dark">School Management & Performance</strong>
+                </div>
             </div>
 
-            <nav class="mt-2">
+            <nav class="principal-sidebar-nav mt-2">
                 <div class="principal-nav-label">Main</div>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'dashboard_principal' %}active{% endif %}" href="{% url 'dashboard_principal' %}"><i class="bi bi-grid"></i>Dashboard</a>
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_performance' %}active{% endif %}" href="{% url 'principal_performance' %}"><i class="bi bi-graph-up"></i>Performance</a>
@@ -519,7 +674,7 @@
                 <a class="principal-nav-link {% if request.resolver_match.url_name == 'principal_settings' %}active{% endif %}" href="{% url 'principal_settings' %}"><i class="bi bi-gear"></i>Settings</a>
             </nav>
 
-            <div class="mt-auto pt-3">
+            <div class="principal-sidebar-footer mt-auto pt-3">
                 <button class="btn principal-logout-btn w-100" type="button" data-bs-toggle="modal" data-bs-target="#principalLogoutModal">
                     <i class="bi bi-box-arrow-right me-1"></i>Logout
                 </button>
@@ -528,22 +683,26 @@
     </aside>
 
     <main class="principal-main">
-        <header class="principal-topbar">
-            <button class="btn btn-link text-dark d-lg-none p-0 me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#principalSidebar" aria-controls="principalSidebar" aria-label="Open navigation menu">
-                <i class="bi bi-list fs-4"></i>
-            </button>
-            <div>
-                <p class="small text-secondary text-uppercase fw-bold mb-1">Principal Module</p>
-                <h1 class="h3 fw-bold mb-0">{{ page_title }}</h1>
+        <header class="admin-topbar">
+            <div class="admin-topbar-start">
+                <button class="btn btn-link text-dark p-0 admin-sidebar-toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#principalSidebar" aria-controls="principalSidebar" aria-label="Open navigation menu">
+                    <i class="bi bi-list fs-4"></i>
+                </button>
+                <div class="admin-topbar-title">
+                    <p class="small text-secondary text-uppercase fw-bold mb-1">PRINCIPAL MODULE</p>
+                    <h1 class="h3 fw-bold mb-0">{{ page_title }}</h1>
+                </div>
             </div>
-            <div class="text-end">
-                <span class="small text-secondary d-block">Logged in as</span>
-                <strong>{{ principal_id }}</strong>
+            <div class="admin-topbar-actions">
+                <div class="text-end admin-topbar-user">
+                    <span class="small text-secondary d-block">Logged in as</span>
+                    <strong>{{ principal_id }}</strong>
+                </div>
+                <button class="btn btn-link text-dark p-0 position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#principalNotificationPane" aria-label="View notifications">
+                    <i class="bi bi-bell fs-5"></i>
+                    <span class="admin-notif-badge is-hidden" id="notifBadge">0</span>
+                </button>
             </div>
-            <button class="btn btn-link text-dark p-0 position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#principalNotificationPane" aria-label="View notifications">
-                <i class="bi bi-bell fs-5"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="display: none; font-size: 0.6rem; padding: 0.35em 0.5em;">0</span>
-            </button>
         </header>
 
         <div class="offcanvas offcanvas-end" tabindex="-1" id="principalNotificationPane" aria-labelledby="principalNotificationPaneLabel">
