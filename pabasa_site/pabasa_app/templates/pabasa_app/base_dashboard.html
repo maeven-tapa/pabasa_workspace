@@ -1926,12 +1926,31 @@
 
             if (window.PABASA_USER_ROLE === 'student') {
                 const liveNotification = notifications.find(n => (n.action_url || '').includes('live_session_id='));
-                if (liveNotification) {
-                    const seenKey = `pabasa_seen_live_session_${encodeURIComponent(liveNotification.action_url || '')}`;
+                if (liveNotification && !liveNotification.is_read) {
+                    const actionUrl = liveNotification.action_url || '';
+                    const seenKey = `pabasa_seen_live_session_${encodeURIComponent(actionUrl)}`;
                     const alreadySeen = window.sessionStorage.getItem(seenKey);
-                    if (!alreadySeen && liveNotification.action_url) {
+                    const liveParams = new URLSearchParams(actionUrl.split('?')[1] || '');
+                    const startAt = liveParams.get('start_at');
+                    const createdAt = liveNotification.created_at ? Date.parse(liveNotification.created_at) : 0;
+                    const isFresh = Boolean(startAt) && (createdAt ? (Date.now() - createdAt) <= 5 * 60 * 1000 : true);
+                    if (!alreadySeen && actionUrl && isFresh) {
                         window.sessionStorage.setItem(seenKey, '1');
-                        window.location.replace(liveNotification.action_url);
+                        try {
+                            await fetch("{% url 'mark_notification_read' %}", {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getNotificationCsrfToken(),
+                                    'Accept': 'application/json'
+                                },
+                                credentials: 'same-origin',
+                                body: JSON.stringify({ notification_id: liveNotification.id })
+                            });
+                        } catch (error) {
+                            console.warn('Could not mark live notification as read before redirect', error);
+                        }
+                        window.location.replace(actionUrl);
                         return;
                     }
                 }
