@@ -97,10 +97,64 @@
         color: #0f2f45;
         text-decoration: underline;
     }
+
+    .login-loading-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        opacity: 0;
+        pointer-events: none;
+        visibility: hidden;
+        transition: opacity 0.18s ease, visibility 0.18s ease;
+    }
+
+    .login-loading-screen.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+        visibility: visible;
+    }
+
+    .login-loading-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .login-loading-logo {
+        display: block;
+        width: min(180px, 48vw);
+        height: auto;
+    }
+
+    .login-loading-spinner {
+        width: 42px;
+        height: 42px;
+        border: 4px solid rgba(84, 194, 240, 0.22);
+        border-top-color: #54c2f0;
+        border-radius: 50%;
+        animation: loginSpinner 0.85s linear infinite;
+    }
+
+    @keyframes loginSpinner {
+        to {
+            transform: rotate(360deg);
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="login-loading-screen" id="loginLoadingScreen" aria-live="polite" aria-label="Loading dashboard">
+    <div class="login-loading-content">
+        <img class="login-loading-logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
+        <div class="login-loading-spinner" role="status" aria-label="Loading"></div>
+    </div>
+</div>
+
 <section class="account-stage">
     <div class="col-12 col-md-9 col-lg-5 mx-auto">
         <article class="account-card card">
@@ -148,7 +202,17 @@
         const passwordToggle = document.getElementById("passwordToggle");
         const loginBtn = document.getElementById("loginBtn");
         const errorMessage = document.getElementById("errorMessage");
+        const loadingScreen = document.getElementById("loginLoadingScreen");
         const pabasaIdPattern = /^((ADM|TCH|G2|STD)-[A-Z0-9]{1,12}|PRN-[A-Z0-9]{1,12}-[0-9]{3})$/;
+        const minimumLoadingTime = 500;
+
+        const showLoadingScreen = () => {
+            loadingScreen?.classList.add("is-visible");
+        };
+
+        const hideLoadingScreen = () => {
+            loadingScreen?.classList.remove("is-visible");
+        };
 
         const updatePasswordToggle = () => {
             const isHidden = password.type === "password";
@@ -217,6 +281,8 @@
 
             loginBtn.disabled = true;
             loginBtn.innerHTML = 'Logging in...';
+            const loadingStartedAt = Date.now();
+            showLoadingScreen();
             
             try {
                 const formData = new FormData(form);
@@ -242,18 +308,25 @@
                         localStorage.setItem("pabasaUserEmail", data.email);
                     }
 
-                    window.location.href = data.redirect_url;
+                    const elapsedLoadingTime = Date.now() - loadingStartedAt;
+                    const remainingLoadingTime = Math.max(0, minimumLoadingTime - elapsedLoadingTime);
+
+                    window.setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, remainingLoadingTime);
                 } else {
                     errorMessage.textContent = data.error || 'Login failed. Please try again.';
                     errorMessage.classList.remove("d-none");
                     loginBtn.disabled = false;
                     loginBtn.innerHTML = 'Login';
+                    hideLoadingScreen();
                 }
             } catch (error) {
                 errorMessage.textContent = 'An error occurred. Please try again.';
                 errorMessage.classList.remove("d-none");
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = 'Login';
+                hideLoadingScreen();
             }
         });
     })();
