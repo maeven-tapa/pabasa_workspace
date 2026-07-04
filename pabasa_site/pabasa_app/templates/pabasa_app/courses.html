@@ -984,6 +984,10 @@
         opacity: 0.9;
     }
 
+    .course-tab-label-short {
+        display: none;
+    }
+
     .course-tabs {
         display: grid;
         gap: 0.65rem;
@@ -2927,7 +2931,236 @@
         padding: 0.25rem 0.55rem;
     }
 
-    @media (max-width: 575.98px) {
+    .course-report-recipient {
+        overflow: hidden;
+    }
+
+    .course-report-recipient-row {
+        align-items: center;
+        display: flex;
+        gap: 0.85rem;
+    }
+
+    .course-report-recipient-check {
+        align-items: center;
+        display: flex;
+        flex: 0 0 auto;
+        min-height: 44px;
+    }
+
+    .course-report-recipient-main {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .course-report-recipient-head {
+        align-items: center;
+        display: flex;
+        gap: 0.6rem;
+        justify-content: space-between;
+        min-width: 0;
+    }
+
+    .course-report-recipient-name,
+    .course-report-recipient-meta,
+    .course-report-recipient .small.text-secondary {
+        overflow-wrap: anywhere;
+    }
+
+    .course-report-template-tip {
+        color: var(--dash-muted);
+        font-weight: 600;
+        margin: -0.2rem 0 0.45rem;
+    }
+
+    @media (max-width: 768px) {
+        #reportsPane #courseReportSection {
+            margin-bottom: 0 !important;
+        }
+
+        #reportsPane .mb-3.d-flex.justify-content-between.align-items-center {
+            margin-bottom: 0.75rem !important;
+        }
+
+        #reportsPane .row {
+            --bs-gutter-x: 0;
+            --bs-gutter-y: 0.9rem;
+        }
+
+        #reportsPane .col-lg-6 {
+            width: 100%;
+        }
+
+        #reportsPane .dash-card {
+            border-radius: 14px;
+            width: 100%;
+        }
+
+        #reportsPane .card-header {
+            align-items: flex-start !important;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 0.95rem 0.95rem 0.6rem !important;
+        }
+
+        #reportsPane .card-body {
+            padding: 0.95rem !important;
+        }
+
+        #reportsPane .course-report-recipients-card .card-body {
+            padding: 0 !important;
+        }
+
+        #reportsPane #courseUnifiedStudentReportList {
+            display: grid;
+            gap: 0.75rem;
+            padding: 0 0.95rem 0.95rem;
+        }
+
+        #reportsPane .form-check {
+            align-items: center;
+            display: flex;
+            gap: 0.55rem;
+            margin: 0;
+            min-height: 44px;
+            padding-left: 0;
+        }
+
+        #reportsPane .form-check-input {
+            flex: 0 0 auto;
+            height: 1.25rem;
+            margin: 0;
+            width: 1.25rem;
+        }
+
+        #reportsPane .form-check-label {
+            line-height: 1.3;
+            margin: 0;
+        }
+
+        .course-report-recipient {
+            border: 1px solid rgba(27, 26, 23, 0.08) !important;
+            border-radius: 12px;
+            padding: 0.85rem !important;
+        }
+
+        .course-report-recipient-row {
+            align-items: flex-start;
+            gap: 0.7rem;
+        }
+
+        .course-report-recipient-check {
+            padding-top: 0.05rem;
+        }
+
+        .course-report-recipient-head {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .course-report-recipient-name {
+            font-size: 0.98rem;
+            line-height: 1.3;
+        }
+
+        .course-report-recipient-meta,
+        .course-report-recipient .small.text-secondary {
+            font-size: 0.82rem;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+        }
+
+        .course-report-pill-row {
+            display: grid;
+            gap: 0.45rem;
+            grid-template-columns: 1fr;
+            margin-top: 0.7rem;
+        }
+
+        .course-report-pill {
+            align-items: center;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            line-height: 1.35;
+            min-height: 44px;
+            overflow-wrap: anywhere;
+            padding: 0.55rem 0.7rem;
+            white-space: normal;
+        }
+
+        .course-report-preview {
+            border-radius: 12px;
+            margin-bottom: 0.9rem;
+            padding: 0.85rem;
+        }
+
+        .course-report-preview-head {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .course-report-metric-grid {
+            gap: 0.55rem;
+        }
+
+        .course-report-metric {
+            padding: 0.7rem;
+        }
+
+        .course-report-recommendation {
+            padding: 0.75rem;
+        }
+
+        #courseParentUpdateTabForm {
+            display: grid;
+            gap: 0.9rem;
+        }
+
+        #courseParentUpdateTabForm .mb-3 {
+            margin-bottom: 0 !important;
+        }
+
+        #courseParentUpdateTabForm .form-label {
+            align-items: flex-start !important;
+            flex-direction: column;
+            gap: 0.25rem;
+            line-height: 1.35;
+            margin-bottom: 0.45rem;
+        }
+
+        #courseParentUpdateTabForm .form-label small {
+            color: var(--dash-muted) !important;
+            display: block;
+            font-weight: 600;
+        }
+
+        .course-report-template-tip {
+            margin: -0.25rem 0 0.1rem;
+        }
+
+        #courseParentUpdateTabForm .form-control,
+        #courseParentUpdateTabForm .form-select,
+        #courseParentUpdateTabForm textarea {
+            min-height: 44px;
+            width: 100%;
+        }
+
+        #courseParentUpdateMessage {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        #courseParentUpdateTabForm .d-flex.justify-content-end {
+            display: block !important;
+        }
+
+        #courseBtnSendParentUpdate {
+            min-height: 44px;
+            width: 100%;
+        }
+
         .course-report-metric-grid {
             grid-template-columns: 1fr;
         }
@@ -2945,12 +3178,68 @@
         .course-sidebar {
             border-bottom: 1px solid rgba(27, 26, 23, 0.08);
             border-right: 0;
-            overflow-x: auto;
+            overflow-x: hidden;
+            padding: 0 0 0.85rem;
+            width: 100%;
+        }
+
+        .course-side-nav {
+            display: flex;
+            flex-direction: row !important;
+            gap: 0.35rem;
+            overflow: hidden;
+            padding: 0;
+            scroll-snap-type: none;
+            width: 100%;
+        }
+
+        .course-side-nav .nav-link {
+            border-radius: 10px;
+            box-shadow: none;
+            flex: 1 1 0;
+            font-size: 0.85rem;
+            justify-content: center;
+            line-height: 1.15;
+            min-height: 38px;
+            min-width: 0;
+            padding: 0.55rem 0.25rem;
+            position: relative;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .course-side-nav .nav-link i {
+            display: none;
+        }
+
+        .course-side-nav .nav-link.active {
+            background: var(--dash-primary);
+            border-color: var(--dash-primary);
+            color: #fff !important;
+        }
+
+        .course-side-nav .nav-link.active::after {
+            background: currentColor;
+            border-radius: 999px;
+            bottom: 0.28rem;
+            content: "";
+            height: 2px;
+            left: 24%;
+            position: absolute;
+            right: 24%;
+        }
+
+        .course-tab-label-full {
+            display: none;
+        }
+
+        .course-tab-label-short {
+            display: inline;
         }
 
         .course-tabs {
             display: flex;
-            min-width: max-content;
+            min-width: 0;
         }
 
         .course-tab-content {
@@ -2985,11 +3274,55 @@
         }
 
         .students-toolbar {
+            align-items: stretch;
             flex-direction: column;
+            gap: 0.75rem;
         }
 
+        .assessment-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .assessment-search,
         .students-search {
+            flex: 1 1 auto;
+            min-height: 44px;
             min-width: unset;
+            width: 100%;
+        }
+
+        .assessment-search input,
+        .students-search input {
+            min-height: 44px;
+            padding: 0;
+        }
+
+        .assessment-filter-group,
+        .students-filter {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .assessment-filter-btn,
+        .students-filter .filter-btn {
+            align-items: center;
+            display: inline-flex;
+            min-height: 44px;
+            padding: 0.55rem 0.85rem;
+        }
+
+        .assessment-sort-group {
+            width: 100%;
+        }
+
+        .assessment-sort-group select,
+        .students-sort-select {
+            min-height: 44px;
+            min-width: 0;
             width: 100%;
         }
 
@@ -3596,6 +3929,14 @@
         color: #ffffff !important;
     }
 
+    @media (max-width: 768px) {
+        body.dark-theme .course-side-nav .nav-link.active {
+            background: var(--dash-primary) !important;
+            border-color: var(--dash-primary) !important;
+            color: #ffffff !important;
+        }
+    }
+
     body.dark-theme #otherMaterialPanel,
     body.dark-theme #otherMaterialPanel .input-group,
     body.dark-theme #otherMaterialPanel .input-group-text,
@@ -4061,10 +4402,10 @@
                                 </div>
 
                                 <nav class="nav flex-column nav-pills course-side-nav" role="tablist" aria-orientation="vertical">
-                                    <button class="nav-link active" id="side-materials-tab" data-bs-toggle="tab" data-bs-target="#materialsPane" type="button" role="tab" aria-controls="materialsPane" aria-selected="true"><i class="bi bi-book"></i> Readings</button>
-                                    <button class="nav-link" id="side-students-tab" data-bs-toggle="tab" data-bs-target="#studentsPane" type="button" role="tab" aria-controls="studentsPane" aria-selected="false"><i class="bi bi-people"></i> Students</button>
-                                    <button class="nav-link" id="side-assessments-tab" data-bs-toggle="tab" data-bs-target="#assessmentsPane" type="button" role="tab" aria-controls="assessmentsPane" aria-selected="false"><i class="bi bi-clipboard2-check"></i> Assessments</button>
-                                    <button class="nav-link" id="side-reports-tab" data-bs-toggle="tab" data-bs-target="#reportsPane" type="button" role="tab" aria-controls="reportsPane" aria-selected="false"><i class="bi bi-bar-chart"></i> Reports & Updates</button>
+                                    <button class="nav-link active" id="side-materials-tab" data-bs-toggle="tab" data-bs-target="#materialsPane" type="button" role="tab" aria-controls="materialsPane" aria-selected="true"><i class="bi bi-book"></i><span class="course-tab-label-full">Readings</span><span class="course-tab-label-short">Readings</span></button>
+                                    <button class="nav-link" id="side-students-tab" data-bs-toggle="tab" data-bs-target="#studentsPane" type="button" role="tab" aria-controls="studentsPane" aria-selected="false"><i class="bi bi-people"></i><span class="course-tab-label-full">Students</span><span class="course-tab-label-short">Students</span></button>
+                                    <button class="nav-link" id="side-assessments-tab" data-bs-toggle="tab" data-bs-target="#assessmentsPane" type="button" role="tab" aria-controls="assessmentsPane" aria-selected="false"><i class="bi bi-clipboard2-check"></i><span class="course-tab-label-full">Assessments</span><span class="course-tab-label-short">Assess.</span></button>
+                                    <button class="nav-link" id="side-reports-tab" data-bs-toggle="tab" data-bs-target="#reportsPane" type="button" role="tab" aria-controls="reportsPane" aria-selected="false"><i class="bi bi-bar-chart"></i><span class="course-tab-label-full">Reports & Updates</span><span class="course-tab-label-short">Reports</span></button>
                                 </nav>
                             </div>
 
@@ -4162,8 +4503,8 @@
                                             </div>
                                             <div class="row g-4" style="margin-bottom:0">
                                                 <div class="col-lg-6">
-                                                    <div class="dash-card h-100">
-                                                        <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center">
+                                                    <div class="dash-card h-100 course-report-recipients-card">
+                                                        <div class="card-header bg-transparent border-0 p-4 pb-0 d-flex justify-content-between align-items-center course-report-card-header">
                                                             <h6 class="fw-bold mb-0">Select Recipients</h6>
                                                             <div class="form-check">
                                                                 <input class="form-check-input" type="checkbox" id="courseSelectAllRecipients">
@@ -4179,8 +4520,8 @@
                                                 </div>
 
                                                 <div class="col-lg-6">
-                                                    <div class="dash-card h-100">
-                                                        <div class="card-body p-4">
+                                                    <div class="dash-card h-100 course-report-composer-card">
+                                                        <div class="card-body p-4 course-report-composer-body">
                                                             <h6 class="fw-bold mb-3">Update Composer</h6>
                                                             <form id="courseParentUpdateTabForm" action="#" method="post">
                                                                 {% csrf_token %}
@@ -4216,10 +4557,10 @@
                                                                 </div>
 
                                                                 <div class="mb-3">
-                                                                    <label class="form-label d-flex justify-content-between" for="courseParentUpdateMessage">
+                                                                    <label class="form-label course-report-message-label" for="courseParentUpdateMessage">
                                                                         <span class="small fw-bold">Teacher Comments</span>
-                                                                        <small class="text-primary">Tip: Use {name} for student name</small>
                                                                     </label>
+                                                                    <div class="form-text course-report-template-tip">Tip: Use {name} for student name.</div>
                                                                     <textarea class="form-control" id="courseParentUpdateMessage" rows="4" style="border-radius:10px;" placeholder="Add personalized notes..."></textarea>
                                                                     <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> PDF attachments are used for support updates only.</div>
                                                                 </div>
@@ -4425,6 +4766,123 @@
     outline: 2px solid rgba(59,130,246,0.3);
     outline-offset: 2px;
 }
+#addMaterialModal .other-material-panel .input-group,
+#addMaterialModal .other-material-panel .form-select,
+#addMaterialModal .other-material-panel .form-control,
+#addMaterialModal .other-material-panel .input-group-text,
+#addMaterialModal .other-material-panel .btn {
+    min-height: 44px;
+}
+#otherMaterialCardGrid {
+    display: none;
+    width: 100%;
+}
+.other-material-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    border-radius: 18px;
+    border: 1px solid rgba(226,232,240,0.85);
+    background: #fff;
+    padding: 1rem;
+    box-shadow: 0 0 0 rgba(0,0,0,0);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    cursor: pointer;
+}
+.other-material-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 34px rgba(15,23,42,0.08);
+}
+.other-material-card:focus-within {
+    outline: 2px solid rgba(59,130,246,0.35);
+    outline-offset: 2px;
+}
+.other-material-card .material-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(226,232,240,0.9);
+}
+.other-material-card .material-card-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    flex: 1;
+}
+.other-material-card .material-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    color: #64748b;
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+.other-material-card .material-card-chip,
+.other-material-card .material-card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.38rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(226,232,240,0.95);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+}
+.other-material-card .material-card-status {
+    background: rgba(226,232,240,0.95);
+    color: #475569;
+}
+.other-material-card .material-card-status.status-published {
+    background: rgba(167,243,208,0.35);
+    color: #166534;
+}
+.other-material-card .material-card-actions {
+    position: absolute;
+    top: 0.20rem;
+    right: 1rem;
+}
+.other-material-card .material-card-actions .btn {
+    min-height: 44px;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(59,130,246,0.12);
+    color: var(--dash-primary);
+    border: 1px solid rgba(59,130,246,0.24);
+    box-shadow: none;
+}
+.other-material-card .material-card-actions .btn:hover,
+.other-material-card .material-card-actions .btn:focus {
+    background: rgba(59,130,246,0.18);
+    color: var(--dash-primary-dark, #0f172a);
+    border-color: rgba(59,130,246,0.36);
+}
+#otherMaterialTableWrapper .use-other-material-btn {
+    border-radius: 999px;
+    padding: 0.35rem 1rem;
+    min-height: 44px;
+    background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-soft));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(31,111,139,0.16);
+    font-weight: 700;
+}
+#otherMaterialTableWrapper .use-other-material-btn:hover,
+#otherMaterialTableWrapper .use-other-material-btn:focus {
+    background: linear-gradient(135deg, rgba(59,130,246,0.9), rgba(191,219,254,0.9));
+    color: #0f172a;
+}
+@media (max-width: 767.98px) {
+    #otherMaterialTableWrapper { display: none !important; }
+    #otherMaterialCardGrid { display: grid; gap: 1rem; }
+}
 @media (max-width: 575.98px) { #addMaterialModal .material-source-toggle { max-width: 100%; } }
 @media (max-width: 991.98px) { #addMaterialModal .modal-dialog { max-width: 100%; margin: 0 1rem; } #addMaterialModal .modal-body { padding: 1rem; } }
 </style>
@@ -4460,20 +4918,20 @@
                     </div>
 
                     <div class="col-12">
-                        <div id="otherMaterialPanel" class="d-none rounded-4 shadow-sm p-3 bg-white border mb-4" style="border-color: rgba(31,111,139,0.12);">
-                            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center justify-content-between mb-3">
-                                <div class="input-group flex-grow-1">
+                        <div id="otherMaterialPanel" class="d-none rounded-4 shadow-sm p-3 bg-white border mb-4 other-material-panel" style="border-color: rgba(31,111,139,0.12);">
+                            <div class="d-flex flex-column gap-3 mb-3">
+                                <div class="input-group">
                                     <span class="input-group-text bg-white border-light"><i class="bi bi-search"></i></span>
                                     <input type="search" id="otherMaterialSearchInput" class="form-control border-light shadow-sm" placeholder="Search title...">
                                 </div>
-                                <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
-                                    <div class="input-group" style="min-width: 180px;">
+                                <div class="d-flex flex-column flex-sm-row gap-2">
+                                    <div class="input-group flex-fill">
                                         <label class="input-group-text bg-white border-light" for="otherMaterialAuthorSelect">Author</label>
                                         <select id="otherMaterialAuthorSelect" class="form-select border-light shadow-sm">
                                             <option value="">All teachers</option>
                                         </select>
                                     </div>
-                                    <div class="input-group" style="min-width: 170px;">
+                                    <div class="input-group flex-fill">
                                         <label class="input-group-text bg-white border-light" for="otherMaterialSortSelect">Sort</label>
                                         <select id="otherMaterialSortSelect" class="form-select border-light shadow-sm">
                                             <option value="date_desc">Date ↓</option>
@@ -4484,7 +4942,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="table-responsive rounded-4 border" style="border-color: rgba(226,232,240,0.85); background: #f8fafc;">
+                            <div id="otherMaterialTableWrapper" class="table-responsive rounded-4 border" style="border-color: rgba(226,232,240,0.85); background: #f8fafc;">
                                 <table class="table table-sm table-hover align-middle mb-0">
                                     <thead class="bg-white">
                                         <tr>
@@ -4500,6 +4958,7 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div id="otherMaterialCardGrid"></div>
                         </div>
                     </div>
 
@@ -6592,12 +7051,12 @@
                     const durationText = s.duration_seconds != null && s.duration_seconds !== '' && Number(s.duration_seconds) > 0 ? formatCourseReportDuration(s.duration_seconds) : 'No time';
                     const levelText = s.level || s.reading_level || 'Level pending';
                     const item = document.createElement('div');
-                    item.className = 'list-group-item p-3 border-0 border-bottom';
+                    item.className = 'list-group-item p-3 border-0 border-bottom course-report-recipient';
                     item.innerHTML = `
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="form-check mb-0"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${escapeHtml(s.id || '')}" ${!emailEnabled || !s.id ? 'disabled' : ''}></div>
-                            <div class="flex-grow-1"><div class="d-flex justify-content-between align-items-center">
-                                    <strong class="mb-0">${escapeHtml(studentName)}</strong><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span>
+                        <div class="course-report-recipient-row">
+                            <div class="form-check course-report-recipient-check"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${escapeHtml(s.id || '')}" ${!emailEnabled || !s.id ? 'disabled' : ''}></div>
+                            <div class="course-report-recipient-main"><div class="course-report-recipient-head">
+                                    <strong class="mb-0 course-report-recipient-name">${escapeHtml(studentName)}</strong><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span>
                                 </div><div class="small text-secondary mt-1">${s.email || '<span class="text-danger">No email</span>'} | Accuracy: <span class="fw-bold">${s.accuracy || '—'}%</span> | Speed: <span class="fw-bold">${s.wpm || 0} WPM</span></div>
                                 <div class="course-report-pill-row">
                                     <span class="course-report-pill"><i class="bi bi-bullseye"></i>${accuracyText}</span>
@@ -8628,6 +9087,7 @@
         const otherMaterialAuthorSelect = document.getElementById('otherMaterialAuthorSelect');
         const otherMaterialSortSelect = document.getElementById('otherMaterialSortSelect');
         const otherMaterialTableBody = document.getElementById('otherMaterialTableBody');
+        const otherMaterialCardGrid = document.getElementById('otherMaterialCardGrid');
         const personalMaterialSections = Array.from(document.querySelectorAll('.personal-material-section'));
 
         function prefixedRecordKind(id) {
@@ -8893,6 +9353,7 @@
                         status: status,
                         originalStatus: item.status || item.publication_status || item.state || 'published',
                         courseTitle: course.title || course.code || 'Course',
+                        termLabel: item.term || item.term_name || item.semester || item.session || item.course_term || course.title || course.code || 'Course',
                         sourceType: 'material',
                         material: item
                     });
@@ -8962,6 +9423,9 @@
 
             if (sorted.length === 0) {
                 otherMaterialTableBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No materials found. Try another search or filter.</td></tr>`;
+                if (otherMaterialCardGrid) {
+                    otherMaterialCardGrid.innerHTML = `<div class="text-center text-muted py-4">No materials found. Try another search or filter.</div>`;
+                }
                 return;
             }
 
@@ -8981,6 +9445,25 @@
                     </td>
                 </tr>
             `).join('');
+
+            if (otherMaterialCardGrid) {
+                otherMaterialCardGrid.innerHTML = sorted.map(item => `
+                    <article class="other-material-card" role="button" tabindex="0" data-material-id="${escapeHtml(item.id)}">
+                        <div class="material-card-actions">
+                            <button type="button" class="btn btn-sm btn-outline-primary use-other-material-btn" data-material-id="${escapeHtml(item.id)}">Select</button>
+                        </div>
+                        <div class="material-card-header">
+                            <div class="material-card-title">${escapeHtml(item.title)}</div>
+                        </div>
+                        <div class="material-card-meta">
+                            <span class="material-card-chip">Term: ${escapeHtml(item.termLabel)}</span>
+                            <span class="material-card-chip">Author: ${escapeHtml(item.author)}</span>
+                            <span class="material-card-chip">${escapeHtml(formatMaterialDate(item.published_at))}</span>
+                            <span class="material-card-status status-${escapeHtml(String(item.originalStatus).toLowerCase())}">${escapeHtml(item.originalStatus.toString())}</span>
+                        </div>
+                    </article>
+                `).join('');
+            }
         }
 
         function getOtherMaterialItems(material) {
@@ -9095,6 +9578,26 @@
                 const btn = event.target.closest('.use-other-material-btn');
                 if (!btn) return;
                 useOtherMaterial(btn.dataset.materialId);
+            });
+            otherMaterialCardGrid?.addEventListener('click', function(event) {
+                const btn = event.target.closest('.use-other-material-btn');
+                if (btn) {
+                    useOtherMaterial(btn.dataset.materialId);
+                    return;
+                }
+                const card = event.target.closest('.other-material-card');
+                if (card && card.dataset.materialId) {
+                    useOtherMaterial(card.dataset.materialId);
+                }
+            });
+            otherMaterialCardGrid?.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    const card = event.target.closest('.other-material-card');
+                    if (card && card.dataset.materialId) {
+                        event.preventDefault();
+                        useOtherMaterial(card.dataset.materialId);
+                    }
+                }
             });
 
             window.addEventListener('pabasa:materials-updated', async function() {
