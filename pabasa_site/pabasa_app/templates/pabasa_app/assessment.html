@@ -288,6 +288,11 @@
         box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
     }
 
+    .assessment-done-pill {
+        background: #16a34a !important;
+        color: #ffffff !important;
+    }
+
     .assessment-type-link.is-disabled {
         opacity: 0.5;
         pointer-events: none;
@@ -492,6 +497,7 @@
         const readingsStorageKey = "pabasa_class_readings";
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
         const materialTypes = ["word", "sentence", "paragraph"];
+        const selectedClassCode = (new URLSearchParams(window.location.search).get("code") || "").trim().toUpperCase();
 
         const escapeHtml = (value) => {
             const div = document.createElement("div");
@@ -563,7 +569,14 @@
             if (!codes.length && legacyCode) {
                 codes.push(legacyCode);
             }
-            return codes.map((code) => String(code).toUpperCase());
+            const normalizedCodes = codes.map((code) => String(code).toUpperCase());
+            if (selectedClassCode && normalizedCodes.includes(selectedClassCode)) {
+                return [selectedClassCode];
+            }
+            if (selectedClassCode) {
+                return [];
+            }
+            return normalizedCodes;
         };
 
             const getAssessmentMaterials = async () => {
@@ -747,11 +760,15 @@
 
             const classMaterials = await getAssessmentMaterials();
             if (!classMaterials.length) {
+                const emptyTitle = selectedClassCode ? "Class not available" : "No classes joined yet";
+                const emptyMessage = selectedClassCode
+                    ? "This class is not currently joined on your dashboard."
+                    : "Join a class from your dashboard to start your reading assessments.";
                 grid.innerHTML = `
                     <div class="assessment-empty-state">
                         <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
-                        <h3>No classes joined yet</h3>
-                        <p>Join a class from your dashboard to start your reading assessments.</p>
+                        <h3>${emptyTitle}</h3>
+                        <p>${emptyMessage}</p>
                     </div>`;
                 return;
             }
@@ -797,7 +814,7 @@
                                 <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
                                 <div class="type-info">
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
+                                        <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
                                         ${getMaterialLanguageBadgeHtml(m)}
                                     </div>
                                     <span>${labelMap[m.category]} • ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span>

@@ -307,6 +307,7 @@
         border: 1px solid rgba(31, 182, 255, 0.12);
         border-radius: 28px;
         box-shadow: 0 12px 34px rgba(15, 182, 255, 0.06);
+        cursor: pointer;
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -1125,14 +1126,23 @@
             }
 
             const unenrollButton = event.target.closest("[data-unenroll-code]");
-            if (!unenrollButton) {
+            if (unenrollButton) {
+                const code = unenrollButton.dataset.unenrollCode;
+                pendingUnenrollCode = code;
+                unenrollClassCode.textContent = code;
+                bootstrap.Modal.getOrCreateInstance(unenrollModalElement).show();
                 return;
             }
 
-            const code = unenrollButton.dataset.unenrollCode;
-            pendingUnenrollCode = code;
-            unenrollClassCode.textContent = code;
-            bootstrap.Modal.getOrCreateInstance(unenrollModalElement).show();
+            const card = event.target.closest("[data-class-card]");
+            if (!card) {
+                return;
+            }
+
+            const code = card.dataset.classCardCode;
+            if (code) {
+                window.location.href = `{% url 'assessment' %}?code=${encodeURIComponent(code)}`;
+            }
         });
 
         confirmUnenrollButton.addEventListener("click", async () => {

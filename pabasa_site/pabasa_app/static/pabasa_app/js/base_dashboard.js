@@ -974,6 +974,16 @@ var getStudentClassData = window.getStudentClassData = function() {
             .material-card-done:hover, .assessment-type-link.is-done:hover {
                 box-shadow: 0 4px 15px rgba(22, 163, 74, 0.1) !important;
             }
+            body.dark-theme .material-card-done,
+            body.dark-theme .assessment-type-link.is-done {
+                background: linear-gradient(180deg, rgba(20, 83, 45, 0.5), rgba(15, 23, 42, 0.9)) !important;
+                border-color: rgba(34, 197, 94, 0.24) !important;
+                color: #f1f5f9 !important;
+            }
+            body.dark-theme .material-card-done:hover,
+            body.dark-theme .assessment-type-link.is-done:hover {
+                box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22) !important;
+            }
         `;
         document.head.appendChild(style);
     }

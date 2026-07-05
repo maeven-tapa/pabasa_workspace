@@ -68,17 +68,22 @@
 
     .practice-meter {
         align-self: center;
-        background: #1b1a17;
+        background: #ffffff;
+        border: 1px solid rgba(21, 94, 117, 0.12);
         border-radius: 22px;
-        color: #fffdf7;
+        color: var(--dash-text);
         min-width: 210px;
         padding: 1rem;
         position: relative;
         z-index: 1;
     }
 
+    .practice-meter .small {
+        color: var(--dash-muted) !important;
+    }
+
     .meter-track {
-        background: rgba(255, 255, 255, 0.16);
+        background: rgba(31, 111, 139, 0.12);
         border-radius: 999px;
         height: 10px;
         margin-top: 0.75rem;
@@ -86,7 +91,7 @@
     }
 
     .meter-track span {
-        background: #f7e7cf;
+        background: var(--dash-primary);
         border-radius: inherit;
         display: block;
         height: 100%;
@@ -327,6 +332,7 @@
             linear-gradient(180deg, rgba(20, 83, 45, 0.5), rgba(15, 23, 42, 0.88)),
             #102316 !important;
         border-color: rgba(34, 197, 94, 0.24) !important;
+        color: #f1f5f9 !important;
     }
 
     body.dark-theme .practice-card .card-header h3,
@@ -345,6 +351,19 @@
     body.dark-theme .practice-card .subject-code {
         background: rgba(15, 23, 42, 0.72) !important;
         border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme .practice-card .subject-code,
+    body.dark-theme .practice-card .meta-pill i,
+    body.dark-theme .practice-card .material-icon {
+        color: #7dd3fc !important;
+    }
+
+    body.dark-theme .practice-card .status-badge,
+    body.dark-theme .practice-status-done {
+        background: rgba(34, 197, 94, 0.14) !important;
+        border-color: rgba(34, 197, 94, 0.24) !important;
+        color: #86efac !important;
     }
 
     body.dark-theme .practice-card .card-bottom {
@@ -449,21 +468,22 @@
 
     .practice-tip-strip {
         align-items: center;
-        background: #1b1a17;
-        color: rgba(255, 253, 247, 0.78);
+        background: #ffffff;
+        border: 1px solid rgba(21, 94, 117, 0.12);
+        color: var(--dash-muted);
         display: grid;
         grid-template-columns: auto 1fr auto;
         gap: 1rem;
         padding: 1rem;
     }
 
-    .practice-tip-strip strong { color: #fffdf7; }
+    .practice-tip-strip strong { color: var(--dash-text); }
 
     .tip-mark {
         align-items: center;
-        background: rgba(255, 255, 255, 0.12);
+        background: rgba(31, 111, 139, 0.1);
         border-radius: 15px;
-        color: #f7e7cf;
+        color: var(--dash-primary);
         display: inline-flex;
         height: 46px;
         justify-content: center;
@@ -523,7 +543,7 @@
             <p>Practice content comes from the active Admin Practice library. Pick Easy, Medium, or Hard, then choose words, sentences, or paragraphs.</p>
         </div>
         <aside class="practice-meter">
-            <p class="small mb-1" style="color: rgba(255,255,255,.62);">Available</p>
+            <p class="small mb-1">Available</p>
             <strong id="practiceMeterCount">0 practice sets</strong>
             <div class="meter-track" aria-hidden="true"><span></span></div>
         </aside>

@@ -379,6 +379,17 @@
         align-items: center;
     }
 
+    .profile-card-spacing .mic-settings-card {
+        grid-column: auto;
+        min-height: 0;
+    }
+
+    .profile-card-spacing .mic-settings-card .mic-settings-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        align-items: stretch;
+    }
+
     .mic-visualizer-container {
         width: 100%;
         height: 12px;
@@ -711,38 +722,9 @@
                 </div>
             </div>
 
-            <!-- Preferences -->
-            <div class="profile-section-card">
-                <h3 class="profile-section-title">
-                    <i class="bi bi-gear"></i>
-                    Preferences
-                </h3>
-                <p class="text-muted small mb-3">Settings below apply to both Email and In-App delivery channels.</p>
-                <div class="profile-info-row">
-                    <span class="profile-info-label">Email Alerts</span>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" id="emailNotifToggle" type="checkbox" {% if notification_settings.email_notifications %}checked{% endif %}>
-                    </div>
-                </div>
-                <div class="profile-info-row">
-                    <span class="profile-info-label">In-App Alerts</span>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" id="pushNotifToggle" type="checkbox" {% if notification_settings.push_enabled %}checked{% endif %}>
-                    </div>
-                </div>
-                <div class="profile-info-row">
-                    <span class="profile-info-label">Weekly Digest</span>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" id="digestToggle" type="checkbox" {% if notification_settings.weekly_digest_enabled %}checked{% endif %}>
-                    </div>
-                </div>
-            </div>
-
-            </div> <!-- End of grid -->
-
             {% if nav_role == 'student' %}
             <!-- Microphone Settings -->
-            <div class="profile-section-card mic-settings-card mt-2" style="padding: 2.2rem !important; min-height: 420px;">
+            <div class="profile-section-card mic-settings-card">
                 <h3 class="profile-section-title">
                     <i class="bi bi-mic"></i>
                     Microphone Settings
@@ -795,6 +777,8 @@
                 </div>
             </div>
             {% endif %}
+
+            </div> <!-- End of grid -->
 
             <!-- Danger Zone (Separated) -->
             <div class="danger-zone-wrapper mt-4 pt-3" style="border-top: 1px solid rgba(27, 26, 23, 0.08);">
