@@ -460,8 +460,7 @@
                 document.body.style.overflow = "";
                 document.body.style.paddingRight = "";
                 
-                // Trigger page refresh to update all dashboard stats and sidebar links
-                window.location.reload();
+                loadSavedClasses();
             });
         }
 
@@ -478,20 +477,16 @@
                         
                         btn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Copied!';
                         btn.classList.replace('btn-primary', 'btn-success');
-                        btn.style.transform = 'translateY(-2px)';
-                        btn.style.transition = 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
                         btn.style.boxShadow = '0 10px 15px -3px rgba(22, 163, 74, 0.3)';
                         
                         if (codeEl) {
                             codeEl.style.color = '#15803d';
                             codeEl.style.borderColor = '#22c55e';
-                            codeEl.style.transition = 'all 0.2s ease';
                         }
                         
                         setTimeout(() => {
                             btn.innerHTML = originalHTML;
                             btn.classList.replace('btn-success', 'btn-primary');
-                            btn.style.transform = '';
                             btn.style.boxShadow = '';
                             if (codeEl) {
                                 codeEl.style.color = '#1e293b';

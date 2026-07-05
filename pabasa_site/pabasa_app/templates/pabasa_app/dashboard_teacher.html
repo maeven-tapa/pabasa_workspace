@@ -47,9 +47,9 @@
         border-radius: 14px;
         padding: 0.6rem 1rem;
         box-shadow: 0 8px 20px rgba(15,78,100,0.08);
-        transition: transform 0.14s ease, box-shadow 0.14s ease;
+        transition: box-shadow 0.14s ease;
     }
-    .btn.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(15,78,100,0.12); }
+    .btn.btn-primary:hover { box-shadow: 0 12px 30px rgba(15,78,100,0.12); }
 
     /* Improve teacher-stat-card visuals */
     .teacher-stat-card { 
@@ -61,15 +61,11 @@
     .teacher-stat-card small { color: var(--dash-ink-soft); }
 
     /* Slight elevation for active class workspace */
-    .class-banner { transition: transform 0.16s ease, box-shadow 0.16s ease; }
-    .class-banner:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(16,40,64,0.06); }
+    .class-banner { box-shadow: 0 16px 36px rgba(16,40,64,0.06); }
 
     /* Improve scrollbar visibility for lists */
     .class-list::-webkit-scrollbar, .student-row::-webkit-scrollbar { height: 8px; width: 8px; }
     .class-list::-webkit-scrollbar-thumb, .student-row::-webkit-scrollbar-thumb { background: rgba(16,40,64,0.06); border-radius: 6px; }
-
-    /* Utility: subtle number animation */
-    .stat-animate { will-change: transform; }
 
     .teacher-dashboard {
         display: grid;
@@ -345,7 +341,7 @@
         gap: 0.55rem;
         padding: 0.85rem;
         text-align: left;
-        transition: border-color 0.2s ease, transform 0.2s ease;
+        transition: border-color 0.2s ease;
         width: 100%;
         position: relative;
         min-width: 0;
@@ -354,7 +350,6 @@
     .class-card:hover,
     .class-card.is-active {
         border-color: rgba(31, 111, 139, 0.32);
-        transform: translateY(-1px);
     }
 
     .class-card-head strong {
@@ -904,11 +899,11 @@ function updateDashboardStatistics(providedStudents = null, providedLevelCounts 
     const elTrans = document.getElementById("dashTransitioningCount");
     const elGrade = document.getElementById("dashGradeLevelCount");
 
-    if (elLow) animateNumber(elLow, Number(levelCounts["Low Emerging Readers"] || 0));
-    if (elHigh) animateNumber(elHigh, Number(levelCounts["High Emerging Readers"] || 0));
-    if (elDev) animateNumber(elDev, Number(levelCounts["Developing Readers"] || 0));
-    if (elTrans) animateNumber(elTrans, Number(levelCounts["Transitioning Readers"] || 0));
-    if (elGrade) animateNumber(elGrade, Number(levelCounts["Readers at Grade Level"] || 0));
+    if (elLow) elLow.textContent = String(Number(levelCounts["Low Emerging Readers"] || 0));
+    if (elHigh) elHigh.textContent = String(Number(levelCounts["High Emerging Readers"] || 0));
+    if (elDev) elDev.textContent = String(Number(levelCounts["Developing Readers"] || 0));
+    if (elTrans) elTrans.textContent = String(Number(levelCounts["Transitioning Readers"] || 0));
+    if (elGrade) elGrade.textContent = String(Number(levelCounts["Readers at Grade Level"] || 0));
 
     // Ensure Classes count is dynamic: prefer server-filled value, otherwise compute from localStorage teacher classes
     const classCountMirrorEl = document.getElementById('classCountMirror'); // Target the 'Class' stat card
@@ -1102,35 +1097,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 </script>
 
 <script>
-// Small helper: animate numbers from 0 to target for visual polish
-function animateNumber(el, target, duration = 800) {
-    if (!el) return;
-    const start = 0;
-    const range = target - start;
-    const startTime = performance.now();
-    function tick(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress; // easeInOutQuad
-        const value = Math.round(start + range * ease);
-        el.textContent = String(value);
-        if (progress < 1) requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-}
-
-// Hook into existing updates to animate counts
-document.addEventListener("DOMContentLoaded", function() {
-    try {
-        const classCountMirrorEl = document.getElementById('classCountMirror'); // Target the 'Class' stat card
-        const materialsEl = document.getElementById('profileMaterialsPostedCount');
-        const studentsEl = document.getElementById('profileTotalStudentsCount');
-        // animate small dashboard numbers if present
-        if (classCountMirrorEl) animateNumber(classCountMirrorEl, Number(classCountMirrorEl.textContent || 0));
-        if (studentsEl) animateNumber(studentsEl, Number(studentsEl.textContent || 0));
-        if (materialsEl) animateNumber(materialsEl, Number(materialsEl.textContent || 0));
-    } catch (e) { console.warn('Animate numbers error', e); }
-});
+// Dashboard statistics are intentionally static on load.
 </script>
 
 <script>
