@@ -203,7 +203,19 @@
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-inner {
             align-items: center;
-            padding: 1.15rem 0.7rem !important;
+            padding: 1.15rem 0 !important;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-top-section,
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-nav-section,
+        body.sidebar-collapsed .dashboard-sidebar .d-grid,
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-footer {
+            align-items: center !important;
+            display: flex !important;
+            flex-direction: column !important;
+            width: 56px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
         }
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-brand-row {
@@ -221,6 +233,10 @@
             justify-content: center;
         }
 
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-brand-row .sidebar-collapse-btn {
+            right: -16px;
+        }
+
         body.sidebar-collapsed .dashboard-sidebar .dash-brand-mark {
             flex: 0 0 42px;
             height: 42px;
@@ -230,12 +246,10 @@
         body.sidebar-collapsed .dashboard-sidebar .sidebar-nav-section,
         body.sidebar-collapsed .dashboard-sidebar .d-grid {
             align-items: center !important;
-            width: 100%;
-        }
-
-        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapse-row {
-            margin-left: -0.7rem;
-            width: calc(100% + 1.4rem);
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            scrollbar-gutter: auto;
+            width: 56px !important;
         }
 
         .dashboard-main {
@@ -778,12 +792,11 @@
         .sidebar-collapse-row {
             align-items: center;
             justify-content: center;
-            margin-left: -1rem;
             margin-top: auto;
             min-height: 34px;
             padding: 0.15rem 0 0.55rem;
             position: relative;
-            width: calc(100% + 2rem);
+            width: 100%;
         }
 
         .sidebar-brand-row {
@@ -798,6 +811,7 @@
             align-items: center;
             gap: 1rem;
             margin-bottom: 0.5rem;
+            position: relative;
         }
 
         .sidebar-brand-row a {
@@ -855,8 +869,9 @@
             justify-content: center;
             padding: 0;
             position: absolute;
-            right: 0;
-            top: 0;
+            right: -14px;
+            top: 50%;
+            transform: translateY(-50%);
             z-index: 4;
             box-shadow: 0 8px 18px rgba(6, 23, 38, 0.22);
             transition: background-color 0.16s ease, box-shadow 0.16s ease;
