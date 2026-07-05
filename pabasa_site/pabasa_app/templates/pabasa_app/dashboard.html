@@ -87,22 +87,23 @@
 
     .student-dashboard {
         display: grid;
-        gap: 1.5rem;
+        gap: 1.25rem;
     }
 
     .student-studio {
-        min-height: 360px;
+        align-items: stretch;
         border: 1px solid rgba(21, 94, 117, 0.12);
-        border-radius: 32px;
+        border-radius: 28px;
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(12px) saturate(160%);
         -webkit-backdrop-filter: blur(12px) saturate(160%);
         box-shadow: 0 18px 42px rgba(21, 94, 117, 0.08);
-        display: flex;
-        flex-direction: row;
-        gap: 2rem;
-        overflow: hidden;
-        padding: clamp(1.5rem, 3vw, 2.5rem);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+        gap: clamp(1rem, 2.4vw, 2rem);
+        min-height: 0;
+        overflow: visible;
+        padding: clamp(1.25rem, 2.4vw, 2rem);
         position: relative;
     }
 
@@ -113,27 +114,30 @@
     .student-studio-copy {
         align-content: center;
         display: grid;
-        gap: 1.2rem;
+        gap: 0.95rem;
+        min-width: 0;
+        padding: clamp(0.25rem, 1vw, 0.75rem) 0;
         position: relative;
         z-index: 1;
     }
 
     .student-studio-copy h2 {
-        font-size: clamp(2.4rem, 5.5vw, 3.6rem);
+        font-size: clamp(2rem, 4.2vw, 3rem);
         font-weight: 800;
         color: #0F172A;
-        line-height: 1.05;
-        letter-spacing: -0.03em;
+        line-height: 1.08;
+        letter-spacing: -0.025em;
         word-break: break-word;
         margin: 0;
-        max-width: 600px;
+        max-width: 520px;
     }
 
     .student-studio-copy p {
         color: #334155;
-        line-height: 1.6;
+        font-size: 0.98rem;
+        line-height: 1.55;
         margin: 0;
-        max-width: 560px;
+        max-width: 540px;
     }
 
     .studio-kicker {
@@ -153,46 +157,47 @@
     .studio-kicker::before { display: none; }
 
     .join-desk {
-        align-self: center;
+        align-self: stretch;
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.93), rgba(231, 245, 248, 0.82));
         border: 1px solid rgba(21, 94, 117, 0.12);
-        border-radius: 30px;
+        border-radius: 24px;
         backdrop-filter: blur(16px) saturate(120%);
         -webkit-backdrop-filter: blur(16px) saturate(120%);
         box-shadow: 0 16px 36px rgba(21, 94, 117, 0.08);
         display: grid;
-        gap: 1.5rem;
-        padding: clamp(1.2rem, 3vw, 2rem);
+        gap: 1rem;
+        min-width: 0;
+        overflow: hidden;
+        padding: clamp(1.15rem, 2.2vw, 1.55rem);
+        padding-top: clamp(1.8rem, 2.6vw, 2.1rem);
         position: relative;
         z-index: 1;
         width: 100%;
-        max-width: 420px;
     }
 
     .student-dashboard.has-class .student-studio {
-        min-height: 240px;
-        padding: clamp(1.15rem, 2vw, 1.6rem);
+        padding: clamp(1rem, 2vw, 1.5rem);
     }
 
     .join-desk::before {
         content: "";
         position: absolute;
         font-family: "Baloo 2", cursive;
-        left: 26px;
-        top: -16px;
-        width: 76px;
-        height: 26px;
-        border-radius: 0 0 16px 16px;
+        left: 24px;
+        top: 0;
+        width: 82px;
+        height: 22px;
+        border-radius: 0 0 14px 14px;
         background: linear-gradient(135deg, #FBBF24, #F59E0B);
-        border: 2px solid #ffffff;
-        box-shadow: 0 10px 20px rgba(245, 158, 11, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        border-top: 0;
+        box-shadow: 0 8px 18px rgba(245, 158, 11, 0.18);
     }
 
     .join-desk-head {
         display: grid;
         color: #0F172A;
         gap: 0.35rem;
-        padding-top: 0.5rem;
     }
 
     .join-desk-head h3 {
@@ -209,11 +214,11 @@
 
     .code-input-shell {
         background: #F1F5F9;
-        border-radius: 20px;
+        border-radius: 18px;
         border: 1px solid rgba(31, 182, 255, 0.08);
         display: grid;
-        gap: 0.75rem;
-        padding: 1.25rem;
+        gap: 0.7rem;
+        padding: clamp(0.95rem, 2vw, 1.15rem);
     }
 
     .code-input-shell label {
@@ -228,24 +233,24 @@
     .code-input-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.75rem;
+        gap: 0.65rem;
     }
 
     .code-input-row .form-control {
-        flex: 1 1 200px;
+        flex: 1 1 180px;
         background: #ffffff;
         border: 1px solid rgba(31, 182, 255, 0.15);
         border-radius: 12px;
         color: #1b1a17;
-        font-size: clamp(0.95rem, 2vw, 1.1rem);
+        font-size: clamp(0.95rem, 2vw, 1.05rem);
         font-weight: 700;
-        letter-spacing: 0.2em;
+        letter-spacing: 0.16em;
         min-height: 52px;
         text-transform: uppercase;
     }
 
     .code-input-row .btn {
-        flex: 1 0 auto;
+        flex: 0 0 auto;
         background: var(--dash-primary);
         border: 0;
         border-radius: 12px;
@@ -253,7 +258,7 @@
         color: #fff !important;
         font-weight: 800;
         min-height: 52px;
-        padding-inline: 1.5rem;
+        padding-inline: 1.35rem;
         box-shadow: 0 10px 20px rgba(31, 111, 139, 0.2);
     }
 
@@ -270,10 +275,10 @@
         color: #7c6d5e;
         display: grid;
         grid-template-columns: auto 1fr;
-        gap: 0.75rem;
-        padding: 0.9rem;
+        gap: 0.65rem;
+        padding: 0.8rem;
         word-break: break-word;
-        font-size: 0.92rem;
+        font-size: 0.9rem;
     }
 
     .desk-note i {
@@ -528,16 +533,52 @@
     /* Improved Tablet and Mobile layout transitions */
     @media (max-width: 1100px) {
         .student-studio {
-            flex-direction: column;
-            min-height: auto;
+            grid-template-columns: 1fr;
         }
+
+        .student-studio-copy {
+            padding-bottom: 0;
+        }
+
         .join-desk {
             max-width: 100%;
-            align-self: stretch;
         }
     }
 
     @media (max-width: 560px) {
+        .student-dashboard {
+            gap: 1rem;
+        }
+
+        .student-studio {
+            border-radius: 22px;
+            padding: 1rem;
+        }
+
+        .student-studio-copy h2 {
+            font-size: clamp(1.85rem, 10vw, 2.35rem);
+        }
+
+        .join-desk {
+            border-radius: 20px;
+            padding: 1rem;
+            padding-top: 1.65rem;
+        }
+
+        .join-desk::before {
+            left: 18px;
+            width: 72px;
+        }
+
+        .code-input-row {
+            display: grid;
+        }
+
+        .code-input-row .form-control,
+        .code-input-row .btn {
+            width: 100%;
+        }
+
         .class-list {
             grid-template-columns: 1fr;
         }

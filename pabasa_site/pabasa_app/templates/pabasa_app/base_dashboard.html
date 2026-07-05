@@ -1816,7 +1816,10 @@
 
         .dashboard-page-loader {
             position: fixed;
-            inset: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: var(--sidebar-width);
             z-index: 99999;
             display: grid;
             place-items: center;
@@ -1825,6 +1828,12 @@
             visibility: hidden;
             pointer-events: none;
             transition: opacity 0.08s ease, visibility 0.08s ease;
+        }
+
+        @media (max-width: 991.98px) {
+            .dashboard-page-loader {
+                left: 0;
+            }
         }
 
         .dashboard-page-loader.is-visible {
