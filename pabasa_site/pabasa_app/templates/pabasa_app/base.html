@@ -548,8 +548,8 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100 public-page-preloading">
-    <div class="public-page-loader" id="publicPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
+<body class="d-flex flex-column min-vh-100">
+    <div class="public-page-loader" id="publicPageLoader" aria-hidden="true" role="status" aria-label="Loading page">
         <div class="public-page-loader__content">
             <div class="public-page-loader__spinner"></div>
         </div>
@@ -643,11 +643,10 @@
     <script>
         (() => {
             const transitionDuration = 500;
-            const minimumPreloadTime = 450;
-            const preloadStartedAt = Date.now();
             let navigationPending = false;
 
             const loader = document.getElementById("publicPageLoader");
+            const accountPath = "{% url 'auth' %}";
 
             const showPublicLoader = () => {
                 loader?.classList.add("is-visible");
@@ -657,23 +656,8 @@
             const hidePublicLoader = () => {
                 loader?.classList.remove("is-visible");
                 loader?.setAttribute("aria-hidden", "true");
-                document.body.classList.remove("public-page-preloading");
                 navigationPending = false;
             };
-
-            const releasePreload = () => {
-                const elapsed = Date.now() - preloadStartedAt;
-                const remaining = Math.max(0, minimumPreloadTime - elapsed);
-                window.setTimeout(() => {
-                    window.requestAnimationFrame(hidePublicLoader);
-                }, remaining);
-            };
-
-            if (document.readyState === "complete") {
-                releasePreload();
-            } else {
-                window.addEventListener("load", releasePreload, { once: true });
-            }
 
             document.addEventListener("click", (event) => {
                 if (navigationPending) return;
@@ -695,6 +679,7 @@
                 }
                 if (targetUrl.origin !== window.location.origin) return;
                 if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return;
+                if (targetUrl.pathname !== accountPath) return;
 
                 event.preventDefault();
                 navigationPending = true;
