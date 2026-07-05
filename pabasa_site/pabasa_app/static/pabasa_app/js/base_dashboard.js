@@ -137,6 +137,71 @@ var getStudentClassData = window.getStudentClassData = function() {
 })();
 
 (function () {
+    const DASHBOARD_NAV_DELAY_MS = 200;
+    let navigationPending = false;
+
+    function getLoader() {
+        return document.getElementById("dashboardPageLoader");
+    }
+
+    function showDashboardPageLoader() {
+        const loader = getLoader();
+        if (!loader) return;
+        loader.classList.add("is-visible");
+        loader.setAttribute("aria-hidden", "false");
+    }
+
+    function hideDashboardPageLoader() {
+        const loader = getLoader();
+        if (!loader) return;
+        loader.classList.remove("is-visible");
+        loader.setAttribute("aria-hidden", "true");
+        navigationPending = false;
+    }
+
+    function shouldDelayNavigation(event, link, targetUrl) {
+        if (event.defaultPrevented || event.button !== 0) return false;
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
+        if (!link || link.hasAttribute("download")) return false;
+        if (link.target && link.target.toLowerCase() !== "_self") return false;
+        if (link.closest("[data-bs-toggle], [data-help-toggle]")) return false;
+        if (link.getAttribute("aria-disabled") === "true" || link.classList.contains("is-locked")) return false;
+        if (targetUrl.origin !== window.location.origin) return false;
+        if (!targetUrl.pathname.startsWith("/dashboard/")) return false;
+        if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return false;
+        return true;
+    }
+
+    document.addEventListener("click", function (event) {
+        if (navigationPending) return;
+
+        const clickTarget = event.target instanceof Element ? event.target : event.target?.parentElement;
+        const link = clickTarget?.closest("a[href]");
+        if (!link) return;
+
+        let targetUrl;
+        try {
+            targetUrl = new URL(link.href, window.location.origin);
+        } catch (error) {
+            return;
+        }
+
+        if (!shouldDelayNavigation(event, link, targetUrl)) return;
+
+        event.preventDefault();
+        navigationPending = true;
+        showDashboardPageLoader();
+        window.setTimeout(function () {
+            window.location.href = targetUrl.href;
+        }, DASHBOARD_NAV_DELAY_MS);
+    }, true);
+
+    window.showDashboardPageLoader = showDashboardPageLoader;
+    window.hideDashboardPageLoader = hideDashboardPageLoader;
+    window.addEventListener("pageshow", hideDashboardPageLoader);
+})();
+
+(function () {
     function getRole() {
         let role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || '').toLowerCase();
         if (!role) {

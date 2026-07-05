@@ -1813,10 +1813,47 @@
             color: #f1f5f9 !important; 
         }
         body.dark-theme hr { border-color: rgba(255, 255, 255, 0.1) !important; }
+
+        .dashboard-page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: grid;
+            place-items: center;
+            background: #ffffff;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.08s ease, visibility 0.08s ease;
+        }
+
+        .dashboard-page-loader.is-visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .dashboard-page-loader__spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #dbeafe;
+            border-top-color: var(--dash-primary);
+            border-radius: 50%;
+            animation: dashboard-loader-spin 0.75s linear infinite;
+        }
+
+        @keyframes dashboard-loader-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="dashboard-body">
+    <div class="dashboard-page-loader" id="dashboardPageLoader" aria-hidden="true" role="status" aria-label="Loading page">
+        <div class="dashboard-page-loader__spinner"></div>
+    </div>
     <script>
         try {
             if (window.localStorage.getItem("pabasaSidebarCollapsed") === "1") {
