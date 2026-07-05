@@ -138,6 +138,38 @@
         min-width: 9rem;
     }
 
+    .signup-progress {
+        display: grid;
+        gap: 0.5rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin: 1rem 0 0.5rem;
+    }
+
+    .signup-progress span {
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.58);
+        border: 1px solid rgba(16, 70, 110, 0.12);
+        color: #526c7a;
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 0.45rem 0.65rem;
+        text-align: center;
+    }
+
+    .signup-progress span.is-active {
+        background: rgba(84, 194, 240, 0.16);
+        border-color: rgba(84, 194, 240, 0.42);
+        color: #10466e;
+    }
+
+    .signup-step {
+        display: none;
+    }
+
+    .signup-step.is-active {
+        display: contents;
+    }
+
     .form-actions {
         align-items: center;
         gap: 0.75rem;
@@ -247,11 +279,18 @@
                 <span class="modern-chip mb-2">Teacher Account</span>
                 <h1 class="h4">Create a Teacher Account</h1>
                 <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
+                <div class="signup-progress" aria-label="Signup steps">
+                    <span class="is-active" data-step-indicator="0">Personal</span>
+                    <span data-step-indicator="1">Contact</span>
+                    <span data-step-indicator="2">School</span>
+                    <span data-step-indicator="3">Password</span>
+                </div>
                 <form id="teacherSignupForm" method="post" class="row g-3 teacher-signup-form">
                     {% csrf_token %}
                     <div class="col-12">
                         <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
                     </div>
+                    <div class="signup-step is-active" data-signup-step="0">
                     <div class="col-md-4">
                         <label class="form-label">First name</label>
                         <input class="form-control" type="text" name="first_name" placeholder="Enter First Name" required>
@@ -311,6 +350,8 @@
                         <label class="form-label">Birth year</label>
                         <input class="form-control" type="number" name="birth_year" placeholder="Year" min="1900" max="2100" oninput="if(this.value.length > 4) this.value = this.value.slice(0, 4);" required>
                     </div>
+                    </div>
+                    <div class="signup-step" data-signup-step="1">
                     <div class="col-md-6">
                         <label class="form-label">Email address</label>
                         <input class="form-control" type="email" name="email" placeholder="you@example.com" required>
@@ -319,31 +360,8 @@
                         <label class="form-label">Contact number</label>
                         <input class="form-control" type="tel" name="contact_no" placeholder="09XXXXXXXXX">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Password</label>
-                        <div class="password-field">
-                            <input class="form-control" type="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
-                            <button class="password-toggle-btn" type="button" data-password-toggle data-target="password" aria-pressed="false" aria-label="Show password">Show</button>
-                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Confirm password</label>
-                        <div class="password-field">
-                            <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required>
-                            <button class="password-toggle-btn" type="button" data-password-toggle data-target="confirm_password" aria-pressed="false" aria-label="Show password">Show</button>
-                        </div>
-                        <div class="field-feedback" data-password-match-error>Passwords must match.</div>
-                    </div>
-                    <div class="col-12">
-                        <div class="password-helper">
-                            <div class="password-helper-title">Password requirements</div>
-                            <ul class="password-rules" aria-live="polite">
-                                <li data-rule="length">At least 8 characters</li>
-                                <li data-rule="uppercase">One uppercase letter</li>
-                                <li data-rule="number">One number</li>
-                            </ul>
-                        </div>
-                    </div>
+                    <div class="signup-step" data-signup-step="2">
                     <div class="col-md-6">
                         <label class="form-label">Teacher Role</label>
                         <select class="form-select" name="teacher_role" required>
@@ -375,9 +393,41 @@
                             <option value="Edukasyong Pantahanan at Pangkabuhayan (EPP)">Edukasyong Pantahanan at Pangkabuhayan (EPP)</option>
                         </select>
                     </div>
+                    </div>
+                    <div class="signup-step" data-signup-step="3">
+                    <div class="col-md-6">
+                        <label class="form-label">Password</label>
+                        <div class="password-field">
+                            <input class="form-control" type="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
+                            <button class="password-toggle-btn" type="button" data-password-toggle data-target="password" aria-pressed="false" aria-label="Show password">Show</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Confirm password</label>
+                        <div class="password-field">
+                            <input class="form-control" type="password" name="confirm_password" placeholder="Confirm password" autocomplete="new-password" required>
+                            <button class="password-toggle-btn" type="button" data-password-toggle data-target="confirm_password" aria-pressed="false" aria-label="Show password">Show</button>
+                        </div>
+                        <div class="field-feedback" data-password-match-error>Passwords must match.</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="password-helper">
+                            <div class="password-helper-title">Password requirements</div>
+                            <ul class="password-rules" aria-live="polite">
+                                <li data-rule="length">At least 8 characters</li>
+                                <li data-rule="uppercase">One uppercase letter</li>
+                                <li data-rule="number">One number</li>
+                            </ul>
+                        </div>
+                    </div>
+                    </div>
                     <div class="col-12 d-flex justify-content-between form-actions">
                         <a class="btn back-button" href="{% url 'signup' %}">Back</a>
-                        <button class="btn btn-primary" id="submitBtn" type="submit" disabled>Create Account</button>
+                        <div class="d-flex gap-2 flex-wrap justify-content-end">
+                            <button class="btn btn-outline-secondary d-none" id="prevStepBtn" type="button">Previous</button>
+                            <button class="btn btn-primary" id="nextStepBtn" type="button">Next</button>
+                            <button class="btn btn-primary d-none" id="submitBtn" type="submit" disabled>Create Account</button>
+                        </div>
                     </div>
                 </form>
                 <div id="teacherOtpLoading" class="account-loading-state d-none" aria-live="polite" aria-label="Sending OTP">
@@ -429,6 +479,11 @@
         const result = document.getElementById("teacherGeneratedPabasaId");
         const pabasaIdOutput = result.querySelector("[data-pabasa-id-output]");
         const submitButton = form.querySelector("button[type='submit']");
+        const nextStepBtn = document.getElementById("nextStepBtn");
+        const prevStepBtn = document.getElementById("prevStepBtn");
+        const steps = Array.from(form.querySelectorAll("[data-signup-step]")).sort((a, b) => Number(a.dataset.signupStep) - Number(b.dataset.signupStep));
+        const stepIndicators = Array.from(document.querySelectorAll("[data-step-indicator]")).sort((a, b) => Number(a.dataset.stepIndicator) - Number(b.dataset.stepIndicator));
+        let currentStep = 0;
         const errorMessage = form.querySelector("#errorMessage");
         const passwordInput = form.elements.password;
         const confirmPasswordInput = form.elements.confirm_password;
@@ -437,6 +492,31 @@
             length: form.querySelector("[data-rule='length']"),
             uppercase: form.querySelector("[data-rule='uppercase']"),
             number: form.querySelector("[data-rule='number']"),
+        };
+
+        const setStep = (stepIndex) => {
+            currentStep = Math.max(0, Math.min(stepIndex, steps.length - 1));
+            steps.forEach((step, index) => {
+                step.classList.toggle("is-active", index === currentStep);
+            });
+            stepIndicators.forEach((indicator, index) => {
+                indicator.classList.toggle("is-active", index === currentStep);
+            });
+            prevStepBtn.classList.toggle("d-none", currentStep === 0);
+            nextStepBtn.classList.toggle("d-none", currentStep === steps.length - 1);
+            submitButton.classList.toggle("d-none", currentStep !== steps.length - 1);
+            errorMessage.classList.add("d-none");
+            updateValidation();
+        };
+
+        const validateCurrentStep = () => {
+            const fields = Array.from(steps[currentStep].querySelectorAll("input, select, textarea"));
+            const invalid = fields.find((field) => !field.checkValidity());
+            if (invalid) {
+                invalid.reportValidity();
+                return false;
+            }
+            return true;
         };
 
         const passwordToggles = form.querySelectorAll("[data-password-toggle]");
@@ -513,6 +593,7 @@
             otpErrorMessage.classList.add("d-none");
             submitButton.disabled = false;
             submitButton.innerHTML = 'Create Account';
+            setStep(0);
         };
 
         const getCsrfToken = () => {
@@ -522,6 +603,15 @@
 
         form.addEventListener("input", updateValidation);
         form.addEventListener("change", updateValidation);
+
+        nextStepBtn.addEventListener("click", () => {
+            if (!validateCurrentStep()) return;
+            setStep(currentStep + 1);
+        });
+
+        prevStepBtn.addEventListener("click", () => {
+            setStep(currentStep - 1);
+        });
 
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
@@ -642,7 +732,7 @@
             showSignupForm();
         });
 
-        updateValidation();
+        setStep(0);
     })();
 </script>
 {% endblock %}
