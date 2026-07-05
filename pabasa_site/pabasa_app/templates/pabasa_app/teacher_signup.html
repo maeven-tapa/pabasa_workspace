@@ -380,6 +380,10 @@
                         <button class="btn btn-primary" id="submitBtn" type="submit" disabled>Create Account</button>
                     </div>
                 </form>
+                <div id="teacherOtpLoading" class="account-loading-state d-none" aria-live="polite" aria-label="Sending OTP">
+                    <div class="account-loading-spinner" role="status" aria-label="Loading"></div>
+                    <div class="account-loading-text">Sending OTP</div>
+                </div>
                 <div id="teacherOtpStage" class="card mt-4 d-none">
                     <div class="card-body p-4">
                         <span class="modern-chip mb-2">OTP Verification</span>
@@ -485,6 +489,7 @@
         };
 
         const otpStage = document.getElementById("teacherOtpStage");
+        const otpLoading = document.getElementById("teacherOtpLoading");
         const otpForm = document.getElementById("otpForm");
         const otpEmailSpan = document.getElementById("otpEmail");
         const otpErrorMessage = document.getElementById("otpErrorMessage");
@@ -492,7 +497,7 @@
         const backToSignupBtn = document.getElementById("backToSignupBtn");
 
         const showOtpStage = (email) => {
-            form.classList.add("d-none");
+            otpLoading.classList.add("d-none");
             otpEmailSpan.textContent = email;
             otpStage.classList.remove("d-none");
             otpErrorMessage.classList.add("d-none");
@@ -501,6 +506,7 @@
         };
 
         const showSignupForm = () => {
+            otpLoading.classList.add("d-none");
             otpStage.classList.add("d-none");
             form.classList.remove("d-none");
             errorMessage.classList.add("d-none");
@@ -527,8 +533,11 @@
             }
 
             submitButton.disabled = true;
-            submitButton.innerHTML = 'Sending OTP...';
+            submitButton.innerHTML = 'Create Account';
             errorMessage.classList.add("d-none");
+            form.classList.add("d-none");
+            otpStage.classList.add("d-none");
+            otpLoading.classList.remove("d-none");
 
             try {
                 const formData = new FormData(form);
@@ -542,12 +551,16 @@
                     showOtpStage(data.email);
                     otpStage.scrollIntoView({ behavior: "smooth", block: "nearest" });
                 } else {
+                    otpLoading.classList.add("d-none");
+                    form.classList.remove("d-none");
                     errorMessage.textContent = data.error || 'Registration failed. Please try again.';
                     errorMessage.classList.remove("d-none");
                     submitButton.disabled = false;
                     submitButton.innerHTML = 'Create Account';
                 }
             } catch (error) {
+                otpLoading.classList.add("d-none");
+                form.classList.remove("d-none");
                 errorMessage.textContent = 'An error occurred. Please try again.';
                 errorMessage.classList.remove("d-none");
                 submitButton.disabled = false;

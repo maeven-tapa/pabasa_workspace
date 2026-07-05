@@ -216,6 +216,37 @@
             padding: 1.5rem;
         }
 
+        .account-loading-state {
+            display: flex;
+            min-height: 220px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.85rem;
+            text-align: center;
+        }
+
+        .account-loading-spinner {
+            width: 44px;
+            height: 44px;
+            border: 4px solid rgba(84, 194, 240, 0.22);
+            border-top-color: #54c2f0;
+            border-radius: 50%;
+            animation: accountLoadingSpin 0.85s linear infinite;
+        }
+
+        .account-loading-text {
+            color: #12394f;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        @keyframes accountLoadingSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .btn {
             transition: all 0.2s ease;
         }
