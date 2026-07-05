@@ -1874,6 +1874,10 @@
             transition: opacity 0.08s ease, visibility 0.08s ease;
         }
 
+        .dashboard-page-loader.is-branded {
+            left: 0;
+        }
+
         @media (max-width: 991.98px) {
             .dashboard-page-loader {
                 left: 0;
@@ -1887,13 +1891,30 @@
             pointer-events: auto;
         }
 
+        .dashboard-page-loader__content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .dashboard-page-loader__logo {
+            display: none;
+            width: min(180px, 48vw);
+            height: auto;
+        }
+
+        .dashboard-page-loader.is-branded .dashboard-page-loader__logo {
+            display: block;
+        }
+
         .dashboard-page-loader__spinner {
-            width: 48px;
-            height: 48px;
-            border: 5px solid #dbeafe;
-            border-top-color: var(--dash-primary);
+            width: 42px;
+            height: 42px;
+            border: 4px solid rgba(84, 194, 240, 0.22);
+            border-top-color: #54c2f0;
             border-radius: 50%;
-            animation: dashboard-loader-spin 0.75s linear infinite;
+            animation: dashboard-loader-spin 0.85s linear infinite;
         }
 
         @keyframes dashboard-loader-spin {
@@ -1906,7 +1927,10 @@
 </head>
 <body class="dashboard-body dashboard-preloading">
     <div class="dashboard-page-loader" id="dashboardPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
-        <div class="dashboard-page-loader__spinner"></div>
+        <div class="dashboard-page-loader__content">
+            <img class="dashboard-page-loader__logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
+            <div class="dashboard-page-loader__spinner"></div>
+        </div>
     </div>
     <script>
         try {
@@ -2106,7 +2130,7 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=dashboard-preload-flicker-fix"></script>
+    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=assessment-branded-loader"></script>
     <script>
         (() => {
             const logoutLink = document.querySelector("#logoutConfirmModal a[href*='home']");

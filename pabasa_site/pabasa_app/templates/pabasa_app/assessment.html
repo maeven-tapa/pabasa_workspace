@@ -122,10 +122,11 @@
 
     .status-ticket {
         align-self: start;
-        background: #1b1a17;
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(16, 70, 110, 0.12);
         border-radius: 22px;
-        box-shadow: 0 22px 42px rgba(27, 26, 23, 0.18);
-        color: #fffdf7;
+        box-shadow: 0 16px 34px rgba(16, 70, 110, 0.1);
+        color: var(--dash-primary-deep);
         display: grid;
         gap: 0.75rem;
         padding: 1rem;
@@ -136,7 +137,7 @@
     /* Status Ticket Dynamic Enhancements */
     .ticket-progress {
         height: 6px;
-        background: rgba(255, 255, 255, 0.12);
+        background: rgba(16, 70, 110, 0.1);
         border-radius: 10px;
         overflow: hidden;
         margin: 0.4rem 0;
@@ -156,11 +157,11 @@
         font-weight: 800;
         letter-spacing: 0.02em;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--dash-muted);
     }
 
     .ticket-metrics span.highlight {
-        color: #fffdf7;
+        color: var(--dash-primary-deep);
     }
 
     .status-ticket::before,
@@ -171,7 +172,8 @@
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #fffdf7;
+        background: #f7fbff;
+        border: 1px solid rgba(16, 70, 110, 0.1);
     }
 
     .status-ticket::before {
@@ -183,7 +185,7 @@
     }
 
     .ticket-label {
-        color: rgba(255, 255, 255, 0.58);
+        color: var(--dash-muted);
         font-size: 0.74rem;
         font-weight: 700;
         letter-spacing: 0.08em;
@@ -396,7 +398,7 @@
         <aside class="status-ticket">
             <span class="ticket-label">Class status</span>
             <strong id="classStatusTitle">Waiting for class</strong>
-            <div id="classStatusText" class="small mb-0" style="color: rgba(255,255,255,.64);">Join a class from the dashboard to receive assigned tests.</div>
+            <div id="classStatusText" class="small mb-0" style="color: var(--dash-muted);">Join a class from the dashboard to receive assigned tests.</div>
         </aside>
     </div>
 
@@ -480,7 +482,14 @@
         if (modal) modal.hide();
 
         const finalUrl = `${selectedAssessment.path}?code=${selectedAssessment.code}&test=${encodeURIComponent(selectedAssessment.test)}&id=${selectedAssessment.id}&viewMode=${viewMode}`;
-        window.location.href = finalUrl;
+        if (window.showDashboardPageLoader) {
+            window.showDashboardPageLoader({ branded: true });
+        }
+        window.requestAnimationFrame(() => {
+            window.setTimeout(() => {
+                window.location.href = finalUrl;
+            }, 500);
+        });
     }
 
     // Event delegation for subject grid cards
@@ -690,7 +699,7 @@
                     <span><span class="highlight">${progress}%</span> Progress</span>
                     <span><span class="highlight">${totalCompleted}/${totalAssigned}</span> Completed</span>
                 </div>
-                <p class="small mb-0" style="color: rgba(255,255,255,.64); line-height: 1.4;">
+                <p class="small mb-0" style="color: var(--dash-muted); line-height: 1.4;">
                     ${totalAssigned === 0 
                         ? "No assessments assigned yet." 
                         : (remaining === 0 

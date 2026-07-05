@@ -146,9 +146,11 @@ var getStudentClassData = window.getStudentClassData = function() {
         return document.getElementById("dashboardPageLoader");
     }
 
-    function showDashboardPageLoader() {
+    function showDashboardPageLoader(options) {
         const loader = getLoader();
         if (!loader) return;
+        const useBrandedLoader = Boolean(options && options.branded);
+        loader.classList.toggle("is-branded", useBrandedLoader);
         loader.classList.add("is-visible");
         loader.setAttribute("aria-hidden", "false");
     }
@@ -157,6 +159,7 @@ var getStudentClassData = window.getStudentClassData = function() {
         const loader = getLoader();
         if (loader) {
             loader.classList.remove("is-visible");
+            loader.classList.remove("is-branded");
             loader.setAttribute("aria-hidden", "true");
         }
         document.body.classList.remove("dashboard-preloading");
@@ -218,7 +221,7 @@ var getStudentClassData = window.getStudentClassData = function() {
         event.preventDefault();
         navigationPending = true;
         hideActiveNavTooltips();
-        showDashboardPageLoader();
+        showDashboardPageLoader({ branded: link.classList.contains("assessment-type-link") });
         window.requestAnimationFrame(function () {
             window.setTimeout(function () {
                 window.location.href = targetUrl.href;
