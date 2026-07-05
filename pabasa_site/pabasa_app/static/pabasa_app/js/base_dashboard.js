@@ -435,8 +435,8 @@ var getStudentClassData = window.getStudentClassData = function() {
         collapseBtn.setAttribute("title", collapsed ? "Expand sidebar" : "Collapse sidebar");
         collapseBtn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
         collapseBtn.innerHTML = collapsed
-            ? '<i class="bi bi-chevron-right"></i>'
-            : '<i class="bi bi-chevron-left"></i>';
+            ? '<i class="bi bi-chevron-right"></i><span class="sidebar-text sidebar-collapse-label">Expand</span>'
+            : '<i class="bi bi-chevron-left"></i><span class="sidebar-text sidebar-collapse-label">Collapse</span>';
     }
 
     setCollapsed(window.localStorage.getItem(key) === "1");

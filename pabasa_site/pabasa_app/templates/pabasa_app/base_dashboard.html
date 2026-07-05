@@ -248,9 +248,25 @@
             width: 56px !important;
         }
 
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapse-row {
+            width: 56px !important;
+            padding-bottom: 0.85rem;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapse-btn {
+            flex: 0 0 48px;
+            width: 48px !important;
+            min-width: 48px !important;
+            max-width: 48px !important;
+            min-height: 48px;
+            height: 48px;
+            gap: 0 !important;
+            padding: 0 !important;
+        }
+
         body.sidebar-collapsed .dashboard-sidebar .sidebar-footer {
             border-top-color: rgba(255, 255, 255, 0.18) !important;
-            margin-top: 1rem !important;
+            margin-top: 0 !important;
             padding-top: 1rem !important;
         }
 
@@ -803,8 +819,8 @@
             align-items: center;
             justify-content: center;
             margin-top: auto;
-            min-height: 34px;
-            padding: 0.15rem 0 0.55rem;
+            min-height: 48px;
+            padding: 0 0 0.85rem;
             position: relative;
             width: 100%;
         }
@@ -866,35 +882,35 @@
             text-transform: uppercase;
         }
 
-        .sidebar-collapse-btn {
-            border: 2px solid rgba(255, 255, 255, 0.92) !important;
-            border-radius: 999px;
+        .sidebar-collapse-btn,
+        .dashboard-sidebar .btn-outline-danger {
+            border: 1px solid rgba(255, 255, 255, 0.16) !important;
+            border-radius: 16px;
             color: #fff;
-            background: var(--dash-primary);
-            flex: 0 0 auto;
-            width: 28px;
-            height: 28px;
+            background: rgba(255, 255, 255, 0.12);
+            width: 100%;
+            min-height: 46px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0;
-            position: fixed;
-            left: calc(var(--sidebar-width) - 14px);
-            top: 32px;
-            z-index: 1045;
-            box-shadow: 0 8px 18px rgba(6, 23, 38, 0.22);
-            transition: background-color 0.16s ease, box-shadow 0.16s ease, left 0.18s ease;
+            gap: 0.55rem;
+            padding: 0.65rem 0.85rem;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
         }
 
         .sidebar-collapse-btn:hover,
-        .sidebar-collapse-btn:focus {
-            background: var(--dash-primary-deep);
+        .sidebar-collapse-btn:focus,
+        .dashboard-sidebar .btn-outline-danger:hover,
+        .dashboard-sidebar .btn-outline-danger:focus {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.22) !important;
             color: #fff;
-            box-shadow: 0 10px 22px rgba(6, 23, 38, 0.28);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
         }
 
         .sidebar-collapse-btn i {
-            font-size: 0.85rem;
+            font-size: 0.95rem;
             line-height: 1;
         }
 
@@ -1024,26 +1040,7 @@
         }
 
         .dashboard-sidebar .btn-outline-danger {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            border-radius: 16px;
-            color: #fff;
             font-weight: 800;
-            min-height: 50px;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.6rem;
-            width: 100%;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-        }
-
-        .dashboard-sidebar .btn-outline-danger:hover {
-            background: rgba(255, 255, 255, 0.18);
-            border-color: rgba(255, 255, 255, 0.22);
-            color: #fff !important;
-            transform: translateY(-2px);
         }
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-nav-section .dash-link,

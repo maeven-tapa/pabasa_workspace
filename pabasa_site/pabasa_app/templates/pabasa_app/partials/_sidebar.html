@@ -13,9 +13,6 @@
                     <div class="brand-note mt-1 small">{% if nav_role == 'teacher' %}Teacher Workspace{% else %}Student Workspace{% endif %}</div>
                 </div>
             </a>
-            <button class="btn btn-sm btn-light sidebar-collapse-btn d-none d-lg-inline-flex" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
-                <i class="bi bi-chevron-left"></i>
-            </button>
         </div>
         <div class="sidebar-role-card">
             <span class="small sidebar-subtext">{% if nav_role == 'teacher' %}Teacher workspace{% else %}Student workspace{% endif %}</span>
@@ -50,6 +47,13 @@
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% url 'profile' %}?role=student" data-nav-tooltip title="Profile"><i class="bi bi-person"></i><span class="sidebar-text">Profile</span></a>
     </div>
     {% endif %}
+
+    <div class="sidebar-collapse-row d-none d-lg-flex">
+        <button class="btn btn-sm btn-light sidebar-collapse-btn" type="button" data-sidebar-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
+            <i class="bi bi-chevron-left"></i>
+            <span class="sidebar-text sidebar-collapse-label">Collapse</span>
+        </button>
+    </div>
 
     <div class="sidebar-footer flex-shrink-0 pt-2 border-top">
         <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#logoutConfirmModal" data-nav-tooltip title="Logout">
