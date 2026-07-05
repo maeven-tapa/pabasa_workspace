@@ -135,40 +135,38 @@
 
     /* ── ADDED: match teacher-signup-form row-gap and action sizing ── */
     .student-signup-form {
-        row-gap: 1rem;
+        row-gap: 1.2rem;
     }
 
     .student-signup-form .form-actions {
-        gap: 0.75rem;
-        margin-top: 0.25rem;
+        gap: 1rem;
+        margin-top: 0.35rem;
+        padding-top: 0.25rem;
     }
 
     .student-signup-form .form-actions .btn {
         min-width: 9rem;
     }
 
-    .signup-progress {
-        display: grid;
-        gap: 0.5rem;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        margin: 1rem 0 0.5rem;
+    .signup-card-topline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.7rem;
     }
 
-    .signup-progress span {
+    .signup-step-pill {
+        flex: 0 0 auto;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.58);
-        border: 1px solid rgba(16, 70, 110, 0.12);
-        color: #526c7a;
+        background: rgba(84, 194, 240, 0.16);
+        border: 1px solid rgba(84, 194, 240, 0.42);
+        color: #10466e;
         font-size: 0.72rem;
         font-weight: 800;
-        padding: 0.45rem 0.65rem;
+        padding: 0.42rem 0.7rem;
         text-align: center;
-    }
-
-    .signup-progress span.is-active {
-        background: rgba(84, 194, 240, 0.16);
-        border-color: rgba(84, 194, 240, 0.42);
-        color: #10466e;
+        white-space: nowrap;
     }
 
     .signup-step {
@@ -176,7 +174,33 @@
     }
 
     .signup-step.is-active {
-        display: contents;
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 1.05rem 1.15rem;
+        width: 100%;
+    }
+
+    .signup-step > [class*="col-"] {
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .signup-step > .col-12,
+    .signup-step > .col-md-12 {
+        grid-column: span 12;
+    }
+
+    .signup-step > .col-md-6 {
+        grid-column: span 6;
+    }
+
+    .signup-step > .col-md-4 {
+        grid-column: span 4;
+    }
+
+    .signup-step > .col-md-2 {
+        grid-column: span 2;
     }
 
     .form-actions {
@@ -203,7 +227,7 @@
     }
 
     .password-helper {
-        margin-top: -0.15rem;
+        margin-top: 0.1rem;
         padding: 0.75rem 0.85rem;
         border: 1px solid rgba(16, 70, 110, 0.12);
         border-radius: 0.9rem;
@@ -267,6 +291,18 @@
             width: 100%;
         }
 
+        .signup-card-topline {
+            align-items: flex-start;
+        }
+
+        .signup-step.is-active {
+            gap: 0.9rem;
+        }
+
+        .signup-step > [class*="col-"] {
+            grid-column: 1 / -1;
+        }
+
         .password-rules {
             grid-template-columns: 1fr;
         }
@@ -280,14 +316,12 @@
     <div class="col-12 col-lg-9 col-xl-8 mx-auto">
         <article class="account-card card student-signup-card mx-auto">
             <div class="card-body p-4 p-md-5">
-                <span class="modern-chip mb-2">Student Account</span>
+                <div class="signup-card-topline">
+                    <span class="modern-chip mb-0">Student Account</span>
+                    <span class="signup-step-pill" data-step-status>Personal 1/3</span>
+                </div>
                 <h1 class="h4">Create a Student Account</h1>
                 <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
-                <div class="signup-progress" aria-label="Signup steps">
-                    <span class="is-active" data-step-indicator="0">Personal</span>
-                    <span data-step-indicator="1">School</span>
-                    <span data-step-indicator="2">Password</span>
-                </div>
                 <!-- CHANGED: added student-signup-form class to match teacher form spacing -->
                 <form id="studentSignupForm" method="post" class="row g-3 student-signup-form">
                     {% csrf_token %}
@@ -478,7 +512,8 @@
         const nextStepBtn = document.getElementById("nextStepBtn");
         const prevStepBtn = document.getElementById("prevStepBtn");
         const steps = Array.from(form.querySelectorAll("[data-signup-step]")).sort((a, b) => Number(a.dataset.signupStep) - Number(b.dataset.signupStep));
-        const stepIndicators = Array.from(document.querySelectorAll("[data-step-indicator]")).sort((a, b) => Number(a.dataset.stepIndicator) - Number(b.dataset.stepIndicator));
+        const stepStatus = document.querySelector("[data-step-status]");
+        const stepLabels = ["Personal", "School", "Password"];
         let currentStep = 0;
         const errorMessage = form.querySelector("#errorMessage");
         const passwordInput = form.elements.password;
@@ -497,9 +532,7 @@
             steps.forEach((step, index) => {
                 step.classList.toggle("is-active", index === currentStep);
             });
-            stepIndicators.forEach((indicator, index) => {
-                indicator.classList.toggle("is-active", index === currentStep);
-            });
+            if (stepStatus) stepStatus.textContent = `${stepLabels[currentStep]} ${currentStep + 1}/${steps.length}`;
             prevStepBtn.classList.toggle("d-none", currentStep === 0);
             nextStepBtn.classList.toggle("d-none", currentStep === steps.length - 1);
             submitButton.classList.toggle("d-none", currentStep !== steps.length - 1);

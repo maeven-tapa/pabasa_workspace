@@ -3716,6 +3716,9 @@ def profile(request):
     username = f"{user.first_name}_{user.last_name}".lower().replace(" ", "_")
     pabasa_id = user.custom_id
     role_display = "Teacher"
+    birthday_display = ""
+    if user.birth_month and user.birth_day and user.birth_year:
+        birthday_display = f"{int(user.birth_month):02d}/{int(user.birth_day):02d}/{user.birth_year}"
 
     if user.role == "teacher":
         teacher_role = user.teacher_role or ''
