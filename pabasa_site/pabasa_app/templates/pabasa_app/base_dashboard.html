@@ -1880,6 +1880,7 @@
             }
         }
 
+        body.dashboard-preloading .dashboard-page-loader,
         .dashboard-page-loader.is-visible {
             opacity: 1;
             visibility: visible;
@@ -1903,8 +1904,8 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="dashboard-body">
-    <div class="dashboard-page-loader" id="dashboardPageLoader" aria-hidden="true" role="status" aria-label="Loading page">
+<body class="dashboard-body dashboard-preloading">
+    <div class="dashboard-page-loader" id="dashboardPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
         <div class="dashboard-page-loader__spinner"></div>
     </div>
     <script>
@@ -2105,7 +2106,7 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=dashboard-loader-tooltip-fix"></script>
+    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=dashboard-preload-flicker-fix"></script>
     <script>
         (() => {
             const logoutLink = document.querySelector("#logoutConfirmModal a[href*='home']");

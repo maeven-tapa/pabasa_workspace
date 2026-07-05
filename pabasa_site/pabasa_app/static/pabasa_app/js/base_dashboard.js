@@ -138,6 +138,8 @@ var getStudentClassData = window.getStudentClassData = function() {
 
 (function () {
     const DASHBOARD_NAV_DELAY_MS = 500;
+    const DASHBOARD_PRELOAD_MIN_MS = 450;
+    const preloadStartedAt = Date.now();
     let navigationPending = false;
 
     function getLoader() {
@@ -153,10 +155,20 @@ var getStudentClassData = window.getStudentClassData = function() {
 
     function hideDashboardPageLoader() {
         const loader = getLoader();
-        if (!loader) return;
-        loader.classList.remove("is-visible");
-        loader.setAttribute("aria-hidden", "true");
+        if (loader) {
+            loader.classList.remove("is-visible");
+            loader.setAttribute("aria-hidden", "true");
+        }
+        document.body.classList.remove("dashboard-preloading");
         navigationPending = false;
+    }
+
+    function releaseDashboardPreload() {
+        const elapsed = Date.now() - preloadStartedAt;
+        const remaining = Math.max(0, DASHBOARD_PRELOAD_MIN_MS - elapsed);
+        window.setTimeout(function () {
+            window.requestAnimationFrame(hideDashboardPageLoader);
+        }, remaining);
     }
 
     function hideActiveNavTooltips() {
@@ -216,7 +228,14 @@ var getStudentClassData = window.getStudentClassData = function() {
 
     window.showDashboardPageLoader = showDashboardPageLoader;
     window.hideDashboardPageLoader = hideDashboardPageLoader;
-    window.addEventListener("pageshow", hideDashboardPageLoader);
+    if (document.readyState === "complete") {
+        releaseDashboardPreload();
+    } else {
+        window.addEventListener("load", releaseDashboardPreload, { once: true });
+    }
+    window.addEventListener("pageshow", function (event) {
+        if (event.persisted) hideDashboardPageLoader();
+    });
 })();
 
 (function () {
