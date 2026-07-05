@@ -565,7 +565,7 @@
             border: 1px solid var(--dash-border);
             border-radius: 0.85rem;
             box-shadow: 0 18px 36px rgba(27, 26, 23, 0.12);
-            z-index: 1040;
+            z-index: 1200;
             transform: translateX(-14px);
             opacity: 0;
             pointer-events: none;
@@ -1589,7 +1589,8 @@
             .help-panel {
                 top: 84px;
                 left: 0.75rem;
-                width: calc(100vw - 1.5rem);
+                right: 0.75rem;
+                width: auto;
                 max-height: calc(100vh - 100px);
             }
         }
@@ -1958,34 +1959,42 @@
                     <ul class="help-links">
                         <li>
                             <button type="button" class="help-link-btn" aria-controls="help-materials">
-                                <i class="bi bi-file-earmark-text"></i> How to create materials
+                                <i class="bi bi-file-earmark-text"></i> How to Create Reading Materials
                             </button>
                             <div id="help-materials" class="help-content" style="display: none;">
-                                <p>Log in to your teacher dashboard, navigate to your Class, click Create Material, and upload your content (PDF, image, or text). Students will see it in their assignments.</p>
+                                <p>Open your course, then create a reading material manually, upload a file, or select a shared material from the Others tab.</p>
                             </div>
                         </li>
                         <li>
                             <button type="button" class="help-link-btn" aria-controls="help-invite">
-                                <i class="bi bi-person-plus"></i> How to invite students
+                                <i class="bi bi-person-plus"></i> How to Invite Students
                             </button>
                             <div id="help-invite" class="help-content" style="display: none;">
-                                <p>Go to your Class → Share → Copy the class code. Share this code with students. They can join by entering the code in their Student Dashboard.</p>
+                                <p>Copy the class code from your dashboard and share it with your students so they can join your class. You can also add students manually from the Class page.</p>
                             </div>
                         </li>
                         <li>
                             <button type="button" class="help-link-btn" aria-controls="help-assign">
-                                <i class="bi bi-list-check"></i> How to assign practice
+                                <i class="bi bi-list-check"></i> How to Assign Practice
                             </button>
                             <div id="help-assign" class="help-content" style="display: none;">
-                                <p>Select your class → Choose students → Create assignment → Select materials → Set due date → Send. Students will receive notifications about the new assignment.</p>
+                                <p>Practice materials are managed by the Admin account and cannot be created or edited by teachers.</p>
                             </div>
                         </li>
                         <li>
                             <button type="button" class="help-link-btn" aria-controls="help-reports">
-                                <i class="bi bi-graph-up"></i> How to view reports
+                                <i class="bi bi-graph-up"></i> How to Send Reports
                             </button>
                             <div id="help-reports" class="help-content" style="display: none;">
-                                <p>From your Dashboard → Progress Reports → Select your class or specific student → View detailed reading analytics, comprehension metrics, and performance trends.</p>
+                                <p>Open your course, go to Reports &amp; Updates, select the student(s), choose the update type, and send your report or update.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <button type="button" class="help-link-btn" aria-controls="help-live">
+                                <i class="bi bi-play-btn"></i> How to Start a Live Assessment
+                            </button>
+                            <div id="help-live" class="help-content" style="display: none;">
+                                <p>Open your course, create an assessment and click Live. All students in the course will automatically receive the assessment and begin together after the countdown.</p>
                             </div>
                         </li>
                         <li>

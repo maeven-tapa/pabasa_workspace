@@ -450,23 +450,25 @@ var getStudentClassData = window.getStudentClassData = function() {
 })();
 
 (function () {
-    const helpToggleBtn = document.querySelector("[data-help-toggle]");
+    const helpToggleBtns = document.querySelectorAll("[data-help-toggle]");
     const helpCloseBtn = document.querySelector("[data-help-close]");
     const helpPanel = document.getElementById("helpPanel");
 
-    if (!helpToggleBtn || !helpPanel) {
+    if (!helpToggleBtns.length || !helpPanel) {
         return;
     }
 
     function setHelpPanel(open) {
         document.body.classList.toggle("help-panel-open", open);
         helpPanel.setAttribute("aria-hidden", open ? "false" : "true");
-        helpToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        helpToggleBtns.forEach(btn => btn.setAttribute("aria-expanded", open ? "true" : "false"));
     }
 
-    helpToggleBtn.addEventListener("click", function () {
-        const next = !document.body.classList.contains("help-panel-open");
-        setHelpPanel(next);
+    helpToggleBtns.forEach(btn => {
+        btn.addEventListener("click", function () {
+            const next = !document.body.classList.contains("help-panel-open");
+            setHelpPanel(next);
+        });
     });
 
     if (helpCloseBtn) {
