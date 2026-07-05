@@ -137,7 +137,7 @@ var getStudentClassData = window.getStudentClassData = function() {
 })();
 
 (function () {
-    const DASHBOARD_NAV_DELAY_MS = 200;
+    const DASHBOARD_NAV_DELAY_MS = 500;
     let navigationPending = false;
 
     function getLoader() {
@@ -191,9 +191,11 @@ var getStudentClassData = window.getStudentClassData = function() {
         event.preventDefault();
         navigationPending = true;
         showDashboardPageLoader();
-        window.setTimeout(function () {
-            window.location.href = targetUrl.href;
-        }, DASHBOARD_NAV_DELAY_MS);
+        window.requestAnimationFrame(function () {
+            window.setTimeout(function () {
+                window.location.href = targetUrl.href;
+            }, DASHBOARD_NAV_DELAY_MS);
+        });
     }, true);
 
     window.showDashboardPageLoader = showDashboardPageLoader;
