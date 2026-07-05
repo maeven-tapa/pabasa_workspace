@@ -17,6 +17,7 @@ import logging
 import json
 import os
 from pathlib import Path
+from html import escape
 import random
 import traceback
 import ssl
@@ -1201,6 +1202,94 @@ def _clear_pending_student_signup(request):
     """Clear student signup data from session"""
     _clear_pending_data(request, 'pending_student_signup', 'pending_student_signup_otp', 'pending_student_signup_otp_created')
 
+def _send_pabasa_otp_email(subject, text_message, recipient_email, first_name, otp, eyebrow, heading, intro, action_url=None, action_label="Open PABASA"):
+    safe_name = escape(first_name or "PABASA user")
+    safe_otp = escape(str(otp))
+    safe_eyebrow = escape(eyebrow)
+    safe_heading = escape(heading)
+    safe_intro = escape(intro)
+    safe_action_url = escape(action_url or "")
+    safe_action_label = escape(action_label)
+    action_html = ""
+    if action_url:
+        action_html = f"""
+                                            <tr>
+                                                <td align="center" style="padding: 8px 0 4px;">
+                                                    <a href="{safe_action_url}" style="display: inline-block; background: #2EA8E5; color: #ffffff; font-family: Arial, sans-serif; font-size: 14px; font-weight: 800; text-decoration: none; padding: 13px 22px; border-radius: 999px; box-shadow: 0 10px 22px rgba(46, 168, 229, 0.22);">{safe_action_label}</a>
+                                                </td>
+                                            </tr>
+        """
+
+    html_message = f"""<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{safe_heading}</title>
+</head>
+<body style="margin: 0; padding: 0; background: #F0F8FF;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: #F0F8FF; margin: 0; padding: 32px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 620px; background: #ffffff; border-radius: 28px; overflow: hidden; border: 1px solid rgba(16, 70, 110, 0.12); box-shadow: 0 18px 42px rgba(16, 70, 110, 0.12);">
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #10466E 0%, #2EA8E5 72%, #FFD639 100%); padding: 28px 30px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td>
+                                        <div style="display: inline-block; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.28); border-radius: 18px; color: #ffffff; font-family: Arial, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; padding: 8px 12px; text-transform: uppercase;">PABASA</div>
+                                        <h1 style="color: #ffffff; font-family: Arial, sans-serif; font-size: 30px; line-height: 1.15; margin: 18px 0 8px;">{safe_heading}</h1>
+                                        <p style="color: rgba(255,255,255,0.86); font-family: Arial, sans-serif; font-size: 14px; line-height: 1.55; margin: 0;">{safe_eyebrow}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 30px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td>
+                                        <p style="color: #0F2D45; font-family: Arial, sans-serif; font-size: 16px; line-height: 1.6; margin: 0 0 12px;">Hello {safe_name},</p>
+                                        <p style="color: #4A6680; font-family: Arial, sans-serif; font-size: 15px; line-height: 1.65; margin: 0 0 22px;">{safe_intro}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding: 8px 0 22px;">
+                                        <div style="background: #EAF7FD; border: 1px dashed rgba(46, 168, 229, 0.5); border-radius: 22px; padding: 20px 18px;">
+                                            <div style="color: #4A6680; font-family: Arial, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; margin-bottom: 8px; text-transform: uppercase;">Your OTP Code</div>
+                                            <div style="color: #10466E; font-family: 'Courier New', monospace; font-size: 36px; font-weight: 800; letter-spacing: 0.24em; line-height: 1;">{safe_otp}</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div style="background: #FFF8D6; border: 1px solid rgba(245, 184, 0, 0.28); border-radius: 16px; color: #6A5710; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.55; padding: 14px 16px; margin-bottom: 18px;">
+                                            This code is valid for 10 minutes. For your safety, do not share it with anyone.
+                                        </div>
+                                    </td>
+                                </tr>
+                                {action_html}
+                                <tr>
+                                    <td style="padding-top: 18px;">
+                                        <p style="color: #6B7D8F; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.6; margin: 0;">If you did not request this code, you can safely ignore this email.</p>
+                                        <p style="color: #0F2D45; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1.6; margin: 18px 0 0;">Thank you,<br>The PABASA Team</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+
+    email = EmailMultiAlternatives(subject, text_message, settings.DEFAULT_FROM_EMAIL, [recipient_email])
+    email.attach_alternative(html_message, "text/html")
+    email.send(fail_silently=False)
+
 def send_teacher_signup_otp_email(request, email, otp, first_name):
     auth_url = request.build_absolute_uri(reverse('auth'))
     subject = "PABASA Teacher Signup OTP"
@@ -1213,7 +1302,18 @@ def send_teacher_signup_otp_email(request, email, otp, first_name):
         f"You can log in after verification at: {auth_url}\n\n"
         "Thank you,\nPABASA Team"
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+    _send_pabasa_otp_email(
+        subject,
+        message,
+        email,
+        first_name,
+        otp,
+        "Teacher account verification",
+        "Complete your teacher signup",
+        "Use the code below to finish creating your PABASA teacher account.",
+        auth_url,
+        "Go to PABASA"
+    )
 
 def send_teacher_confirmation_email(request, user, teacher_code):
     auth_url = request.build_absolute_uri(reverse('auth'))
@@ -1241,7 +1341,18 @@ def send_student_signup_otp_email(request, email, otp, first_name):
         f"You can log in after verification at: {auth_url}\n\n"
         "Thank you,\nPABASA Team"
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+    _send_pabasa_otp_email(
+        subject,
+        message,
+        email,
+        first_name,
+        otp,
+        "Student account verification",
+        "Complete your student signup",
+        "Use the code below to finish creating your PABASA student account.",
+        auth_url,
+        "Go to PABASA"
+    )
 
 def send_student_confirmation_email(request, user):
     auth_url = request.build_absolute_uri(reverse('auth'))
@@ -1282,7 +1393,18 @@ def send_password_reset_otp_email(request, email, otp, first_name):
         f"Open the following link to verify the code: {otp_url}\n\n"
         "Thank you,\nPABASA Team"
     )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+    _send_pabasa_otp_email(
+        subject,
+        message,
+        email,
+        first_name,
+        otp,
+        "Password reset verification",
+        "Reset your PABASA password",
+        "We received a request to reset your PABASA password. Use the code below to continue.",
+        otp_url,
+        "Verify OTP"
+    )
 
 
 def send_password_reset_confirmation_email(request, user):

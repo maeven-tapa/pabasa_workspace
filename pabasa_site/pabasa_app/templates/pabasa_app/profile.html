@@ -366,9 +366,16 @@
         }
 
         .profile-card-spacing,
-        .mic-settings-card,
         .danger-zone-wrapper {
             grid-column: 2;
+        }
+
+        .profile-card-spacing {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .profile-card-spacing .mic-settings-card {
+            grid-column: 1 / -1;
         }
     }
 
@@ -379,14 +386,9 @@
         align-items: center;
     }
 
-    .profile-card-spacing .mic-settings-card {
-        grid-column: auto;
-        min-height: 0;
-    }
-
     .profile-card-spacing .mic-settings-card .mic-settings-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem 1.5rem;
         align-items: stretch;
     }
 
@@ -482,6 +484,10 @@
         .mic-settings-grid {
             grid-template-columns: 1fr;
             gap: 2rem;
+        }
+
+        .profile-card-spacing .mic-settings-card .mic-settings-grid {
+            grid-template-columns: 1fr;
         }
         
         .profile-summary {
