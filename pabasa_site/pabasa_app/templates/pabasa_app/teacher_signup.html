@@ -314,7 +314,7 @@
             <div class="card-body p-4 p-md-5">
                 <div class="signup-card-topline">
                     <span class="modern-chip mb-0">Teacher Account</span>
-                    <span class="signup-step-pill" data-step-status>Personal 1/4</span>
+                    <span class="signup-step-pill" data-step-status>Personal 1/3</span>
                 </div>
                 <h1 class="h4">Create a Teacher Account</h1>
                 <p class="small">Already have an account? <a href="{% url 'auth' %}">Login</a></p>
@@ -393,8 +393,6 @@
                         <label class="form-label">Contact number</label>
                         <input class="form-control" type="tel" name="contact_no" placeholder="09XXXXXXXXX">
                     </div>
-                    </div>
-                    <div class="signup-step" data-signup-step="2">
                     <div class="col-md-6">
                         <label class="form-label">Teacher Role</label>
                         <select class="form-select" name="teacher_role" required>
@@ -427,7 +425,7 @@
                         </select>
                     </div>
                     </div>
-                    <div class="signup-step" data-signup-step="3">
+                    <div class="signup-step" data-signup-step="2">
                     <div class="col-md-6">
                         <label class="form-label">Password</label>
                         <div class="password-field">
@@ -516,7 +514,7 @@
         const prevStepBtn = document.getElementById("prevStepBtn");
         const steps = Array.from(form.querySelectorAll("[data-signup-step]")).sort((a, b) => Number(a.dataset.signupStep) - Number(b.dataset.signupStep));
         const stepStatus = document.querySelector("[data-step-status]");
-        const stepLabels = ["Personal", "Contact", "School", "Password"];
+        const stepLabels = ["Personal", "School", "Password"];
         let currentStep = 0;
         const errorMessage = form.querySelector("#errorMessage");
         const passwordInput = form.elements.password;

@@ -645,17 +645,15 @@
             const transitionDuration = 500;
             let navigationPending = false;
 
-            const loader = document.getElementById("publicPageLoader");
             const accountPath = "{% url 'auth' %}";
 
-            const showPublicLoader = () => {
-                loader?.classList.add("is-visible");
-                loader?.setAttribute("aria-hidden", "false");
-            };
-
             const hidePublicLoader = () => {
+                const loader = document.getElementById("publicPageLoader");
                 loader?.classList.remove("is-visible");
                 loader?.setAttribute("aria-hidden", "true");
+                document.querySelectorAll(".account-card.is-card-transitioning").forEach((card) => {
+                    card.classList.remove("is-card-transitioning");
+                });
                 navigationPending = false;
             };
 
@@ -680,11 +678,12 @@
                 if (targetUrl.origin !== window.location.origin) return;
                 if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return;
                 if (targetUrl.pathname !== accountPath) return;
+                const sourceCard = link.closest(".account-card");
+                if (!sourceCard) return;
 
                 event.preventDefault();
                 navigationPending = true;
-                link.closest(".account-card")?.classList.add("is-card-transitioning");
-                showPublicLoader();
+                sourceCard.classList.add("is-card-transitioning");
 
                 window.setTimeout(() => {
                     window.location.href = targetUrl.href;

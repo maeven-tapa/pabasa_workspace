@@ -68,18 +68,49 @@
     .account-card .text-secondary {
         color: #263f4f !important;
     }
+
+    .signup-choice-card {
+        max-width: 540px;
+        margin-inline: auto;
+    }
+
+    .signup-choice-card .card-body {
+        display: grid;
+        justify-items: center;
+        text-align: center;
+        gap: 0.9rem;
+        padding: clamp(2rem, 5vw, 2.8rem) !important;
+    }
+
+    .signup-choice-card h2,
+    .signup-choice-card p {
+        margin-bottom: 0;
+    }
+
+    .signup-choice-actions {
+        display: grid;
+        gap: 0.8rem;
+        width: min(100%, 420px);
+        margin-top: 0.25rem;
+    }
+
+    .signup-choice-actions .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="account-stage">
-    <div class="col-12 col-md-9 col-lg-5">
-        <article class="account-card card">
+    <div class="col-12 col-md-9 col-lg-5 mx-auto">
+        <article class="account-card card signup-choice-card">
             <div class="card-body p-4">
                 <span class="modern-chip mb-2">Access Portal</span>
                 <h2 class="h4">Create an Account</h2>
                 <p class="text-secondary">Choose your role to begin the sign up flow.</p>
-                <div class="d-grid gap-2 mb-3">
+                <div class="signup-choice-actions">
                     <a class="btn btn-primary" href="{% url 'teacher_signup' %}">Teacher Sign Up</a>
                     <a class="btn btn-outline-primary" href="{% url 'student_signup' %}">Student Sign Up</a>
                 </div>

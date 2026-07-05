@@ -202,16 +202,16 @@
         const passwordToggle = document.getElementById("passwordToggle");
         const loginBtn = document.getElementById("loginBtn");
         const errorMessage = document.getElementById("errorMessage");
-        const loadingScreen = document.getElementById("loginLoadingScreen");
+        const loginCard = form.closest(".account-card");
         const pabasaIdPattern = /^((ADM|TCH|G2|STD)-[A-Z0-9]{1,12}|PRN-[A-Z0-9]{1,12}-[0-9]{3})$/;
         const minimumLoadingTime = 500;
 
         const showLoadingScreen = () => {
-            loadingScreen?.classList.add("is-visible");
+            loginCard?.classList.add("is-card-transitioning");
         };
 
         const hideLoadingScreen = () => {
-            loadingScreen?.classList.remove("is-visible");
+            loginCard?.classList.remove("is-card-transitioning");
         };
 
         const updatePasswordToggle = () => {
