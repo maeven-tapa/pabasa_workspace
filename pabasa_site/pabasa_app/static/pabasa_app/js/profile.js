@@ -29,6 +29,7 @@ function initProfilePage() {
     const profilePhotoInput = document.getElementById("profilePhoto");
     const uploadPhotoBtn = document.getElementById("uploadPhotoBtn");
     const removePhotoBtn = document.getElementById("removePhotoBtn");
+    const profileSummaryCard = document.querySelector(".profile-summary");
     const profileUsername = JSON.parse(document.getElementById("profileUsername")?.textContent || "\"user\"");
     const profileFullName = JSON.parse(document.getElementById("profileFullName")?.textContent || '""');
     const profileEmail = JSON.parse(document.getElementById("profileEmail")?.textContent || "\"\"");
@@ -70,6 +71,7 @@ function initProfilePage() {
         accountFields.forEach(function (field) {
             field.disabled = !editing;
         });
+        profileSummaryCard?.classList.toggle("is-editing", editing);
         editBtn.classList.toggle("d-none", editing);
         actions.classList.toggle("d-none", !editing);
     }
