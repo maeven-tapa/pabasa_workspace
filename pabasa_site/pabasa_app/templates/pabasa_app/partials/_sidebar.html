@@ -14,13 +14,9 @@
                 </div>
             </a>
         </div>
-        <div class="sidebar-role-card">
-            <span class="small sidebar-subtext">{% if nav_role == 'teacher' %}Teacher workspace{% else %}Student workspace{% endif %}</span>
-            <strong class="sidebar-text">{% if nav_role == 'teacher' %}Guide reading progress{% else %}Build fluency daily{% endif %}</strong>
-        </div>
     </div>
 
-    <nav class="sidebar-nav-section nav nav-pills flex-column gap-1 mb-2">
+    <nav class="sidebar-nav-section nav nav-pills flex-column gap-1 mb-2 sidebar-main-section">
         <div class="sidebar-section-label">Main</div>
         <a class="nav-link dash-link d-flex align-items-center gap-2" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" data-nav-tooltip data-active-path="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" title="Dashboard"><i class="bi bi-grid"></i><span class="sidebar-text">Dashboard</span></a>
         {% if nav_role == 'student' %}
