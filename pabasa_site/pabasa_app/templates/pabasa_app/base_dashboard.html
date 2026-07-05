@@ -31,6 +31,7 @@
             --dash-ink-soft: rgba(15, 45, 69, 0.72);
             --dash-shadow: 0 18px 40px rgba(16, 70, 110, 0.12);
             --sidebar-width: 320px;
+            --sidebar-collapsed-width: 88px;
         }
 
         body.dashboard-body {
@@ -67,7 +68,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            transition: width 0.2s ease;
+            transition: width 0.18s ease;
             /* Allow vertical scrolling inside the nav area only; hide any horizontal overflow
                to prevent a horizontal scrollbar appearing on desktop. */
             overflow-y: hidden;
@@ -150,52 +151,97 @@
             overflow-x: hidden !important;
         }
 
-        body.sidebar-collapsed .dashboard-sidebar {
-            width: 90px;
+        body.sidebar-collapsed {
+            --sidebar-width: var(--sidebar-collapsed-width);
         }
 
-        body.sidebar-collapsed {
-            --sidebar-width: 90px;
+        body.sidebar-collapsed .dashboard-sidebar {
+            width: var(--sidebar-collapsed-width);
         }
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-text,
         body.sidebar-collapsed .dashboard-sidebar .sidebar-subtext,
         body.sidebar-collapsed .dashboard-sidebar .sidebar-section-label,
-        body.sidebar-collapsed .dashboard-sidebar .sidebar-role-card,
         body.sidebar-collapsed .dashboard-sidebar .brand-note {
+            width: 0 !important;
+            max-width: 0 !important;
+            margin: 0 !important;
+            opacity: 0 !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+            white-space: nowrap !important;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-role-card {
             display: none !important;
         }
 
         body.sidebar-collapsed .dashboard-sidebar .dash-link {
-            width: 48px;
+            width: 48px !important;
             height: 48px;
             min-height: 48px;
-            justify-content: center;
-            padding-left: 0.55rem;
-            padding-right: 0.55rem;
+            justify-content: center !important;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0 !important;
         }
 
         body.sidebar-collapsed .dashboard-sidebar .dash-link i {
+            flex: 0 0 28px !important;
             margin-right: 0 !important;
         }
 
         body.sidebar-collapsed .dashboard-sidebar .btn-outline-danger {
-            padding-left: 0.55rem;
-            padding-right: 0.55rem;
+            width: 48px !important;
+            height: 48px;
+            min-height: 48px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0 !important;
         }
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-inner {
-            padding: 0.75rem 0.85rem !important;
+            align-items: center;
+            padding: 1.15rem 0.7rem !important;
         }
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-brand-row {
+            width: 56px;
+            min-height: 56px;
             justify-content: center !important;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 0.35rem !important;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-brand-row a {
+            flex: 0 0 auto;
+            gap: 0 !important;
+            justify-content: center;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .dash-brand-mark {
+            flex: 0 0 42px;
+            height: 42px;
+            width: 42px;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-nav-section,
+        body.sidebar-collapsed .dashboard-sidebar .d-grid {
+            align-items: center !important;
+            width: 100%;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapse-row {
+            margin-left: -0.7rem;
+            width: calc(100% + 1.4rem);
         }
 
         .dashboard-main {
             min-height: 100vh; /* Keep for overall layout, but the body will handle the main scrolling */
             margin-left: var(--sidebar-width); /* Add margin to push content away from the fixed sidebar */
-            transition: margin-left 0.2s ease; /* Smooth transition for margin when sidebar collapses */
+            transition: margin-left 0.18s ease; /* Smooth transition for margin when sidebar collapses */
         }
 
         #dashboardSidebar {
@@ -448,7 +494,7 @@
 
         /* Adjust for collapsed sidebar */
         body.sidebar-collapsed .dashboard-main {
-            margin-left: 90px; /* Adjust margin for collapsed sidebar width */
+            margin-left: var(--sidebar-collapsed-width); /* Adjust margin for collapsed sidebar width */
         }
         .dashboard-topbar h1 {
             font-weight: 700;
@@ -726,13 +772,18 @@
             margin-top: 0;
             flex-shrink: 0;
             padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+            width: 100%;
         }
 
         .sidebar-collapse-row {
             align-items: center;
             justify-content: center;
+            margin-left: -1rem;
             margin-top: auto;
-            padding: 0.35rem 0 0.75rem;
+            min-height: 34px;
+            padding: 0.15rem 0 0.55rem;
+            position: relative;
+            width: calc(100% + 2rem);
         }
 
         .sidebar-brand-row {
@@ -792,16 +843,35 @@
         }
 
         .sidebar-collapse-btn {
-            border: 1px solid rgba(255, 255, 255, 0.16) !important;
-            border-radius: 13px;
+            border: 2px solid rgba(255, 255, 255, 0.92) !important;
+            border-radius: 999px;
             color: #fff;
-            background: rgba(255, 255, 255, 0.12);
+            background: var(--dash-primary);
             flex: 0 0 auto;
-            width: 36px;
-            height: 36px;
+            width: 28px;
+            height: 28px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            padding: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            z-index: 4;
+            box-shadow: 0 8px 18px rgba(6, 23, 38, 0.22);
+            transition: background-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .sidebar-collapse-btn:hover,
+        .sidebar-collapse-btn:focus {
+            background: var(--dash-primary-deep);
+            color: #fff;
+            box-shadow: 0 10px 22px rgba(6, 23, 38, 0.28);
+        }
+
+        .sidebar-collapse-btn i {
+            font-size: 0.85rem;
+            line-height: 1;
         }
 
         .sidebar-role-card {
@@ -950,6 +1020,36 @@
             border-color: rgba(255, 255, 255, 0.22);
             color: #fff !important;
             transform: translateY(-2px);
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-nav-section .dash-link,
+        body.sidebar-collapsed .dashboard-sidebar .d-grid .dash-link,
+        body.sidebar-collapsed .dashboard-sidebar .btn-outline-danger {
+            align-items: center !important;
+            display: inline-flex !important;
+            justify-content: center !important;
+            width: 48px !important;
+            min-width: 48px !important;
+            max-width: 48px !important;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-nav-section .dash-link i,
+        body.sidebar-collapsed .dashboard-sidebar .d-grid .dash-link i,
+        body.sidebar-collapsed .dashboard-sidebar .btn-outline-danger i {
+            flex: 0 0 24px !important;
+            margin: 0 !important;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .dash-link:hover,
+        body.sidebar-collapsed .dashboard-sidebar .dash-link.is-active,
+        body.sidebar-collapsed .dashboard-sidebar .dash-link.active {
+            transform: none;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .dash-link.is-active::before,
+        body.sidebar-collapsed .dashboard-sidebar .dash-link.active::before {
+            left: 0;
+            height: 24px;
         }
 
         .dash-top-btn {
