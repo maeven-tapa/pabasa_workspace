@@ -159,6 +159,21 @@ var getStudentClassData = window.getStudentClassData = function() {
         navigationPending = false;
     }
 
+    function hideActiveNavTooltips() {
+        if (window.bootstrap && bootstrap.Tooltip) {
+            document.querySelectorAll("[data-nav-tooltip]").forEach(function (item) {
+                const tooltip = bootstrap.Tooltip.getInstance(item);
+                if (tooltip) tooltip.hide();
+            });
+        }
+        document.querySelectorAll(".tooltip").forEach(function (tooltipEl) {
+            tooltipEl.remove();
+        });
+        if (document.activeElement && document.activeElement.blur) {
+            document.activeElement.blur();
+        }
+    }
+
     function shouldDelayNavigation(event, link, targetUrl) {
         if (event.defaultPrevented || event.button !== 0) return false;
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
@@ -190,6 +205,7 @@ var getStudentClassData = window.getStudentClassData = function() {
 
         event.preventDefault();
         navigationPending = true;
+        hideActiveNavTooltips();
         showDashboardPageLoader();
         window.requestAnimationFrame(function () {
             window.setTimeout(function () {

@@ -359,7 +359,8 @@
         }
 
         .profile-summary {
-            grid-row: 1 / span 3; /* Matches the number of right-column sections */
+            align-self: stretch;
+            grid-row: 1;
             position: sticky;
             top: 2rem;
             z-index: 5;
@@ -374,11 +375,16 @@
         }
 
         .profile-card-spacing {
+            align-self: stretch;
+            gap: 1.75rem 1.2rem;
             grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: auto minmax(0, 1fr);
+            height: 100%;
         }
 
         .profile-card-spacing .mic-settings-card {
             grid-column: 1 / -1;
+            min-height: 0;
         }
     }
 
@@ -472,8 +478,8 @@
     }
 
     .danger-zone-wrapper {
-        border-top: 1px solid rgba(27, 26, 23, 0.08);
-        margin-top: 1.25rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.72);
+        margin-top: 0;
         padding-top: 1.25rem;
     }
 

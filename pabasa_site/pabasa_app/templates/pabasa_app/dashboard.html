@@ -169,7 +169,6 @@
         min-width: 0;
         overflow: hidden;
         padding: clamp(1.15rem, 2.2vw, 1.55rem);
-        padding-top: clamp(1.8rem, 2.6vw, 2.1rem);
         position: relative;
         z-index: 1;
         width: 100%;
@@ -180,18 +179,7 @@
     }
 
     .join-desk::before {
-        content: "";
-        position: absolute;
-        font-family: "Baloo 2", cursive;
-        left: 24px;
-        top: 0;
-        width: 82px;
-        height: 22px;
-        border-radius: 0 0 14px 14px;
-        background: linear-gradient(135deg, #FBBF24, #F59E0B);
-        border: 1px solid rgba(255, 255, 255, 0.85);
-        border-top: 0;
-        box-shadow: 0 8px 18px rgba(245, 158, 11, 0.18);
+        display: none;
     }
 
     .join-desk-head {
@@ -294,7 +282,7 @@
         align-items: stretch;
     }
 
-    .student-dashboard.has-class .class-list {
+    .student-dashboard.has-class.class-list-ready .class-list {
         display: grid;
         margin-top: 1.5rem;
     }
@@ -562,12 +550,6 @@
         .join-desk {
             border-radius: 20px;
             padding: 1rem;
-            padding-top: 1.65rem;
-        }
-
-        .join-desk::before {
-            left: 18px;
-            width: 72px;
         }
 
         .code-input-row {
@@ -983,7 +965,7 @@
                     const saved = getSavedCodes().map(c => String(c).toUpperCase());
                     const filtered = saved.filter(c => c !== String(code).toUpperCase());
                     saveCodes(filtered);
-                    await renderClassCards(filtered);
+                    await setJoinedState(filtered);
                 });
             });
         };
@@ -997,6 +979,7 @@
                 validCodes = codes; // Use the provided codes directly for student role
             }
             const isJoined = validCodes.length > 0;
+            dashboard.classList.remove("class-list-ready");
             dashboard.classList.toggle("has-class", isJoined);
             emptyNote.style.display = isJoined ? "none" : "";
             joinedNote.style.display = isJoined ? "" : "none";
@@ -1009,6 +992,9 @@
                 // provides the correct list of classes the student is joined to.
                 await renderClassCards(validCodes);
                 saveCodes(validCodes);
+                window.requestAnimationFrame(() => {
+                    dashboard.classList.add("class-list-ready");
+                });
             } else {
                 classList.innerHTML = "";
                 window.localStorage.removeItem(classJoinedKey);
