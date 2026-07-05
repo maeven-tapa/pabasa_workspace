@@ -431,6 +431,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     const key = "pabasaSidebarCollapsed";
 
     function setCollapsed(collapsed) {
+        document.documentElement.classList.toggle("sidebar-collapsed", collapsed);
         document.body.classList.toggle("sidebar-collapsed", collapsed);
         collapseBtn.setAttribute("title", collapsed ? "Expand sidebar" : "Collapse sidebar");
         collapseBtn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
