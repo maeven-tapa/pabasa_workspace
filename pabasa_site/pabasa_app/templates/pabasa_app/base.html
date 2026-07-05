@@ -241,6 +241,42 @@
             letter-spacing: 0;
         }
 
+        .public-page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: grid;
+            place-items: center;
+            background: #ffffff;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+            transition: opacity 0.16s ease, visibility 0.16s ease;
+        }
+
+        body.public-page-preloading .public-page-loader,
+        .public-page-loader.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        .public-page-loader__content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .public-page-loader__spinner {
+            width: 42px;
+            height: 42px;
+            border: 4px solid rgba(84, 194, 240, 0.22);
+            border-top-color: #54c2f0;
+            border-radius: 50%;
+            animation: accountLoadingSpin 0.85s linear infinite;
+        }
+
         @keyframes accountLoadingSpin {
             to {
                 transform: rotate(360deg);
@@ -512,7 +548,12 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100 public-page-preloading">
+    <div class="public-page-loader" id="publicPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
+        <div class="public-page-loader__content">
+            <div class="public-page-loader__spinner"></div>
+        </div>
+    </div>
     <header class="modern-nav-wrap sticky-top shadow-sm">
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container">
@@ -601,10 +642,44 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
         (() => {
-            const transitionDuration = 200;
+            const transitionDuration = 500;
+            const minimumPreloadTime = 450;
+            const preloadStartedAt = Date.now();
+            let navigationPending = false;
+
+            const loader = document.getElementById("publicPageLoader");
+
+            const showPublicLoader = () => {
+                loader?.classList.add("is-visible");
+                loader?.setAttribute("aria-hidden", "false");
+            };
+
+            const hidePublicLoader = () => {
+                loader?.classList.remove("is-visible");
+                loader?.setAttribute("aria-hidden", "true");
+                document.body.classList.remove("public-page-preloading");
+                navigationPending = false;
+            };
+
+            const releasePreload = () => {
+                const elapsed = Date.now() - preloadStartedAt;
+                const remaining = Math.max(0, minimumPreloadTime - elapsed);
+                window.setTimeout(() => {
+                    window.requestAnimationFrame(hidePublicLoader);
+                }, remaining);
+            };
+
+            if (document.readyState === "complete") {
+                releasePreload();
+            } else {
+                window.addEventListener("load", releasePreload, { once: true });
+            }
 
             document.addEventListener("click", (event) => {
-                const link = event.target.closest(".account-card a[href]");
+                if (navigationPending) return;
+
+                const clickTarget = event.target instanceof Element ? event.target : event.target?.parentElement;
+                const link = clickTarget?.closest("a[href]");
                 if (!link) return;
                 if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
                 if (link.target || link.hasAttribute("download")) return;
@@ -612,15 +687,27 @@
                 const href = link.getAttribute("href") || "";
                 if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
 
-                const card = link.closest(".account-card");
-                if (!card) return;
+                let targetUrl;
+                try {
+                    targetUrl = new URL(link.href, window.location.origin);
+                } catch (error) {
+                    return;
+                }
+                if (targetUrl.origin !== window.location.origin) return;
+                if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return;
 
                 event.preventDefault();
-                card.classList.add("is-card-transitioning");
+                navigationPending = true;
+                link.closest(".account-card")?.classList.add("is-card-transitioning");
+                showPublicLoader();
 
                 window.setTimeout(() => {
-                    window.location.href = link.href;
+                    window.location.href = targetUrl.href;
                 }, transitionDuration);
+            });
+
+            window.addEventListener("pageshow", (event) => {
+                if (event.persisted) hidePublicLoader();
             });
         })();
     </script>

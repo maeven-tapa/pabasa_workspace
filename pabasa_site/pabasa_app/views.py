@@ -1893,6 +1893,9 @@ def _dashboard_context(request, nav_role=None, extra=None):
     full_name = ' '.join(p for p in _name_parts if p).strip() or request.session.get('custom_id', 'User')
     teacher_role = ''
     initials = "".join(part[:1] for part in full_name.split()[:2]).upper() or "PA"
+    birthday_display = ""
+    if user.birth_month and user.birth_day and user.birth_year:
+        birthday_display = f"{int(user.birth_month):02d}/{int(user.birth_day):02d}/{user.birth_year}"
     profile_photo_url = None
     username = ''
 
@@ -3989,6 +3992,10 @@ def profile(request):
         'role_display': role_display,
         'initials': initials,
         'bio': bio,
+        'gender': user.sex or '',
+        'birthday_display': birthday_display,
+        'grade_level': user.grade_level or '',
+        'contact_number': user.contact_no or '',
         'notification_settings': _notification_settings_for_user(user),
     })
 
