@@ -233,8 +233,8 @@
             justify-content: center;
         }
 
-        body.sidebar-collapsed .dashboard-sidebar .sidebar-brand-row .sidebar-collapse-btn {
-            right: -16px;
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapse-btn {
+            left: calc(var(--sidebar-collapsed-width) - 14px);
         }
 
         body.sidebar-collapsed .dashboard-sidebar .dash-brand-mark {
@@ -868,13 +868,12 @@
             align-items: center;
             justify-content: center;
             padding: 0;
-            position: absolute;
-            right: -14px;
-            top: 50%;
-            transform: translateY(-50%);
+            position: fixed;
+            left: calc(320px - 14px);
+            top: 32px;
             z-index: 4;
             box-shadow: 0 8px 18px rgba(6, 23, 38, 0.22);
-            transition: background-color 0.16s ease, box-shadow 0.16s ease;
+            transition: background-color 0.16s ease, box-shadow 0.16s ease, left 0.18s ease;
         }
 
         .sidebar-collapse-btn:hover,
@@ -1063,8 +1062,12 @@
 
         body.sidebar-collapsed .dashboard-sidebar .dash-link.is-active::before,
         body.sidebar-collapsed .dashboard-sidebar .dash-link.active::before {
-            left: 0;
-            height: 24px;
+            left: 50%;
+            top: auto;
+            bottom: 4px;
+            width: 22px;
+            height: 4px;
+            transform: translateX(-50%);
         }
 
         .dash-top-btn {
