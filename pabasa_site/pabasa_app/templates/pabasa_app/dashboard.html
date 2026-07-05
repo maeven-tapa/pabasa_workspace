@@ -316,12 +316,11 @@
         padding: 1.75rem;
         word-break: break-word;
         position: relative;
-        transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
         backface-visibility: hidden;
     }
 
     .class-card:hover {
-        transform: translateY(-8px) scale(1.015);
         box-shadow: 0 25px 50px rgba(31, 182, 255, 0.15);
         border-color: rgba(31, 182, 255, 0.35);
     }
@@ -356,7 +355,7 @@
     }
 
     .class-card:hover .class-card-bg-icon {
-        transform: rotate(-5deg) scale(1.1);
+        transform: rotate(-5deg);
         opacity: 0.07;
     }
 

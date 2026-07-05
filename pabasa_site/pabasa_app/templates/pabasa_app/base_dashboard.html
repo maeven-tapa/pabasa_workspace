@@ -192,19 +192,20 @@
             justify-content: center !important;
         }
 
-        body.sidebar-collapsed .dashboard-sidebar .sidebar-collapse-btn {
-            position: absolute;
-            /* place the collapse/expand control near the top-right of the collapsed sidebar
-               to avoid overlapping the first nav icon */
-            right: 8px;
-            top: 18px;
-            transform: none;
-        }
-
         .dashboard-main {
             min-height: 100vh; /* Keep for overall layout, but the body will handle the main scrolling */
             margin-left: var(--sidebar-width); /* Add margin to push content away from the fixed sidebar */
             transition: margin-left 0.2s ease; /* Smooth transition for margin when sidebar collapses */
+        }
+
+        #dashboardSidebar {
+            background:
+                linear-gradient(145deg, #13507a 0%, var(--dash-primary-deep) 70%, #0b3552 100%);
+            color: #fff;
+        }
+
+        #dashboardSidebar .offcanvas-body {
+            background: transparent;
         }
 
         /* Reset margin for main content area when sidebar is hidden on mobile/tablet */
@@ -215,9 +216,6 @@
 
             #dashboardSidebar {
                 --bs-offcanvas-width: clamp(300px, 86vw, 320px);
-                background:
-                    linear-gradient(145deg, #13507a 0%, var(--dash-primary-deep) 70%, #0b3552 100%);
-                color: #fff;
                 overflow: hidden;
             }
 
@@ -616,7 +614,6 @@
         }
 
         .dash-brand-mark:hover {
-            transform: translateY(-2px) scale(1.05);
             box-shadow: 0 12px 24px rgba(16, 70, 110, 0.2);
         }
 
@@ -726,9 +723,16 @@
         }
 
         .sidebar-footer {
-            margin-top: auto;
+            margin-top: 0;
             flex-shrink: 0;
             padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+        }
+
+        .sidebar-collapse-row {
+            align-items: center;
+            justify-content: center;
+            margin-top: auto;
+            padding: 0.35rem 0 0.75rem;
         }
 
         .sidebar-brand-row {
@@ -1697,7 +1701,7 @@
         </aside>
 
         <div class="dashboard-main flex-grow-1">
-            <div class="offcanvas offcanvas-start" tabindex="-1" id="dashboardSidebar" aria-labelledby="dashboardSidebarLabel">
+            <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="dashboardSidebar" aria-labelledby="dashboardSidebarLabel">
                 <div class="offcanvas-header border-bottom">
                     <h5 class="offcanvas-title" id="dashboardSidebarLabel">PABASA</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
