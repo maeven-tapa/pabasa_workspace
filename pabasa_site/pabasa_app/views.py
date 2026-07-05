@@ -7108,6 +7108,18 @@ def mark_notification_read(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required()
+def clear_notifications(request):
+    """API: Clear all notifications for the current user."""
+    try:
+        user = User.objects.get(id=request.session.get('user_id'))
+        deleted_count, _ = Notification.objects.filter(recipient=user).delete()
+        return JsonResponse({'success': True, 'deleted_count': deleted_count})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 @require_http_methods(["GET"])
 @login_required(role='teacher')
 def get_teacher_students_api(request):

@@ -531,6 +531,24 @@
             backdrop-filter: blur(18px);
         }
 
+        .dashboard-notif-btn {
+            border: 1px solid rgba(16, 70, 110, 0.08) !important;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+        }
+
+        .dashboard-notif-btn:hover,
+        .dashboard-notif-btn:focus-visible {
+            background: var(--dash-primary-soft) !important;
+            border-color: rgba(46, 168, 229, 0.28) !important;
+            box-shadow: 0 12px 24px rgba(46, 168, 229, 0.18) !important;
+            transform: translateY(-1px);
+        }
+
+        .dashboard-notif-btn:hover i,
+        .dashboard-notif-btn:focus-visible i {
+            color: var(--dash-primary) !important;
+        }
+
         /* Adjust for collapsed sidebar */
         body.sidebar-collapsed .dashboard-main {
             margin-left: var(--sidebar-collapsed-width); /* Adjust margin for collapsed sidebar width */
@@ -1409,6 +1427,13 @@
             color: var(--dash-primary-deep);
         }
 
+        .notif-clear-btn {
+            border-radius: 999px;
+            font-weight: 800;
+            min-height: 34px;
+            padding: 0.35rem 0.8rem;
+        }
+
         .notif-list {
             display: grid;
             gap: 0.75rem;
@@ -1908,7 +1933,10 @@
             <div class="offcanvas offcanvas-end notif-pane" tabindex="-1" id="notificationPane" aria-labelledby="notificationPaneLabel">
                 <div class="offcanvas-header">
                     <h5 class="offcanvas-title" id="notificationPaneLabel">Notifications</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary notif-clear-btn" id="clearNotificationsBtn">Clear</button>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                    </div>
                 </div>
                 <div class="offcanvas-body p-0">
                     <div id="notifContainer" class="p-3"></div>
@@ -2176,6 +2204,7 @@
         async function updateInAppNotifications() {
             const container = document.getElementById('notifContainer');
             const badge = document.getElementById('notifBadge');
+            const clearBtn = document.getElementById('clearNotificationsBtn');
             if (!container) return;
 
             // Avoid fetching notifications for anonymous users or before the sidebar
@@ -2223,8 +2252,11 @@
 
             if (notifications.length === 0) {
                 container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i> No notifications yet</div>';
+                if (clearBtn) clearBtn.disabled = true;
                 return;
             }
+
+            if (clearBtn) clearBtn.disabled = false;
 
             container.innerHTML = `
                 <div class="notif-list">
@@ -2260,6 +2292,53 @@
                 if (actionUrl) window.location.href = actionUrl;
             }
         };
+
+        window.clearNotifications = async function() {
+            const clearBtn = document.getElementById('clearNotificationsBtn');
+            const container = document.getElementById('notifContainer');
+            const badge = document.getElementById('notifBadge');
+            if (clearBtn) {
+                clearBtn.disabled = true;
+                clearBtn.textContent = 'Clearing...';
+            }
+
+            try {
+                const response = await fetch("{% url 'clear_notifications' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getNotificationCsrfToken(),
+                        "Accept": "application/json"
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || "Unable to clear notifications.");
+                window.localStorage.setItem('pabasa_notifications', '[]');
+                if (badge) badge.style.display = 'none';
+                if (container) {
+                    container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i> No notifications yet</div>';
+                }
+                window.dispatchEvent(new Event('pabasa:notifications-updated'));
+            } catch (error) {
+                if (container) {
+                    container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-wifi-off d-block fs-1 mb-3 opacity-25"></i> Could not clear notifications. Please try again.</div>';
+                }
+            } finally {
+                if (clearBtn) {
+                    clearBtn.textContent = 'Clear';
+                }
+                await updateInAppNotifications();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const clearBtn = document.getElementById('clearNotificationsBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', window.clearNotifications);
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             updateInAppNotifications();
