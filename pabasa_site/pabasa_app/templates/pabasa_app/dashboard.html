@@ -367,6 +367,60 @@
         margin-top: 0.1rem;
     }
 
+    /* Two-column layout: left (classes) and right (progress + achievements) */
+    .dashboard-main-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+        align-items: start;
+    }
+
+    .my-classes-section {
+        display: grid;
+        gap: 1.25rem;
+        min-height: 0;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(12px) saturate(120%);
+        -webkit-backdrop-filter: blur(12px) saturate(120%);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 24px;
+        padding: 1.75rem;
+        box-shadow: 0 10px 24px rgba(15, 182, 255, 0.08);
+    }
+
+    body.dark-theme .my-classes-section {
+        background: rgba(30, 41, 59, 0.4) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .my-classes-header {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #0F172A;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid rgba(31, 182, 255, 0.1);
+    }
+
+    body.dark-theme .my-classes-header {
+        color: #F1F5F9 !important;
+        border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    .my-classes-header i {
+        font-size: 1.3rem;
+        color: #1FB6FF;
+    }
+
+    body.dark-theme .my-classes-header i {
+        color: #38BDF8 !important;
+    }
+
     .class-list {
         display: none;
         gap: 1.25rem;
@@ -374,9 +428,66 @@
         align-items: stretch;
     }
 
+    .student-dashboard.has-class.class-list-ready .class-list,
+    .my-classes-section .class-list {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        max-height: min(700px, calc(100vh - 260px));
+        min-height: 0;
+        overflow-y: scroll;
+        overflow-x: hidden;
+        scrollbar-gutter: stable both-edges;
+        padding-bottom: 0.5rem;
+        padding-right: 0.4rem;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(31, 182, 255, 0.35) rgba(226, 232, 240, 0.25);
+    }
+
+    .my-classes-section .class-list > .class-card {
+        width: 100%;
+        max-width: 100%;
+        min-width: auto;
+        height: auto;
+        overflow: visible;
+    }
+
+    .my-classes-section .class-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .my-classes-section .class-list::-webkit-scrollbar-track {
+        background: rgba(226, 232, 240, 0.3);
+        border-radius: 999px;
+    }
+
+    .my-classes-section .class-list::-webkit-scrollbar-thumb {
+        background: rgba(31, 182, 255, 0.4);
+        border-radius: 999px;
+        border: 2px solid rgba(226, 232, 240, 0.3);
+    }
+
+    .my-classes-section .class-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(31, 182, 255, 0.6);
+    }
+
+    body.dark-theme .my-classes-section .class-list::-webkit-scrollbar-track {
+        background: rgba(30, 41, 59, 0.3);
+    }
+
+    body.dark-theme .my-classes-section .class-list::-webkit-scrollbar-thumb {
+        background: rgba(56, 189, 248, 0.3);
+        border-color: rgba(30, 41, 59, 0.3);
+    }
+
+    body.dark-theme .my-classes-section .class-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(56, 189, 248, 0.5);
+    }
+
     .student-dashboard.has-class.class-list-ready .class-list {
         display: grid;
-        margin-top: 1.5rem;
     }
 
     .student-dashboard.has-class .desk-note {
@@ -392,13 +503,13 @@
         backdrop-filter: blur(18px) saturate(140%);
         -webkit-backdrop-filter: blur(18px) saturate(140%);
         border: 1px solid rgba(255, 255, 255, 0.72);
-        border-radius: 22px;
+        border-radius: 20px;
         box-shadow: 0 10px 24px rgba(15, 182, 255, 0.06);
         cursor: pointer;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        padding: 1.2rem;
+        padding: 0.95rem;
         word-break: break-word;
         position: relative;
         backface-visibility: hidden;
@@ -454,9 +565,9 @@
     .class-card-top {
         align-items: center;
         display: flex;
-        gap: 0.5rem;
+        gap: 0.4rem;
         justify-content: space-between;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.5rem;
     }
 
     .subject-pill,
@@ -481,19 +592,17 @@
     }
 
     .class-card h3 {
-        font-size: 1.1rem;
+        font-size: 0.95rem;
         font-weight: 800;
-        margin: 0 0 0.5rem;
-        color: #0F172A;
-        letter-spacing: -0.01em;
+        margin: 0 0 0.35rem;
     }
 
     .class-card-meta {
         color: #475569;
         display: flex;
         flex-direction: column;
-        gap: 0.4rem;
-        font-size: 0.86rem;
+        gap: 0.35rem;
+        font-size: 0.78rem;
     }
 
     .class-card-code {
@@ -506,8 +615,8 @@
         font-size: 0.72rem;
         font-weight: 900;
         letter-spacing: 0.08em;
-        margin-top: 1rem;
-        padding: 0.4rem 0.8rem;
+        margin-top: 0.75rem;
+        padding: 0.35rem 0.7rem;
         text-transform: uppercase;
         width: fit-content;
         border: 1px solid rgba(31, 182, 255, 0.12);
@@ -517,20 +626,20 @@
     .class-card-actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.75rem;
+        gap: 0.55rem;
         align-items: center;
         margin-top: auto;
-        padding-top: 1.5rem;
+        padding-top: 0.9rem;
     }
 
     .view-class-btn {
         border: none;
-        border-radius: 14px;
+        border-radius: 12px;
         background: #1FB6FF;
         color: #fff;
-        font-size: 0.85rem;
+        font-size: 0.78rem;
         font-weight: 800;
-        padding: 0.6rem 1.2rem;
+        padding: 0.5rem 0.95rem;
         flex: 1.5;
         box-shadow: 0 8px 15px rgba(31, 182, 255, 0.2);
     }
@@ -544,12 +653,12 @@
 
     .unenroll-btn {
         border: 1px solid rgba(255, 122, 89, 0.2);
-        border-radius: 14px;
+        border-radius: 12px;
         background: rgba(255, 122, 89, 0.05);
         color: #FF7A59;
-        font-size: 0.85rem;
+        font-size: 0.78rem;
         font-weight: 800;
-        padding: 0.6rem 1rem;
+        padding: 0.5rem 0.8rem;
         flex: 1;
         display: inline-flex;
         align-items: center;
@@ -580,6 +689,7 @@
     .class-card.is-expanded .class-detail {
         display: grid;
         gap: 0.75rem;
+        overflow: visible;
     }
 
     .stat-grid {
@@ -667,6 +777,328 @@
         }
     }
 
+    /* Enhanced class cards with additional info */
+    .class-card-new-info {
+        background: linear-gradient(135deg, rgba(31, 182, 255, 0.08), rgba(251, 191, 36, 0.08));
+        border: 1px solid rgba(31, 182, 255, 0.1);
+        border-radius: 16px;
+        padding: 0.85rem;
+        margin-top: 1rem;
+        display: none;
+        gap: 0.75rem;
+    }
+
+    .class-card.has-current-lesson .class-card-new-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .current-lesson-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .current-lesson-label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: #0369a1;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .current-lesson-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #0F172A;
+        word-break: break-word;
+    }
+
+    /* Right column sections: My Reading Journey and My Achievements */
+    .right-column {
+        display: grid;
+        grid-template-rows: auto auto;
+        gap: 1.5rem;
+    }
+
+    .my-reading-journey, .my-achievements {
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 22px;
+        box-shadow: 0 10px 24px rgba(15, 182, 255, 0.06);
+        padding: 1.25rem;
+        display: grid;
+        gap: 1rem;
+    }
+
+    body.dark-theme .my-reading-journey,
+    body.dark-theme .my-achievements {
+        background: rgba(30, 41, 59, 0.6) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .section-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #0F172A;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    body.dark-theme .section-title {
+        color: #F1F5F9 !important;
+    }
+
+    .section-title-icon {
+        font-size: 1.2rem;
+    }
+
+    /* Progress Section Styling */
+    .progress-item {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .progress-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #475569;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    body.dark-theme .progress-label {
+        color: #94A3B8 !important;
+    }
+
+    .progress-value {
+        font-weight: 800;
+        color: #0F172A;
+    }
+
+    body.dark-theme .progress-value {
+        color: #F1F5F9 !important;
+    }
+
+    .progress-bar-container {
+        background: #E2E8F0;
+        border-radius: 999px;
+        height: 0.65rem;
+        overflow: hidden;
+        position: relative;
+    }
+
+    body.dark-theme .progress-bar-container {
+        background: rgba(15, 23, 42, 0.5) !important;
+    }
+
+    .progress-bar-fill {
+        background: linear-gradient(90deg, #1FB6FF, #06B6D4);
+        border-radius: inherit;
+        height: 100%;
+        transition: width 0.6s ease-out;
+        position: relative;
+    }
+
+    .progress-bar-fill::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 20px;
+        background: linear-gradient(90deg, rgba(255,255,255,0.3), transparent);
+        border-radius: inherit;
+    }
+
+    .stats-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .stat-item {
+        background: linear-gradient(135deg, rgba(31, 182, 255, 0.08), rgba(6, 182, 212, 0.08));
+        border: 1px solid rgba(31, 182, 255, 0.12);
+        border-radius: 14px;
+        padding: 0.85rem;
+        text-align: center;
+        display: grid;
+        gap: 0.4rem;
+        align-items: center;
+    }
+
+    body.dark-theme .stat-item {
+        background: rgba(15, 23, 42, 0.4) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    .stat-item-value {
+        font-size: 1.45rem;
+        font-weight: 900;
+        color: #1FB6FF;
+    }
+
+    body.dark-theme .stat-item-value {
+        color: #38BDF8 !important;
+    }
+
+    .stat-item-label {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: #0369a1;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    body.dark-theme .stat-item-label {
+        color: #7DD3FC !important;
+    }
+
+    /* Achievements Grid */
+    .achievements-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem;
+    }
+
+    .achievement-badge {
+        background: linear-gradient(135deg, rgba(31, 182, 255, 0.12), rgba(251, 191, 36, 0.12));
+        border: 2px solid rgba(31, 182, 255, 0.2);
+        border-radius: 16px;
+        padding: 0.85rem;
+        text-align: center;
+        display: grid;
+        gap: 0.4rem;
+        align-items: center;
+        justify-items: center;
+        cursor: help;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    body.dark-theme .achievement-badge {
+        background: rgba(30, 41, 59, 0.4) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .achievement-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(31, 182, 255, 0.15);
+        border-color: rgba(31, 182, 255, 0.4);
+    }
+
+    .achievement-badge.unlocked {
+        background: linear-gradient(135deg, rgba(31, 182, 255, 0.15), rgba(251, 191, 36, 0.15));
+        border-color: rgba(31, 182, 255, 0.3);
+    }
+
+    .achievement-badge.unlocked:hover {
+        box-shadow: 0 12px 24px rgba(31, 182, 255, 0.2);
+    }
+
+    .achievement-badge.locked {
+        opacity: 0.5;
+        background: rgba(226, 232, 240, 0.5);
+        border-color: rgba(148, 163, 184, 0.2);
+    }
+
+    body.dark-theme .achievement-badge.locked {
+        background: rgba(15, 23, 42, 0.3) !important;
+        opacity: 0.4;
+    }
+
+    .achievement-badge.locked:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .achievement-icon {
+        font-size: 1.85rem;
+        line-height: 1;
+    }
+
+    .achievement-badge.locked .achievement-icon {
+        filter: grayscale(100%);
+        opacity: 0.6;
+    }
+
+    .achievement-name {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #0F172A;
+        line-height: 1.2;
+    }
+
+    body.dark-theme .achievement-name {
+        color: #F1F5F9 !important;
+    }
+
+    .achievement-badge.locked .achievement-name {
+        color: #64748B;
+    }
+
+    body.dark-theme .achievement-badge.locked .achievement-name {
+        color: #94A3B8 !important;
+    }
+
+    .achievement-lock {
+        position: absolute;
+        bottom: 0.35rem;
+        right: 0.35rem;
+        font-size: 0.8rem;
+        background: rgba(100, 116, 139, 0.8);
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        display: none;
+    }
+
+    .achievement-badge.locked .achievement-lock {
+        display: flex;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1300px) {
+        .dashboard-main-layout {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+
+        .right-column {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto;
+            gap: 1.25rem;
+        }
+
+        .my-classes-section {
+            padding: 1.5rem;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .right-column {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+
+        .my-classes-section {
+            padding: 1.25rem;
+        }
+    }
+
+    /* Mobile/Tablet adjustments */
     @media (max-width: 560px) {
         .student-dashboard {
             gap: 1rem;
@@ -675,6 +1107,22 @@
         .student-studio {
             border-radius: 22px;
             padding: 1rem;
+        }
+
+        .my-classes-section {
+            padding: 1rem;
+            border-radius: 18px;
+            gap: 0.85rem;
+        }
+
+        .my-classes-header {
+            font-size: 1rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .my-classes-section .class-list {
+            max-height: 500px;
+            grid-template-columns: 1fr;
         }
 
         .student-studio-copy h2 {
@@ -695,12 +1143,31 @@
             width: 100%;
         }
 
-        .class-list {
+        .dashboard-main-layout {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .right-column {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .my-classes-section .class-list {
             grid-template-columns: 1fr;
         }
 
         .stat-grid {
             grid-template-columns: 1fr 1fr;
+        }
+
+        .class-card-new-info {
+            grid-template-columns: 1fr;
+        }
+
+        .achievements-grid {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -750,7 +1217,58 @@
         </article>
     </div>
 
-    <div class="class-list" data-class-list aria-live="polite"></div>
+    <!-- Two-column layout: My Classes (left) and Progress/Achievements (right) -->
+    <div class="dashboard-main-layout" data-dashboard-main-layout style="display: none;">
+        <!-- Left Column: My Classes -->
+        <div class="my-classes-section">
+            <div class="my-classes-header">
+                <i class="bi bi-book-fill"></i>
+                <span>My Classes</span>
+            </div>
+            <div class="class-list" data-class-list aria-live="polite"></div>
+        </div>
+
+        <!-- Right Column: Progress and Achievements -->
+        <div class="right-column">
+            <!-- My Reading Journey -->
+            <div class="my-reading-journey" data-reading-journey>
+                <h3 class="section-title">
+                    <span class="section-title-icon">📖</span>
+                    <span>My Reading Journey</span>
+                </h3>
+
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span>Reading Progress</span>
+                        <span class="progress-value" data-reading-percent>0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" data-reading-progress-fill style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="stats-container">
+                    <div class="stat-item">
+                        <div class="stat-item-value" data-assessments-completed>0</div>
+                        <div class="stat-item-label">Assessments</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-item-value" data-reading-days>0</div>
+                        <div class="stat-item-label">Reading Days</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Achievements -->
+            <div class="my-achievements" data-achievements>
+                <h3 class="section-title">
+                    <span class="section-title-icon">🏆</span>
+                    <span>My Achievements</span>
+                </h3>
+                <div class="achievements-grid" data-achievements-grid></div>
+            </div>
+        </div>
+    </div>
 </section>
 
 <!-- Loading Modal -->
@@ -829,6 +1347,7 @@
         const form = document.querySelector("[data-class-code-form]");
         const classCodeInput = document.getElementById("classCode");
         const classList = document.querySelector("[data-class-list]");
+        const myClassesSection = document.querySelector(".my-classes-section");
         const emptyNote = document.querySelector("[data-class-empty-note]");
         const joinedNote = document.querySelector("[data-class-joined-note]");
         const greetingEl = document.querySelector("[data-dashboard-greeting]");
@@ -971,6 +1490,168 @@
             window.alert("This code does not match any class created by a teacher.");
         };
 
+        // Define achievements
+        const ACHIEVEMENTS = [
+            {
+                id: 'first-steps',
+                name: '🌱 First Steps',
+                description: 'Complete your first assessment',
+                icon: '🌱'
+            },
+            {
+                id: 'book-explorer',
+                name: '📘 Book Explorer',
+                description: 'Complete all 3 assessments',
+                icon: '📘'
+            },
+            {
+                id: 'reading-streak',
+                name: '🔥 Reading Streak',
+                description: 'Read for 7 consecutive days',
+                icon: '🔥'
+            },
+            {
+                id: 'rising-reader',
+                name: '⭐ Rising Reader',
+                description: 'Reach 50% reading progress',
+                icon: '⭐'
+            },
+            {
+                id: 'reading-champion',
+                name: '🏆 Reading Champion',
+                description: 'Complete 100% of the course',
+                icon: '🏆'
+            }
+        ];
+
+        // Calculate reading progress and determine unlocked achievements
+        const calculateProgress = () => {
+            try {
+                const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
+                const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
+                
+                let totalAssessments = 0;
+                let completedAssessments = 0;
+                let readingDays = 0;
+
+                // Calculate assessment totals across all classes only
+                Object.keys(readings).forEach(classCode => {
+                    const classReadings = readings[classCode];
+                    if (!classReadings) return;
+
+                    ['word', 'sentence', 'paragraph', 'story', 'words', 'sentences', 'paragraphs', 'stories'].forEach(type => {
+                        (classReadings[type] || []).forEach(material => {
+                            if (!material) return;
+
+                            let isLive = !material.status || material.status === 'published';
+                            if (material.status === 'scheduled' && material.schedule) {
+                                isLive = new Date(material.schedule).getTime() <= Date.now();
+                            }
+                            if (!isLive) return;
+
+                            const mType = (material.type || "").toLowerCase();
+                            if (mType !== 'assessment' && mType !== 'both') return;
+
+                            totalAssessments++;
+                            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+                            if (mId && seenIds.includes(mId)) {
+                                completedAssessments++;
+                            }
+                        });
+                    });
+                });
+
+                // Calculate assessment progress percentage
+                const readingPercent = totalAssessments > 0 ? Math.round((completedAssessments / totalAssessments) * 100) : 0;
+                
+                // Estimate reading days from completed assessments (assessment-based pace)
+                readingDays = completedAssessments > 0 ? Math.min(Math.ceil(completedAssessments / 2), 30) : 0;
+
+                // Determine unlocked achievements
+                const unlockedAchievements = new Set();
+                
+                if (completedAssessments >= 1) {
+                    unlockedAchievements.add('first-steps');
+                }
+                
+                if (completedAssessments >= 3) {
+                    unlockedAchievements.add('book-explorer');
+                }
+                
+                if (readingDays >= 7) {
+                    unlockedAchievements.add('reading-streak');
+                }
+                
+                if (readingPercent >= 50) {
+                    unlockedAchievements.add('rising-reader');
+                }
+                
+                if (readingPercent >= 100) {
+                    unlockedAchievements.add('reading-champion');
+                }
+
+                return {
+                    readingPercent,
+                    assessmentCount: completedAssessments,
+                    readingDays,
+                    unlockedAchievements,
+                    completedAssessments,
+                    totalAssessments
+                };
+            } catch (error) {
+                console.error('Error calculating progress:', error);
+                return {
+                    readingPercent: 0,
+                    assessmentCount: 0,
+                    readingDays: 0,
+                    unlockedAchievements: new Set(),
+                    completedAssessments: 0,
+                    totalAssessments: 0
+                };
+            }
+        };
+
+        // Render progress and achievements
+        const renderProgressAndAchievements = () => {
+            const mainLayout = document.querySelector("[data-dashboard-main-layout]");
+            const readingJourney = document.querySelector("[data-reading-journey]");
+            const achievementsContainer = document.querySelector("[data-achievements]");
+            
+            if (!mainLayout || !readingJourney || !achievementsContainer) return;
+
+            const progress = calculateProgress();
+
+            // Update reading journey
+            const readingPercentEl = document.querySelector("[data-reading-percent]");
+            const readingProgressFill = document.querySelector("[data-reading-progress-fill]");
+            const assessmentsCompletedEl = document.querySelector("[data-assessments-completed]");
+            const readingDaysEl = document.querySelector("[data-reading-days]");
+
+            if (readingPercentEl) readingPercentEl.textContent = `${progress.readingPercent}%`;
+            if (readingProgressFill) readingProgressFill.style.width = `${progress.readingPercent}%`;
+            if (assessmentsCompletedEl) assessmentsCompletedEl.textContent = progress.assessmentCount;
+            if (readingDaysEl) readingDaysEl.textContent = progress.readingDays;
+
+            // Render achievements
+            const achievementsGrid = document.querySelector("[data-achievements-grid]");
+            if (achievementsGrid) {
+                achievementsGrid.innerHTML = ACHIEVEMENTS.map(achievement => {
+                    const isUnlocked = progress.unlockedAchievements.has(achievement.id);
+                    return `
+                        <div class="achievement-badge ${isUnlocked ? 'unlocked' : 'locked'}" title="${achievement.description}">
+                            <div class="achievement-icon">${achievement.icon}</div>
+                            <div class="achievement-name">${achievement.name}</div>
+                            <div class="achievement-lock"><i class="bi bi-lock-fill"></i></div>
+                        </div>
+                    `;
+                }).join("");
+            }
+
+            // Show layout when classes exist
+            const isJoined = getSavedCodes().length > 0;
+            mainLayout.style.display = isJoined ? 'grid' : 'none';
+        };
+
         // Fetch class details from database API instead of localStorage
         const fetchClassDetailsFromDatabase = async (codes) => {
             try {
@@ -995,6 +1676,7 @@
                 return {};
             }
         };
+
 
         const renderClassCards = async (codes) => {
             const classDetailsMap = await fetchClassDetailsFromDatabase(codes);
@@ -1029,6 +1711,8 @@
                     let totalPracticeInClass = 0;
                     let totalInClass = 0;
                     let seenInClass = 0;
+                    let currentLesson = null;
+                    let hasUnreadMaterial = false;
 
                     const classReadings = readingsMap[classData.code.toUpperCase()] || {};
 
@@ -1054,6 +1738,15 @@
                                     return;
                                 }
 
+                                // Track first unread material as current lesson
+                                if (!currentLesson) {
+                                    currentLesson = {
+                                        title: m.title || m.content?.substring(0, 40) || 'New Activity',
+                                        type: mType
+                                    };
+                                    hasUnreadMaterial = true;
+                                }
+
                                 if (mType === 'practice' || mType === 'both') pCount++;
                                 if (mType === 'assessment' || mType === 'both') aCount++;
                             });
@@ -1061,7 +1754,15 @@
                     });
 
                     const progress = totalInClass > 0 ? Math.round((seenInClass / totalInClass) * 100) : 0;
-                    return { ...classData, practiceCount: pCount, assessmentCount: aCount, totalPractice: totalPracticeInClass, progress: progress };
+                    return { 
+                        ...classData, 
+                        practiceCount: pCount, 
+                        assessmentCount: aCount, 
+                        totalPractice: totalPracticeInClass, 
+                        progress: progress,
+                        currentLesson: currentLesson,
+                        hasUnreadMaterial: hasUnreadMaterial
+                    };
                 })
                 .filter(Boolean);
 
@@ -1070,7 +1771,7 @@
             }
 
             classList.innerHTML = validClasses.map((classData) => `
-                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}" data-class-card data-class-card-code="${escapeHtml(classData.code)}">
+                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}${classData.hasUnreadMaterial ? ' has-current-lesson' : ''}" data-class-card data-class-card-code="${escapeHtml(classData.code)}">
                     <div class="class-card-bg-icon">
                         <i class="bi ${
                             (classData.subject || '').toLowerCase().includes('english') ? 'bi-alphabet-uppercase' : 
@@ -1087,6 +1788,18 @@
                         <span><i class="bi bi-person-badge me-2 text-primary"></i> <strong>Teacher Class</strong></span>
                         <span><i class="bi bi-stars me-2 text-info"></i> ${classData.practiceCount || classData.assessmentCount ? 'Activity waiting for you' : 'Fresh and ready'}</span>
                     </div>
+                    ${classData.hasUnreadMaterial && classData.currentLesson ? `
+                    <div class="class-card-new-info">
+                        <div class="current-lesson-item">
+                            <span class="current-lesson-label">📚 Current Lesson</span>
+                            <span class="current-lesson-value">${escapeHtml(classData.currentLesson.title)}</span>
+                        </div>
+                        <div class="current-lesson-item">
+                            <span class="current-lesson-label">📊 Progress</span>
+                            <span class="current-lesson-value">${classData.progress}% Done</span>
+                        </div>
+                    </div>
+                    ` : ''}
                     <span class="class-card-code">${escapeHtml(classData.code)}</span>
                     <div class="class-detail" data-class-detail>
                         <div class="stat-grid">
@@ -1151,6 +1864,11 @@
                     await setJoinedState(filtered);
                 });
             });
+
+            // Render progress and achievements after rendering class cards
+            window.requestAnimationFrame(() => {
+                renderProgressAndAchievements();
+            });
         };
 
         const setJoinedState = async (codes = []) => {
@@ -1189,6 +1907,11 @@
                 window.localStorage.removeItem(classJoinedKey);
                 window.localStorage.removeItem(classCodesKey);
                 window.localStorage.removeItem(legacyClassCodeKey);
+                // Hide the layout when no classes
+                const mainLayout = document.querySelector("[data-dashboard-main-layout]");
+                if (mainLayout) {
+                    mainLayout.style.display = 'none';
+                }
             }
 
             window.dispatchEvent(new Event("pabasa:student-class-updated"));
@@ -1449,6 +2172,15 @@
                 setJoinedState(getSavedCodes());
             }
         });
+
+        // Update progress and achievements when seen materials change
+        const originalSetItem = Storage.prototype.setItem;
+        Storage.prototype.setItem = function(key, value) {
+            originalSetItem.call(this, key, value);
+            if (key === "pabasa_seen_material_ids") {
+                renderProgressAndAchievements();
+            }
+        };
 
         // Removed: This event listener caused infinite recursion by calling setJoinedState, which itself dispatches this event.
     });
