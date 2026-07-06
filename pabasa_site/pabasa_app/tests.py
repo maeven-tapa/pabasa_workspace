@@ -2,6 +2,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from datetime import timedelta
 from io import BytesIO
@@ -11,6 +12,7 @@ import uuid
 from unittest.mock import patch
 
 from pypdf import PdfReader
+from reportlab.pdfgen import canvas
 
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
@@ -39,6 +41,63 @@ class ReadingMatcherTests(TestCase):
 
         self.assertEqual(result["correct_word_count"], 1)
         self.assertFalse(result["complete"])
+
+
+class MaterialUploadExtractionTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}",
+            role="teacher",
+            first_name="Tina",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=5,
+            birth_day=10,
+            birth_year=1988,
+            email="upload-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = self.teacher.id
+        session["user_role"] = self.teacher.role
+        session["first_name"] = self.teacher.first_name
+        session["last_name"] = self.teacher.last_name
+        session["email"] = self.teacher.email
+        session["custom_id"] = self.teacher.custom_id
+        session.save()
+
+    def test_extract_endpoint_honors_selected_pdf_pages(self):
+        buffer = BytesIO()
+        pdf_canvas = canvas.Canvas(buffer)
+        pdf_canvas.drawString(72, 720, "Intro page")
+        pdf_canvas.showPage()
+        pdf_canvas.drawString(72, 720, "Page 2")
+        pdf_canvas.showPage()
+        pdf_canvas.drawString(72, 720, "Last page")
+        pdf_canvas.save()
+        buffer.seek(0)
+
+        pdf_file = SimpleUploadedFile(
+            "sample.pdf",
+            buffer.read(),
+            content_type="application/pdf",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": pdf_file, "selection_mode": "selected", "selected_pages": "2"},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["page_count"], 3)
+        self.assertEqual(data["selected_pages"], [2])
+        self.assertEqual(data["items"], ["Page 2"])
 
 
 class PrincipalReportsExportTests(TestCase):

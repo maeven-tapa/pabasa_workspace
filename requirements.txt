@@ -17,12 +17,14 @@ markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
 packaging==26.0
+Pillow==11.0.0
 Pygments==2.20.0
 pypdf==6.4.1
 PyQt5==5.15.11
 PyQt5-Qt5==5.15.2
 PyQt5_sip==12.18.0
 pytailwindcss==0.3.0
+pytesseract==0.3.10
 python-dateutil==2.9.0.post0
 python-slugify==8.0.4
 PyYAML==6.0.3

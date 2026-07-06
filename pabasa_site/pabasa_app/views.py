@@ -6336,72 +6336,142 @@ def delete_reading_class(request):
         logger.error(f"Class deletion error: {str(e)}", exc_info=True)
         return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
 
+def _parse_selected_pages(raw_value, page_count):
+    if page_count <= 1:
+        return [1]
+
+    if not raw_value:
+        return list(range(1, page_count + 1))
+
+    if isinstance(raw_value, (list, tuple)):
+        raw_values = raw_value
+    else:
+        raw_values = [segment.strip() for segment in str(raw_value).split(',') if str(raw_value).strip()]
+
+    selected = []
+    for item in raw_values:
+        if not item:
+            continue
+        if '-' in item:
+            start_text, end_text = item.split('-', 1)
+            try:
+                start = int(start_text.strip())
+                end = int(end_text.strip())
+            except ValueError:
+                continue
+            if start > end:
+                start, end = end, start
+            selected.extend(range(start, end + 1))
+        else:
+            try:
+                selected.append(int(item))
+            except ValueError:
+                continue
+
+    normalized = sorted({page for page in selected if 1 <= page <= page_count})
+    return normalized or list(range(1, page_count + 1))
+
+
+def _extract_text_from_pdf(upload, selected_pages=None):
+    try:
+        from pypdf import PdfReader
+    except ImportError as exc:
+        raise RuntimeError('PDF extraction needs the pypdf package installed.') from exc
+
+    upload.seek(0)
+    reader = PdfReader(upload)
+    page_count = len(reader.pages)
+    selected = _parse_selected_pages(selected_pages, page_count)
+    page_texts = []
+    for page_number in selected:
+        page = reader.pages[page_number - 1]
+        page_text = (page.extract_text() or '').strip()
+        if page_text:
+            page_texts.append(page_text)
+
+    return {
+        'text': '\n\n'.join(page_texts),
+        'page_count': page_count,
+        'selected_pages': selected,
+    }
+
+
+def _extract_text_from_image(upload):
+    try:
+        from PIL import Image, UnidentifiedImageError
+    except ImportError as exc:
+        raise RuntimeError('Image OCR requires Pillow to be installed.') from exc
+
+    try:
+        import pytesseract
+    except ImportError as exc:
+        raise RuntimeError('Image OCR requires pytesseract to be installed.') from exc
+
+    upload.seek(0)
+    try:
+        with Image.open(BytesIO(upload.read())) as image:
+            converted = image.convert('RGB')
+            return pytesseract.image_to_string(converted).strip()
+    except UnidentifiedImageError as exc:
+        raise RuntimeError('The selected image could not be read.') from exc
+
+
+def _build_extracted_material_items(text, requested_reading_type=''):
+    detected_type = _detect_material_type(text, requested_reading_type)
+    items = _split_material_content(text, detected_type, requested_reading_type)
+    if not items:
+        return detected_type, []
+    if detected_type == 'word':
+        cleaned_items = []
+        seen = set()
+        for item in items:
+            normalized = re.sub(r'\s+', ' ', str(item).strip())
+            key = normalized.lower()
+            if not normalized or key in seen:
+                continue
+            seen.add(key)
+            cleaned_items.append(normalized[:220] + ('...' if len(normalized) > 220 else ''))
+        return detected_type, cleaned_items
+    cleaned_items = []
+    seen = set()
+    for item in items:
+        normalized = re.sub(r'\s+', ' ', str(item).strip())
+        key = normalized.lower()
+        if not normalized or key in seen:
+            continue
+        seen.add(key)
+        if len(normalized) > 220:
+            normalized = normalized[:217].strip() + '...'
+        cleaned_items.append(normalized)
+    return detected_type, cleaned_items
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
 def extract_reading_material_file(request):
-    """Extract text snippets from an uploaded PDF, DOCX, or text file for the Add Material modal."""
+    """Extract text snippets from an uploaded file for the Add Material modal."""
     upload = request.FILES.get('file')
     if not upload:
-        return JsonResponse({'success': False, 'error': 'Please choose a PDF, DOCX, or text file.'}, status=400)
+        return JsonResponse({'success': False, 'error': 'Please choose a PDF, DOCX, JPEG, PNG, or text file.'}, status=400)
 
     filename = upload.name or ''
     ext = Path(filename).suffix.lower()
-    if ext not in {'.txt', '.docx', '.pdf'}:
-        return JsonResponse({'success': False, 'error': 'Only PDF, DOCX, and text files are supported.'}, status=400)
+    if ext not in {'.txt', '.docx', '.pdf', '.jpg', '.jpeg', '.png'}:
+        return JsonResponse({'success': False, 'error': 'Only PDF, DOCX, JPG, PNG, and text files are supported.'}, status=400)
 
     if upload.size and upload.size > 8 * 1024 * 1024:
         return JsonResponse({'success': False, 'error': 'File is too large. Please upload a file under 8 MB.'}, status=400)
 
-    def excerpt_items(text):
-        cleaned = re.sub(r'[ \t]+', ' ', (text or '').replace('\r', '\n'))
-        cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
-        if not cleaned:
-            return []
-
-        numbered_text = re.sub(r'\s*(\d{1,3})\.\s+', r'\n\1. ', cleaned)
-        numbered_items = [
-            re.sub(r'^\d{1,3}\.\s+', '', item).strip()
-            for item in re.split(r'\n(?=\d{1,3}\.\s+)', numbered_text)
-            if item.strip()
-        ]
-        if len(numbered_items) > 1:
-            raw_items = numbered_items
-        else:
-            paragraphs = [re.sub(r'^\d{1,3}\.\s+', '', p).strip() for p in re.split(r'\n\s*\n', cleaned) if p.strip()]
-            if len(paragraphs) > 1:
-                raw_items = paragraphs
-            else:
-                lines = [re.sub(r'^\d{1,3}\.\s+', '', line).strip() for line in cleaned.split('\n') if line.strip()]
-                if len(lines) > 1:
-                    raw_items = lines
-                else:
-                    sentences = [
-                        re.sub(r'^\d{1,3}\.\s+', '', s).strip()
-                        for s in re.split(r'(?<=[.!?])\s+', cleaned)
-                        if s.strip()
-                    ]
-                    raw_items = sentences if len(sentences) > 1 else re.split(r'[,\s]+', cleaned)
-
-        items = []
-        seen = set()
-        for raw_item in raw_items:
-            item = re.sub(r'\s+', ' ', raw_item).strip()
-            key = item.lower()
-            if not item or key in seen:
-                continue
-            seen.add(key)
-            if len(item) > 220:
-                item = item[:217].strip() + '...'
-            items.append(item)
-            if len(items) >= 80:
-                break
-        return items
+    selection_mode = (request.POST.get('selection_mode') or 'all').strip().lower()
+    selected_pages = request.POST.get('selected_pages') or request.POST.getlist('selected_pages')
 
     try:
         if ext == '.txt':
             raw = upload.read()
             text = raw.decode('utf-8', errors='replace')
+            page_count = 1
+            selected_pages_list = [1]
         elif ext == '.docx':
             with zipfile.ZipFile(upload) as docx_zip:
                 xml = docx_zip.read('word/document.xml').decode('utf-8', errors='ignore')
@@ -6414,21 +6484,31 @@ def extract_reading_material_file(request):
                     .replace('&quot;', '"')
                     .replace('&apos;', "'")
             )
+            page_count = 1
+            selected_pages_list = [1]
+        elif ext in {'.jpg', '.jpeg', '.png'}:
+            text = _extract_text_from_image(upload)
+            page_count = 1
+            selected_pages_list = [1]
         else:
-            try:
-                from pypdf import PdfReader
-            except ImportError:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'PDF extraction needs the pypdf package installed. DOCX and text uploads are ready now.'
-                }, status=400)
-            reader = PdfReader(upload)
-            text = '\n\n'.join((page.extract_text() or '') for page in reader.pages)
+            extracted = _extract_text_from_pdf(upload, selected_pages if selection_mode == 'selected' else None)
+            text = extracted['text']
+            page_count = extracted['page_count']
+            selected_pages_list = extracted['selected_pages']
 
-        items = excerpt_items(text)
+        detected_type, items = _build_extracted_material_items(text, '')
         if not items:
             return JsonResponse({'success': False, 'error': 'No readable text was found in that file.'}, status=400)
-        return JsonResponse({'success': True, 'items': items, 'text': text[:12000], 'filename': filename})
+        return JsonResponse({
+            'success': True,
+            'items': items,
+            'text': text[:12000],
+            'filename': filename,
+            'reading_type': detected_type,
+            'page_count': page_count,
+            'selected_pages': selected_pages_list,
+            'selection_mode': selection_mode,
+        })
     except zipfile.BadZipFile:
         return JsonResponse({'success': False, 'error': 'That DOCX file could not be read.'}, status=400)
     except Exception as e:
