@@ -1,9 +1,11 @@
 from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
+from html import escape
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -113,22 +115,18 @@ def build_teacher_weekly_digest(user, start, end):
     assessments = Assessment.objects.filter(teacher=user, is_active=True)
     assessments_created = assessments.filter(created_at__gte=start, created_at__lt=end).count()
 
-    students_added_by_section = {}
+    students_enrolled_by_section = {}
     for section in sections:
-        count = 0
-        for entry in section.get_enrolled_students(active_only=False):
-            if _in_window(entry.get("joined_at"), start, end):
-                count += 1
-        students_added_by_section[section.class_name] = count
+        students_enrolled_by_section[section.class_name] = len(section.get_enrolled_students(active_only=True))
 
-    students_added_by_course = {}
+    students_enrolled_by_course = {}
     for course in courses.prefetch_related("sections"):
         seen = set()
         for section in course.sections.all():
-            for entry in section.get_enrolled_students(active_only=False):
-                if _in_window(entry.get("joined_at"), start, end) and entry.get("student_id"):
+            for entry in section.get_enrolled_students(active_only=True):
+                if entry.get("student_id"):
                     seen.add(entry.get("student_id"))
-        students_added_by_course[course.title] = len(seen)
+        students_enrolled_by_course[course.title] = len(seen)
 
     submissions = 0
     completed = 0
@@ -201,8 +199,8 @@ def build_teacher_weekly_digest(user, start, end):
         "end": end,
         "sections_created": Section.objects.filter(teacher=user, created_at__gte=start, created_at__lt=end).count(),
         "courses_created": courses_created,
-        "students_added_by_section": students_added_by_section,
-        "students_added_by_course": students_added_by_course,
+        "students_added_by_section": students_enrolled_by_section,
+        "students_added_by_course": students_enrolled_by_course,
         "assessments_created": assessments_created,
         "submissions_received": submissions,
         "assessments_completed": completed,
@@ -237,11 +235,6 @@ def _student_sections(user):
 def build_student_weekly_digest(user, start, end):
     sections = _student_sections(user)
     previous_start = start - (end - start)
-    joined_count = 0
-    for section in sections:
-        for entry in section.get_enrolled_students(active_only=True):
-            if str(entry.get("student_id")) == str(user.id) and _in_window(entry.get("joined_at"), start, end):
-                joined_count += 1
 
     assessments = Assessment.objects.filter(section__in=sections, is_active=True)
     scores = []
@@ -307,7 +300,7 @@ def build_student_weekly_digest(user, start, end):
         "user": user,
         "start": start,
         "end": end,
-        "classes_joined": joined_count,
+        "classes_joined": len(sections),
         "assessments_completed": completed_count,
         "practice_sessions_completed": practice_completed,
         "average_reading_score": current_avg,
@@ -337,11 +330,11 @@ def render_digest_text(digest):
             f"Assessments completed by students: {digest['assessments_completed']}",
             f"Average class reading performance: {digest['average_class_reading_performance']}%",
             "",
-            "Students added per section:",
+            "Students enrolled per section:",
         ])
         lines.extend([f"- {name}: {count}" for name, count in digest["students_added_by_section"].items()] or ["- None"])
         lines.append("")
-        lines.append("Students added per course:")
+        lines.append("Students enrolled per course:")
         lines.extend([f"- {name}: {count}" for name, count in digest["students_added_by_course"].items()] or ["- None"])
         lines.append("")
         lines.append("Students with the most improvement:")
@@ -376,6 +369,174 @@ def render_digest_text(digest):
     return "\n".join(lines)
 
 
+def _format_percent(value):
+    return f"{value}%"
+
+
+def _format_delta(value):
+    if value > 0:
+        return f"+{value} pts"
+    return f"{value} pts"
+
+
+def _digest_logo_url():
+    base_url = getattr(settings, "SITE_URL", "") or getattr(settings, "BASE_URL", "")
+    logo_path = static("pabasa_app/images/pabasalogo.png")
+    if base_url and logo_path.startswith("/"):
+        return f"{base_url.rstrip('/')}{logo_path}"
+    return logo_path
+
+
+def _metric_card(label, value, accent="#0f766e"):
+    return f"""
+        <td class="stack-column" style="width: 33.333%; padding: 6px;">
+            <div style="border: 1px solid #d9edf0; border-radius: 12px; padding: 14px; background: #ffffff;">
+                <div style="font-size: 12px; line-height: 18px; color: #5f6f73; text-transform: uppercase;">{escape(str(label))}</div>
+                <div style="font-size: 24px; line-height: 30px; color: {accent}; font-weight: 800;">{escape(str(value))}</div>
+            </div>
+        </td>
+    """
+
+
+def _list_items(items, empty_text):
+    if not items:
+        return f'<li style="margin: 0 0 8px;">{escape(empty_text)}</li>'
+    return "".join(f'<li style="margin: 0 0 8px;">{escape(str(item))}</li>' for item in items)
+
+
+def _section_card(title, body):
+    return f"""
+        <tr>
+            <td style="padding: 8px 24px;">
+                <div style="border: 1px solid #d9edf0; border-radius: 14px; background: #ffffff; padding: 18px;">
+                    <h2 style="margin: 0 0 12px; font-size: 17px; line-height: 24px; color: #134e4a;">{escape(title)}</h2>
+                    {body}
+                </div>
+            </td>
+        </tr>
+    """
+
+
+def render_digest_html(digest):
+    user = digest["user"]
+    name = _student_label(user)
+    start = digest["start"].date().isoformat()
+    end = (digest["end"] - timedelta(days=1)).date().isoformat()
+    logo_url = _digest_logo_url()
+
+    if digest["role"] == "teacher":
+        metrics = [
+            ("Sections created", digest["sections_created"], "#0f766e"),
+            ("Courses created", digest["courses_created"], "#155e75"),
+            ("Assessments made", digest["assessments_created"], "#7c3aed"),
+            ("Attempts received", digest["submissions_received"], "#0f766e"),
+            ("Completed by students", digest["assessments_completed"], "#155e75"),
+            ("Class average", _format_percent(digest["average_class_reading_performance"]), "#b45309"),
+        ]
+        sections_rows = "".join(
+            f'<tr><td style="padding: 8px 0; color: #20393d;">{escape(section)}</td><td align="right" style="padding: 8px 0; font-weight: 700; color: #0f766e;">{count}</td></tr>'
+            for section, count in digest["students_added_by_section"].items()
+        ) or '<tr><td style="padding: 8px 0;">No active section enrollments yet.</td></tr>'
+        courses_rows = "".join(
+            f'<tr><td style="padding: 8px 0; color: #20393d;">{escape(course)}</td><td align="right" style="padding: 8px 0; font-weight: 700; color: #155e75;">{count}</td></tr>'
+            for course, count in digest["students_added_by_course"].items()
+        ) or '<tr><td style="padding: 8px 0;">No active course enrollments yet.</td></tr>'
+        improved = [
+            f"{row['student']}: +{row['improvement']} pts, {row['average']}% average"
+            for row in digest["most_improved"]
+        ]
+        support = [
+            f"{row['student']}: {row['low_score_average']}% low-score average, {row['incomplete_assessments']} incomplete"
+            for row in digest["needs_support"]
+        ]
+        class_perf = [
+            f"{class_name}: {score}%"
+            for class_name, score in digest["class_performance"].items()
+        ]
+        detail_cards = [
+            _section_card("Students Enrolled Per Section", f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{sections_rows}</table>'),
+            _section_card("Students Enrolled Per Course", f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0">{courses_rows}</table>'),
+            _section_card("Most Improved", f'<ul style="padding-left: 20px; margin: 0; color: #20393d;">{_list_items(improved, "No comparable score data yet.")}</ul>'),
+            _section_card("Needs Support", f'<ul style="padding-left: 20px; margin: 0; color: #20393d;">{_list_items(support, "No low-score or incomplete-assessment flags this week.")}</ul>'),
+            _section_card("Class Reading Performance", f'<ul style="padding-left: 20px; margin: 0; color: #20393d;">{_list_items(class_perf, "No completed scores this week.")}</ul>'),
+        ]
+    else:
+        best = digest["best_assessment"]
+        best_label = f"{best['title']} ({best['score']}%)" if best else "No completed assessment this week"
+        metrics = [
+            ("Classes joined", digest["classes_joined"], "#0f766e"),
+            ("Assessments done", digest["assessments_completed"], "#155e75"),
+            ("Practice sessions", digest["practice_sessions_completed"], "#7c3aed"),
+            ("Average score", _format_percent(digest["average_reading_score"]), "#b45309"),
+            ("Reading level", digest["reading_level"], "#0f766e"),
+            ("Weekly progress", _format_delta(digest["progress_delta"]), "#155e75"),
+        ]
+        weak_areas = digest["areas_needing_improvement"] or ["Keep building consistency"]
+        detail_cards = [
+            _section_card("Best Assessment", f'<p style="margin: 0; color: #20393d; font-weight: 700;">{escape(best_label)}</p>'),
+            _section_card("Areas To Practice", f'<ul style="padding-left: 20px; margin: 0; color: #20393d;">{_list_items(weak_areas, "Keep building consistency")}</ul>'),
+            _section_card("Pending Assessments", f'<ul style="padding-left: 20px; margin: 0; color: #20393d;">{_list_items(digest["pending_assessments"], "None")}</ul>'),
+            _section_card("Achievement", f'<p style="margin: 0 0 8px; color: #0f766e; font-size: 18px; font-weight: 800;">&#127941; {escape(digest["achievement_badge"])}</p><p style="margin: 0; color: #20393d;">{escape(digest["encouraging_message"])}</p>'),
+        ]
+
+    metric_rows = []
+    for index in range(0, len(metrics), 3):
+        cards = "".join(_metric_card(label, value, accent) for label, value, accent in metrics[index:index + 3])
+        metric_rows.append(f'<tr>{cards}</tr>')
+
+    return f"""<!doctype html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        @media screen and (max-width: 620px) {{
+            .email-container {{ width: 100% !important; }}
+            .stack-column {{ display: block !important; width: 100% !important; box-sizing: border-box !important; }}
+            .mobile-padding {{ padding-left: 16px !important; padding-right: 16px !important; }}
+        }}
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background: #eef7f8; font-family: Arial, Helvetica, sans-serif; color: #20393d;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #eef7f8;">
+        <tr>
+            <td align="center" style="padding: 24px 12px;">
+                <table role="presentation" class="email-container" width="640" cellspacing="0" cellpadding="0" style="width: 640px; max-width: 640px; background: #f8fcfc; border-radius: 18px; overflow: hidden;">
+                    <tr>
+                        <td class="mobile-padding" style="padding: 24px; background: #0f766e;">
+                            <img src="{escape(logo_url)}" alt="PABASA" width="72" style="display: block; border: 0; margin-bottom: 14px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 26px; line-height: 34px;">Your Weekly PABASA Digest</h1>
+                            <p style="margin: 8px 0 0; color: #dff7f4; font-size: 14px; line-height: 22px;">{escape(start)} to {escape(end)}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="mobile-padding" style="padding: 24px 24px 10px;">
+                            <p style="margin: 0; font-size: 16px; line-height: 25px;">Hello {escape(name)},</p>
+                            <p style="margin: 8px 0 0; font-size: 15px; line-height: 24px; color: #486166;">Here is a friendly summary of this week's reading activity.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 18px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                                {''.join(metric_rows)}
+                            </table>
+                        </td>
+                    </tr>
+                    {''.join(detail_cards)}
+                    <tr>
+                        <td align="center" style="padding: 22px 24px 28px; color: #60777b; font-size: 12px; line-height: 20px;">
+                            <strong style="color: #134e4a;">PABASA</strong><br>
+                            Copyright &copy; {timezone.now().year} PABASA. This email was generated automatically from your account activity.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+
+
 def _window_key(start, end):
     return f"{start.isoformat()}::{end.isoformat()}"
 
@@ -403,9 +564,17 @@ def send_weekly_digest(user, start, end, dry_run=False, force=False):
         return {"sent": False, "skipped": "unsupported_role"}
 
     body = render_digest_text(digest)
+    html_body = render_digest_html(digest)
     subject = "Your Weekly PABASA Digest"
     if not dry_run:
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+            html_message=html_body,
+        )
         prefs["weekly_digest"] = {
             "last_sent_at": timezone.now().isoformat(),
             "last_window_start": start.isoformat(),
@@ -414,7 +583,7 @@ def send_weekly_digest(user, start, end, dry_run=False, force=False):
         }
         user.preference = prefs
         user.save(update_fields=["preference", "updated_at"])
-    return {"sent": not dry_run, "dry_run": dry_run, "subject": subject, "body": body, "digest": digest}
+    return {"sent": not dry_run, "dry_run": dry_run, "subject": subject, "body": body, "html_body": html_body, "digest": digest}
 
 
 def send_weekly_digests(start=None, end=None, user_id=None, dry_run=False, force=False):

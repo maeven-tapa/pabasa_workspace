@@ -1431,6 +1431,10 @@
 
         function goBackToAssessments() {
             if (isAssistMode && window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: "pabasa-assist-returning",
+                    materialId: materialId,
+                }, window.location.origin);
                 const notifyParent = () => {
                     window.parent.postMessage({
                         type: completionSubmitted ? "pabasa-assist-complete" : "pabasa-assist-exit",

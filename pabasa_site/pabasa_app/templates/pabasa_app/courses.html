@@ -6812,6 +6812,7 @@
 
             const assistQueueState = window.assistQueueState || { active: false, courseId: null, courseTitle: '', materialId: null, materialTitle: '', students: [], currentIndex: -1, pendingIndex: -1 };
             window.assistQueueState = assistQueueState;
+            let assistReturningShownAt = 0;
 
             function renderAssistQueue() {
                 ensureAssistAssessmentUi();
@@ -7115,9 +7116,20 @@
                 window.assistQueueMessageBound = true;
                 window.addEventListener('message', async function(event) {
                     if (event.origin !== window.location.origin || !event.data) return;
+                    const isAssistReturning = event.data.type === 'pabasa-assist-returning';
                     const isAssistComplete = event.data.type === 'pabasa-assist-complete';
                     const isAssistExit = event.data.type === 'pabasa-assist-exit';
-                    if (!isAssistComplete && !isAssistExit) return;
+                    if (!isAssistReturning && !isAssistComplete && !isAssistExit) return;
+
+                    if (isAssistReturning) {
+                        assistReturningShownAt = Date.now();
+                        await showAssistLoading(
+                            'Loading...',
+                            'Saving the assisted assessment and returning to the course page.'
+                        );
+                        return;
+                    }
+
                     document.getElementById('assistAssessmentOverlay')?.classList.add('d-none');
                     const frame = document.getElementById('assistAssessmentFrame');
                     if (frame) frame.removeAttribute('src');
@@ -7127,20 +7139,30 @@
                     assistQueueState.currentIndex = -1;
                     assistQueueState.pendingIndex = -1;
                     renderAssistQueue();
-                    if (isAssistExit) return;
+                    if (isAssistExit) {
+                        await hideModalAndWait(document.getElementById('assistLoadingModal'));
+                        assistReturningShownAt = 0;
+                        return;
+                    }
 
                     const hasNextStudent = assistQueueState.students.some(s => s.status === 'Waiting');
                     if (hasNextStudent) {
+                        assistReturningShownAt = 0;
                         await prepareNextAssistStudent(true);
                         return;
                     }
 
-                    await showAssistLoading(
-                        'Returning to Course Assessment...',
-                        'All assisted assessments are complete. Returning to the course page.'
-                    );
-                    await pauseAssistTransition(650);
+                    if (!assistReturningShownAt) {
+                        assistReturningShownAt = Date.now();
+                        await showAssistLoading(
+                            'Returning to Course Assessment...',
+                            'All assisted assessments are complete. Returning to the course page.'
+                        );
+                    }
+                    const visibleFor = Date.now() - assistReturningShownAt;
+                    await pauseAssistTransition(Math.max(0, 2200 - visibleFor));
                     await hideModalAndWait(document.getElementById('assistLoadingModal'));
+                    assistReturningShownAt = 0;
                     finishAssistQueueIfDone();
                 });
             }

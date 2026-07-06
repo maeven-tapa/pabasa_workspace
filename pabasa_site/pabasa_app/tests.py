@@ -1712,6 +1712,11 @@ class SettingsViewTests(TestCase):
         self.user.refresh_from_db()
         self.assertTrue(self.user.preference["notification_settings"]["weekly_digest_enabled"])
 
+        fresh_response = self.client.get(reverse("settings"))
+        self.assertEqual(fresh_response.status_code, 200)
+        self.assertContains(fresh_response, 'id="weeklyDigestEnabled"')
+        self.assertContains(fresh_response, 'name="weekly_digest_enabled" checked')
+
 
 class AdminSettingsRenderTests(TestCase):
     def setUp(self):
@@ -2521,14 +2526,20 @@ class WeeklyDigestTests(TestCase):
         mock_send_mail.assert_not_called()
 
     @patch("pabasa_app.weekly_digest.send_mail")
-    def test_teacher_weekly_digest_sends_and_records_window(self, mock_send_mail):
+    def test_teacher_weekly_digest_sends_html_email_and_records_window(self, mock_send_mail):
         result = send_weekly_digest(self.teacher, self.start, self.end)
 
         self.assertTrue(result["sent"])
         mock_send_mail.assert_called_once()
         email_body = mock_send_mail.call_args[0][1]
+        html_body = mock_send_mail.call_args.kwargs["html_message"]
         self.assertIn("Assessments completed by students: 1", email_body)
         self.assertIn("Average class reading performance: 88.0%", email_body)
+        self.assertIn("<html", html_body)
+        self.assertIn("Your Weekly PABASA Digest", html_body)
+        self.assertIn("pabasalogo.png", html_body)
+        self.assertIn("Assessments made", html_body)
+        self.assertIn("Class average", html_body)
 
         self.teacher.refresh_from_db()
         digest_meta = self.teacher.preference["weekly_digest"]
@@ -2538,6 +2549,26 @@ class WeeklyDigestTests(TestCase):
         duplicate = send_weekly_digest(self.teacher, self.start, self.end)
         self.assertEqual(duplicate["skipped"], "duplicate_window")
         mock_send_mail.assert_called_once()
+
+    @patch("pabasa_app.weekly_digest.send_mail")
+    def test_student_weekly_digest_sends_html_email(self, mock_send_mail):
+        self.student.preference = {
+            "notification_settings": {
+                "push_enabled": True,
+                "email_notifications": True,
+                "weekly_digest_enabled": True,
+            }
+        }
+        self.student.save(update_fields=["preference", "updated_at"])
+
+        result = send_weekly_digest(self.student, self.start, self.end)
+
+        self.assertTrue(result["sent"])
+        html_body = mock_send_mail.call_args.kwargs["html_message"]
+        self.assertIn("Assessments done", html_body)
+        self.assertIn("Practice sessions", html_body)
+        self.assertIn("Best Assessment", html_body)
+        self.assertIn("Pending Assessments", html_body)
 
 
 class TeacherStudentsDirectoryTests(TestCase):

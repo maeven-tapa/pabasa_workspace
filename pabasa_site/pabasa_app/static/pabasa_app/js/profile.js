@@ -335,11 +335,51 @@ function initProfilePage() {
         return seen.size;
     }
 
+    let teacherClassesRefreshInFlight = false;
+    let teacherClassesLastRefreshAt = 0;
+
+    function getTeacherClassesCacheKey() {
+        const emailForCache = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
+        return emailForCache ? `pabasa_teacher_classes_${emailForCache}` : 'pabasa_teacher_classes';
+    }
+
+    function refreshTeacherClassesCache(options) {
+        const opts = options || {};
+        const now = Date.now();
+        if (teacherClassesRefreshInFlight) return;
+        if (!opts.force && now - teacherClassesLastRefreshAt < 30000) return;
+
+        teacherClassesRefreshInFlight = true;
+        teacherClassesLastRefreshAt = now;
+        const scopedClassesKey = getTeacherClassesCacheKey();
+
+        try {
+            fetch('/dashboard/teacher/classes/', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            }).then(function(r) {
+                if (!r.ok) return null;
+                return r.json();
+            }).then(function(data) {
+                if (!data || !data.success || !Array.isArray(data.classes)) return;
+                try {
+                    localStorage.setItem(scopedClassesKey, JSON.stringify(data.classes));
+                } catch (e) {}
+                try {
+                    window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { classes: data.classes } }));
+                } catch (e) {}
+            }).catch(function () {}).finally(function () {
+                teacherClassesRefreshInFlight = false;
+            });
+        } catch (e) {
+            teacherClassesRefreshInFlight = false;
+        }
+    }
+
     function getTeacherOverviewStats() {
         const sampleClassCodes = ["RRG-9154", "AFC-7302", "ESL-5601"];
-        // Prefer scoped server-backed classes cache: pabasa_teacher_classes_{email}
-        const emailForCache = (window.PABASA_USER_EMAIL || localStorage.getItem('pabasaUserEmail') || '').trim();
-        const scopedClassesKey = emailForCache ? `pabasa_teacher_classes_${emailForCache}` : 'pabasa_teacher_classes';
+        const scopedClassesKey = getTeacherClassesCacheKey();
         let classes = [];
         try {
             const parsed = JSON.parse(localStorage.getItem(scopedClassesKey) || '[]');
@@ -347,32 +387,6 @@ function initProfilePage() {
         } catch (e) {
             classes = [];
         }
-
-        // Refresh authoritative classes asynchronously and update cache/UI when available
-        (function refreshTeacherClasses() {
-            try {
-                fetch('/dashboard/teacher/classes/', {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                }).then(function(r) {
-                    if (!r.ok) return null;
-                    return r.json();
-                }).then(function(data) {
-                    if (!data || !data.success || !Array.isArray(data.classes)) return;
-                    try {
-                        localStorage.setItem(scopedClassesKey, JSON.stringify(data.classes));
-                    } catch (e) {}
-                    try { window.dispatchEvent(new CustomEvent('pabasa:teacher-classes-updated', { detail: { classes: data.classes } })); } catch (e) {}
-
-                    // Update UI counts if elements exist (best-effort)
-                    try {
-                        const activeClassesCount = document.getElementById("profileActiveClassesCount");
-                        if (activeClassesCount) activeClassesCount.textContent = String(data.classes.length || classes.length);
-                    } catch (e) {}
-                }).catch(function () {});
-            } catch (e) {}
-        })();
         const storedStudentCount = countUniqueStudents(getStoredArray("pabasa_added_students"));
         const classStudentCount = classes.reduce(function (total, classData) {
             return total + (Number.parseInt(classData.students, 10) || 0);
@@ -384,7 +398,7 @@ function initProfilePage() {
         // server stores snake_case keys (materials_posted, assessments_posted); support both formats
         const storedMaterialsPosted = normalizeOverviewCount(
             (normalizeOverviewCount(overviewStats.materials_posted, 0) || 0) +
-            (normalizeOverviewCount(overviewStats.assessments_posted || overviewStats.assessmentsPosted, 0) || 0),
+            (normalizeOverviewCount(overviewStats.assessments_posted ?? overviewStats.assessmentsPosted, 0) || 0),
             0
         );
         const fallbackReportsGenerated = Number.isFinite(overviewReportsGenerated)
@@ -435,6 +449,7 @@ function initProfilePage() {
             // or window globals were cleared (ensures profile page still fetches)
             const role = (window.PABASA_USER_ROLE || window.localStorage.getItem('pabasaUserRole') || profileRoleDisplay || '').toString().toLowerCase();
             if (role === 'teacher' || role.startsWith('teacher -')) {
+                refreshTeacherClassesCache();
                 const requestToken = ++teacherOverviewRequestSeq;
                 fetch('/dashboard/teacher/overview/', {
                     method: 'GET',
@@ -460,10 +475,23 @@ function initProfilePage() {
                         console.warn('Teacher overview returned error', data.error || data);
                         return;
                     }
-                    const safeClassesCount = normalizeOverviewCount(data.classes_count || data.classesCount || stats.activeClasses, stats.activeClasses);
-                    const safeStudentsCount = normalizeOverviewCount(data.total_students || data.totalStudents || stats.totalStudents, stats.totalStudents);
-                    const safeMaterialsCount = normalizeOverviewCount((Number(data.materials_posted || 0) + Number(data.assessments_posted || data.assessmentsPosted || 0)), stats.materialsPosted);
-                    const safeReportsCount = normalizeOverviewCount(data.reports_generated || data.reportsGenerated, stats.reportsGenerated);
+                    const safeClassesCount = normalizeOverviewCount(data.classes_count ?? data.classesCount ?? stats.activeClasses, stats.activeClasses);
+                    const safeStudentsCount = normalizeOverviewCount(data.total_students ?? data.totalStudents ?? stats.totalStudents, stats.totalStudents);
+                    const safeMaterialsCount = normalizeOverviewCount(
+                        Number(data.materials_posted ?? data.materialsPosted ?? 0) + Number(data.assessments_posted ?? data.assessmentsPosted ?? 0),
+                        stats.materialsPosted
+                    );
+                    const safeReportsCount = normalizeOverviewCount(data.reports_generated ?? data.reportsGenerated ?? stats.reportsGenerated, stats.reportsGenerated);
+
+                    try {
+                        localStorage.setItem('pabasa_teacher_overview_stats', JSON.stringify({
+                            classes_count: safeClassesCount,
+                            total_students: safeStudentsCount,
+                            materials_posted: Number(data.materials_posted ?? data.materialsPosted ?? 0),
+                            assessments_posted: Number(data.assessments_posted ?? data.assessmentsPosted ?? 0),
+                            reports_generated: safeReportsCount
+                        }));
+                    } catch (e) {}
 
                     setCounterValue(activeClassesCount, safeClassesCount, stats.activeClasses);
                     setCounterValue(totalStudentsCount, safeStudentsCount, stats.totalStudents);
