@@ -21,6 +21,7 @@
     const reviewBtn = document.getElementById("reviewBtn");
     const finishBtn = document.getElementById("finishBtn");
     let isMuted = false;
+    let completionSavePromise = Promise.resolve();
 
     const studentClassCodesKey = "pabasaStudentClassCodes";
     const legacyStudentClassCodeKey = "pabasaStudentClassCode";
@@ -32,6 +33,8 @@
     const testCode = params.get("code") || "TST-000";
     const materialId = params.get("id");
     const viewMode = params.get("viewMode");
+    const assistMode = params.get("assist") === "1";
+    const assistToken = params.get("assist_token") || "";
     if (testMeta) testMeta.textContent = testTitle + " - " + testCode;
 
     function getStoredArray(key) {
@@ -93,6 +96,9 @@
                 }
             });
         });
+        if (aggregatedItems.length === 0 && params.get("content")) {
+            aggregatedItems = parseItems({ content: params.get("content") }, mode);
+        }
         words = aggregatedItems;
     }
 
@@ -159,11 +165,12 @@
         const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
         if (materialId && token) {
             const payload = { material_id: materialId, activity_type: 'assessment' };
+            if (assistToken) payload.assist_token = assistToken;
             const normalizedId = String(materialId).trim();
             if (normalizedId && !normalizedId.toLowerCase().startsWith('material-') && !normalizedId.toLowerCase().startsWith('practice-') && !normalizedId.toLowerCase().startsWith('assessment-')) {
                 payload.assessment_id = `assessment-${normalizedId}`;
             }
-            fetch('/record-assessment-completion/', {
+            completionSavePromise = fetch('/record-assessment-completion/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
                 body: JSON.stringify(payload)
@@ -227,6 +234,12 @@
     reviewBtn?.addEventListener("click", restartAssessment);
 
     finishBtn?.addEventListener("click", function () {
+        if (assistMode && window.parent && window.parent !== window) {
+            completionSavePromise.finally(() => {
+                window.parent.postMessage({ type: "pabasa-assist-complete", materialId: materialId }, window.location.origin);
+            });
+            return;
+        }
         window.location.href = "/dashboard/assessment/";
     });
 

@@ -46,6 +46,8 @@
         const testCode = urlParams.get("code") || "TST-000";
         const materialId = urlParams.get("id");
         const viewMode = urlParams.get("viewMode");
+        const isAssistMode = urlParams.get("assist") === "1";
+        const assistToken = urlParams.get("assist_token") || "";
         const liveContent = urlParams.get("content") || "";
         const liveItemType = (urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
         const liveLanguage = urlParams.get("language") || "";
@@ -67,6 +69,7 @@
         let isMuted = false;
         let startTime = null;
         let completionSubmitted = false;
+        let completionSavePromise = Promise.resolve();
         let recognition = null;
         let recognitionActive = false;
         let spokenTranscript = "";
@@ -935,13 +938,19 @@
                 } else if (normalizedId.toLowerCase().startsWith('assessment-')) {
                     payload.assessment_id = normalizedId;
                 }
-                fetch('/record-assessment-completion/', {
+                if (assistToken) payload.assist_token = assistToken;
+                completionSavePromise = fetch('/record-assessment-completion/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
                     credentials: 'same-origin',
                     body: JSON.stringify(payload)
-                }).then(r => r.json()).then(d => {
-                    if (d.success) console.log("PABASA: Assessment completion recorded.");
+                }).then(async r => {
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok || !d.success) {
+                        throw new Error(d.error || `Completion save failed (${r.status})`);
+                    }
+                    console.log("PABASA: Assessment completion recorded.");
+                    return d;
                 }).catch(e => console.error("PABASA: Completion error", e));
             }
         }
@@ -1067,7 +1076,7 @@
             isRecording = false;
             stopSpeechRecognition();
             const reachedLastItem = items.length > 0 && currentIndex === items.length - 1;
-            showCompletion(reachedLastItem);
+            showCompletion(isAssistMode || reachedLastItem);
         };
 
         btnStartReading?.addEventListener("click", startReading);
@@ -1421,6 +1430,20 @@
         }
 
         function goBackToAssessments() {
+            if (isAssistMode && window.parent && window.parent !== window) {
+                const notifyParent = () => {
+                    window.parent.postMessage({
+                        type: completionSubmitted ? "pabasa-assist-complete" : "pabasa-assist-exit",
+                        materialId: materialId,
+                    }, window.location.origin);
+                };
+                if (completionSubmitted) {
+                    completionSavePromise.finally(notifyParent);
+                } else {
+                    notifyParent();
+                }
+                return;
+            }
             window.location.assign('/dashboard/assessment/');
         }
 

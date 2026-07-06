@@ -2,8 +2,10 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMultiAlternatives
+from django.core import signing
 from django.contrib.auth import authenticate, login
 from django.core.mail import send_mail
 from django.conf import settings
@@ -3286,12 +3288,15 @@ def assessment(request):
         return redirect('auth')
     return render(request, 'pabasa_app/assessment.html', _dashboard_context(request, 'student'))
 
+@xframe_options_sameorigin
 def reading_word_page(request):
     return render(request, 'pabasa_app/reading_word_page.html', _dashboard_context(request))
 
+@xframe_options_sameorigin
 def reading_sentence_page(request):
     return render(request, 'pabasa_app/reading_sentence_page.html', _dashboard_context(request))
 
+@xframe_options_sameorigin
 def reading_para_page(request):
     return render(request, 'pabasa_app/reading_para_page.html', _dashboard_context(request))
 
@@ -3495,6 +3500,152 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
     }
     query = '&'.join(f'{key}={quote(str(value), safe="")}' for key, value in params.items())
     return f'/dashboard/assessment/reading_ui/{mode}/?{query}'
+
+
+def _build_assist_assessment_url(material, student_user, course, teacher_user, section=None):
+    if not material or not student_user or not teacher_user:
+        return ''
+
+    item_type = (material.item_type or '').strip().lower()
+    mode = 'sentence' if item_type == 'sentence' else 'para' if item_type == 'paragraph' else 'word'
+    content_json = material.content_json or {}
+    content = (material.content_text or material.prompt_text or '').strip()
+    if isinstance(content_json, dict):
+        content = content or (content_json.get('content_text') or '').strip()
+    language = (content_json.get('language') if isinstance(content_json, dict) else '') or 'English'
+    token = signing.dumps({
+        'student_id': student_user.id,
+        'teacher_id': teacher_user.id,
+        'course_id': course.id if course else None,
+        'material_id': material.id,
+    }, salt='pabasa-assist-assessment')
+    params = {
+        'id': str(material.id),
+        'test': (material.title or material.prompt_text or 'Assessment').strip() or 'Assessment',
+        'code': section.class_code if section else (material.code or (course.code if course else 'ASSIST')),
+        'content': content,
+        'item_type': item_type or 'word',
+        'language': language,
+        'assist': '1',
+        'assist_token': token,
+    }
+    query = '&'.join(f'{key}={quote(str(value), safe="")}' for key, value in params.items())
+    return f'/dashboard/assessment/reading_ui/{mode}/?{query}'
+
+
+def _resolve_assist_token(token, max_age=60 * 60 * 4):
+    if not token:
+        return None
+    try:
+        payload = signing.loads(token, salt='pabasa-assist-assessment', max_age=max_age)
+    except signing.BadSignature:
+        return None
+    student_user = User.objects.filter(id=payload.get('student_id'), role='student', is_archived=False).first()
+    teacher_user = User.objects.filter(id=payload.get('teacher_id'), role__in=['teacher', 'admin']).first()
+    material = Material.objects.filter(id=payload.get('material_id')).first()
+    course = Course.objects.filter(id=payload.get('course_id')).first() if payload.get('course_id') else None
+    if not student_user or not teacher_user or not material:
+        return None
+    if course and teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+        return None
+    sections = course.sections.filter(is_active=True) if course else Section.objects.filter(is_active=True, teacher=teacher_user)
+    allowed = any(section.has_student(student_user, active_only=True) for section in sections)
+    if not allowed:
+        return None
+    return {
+        'student': student_user,
+        'teacher': teacher_user,
+        'material': material,
+        'course': course,
+    }
+
+
+@csrf_protect
+@require_http_methods(["GET"])
+def get_assist_students(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    if request.session.get('user_role') not in ['teacher', 'admin']:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
+    course = Course.objects.filter(id=request.GET.get('course_id')).first()
+    material = Material.objects.filter(id=request.GET.get('material_id')).first()
+    if not teacher_user or not course or not material:
+        return JsonResponse({'success': False, 'error': 'Course or material not found'}, status=404)
+    if teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+        return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
+    if not course.materials.filter(id=material.id).exists():
+        return JsonResponse({'success': False, 'error': 'Material is not assigned to this course'}, status=403)
+
+    students = []
+    seen = set()
+    for section in course.sections.filter(is_active=True).order_by('class_name'):
+        for entry in section.get_enrolled_students(active_only=True):
+            student_id = entry.get('student_id')
+            if not student_id or student_id in seen:
+                continue
+            student_user = User.objects.filter(id=student_id, role='student', is_archived=False).first()
+            if not student_user:
+                continue
+            seen.add(student_id)
+            students.append({
+                'id': student_user.id,
+                'custom_id': student_user.custom_id,
+                'name': f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id,
+                'email': student_user.email,
+                'section': section.class_name,
+                'section_code': section.class_code,
+            })
+    return JsonResponse({'success': True, 'students': students})
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+def start_assist_assessment(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    if request.session.get('user_role') not in ['teacher', 'admin']:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        data = {}
+
+    teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
+    course = Course.objects.filter(id=data.get('course_id')).first()
+    material = Material.objects.filter(id=data.get('material_id')).first()
+    student_user = User.objects.filter(id=data.get('student_id'), role='student', is_archived=False).first()
+    if not teacher_user or not course or not material or not student_user:
+        return JsonResponse({'success': False, 'error': 'Unable to start assisted assessment'}, status=404)
+    if teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+        return JsonResponse({'success': False, 'error': 'Course access denied'}, status=403)
+    if not course.materials.filter(id=material.id).exists():
+        return JsonResponse({'success': False, 'error': 'Material is not assigned to this course'}, status=403)
+
+    section = None
+    for candidate in course.sections.filter(is_active=True):
+        if candidate.has_student(student_user, active_only=True):
+            section = candidate
+            break
+    if section is None:
+        return JsonResponse({'success': False, 'error': 'Student is not enrolled in this course'}, status=403)
+
+    _create_notification(
+        teacher_user,
+        'Assist assessment started',
+        f'{teacher_user.first_name} {teacher_user.last_name} started assisted assessment "{material.title}" for {student_user.first_name} {student_user.last_name}.',
+        'assessment',
+        '',
+        teacher_user,
+        send_email=False,
+        force_in_app=True,
+    )
+    return JsonResponse({
+        'success': True,
+        'launch_url': _build_assist_assessment_url(material, student_user, course, teacher_user, section),
+    })
 
 
 @require_http_methods(["GET"])
@@ -6848,7 +6999,7 @@ def delete_reading_material(request):
 
 @csrf_protect
 @require_http_methods(["POST"])
-@login_required(role='student')
+@login_required()
 def record_assessment_completion(request):
     """Handles notification when student completes reading material."""
     try:
@@ -6858,7 +7009,17 @@ def record_assessment_completion(request):
         is_retake = data.get('is_retake', False)
         attempt_number = data.get('attempt_number', 0)
         activity_type = data.get('activity_type', 'assessment')
-        student_user = User.objects.get(id=request.session.get('user_id'))
+        assist_context = _resolve_assist_token(data.get('assist_token'))
+        if assist_context:
+            student_user = assist_context['student']
+            assist_teacher_user = assist_context['teacher']
+            material_id = str(assist_context['material'].id)
+            assessment_id = None
+        else:
+            if request.session.get('user_role') != 'student':
+                return JsonResponse({'success': False, 'error': 'Forbidden: insufficient role'}, status=403)
+            student_user = User.objects.get(id=request.session.get('user_id'))
+            assist_teacher_user = None
 
         assessment = None
         teacher_user = None
@@ -7064,6 +7225,17 @@ def record_assessment_completion(request):
                     student_user,
                     send_email=False,
                 )
+        if assist_teacher_user and not is_practice:
+            _create_notification(
+                assist_teacher_user,
+                'Assist assessment completed',
+                f'Assisted assessment "{title_text}" was completed for {student_name}.',
+                'assessment',
+                f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
+                assist_teacher_user,
+                send_email=False,
+                force_in_app=True,
+            )
         response_payload = {'success': True}
         if is_practice and material:
             response_payload.update({

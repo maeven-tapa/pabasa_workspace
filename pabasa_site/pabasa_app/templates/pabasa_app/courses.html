@@ -1649,6 +1649,201 @@
         font-size: 0.9rem;
     }
 
+    .assist-student-list {
+        display: grid;
+        gap: 0.65rem;
+        max-height: 420px;
+        overflow-y: auto;
+    }
+
+    .assist-student-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0.85rem;
+        border: 1px solid rgba(31, 111, 139, 0.16);
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .assist-student-option input {
+        accent-color: var(--dash-primary);
+        inline-size: 1rem;
+        block-size: 1rem;
+    }
+
+    .assist-student-option strong,
+    .assist-student-option small {
+        display: block;
+    }
+
+    .assist-student-option small {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+
+    /* Make the select-all option more compact and not stretch like the student rows */
+    .assist-select-all-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0.5rem;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        margin-bottom: 0.25rem;
+    }
+
+    .assist-select-all-option strong {
+        font-weight: 600;
+        color: inherit;
+    }
+
+    .assist-assessment-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 3000;
+        background: #fff;
+    }
+
+    .assist-assessment-overlay iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: block;
+    }
+
+    .assist-queue-panel {
+        position: fixed;
+        right: 1rem;
+        bottom: 1rem;
+        z-index: 3010;
+        width: min(360px, calc(100vw - 2rem));
+        padding: 1rem;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid rgba(31, 111, 139, 0.16);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+        font-family: inherit;
+    }
+
+    .assist-queue-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        color: #0f172a;
+    }
+
+    .assist-queue-head span {
+        display: block;
+        color: #64748b;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .assist-queue-head .badge {
+        background: var(--dash-primary);
+        color: #fff;
+    }
+
+    .assist-queue-current {
+        margin: 0.75rem 0;
+        padding: 0.55rem 0.7rem;
+        border-radius: 8px;
+        background: rgba(31, 111, 139, 0.08);
+        color: var(--dash-primary);
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .assist-queue-list {
+        display: grid;
+        gap: 0.45rem;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .assist-queue-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.45rem 0;
+        color: #334155;
+        font-size: 0.85rem;
+        border-top: 1px solid rgba(15, 23, 42, 0.06);
+    }
+
+    .assist-queue-row.is-current {
+        color: var(--dash-primary);
+        font-weight: 700;
+    }
+
+    .assist-queue-row em {
+        font-style: normal;
+        color: #64748b;
+        white-space: nowrap;
+    }
+
+    .assist-queue-prepare-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        width: 100%;
+        margin-top: 0.85rem;
+        min-height: 38px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--dash-primary);
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .assist-queue-prepare-btn:hover {
+        background: var(--dash-primary-deep);
+    }
+
+    #assistTransitionModal {
+        z-index: 3040;
+    }
+
+    #assistLoadingModal {
+        z-index: 3060;
+    }
+
+    .assist-transition-summary {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .assist-transition-summary div {
+        padding: 0.75rem 0.85rem;
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 8px;
+        background: rgba(31, 111, 139, 0.05);
+    }
+
+    .assist-transition-summary span {
+        display: block;
+        margin-bottom: 0.25rem;
+        color: #64748b;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .assist-transition-summary strong {
+        display: block;
+        color: #0f172a;
+        font-size: 0.98rem;
+        line-height: 1.35;
+    }
+
     .practice-card .material-type-badge {
         background: rgba(14, 165, 233, 0.12);
         color: #0369a1;
@@ -6370,6 +6565,7 @@
                                 <button type="button" class="material-btn course-readings-action-btn" data-material-action="preview" data-mid="${courseMaterialActionId(m)}" title="View"><i class="bi bi-eye"></i>View</button>
                                 <button type="button" class="material-btn course-readings-action-btn" data-material-action="edit" data-mid="${courseMaterialActionId(m)}" title="Edit"><i class="bi bi-pencil"></i>Edit</button>
                                 <button type="button" class="material-btn course-readings-action-btn" data-material-action="live" data-mid="${courseMaterialActionId(m)}" title="Start Live"><i class="bi bi-broadcast"></i>Live</button>
+                                <button type="button" class="material-btn course-readings-action-btn" data-material-action="assist" data-mid="${courseMaterialActionId(m)}" title="Assist"><i class="bi bi-person-check"></i>Assist</button>
                                 <button type="button" class="material-btn delete course-readings-action-btn" data-material-action="delete" data-mid="${courseMaterialActionId(m)}" title="Archive"><i class="bi bi-archive"></i>Archive</button>
                             </div>
                         `;
@@ -6379,6 +6575,442 @@
                 assignedSection.appendChild(assignedList);
                 materialsContainer.appendChild(assignedSection);
 
+            }
+
+            function ensureAssistAssessmentUi() {
+                if (!document.getElementById('assistAssessmentModal')) {
+                    document.body.insertAdjacentHTML('beforeend', `
+                        <div class="modal fade" id="assistAssessmentModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <div>
+                                            <h5 class="modal-title fw-bold mb-0">Assist Assessment</h5>
+                                            <p class="small text-muted mb-0" id="assistAssessmentSubtitle">Select enrolled students.</p>
+                                        </div>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div id="assistStudentList" class="assist-student-list"></div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="button" class="btn btn-primary" id="assistStartBtn"><i class="bi bi-play-fill me-1"></i>Start Assist</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+                if (!document.getElementById('assistAssessmentOverlay')) {
+                    document.body.insertAdjacentHTML('beforeend', `
+                        <div id="assistAssessmentOverlay" class="assist-assessment-overlay d-none" aria-live="polite">
+                            <iframe id="assistAssessmentFrame" title="Student assessment"></iframe>
+                        </div>
+                        <aside id="assistQueuePanel" class="assist-queue-panel d-none" aria-live="polite">
+                            <div class="assist-queue-head">
+                                <div>
+                                    <strong>Assessment Queue</strong>
+                                    <span id="assistQueueProgress">0 of 0 completed</span>
+                                </div>
+                                <span id="assistQueueCount" class="badge rounded-pill">0</span>
+                            </div>
+                            <div id="assistQueueCurrent" class="assist-queue-current">No active student</div>
+                            <div id="assistQueueList" class="assist-queue-list"></div>
+                            <button type="button" class="assist-queue-prepare-btn d-none" id="assistPrepareNextBtn">
+                                <i class="bi bi-play-fill"></i> Prepare Next
+                            </button>
+                        </aside>
+                    `);
+                }
+                if (!document.getElementById('assistTransitionModal')) {
+                    document.body.insertAdjacentHTML('beforeend', `
+                        <div class="modal fade" id="assistTransitionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <div>
+                                            <h5 class="modal-title fw-bold mb-0">Starting Assisted Assessment</h5>
+                                            <p class="small text-muted mb-0">Prepare the next student before beginning.</p>
+                                        </div>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="assist-transition-summary">
+                                            <div>
+                                                <span>Student</span>
+                                                <strong id="assistTransitionStudent">Student</strong>
+                                            </div>
+                                            <div>
+                                                <span>Class/Course</span>
+                                                <strong id="assistTransitionCourse">Course</strong>
+                                            </div>
+                                            <div>
+                                                <span>Assessment Material</span>
+                                                <strong id="assistTransitionMaterial">Assessment</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" id="assistTransitionCancelBtn">Cancel</button>
+                                        <button type="button" class="btn btn-primary" id="assistTransitionBeginBtn">
+                                            <i class="bi bi-play-fill me-1"></i>Begin Assessment
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+                if (!document.getElementById('assistLoadingModal')) {
+                    document.body.insertAdjacentHTML('beforeend', `
+                        <div class="modal fade" id="assistLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                            <div class="modal-dialog modal-dialog-centered modal-sm">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-body text-center py-4">
+                                        <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+                                        <h5 class="fw-bold mb-1" id="assistLoadingTitle">Preparing</h5>
+                                        <p class="small text-muted mb-0" id="assistLoadingMessage">Please wait...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+            }
+
+            const assistQueueState = window.assistQueueState || { active: false, courseId: null, courseTitle: '', materialId: null, materialTitle: '', students: [], currentIndex: -1, pendingIndex: -1 };
+            window.assistQueueState = assistQueueState;
+
+            function renderAssistQueue() {
+                ensureAssistAssessmentUi();
+                const panel = document.getElementById('assistQueuePanel');
+                const count = document.getElementById('assistQueueCount');
+                const progress = document.getElementById('assistQueueProgress');
+                const current = document.getElementById('assistQueueCurrent');
+                const list = document.getElementById('assistQueueList');
+                const prepareBtn = document.getElementById('assistPrepareNextBtn');
+                const completed = assistQueueState.students.filter(s => s.status === 'Completed').length;
+                panel.classList.toggle('d-none', !assistQueueState.active || assistQueueState.students.length === 0);
+                count.textContent = assistQueueState.students.length;
+                progress.textContent = `${completed} of ${assistQueueState.students.length} completed`;
+                const activeStudent = assistQueueState.students[assistQueueState.currentIndex];
+                const pendingStudent = assistQueueState.students[assistQueueState.pendingIndex];
+                current.textContent = activeStudent
+                    ? `Current: ${activeStudent.name}`
+                    : pendingStudent
+                        ? `Ready: ${pendingStudent.name}`
+                        : 'No active student';
+                list.innerHTML = assistQueueState.students.map((student, index) => `
+                    <div class="assist-queue-row ${(index === assistQueueState.currentIndex || index === assistQueueState.pendingIndex) ? 'is-current' : ''}">
+                        <span>${escapeHtml(student.name)}</span>
+                        <em>${escapeHtml(student.status)}</em>
+                    </div>
+                `).join('');
+                const hasWaiting = assistQueueState.students.some(s => s.status === 'Waiting');
+                const hasInProgress = assistQueueState.students.some(s => s.status === 'In Progress');
+                const hasPendingConfirmation = assistQueueState.pendingIndex >= 0;
+                prepareBtn?.classList.toggle('d-none', !assistQueueState.active || !hasWaiting || hasInProgress || hasPendingConfirmation);
+            }
+
+            function finishAssistQueueIfDone() {
+                const nextIndex = assistQueueState.students.findIndex(s => s.status === 'Waiting');
+                const inProgressIndex = assistQueueState.students.findIndex(s => s.status === 'In Progress');
+                if (nextIndex !== -1 || inProgressIndex !== -1) return false;
+                assistQueueState.active = false;
+                assistQueueState.currentIndex = -1;
+                assistQueueState.pendingIndex = -1;
+                document.getElementById('assistAssessmentOverlay')?.classList.add('d-none');
+                const frame = document.getElementById('assistAssessmentFrame');
+                if (frame) frame.removeAttribute('src');
+                renderAssistQueue();
+                showToast('Assisted assessment queue completed', 'success');
+                return true;
+            }
+
+            function cleanupAssistModalBackdrops() {
+                const visibleModal = document.querySelector('.modal.show');
+                if (visibleModal) return;
+                document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+
+            function hideModalAndWait(modalEl) {
+                if (!modalEl || !modalEl.classList.contains('show')) return Promise.resolve();
+                return new Promise(resolve => {
+                    const done = () => {
+                        modalEl.removeEventListener('hidden.bs.modal', done);
+                        cleanupAssistModalBackdrops();
+                        resolve();
+                    };
+                    modalEl.addEventListener('hidden.bs.modal', done, { once: true });
+                    const instance = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+                    instance.hide();
+                    window.setTimeout(done, 450);
+                });
+            }
+
+            async function hideVisibleModalsExcept(exceptId) {
+                const visibleModals = Array.from(document.querySelectorAll('.modal.show'))
+                    .filter(modal => !exceptId || modal.id !== exceptId);
+                for (const modal of visibleModals) {
+                    await hideModalAndWait(modal);
+                }
+                cleanupAssistModalBackdrops();
+            }
+
+            async function showAssistLoading(title, message) {
+                ensureAssistAssessmentUi();
+                await hideVisibleModalsExcept('assistLoadingModal');
+                const titleEl = document.getElementById('assistLoadingTitle');
+                const messageEl = document.getElementById('assistLoadingMessage');
+                if (titleEl) titleEl.textContent = title || 'Preparing';
+                if (messageEl) messageEl.textContent = message || 'Please wait...';
+                const modalEl = document.getElementById('assistLoadingModal');
+                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+
+            function hideAssistLoading() {
+                const modalEl = document.getElementById('assistLoadingModal');
+                if (!modalEl) return;
+                bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                window.setTimeout(cleanupAssistModalBackdrops, 250);
+            }
+
+            function pauseAssistTransition(ms) {
+                return new Promise(resolve => window.setTimeout(resolve, ms));
+            }
+
+            function showAssistTransitionModal(studentIndex) {
+                ensureAssistAssessmentUi();
+                const student = assistQueueState.students[studentIndex];
+                if (!student) return;
+                assistQueueState.pendingIndex = studentIndex;
+                assistQueueState.currentIndex = -1;
+                if (student.status !== 'Completed') student.status = 'Waiting';
+                document.getElementById('assistTransitionStudent').textContent = student.name || 'Student';
+                document.getElementById('assistTransitionCourse').textContent = student.section || assistQueueState.courseTitle || 'Course';
+                document.getElementById('assistTransitionMaterial').textContent = assistQueueState.materialTitle || 'Assessment';
+                const modalEl = document.getElementById('assistTransitionModal');
+                const beginBtn = document.getElementById('assistTransitionBeginBtn');
+                const cancelBtn = document.getElementById('assistTransitionCancelBtn');
+                beginBtn.disabled = false;
+                beginBtn.onclick = async function () {
+                    beginBtn.disabled = true;
+                    try {
+                        await hideModalAndWait(modalEl);
+                        await launchAssistStudent(studentIndex);
+                    } catch (err) {
+                        assistQueueState.currentIndex = -1;
+                        assistQueueState.pendingIndex = studentIndex;
+                        if (assistQueueState.students[studentIndex]) {
+                            assistQueueState.students[studentIndex].status = 'Waiting';
+                        }
+                        renderAssistQueue();
+                        hideAssistLoading();
+                        beginBtn.disabled = false;
+                        showToast(err.message || 'Unable to launch assisted assessment', 'error');
+                    }
+                };
+                cancelBtn.onclick = function () {
+                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                    assistQueueState.pendingIndex = -1;
+                    renderAssistQueue();
+                };
+                renderAssistQueue();
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+
+            async function prepareNextAssistStudent(showLoading = false) {
+                ensureAssistAssessmentUi();
+                if (finishAssistQueueIfDone()) return;
+                const nextIndex = assistQueueState.students.findIndex(s => s.status === 'Waiting');
+                if (nextIndex === -1) return;
+                const nextStudent = assistQueueState.students[nextIndex];
+                if (showLoading) {
+                    await showAssistLoading(
+                        'Preparing Next Assisted Assessment',
+                        `Setting up ${nextStudent?.name || 'the next student'} for ${assistQueueState.materialTitle || 'this assessment'}.`
+                    );
+                    // Keep the loading modal visible for ~3 seconds (or until data loads)
+                    await pauseAssistTransition(3000);
+                    await hideModalAndWait(document.getElementById('assistLoadingModal'));
+                } else {
+                    await hideVisibleModalsExcept();
+                }
+                showAssistTransitionModal(nextIndex);
+            }
+
+            async function launchAssistStudent(studentIndex) {
+                ensureAssistAssessmentUi();
+                const student = assistQueueState.students[studentIndex];
+                if (!student) throw new Error('Student not found in queue');
+                assistQueueState.pendingIndex = -1;
+                assistQueueState.currentIndex = studentIndex;
+                student.status = 'In Progress';
+                renderAssistQueue();
+                const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                const res = await fetch('/dashboard/teacher/assist/start/', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({
+                        course_id: assistQueueState.courseId,
+                        material_id: assistQueueState.materialId,
+                        student_id: student.id
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Unable to launch assisted assessment');
+                document.getElementById('assistAssessmentFrame').src = data.launch_url;
+                document.getElementById('assistAssessmentOverlay').classList.remove('d-none');
+            }
+
+            const prepareNextBtn = document.getElementById('assistPrepareNextBtn');
+            if (prepareNextBtn && !prepareNextBtn.dataset.bound) {
+                prepareNextBtn.dataset.bound = 'true';
+                prepareNextBtn.addEventListener('click', function () {
+                    prepareNextAssistStudent().catch(err => {
+                        hideAssistLoading();
+                        showToast(err.message || 'Unable to prepare the next assisted assessment', 'error');
+                    });
+                });
+            }
+
+            async function openAssistStudentPicker(activeCourse, material) {
+                ensureAssistAssessmentUi();
+                if (assistQueueState.active) {
+                    showToast('Finish the current assessment queue before starting another', 'error');
+                    return;
+                }
+                const modalEl = document.getElementById('assistAssessmentModal');
+                const list = document.getElementById('assistStudentList');
+                const subtitle = document.getElementById('assistAssessmentSubtitle');
+                const startBtn = document.getElementById('assistStartBtn');
+                subtitle.textContent = material.title || 'Select enrolled students.';
+                list.innerHTML = '<div class="text-center text-muted py-3">Loading students...</div>';
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+                const materialId = String(material.id || material.raw_id || '').replace(/^(material|assessment)-/, '');
+                const res = await fetch(`/dashboard/teacher/assist/students/?course_id=${encodeURIComponent(activeCourse.id)}&material_id=${encodeURIComponent(materialId)}`, { credentials: 'same-origin' });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load students');
+                if (!data.students.length) {
+                    list.innerHTML = '<div class="text-center text-muted py-3">No enrolled students available.</div>';
+                    startBtn.disabled = true;
+                    return;
+                }
+                startBtn.disabled = false;
+                // Add an "All Student" checkbox at the top and wire select-all behavior
+                const allHtml = `
+                    <label class="assist-student-option assist-select-all-option">
+                        <input type="checkbox" id="assistSelectAllStudents">
+                        <span>
+                            <strong>All Student</strong>
+                        </span>
+                    </label>
+                `;
+                list.innerHTML = allHtml + data.students.map(student => `
+                    <label class="assist-student-option">
+                        <input type="checkbox" value="${student.id}" data-name="${escapeHtml(student.name)}" data-section="${escapeHtml(student.section || student.section_code || '')}">
+                        <span>
+                            <strong>${escapeHtml(student.name)}</strong>
+                            <small>${escapeHtml(student.section || student.section_code || '')}</small>
+                        </span>
+                    </label>
+                `).join('');
+
+                // Wire up the select-all checkbox and keep it in sync with individual checkboxes
+                const allCheckbox = document.getElementById('assistSelectAllStudents');
+                const individualCheckboxes = () => Array.from(list.querySelectorAll('input[type="checkbox"]')).filter(i => i.id !== 'assistSelectAllStudents');
+                if (allCheckbox) {
+                    allCheckbox.addEventListener('change', function () {
+                        individualCheckboxes().forEach(i => { i.checked = allCheckbox.checked; });
+                    });
+                }
+                // Update the all-checkbox state when individuals change
+                individualCheckboxes().forEach(i => {
+                    i.addEventListener('change', function () {
+                        if (!allCheckbox) return;
+                        const allChecked = individualCheckboxes().every(inp => inp.checked);
+                        allCheckbox.checked = allChecked;
+                    });
+                });
+
+                startBtn.onclick = async function () {
+                    const selected = Array.from(list.querySelectorAll('input[type="checkbox"]:checked'))
+                        .filter(input => input.id !== 'assistSelectAllStudents')
+                        .map(input => ({
+                            id: input.value,
+                            name: input.getAttribute('data-name') || input.value,
+                            section: input.getAttribute('data-section') || '',
+                            status: 'Waiting'
+                        }));
+                    if (!selected.length) {
+                        showToast('Select at least one student', 'error');
+                        return;
+                    }
+                    const unique = [];
+                    const seen = new Set();
+                    selected.forEach(student => {
+                        if (!seen.has(String(student.id))) {
+                            seen.add(String(student.id));
+                            unique.push(student);
+                        }
+                    });
+                    assistQueueState.active = true;
+                    assistQueueState.courseId = activeCourse.id;
+                    assistQueueState.courseTitle = activeCourse.title || activeCourse.name || activeCourse.code || '';
+                    assistQueueState.materialId = materialId;
+                    assistQueueState.materialTitle = material.title || '';
+                    assistQueueState.students = unique;
+                    assistQueueState.currentIndex = -1;
+                    assistQueueState.pendingIndex = -1;
+                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                    renderAssistQueue();
+                    try {
+                        await prepareNextAssistStudent();
+                    } catch (err) {
+                        assistQueueState.active = false;
+                        renderAssistQueue();
+                        showToast(err.message || 'Unable to start assisted assessment', 'error');
+                    }
+                };
+            }
+
+            if (!window.assistQueueMessageBound) {
+                window.assistQueueMessageBound = true;
+                window.addEventListener('message', async function(event) {
+                    if (event.origin !== window.location.origin || !event.data) return;
+                    const isAssistComplete = event.data.type === 'pabasa-assist-complete';
+                    const isAssistExit = event.data.type === 'pabasa-assist-exit';
+                    if (!isAssistComplete && !isAssistExit) return;
+                    document.getElementById('assistAssessmentOverlay')?.classList.add('d-none');
+                    const frame = document.getElementById('assistAssessmentFrame');
+                    if (frame) frame.removeAttribute('src');
+                    if (assistQueueState.currentIndex >= 0 && assistQueueState.students[assistQueueState.currentIndex]) {
+                        assistQueueState.students[assistQueueState.currentIndex].status = isAssistComplete ? 'Completed' : 'Waiting';
+                    }
+                    assistQueueState.currentIndex = -1;
+                    assistQueueState.pendingIndex = -1;
+                    renderAssistQueue();
+                    if (isAssistExit) return;
+
+                    const hasNextStudent = assistQueueState.students.some(s => s.status === 'Waiting');
+                    if (hasNextStudent) {
+                        await prepareNextAssistStudent(true);
+                        return;
+                    }
+
+                    await showAssistLoading(
+                        'Returning to Course Assessment...',
+                        'All assisted assessments are complete. Returning to the course page.'
+                    );
+                    await pauseAssistTransition(650);
+                    await hideModalAndWait(document.getElementById('assistLoadingModal'));
+                    finishAssistQueueIfDone();
+                });
             }
 
             // Attach a single delegated handler for material and practice actions
@@ -6442,6 +7074,17 @@
                                 console.error('live assessment error', err);
                                 closeLiveModal();
                                 showToast(err.message || 'Could not start live assessment', 'error');
+                            }
+                            return;
+                        }
+
+                        if (action === 'assist') {
+                            if (!mat) return showToast('Material not found', 'error');
+                            try {
+                                await openAssistStudentPicker(activeCourse, mat);
+                            } catch (err) {
+                                console.error('assist assessment error', err);
+                                showToast(err.message || 'Could not start assisted assessment', 'error');
                             }
                             return;
                         }
