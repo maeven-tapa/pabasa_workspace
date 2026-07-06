@@ -5308,28 +5308,48 @@
 </div>
 
 <div class="modal fade" id="materialUploadSelectModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 18px;">
-            <div class="modal-header border-0 pb-2">
-                <h5 class="modal-title fw-bold">Choose pages to use</h5>
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content course-modal-content" style="border-radius: 20px;">
+            <div class="modal-header course-modal-header border-0">
+                <div>
+                    <h5 class="modal-title fw-bold">Choose pages to use</h5>
+                    <small class="text-muted">Select the pages you want to extract, or use every page.</small>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold small" for="uploadSelectionModeAll">How should this file be used?</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="uploadSelectionMode" id="uploadSelectionModeAll" value="all" checked>
-                        <label class="form-check-label" for="uploadSelectionModeAll">Use all pages</label>
+            <div class="modal-body course-modal-body">
+                <div class="row g-4 align-items-start">
+                    <div class="col-lg-4">
+                        <div class="rounded-4 border p-3 bg-light-subtle" style="border-color: rgba(31,111,139,0.14);">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div>
+                                    <div class="fw-semibold">Selection</div>
+                                    <div class="small text-muted" id="uploadSelectionSummary">All pages will be used.</div>
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" id="uploadAllPagesCheckbox" checked>
+                                    <label class="form-check-label small" for="uploadAllPagesCheckbox">Use all pages</label>
+                                </div>
+                            </div>
+                            <div class="small text-muted mb-3">Click any page preview to include or exclude it from the extraction.</div>
+                            <div class="rounded-3 border bg-white p-3" style="border-color: rgba(31,111,139,0.12);">
+                                <div class="fw-semibold small mb-2">How this works</div>
+                                <ul class="small text-muted mb-0 ps-3">
+                                    <li>Use all pages for a full extraction.</li>
+                                    <li>Turn off the toggle to pick specific pages.</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="uploadSelectionMode" id="uploadSelectionModeSelected" value="selected">
-                        <label class="form-check-label" for="uploadSelectionModeSelected">Use selected pages</label>
+                    <div class="col-lg-8">
+                        <div class="rounded-4 border p-3 bg-white" style="border-color: rgba(31,111,139,0.14);">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="fw-semibold">Page previews</div>
+                                <div class="small text-muted" id="uploadPageCountLabel">Loading preview…</div>
+                            </div>
+                            <div id="uploadPagePreviewList" style="display: flex; flex-wrap: wrap; gap: 0.9rem; max-height: min(64vh, 620px); overflow: auto; align-content: flex-start;"></div>
+                        </div>
                     </div>
-                </div>
-                <div id="uploadSelectionPagesGroup" class="d-none">
-                    <label class="form-label fw-semibold small" for="uploadSelectedPagesInput">Page numbers</label>
-                    <input type="text" class="form-control" id="uploadSelectedPagesInput" placeholder="e.g. 1,3-4">
-                    <div class="form-text small text-muted">Use commas or ranges such as 2-4.</div>
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
@@ -9844,10 +9864,10 @@
         const materialFileInput = document.getElementById('materialFileInput');
         const materialUploadStatus = document.getElementById('materialUploadStatus');
         const uploadSelectionModal = document.getElementById('materialUploadSelectModal');
-        const uploadSelectionModeAll = document.getElementById('uploadSelectionModeAll');
-        const uploadSelectionModeSelected = document.getElementById('uploadSelectionModeSelected');
-        const uploadSelectionPagesGroup = document.getElementById('uploadSelectionPagesGroup');
-        const uploadSelectedPagesInput = document.getElementById('uploadSelectedPagesInput');
+        const uploadAllPagesCheckbox = document.getElementById('uploadAllPagesCheckbox');
+        const uploadSelectionSummary = document.getElementById('uploadSelectionSummary');
+        const uploadPageCountLabel = document.getElementById('uploadPageCountLabel');
+        const uploadPagePreviewList = document.getElementById('uploadPagePreviewList');
         const confirmUploadSelectionBtn = document.getElementById('confirmUploadSelectionBtn');
         const materialModePersonalBtn = document.getElementById('materialModePersonal');
         const materialModeOtherBtn = document.getElementById('materialModeOther');
@@ -10564,34 +10584,152 @@
             });
         }
 
+        function updateUploadSelectionSummary() {
+            if (uploadSelectionSummary) {
+                const selectedCount = Array.isArray(window._pendingSelectedUploadPages) ? window._pendingSelectedUploadPages.length : 0;
+                if (uploadAllPagesCheckbox && uploadAllPagesCheckbox.checked) {
+                    uploadSelectionSummary.textContent = 'All pages will be used.';
+                } else if (selectedCount > 0) {
+                    uploadSelectionSummary.textContent = `${selectedCount} page${selectedCount === 1 ? '' : 's'} selected.`;
+                } else {
+                    uploadSelectionSummary.textContent = 'Select at least one page.';
+                }
+            }
+        }
+
+        function renderUploadPreviewCards() {
+            if (!uploadPagePreviewList) return;
+            const previews = Array.isArray(window._pendingUploadPagePreviews) ? window._pendingUploadPagePreviews : [];
+            if (previews.length === 0) {
+                uploadPagePreviewList.innerHTML = '<div class="text-muted small">Preview is not available for this file.</div>';
+                return;
+            }
+            const selectedPages = new Set(Array.isArray(window._pendingSelectedUploadPages) ? window._pendingSelectedUploadPages : []);
+            const cards = previews.map(preview => {
+                const isSelected = selectedPages.has(preview.pageNumber);
+                const previewMarkup = preview.imageUrl
+                    ? `<img src="${preview.imageUrl}" alt="Page ${preview.pageNumber}" class="img-fluid rounded-top w-100" style="height: 180px; object-fit: cover;">`
+                    : `<div class="d-flex flex-column justify-content-center align-items-center h-100 text-muted" style="min-height: 180px;">
+                        <i class="bi bi-file-earmark-richtext fs-1"></i>
+                        <div class="small mt-2">${preview.label || `Page ${preview.pageNumber}`}</div>
+                    </div>`;
+                return `
+                    <button type="button" class="btn btn-outline-secondary p-0 text-start border ${isSelected ? 'border-primary shadow-sm' : ''}" data-upload-page="${preview.pageNumber}" style="flex: 0 0 calc((100% - 1.8rem) / 3); min-width: 180px; max-width: calc((100% - 1.8rem) / 3); overflow: hidden; border-radius: 14px;">
+                        <div class="position-relative">
+                            <div class="bg-light rounded-top" style="min-height: 180px;">${previewMarkup}</div>
+                            <span class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75">Page ${preview.pageNumber}</span>
+                            ${isSelected ? '<span class="position-absolute bottom-0 end-0 m-2 badge bg-primary"><i class="bi bi-check-lg"></i></span>' : ''}
+                        </div>
+                        <div class="px-2 py-2 small text-muted">${isSelected ? 'Selected' : 'Tap to select'}</div>
+                    </button>`;
+            }).join('');
+            uploadPagePreviewList.innerHTML = cards;
+        }
+
+        async function ensurePdfPreviewLibrary() {
+            if (window.pdfjsLib && window.pdfjsLib.getDocument) return window.pdfjsLib;
+            await new Promise((resolve, reject) => {
+                const existingScript = document.querySelector('script[src*="pdf.min.js"]');
+                if (existingScript) {
+                    existingScript.addEventListener('load', resolve, { once: true });
+                    existingScript.addEventListener('error', reject, { once: true });
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js';
+                script.async = true;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+            if (!window.pdfjsLib || !window.pdfjsLib.getDocument) {
+                throw new Error('PDF preview library failed to load.');
+            }
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+            return window.pdfjsLib;
+        }
+
+        async function buildUploadPreviewCards(file) {
+            const extension = (file.name.split('.').pop() || '').toLowerCase();
+            if (extension === 'pdf') {
+                try {
+                    const pdfjsLib = await ensurePdfPreviewLibrary();
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    const previews = [];
+                    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                        const page = await pdf.getPage(pageNumber);
+                        const viewport = page.getViewport({ scale: 0.6 });
+                        const canvas = document.createElement('canvas');
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        const context = canvas.getContext('2d');
+                        await page.render({ canvasContext: context, viewport }).promise;
+                        previews.push({ pageNumber, imageUrl: canvas.toDataURL('image/png') });
+                    }
+                    window._pendingUploadPagePreviews = previews;
+                    window._pendingSelectedUploadPages = previews.map(item => item.pageNumber);
+                    return previews;
+                } catch (err) {
+                    console.warn('PDF preview generation failed', err);
+                }
+            }
+            if (extension === 'docx' || extension === 'doc') {
+                window._pendingUploadPagePreviews = [{ pageNumber: 1, label: 'DOCX preview', imageUrl: '' }];
+                window._pendingSelectedUploadPages = [1];
+                return window._pendingUploadPagePreviews;
+            }
+            window._pendingUploadPagePreviews = [{ pageNumber: 1, label: 'Preview unavailable', imageUrl: '' }];
+            window._pendingSelectedUploadPages = [1];
+            return window._pendingUploadPagePreviews;
+        }
+
         function showUploadSelectionModal(file, pageCount) {
             if (!uploadSelectionModal) {
                 return false;
             }
-            const pageCountLabel = document.getElementById('uploadPageCountLabel');
-            if (pageCountLabel) {
-                pageCountLabel.textContent = `This PDF has ${pageCount} pages.`;
+            if (uploadPageCountLabel) {
+                uploadPageCountLabel.textContent = `${pageCount || 1} page${pageCount === 1 ? '' : 's'} ready to preview`;
             }
-            if (uploadSelectedPagesInput) {
-                uploadSelectedPagesInput.value = '';
-            }
-            if (uploadSelectionModeAll) uploadSelectionModeAll.checked = true;
-            if (uploadSelectionModeSelected) uploadSelectionModeSelected.checked = false;
-            if (uploadSelectionPagesGroup) uploadSelectionPagesGroup.classList.add('d-none');
             window._pendingUploadFile = file;
             window._pendingUploadPageCount = pageCount;
+            window._pendingUploadPagePreviews = [];
+            window._pendingSelectedUploadPages = [];
+            if (uploadAllPagesCheckbox) uploadAllPagesCheckbox.checked = true;
+            if (uploadPagePreviewList) uploadPagePreviewList.innerHTML = '<div class="text-muted small">Preparing preview…</div>';
+            updateUploadSelectionSummary();
             const modal = new bootstrap.Modal(uploadSelectionModal);
             modal.show();
             return true;
         }
 
-        if (uploadSelectionModeAll && uploadSelectionModeSelected) {
-            [uploadSelectionModeAll, uploadSelectionModeSelected].forEach(function(radio) {
-                radio.addEventListener('change', function() {
-                    if (uploadSelectionPagesGroup) {
-                        uploadSelectionPagesGroup.classList.toggle('d-none', uploadSelectionModeAll.checked);
-                    }
-                });
+        if (uploadAllPagesCheckbox) {
+            uploadAllPagesCheckbox.addEventListener('change', function() {
+                const checked = !!uploadAllPagesCheckbox.checked;
+                window._pendingSelectedUploadPages = checked
+                    ? (Array.isArray(window._pendingUploadPagePreviews) ? window._pendingUploadPagePreviews.map(item => item.pageNumber) : [])
+                    : [];
+                renderUploadPreviewCards();
+                updateUploadSelectionSummary();
+            });
+        }
+
+        if (uploadPagePreviewList) {
+            uploadPagePreviewList.addEventListener('click', function(event) {
+                const button = event.target.closest('[data-upload-page]');
+                if (!button) return;
+                const pageNumber = Number(button.getAttribute('data-upload-page'));
+                if (!Number.isFinite(pageNumber)) return;
+                if (uploadAllPagesCheckbox) {
+                    uploadAllPagesCheckbox.checked = false;
+                }
+                const selected = Array.isArray(window._pendingSelectedUploadPages) ? window._pendingSelectedUploadPages : [];
+                const nextSelected = selected.includes(pageNumber)
+                    ? selected.filter(value => value !== pageNumber)
+                    : [...selected, pageNumber].sort((a, b) => a - b);
+                window._pendingSelectedUploadPages = nextSelected;
+                renderUploadPreviewCards();
+                updateUploadSelectionSummary();
             });
         }
 
@@ -10599,8 +10737,8 @@
             confirmUploadSelectionBtn.addEventListener('click', async function() {
                 const file = window._pendingUploadFile;
                 if (!file) return;
-                const selectionMode = uploadSelectionModeSelected && uploadSelectionModeSelected.checked ? 'selected' : 'all';
-                const selectedPages = selectionMode === 'selected' ? (uploadSelectedPagesInput ? uploadSelectedPagesInput.value.trim() : '') : '';
+                const selectionMode = (uploadAllPagesCheckbox && uploadAllPagesCheckbox.checked) || !Array.isArray(window._pendingSelectedUploadPages) || window._pendingSelectedUploadPages.length === 0 ? 'all' : 'selected';
+                const selectedPages = selectionMode === 'selected' ? (window._pendingSelectedUploadPages || []).join(',') : '';
                 const modalInstance = bootstrap.Modal.getInstance(uploadSelectionModal);
                 if (modalInstance) modalInstance.hide();
                 uploadMaterialBtn.disabled = true;
@@ -10617,6 +10755,8 @@
                     materialFileInput.value = '';
                     delete window._pendingUploadFile;
                     delete window._pendingUploadPageCount;
+                    delete window._pendingUploadPagePreviews;
+                    delete window._pendingSelectedUploadPages;
                 }
             });
         }
@@ -10629,27 +10769,15 @@
                 const file = materialFileInput.files && materialFileInput.files[0];
                 if (!file) return;
                 const extension = (file.name.split('.').pop() || '').toLowerCase();
-                const isPdf = extension === 'pdf';
-                if (isPdf) {
-                    const formData = new FormData();
-                    formData.append('file', file);
+                const isPreviewable = extension === 'pdf' || extension === 'docx' || extension === 'doc';
+                if (isPreviewable) {
                     try {
-                        const response = await fetch('/dashboard/teacher/extract-material/', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: { 'X-CSRFToken': await ensureCsrfToken() },
-                            body: formData
-                        });
-                        if (response.ok) {
-                            const data = await response.json().catch(() => ({}));
-                            if (data && data.page_count && Number(data.page_count) > 1) {
-                                showUploadSelectionModal(file, Number(data.page_count));
-                                materialFileInput.value = '';
-                                return;
-                            }
-                        }
+                        const pageCount = extension === 'pdf' ? (await buildUploadPreviewCards(file)).length : 1;
+                        showUploadSelectionModal(file, pageCount);
+                        materialFileInput.value = '';
+                        return;
                     } catch (err) {
-                        console.warn('Could not inspect uploaded PDF', err);
+                        console.warn('Could not prepare upload preview', err);
                     }
                 }
                 uploadMaterialBtn.disabled = true;
