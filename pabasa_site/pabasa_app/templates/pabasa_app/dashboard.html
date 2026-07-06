@@ -88,6 +88,40 @@
     .student-dashboard {
         display: grid;
         gap: 1.25rem;
+        position: relative;
+    }
+
+    .student-dashboard::before,
+    .student-dashboard::after {
+        animation: dashboardFloat 12s ease-in-out infinite;
+        border-radius: 999px;
+        content: "";
+        filter: blur(8px);
+        pointer-events: none;
+        position: absolute;
+        z-index: 0;
+    }
+
+    .student-dashboard::before {
+        background: rgba(31, 182, 255, 0.14);
+        height: 180px;
+        right: -60px;
+        top: -40px;
+        width: 180px;
+    }
+
+    .student-dashboard::after {
+        animation-delay: -4s;
+        background: rgba(251, 191, 36, 0.14);
+        bottom: -30px;
+        height: 140px;
+        left: -20px;
+        width: 140px;
+    }
+
+    @keyframes dashboardFloat {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-10px) scale(1.03); }
     }
 
     .student-studio {
@@ -114,11 +148,38 @@
     .student-studio-copy {
         align-content: center;
         display: grid;
-        gap: 0.95rem;
+        gap: 0.85rem;
         min-width: 0;
         padding: clamp(0.25rem, 1vw, 0.75rem) 0;
         position: relative;
         z-index: 1;
+    }
+
+    .greeting-row {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+    }
+
+    .mood-badge {
+        align-items: center;
+        background: rgba(31, 182, 255, 0.12);
+        border: 1px solid rgba(31, 182, 255, 0.16);
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 1rem;
+        height: 38px;
+        justify-content: center;
+        width: 38px;
+    }
+
+    .greeting-kicker {
+        color: #0369a1;
+        font-size: 0.73rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
     }
 
     .student-studio-copy h2 {
@@ -134,10 +195,41 @@
 
     .student-studio-copy p {
         color: #334155;
-        font-size: 0.98rem;
-        line-height: 1.55;
+        font-size: 0.95rem;
+        line-height: 1.5;
         margin: 0;
         max-width: 540px;
+    }
+
+    .spark-card {
+        background: linear-gradient(135deg, rgba(31, 182, 255, 0.16), rgba(251, 191, 36, 0.16));
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 16px;
+        color: #0f172a;
+        display: inline-flex;
+        font-size: 0.92rem;
+        font-weight: 800;
+        margin-top: 0.1rem;
+        padding: 0.7rem 0.85rem;
+        width: fit-content;
+        animation: sparkPulse 2.5s ease-in-out infinite;
+    }
+
+    @keyframes sparkPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(31, 182, 255, 0.08); }
+        50% { box-shadow: 0 0 0 6px rgba(31, 182, 255, 0.04); }
+    }
+
+    .reward-pill {
+        background: rgba(251, 191, 36, 0.16);
+        border: 1px solid rgba(251, 191, 36, 0.22);
+        border-radius: 999px;
+        color: #92400e;
+        display: inline-flex;
+        font-size: 0.8rem;
+        font-weight: 800;
+        padding: 0.4rem 0.7rem;
+        width: fit-content;
     }
 
     .studio-kicker {
@@ -189,8 +281,8 @@
     }
 
     .join-desk-head h3 {
-        font-size: 1.15rem;
-        font-weight: 700;
+        font-size: 1.05rem;
+        font-weight: 800;
         margin: 0;
         letter-spacing: -0.01em;
     }
@@ -296,23 +388,37 @@
     }
 
     .class-card {
-        background: linear-gradient(165deg, #ffffff 0%, #f4fbff 100%);
-        border: 1px solid rgba(31, 182, 255, 0.12);
-        border-radius: 28px;
-        box-shadow: 0 12px 34px rgba(15, 182, 255, 0.06);
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 22px;
+        box-shadow: 0 10px 24px rgba(15, 182, 255, 0.06);
         cursor: pointer;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        padding: 1.75rem;
+        padding: 1.2rem;
         word-break: break-word;
         position: relative;
         backface-visibility: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
     .class-card:hover {
-        box-shadow: 0 25px 50px rgba(31, 182, 255, 0.15);
-        border-color: rgba(31, 182, 255, 0.35);
+        box-shadow: 0 16px 32px rgba(31, 182, 255, 0.12);
+        border-color: rgba(31, 111, 139, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .class-card.is-ready {
+        animation: gentleGlow 2.8s ease-in-out infinite;
+        border-color: rgba(31, 111, 139, 0.2);
+    }
+
+    @keyframes gentleGlow {
+        0%, 100% { box-shadow: 0 10px 24px rgba(15, 182, 255, 0.06); }
+        50% { box-shadow: 0 14px 30px rgba(31, 111, 139, 0.12); }
     }
 
     .class-card::before {
@@ -345,13 +451,41 @@
         opacity: 0.07;
     }
 
-    .class-card h3 {
-        font-size: 1.35rem;
+    .class-card-top {
+        align-items: center;
+        display: flex;
+        gap: 0.5rem;
+        justify-content: space-between;
+        margin-bottom: 0.6rem;
+    }
+
+    .subject-pill,
+    .activity-pill {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 0.72rem;
         font-weight: 800;
-        margin-top: 0.5rem;
-        margin-bottom: 0.75rem;
+        gap: 0.3rem;
+        padding: 0.35rem 0.6rem;
+    }
+
+    .subject-pill {
+        background: rgba(31, 111, 139, 0.08);
+        color: var(--dash-primary-deep);
+    }
+
+    .activity-pill {
+        background: rgba(251, 191, 36, 0.16);
+        color: #92400e;
+    }
+
+    .class-card h3 {
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin: 0 0 0.5rem;
         color: #0F172A;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.01em;
     }
 
     .class-card-meta {
@@ -580,17 +714,21 @@
 <section class="student-dashboard" data-student-dashboard>
     <div class="student-studio">
         <div class="student-studio-copy">
-            <span class="studio-kicker">Your classroom canvas</span>
-            <h2>Your reading space starts clean.</h2>
-            <p data-class-empty-note>Once you join a class, this page becomes your home for teacher notes, reading work, and assigned assessments. Until then, the dashboard stays intentionally quiet.</p>
-            <p data-class-joined-note class="mb-0" style="display: none;">You are now connected to your class. Practice Mode and Reading Assessment are available from the sidebar.</p>
+            <div class="greeting-row">
+                <span class="mood-badge" data-mood-badge>🙂</span>
+                <span class="greeting-kicker">Friendly learning start</span>
+            </div>
+            <h2 data-dashboard-greeting>Good morning, friend 🌞</h2>
+            <p data-class-empty-note>Ready for a fun learning moment? Join a class and your dashboard will feel lively here.</p>
+            <p data-class-joined-note class="mb-0" style="display: none;">You’re all set. Pick a class and keep going.</p>
+            <div class="spark-card" data-spark-card>Today’s Spark ✨ Read one short story</div>
+            <div class="reward-pill" data-reward-pill style="display: none;"></div>
         </div>
 
-        <article class="join-desk">
+        <article class="join-desk" data-join-desk>
             <div class="join-desk-head">
-                <span class="dash-pill"><i class="bi bi-door-open"></i> Join your class</span>
-                <h3>Enter the code from your teacher.</h3>
-                <p class="small text-secondary mb-0">Class cards and reading assignments appear here after the code is accepted.</p>
+                <span class="dash-pill"><i class="bi bi-door-open"></i> Add a class</span>
+                <h3>+ Join a new class 🚀</h3>
             </div>
 
             <form action="#" method="post" class="class-code-form" data-class-code-form>
@@ -602,12 +740,12 @@
                         <button class="btn" type="submit"><i class="bi bi-plus-lg me-1"></i>Join</button>
                     </div>
                 </div>
-                <p id="classCodeHelp" class="small text-secondary mb-0">Your teacher will provide the class code to join.</p>
+                <p id="classCodeHelp" class="class-code-help small text-secondary mb-0">Your teacher will provide the class code to join.</p>
             </form>
 
             <div class="desk-note">
                 <i class="bi bi-info-circle"></i>
-                <p class="small mb-0">No class yet. That is expected for a new student account.</p>
+                <p class="small mb-0">No class yet. That is okay—let’s add one when you’re ready.</p>
             </div>
         </article>
     </div>
@@ -693,6 +831,10 @@
         const classList = document.querySelector("[data-class-list]");
         const emptyNote = document.querySelector("[data-class-empty-note]");
         const joinedNote = document.querySelector("[data-class-joined-note]");
+        const greetingEl = document.querySelector("[data-dashboard-greeting]");
+        const moodBadge = document.querySelector("[data-mood-badge]");
+        const sparkCard = document.querySelector("[data-spark-card]");
+        const rewardPill = document.querySelector("[data-reward-pill]");
         const unenrollModalElement = document.getElementById("unenrollConfirmModal");
         const unenrollClassCode = document.querySelector("[data-unenroll-class-code]");
         const confirmUnenrollButton = document.querySelector("[data-confirm-unenroll]");
@@ -706,6 +848,39 @@
         const loadingModalElement = document.getElementById('loadingModal');
         let pendingUnenrollCode = "";
 
+        const setGreeting = () => {
+            const hour = new Date().getHours();
+            const timeName = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+            const email = (window.PABASA_USER_EMAIL || '').split('@')[0] || '';
+            const baseName = email
+                .replace(/[._-]+/g, ' ')
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean)
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            const friendlyName = baseName || 'friend';
+            const titlePool = ['Super Reader', 'Math Star', 'Bright Spark', 'Learning Hero'];
+            const title = titlePool[(hour + friendlyName.length) % titlePool.length];
+            const greetingPrefix = timeName === 'morning' ? 'Good morning' : timeName === 'afternoon' ? 'Good afternoon' : 'Good evening';
+            if (greetingEl) {
+                greetingEl.textContent = `${greetingPrefix}, ${friendlyName} 🌞`;
+            }
+            if (sparkCard) {
+                sparkCard.textContent = `Today’s Spark ✨ ${title}`;
+            }
+        };
+
+        const showReward = (message) => {
+            if (!rewardPill) return;
+            rewardPill.textContent = message;
+            rewardPill.style.display = 'inline-flex';
+            window.clearTimeout(showReward.timeout);
+            showReward.timeout = window.setTimeout(() => {
+                rewardPill.style.display = 'none';
+            }, 2600);
+        };
+
         if (!dashboard || !form || !classCodeInput || !classList) {
             return;
         }
@@ -713,6 +888,11 @@
         // Ensure toast helpers exist to avoid ReferenceErrors in pages that don't include them
         window.showSuccessToast = window.showSuccessToast || function(msg){ if (typeof showToast === 'function') return showToast(msg, 'success'); try{ alert(msg); }catch(e){} };
         window.showErrorToast = window.showErrorToast || function(msg){ if (typeof showToast === 'function') return showToast(msg, 'error'); try{ alert(msg); }catch(e){} };
+
+        setGreeting();
+        if (classCodeInput) {
+            window.setTimeout(() => classCodeInput.focus(), 60);
+        }
 
         const getSavedCodes = () => {
             try {
@@ -890,7 +1070,7 @@
             }
 
             classList.innerHTML = validClasses.map((classData) => `
-                <article class="class-card" data-class-card data-class-card-code="${escapeHtml(classData.code)}">
+                <article class="class-card${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? ' is-ready' : ''}" data-class-card data-class-card-code="${escapeHtml(classData.code)}">
                     <div class="class-card-bg-icon">
                         <i class="bi ${
                             (classData.subject || '').toLowerCase().includes('english') ? 'bi-alphabet-uppercase' : 
@@ -898,11 +1078,14 @@
                             'bi-book'
                         }"></i>
                     </div>
+                    <div class="class-card-top">
+                        <span class="subject-pill"><i class="bi bi-book"></i> ${escapeHtml(classData.subject || classData.header || "Reading")}</span>
+                        <span class="activity-pill">${(classData.progress || 0) < 100 && (classData.practiceCount || classData.assessmentCount) ? 'Continue learning' : 'Ready to go'}</span>
+                    </div>
                     <h3>${escapeHtml(classData.name || "Reading Class")}</h3>
                     <div class="class-card-meta">
                         <span><i class="bi bi-person-badge me-2 text-primary"></i> <strong>Teacher Class</strong></span>
-                        <span><i class="bi bi-journal-bookmark me-2 text-warning"></i> ${escapeHtml(classData.subject || classData.header || "Reading")}</span>
-                        <span><i class="bi bi-stars me-2 text-info"></i> Practice and assessment unlocked</span>
+                        <span><i class="bi bi-stars me-2 text-info"></i> ${classData.practiceCount || classData.assessmentCount ? 'Activity waiting for you' : 'Fresh and ready'}</span>
                     </div>
                     <span class="class-card-code">${escapeHtml(classData.code)}</span>
                     <div class="class-detail" data-class-detail>
@@ -983,6 +1166,12 @@
             dashboard.classList.toggle("has-class", isJoined);
             emptyNote.style.display = isJoined ? "none" : "";
             joinedNote.style.display = isJoined ? "" : "none";
+            if (moodBadge) {
+                moodBadge.textContent = isJoined ? '⭐' : '🙂';
+            }
+            if (sparkCard) {
+                sparkCard.textContent = isJoined ? 'Today’s Spark ✨ Open your next class' : 'Today’s Spark ✨ Read one short story';
+            }
 
             if (isJoined) {
                 // Ensure that the codes passed to renderClassCards are indeed the valid ones
@@ -1139,6 +1328,7 @@
             showSuccessToast(
             `Successfully joined ${teacherClass.name}!`
         );
+            showReward('You earned a sticker! 🎉');
         });
 
         classList.addEventListener("click", (event) => {

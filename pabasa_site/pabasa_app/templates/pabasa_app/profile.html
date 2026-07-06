@@ -63,15 +63,12 @@
         position: relative;
         overflow: hidden;
         width: 100%;
-        background:
-            linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(232, 246, 252, 0.78));
-        border: 1px solid rgba(255, 255, 255, 0.86);
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.72);
         border-radius: 24px;
-        backdrop-filter: blur(12px) saturate(160%);
-        -webkit-backdrop-filter: blur(12px) saturate(160%);
-        box-shadow:
-            0 18px 36px rgba(16, 70, 110, 0.12),
-            inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        box-shadow: 0 18px 36px rgba(16, 70, 110, 0.12);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -323,11 +320,11 @@
     }
 
     .profile-section-card {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(247, 250, 252, 0.86));
-        border: 1px solid rgba(21, 94, 117, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.72);
         border-radius: 24px;
-        backdrop-filter: blur(12px) saturate(160%);
-        -webkit-backdrop-filter: blur(12px) saturate(160%);
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
         box-shadow: 0 14px 30px rgba(21, 94, 117, 0.06);
         padding: 1.4rem;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -337,7 +334,6 @@
         height: 100%;
         overflow: visible; /* Changed from hidden to avoid cropping child element focus states */
         min-width: 0; /* Important for grid item content overflow */
-        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.05);
     }
 
     .profile-section-card::before {
@@ -421,15 +417,17 @@
     }
 
     .profile-stat-box {
-        background: #ffffff;
-        border: 1px solid rgba(31, 111, 139, 0.1);
-        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 14px;
         padding: 1rem 0.5rem;
         text-align: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
-        box-shadow: 0 2px 6px rgba(31, 111, 139, 0.03);
+        box-shadow: 0 8px 18px rgba(31, 111, 139, 0.06);
+        backdrop-filter: blur(16px) saturate(140%);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
     }
 
     /* Prevent grid items from overflowing their cells */

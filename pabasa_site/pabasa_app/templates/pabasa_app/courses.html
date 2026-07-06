@@ -3,6 +3,26 @@
 
 {% block extra_head %}
 <style>
+    :root {
+        --dash-primary: #1f6f8b;
+        --dash-primary-soft: rgba(31,111,139,0.08);
+        --dash-primary-deep: #0b4d63;
+        --dash-border: rgba(27,26,23,0.08);
+        --dash-shadow: 0 16px 36px rgba(16,40,64,0.08);
+        --dash-ink: #16212b;
+        --dash-ink-soft: #58676f;
+        --dash-muted: #6b7280;
+        --surface-glass: rgba(255,255,255,0.74);
+        --surface-glass-strong: rgba(255,255,255,0.9);
+        --surface-glass-border: rgba(255,255,255,0.72);
+        --surface-solid: #ffffff;
+        --surface-solid-strong: #fcfeff;
+        --radius-xl: 24px;
+        --radius-lg: 18px;
+        --radius-md: 14px;
+        --radius-sm: 12px;
+    }
+
     .classes-home {
         display: grid;
         gap: 1rem;
@@ -32,11 +52,11 @@
     }
 
     .class-card-full {
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        border-radius: 20px;
+        background: var(--surface-glass) !important;
+        backdrop-filter: blur(16px) saturate(140%);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        border: 1px solid rgba(255,255,255,0.72) !important;
+        border-radius: var(--radius-xl);
         box-shadow: var(--dash-shadow);
         cursor: pointer;
         display: grid;
@@ -106,10 +126,11 @@
     }
 
     .class-stat {
-        background: rgba(255, 255, 255, 0.74);
+        background: var(--surface-solid);
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 12px;
+        border-radius: var(--radius-sm);
         padding: 0.7rem;
+        box-shadow: 0 8px 20px rgba(15,78,100,0.04);
     }
 
     .class-stat strong {
@@ -143,10 +164,12 @@
     }
 
     .course-dashboard-card {
-        background: #ffffff;
-        border: 1px solid rgba(31, 111, 139, 0.16);
-        border-radius: 18px;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
+        background: var(--surface-glass) !important;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid var(--surface-glass-border) !important;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--dash-shadow);
         cursor: default;
         display: flex;
         flex-direction: column;
@@ -154,6 +177,7 @@
         height: 100%;
         min-height: 320px;
         padding: 1.25rem;
+        position: relative;
         transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     }
 
@@ -293,13 +317,28 @@
 
     .course-card-action {
         align-items: center;
-        border-radius: 14px;
+        border-radius: var(--radius-md);
         display: inline-flex;
         font-weight: 800;
         justify-content: center;
         min-height: 48px;
         transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
         width: 100%;
+    }
+
+    .course-card-action.btn-primary {
+        background: linear-gradient(135deg, var(--dash-primary), #2d8fb2);
+        border: 1px solid transparent;
+        box-shadow: 0 10px 24px rgba(15,78,100,0.14);
+        color: #fff;
+    }
+
+    .course-card-action.btn-outline-secondary,
+    .course-card-action.btn-secondary {
+        background: var(--surface-solid);
+        border: 1px solid rgba(31,111,139,0.12);
+        color: var(--dash-primary-deep);
+        box-shadow: 0 8px 20px rgba(15,78,100,0.06);
     }
 
     .course-card-action:hover {
@@ -418,9 +457,12 @@
         grid-column: 1 / -1;
         text-align: center;
         padding: 3rem;
-        background: #fffdf7;
-        border: 2px dashed rgba(27, 26, 23, 0.12);
-        border-radius: 20px;
+        background: var(--surface-glass) !important;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid var(--surface-glass-border) !important;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--dash-shadow);
     }
 
     .empty-state i {
@@ -449,13 +491,11 @@
     }
 
     .course-modal-content {
-        background: rgba(255, 255, 255, 0.75) !important;
+        background: var(--surface-glass) !important;
         backdrop-filter: blur(20px) saturate(160%);
         -webkit-backdrop-filter: blur(20px) saturate(160%);
-        border: 1px solid rgba(255, 255, 255, 0.4) !important;
-        border-radius: 20px;
-        border-top-left-radius: 20px;
-        border-top-right-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.72) !important;
+        border-radius: var(--radius-xl);
         box-shadow: 0 24px 70px rgba(27, 26, 23, 0.16);
         display: flex;
         flex-direction: column;
@@ -1012,16 +1052,17 @@
 
     .workspace-hero {
         align-items: center;
-        background: rgba(255, 255, 255, 0.5) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.4) !important;
-        border-radius: 8px;
+        background: var(--surface-glass) !important;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid var(--surface-glass-border) !important;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--dash-shadow);
         display: flex;
         justify-content: space-between;
         gap: 1rem;
         margin-bottom: 0.6rem;
-        padding: 0.8rem;
+        padding: 0.95rem 1rem;
     }
 
     .workspace-hero.is-compact {
@@ -1038,10 +1079,12 @@
 
     .overview-stat-card {
         align-items: flex-start;
-        background: linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(248,251,255,0.96) 100%);
-        border: 1px solid rgba(31, 111, 139, 0.12);
-        border-radius: 16px;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+        background: var(--surface-glass-strong) !important;
+        backdrop-filter: blur(16px) saturate(140%);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        border: 1px solid var(--surface-glass-border) !important;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
         display: flex;
         gap: 0.8rem;
         min-height: 112px;
