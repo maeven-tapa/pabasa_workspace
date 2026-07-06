@@ -18,6 +18,7 @@ from urllib.parse import quote
 import logging
 import json
 import os
+import shutil
 from pathlib import Path
 from html import escape
 import random
@@ -6572,6 +6573,33 @@ def _extract_text_from_pdf(upload, selected_pages=None):
     }
 
 
+def _resolve_tesseract_executable(pytesseract_module):
+    explicit = os.environ.get('TESSERACT_CMD') or os.environ.get('TESSERACT_PATH')
+    if explicit:
+        candidate = os.path.expandvars(os.path.expanduser(explicit))
+        if os.path.isfile(candidate):
+            return candidate
+
+    try:
+        resolved = shutil.which('tesseract')
+        if resolved:
+            return resolved
+    except Exception:
+        pass
+
+    common_paths = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+        os.path.expandvars(r'%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe'),
+        os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR\tesseract.exe'),
+    ]
+    for path in common_paths:
+        if path and os.path.isfile(path):
+            return path
+
+    return None
+
+
 def _extract_text_from_image(upload):
     try:
         from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
@@ -6582,6 +6610,13 @@ def _extract_text_from_image(upload):
         import pytesseract
     except ImportError as exc:
         raise RuntimeError('Image OCR requires pytesseract to be installed.') from exc
+
+    tesseract_path = _resolve_tesseract_executable(pytesseract)
+    if tesseract_path:
+        pytesseract.pytesseract.tesseract_cmd = tesseract_path
+    else:
+        logger.warning('Tesseract executable not found; image OCR will return empty text.')
+        return ''
 
     upload.seek(0)
     try:
