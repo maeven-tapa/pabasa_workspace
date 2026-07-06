@@ -8,64 +8,119 @@
         --dash-primary: #1f6f8b;
         --dash-primary-soft: rgba(31,111,139,0.08);
         --dash-primary-deep: #0b4d63;
-        --dash-border: rgba(27,26,23,0.06);
-        --dash-shadow: 0 8px 24px rgba(16,40,64,0.06);
+        --dash-border: rgba(27,26,23,0.08);
+        --dash-shadow: 0 16px 36px rgba(16,40,64,0.08);
         --dash-ink-soft: #58676f;
+        --surface-solid: #ffffff;
+        --surface-solid-strong: #fcfeff;
+        --surface-glass: rgba(255,255,255,0.72);
+        --surface-glass-border: rgba(255,255,255,0.72);
+        --radius-xl: 24px;
+        --radius-lg: 18px;
+        --radius-md: 14px;
+        --radius-sm: 12px;
     }
 
-    /* Reset margin for main content area when sidebar is hidden on mobile/tablet */
     @media (max-width: 991.98px) {
         .dashboard-main {
             margin-left: 0 !important;
         }
     }
-    
+
     body {
         background: url("{% static 'pabasa_app/images/teacher_bg.jpg' %}") no-repeat center center fixed !important;
         background-size: cover !important;
     }
 
-    /* Polished pill and button styles */
+    .dashboard-topbar {
+        background: var(--surface-glass) !important;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid var(--surface-glass-border) !important;
+        border-radius: var(--radius-xl);
+        box-shadow: 0 16px 40px rgba(15,78,100,0.1);
+    }
+
+    .dashboard-notif-btn {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0.35rem !important;
+    }
+
     .dash-pill {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
         padding: 0.35rem 0.75rem;
         border-radius: 999px;
-        background: linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.4));
-        border: 1px solid rgba(31,111,139,0.06);
+        background: linear-gradient(90deg, rgba(255,255,255,0.75), rgba(255,255,255,0.5));
+        border: 1px solid rgba(31,111,139,0.08);
         font-weight: 800;
         color: var(--dash-primary-deep);
         box-shadow: none;
     }
 
     .teacher-quick-links a.primary {
-        box-shadow: 0 6px 20px rgba(15,78,100,0.12);
+        box-shadow: 0 8px 18px rgba(15,78,100,0.12);
+    }
+
+    .btn {
+        border-radius: var(--radius-md);
+        transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
     }
 
     .btn.btn-primary {
-        border-radius: 14px;
-        padding: 0.6rem 1rem;
-        box-shadow: 0 8px 20px rgba(15,78,100,0.08);
-        transition: box-shadow 0.14s ease;
+        background: linear-gradient(135deg, var(--dash-primary), #2d8fb2);
+        border: 1px solid transparent;
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(15,78,100,0.14);
+        padding: 0.62rem 1rem;
     }
-    .btn.btn-primary:hover { box-shadow: 0 12px 30px rgba(15,78,100,0.12); }
 
-    /* Improve teacher-stat-card visuals */
-    .teacher-stat-card { 
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 18px; 
+    .btn.btn-primary:hover,
+    .btn.btn-primary:focus,
+    .btn.btn-primary:active {
+        background: linear-gradient(135deg, var(--dash-primary-deep), var(--dash-primary));
+        color: #fff;
+        box-shadow: 0 12px 30px rgba(15,78,100,0.18);
     }
+
+    .btn.btn-secondary {
+        background: var(--surface-solid);
+        border: 1px solid rgba(31,111,139,0.12);
+        color: var(--dash-primary-deep);
+        box-shadow: 0 8px 20px rgba(15,78,100,0.06);
+    }
+
+    .btn.btn-secondary:hover,
+    .btn.btn-secondary:focus,
+    .btn.btn-secondary:active {
+        background: var(--surface-solid-strong);
+        border-color: rgba(31,111,139,0.18);
+        color: var(--dash-primary-deep);
+        box-shadow: 0 12px 28px rgba(15,78,100,0.1);
+    }
+
+    .btn.btn-ghost {
+        background: transparent;
+        border: 1px solid rgba(31,111,139,0.16);
+        color: var(--dash-primary-deep);
+        box-shadow: none;
+    }
+
+    .btn.btn-ghost:hover,
+    .btn.btn-ghost:focus,
+    .btn.btn-ghost:active {
+        background: rgba(31,111,139,0.06);
+        color: var(--dash-primary-deep);
+    }
+
     .teacher-stat-card small { color: var(--dash-ink-soft); }
-
-    /* Slight elevation for active class workspace */
-    .class-banner { box-shadow: 0 16px 36px rgba(16,40,64,0.06); }
-
-    /* Improve scrollbar visibility for lists */
-    .class-list::-webkit-scrollbar, .student-row::-webkit-scrollbar { height: 8px; width: 8px; }
-    .class-list::-webkit-scrollbar-thumb, .student-row::-webkit-scrollbar-thumb { background: rgba(16,40,64,0.06); border-radius: 6px; }
 
     .teacher-dashboard {
         display: grid;
@@ -73,12 +128,11 @@
     }
 
     .teacher-hero {
-        background: rgba(255, 255, 255, 0.6) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        border: 1px solid var(--dash-border);
-        border-radius: 26px;
+        background: var(--surface-glass) !important;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid var(--surface-glass-border) !important;
+        border-radius: var(--radius-xl);
         box-shadow: var(--dash-shadow);
         display: grid;
         gap: 1.5rem;
@@ -87,8 +141,6 @@
         padding: clamp(1.1rem, 3vw, 2rem);
         position: relative;
     }
-
-
 
     .teacher-hero-copy,
     .create-class-card {
@@ -145,9 +197,9 @@
 
     .teacher-quick-links a {
         align-items: center;
-        background: #fff;
-        border: 1px solid rgba(31, 111, 139, 0.16);
-        border-radius: 16px;
+        background: var(--surface-solid);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        border-radius: var(--radius-md);
         color: var(--dash-primary-deep);
         display: inline-flex;
         font-weight: 700;
@@ -155,6 +207,7 @@
         min-height: 46px;
         padding: 0.55rem 0.9rem;
         text-decoration: none;
+        box-shadow: 0 8px 18px rgba(15,78,100,0.04);
     }
 
     .teacher-quick-links a.primary {
@@ -163,12 +216,10 @@
     }
 
     .create-class-card {
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 24px;
-        box-shadow: 0 24px 48px rgba(27, 26, 23, 0.12);
+        background: var(--surface-solid) !important;
+        border: 1px solid var(--dash-border);
+        border-radius: var(--radius-xl);
+        box-shadow: 0 18px 40px rgba(27, 26, 23, 0.08);
         display: grid;
         gap: 1rem;
         padding: clamp(1rem, 2vw, 1.35rem);
@@ -204,16 +255,17 @@
     }
 
     .teacher-field .form-control {
+        background: var(--surface-solid);
         border-color: rgba(27, 26, 23, 0.12);
-        border-radius: 14px;
+        border-radius: var(--radius-md);
         font-weight: 600;
         min-height: 48px;
     }
 
     .generated-code {
         align-items: center;
-        background: #1b1a17;
-        border-radius: 18px;
+        background: linear-gradient(135deg, #0f4c5c, #123b4b);
+        border-radius: var(--radius-lg);
         color: #fffdf7;
         display: grid;
         gap: 0.45rem;
@@ -243,12 +295,10 @@
     }
 
     .teacher-stat-card {
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        background: var(--surface-solid) !important;
         border: 1px solid var(--dash-border);
-        border-radius: 20px;
-        box-shadow: var(--dash-shadow);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 12px 28px rgba(16,40,64,0.05);
         display: grid;
         gap: 0.35rem;
         min-height: 126px;
@@ -293,16 +343,12 @@
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
     }
 
-    @media (max-width: 1100px) {
-        .teacher-board { grid-template-columns: 1fr; }
-    }
-
     .teacher-panel {
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--dash-border);
-        border-radius: 22px;
+        background: var(--surface-glass) !important;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-xl);
         box-shadow: var(--dash-shadow);
         display: grid;
         gap: 1rem;
@@ -330,18 +376,20 @@
         padding: 5px 8px 5px 4px;
     }
 
+    .class-list::-webkit-scrollbar, .student-row::-webkit-scrollbar { height: 8px; width: 8px; }
+    .class-list::-webkit-scrollbar-thumb, .student-row::-webkit-scrollbar-thumb { background: rgba(16,40,64,0.08); border-radius: 6px; }
+
     .class-card {
-        background: rgba(255, 253, 247, 0.6) !important;
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+        background: var(--surface-solid) !important;
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 18px;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 10px 24px rgba(15,78,100,0.04);
         cursor: pointer;
         display: grid;
         gap: 0.55rem;
         padding: 0.85rem;
         text-align: left;
-        transition: border-color 0.2s ease;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
         width: 100%;
         position: relative;
         min-width: 0;
@@ -350,6 +398,7 @@
     .class-card:hover,
     .class-card.is-active {
         border-color: rgba(31, 111, 139, 0.32);
+        box-shadow: 0 14px 28px rgba(15,78,100,0.08);
     }
 
     .class-card-head strong {
@@ -379,7 +428,7 @@
         align-items: center;
         background: rgba(199, 39, 59, 0.08);
         border: 1px solid rgba(199, 39, 59, 0.2);
-        border-radius: 8px;
+        border-radius: var(--radius-sm);
         color: #c7273b;
         cursor: pointer;
         display: none;
@@ -418,11 +467,12 @@
     }
 
     .class-banner {
-        background: rgba(255, 255, 255, 0.6) !important;
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border: 1px solid var(--dash-border);
-        border-radius: 22px;
+        background: var(--surface-glass) !important;
+        backdrop-filter: blur(18px) saturate(140%);
+        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border: 1px solid var(--surface-glass-border);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--dash-shadow);
         display: grid;
         gap: 0.75rem;
         min-height: 180px;
@@ -467,11 +517,10 @@
     }
 
     .mini-metric {
-        background: rgba(255, 255, 255, 0.5) !important;
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
+        background: var(--surface-solid) !important;
         border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 16px;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 20px rgba(15,78,100,0.04);
         padding: 0.75rem;
     }
 
@@ -504,11 +553,10 @@
 
     .student-card,
     .post-card {
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        background: var(--surface-solid) !important;
         border: 1px solid var(--dash-border);
-        border-radius: 18px;
+        border-radius: var(--radius-lg);
+        box-shadow: 0 10px 24px rgba(15,78,100,0.04);
         padding: 0.85rem;
     }
 
@@ -549,6 +597,13 @@
     .level-grade { background: #dcfce7; color: #166534; }
     .level-high { background: #d9eef4; color: #155e75; }
 
+    .modal-content {
+        background: var(--surface-solid);
+        border: 1px solid rgba(27,26,23,0.06);
+        border-radius: 24px;
+        box-shadow: 0 24px 56px rgba(16,40,64,0.12);
+    }
+
     @media (max-width: 1400px) {
         .class-detail-grid {
             grid-template-columns: 1fr;
@@ -580,9 +635,8 @@
         }
     }
 
-    /* Success Modal Refined Styling */
     .modal-success-premium {
-        background: radial-gradient(circle at top right, rgba(22, 163, 74, 0.08), transparent 250px), 
+        background: radial-gradient(circle at top right, rgba(22, 163, 74, 0.08), transparent 250px),
                     radial-gradient(circle at bottom left, rgba(31, 111, 139, 0.05), transparent 250px),
                     #ffffff !important;
     }
@@ -670,7 +724,7 @@
                     <button
                         id="regenerateCodeBtn"
                         type="button"
-                        class="btn btn-light fw-bold">
+                        class="btn btn-secondary fw-bold">
                         <i class="bi bi-arrow-clockwise me-1"></i>
                         New Code
                     </button>
@@ -731,7 +785,7 @@
                 <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
                     <span class="dash-pill"><i class="bi bi-door-open"></i> Class code <strong id="activeClassCode">—</strong></span>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-light border fw-bold" type="button" id="copyClassCodeBtn" style="display: none;"><i class="bi bi-copy me-1"></i>Copy Code</button>
+                        <button class="btn btn-sm btn-secondary fw-bold" type="button" id="copyClassCodeBtn" style="display: none;"><i class="bi bi-copy me-1"></i>Copy Code</button>
                         <a id="manageClassLink" class="btn btn-sm btn-primary fw-bold" href="#" style="display: none;"><i class="bi bi-gear-fill me-1"></i>Manage Class</a>
                     </div>
                 </div>
@@ -784,7 +838,7 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete Class</button>
+                <button type="button" class="btn btn-ghost text-danger border-danger" id="confirmDeleteBtn">Delete Class</button>
             </div>
         </div>
     </div>
@@ -815,7 +869,7 @@
                     <button type="button" class="btn btn-primary py-3 rounded-pill fw-bold shadow-sm" id="copyCreatedClassCode">
                         <i class="bi bi-copy me-2"></i>Copy Code & Close
                     </button>
-                    <button type="button" class="btn btn-link text-secondary text-decoration-none" data-bs-dismiss="modal">Dismiss</button>
+                    <button type="button" class="btn btn-ghost text-secondary" data-bs-dismiss="modal">Dismiss</button>
                 </div>
             </div>
         </div>
