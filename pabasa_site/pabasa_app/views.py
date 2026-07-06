@@ -301,6 +301,158 @@ def _notify_admins(title, message, notification_type='info', action_url='', crea
     for admin_user in _admin_users():
         _create_notification(admin_user, title, message, notification_type, action_url, created_by, send_email=send_email)
 
+
+def _principal_users():
+    return User.objects.filter(role='principal', is_archived=False)
+
+
+def _notification_recently_sent(recipient, title, message, window_minutes=1440):
+    if not recipient:
+        return False
+    window_start = timezone.now() - timedelta(minutes=window_minutes)
+    return Notification.objects.filter(
+        recipient=recipient,
+        title=title,
+        message=message,
+        created_at__gte=window_start,
+    ).exists()
+
+
+def _notify_principals(title, message, notification_type='info', action_url='', created_by=None, send_email=False, force_in_app=True):
+    sent_count = 0
+    for principal_user in _principal_users():
+        if _notification_recently_sent(principal_user, title, message, window_minutes=1440):
+            continue
+        created = _create_notification(
+            principal_user,
+            title,
+            message,
+            notification_type,
+            action_url or reverse('dashboard_principal'),
+            created_by,
+            send_email=send_email,
+            force_in_app=force_in_app,
+        )
+        if created is not None:
+            sent_count += 1
+    return sent_count
+
+
+def _notify_principal_performance_events(student_user, assessment=None, material=None, class_name=None, score_payload=None):
+    if not student_user:
+        return []
+
+    section = None
+    if assessment and assessment.section:
+        section = assessment.section
+    elif material and material.section:
+        section = material.section
+    elif material and hasattr(material, 'assigned_sections'):
+        section = material.assigned_sections.filter(is_active=True).first()
+
+    if not section:
+        return []
+
+    now = timezone.now()
+    week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    week_end = week_start + timedelta(days=7)
+
+    def _section_weekly_average(section_obj):
+        scores = [
+            float(score)
+            for score in Assessment.objects.filter(
+                section=section_obj,
+                is_active=True,
+                attempt_status='completed',
+                completed_at__gte=week_start,
+                completed_at__lt=week_end,
+                total_score__isnull=False,
+            ).values_list('total_score', flat=True)
+            if score is not None
+        ]
+        if not scores:
+            return None
+        return round(sum(scores) / len(scores), 1)
+
+    current_week_avg = _section_weekly_average(section)
+    score_value = None
+    if score_payload:
+        score_value = score_payload.get('total_score')
+        if score_value is None:
+            score_value = score_payload.get('score')
+    if score_value is None and assessment:
+        score_value = getattr(assessment, 'total_score', None)
+
+    other_sections = []
+    for other_section in Section.objects.filter(is_active=True).exclude(id=section.id):
+        average = _section_weekly_average(other_section)
+        if average is not None:
+            other_sections.append(average)
+    highest_weekly_avg = max(other_sections) if other_sections else None
+    if current_week_avg is not None and (highest_weekly_avg is None or current_week_avg > highest_weekly_avg):
+        _notify_principals(
+            'Top-performing class of the week',
+            f"{section.class_name} achieved the highest reading score this week at {current_week_avg:.1f}%.",
+            'success',
+            reverse('dashboard_principal'),
+            student_user,
+            send_email=False,
+        )
+
+    previous_week_start = week_start - timedelta(days=7)
+    previous_week_end = week_start
+
+    def _school_weekly_average(start_dt, end_dt):
+        scores = [
+            float(score)
+            for score in Assessment.objects.filter(
+                is_active=True,
+                attempt_status='completed',
+                completed_at__gte=start_dt,
+                completed_at__lt=end_dt,
+                total_score__isnull=False,
+            ).values_list('total_score', flat=True)
+            if score is not None
+        ]
+        if not scores:
+            return None
+        return round(sum(scores) / len(scores), 1)
+
+    current_school_average = _school_weekly_average(week_start, week_end)
+    previous_school_average = _school_weekly_average(previous_week_start, previous_week_end)
+    if current_school_average is not None and previous_school_average is not None and current_school_average > previous_school_average + 0.5:
+        _notify_principals(
+            'School reading performance improved',
+            f'The school reading performance improved from {previous_school_average:.1f}% to {current_school_average:.1f}% this week.',
+            'success',
+            reverse('dashboard_principal'),
+            student_user,
+            send_email=False,
+        )
+
+    if current_week_avg is not None and current_week_avg < 70:
+        _notify_principals(
+            'Reading intervention needed',
+            f"{section.class_name} needs reading intervention support after averaging {current_week_avg:.1f}% this week.",
+            'warning',
+            reverse('dashboard_principal'),
+            student_user,
+            send_email=False,
+        )
+
+    if score_value is not None and score_value >= 90:
+        _notify_principals(
+            'Outstanding reading outcomes',
+            f"{section.class_name} achieved outstanding reading outcomes with a score of {score_value:.1f}%.",
+            'success',
+            reverse('dashboard_principal'),
+            student_user,
+            send_email=False,
+        )
+
+    return []
+
+
 def _resolve_assessment_class_name(assessment=None, material=None, class_code=None):
     """Resolve a human-readable class name for assessment completion alerts."""
     if material and material.section:
@@ -1688,6 +1840,14 @@ def verify_teacher_otp(request):
             'success',
             reverse('admin_teacher_detail', args=[user.id]),
             user,
+        )
+        _notify_principals(
+            'New teacher account created',
+            f'{user.first_name} {user.last_name} created a new teacher account.',
+            'success',
+            reverse('admin_teacher_detail', args=[user.id]),
+            user,
+            send_email=False,
         )
         _clear_pending_teacher_signup(request)
 
@@ -4606,6 +4766,14 @@ def create_reading_class(request):
         )
 
         teacher_user.add_tag(new_class.get_tag_label())
+        _notify_principals(
+            'New class created',
+            f"{teacher_user.first_name} {teacher_user.last_name} created a new class: {new_class.class_name}.",
+            'info',
+            reverse('dashboard_principal'),
+            teacher_user,
+            send_email=False,
+        )
 
         return JsonResponse({
             'success': True,
@@ -5523,6 +5691,14 @@ def create_course(request):
             title=title,
             description=description,
             teacher=teacher_user,
+        )
+        _notify_principals(
+            'New course created',
+            f"{teacher_user.first_name} {teacher_user.last_name} created a new course: {course.title}.",
+            'info',
+            reverse('dashboard_principal'),
+            teacher_user,
+            send_email=False,
         )
         if section_ids:
             # Accept either numeric ids or class_code strings
@@ -6808,6 +6984,15 @@ def add_reading_material(request):
                         )
             else:
                 action_url = reverse('courses')
+            if source_type == 'shared' and getattr(m, 'source_type', '') == 'shared':
+                _notify_principals(
+                    'New shared reading material added',
+                    f'A new reading material from the Others shared library, "{m.title}", has been used by {teacher_user.first_name} {teacher_user.last_name}.',
+                    'info',
+                    reverse('dashboard_principal'),
+                    teacher_user,
+                    send_email=False,
+                )
             _notify_admins(
                 'Teacher created a new material',
                 f'{teacher_user.first_name} {teacher_user.last_name} created "{m.title}".',
@@ -7223,6 +7408,15 @@ def record_assessment_completion(request):
 
         student_name = f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id
         class_name = _resolve_assessment_class_name(assessment=assessment, material=material, class_code=class_code)
+
+        if not is_practice and should_notify_assessment:
+            _notify_principal_performance_events(
+                student_user,
+                assessment=assessment,
+                material=material,
+                class_name=class_name,
+                score_payload=score_payload,
+            )
 
         email_subject = None
         if is_retake:

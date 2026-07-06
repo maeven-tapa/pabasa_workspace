@@ -17,7 +17,7 @@ from reportlab.pdfgen import canvas
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _create_notification
+from .views import _create_notification, _notify_principals
 from .weekly_digest import send_weekly_digest
 
 
@@ -1753,6 +1753,82 @@ class AdminSettingsRenderTests(TestCase):
         self.assertContains(response, "Confirm Password")
         self.assertContains(response, "Update Password")
         self.assertNotContains(response, "Settings placeholder. CRUD is not implemented yet.")
+
+
+class PrincipalNotificationTests(TestCase):
+    def test_notify_principals_creates_in_app_notifications(self):
+        principal = User.objects.create(
+            custom_id=f"PRN-{uuid.uuid4().hex[:8].upper()}",
+            role="principal",
+            first_name="Principal",
+            last_name="User",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="principal-notify@example.com",
+            password_hash=make_password("principal-password"),
+        )
+
+        result = _notify_principals("School update", "A principal alert should be stored.", "success")
+
+        self.assertEqual(result, 1)
+        self.assertTrue(Notification.objects.filter(recipient=principal, title="School update").exists())
+
+    def test_create_reading_class_notifies_principal(self):
+        principal = User.objects.create(
+            custom_id=f"PRN-{uuid.uuid4().hex[:8].upper()}",
+            role="principal",
+            first_name="Principal",
+            last_name="User",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="principal-class@example.com",
+            password_hash=make_password("principal-password"),
+        )
+        teacher = User.objects.create(
+            custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}",
+            role="teacher",
+            first_name="Teacher",
+            last_name="User",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="teacher-class@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("create_reading_class"),
+            json.dumps({
+                "class_name": "Grade 1A",
+                "header": "Reading Class",
+                "description": "New class",
+                "subject": "Reading",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Notification.objects.filter(recipient=principal, title__icontains="new class").exists())
 
 
 class PreferenceDeliveryTests(TestCase):
