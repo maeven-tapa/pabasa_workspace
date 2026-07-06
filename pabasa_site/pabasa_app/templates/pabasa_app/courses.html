@@ -10656,23 +10656,35 @@
                     const pdfjsLib = await ensurePdfPreviewLibrary();
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    const pageCount = Math.min(pdf.numPages, 20);
                     const previews = [];
-                    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-                        const page = await pdf.getPage(pageNumber);
-                        const viewport = page.getViewport({ scale: 0.6 });
-                        const canvas = document.createElement('canvas');
-                        canvas.width = viewport.width;
-                        canvas.height = viewport.height;
-                        const context = canvas.getContext('2d');
-                        await page.render({ canvasContext: context, viewport }).promise;
-                        previews.push({ pageNumber, imageUrl: canvas.toDataURL('image/png') });
+                    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+                        try {
+                            const page = await pdf.getPage(pageNumber);
+                            const viewport = page.getViewport({ scale: 0.6 });
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            const context = canvas.getContext('2d');
+                            await page.render({ canvasContext: context, viewport }).promise;
+                            previews.push({ pageNumber, imageUrl: canvas.toDataURL('image/png') });
+                        } catch (pageErr) {
+                            console.warn(`Failed to render page ${pageNumber}:`, pageErr);
+                            previews.push({ pageNumber, label: `Page ${pageNumber}`, imageUrl: '' });
+                        }
                     }
-                    window._pendingUploadPagePreviews = previews;
-                    window._pendingSelectedUploadPages = previews.map(item => item.pageNumber);
-                    return previews;
+                    if (previews.length > 0) {
+                        window._pendingUploadPagePreviews = previews;
+                        window._pendingSelectedUploadPages = previews.map(item => item.pageNumber);
+                        return previews;
+                    }
+                    console.warn('PDF preview generation: no pages were rendered successfully');
                 } catch (err) {
-                    console.warn('PDF preview generation failed', err);
+                    console.error('PDF preview generation failed:', err);
                 }
+                window._pendingUploadPagePreviews = [{ pageNumber: 1, label: 'PDF preview unavailable', imageUrl: '' }];
+                window._pendingSelectedUploadPages = [1];
+                return window._pendingUploadPagePreviews;
             }
             if (extension === 'docx' || extension === 'doc') {
                 window._pendingUploadPagePreviews = [{ pageNumber: 1, label: 'DOCX preview', imageUrl: '' }];
@@ -10772,12 +10784,19 @@
                 const isPreviewable = extension === 'pdf' || extension === 'docx' || extension === 'doc';
                 if (isPreviewable) {
                     try {
-                        const pageCount = extension === 'pdf' ? (await buildUploadPreviewCards(file)).length : 1;
+                        const previews = await buildUploadPreviewCards(file);
+                        const pageCount = Array.isArray(previews) ? previews.length : 1;
                         showUploadSelectionModal(file, pageCount);
+                        await (async () => {
+                            if (uploadPagePreviewList && Array.isArray(previews) && previews.length > 0) {
+                                renderUploadPreviewCards();
+                                updateUploadSelectionSummary();
+                            }
+                        })();
                         materialFileInput.value = '';
                         return;
                     } catch (err) {
-                        console.warn('Could not prepare upload preview', err);
+                        console.error('Could not prepare upload preview', err);
                     }
                 }
                 uploadMaterialBtn.disabled = true;
