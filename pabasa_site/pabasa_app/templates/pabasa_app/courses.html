@@ -10628,24 +10628,60 @@
 
         async function ensurePdfPreviewLibrary() {
             if (window.pdfjsLib && window.pdfjsLib.getDocument) return window.pdfjsLib;
+            
+            const libraryUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js';
+            const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+            
             await new Promise((resolve, reject) => {
                 const existingScript = document.querySelector('script[src*="pdf.min.js"]');
+                if (existingScript && existingScript.dataset.loaded === 'true') {
+                    return resolve();
+                }
                 if (existingScript) {
-                    existingScript.addEventListener('load', resolve, { once: true });
-                    existingScript.addEventListener('error', reject, { once: true });
+                    const onLoadOnce = () => {
+                        existingScript.removeEventListener('load', onLoadOnce);
+                        existingScript.removeEventListener('error', onErrorOnce);
+                        resolve();
+                    };
+                    const onErrorOnce = () => {
+                        existingScript.removeEventListener('load', onLoadOnce);
+                        existingScript.removeEventListener('error', onErrorOnce);
+                        reject(new Error('PDF.js library failed to load from CDN'));
+                    };
+                    existingScript.addEventListener('load', onLoadOnce, { once: true });
+                    existingScript.addEventListener('error', onErrorOnce, { once: true });
                     return;
                 }
+                
                 const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js';
+                script.src = libraryUrl;
                 script.async = true;
-                script.onload = resolve;
-                script.onerror = reject;
+                script.dataset.loaded = 'false';
+                
+                script.onload = () => {
+                    script.dataset.loaded = 'true';
+                    resolve();
+                };
+                script.onerror = () => {
+                    reject(new Error('PDF.js library failed to load from CDN'));
+                };
+                
                 document.head.appendChild(script);
             });
+            
+            // Add small delay to ensure library is available
+            await new Promise(r => setTimeout(r, 100));
+            
             if (!window.pdfjsLib || !window.pdfjsLib.getDocument) {
-                throw new Error('PDF preview library failed to load.');
+                throw new Error('PDF.js library loaded but pdfjsLib not found on window object');
             }
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+            
+            try {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+            } catch (e) {
+                console.warn('Could not set PDF.js worker URL:', e);
+            }
+            
             return window.pdfjsLib;
         }
 
@@ -10653,11 +10689,19 @@
             const extension = (file.name.split('.').pop() || '').toLowerCase();
             if (extension === 'pdf') {
                 try {
+                    console.log('Loading PDF preview library...');
                     const pdfjsLib = await ensurePdfPreviewLibrary();
+                    console.log('PDF library loaded, reading file...');
+                    
                     const arrayBuffer = await file.arrayBuffer();
+                    console.log('File buffer loaded, parsing PDF...');
+                    
                     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    console.log(`PDF loaded with ${pdf.numPages} pages`);
+                    
                     const pageCount = Math.min(pdf.numPages, 20);
                     const previews = [];
+                    
                     for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
                         try {
                             const page = await pdf.getPage(pageNumber);
@@ -10666,22 +10710,32 @@
                             canvas.width = viewport.width;
                             canvas.height = viewport.height;
                             const context = canvas.getContext('2d');
+                            
+                            if (!context) {
+                                throw new Error('Could not get 2D canvas context');
+                            }
+                            
                             await page.render({ canvasContext: context, viewport }).promise;
                             previews.push({ pageNumber, imageUrl: canvas.toDataURL('image/png') });
+                            console.log(`Rendered page ${pageNumber}`);
                         } catch (pageErr) {
                             console.warn(`Failed to render page ${pageNumber}:`, pageErr);
                             previews.push({ pageNumber, label: `Page ${pageNumber}`, imageUrl: '' });
                         }
                     }
+                    
                     if (previews.length > 0) {
                         window._pendingUploadPagePreviews = previews;
                         window._pendingSelectedUploadPages = previews.map(item => item.pageNumber);
+                        console.log(`Generated ${previews.length} page previews`);
                         return previews;
                     }
+                    
                     console.warn('PDF preview generation: no pages were rendered successfully');
                 } catch (err) {
-                    console.error('PDF preview generation failed:', err);
+                    console.error('PDF preview generation failed:', err, err.stack);
                 }
+                
                 window._pendingUploadPagePreviews = [{ pageNumber: 1, label: 'PDF preview unavailable', imageUrl: '' }];
                 window._pendingSelectedUploadPages = [1];
                 return window._pendingUploadPagePreviews;
