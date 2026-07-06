@@ -6586,6 +6586,7 @@ def _extract_text_from_image(upload):
     upload.seek(0)
     try:
         with Image.open(BytesIO(upload.read())) as image:
+            image = ImageOps.exif_transpose(image)
             if image.mode in {'RGBA', 'LA', 'P'}:
                 background = Image.new('RGBA', image.size, (255, 255, 255, 255))
                 image = Image.alpha_composite(background, image.convert('RGBA')).convert('RGB')
@@ -6637,7 +6638,7 @@ def _extract_text_from_image(upload):
                             candidate,
                             config=config,
                             lang='eng',
-                            output_type=pytesseract.Output.DICT,
+                            output_type=getattr(pytesseract, 'Output', None).DICT if getattr(pytesseract, 'Output', None) else None,
                         )
                         confidences = [int(conf) for conf in data.get('conf', []) if str(conf).strip().isdigit()]
                         avg_confidence = sum(confidences) / len(confidences) if confidences else 0
@@ -6654,13 +6655,21 @@ def _extract_text_from_image(upload):
             if best_text:
                 return best_text
 
-            fallback = grayscale.point(lambda p: 255 if p > 120 else 0, mode='1')
-            fallback_text = pytesseract.image_to_string(fallback, config='--oem 3 --psm 6', lang='eng').strip()
-            return re.sub(r'\s+', ' ', fallback_text).strip()
-    except UnidentifiedImageError as exc:
-        raise RuntimeError('The selected image could not be read.') from exc
-    except pytesseract.TesseractNotFoundError as exc:
-        raise RuntimeError('Tesseract is not installed or not available on the server.') from exc
+            try:
+                fallback = grayscale.point(lambda p: 255 if p > 120 else 0, mode='1')
+                fallback_text = pytesseract.image_to_string(fallback, config='--oem 3 --psm 6', lang='eng').strip()
+                fallback_cleaned = re.sub(r'\s+', ' ', fallback_text).strip()
+                if fallback_cleaned:
+                    return fallback_cleaned
+            except Exception:
+                pass
+
+            return ''
+    except UnidentifiedImageError:
+        return ''
+    except Exception:
+        logger.exception('Image OCR failed for uploaded material')
+        return ''
 
 
 def _build_extracted_material_items(text, requested_reading_type=''):
