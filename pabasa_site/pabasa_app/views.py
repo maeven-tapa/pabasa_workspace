@@ -6595,23 +6595,32 @@ def _extract_text_from_image(upload):
             grayscale = ImageOps.grayscale(image)
             candidates = [image, grayscale, ImageOps.autocontrast(grayscale)]
 
-            if max(image.size) < 1400:
-                scale = 1400 / max(image.size)
+            for base in [image, grayscale]:
+                candidates.append(base.filter(ImageFilter.SHARPEN))
+                candidates.append(base.filter(ImageFilter.MedianFilter(size=3)))
+                candidates.append(ImageOps.autocontrast(base))
+
+            if max(image.size) < 1800:
+                scale = 1800 / max(image.size)
                 resized = grayscale.resize(
                     (max(1, int(image.size[0] * scale)), max(1, int(image.size[1] * scale))),
                     resample=getattr(Image, 'Resampling', Image).LANCZOS,
                 )
-                candidates.append(resized)
+                candidates.extend([resized, ImageOps.autocontrast(resized)])
 
-            threshold = grayscale.point(lambda p: 255 if p > 180 else 0, mode='1')
-            candidates.extend([threshold, ImageOps.invert(threshold)])
+            for base in [grayscale, ImageOps.autocontrast(grayscale)]:
+                threshold = base.point(lambda p: 255 if p > 170 else 0, mode='1')
+                candidates.extend([threshold, ImageOps.invert(threshold)])
 
-            sharpened = grayscale.filter(ImageFilter.SHARPEN)
-            denoised = grayscale.filter(ImageFilter.MedianFilter(size=3))
-            candidates.extend([sharpened, denoised])
-
-            configs = ['--oem 3 --psm 6', '--oem 3 --psm 3', '--oem 3 --psm 11']
+            configs = [
+                '--oem 3 --psm 6',
+                '--oem 3 --psm 11',
+                '--oem 3 --psm 3',
+                '--oem 3 --psm 4',
+                '--oem 3 --psm 12',
+            ]
             best_text = ''
+            best_confidence = 0
             for candidate in candidates:
                 for config in configs:
                     try:
@@ -6623,16 +6632,34 @@ def _extract_text_from_image(upload):
                     if not cleaned:
                         continue
 
-                    if len(cleaned.split()) >= len(best_text.split()) and len(cleaned) > len(best_text):
-                        best_text = cleaned
+                    try:
+                        data = pytesseract.image_to_data(
+                            candidate,
+                            config=config,
+                            lang='eng',
+                            output_type=pytesseract.Output.DICT,
+                        )
+                        confidences = [int(conf) for conf in data.get('conf', []) if str(conf).strip().isdigit()]
+                        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+                    except Exception:
+                        avg_confidence = 0
 
-                    if len(cleaned.split()) >= 4:
+                    if len(cleaned.split()) >= 4 and (avg_confidence >= best_confidence or len(cleaned) > len(best_text)):
+                        best_text = cleaned
+                        best_confidence = avg_confidence
+
+                    if len(cleaned.split()) >= 4 and avg_confidence >= 60:
                         return cleaned
 
-            return best_text
+            if best_text:
+                return best_text
+
+            fallback = grayscale.point(lambda p: 255 if p > 120 else 0, mode='1')
+            fallback_text = pytesseract.image_to_string(fallback, config='--oem 3 --psm 6', lang='eng').strip()
+            return re.sub(r'\s+', ' ', fallback_text).strip()
     except UnidentifiedImageError as exc:
         raise RuntimeError('The selected image could not be read.') from exc
-    except getattr(pytesseract, 'pytesseract', pytesseract).TesseractNotFoundError as exc:
+    except pytesseract.TesseractNotFoundError as exc:
         raise RuntimeError('Tesseract is not installed or not available on the server.') from exc
 
 
