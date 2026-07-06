@@ -6574,7 +6574,7 @@ def _extract_text_from_pdf(upload, selected_pages=None):
 
 def _extract_text_from_image(upload):
     try:
-        from PIL import Image, UnidentifiedImageError
+        from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
     except ImportError as exc:
         raise RuntimeError('Image OCR requires Pillow to be installed.') from exc
 
@@ -6586,10 +6586,54 @@ def _extract_text_from_image(upload):
     upload.seek(0)
     try:
         with Image.open(BytesIO(upload.read())) as image:
-            converted = image.convert('RGB')
-            return pytesseract.image_to_string(converted).strip()
+            if image.mode in {'RGBA', 'LA', 'P'}:
+                background = Image.new('RGBA', image.size, (255, 255, 255, 255))
+                image = Image.alpha_composite(background, image.convert('RGBA')).convert('RGB')
+            else:
+                image = image.convert('RGB')
+
+            grayscale = ImageOps.grayscale(image)
+            candidates = [image, grayscale, ImageOps.autocontrast(grayscale)]
+
+            if max(image.size) < 1400:
+                scale = 1400 / max(image.size)
+                resized = grayscale.resize(
+                    (max(1, int(image.size[0] * scale)), max(1, int(image.size[1] * scale))),
+                    resample=getattr(Image, 'Resampling', Image).LANCZOS,
+                )
+                candidates.append(resized)
+
+            threshold = grayscale.point(lambda p: 255 if p > 180 else 0, mode='1')
+            candidates.extend([threshold, ImageOps.invert(threshold)])
+
+            sharpened = grayscale.filter(ImageFilter.SHARPEN)
+            denoised = grayscale.filter(ImageFilter.MedianFilter(size=3))
+            candidates.extend([sharpened, denoised])
+
+            configs = ['--oem 3 --psm 6', '--oem 3 --psm 3', '--oem 3 --psm 11']
+            best_text = ''
+            for candidate in candidates:
+                for config in configs:
+                    try:
+                        text = pytesseract.image_to_string(candidate, config=config, lang='eng').strip()
+                    except Exception:
+                        continue
+
+                    cleaned = re.sub(r'\s+', ' ', text).strip()
+                    if not cleaned:
+                        continue
+
+                    if len(cleaned.split()) >= len(best_text.split()) and len(cleaned) > len(best_text):
+                        best_text = cleaned
+
+                    if len(cleaned.split()) >= 4:
+                        return cleaned
+
+            return best_text
     except UnidentifiedImageError as exc:
         raise RuntimeError('The selected image could not be read.') from exc
+    except getattr(pytesseract, 'pytesseract', pytesseract).TesseractNotFoundError as exc:
+        raise RuntimeError('Tesseract is not installed or not available on the server.') from exc
 
 
 def _build_extracted_material_items(text, requested_reading_type=''):
