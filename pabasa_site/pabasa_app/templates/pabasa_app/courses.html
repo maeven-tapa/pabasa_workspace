@@ -518,6 +518,41 @@
         position: relative;
     }
 
+    #materialUploadSelectModal .modal-dialog {
+        max-width: min(95vw, 1100px);
+        width: min(95vw, 1100px);
+    }
+
+    #materialUploadSelectModal .course-modal-body {
+        padding: 1.25rem 1.5rem 1.35rem;
+    }
+
+    #materialUploadSelectModal .row.g-4.align-items-start {
+        align-items: start;
+    }
+
+    #materialUploadSelectModal .col-12.col-xl-4,
+    #materialUploadSelectModal .col-12.col-xl-8 {
+        min-width: 0;
+    }
+
+    @media (max-width: 1199.98px) {
+        #materialUploadSelectModal .col-12.col-xl-4,
+        #materialUploadSelectModal .col-12.col-xl-8 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+
+    #materialUploadSelectModal #uploadPagePreviewList {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+        max-height: min(64vh, 620px);
+        overflow: auto;
+        align-content: flex-start;
+    }
+
     .course-modal-title-group {
         align-items: center;
         display: flex;
@@ -5319,8 +5354,8 @@
             </div>
             <div class="modal-body course-modal-body">
                 <div class="row g-4 align-items-start">
-                    <div class="col-lg-4">
-                        <div class="rounded-4 border p-3 bg-light-subtle" style="border-color: rgba(31,111,139,0.14);">
+                    <div class="col-12 col-lg-4">
+                        <div class="rounded-4 border p-3 bg-light-subtle" style="border-color: rgba(31,111,139,0.14); min-height: 100%;">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div>
                                     <div class="fw-semibold">Selection</div>
@@ -5341,8 +5376,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-8">
-                        <div class="rounded-4 border p-3 bg-white" style="border-color: rgba(31,111,139,0.14);">
+                    <div class="col-12 col-lg-8">
+                        <div class="rounded-4 border p-3 bg-white" style="border-color: rgba(31,111,139,0.14); min-height: 100%;">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="fw-semibold">Page previews</div>
                                 <div class="small text-muted" id="uploadPageCountLabel">Loading preview…</div>
