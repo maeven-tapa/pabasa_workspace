@@ -10629,15 +10629,15 @@
         async function ensurePdfPreviewLibrary() {
             if (window.pdfjsLib && window.pdfjsLib.getDocument) return window.pdfjsLib;
 
-            const cdnLibrary = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js';
-            const cdnWorker = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+            const cdnLibrary = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js';
+            const cdnWorker = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js';
             const localLibrary = '{% static "pabasa_app/vendor/pdf.min.js" %}';
             const localWorker = '{% static "pabasa_app/vendor/pdf.worker.min.js" %}';
 
             function loadScript(url) {
                 return new Promise((resolve, reject) => {
                     // avoid adding duplicate scripts
-                    const existing = document.querySelector(`script[src\\n*="${url.split('/').pop()}"]`);
+                    const existing = document.querySelector('script[src*="' + url.split('/').pop() + '"]');
                     if (existing && existing.dataset && existing.dataset.loaded === 'true') return resolve();
                     if (existing) {
                         existing.addEventListener('load', () => resolve(), { once: true });
