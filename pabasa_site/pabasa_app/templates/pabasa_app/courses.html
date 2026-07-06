@@ -10628,60 +10628,97 @@
 
         async function ensurePdfPreviewLibrary() {
             if (window.pdfjsLib && window.pdfjsLib.getDocument) return window.pdfjsLib;
-            
-            const libraryUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js';
-            const workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
-            
-            await new Promise((resolve, reject) => {
-                const existingScript = document.querySelector('script[src*="pdf.min.js"]');
-                if (existingScript && existingScript.dataset.loaded === 'true') {
-                    return resolve();
+
+            // Try multiple CDNs for robustness
+            const cdnCandidates = [
+                { lib: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js', worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js' },
+                { lib: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.js', worker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js' },
+                { lib: 'https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.min.js', worker: 'https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.js' }
+            ];
+
+            // If a script already exists on the page, wait for it (or use it)
+            const existingScript = document.querySelector('script[src*="pdf.min.js"]');
+            if (existingScript) {
+                if (existingScript.dataset.loaded === 'true') {
+                    // small delay in case worker needs to be set
+                    await new Promise(r => setTimeout(r, 50));
+                } else {
+                    await new Promise((resolve, reject) => {
+                        const onLoadOnce = () => { existingScript.removeEventListener('load', onLoadOnce); existingScript.removeEventListener('error', onErrorOnce); resolve(); };
+                        const onErrorOnce = () => { existingScript.removeEventListener('load', onLoadOnce); existingScript.removeEventListener('error', onErrorOnce); reject(new Error('PDF.js library failed to load from existing script')); };
+                        existingScript.addEventListener('load', onLoadOnce, { once: true });
+                        existingScript.addEventListener('error', onErrorOnce, { once: true });
+                    }).catch(() => {/* fallthrough to try other CDNs */});
                 }
-                if (existingScript) {
-                    const onLoadOnce = () => {
-                        existingScript.removeEventListener('load', onLoadOnce);
-                        existingScript.removeEventListener('error', onErrorOnce);
-                        resolve();
-                    };
-                    const onErrorOnce = () => {
-                        existingScript.removeEventListener('load', onLoadOnce);
-                        existingScript.removeEventListener('error', onErrorOnce);
-                        reject(new Error('PDF.js library failed to load from CDN'));
-                    };
-                    existingScript.addEventListener('load', onLoadOnce, { once: true });
-                    existingScript.addEventListener('error', onErrorOnce, { once: true });
-                    return;
-                }
-                
-                const script = document.createElement('script');
-                script.src = libraryUrl;
-                script.async = true;
-                script.dataset.loaded = 'false';
-                
-                script.onload = () => {
-                    script.dataset.loaded = 'true';
-                    resolve();
-                };
-                script.onerror = () => {
-                    reject(new Error('PDF.js library failed to load from CDN'));
-                };
-                
-                document.head.appendChild(script);
-            });
-            
-            // Add small delay to ensure library is available
-            await new Promise(r => setTimeout(r, 100));
-            
-            if (!window.pdfjsLib || !window.pdfjsLib.getDocument) {
-                throw new Error('PDF.js library loaded but pdfjsLib not found on window object');
             }
-            
+
+            // Try candidate CDNs sequentially until one loads
+            let loaded = false;
+            let workerUrl = '';
+            for (const candidate of cdnCandidates) {
+                if (window.pdfjsLib && window.pdfjsLib.getDocument) { loaded = true; break; }
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = candidate.lib;
+                        script.async = true;
+                        script.dataset.loaded = 'false';
+                        const clean = () => { script.onload = null; script.onerror = null; };
+                        script.onload = () => { script.dataset.loaded = 'true'; clean(); resolve(); };
+                        script.onerror = () => { clean(); reject(new Error('load-failed')); };
+                        document.head.appendChild(script);
+                        // safety timeout in case the CDN hangs
+                        setTimeout(() => { if (script.dataset.loaded !== 'true') { clean(); reject(new Error('timeout')); } }, 8000);
+                    });
+                    // small delay to ensure library attaches
+                    await new Promise(r => setTimeout(r, 80));
+                    if (window.pdfjsLib && window.pdfjsLib.getDocument) {
+                        loaded = true;
+                        workerUrl = candidate.worker;
+                        break;
+                    }
+                } catch (e) {
+                    // try next candidate
+                    console.warn('PDF.js CDN candidate failed:', candidate.lib, e && e.message);
+                }
+            }
+
+            if (!loaded) {
+                // As a last resort, attempt to load from local static path if available
+                try {
+                    const localLib = '{% static "pabasa_app/libs/pdfjs/pdf.min.js" %}';
+                    const localWorker = '{% static "pabasa_app/libs/pdfjs/pdf.worker.min.js" %}';
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = localLib;
+                        script.async = true;
+                        script.dataset.loaded = 'false';
+                        script.onload = () => { script.dataset.loaded = 'true'; resolve(); };
+                        script.onerror = () => { reject(new Error('local-load-failed')); };
+                        document.head.appendChild(script);
+                    });
+                    await new Promise(r => setTimeout(r, 80));
+                    if (window.pdfjsLib && window.pdfjsLib.getDocument) {
+                        loaded = true;
+                        workerUrl = localWorker;
+                    }
+                } catch (e) {
+                    console.warn('Local PDF.js fallback failed:', e && e.message);
+                }
+            }
+
+            if (!loaded || !window.pdfjsLib || !window.pdfjsLib.getDocument) {
+                throw new Error('PDF.js library failed to load from CDN or fallback');
+            }
+
             try {
-                window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+                if (workerUrl) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+                }
             } catch (e) {
                 console.warn('Could not set PDF.js worker URL:', e);
             }
-            
+
             return window.pdfjsLib;
         }
 
