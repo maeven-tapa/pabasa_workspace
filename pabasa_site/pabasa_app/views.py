@@ -7179,19 +7179,37 @@ def extract_reading_material_file(request):
         
         detected_type, items = _build_extracted_material_items(text, '')
         if not items:
-            # If no items found, but we have some text, try to provide a helpful error
+            warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
             if text:
                 logger.warning(f'Extraction produced text but no items: {text[:100]}...')
                 if extraction_warnings:
-                    warning_msg = '. '.join(extraction_warnings)
-                    return JsonResponse({'success': False, 'error': f'Could not parse text from file: {warning_msg}'}, status=400)
+                    return JsonResponse({
+                        'success': True,
+                        'items': [],
+                        'text': text[:12000],
+                        'filename': filename,
+                        'reading_type': detected_type,
+                        'page_count': page_count,
+                        'selected_pages': selected_pages_list,
+                        'selection_mode': selection_mode,
+                        'warnings': extraction_warnings,
+                        'warning_message': warning_msg,
+                    })
                 return JsonResponse({'success': False, 'error': f'No readable text was found that could be split into {detected_type}s.'}, status=400)
             elif extraction_warnings:
-                # Text extraction warned but produced nothing
-                warning_msg = '. '.join(extraction_warnings)
-                return JsonResponse({'success': False, 'error': warning_msg}, status=400)
+                return JsonResponse({
+                    'success': True,
+                    'items': [],
+                    'text': '',
+                    'filename': filename,
+                    'reading_type': detected_type,
+                    'page_count': page_count,
+                    'selected_pages': selected_pages_list,
+                    'selection_mode': selection_mode,
+                    'warnings': extraction_warnings,
+                    'warning_message': warning_msg,
+                })
             else:
-                # No text extracted at all
                 return JsonResponse({'success': False, 'error': 'No readable text was found in that file. Please ensure the file contains text content.'}, status=400)
         
         return JsonResponse({
@@ -7203,6 +7221,7 @@ def extract_reading_material_file(request):
             'page_count': page_count,
             'selected_pages': selected_pages_list,
             'selection_mode': selection_mode,
+            'warnings': extraction_warnings,
         })
     except zipfile.BadZipFile:
         return JsonResponse({'success': False, 'error': 'That DOCX file could not be read.'}, status=400)
@@ -7251,8 +7270,10 @@ def _split_material_content(text, rtype, requested_reading_type=''):
         return []
     
     if rtype == 'word':
-        # Try Unicode word pattern first
+        # Preserve short phrases extracted from PDFs/images as a single item.
         words = re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
+        if words and len(words) <= 2 and '\n' not in text and not re.search(r'[.!?;,:-]', text):
+            return [cleaned]
         if words:
             return words
         # Fallback: try splitting on whitespace/punctuation for non-Latin scripts

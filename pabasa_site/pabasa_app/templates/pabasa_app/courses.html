@@ -10602,7 +10602,10 @@
 
         function applyUploadedItems(items, fileName, metadata = {}) {
             if (!Array.isArray(items) || items.length === 0) {
-                setUploadStatus('No readable items were found in that file.', 'danger');
+                const warningText = Array.isArray(metadata.warnings) && metadata.warnings.length > 0
+                    ? metadata.warnings[0]
+                    : 'No readable items were found in that file.';
+                setUploadStatus(warningText, 'warning');
                 return;
             }
             currentItemsList = items;
@@ -10647,6 +10650,7 @@
                 reading_type: data.reading_type,
                 selection_mode: data.selection_mode,
                 selected_pages: data.selected_pages,
+                warnings: Array.isArray(data.warnings) ? data.warnings : [],
             });
         }
 

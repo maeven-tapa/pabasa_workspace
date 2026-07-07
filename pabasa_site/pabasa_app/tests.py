@@ -201,6 +201,27 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertEqual(data["selected_pages"], [2])
         self.assertEqual(data["items"], ["Page 2"])
 
+    @patch("pabasa_app.views._extract_text_from_image", return_value="")
+    def test_extract_endpoint_returns_empty_items_when_image_ocr_detects_no_text(self, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["items"], [])
+        self.assertTrue(any("No text could be detected" in warning for warning in data.get("warnings", [])))
+        mock_extract_text_from_image.assert_called_once()
+
 
 class PrincipalReportsExportTests(TestCase):
     def test_default_timezone_is_asia_manila(self):
