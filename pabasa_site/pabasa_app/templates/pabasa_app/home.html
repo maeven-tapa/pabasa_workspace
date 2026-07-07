@@ -7,108 +7,101 @@
 
 {% block content %}
 
-<div class="hero-image-section">
-    <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="Student reading" class="img-fluid" id="heroImage">
-    <div class="hero-quote" id="heroQuote">
-        <p class="hero-quote-text">"Reading opens doors to new worlds and endless possibilities for every child."</p>
-        <p class="hero-quote-author">- PABASA</p>
-    </div>
-</div>
 <section class="section-container-hero fade-in-section">
     <div class="section-wrapper">
-        <div class="modern-hero">
-            <div class="row align-items-center">
-                <!-- Left Side: Copy & Features -->
-                <div class="col-lg-6 hero-content-side">
-                    <span class="modern-chip">PABASA EdTech</span>
-                    <h1>Empower Every Reader with Data-Driven Insights</h1>
-                    <p class="hero-tagline">
-                        A modern platform for automated reading assessments, real-time progress tracking, and targeted literacy interventions.
-                    </p>
-                    
-                    <div class="hero-feature-grid">
-                        <div class="hero-feature-item">
-                            <div class="feature-dot blue"></div>
-                            <div>
-                                <strong>Reading Assessments</strong>
-                                <span>AI-powered speech evaluation</span>
-                            </div>
-                        </div>
-                        <div class="hero-feature-item">
-                            <div class="feature-dot yellow"></div>
-                            <div>
-                                <strong>Progress Analytics</strong>
-                                <span>Visual student growth charts</span>
-                            </div>
-                        </div>
-                        <div class="hero-feature-item">
-                            <div class="feature-dot deep"></div>
-                            <div>
-                                <strong>Targeted Interventions</strong>
-                                <span>Automated student grouping</span>
-                            </div>
-                        </div>
-                    </div>
+        <div class="hero-stage">
+            <div class="hero-decor hero-decor--book" aria-hidden="true">📚</div>
+            <div class="hero-decor hero-decor--pencil" aria-hidden="true">✏️</div>
+            <div class="hero-decor hero-decor--abc" aria-hidden="true">ABC</div>
+            <div class="hero-decor hero-decor--star" aria-hidden="true">⭐</div>
+            <div class="hero-decor hero-decor--bubble" aria-hidden="true">💬</div>
+            <div class="hero-decor hero-decor--plane" aria-hidden="true">✈️</div>
+            <div class="hero-decor hero-decor--wave" aria-hidden="true">🎵</div>
 
-                    <div class="hero-cta-group">
-                        <a href="{% url 'signup' %}" class="btn btn-primary">Get Started for Free</a>
-                        <a href="{% url 'pabasa_info' %}" class="btn btn-outline-primary">Learn How it Works</a>
+            <div class="browser-window">
+                <div class="browser-chrome">
+                    <div class="browser-controls" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="browser-topbar">
+                        <div class="browser-brand">
+                            <span class="browser-logo">P</span>
+                            <span>PABASA</span>
+                        </div>
+                        <nav class="browser-nav" aria-label="Primary navigation">
+                            <a href="{% url 'home' %}">Home</a>
+                            <a href="{% url 'about' %}">About</a>
+                            <a href="{% url 'pabasa_info' %}">Features</a>
+                            <a href="{% url 'pabasa_info' %}">How It Works</a>
+                            <a href="{% url 'about' %}">Contact</a>
+                        </nav>
+                        <div class="browser-actions">
+                            <span class="bell-badge" aria-label="Notifications">
+                                <i class="bi bi-bell"></i>
+                                <span>3</span>
+                            </span>
+                            <span class="avatar-pill">MR</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Right Side: Product Mockup & Floating UI -->
-                <div class="col-lg-6 hero-visual-side">
-                    <div class="product-mockup-frame">
-                        <div class="mockup-browser-bar">
-                            <div class="mockup-dots"><span></span><span></span><span></span></div>
-                            <div class="mockup-url">pabasa.app/dashboard/analytics</div>
+                <div class="browser-body">
+                    <div class="hero-copy">
+                        <span class="hero-chip">Inside the learning space</span>
+                        <h1>Every child deserves the opportunity to become a confident reader.</h1>
+                        <p>Welcome inside PABASA, where teachers guide reading practice, celebrate progress, and turn every lesson into a confident next step.</p>
+                        <div class="hero-cta-group">
+                            <a href="{% url 'signup' %}" class="btn btn-primary">Get Started</a>
+                            <a href="{% url 'login_user' %}" class="btn btn-outline-primary">Login</a>
                         </div>
-                        <div class="mockup-screen-content">
-                            <div class="mockup-dashboard-header"></div>
-                            <div class="mockup-row">
-                                <div class="mockup-card-lg">
-                                    <div style="height:10px; width:60%; background:#e2e8f0; margin-bottom:15px; border-radius:4px;"></div>
-                                    <div style="display:flex; align-items:flex-end; gap:8px; height:60px;">
-                                        <div style="height:40%; width:15%; background:var(--pabasa-blue); border-radius:4px 4px 0 0;"></div>
-                                        <div style="height:70%; width:15%; background:var(--pabasa-blue-mid); border-radius:4px 4px 0 0;"></div>
-                                        <div style="height:55%; width:15%; background:var(--pabasa-blue); border-radius:4px 4px 0 0;"></div>
-                                        <div style="height:90%; width:15%; background:var(--pabasa-yellow); border-radius:4px 4px 0 0;"></div>
-                                        <div style="height:65%; width:15%; background:var(--pabasa-blue-deep); border-radius:4px 4px 0 0;"></div>
-                                    </div>
-                                </div>
-                                <div class="mockup-stack">
-                                    <div class="mockup-card-sm"></div>
-                                    <div class="mockup-card-sm"></div>
+                    </div>
+
+                    <div class="hero-dashboard" aria-label="Teacher dashboard preview">
+                        <div class="dashboard-panel dashboard-panel--main">
+                            <div class="panel-heading">
+                                <span>Teacher Dashboard</span>
+                                <span class="panel-pill">Live • 24 learners</span>
+                            </div>
+                            <div class="chart-card">
+                                <div class="chart-bars" aria-hidden="true">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
                                 </div>
                             </div>
-                            <div class="mockup-table">
-                                <div class="mockup-tr" style="width: 100%;"></div>
-                                <div class="mockup-tr" style="width: 85%;"></div>
-                                <div class="mockup-tr" style="width: 90%;"></div>
+                            <div class="mini-list">
+                                <div class="mini-item">
+                                    <span>Fluency</span>
+                                    <strong>92%</strong>
+                                </div>
+                                <div class="mini-item">
+                                    <span>Confidence</span>
+                                    <strong>88%</strong>
+                                </div>
+                                <div class="mini-item">
+                                    <span>Next practice</span>
+                                    <strong>Today</strong>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Floating UI Elements -->
-                        <div class="floating-ui f-completion">
-                            <div class="f-icon success"><i class="bi bi-check2-circle"></i></div>
-                            <div>
-                                <strong>92%</strong>
-                                <span>Assessments Done</span>
+                        <div class="dashboard-panel dashboard-panel--side">
+                            <div class="panel-heading">
+                                <span>Reading streak</span>
+                                <span class="panel-pill">Weekly</span>
+                            </div>
+                            <div class="streak-ring">92%</div>
+                            <div class="progress-track" aria-hidden="true">
+                                <span></span>
                             </div>
                         </div>
-                        <div class="floating-ui f-improvement">
-                            <div class="f-icon primary"><i class="bi bi-graph-up-arrow"></i></div>
-                            <div>
-                                <strong>+15</strong>
-                                <span>Students Improved</span>
-                            </div>
-                        </div>
-                        <div class="floating-ui f-alert">
-                            <div class="f-icon warning"><i class="bi bi-exclamation-triangle"></i></div>
-                            <div>
-                                <strong>3</strong>
-                                <span>Need Intervention</span>
-                            </div>
+
+                        <div class="dashboard-panel dashboard-panel--floating">
+                            <div class="notification-pill">New feedback ready</div>
                         </div>
                     </div>
                 </div>
@@ -190,7 +183,7 @@
     </div>
 </section>
 
-<section class="fade-in-section section-container section-container-3">
+<section id="key-features" class="fade-in-section section-container section-container-3">
     <div class="section-wrapper">
     <div class="text-center">
         <div class="section-kicker">Platform Tools</div>

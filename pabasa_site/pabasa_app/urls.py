@@ -53,6 +53,7 @@ urlpatterns = [
     path('dashboard/admin/practice-assessment/<int:practice_id>/', views.admin_practice_detail, name='admin_practice_detail'),
     path('dashboard/admin/practice-assessment/<int:practice_id>/edit/', views.admin_practice_edit, name='admin_practice_edit'),
     path('dashboard/admin/practice-assessment/<int:practice_id>/archive/', views.admin_practice_archive, name='admin_practice_archive'),
+    path('dashboard/admin/practice-assessment/<int:practice_id>/delete/', views.admin_practice_delete, name='admin_practice_delete'),
     path('dashboard/admin/settings/', views.admin_settings, name='admin_settings'),
     path('dashboard/courses/', views.courses, name='courses'),
     path('dashboard/assessment/', views.assessment, name='assessment'),

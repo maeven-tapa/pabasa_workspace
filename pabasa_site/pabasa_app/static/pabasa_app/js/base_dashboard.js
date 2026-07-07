@@ -146,13 +146,54 @@ var getStudentClassData = window.getStudentClassData = function() {
         return document.getElementById("dashboardPageLoader");
     }
 
+    function ensureDashboardPageLoader() {
+        let loader = getLoader();
+        if (loader) return loader;
+
+        loader = document.createElement("div");
+        loader.id = "dashboardPageLoader";
+        loader.className = "dashboard-page-loader";
+        loader.setAttribute("role", "status");
+        loader.setAttribute("aria-live", "polite");
+        loader.setAttribute("aria-label", "Loading page");
+        loader.innerHTML = `
+            <div class="dashboard-page-loader__content">
+                <img class="dashboard-page-loader__logo" src="/static/pabasa_app/images/pabasalogo.png" alt="PABASA">
+                <div class="dashboard-page-loader__spinner"></div>
+            </div>
+        `;
+        document.body.prepend(loader);
+        return loader;
+    }
+
+    function cleanupModalBackdrops() {
+        document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+            if (backdrop && backdrop.isConnected) {
+                backdrop.remove();
+            }
+        });
+        if (!document.querySelectorAll('.modal.show').length) {
+            document.body.classList.remove('modal-open');
+        }
+    }
+
+    function dedupeModalBackdrops() {
+        const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+        if (backdrops.length <= 1) return;
+        backdrops.slice(0, -1).forEach(function (backdrop) {
+            if (backdrop && backdrop.isConnected) {
+                backdrop.remove();
+            }
+        });
+    }
+
     function showDashboardPageLoader(options) {
-        const loader = getLoader();
-        if (!loader) return;
+        const loader = ensureDashboardPageLoader();
         const useBrandedLoader = Boolean(options && options.branded);
         loader.classList.toggle("is-branded", useBrandedLoader);
         loader.classList.add("is-visible");
         loader.setAttribute("aria-hidden", "false");
+        loader.removeAttribute("inert");
     }
 
     function hideDashboardPageLoader() {
@@ -161,8 +202,16 @@ var getStudentClassData = window.getStudentClassData = function() {
             loader.classList.remove("is-visible");
             loader.classList.remove("is-branded");
             loader.setAttribute("aria-hidden", "true");
+            loader.setAttribute("inert", "");
+            window.requestAnimationFrame(function () {
+                if (loader && loader.isConnected) {
+                    loader.remove();
+                }
+            });
         }
         document.body.classList.remove("dashboard-preloading");
+        document.body.classList.remove("modal-open");
+        cleanupModalBackdrops();
         navigationPending = false;
     }
 
@@ -201,6 +250,26 @@ var getStudentClassData = window.getStudentClassData = function() {
         if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return false;
         return true;
     }
+
+    document.addEventListener("show.bs.modal", function () {
+        cleanupModalBackdrops();
+    });
+
+    document.addEventListener("shown.bs.modal", function () {
+        dedupeModalBackdrops();
+    });
+
+    document.addEventListener("hidden.bs.modal", function () {
+        window.setTimeout(function () {
+            cleanupModalBackdrops();
+        }, 100);
+    });
+
+    document.addEventListener("hide.bs.modal", function () {
+        window.setTimeout(function () {
+            cleanupModalBackdrops();
+        }, 100);
+    });
 
     document.addEventListener("click", function (event) {
         if (navigationPending) return;

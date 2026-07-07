@@ -3243,16 +3243,80 @@ def _practice_material_items(material):
         return []
     return parse_practice_items(material.content_text, material.item_type)
 
+def _practice_config_label(value, choices):
+    if not value:
+        return ''
+    choice_map = dict(choices)
+    if value in choice_map:
+        return choice_map[value]
+    return str(value).replace('_', ' ').title()
+
+
+def _practice_row_summary(material):
+    content_json = getattr(material, 'content_json', None) or {}
+    selected_difficulty = getattr(material, 'difficulty_level', '') or content_json.get('difficulty', '')
+    item_type = 'sentence' if selected_difficulty == 'hard' else 'word'
+    items = parse_practice_items(material.content_text, item_type)
+    item_count = len(items)
+    summary_text = f"{item_count} {item_type}{'s' if item_count != 1 else ''}"
+    status_label = 'Archived' if not material.is_active else (material.get_status_display() or material.status)
+    status_badge_class = 'text-bg-secondary' if not material.is_active else ('text-bg-success' if material.status == 'published' else 'text-bg-warning')
+    return {
+        'material': material,
+        'mode_label': _practice_config_label(content_json.get('mode', ''), AdminPracticeMaterialForm.MODE_CHOICES),
+        'difficulty_label': _practice_config_label(selected_difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
+        'level_label': _practice_config_label(content_json.get('level', ''), AdminPracticeMaterialForm.LEVEL_CHOICES),
+        'item_count': item_count,
+        'item_summary': summary_text,
+        'items': items,
+        'is_hard': selected_difficulty == 'hard',
+        'status_label': status_label,
+        'status_badge_class': status_badge_class,
+    }
+
+
+def _practice_matches_search(material, search_query):
+    search_query = (search_query or '').strip().lower()
+    if not search_query:
+        return True
+    row = _practice_row_summary(material)
+    haystack = ' '.join([
+        row['mode_label'].lower(),
+        row['difficulty_label'].lower(),
+        row['level_label'].lower(),
+        ' '.join(row['items']).lower(),
+        (material.content_text or '').lower(),
+    ])
+    return search_query in haystack
+
+
+def _sort_practice_rows(rows, sort_value):
+    sort_value = (sort_value or '-created_at').strip()
+    reverse = sort_value.startswith('-')
+    field = sort_value.lstrip('-')
+    if field == 'mode':
+        return sorted(rows, key=lambda row: (row['mode_label'] or '').lower(), reverse=reverse)
+    if field == 'difficulty':
+        return sorted(rows, key=lambda row: (row['difficulty_label'] or '').lower(), reverse=reverse)
+    if field == 'level':
+        return sorted(rows, key=lambda row: (row['level_label'] or '').lower(), reverse=reverse)
+    if field == 'updated_at':
+        return sorted(rows, key=lambda row: row['material'].updated_at, reverse=reverse)
+    return sorted(rows, key=lambda row: row['material'].created_at, reverse=reverse)
+
+
 def _admin_practice_context(request, page_title):
     search_query = request.GET.get('q', '').strip()
+    mode_filter = request.GET.get('mode', 'all').strip().lower()
     status_filter = request.GET.get('status', 'all').strip().lower()
     difficulty_filter = request.GET.get('difficulty', 'all').strip().lower()
-    type_filter = request.GET.get('type', 'all').strip().lower()
+    level_filter = request.GET.get('level', 'all').strip().lower()
+    sort_value = request.GET.get('sort', '-created_at').strip()
 
     practice_items = _admin_practice_queryset()
 
-    if search_query:
-        practice_items = practice_items.filter(title__icontains=search_query)
+    if mode_filter in {value for value, _label in AdminPracticeMaterialForm.MODE_CHOICES}:
+        practice_items = practice_items.filter(content_json__mode=mode_filter)
 
     if status_filter == 'active':
         practice_items = practice_items.filter(is_active=True)
@@ -3264,49 +3328,80 @@ def _admin_practice_context(request, page_title):
     if difficulty_filter in _practice_difficulty_values():
         practice_items = practice_items.filter(difficulty_level=difficulty_filter)
 
-    valid_types = {choice[0] for choice in Material.ITEM_TYPE_CHOICES}
-    if type_filter in valid_types:
-        practice_items = practice_items.filter(item_type=type_filter)
+    if level_filter in {value for value, _label in AdminPracticeMaterialForm.LEVEL_CHOICES}:
+        practice_items = practice_items.filter(content_json__level=level_filter)
+
+    if search_query:
+        practice_items = [item for item in practice_items if _practice_matches_search(item, search_query)]
+    else:
+        practice_items = list(practice_items)
+
+    practice_rows = [_practice_row_summary(item) for item in practice_items]
+    practice_rows = _sort_practice_rows(practice_rows, sort_value)
 
     context = _admin_context(request, page_title, [
-        'Title',
+        'Mode',
         'Difficulty',
-        'Practice Type',
+        'Level',
+        'Items',
         'Status',
-        'Created At',
+        'Date Created',
+        'Last Updated',
         'Actions',
     ])
     context.update({
-        'practice_items': practice_items.order_by('difficulty_level', 'item_type', '-created_at'),
+        'practice_items': practice_rows,
         'search_query': search_query,
+        'mode_filter': mode_filter,
         'status_filter': status_filter,
         'difficulty_filter': difficulty_filter,
-        'type_filter': type_filter,
+        'level_filter': level_filter,
+        'sort': sort_value,
+        'mode_options': [('all', 'All Modes')] + AdminPracticeMaterialForm.MODE_CHOICES,
         'status_options': [('all', 'All Statuses'), ('active', 'Active')] + AdminPracticeMaterialForm.STATUS_CHOICES + [('archived', 'Archived')],
         'difficulty_options': [('all', 'All Difficulties')] + AdminPracticeMaterialForm.DIFFICULTY_CHOICES,
-        'type_options': [('all', 'All Types')] + list(Material.ITEM_TYPE_CHOICES),
+        'level_options': [('all', 'All Levels')] + AdminPracticeMaterialForm.LEVEL_CHOICES,
+        'sort_options': [
+            ('-created_at', 'Newest Created'),
+            ('created_at', 'Oldest Created'),
+            ('-updated_at', 'Recently Updated'),
+            ('updated_at', 'Oldest Updated'),
+            ('mode', 'Mode A-Z'),
+            ('-mode', 'Mode Z-A'),
+            ('difficulty', 'Difficulty A-Z'),
+            ('-difficulty', 'Difficulty Z-A'),
+            ('level', 'Level A-Z'),
+            ('-level', 'Level Z-A'),
+        ],
     })
     return context
 
 def _admin_practice_template_context(request, material=None, page_title='Practice'):
     initial = {}
     if material:
+        content_json = getattr(material, 'content_json', None) or {}
         initial = {
-            'title': material.title,
+            'mode': content_json.get('mode', ''),
             'difficulty_level': material.difficulty_level,
-            'item_type': material.item_type,
+            'level': content_json.get('level', ''),
             'status': material.status if getattr(material, 'status', None) in dict(AdminPracticeMaterialForm.STATUS_CHOICES) else 'draft',
-            'prompt_text': getattr(material, 'prompt_text', ''),
             'content_text': material.content_text,
         }
 
-    form = AdminPracticeMaterialForm(initial=initial)
+    form = AdminPracticeMaterialForm(initial=initial, material=material)
+    occupied_levels_map = {}
+    for mode, _mode_label in AdminPracticeMaterialForm.MODE_CHOICES:
+        occupied_levels_map[mode] = {}
+        for difficulty, _difficulty_label in AdminPracticeMaterialForm.DIFFICULTY_CHOICES:
+            occupied_levels_map[mode][difficulty] = form.get_occupied_levels(mode, difficulty)
+
     context = _admin_context(request, page_title, [])
     context.update({
         'form': form,
         'practice': material,
         'practice_status': _admin_practice_status(material) if material else '',
         'practice_item_count': len(_practice_material_items(material)),
+        'occupied_levels_map': occupied_levels_map,
     })
     return context
 
@@ -3314,10 +3409,15 @@ def _save_admin_practice_material(form, material=None, request=None):
     """Save admin practice material directly to Material table (canonical storage)."""
     cleaned = form.cleaned_data
     material_obj = material if material and isinstance(material, Material) else Material()
-    material_obj.title = cleaned['title']
-    material_obj.item_type = cleaned['item_type']
-    material_obj.prompt_text = cleaned.get('prompt_text', '')
+    material_obj.title = f"{cleaned['mode'].title()} {cleaned['difficulty_level'].title()} {cleaned['level'].replace('_', ' ').title()}"
+    material_obj.item_type = 'sentence' if cleaned['difficulty_level'] == 'hard' else 'word'
+    material_obj.prompt_text = ''
     material_obj.content_text = cleaned.get('content_text', '')
+    material_obj.content_json = {
+        'mode': cleaned['mode'],
+        'difficulty': cleaned['difficulty_level'],
+        'level': cleaned['level'],
+    }
     material_obj.type = 'practice'
     material_obj.status = cleaned['status']
     material_obj.difficulty_level = cleaned['difficulty_level']
@@ -3331,7 +3431,7 @@ def _save_admin_practice_material(form, material=None, request=None):
 @require_http_methods(["GET", "POST"])
 def admin_practice_create(request):
     if request.method == 'POST':
-        form = AdminPracticeMaterialForm(request.POST)
+        form = AdminPracticeMaterialForm(request.POST, material=None)
         if form.is_valid():
             material = _save_admin_practice_material(form, None, request)
             return redirect('admin_practice_detail', practice_id=material.id)
@@ -3360,7 +3460,7 @@ def admin_practice_edit(request, practice_id):
         return redirect('admin_practice_assessment')
 
     if request.method == 'POST':
-        form = AdminPracticeMaterialForm(request.POST)
+        form = AdminPracticeMaterialForm(request.POST, material=material)
         if form.is_valid():
             updated_material = _save_admin_practice_material(form, material, request)
             return redirect('admin_practice_detail', practice_id=updated_material.id)
@@ -3386,6 +3486,16 @@ def admin_practice_archive(request, practice_id):
         material.is_active = True
         material.save(update_fields=['is_active', 'updated_at'])
 
+    return redirect('admin_practice_assessment')
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_practice_delete(request, practice_id):
+    material = _get_admin_practice_material(practice_id)
+    if not material:
+        return redirect('admin_practice_assessment')
+
+    material.delete()
     return redirect('admin_practice_assessment')
 
 @admin_required
