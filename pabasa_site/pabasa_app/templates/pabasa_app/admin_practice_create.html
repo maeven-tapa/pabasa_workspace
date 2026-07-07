@@ -18,59 +18,416 @@
     </div>
     {% endif %}
 
-    <form method="post">
+    <form method="post" id="practice-mode-form">
         {% csrf_token %}
-        <div class="row g-3">
-            <div class="col-12">
-                <label class="form-label fw-bold" for="{{ form.title.id_for_label }}">Title</label>
-                <input class="form-control {% if form.title.errors %}is-invalid{% endif %}" id="{{ form.title.id_for_label }}" type="text" name="{{ form.title.html_name }}" value="{{ form.title.value|default_if_none:'' }}" required>
-                {% for error in form.title.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+        {{ form.content_text }}
+        <div class="border rounded-3 p-3 bg-white mb-3">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <h3 class="h6 fw-bold mb-1">Game Configuration</h3>
+                    <p class="text-secondary small mb-0">Set the game mode, difficulty, and level before adding content.</p>
+                </div>
+                <div class="small text-secondary">Required fields marked with *</div>
             </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-bold" for="{{ form.difficulty_level.id_for_label }}">Difficulty</label>
-                <select class="form-select {% if form.difficulty_level.errors %}is-invalid{% endif %}" id="{{ form.difficulty_level.id_for_label }}" name="{{ form.difficulty_level.html_name }}" required>
-                    {% for value, label in form.fields.difficulty_level.choices %}
-                    <option value="{{ value }}" {% if form.difficulty_level.value == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                {% for error in form.difficulty_level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label fw-bold">Mode</label>
+                    <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="Practice mode">
+                        {% for value, label in form.fields.mode.choices %}
+                        <button type="button" class="mode-option btn btn-sm px-3 py-2 {% if form.mode.value == value %}btn-primary{% else %}btn-outline-secondary{% endif %}" data-value="{{ value }}">{{ label }}</button>
+                        {% endfor %}
+                    </div>
+                    <select class="d-none" id="{{ form.mode.id_for_label }}" name="{{ form.mode.html_name }}" required>
+                        <option value="">Select mode</option>
+                        {% for value, label in form.fields.mode.choices %}
+                        <option value="{{ value }}" {% if form.mode.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% for error in form.mode.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold" for="{{ form.difficulty_level.id_for_label }}">Difficulty</label>
+                    <select class="form-select {% if form.difficulty_level.errors %}is-invalid{% endif %}" id="{{ form.difficulty_level.id_for_label }}" name="{{ form.difficulty_level.html_name }}" required disabled>
+                        <option value="">Select difficulty</option>
+                        {% for value, label in form.fields.difficulty_level.choices %}
+                        <option value="{{ value }}" {% if form.difficulty_level.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% for error in form.difficulty_level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold" for="{{ form.level.id_for_label }}">Level</label>
+                    <select class="form-select {% if form.level.errors %}is-invalid{% endif %}" id="{{ form.level.id_for_label }}" name="{{ form.level.html_name }}" required disabled>
+                        <option value="">Select level</option>
+                        {% for value, label in form.fields.level.choices %}
+                        <option value="{{ value }}" data-label="{{ label }}" {% if form.level.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text text-secondary mt-2" id="level-availability-help">Select a mode and difficulty to view available levels.</div>
+                    {% for error in form.level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
             </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-bold" for="{{ form.item_type.id_for_label }}">Practice Type</label>
-                <select class="form-select {% if form.item_type.errors %}is-invalid{% endif %}" id="{{ form.item_type.id_for_label }}" name="{{ form.item_type.html_name }}" required>
-                    {% for value, label in form.fields.item_type.choices %}
-                    <option value="{{ value }}" {% if form.item_type.value == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                {% for error in form.item_type.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            <div class="mt-3">
+                <div class="border rounded-3 p-3 bg-light">
+                    <div class="small text-uppercase fw-bold text-secondary mb-1">Mode Preview</div>
+                    <div id="mode-context-title" class="fw-semibold">Select a mode</div>
+                    <div id="mode-context-description" class="text-secondary small mt-1">Choose a game mode to see a short description here.</div>
+                </div>
             </div>
-            <div class="col-12 col-md-4">
-                <label class="form-label fw-bold" for="{{ form.status.id_for_label }}">Status</label>
-                <select class="form-select {% if form.status.errors %}is-invalid{% endif %}" id="{{ form.status.id_for_label }}" name="{{ form.status.html_name }}" required>
-                    {% for value, label in form.fields.status.choices %}
-                    <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                {% for error in form.status.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+        </div>
+
+        <div class="border rounded-3 p-3 bg-white mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                <div class="flex-grow-1">
+                    <div class="small text-uppercase fw-bold text-secondary">Configuration</div>
+                    <ul class="list-unstyled small mb-0 mt-2">
+                        <li><strong>Mode:</strong> <span id="summary-mode">—</span></li>
+                        <li><strong>Difficulty:</strong> <span id="summary-difficulty">—</span></li>
+                        <li><strong>Level:</strong> <span id="summary-level">—</span></li>
+                        <li><strong>Items Added:</strong> <span id="summary-items">0</span></li>
+                        <li><strong>Status:</strong> <span id="summary-status">—</span></li>
+                    </ul>
+                </div>
+                <div class="min-w-220px">
+                    <label class="form-label fw-bold" for="{{ form.status.id_for_label }}">Status</label>
+                    <select class="form-select {% if form.status.errors %}is-invalid{% endif %}" id="{{ form.status.id_for_label }}" name="{{ form.status.html_name }}" required disabled>
+                        {% for value, label in form.fields.status.choices %}
+                        <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% for error in form.status.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
             </div>
-            <div class="col-12">
-                <label class="form-label fw-bold" for="{{ form.prompt_text.id_for_label }}">Prompt</label>
-                <textarea class="form-control {% if form.prompt_text.errors %}is-invalid{% endif %}" id="{{ form.prompt_text.id_for_label }}" name="{{ form.prompt_text.html_name }}" rows="3">{{ form.prompt_text.value|default_if_none:'' }}</textarea>
-                {% for error in form.prompt_text.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+        </div>
+
+        <div class="border rounded-3 p-3 bg-white mb-3" id="items-section">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                    <h3 class="h6 fw-bold mb-1">Items</h3>
+                    <p class="text-secondary small mb-0">Add the content for this game challenge.</p>
+                </div>
+                <div class="small text-secondary" id="difficulty-helper">Choose a difficulty to start adding items.</div>
             </div>
-            <div class="col-12">
-                <label class="form-label fw-bold" for="{{ form.content_text.id_for_label }}">Content</label>
-                <textarea class="form-control {% if form.content_text.errors %}is-invalid{% endif %}" id="{{ form.content_text.id_for_label }}" name="{{ form.content_text.html_name }}" rows="8" required>{{ form.content_text.value|default_if_none:'' }}</textarea>
-                {% for error in form.content_text.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            <div id="items-input-card">
+                <input class="form-control" id="practice-items-input" type="text" placeholder="Type a one-syllable word..." autocomplete="off" disabled>
+                <div class="mt-2 text-secondary small" id="items-helper-text">Each item should be a one-syllable word.</div>
             </div>
+            <textarea class="form-control d-none mt-2" id="practice-items-textarea" rows="8" placeholder="Enter one sentence per line..." disabled></textarea>
+            <div class="border rounded-3 p-3 bg-light mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="h6 fw-bold mb-0">Items Added</h4>
+                    <span id="items-count" class="small text-secondary">0 items</span>
+                </div>
+                <div id="items-list" class="d-flex flex-wrap gap-2">No items added yet.</div>
+            </div>
+            {% if form.content_text.errors %}<div class="invalid-feedback d-block mt-2">{{ form.content_text.errors|join:", " }}</div>{% endif %}
         </div>
 
         <div class="d-flex flex-wrap justify-content-end gap-2 mt-4">
             <a class="btn btn-outline-secondary" href="{% url 'admin_practice_assessment' %}">Cancel</a>
-            <button class="btn btn-primary" type="submit">
+            <button class="btn btn-primary" type="submit" id="practice-submit" disabled>
                 <i class="bi bi-check2 me-1"></i>Save Practice Content
             </button>
         </div>
     </form>
 </div>
+
+{{ occupied_levels_map|json_script:"occupied-levels-map" }}
+<script>
+(function () {
+    const form = document.getElementById('practice-mode-form');
+    const modeSelect = document.getElementById('{{ form.mode.id_for_label }}');
+    const modeButtons = Array.from(document.querySelectorAll('.mode-option'));
+    const difficulty = document.getElementById('{{ form.difficulty_level.id_for_label }}');
+    const level = document.getElementById('{{ form.level.id_for_label }}');
+    const status = document.getElementById('{{ form.status.id_for_label }}');
+    const itemsInput = document.getElementById('practice-items-input');
+    const itemsList = document.getElementById('items-list');
+    const itemsCount = document.getElementById('items-count');
+    const itemsTextarea = document.getElementById('practice-items-textarea');
+    const hiddenField = document.getElementById('{{ form.content_text.id_for_label }}');
+    const helperText = document.getElementById('items-helper-text');
+    const helperLabel = document.getElementById('difficulty-helper');
+    const summaryMode = document.getElementById('summary-mode');
+    const summaryDifficulty = document.getElementById('summary-difficulty');
+    const summaryLevel = document.getElementById('summary-level');
+    const summaryItems = document.getElementById('summary-items');
+    const summaryStatus = document.getElementById('summary-status');
+    const modeTitle = document.getElementById('mode-context-title');
+    const modeDescription = document.getElementById('mode-context-description');
+    const submitButton = document.getElementById('practice-submit');
+    const itemsSection = document.getElementById('items-section');
+    const levelHelp = document.getElementById('level-availability-help');
+
+    const modeDescriptions = {
+        free: {
+            title: 'Free Mode',
+            description: 'Create reading content that students will read aloud.'
+        },
+        color: {
+            title: 'Color Mode',
+            description: 'Create reading content used for the color-based game.'
+        },
+        hunt: {
+            title: 'Hunt Mode',
+            description: 'Create reading content used for the word hunting game.'
+        }
+    };
+
+    function parseItems(value) {
+        if (!value) return [];
+        return value.split(/\n|,/).map(item => item.trim()).filter(Boolean);
+    }
+
+    function getSelectedItems() {
+        if (difficulty.value === 'hard') {
+            return (itemsTextarea.value || hiddenField.value || '').split(/\n/).map(item => item.trim()).filter(Boolean);
+        }
+        return parseItems(hiddenField.value || '');
+    }
+
+    function syncHiddenField() {
+        if (difficulty.value === 'hard') {
+            hiddenField.value = itemsTextarea.value.trim();
+        } else {
+            hiddenField.value = getSelectedItems().join('\n');
+        }
+    }
+
+    function setDisabledState(element, disabled) {
+        if (!element) return;
+        element.disabled = disabled;
+        element.classList.toggle('opacity-50', disabled);
+        if (element.tagName === 'SELECT' || element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'BUTTON') {
+            element.style.pointerEvents = disabled ? 'none' : '';
+        }
+    }
+
+    const occupiedLevelsMap = JSON.parse(document.getElementById('occupied-levels-map').textContent);
+
+    function updateLevelOptions() {
+        const selectedMode = modeSelect.value;
+        const selectedDifficulty = difficulty.value;
+        const currentValue = level.value;
+        const occupiedLevels = selectedMode && selectedDifficulty ? (occupiedLevelsMap[selectedMode] || {})[selectedDifficulty] || [] : [];
+
+        Array.from(level.options).forEach(function (option) {
+            if (!option.value) {
+                return;
+            }
+            const isOccupied = occupiedLevels.includes(option.value);
+            const isCurrentValue = option.value === currentValue;
+            option.disabled = isOccupied && !isCurrentValue;
+            option.title = isOccupied && !isCurrentValue
+                ? 'This configuration already exists. Edit or archive the existing content to make changes.'
+                : '';
+            option.textContent = isOccupied ? `${option.dataset.label} (Already Created)` : option.dataset.label;
+        });
+
+        if (!selectedMode || !selectedDifficulty) {
+            levelHelp.textContent = 'Select a mode and difficulty to view available levels.';
+            level.value = '';
+            return;
+        }
+
+        const availableOptions = Array.from(level.options).filter(function (option) {
+            return option.value && !option.disabled;
+        });
+        if (!availableOptions.length) {
+            const currentOptionExists = Array.from(level.options).some(function (option) {
+                return option.value === currentValue;
+            });
+            level.value = currentOptionExists ? currentValue : '';
+            levelHelp.textContent = 'All levels for this Mode and Difficulty have already been created. Edit or archive an existing configuration to make changes.';
+            level.disabled = true;
+            level.classList.add('opacity-50');
+        } else {
+            level.disabled = false;
+            level.classList.remove('opacity-50');
+            const currentOptionStillAvailable = Array.from(level.options).some(function (option) {
+                return option.value === currentValue && !option.disabled;
+            });
+            if (currentValue && !currentOptionStillAvailable) {
+                level.value = '';
+            }
+            levelHelp.textContent = occupiedLevels.length ? 'Some levels are already occupied for this configuration.' : 'All levels are available for this configuration.';
+        }
+    }
+
+    function updateFormAvailability() {
+        const hasMode = Boolean(modeSelect.value);
+        const hasDifficulty = Boolean(difficulty.value);
+        const hasLevel = Boolean(level.value);
+        const hasStatus = Boolean(status.value);
+        const canEditItems = hasMode && hasDifficulty && hasLevel && hasStatus;
+        const allLevelsOccupied = hasMode && hasDifficulty && Array.from(level.options).filter(function (option) {
+            return option.value && !option.disabled;
+        }).length === 0;
+
+        setDisabledState(difficulty, !hasMode);
+        setDisabledState(level, !hasMode || !hasDifficulty || allLevelsOccupied);
+        setDisabledState(status, !hasMode || !hasDifficulty || !hasLevel);
+
+        itemsSection.classList.toggle('opacity-50', !canEditItems);
+        itemsSection.style.pointerEvents = canEditItems ? '' : 'none';
+        setDisabledState(itemsInput, !canEditItems);
+        setDisabledState(itemsTextarea, !canEditItems || difficulty.value !== 'hard');
+
+        const hasContent = difficulty.value === 'hard'
+            ? Boolean(itemsTextarea.value.trim())
+            : Boolean(getSelectedItems().length);
+
+        submitButton.disabled = !(hasMode && hasDifficulty && hasLevel && hasStatus && hasContent);
+        submitButton.classList.toggle('opacity-50', submitButton.disabled);
+        submitButton.style.pointerEvents = submitButton.disabled ? 'none' : '';
+    }
+
+    function updateModeSelection(value) {
+        modeSelect.value = value || '';
+        updateLevelOptions();
+        modeButtons.forEach(function (button) {
+            const active = button.getAttribute('data-value') === value;
+            button.classList.toggle('btn-primary', active);
+            button.classList.toggle('btn-outline-secondary', !active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        const selectedMode = modeDescriptions[value] || null;
+        if (selectedMode) {
+            modeTitle.textContent = selectedMode.title;
+            modeDescription.textContent = selectedMode.description;
+        } else {
+            modeTitle.textContent = 'Select a game mode to begin.';
+            modeDescription.textContent = 'Choose one of the available game modes before configuring the practice content.';
+        }
+        updateFormAvailability();
+    }
+
+    function updateDifficultyUI() {
+        const selected = difficulty.value;
+        const itemsDisabled = !modeSelect.value || !difficulty.value || !level.value || !status.value;
+        updateLevelOptions();
+        if (selected === 'hard') {
+            itemsInput.parentElement.classList.add('d-none');
+            itemsTextarea.classList.remove('d-none');
+            itemsTextarea.value = hiddenField.value || '';
+            helperLabel.textContent = 'Hard difficulty';
+            helperText.textContent = 'Each line represents one sentence.';
+            itemsInput.placeholder = 'Enter one sentence per line...';
+        } else {
+            itemsInput.parentElement.classList.remove('d-none');
+            itemsTextarea.classList.add('d-none');
+            itemsTextarea.value = '';
+            if (selected === 'medium') {
+                helperLabel.textContent = 'Medium difficulty';
+                helperText.textContent = 'Each item should contain up to three syllables.';
+                itemsInput.placeholder = 'Type a word...';
+            } else {
+                helperLabel.textContent = 'Easy difficulty';
+                helperText.textContent = 'Each item should be a one-syllable word.';
+                itemsInput.placeholder = 'Type a one-syllable word...';
+            }
+        }
+        setDisabledState(itemsInput, itemsDisabled);
+        setDisabledState(itemsTextarea, itemsDisabled || selected !== 'hard');
+        renderItemsList();
+        updateFormAvailability();
+    }
+
+    function renderItemsList() {
+        const items = getSelectedItems();
+        itemsCount.textContent = items.length === 1 ? '1 item' : `${items.length} items`;
+        summaryItems.textContent = items.length;
+        if (!items.length) {
+            itemsList.innerHTML = 'No items added yet.';
+            return;
+        }
+        itemsList.innerHTML = '';
+        items.forEach(function (item) {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'btn btn-sm btn-outline-warning rounded-pill';
+            chip.innerHTML = `${item} <span class="ms-2">×</span>`;
+            chip.addEventListener('click', function () {
+                const currentItems = getSelectedItems();
+                const nextItems = currentItems.filter(function (value) {
+                    return value !== item;
+                });
+                hiddenField.value = nextItems.join('\n');
+                if (difficulty.value === 'hard') {
+                    itemsTextarea.value = nextItems.join('\n');
+                }
+                renderItemsList();
+            });
+            itemsList.appendChild(chip);
+        });
+    }
+
+    function updateSummary() {
+        summaryMode.textContent = modeSelect.value ? modeSelect.value.replace(/_/g, ' ').replace(/\b\w/g, function (char) { return char.toUpperCase(); }) : '—';
+        summaryDifficulty.textContent = difficulty.value ? difficulty.options[difficulty.selectedIndex].text : '—';
+        summaryLevel.textContent = level.value ? level.options[level.selectedIndex].text : '—';
+        summaryStatus.textContent = status.value ? status.options[status.selectedIndex].text : '—';
+    }
+
+    if (itemsInput) {
+        itemsInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ',') {
+                event.preventDefault();
+                const value = itemsInput.value.trim().replace(/,$/, '');
+                if (!value) {
+                    return;
+                }
+                const existingItems = getSelectedItems();
+                if (!existingItems.includes(value)) {
+                    const nextItems = existingItems.concat(value);
+                    hiddenField.value = nextItems.join('\n');
+                    if (difficulty.value === 'hard') {
+                        itemsTextarea.value = nextItems.join('\n');
+                    }
+                    itemsInput.value = '';
+                    renderItemsList();
+                    updateFormAvailability();
+                }
+            }
+        });
+    }
+
+    if (itemsTextarea) {
+        itemsTextarea.addEventListener('input', function () {
+            syncHiddenField();
+            renderItemsList();
+            updateFormAvailability();
+        });
+    }
+
+    modeButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            updateModeSelection(button.getAttribute('data-value'));
+        });
+    });
+
+    [modeSelect, difficulty, level, status].forEach(function (field) {
+        field.addEventListener('change', function () {
+            updateModeSelection(modeSelect.value);
+            updateDifficultyUI();
+            updateSummary();
+            updateFormAvailability();
+        });
+    });
+
+    level.addEventListener('change', function () {
+        updateFormAvailability();
+        updateSummary();
+    });
+
+    form.addEventListener('submit', function () {
+        syncHiddenField();
+    });
+
+    updateModeSelection(modeSelect.value);
+    updateDifficultyUI();
+    updateSummary();
+    updateFormAvailability();
+})();
+</script>
 {% endblock %}

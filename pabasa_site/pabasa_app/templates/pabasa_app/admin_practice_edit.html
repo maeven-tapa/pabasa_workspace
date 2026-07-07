@@ -21,17 +21,24 @@
     </div>
     {% endif %}
 
-    <form method="post">
+    <form method="post" id="practice-mode-form">
         {% csrf_token %}
+        {{ form.content_text }}
         <div class="row g-3">
-            <div class="col-12">
-                <label class="form-label fw-bold" for="{{ form.title.id_for_label }}">Title</label>
-                <input class="form-control {% if form.title.errors %}is-invalid{% endif %}" id="{{ form.title.id_for_label }}" type="text" name="{{ form.title.html_name }}" value="{{ form.title.value|default_if_none:'' }}" required>
-                {% for error in form.title.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-bold" for="{{ form.mode.id_for_label }}">Mode</label>
+                <select class="form-select {% if form.mode.errors %}is-invalid{% endif %}" id="{{ form.mode.id_for_label }}" name="{{ form.mode.html_name }}" required>
+                    <option value="">Select mode</option>
+                    {% for value, label in form.fields.mode.choices %}
+                    <option value="{{ value }}" {% if form.mode.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                {% for error in form.mode.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
             </div>
             <div class="col-12 col-md-4">
                 <label class="form-label fw-bold" for="{{ form.difficulty_level.id_for_label }}">Difficulty</label>
                 <select class="form-select {% if form.difficulty_level.errors %}is-invalid{% endif %}" id="{{ form.difficulty_level.id_for_label }}" name="{{ form.difficulty_level.html_name }}" required>
+                    <option value="">Select difficulty</option>
                     {% for value, label in form.fields.difficulty_level.choices %}
                     <option value="{{ value }}" {% if form.difficulty_level.value == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
@@ -39,15 +46,17 @@
                 {% for error in form.difficulty_level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
             </div>
             <div class="col-12 col-md-4">
-                <label class="form-label fw-bold" for="{{ form.item_type.id_for_label }}">Practice Type</label>
-                <select class="form-select {% if form.item_type.errors %}is-invalid{% endif %}" id="{{ form.item_type.id_for_label }}" name="{{ form.item_type.html_name }}" required>
-                    {% for value, label in form.fields.item_type.choices %}
-                    <option value="{{ value }}" {% if form.item_type.value == value %}selected{% endif %}>{{ label }}</option>
+                <label class="form-label fw-bold" for="{{ form.level.id_for_label }}">Level</label>
+                <select class="form-select {% if form.level.errors %}is-invalid{% endif %}" id="{{ form.level.id_for_label }}" name="{{ form.level.html_name }}" required>
+                    <option value="">Select level</option>
+                    {% for value, label in form.fields.level.choices %}
+                    <option value="{{ value }}" data-label="{{ label }}" {% if form.level.value == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
-                {% for error in form.item_type.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                <div class="form-text text-secondary mt-2" id="level-availability-help">Select a mode and difficulty to view available levels.</div>
+                {% for error in form.level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-8">
                 <label class="form-label fw-bold" for="{{ form.status.id_for_label }}">Status</label>
                 <select class="form-select {% if form.status.errors %}is-invalid{% endif %}" id="{{ form.status.id_for_label }}" name="{{ form.status.html_name }}" required>
                     {% for value, label in form.fields.status.choices %}
@@ -57,14 +66,19 @@
                 {% for error in form.status.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
             </div>
             <div class="col-12">
-                <label class="form-label fw-bold" for="{{ form.prompt_text.id_for_label }}">Prompt</label>
-                <textarea class="form-control {% if form.prompt_text.errors %}is-invalid{% endif %}" id="{{ form.prompt_text.id_for_label }}" name="{{ form.prompt_text.html_name }}" rows="3">{{ form.prompt_text.value|default_if_none:'' }}</textarea>
-                {% for error in form.prompt_text.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-bold" for="{{ form.content_text.id_for_label }}">Content</label>
-                <textarea class="form-control {% if form.content_text.errors %}is-invalid{% endif %}" id="{{ form.content_text.id_for_label }}" name="{{ form.content_text.html_name }}" rows="8" required>{{ form.content_text.value|default_if_none:'' }}</textarea>
-                {% for error in form.content_text.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                <div class="border rounded-3 p-3 bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold mb-0" for="practice-items-input">Items</label>
+                        <span class="small text-secondary" id="practice-items-helper">Enter one item per chip for easy/medium or one sentence per line for hard.</span>
+                    </div>
+                    <div id="practice-items-container">
+                        <input class="form-control" id="practice-items-input" type="text" placeholder="Type and press Enter or comma" autocomplete="off">
+                        <div class="mt-2" id="practice-items-tags"></div>
+                    </div>
+                    <textarea class="form-control d-none" id="practice-items-textarea" rows="8" placeholder="Write one sentence per line"></textarea>
+                    <div class="form-text text-secondary mt-2">This section will change based on Difficulty and will be stored for future gameplay integration.</div>
+                    {% if form.content_text.errors %}<div class="invalid-feedback d-block">{{ form.content_text.errors|join:", " }}</div>{% endif %}
+                </div>
             </div>
         </div>
 
@@ -77,4 +91,150 @@
     </form>
 
 </div>
+
+{{ occupied_levels_map|json_script:"occupied-levels-map" }}
+<script>
+(function () {
+    const form = document.getElementById('practice-mode-form');
+    const mode = document.getElementById('{{ form.mode.id_for_label }}');
+    const difficulty = document.getElementById('{{ form.difficulty_level.id_for_label }}');
+    const level = document.getElementById('{{ form.level.id_for_label }}');
+    const itemsInput = document.getElementById('practice-items-input');
+    const itemsTags = document.getElementById('practice-items-tags');
+    const itemsTextarea = document.getElementById('practice-items-textarea');
+    const hiddenField = document.getElementById('{{ form.content_text.id_for_label }}');
+    const helper = document.getElementById('practice-items-helper');
+    const container = document.getElementById('practice-items-container');
+    const levelHelp = document.getElementById('level-availability-help');
+    const occupiedLevelsMap = JSON.parse(document.getElementById('occupied-levels-map').textContent);
+
+    function parseExistingItems(value) {
+        if (!value) return [];
+        return value.split(/\n|,/).map(item => item.trim()).filter(Boolean);
+    }
+
+    function syncHiddenField() {
+        if (difficulty.value === 'hard') {
+            hiddenField.value = itemsTextarea.value.trim();
+        } else {
+            hiddenField.value = Array.from(itemsTags.querySelectorAll('[data-value]')).map(tag => tag.getAttribute('data-value')).join('\n');
+        }
+    }
+
+    function updateLevelOptions() {
+        const selectedMode = mode.value;
+        const selectedDifficulty = difficulty.value;
+        const currentValue = level.value;
+        const occupiedLevels = selectedMode && selectedDifficulty ? (occupiedLevelsMap[selectedMode] || {})[selectedDifficulty] || [] : [];
+
+        Array.from(level.options).forEach(function (option) {
+            if (!option.value) {
+                return;
+            }
+            const isOccupied = occupiedLevels.includes(option.value);
+            const isCurrentValue = option.value === currentValue;
+            option.disabled = isOccupied && !isCurrentValue;
+            option.title = isOccupied && !isCurrentValue
+                ? 'This configuration already exists. Edit or archive the existing content to make changes.'
+                : '';
+            option.textContent = isOccupied ? `${option.dataset.label} (Already Created)` : option.dataset.label;
+        });
+
+        if (!selectedMode || !selectedDifficulty) {
+            levelHelp.textContent = 'Select a mode and difficulty to view available levels.';
+            return;
+        }
+
+        const availableOptions = Array.from(level.options).filter(function (option) {
+            return option.value && !option.disabled;
+        });
+        if (!availableOptions.length) {
+            const currentOptionExists = Array.from(level.options).some(function (option) {
+                return option.value === currentValue;
+            });
+            level.value = currentOptionExists ? currentValue : '';
+            levelHelp.textContent = 'All levels for this Mode and Difficulty have already been created. Edit or archive an existing configuration to make changes.';
+        } else {
+            const currentOptionStillAvailable = Array.from(level.options).some(function (option) {
+                return option.value === currentValue && !option.disabled;
+            });
+            if (currentValue && !currentOptionStillAvailable) {
+                level.value = '';
+            }
+            levelHelp.textContent = occupiedLevels.length ? 'Some levels are already occupied for this configuration.' : 'All levels are available for this configuration.';
+        }
+    }
+
+    function renderForDifficulty() {
+        const selected = difficulty.value;
+        updateLevelOptions();
+        if (selected === 'hard') {
+            container.classList.add('d-none');
+            itemsTextarea.classList.remove('d-none');
+            itemsTextarea.value = hiddenField.value || '';
+            helper.textContent = 'Enter one sentence per line.';
+        } else {
+            container.classList.remove('d-none');
+            itemsTextarea.classList.add('d-none');
+            itemsTextarea.value = '';
+            helper.textContent = selected === 'medium' ? 'Each chip represents one word with up to three syllables.' : 'Each chip represents one one-syllable word.';
+            renderTags();
+        }
+    }
+
+    function renderTags() {
+        itemsTags.innerHTML = '';
+        const values = parseExistingItems(hiddenField.value || '');
+        values.forEach(function (value) {
+            const chip = document.createElement('span');
+            chip.className = 'badge rounded-pill bg-primary-subtle text-primary-emphasis me-2 mb-2 px-3 py-2 fs-6';
+            chip.innerHTML = `${value} <button type="button" class="btn-close btn-close-sm ms-2" aria-label="Remove"></button>`;
+            chip.setAttribute('data-value', value);
+            chip.querySelector('button').addEventListener('click', function () {
+                chip.remove();
+                syncHiddenField();
+            });
+            itemsTags.appendChild(chip);
+        });
+    }
+
+    if (itemsInput) {
+        itemsInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ',') {
+                event.preventDefault();
+                const value = itemsInput.value.trim();
+                if (!value) {
+                    return;
+                }
+                const normalized = value.replace(/,$/, '');
+                const existingValues = Array.from(itemsTags.querySelectorAll('[data-value]')).map(tag => tag.getAttribute('data-value'));
+                if (!existingValues.includes(normalized)) {
+                    const chip = document.createElement('span');
+                    chip.className = 'badge rounded-pill bg-warning text-dark me-2 mb-2 px-2 py-1';
+                    chip.innerHTML = `${normalized} <button type="button" class="btn-close btn-close-sm ms-2" aria-label="Remove"></button>`;
+                    chip.setAttribute('data-value', normalized);
+                    chip.querySelector('button').addEventListener('click', function () {
+                        chip.remove();
+                        syncHiddenField();
+                    });
+                    itemsTags.appendChild(chip);
+                }
+                itemsInput.value = '';
+                syncHiddenField();
+            }
+        });
+    }
+
+    if (itemsTextarea) {
+        itemsTextarea.addEventListener('input', syncHiddenField);
+    }
+
+    difficulty.addEventListener('change', renderForDifficulty);
+    form.addEventListener('submit', function () {
+        syncHiddenField();
+    });
+
+    renderForDifficulty();
+})();
+</script>
 {% endblock %}

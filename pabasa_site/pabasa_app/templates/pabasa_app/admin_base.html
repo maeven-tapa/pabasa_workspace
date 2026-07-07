@@ -1486,6 +1486,55 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
         (function() {
+            let cleanupTimer = null;
+
+            function removeModalBackdrops() {
+                document.querySelectorAll('.modal-backdrop').forEach(function(backdrop) {
+                    if (backdrop && backdrop.isConnected) {
+                        backdrop.remove();
+                    }
+                });
+                if (!document.querySelectorAll('.modal.show').length) {
+                    document.body.classList.remove('modal-open');
+                }
+            }
+
+            function dedupeModalBackdrops() {
+                const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+                if (backdrops.length <= 1) return;
+                backdrops.slice(0, -1).forEach(function(backdrop) {
+                    if (backdrop && backdrop.isConnected) {
+                        backdrop.remove();
+                    }
+                });
+            }
+
+            function scheduleModalCleanup() {
+                if (cleanupTimer) {
+                    window.clearTimeout(cleanupTimer);
+                }
+                cleanupTimer = window.setTimeout(function() {
+                    const activeModals = document.querySelectorAll('.modal.show');
+                    if (!activeModals.length) {
+                        removeModalBackdrops();
+                    } else {
+                        dedupeModalBackdrops();
+                    }
+                }, 100);
+            }
+
+            document.addEventListener('show.bs.modal', removeModalBackdrops);
+            document.addEventListener('shown.bs.modal', dedupeModalBackdrops);
+            document.addEventListener('hidden.bs.modal', scheduleModalCleanup);
+            document.addEventListener('hide.bs.modal', scheduleModalCleanup);
+            window.addEventListener('beforeunload', removeModalBackdrops);
+            window.addEventListener('pagehide', removeModalBackdrops);
+            window.addEventListener('beforeunload', removeModalBackdrops);
+            window.addEventListener('pagehide', removeModalBackdrops);
+            document.addEventListener('DOMContentLoaded', ensureModalBackdrop);
+            window.addEventListener('load', ensureModalBackdrop);
+        })();
+        (function() {
             // Initialize tooltips for admin nav items (show when collapsed)
             const adminTooltipTargets = document.querySelectorAll('[data-admin-tooltip]');
             adminTooltipTargets.forEach(function(item) {

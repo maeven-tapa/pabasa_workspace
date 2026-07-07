@@ -14,6 +14,7 @@ from unittest.mock import patch
 from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
+from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
@@ -1799,6 +1800,62 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, f'"id": "practice-{material.id}"', html=False)
         self.assertContains(response, '"status": "published"', html=False)
         self.assertContains(response, '"is_done": false', html=False)
+
+
+class AdminPracticeMaterialFormTests(TestCase):
+    def test_easy_items_require_at_least_one_item(self):
+        form = AdminPracticeMaterialForm(data={
+            'mode': 'free',
+            'difficulty_level': 'easy',
+            'level': 'level_1',
+            'status': 'draft',
+            'content_text': '',
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('content_text', form.errors)
+
+    def test_duplicate_mode_difficulty_and_level_is_rejected(self):
+        Material.objects.create(
+            title='Existing Practice',
+            item_type='word',
+            prompt_text='',
+            content_text='sun',
+            content_json={'mode': 'free', 'difficulty': 'easy', 'level': 'level_1'},
+            type='practice',
+            status='published',
+            difficulty_level='easy',
+            is_active=True,
+        )
+
+        form = AdminPracticeMaterialForm(data={
+            'mode': 'free',
+            'difficulty_level': 'easy',
+            'level': 'level_1',
+            'status': 'draft',
+            'content_text': 'sun',
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('__all__', form.errors)
+
+    def test_occupied_levels_are_detected_for_a_configuration(self):
+        Material.objects.create(
+            title='Existing Practice',
+            item_type='word',
+            prompt_text='',
+            content_text='sun',
+            content_json={'mode': 'free', 'difficulty': 'easy', 'level': 'level_1'},
+            type='practice',
+            status='published',
+            difficulty_level='easy',
+            is_active=True,
+        )
+
+        form = AdminPracticeMaterialForm()
+        occupied_levels = form.get_occupied_levels('free', 'easy')
+
+        self.assertEqual(occupied_levels, ['level_1'])
 
 
 class PracticeAccessControlTests(TestCase):
