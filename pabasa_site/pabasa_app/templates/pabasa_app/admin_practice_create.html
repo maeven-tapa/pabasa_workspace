@@ -111,6 +111,9 @@
             <div id="items-input-card">
                 <input class="form-control" id="practice-items-input" type="text" placeholder="Type a one-syllable word..." autocomplete="off" disabled>
                 <div class="mt-2 text-secondary small" id="items-helper-text">Each item should be a one-syllable word.</div>
+                <div class="mt-2 alert alert-info py-2 px-3 mb-0 small" id="color-mode-limit-note" style="display: none;">
+                    <i class="bi bi-info-circle me-1"></i>Color Mode allows only up to 5 items for each difficulty and level.
+                </div>
             </div>
             <textarea class="form-control d-none mt-2" id="practice-items-textarea" rows="8" placeholder="Enter one sentence per line..." disabled></textarea>
             <div class="border rounded-3 p-3 bg-light mt-3">
@@ -147,6 +150,11 @@
     const itemsTextarea = document.getElementById('practice-items-textarea');
     const hiddenField = document.getElementById('{{ form.content_text.id_for_label }}');
     const helperText = document.getElementById('items-helper-text');
+    const colorModeLimitNote = document.getElementById('color-mode-limit-note');
+    const maxItemsPerContent = 5;
+    function isColorModeSelected() {
+        return modeSelect.value === 'color';
+    }
     const helperLabel = document.getElementById('difficulty-helper');
     const summaryMode = document.getElementById('summary-mode');
     const summaryDifficulty = document.getElementById('summary-difficulty');
@@ -272,6 +280,9 @@
         itemsSection.style.pointerEvents = canEditItems ? '' : 'none';
         setDisabledState(itemsInput, !canEditItems);
         setDisabledState(itemsTextarea, !canEditItems || difficulty.value !== 'hard');
+        if (colorModeLimitNote) {
+            colorModeLimitNote.style.display = isColorModeSelected() ? 'block' : 'none';
+        }
 
         const hasContent = difficulty.value === 'hard'
             ? Boolean(itemsTextarea.value.trim())
@@ -311,7 +322,9 @@
             itemsTextarea.classList.remove('d-none');
             itemsTextarea.value = hiddenField.value || '';
             helperLabel.textContent = 'Hard difficulty';
-            helperText.textContent = 'Each line represents one sentence.';
+            helperText.textContent = isColorModeSelected()
+                ? `Each line represents one sentence. Limit: ${maxItemsPerContent} sentences.`
+                : 'Each line represents one sentence.';
             itemsInput.placeholder = 'Enter one sentence per line...';
         } else {
             itemsInput.parentElement.classList.remove('d-none');
@@ -319,11 +332,15 @@
             itemsTextarea.value = '';
             if (selected === 'medium') {
                 helperLabel.textContent = 'Medium difficulty';
-                helperText.textContent = 'Each item should contain up to three syllables.';
+                helperText.textContent = isColorModeSelected()
+                    ? `Each item should contain up to three syllables. Limit: ${maxItemsPerContent} items.`
+                    : 'Each item should contain up to three syllables.';
                 itemsInput.placeholder = 'Type a word...';
             } else {
                 helperLabel.textContent = 'Easy difficulty';
-                helperText.textContent = 'Each item should be a one-syllable word.';
+                helperText.textContent = isColorModeSelected()
+                    ? `Each item should be a one-syllable word. Limit: ${maxItemsPerContent} items.`
+                    : 'Each item should be a one-syllable word.';
                 itemsInput.placeholder = 'Type a one-syllable word...';
             }
         }
@@ -378,6 +395,11 @@
                     return;
                 }
                 const existingItems = getSelectedItems();
+                if (isColorModeSelected() && existingItems.length >= maxItemsPerContent) {
+                    helperText.textContent = `You can add up to ${maxItemsPerContent} items for this difficulty and level.`;
+                    itemsInput.value = '';
+                    return;
+                }
                 if (!existingItems.includes(value)) {
                     const nextItems = existingItems.concat(value);
                     hiddenField.value = nextItems.join('\n');
@@ -394,6 +416,12 @@
 
     if (itemsTextarea) {
         itemsTextarea.addEventListener('input', function () {
+            const lines = (itemsTextarea.value || '').split(/\n/).map(function (item) {
+                return item.trim();
+            }).filter(Boolean);
+            if (isColorModeSelected() && lines.length > maxItemsPerContent) {
+                itemsTextarea.value = lines.slice(0, maxItemsPerContent).join('\n');
+            }
             syncHiddenField();
             renderItemsList();
             updateFormAvailability();

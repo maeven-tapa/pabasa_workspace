@@ -20,6 +20,8 @@ def parse_practice_items(content, item_type):
 
 
 class AdminPracticeMaterialForm(forms.Form):
+    MAX_ITEMS_PER_CONTENT = 5
+
     MODE_CHOICES = [
         ("free", "Free Mode"),
         ("color", "Color Mode"),
@@ -74,12 +76,19 @@ class AdminPracticeMaterialForm(forms.Form):
     def clean_content_text(self):
         content = (self.cleaned_data.get("content_text") or "").strip()
         difficulty = self.cleaned_data.get("difficulty_level")
+        mode = self.cleaned_data.get("mode")
         if difficulty in {"easy", "medium"}:
             if not content:
                 raise forms.ValidationError("At least one item is required.")
+            item_count = len(parse_practice_items(content, "word"))
+            if mode == "color" and item_count > self.MAX_ITEMS_PER_CONTENT:
+                raise forms.ValidationError(f"Only up to {self.MAX_ITEMS_PER_CONTENT} items are allowed for each difficulty and level in Color Mode.")
         elif difficulty == "hard":
             if not [line.strip() for line in content.splitlines() if line.strip()]:
                 raise forms.ValidationError("At least one sentence is required.")
+            sentence_count = len([line.strip() for line in content.splitlines() if line.strip()])
+            if mode == "color" and sentence_count > self.MAX_ITEMS_PER_CONTENT:
+                raise forms.ValidationError(f"Only up to {self.MAX_ITEMS_PER_CONTENT} sentences are allowed for each difficulty and level in Color Mode.")
         return content
 
     def practice_items(self):
@@ -93,8 +102,11 @@ class AdminPracticeMaterialForm(forms.Form):
             raise forms.ValidationError("At least one item is required.")
         if cleaned_data.get("difficulty_level") == "hard" and not self.practice_items():
             raise forms.ValidationError("At least one sentence is required.")
-
         mode = cleaned_data.get("mode")
+        if mode == "color" and cleaned_data.get("difficulty_level") in {"easy", "medium"} and len(self.practice_items()) > self.MAX_ITEMS_PER_CONTENT:
+            raise forms.ValidationError(f"Only up to {self.MAX_ITEMS_PER_CONTENT} items are allowed for each difficulty and level in Color Mode.")
+        if mode == "color" and cleaned_data.get("difficulty_level") == "hard" and len(self.practice_items()) > self.MAX_ITEMS_PER_CONTENT:
+            raise forms.ValidationError(f"Only up to {self.MAX_ITEMS_PER_CONTENT} sentences are allowed for each difficulty and level in Color Mode.")
         difficulty = cleaned_data.get("difficulty_level")
         level = cleaned_data.get("level")
         if mode and difficulty and level:

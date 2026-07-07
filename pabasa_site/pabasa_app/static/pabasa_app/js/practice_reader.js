@@ -66,7 +66,49 @@
     const viewMode = urlParams.get("viewMode");
     const selectedDifficulty = (urlParams.get("difficulty") || "").trim().toLowerCase();
     const selectedGameMode = (urlParams.get("game") || "free").trim().toLowerCase();
+    const hasSelectedProgressLevel = urlParams.has("level");
     const selectedProgressLevel = (urlParams.get("level") || "level_1").trim().toLowerCase();
+    const isColorMode = selectedGameMode === "color";
+    const colorModeStage = document.getElementById("colorModeStage");
+    const colorPracticeText = document.getElementById("colorPracticeText");
+    const colorScene = document.getElementById("colorScene");
+    const colorSceneBackground = document.getElementById("colorSceneBackground");
+    const colorCompleteBurst = document.getElementById("colorCompleteBurst");
+    const colorAssetBase = window.PABASA_COLOR_MODE_ASSET_BASE || "/static/pabasa_app/color_mode/";
+    const colorModeScenes = Object.freeze({
+        easy: {
+            theme: "beach",
+            objects: [
+                { key: "sand", file: "sand.png", label: "Sand" },
+                { key: "sea", file: "sea.png", label: "Sea" },
+                { key: "palm_tree", file: "palm_tree.png", label: "Palm Tree" },
+                { key: "umbrella", file: "umbrella.png", label: "Beach Umbrella" },
+                { key: "clouds", file: "clouds.png", label: "Clouds" },
+            ],
+        },
+        medium: {
+            theme: "farm",
+            objects: [
+                { key: "grass", file: "grass.png", label: "Grass" },
+                { key: "barn", file: "barn.png", label: "Barn" },
+                { key: "sheep", file: "sheep.png", label: "Sheep" },
+                { key: "fence", file: "fence.png", label: "Fence" },
+                { key: "clouds", file: "clouds.png", label: "Clouds" },
+            ],
+        },
+        hard: {
+            theme: "zoo",
+            objects: [
+                { key: "grass", file: "grass.png", label: "Grass" },
+                { key: "entrance", file: "entrance.png", label: "Zoo Entrance" },
+                { key: "tiger", file: "tiger.png", label: "Tiger" },
+                { key: "elephant", file: "elephant.png", label: "Elephant" },
+                { key: "butterfly", file: "butterfly.png", label: "Butterfly" },
+            ],
+        },
+    });
+    let colorRevealedCount = 0;
+    let colorCompletionTimer = null;
     const practiceProgressStorageKey = "pabasa_practice_progress_v1";
     const practiceProgressLevelSequence = Object.freeze([
         ['easy', 'level_1'],
@@ -112,6 +154,128 @@
             difficulty: (selectedDifficulty || "easy").toLowerCase(),
             level: (selectedProgressLevel || "level_1").toLowerCase(),
         };
+    }
+
+    function getColorSceneConfig() {
+        return colorModeScenes[selectedDifficulty] || colorModeScenes.easy;
+    }
+
+    function getColorAssetUrl(theme, file) {
+        return `${colorAssetBase}${theme}/${file}`;
+    }
+
+    function setupColorModeScene() {
+        if (!isColorMode || !colorModeStage || !colorScene || !colorSceneBackground) return;
+
+        const config = getColorSceneConfig();
+        shell.classList.add("practice-color");
+        colorModeStage.setAttribute("aria-hidden", "false");
+        colorScene.dataset.theme = config.theme;
+        colorSceneBackground.src = getColorAssetUrl(config.theme, "background.png");
+        colorSceneBackground.alt = `${config.theme} scene background`;
+        colorCompleteBurst?.classList.remove("is-visible");
+        colorScene.querySelectorAll(".color-scene-object").forEach((object) => object.remove());
+
+        config.objects.forEach((object, index) => {
+            const layer = document.createElement("img");
+            layer.className = "color-scene-object";
+            layer.dataset.colorObject = object.key;
+            layer.dataset.index = String(index);
+            layer.src = getColorAssetUrl(config.theme, object.file);
+            layer.alt = "";
+            colorScene.appendChild(layer);
+        });
+
+        colorRevealedCount = 0;
+        if (colorCompletionTimer) {
+            window.clearTimeout(colorCompletionTimer);
+            colorCompletionTimer = null;
+        }
+    }
+
+    function updateColorModeReadingText() {
+        if (!isColorMode || !colorPracticeText) return;
+        colorPracticeText.textContent = items[currentIndex] || "No materials available.";
+    }
+
+    function revealNextColorObject() {
+        if (!isColorMode || !colorScene) return false;
+        const config = getColorSceneConfig();
+        const maxRevealCount = Math.min(config.objects.length, items.length || config.objects.length);
+        if (colorRevealedCount >= maxRevealCount) return false;
+
+        const objectLayer = colorScene.querySelector(`.color-scene-object[data-index="${colorRevealedCount}"]`);
+        if (objectLayer) {
+            objectLayer.classList.add("is-revealed");
+        }
+        colorRevealedCount += 1;
+        return true;
+    }
+
+    function getMaterialForLevel(context) {
+        return getServerPracticeMaterials().find((material) => {
+            if (!material) return false;
+            const materialType = normalizeMaterialValue(material.item_type || material.type).toLowerCase();
+            const materialDifficulty = normalizeMaterialValue(material.difficulty || material.difficulty_level).toLowerCase();
+            const materialLevel = normalizeMaterialValue(material.level).toLowerCase();
+            return materialType === mode
+                && materialDifficulty === context.difficulty
+                && materialLevel === context.level;
+        }) || null;
+    }
+
+    function getPracticeProgressionUrl(context) {
+        const nextMaterial = getMaterialForLevel(context);
+        const query = new URLSearchParams({
+            game: context.mode,
+            difficulty: context.difficulty,
+            level: context.level,
+        });
+        if (nextMaterial?.id !== undefined && nextMaterial?.id !== null) {
+            query.set("id", String(nextMaterial.id));
+        }
+        return `/dashboard/practice/${mode}/?${query.toString()}`;
+    }
+
+    function completeColorModeLevel() {
+        if (!isColorMode) return false;
+
+        const levelContext = getLevelProgressContext();
+        const progressState = getPracticeProgressState();
+        const entry = ensureLevelProgressEntry(progressState, levelContext.mode, levelContext.difficulty, levelContext.level);
+        entry.cards_completed = Math.max(entry.cards_completed || 0, Math.min(items.length, 5));
+        entry.completed_cards = Array.from({ length: Math.min(items.length, 5) }, (_, index) => index);
+        entry.unlocked = true;
+        entry.completed = true;
+        entry.stars_earned = Math.max(Number(entry.stars_earned || 0) || 0, correctResponses * 10);
+        progressState[levelContext.mode][levelContext.difficulty][levelContext.level] = entry;
+        savePracticeProgressState(progressState);
+
+        const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
+        if (nextLevel) {
+            saveLevelProgressEntry(nextLevel.mode, nextLevel.difficulty, nextLevel.level, { unlocked: true });
+        }
+
+        if (colorCompleteBurst) {
+            colorCompleteBurst.classList.add("is-visible");
+        }
+        if (practiceFeedback) {
+            practiceFeedback.textContent = nextLevel ? "Scene complete! Loading the next level..." : "Scene complete! Great work.";
+            practiceFeedback.style.color = "#0f766e";
+        }
+        if (nextBtn) nextBtn.disabled = true;
+        if (recordBtn) recordBtn.disabled = true;
+        if (skipBtn) skipBtn.disabled = true;
+
+        submitPracticeCompletion().catch(() => false);
+        colorCompletionTimer = window.setTimeout(() => {
+            if (nextLevel) {
+                window.location.href = getPracticeProgressionUrl(nextLevel);
+            } else {
+                window.location.href = `/dashboard/practice/progression/${levelContext.mode}/`;
+            }
+        }, 1500);
+        return true;
     }
 
     function getStoredLevelEntry(progressState, mode, difficulty, level) {
@@ -200,6 +364,10 @@
         const materialDifficulty = normalizeMaterialValue(material.difficulty || material.difficulty_level || selectedDifficulty || "").toLowerCase();
         const requestedDifficulty = normalizeMaterialValue(selectedDifficulty).toLowerCase();
         if (requestedDifficulty && materialDifficulty && materialDifficulty !== requestedDifficulty) return false;
+
+        const materialLevel = normalizeMaterialValue(material.level || selectedProgressLevel || "").toLowerCase();
+        const requestedLevel = hasSelectedProgressLevel ? normalizeMaterialValue(selectedProgressLevel).toLowerCase() : "";
+        if (requestedLevel && materialLevel && materialLevel !== requestedLevel) return false;
 
         const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
         return !materialId && !testTitle
@@ -310,6 +478,7 @@
             items = serverItems.slice();
             currentIndex = 0;
             itemOutcomes = Array(items.length).fill(null);
+            setupColorModeScene();
             if (isFreeMode) {
                 renderFreeMode();
             } else {
@@ -321,7 +490,9 @@
 
         items = [];
         itemOutcomes = [];
+        setupColorModeScene();
         if (practiceText) practiceText.textContent = "No materials available.";
+        updateColorModeReadingText();
         if (practiceCounter) practiceCounter.textContent = "No items";
         if (practiceProgress) practiceProgress.style.width = "0%";
         if (nextBtn) nextBtn.disabled = true;
@@ -416,6 +587,7 @@
         }
 
         practiceText.textContent = items[currentIndex];
+        updateColorModeReadingText();
         const label = mode.charAt(0).toUpperCase() + mode.slice(1);
         practiceCounter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
         practiceProgress.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
@@ -810,6 +982,9 @@
         sessionStartedAt = Date.now();
         completionSubmitted = false;
         // No deferred Done button to clear.
+        if (recordBtn) recordBtn.disabled = false;
+        if (skipBtn) skipBtn.disabled = false;
+        setupColorModeScene();
         practiceFeedback.textContent = "Ready when you are.";
         practiceFeedback.style.color = "";
         updateCompletionSummary();
@@ -826,11 +1001,17 @@
     });
 
     recordBtn?.addEventListener("click", function () {
+        const wasAlreadyRead = itemOutcomes[currentIndex] === "read";
         setCurrentItemOutcome("read");
+        const revealedObject = wasAlreadyRead ? false : revealNextColorObject();
         practiceFeedback.textContent = "Nice reading. You earned a practice star.";
         practiceFeedback.style.color = "#0f766e";
         playCoachAnimation('read');
         updateCompletionSummary();
+        if (isColorMode && revealedObject && colorRevealedCount >= Math.min(getColorSceneConfig().objects.length, items.length || 5)) {
+            completeColorModeLevel();
+            return;
+        }
         render();
     });
 

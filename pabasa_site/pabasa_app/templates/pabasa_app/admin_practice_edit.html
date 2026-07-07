@@ -105,6 +105,10 @@
     const hiddenField = document.getElementById('{{ form.content_text.id_for_label }}');
     const helper = document.getElementById('practice-items-helper');
     const container = document.getElementById('practice-items-container');
+    const maxItemsPerContent = 5;
+    function isColorModeSelected() {
+        return mode.value === 'color';
+    }
     const levelHelp = document.getElementById('level-availability-help');
     const occupiedLevelsMap = JSON.parse(document.getElementById('occupied-levels-map').textContent);
 
@@ -172,12 +176,20 @@
             container.classList.add('d-none');
             itemsTextarea.classList.remove('d-none');
             itemsTextarea.value = hiddenField.value || '';
-            helper.textContent = 'Enter one sentence per line.';
+            helper.textContent = isColorModeSelected()
+                ? `Enter up to ${maxItemsPerContent} sentences.`
+                : 'Enter one sentence per line.';
         } else {
             container.classList.remove('d-none');
             itemsTextarea.classList.add('d-none');
             itemsTextarea.value = '';
-            helper.textContent = selected === 'medium' ? 'Each chip represents one word with up to three syllables.' : 'Each chip represents one one-syllable word.';
+            helper.textContent = selected === 'medium'
+                ? (isColorModeSelected()
+                    ? `Each chip represents one word with up to three syllables. Limit: ${maxItemsPerContent} items.`
+                    : 'Each chip represents one word with up to three syllables.')
+                : (isColorModeSelected()
+                    ? `Each chip represents one one-syllable word. Limit: ${maxItemsPerContent} items.`
+                    : 'Each chip represents one one-syllable word.');
             renderTags();
         }
     }
@@ -208,6 +220,11 @@
                 }
                 const normalized = value.replace(/,$/, '');
                 const existingValues = Array.from(itemsTags.querySelectorAll('[data-value]')).map(tag => tag.getAttribute('data-value'));
+                if (isColorModeSelected() && existingValues.length >= maxItemsPerContent) {
+                    helper.textContent = `You can add up to ${maxItemsPerContent} items for this difficulty and level.`;
+                    itemsInput.value = '';
+                    return;
+                }
                 if (!existingValues.includes(normalized)) {
                     const chip = document.createElement('span');
                     chip.className = 'badge rounded-pill bg-warning text-dark me-2 mb-2 px-2 py-1';
@@ -226,7 +243,15 @@
     }
 
     if (itemsTextarea) {
-        itemsTextarea.addEventListener('input', syncHiddenField);
+        itemsTextarea.addEventListener('input', function () {
+            const lines = (itemsTextarea.value || '').split(/\n/).map(function (item) {
+                return item.trim();
+            }).filter(Boolean);
+            if (isColorModeSelected() && lines.length > maxItemsPerContent) {
+                itemsTextarea.value = lines.slice(0, maxItemsPerContent).join('\n');
+            }
+            syncHiddenField();
+        });
     }
 
     difficulty.addEventListener('change', renderForDifficulty);

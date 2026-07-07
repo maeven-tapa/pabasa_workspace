@@ -1893,6 +1893,18 @@ class AdminPracticeMaterialFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('content_text', form.errors)
 
+    def test_color_mode_items_are_limited_to_five_per_difficulty_and_level(self):
+        form = AdminPracticeMaterialForm(data={
+            'mode': 'color',
+            'difficulty_level': 'easy',
+            'level': 'level_1',
+            'status': 'draft',
+            'content_text': 'one\ntwo\nthree\nfour\nfive\nsix',
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('content_text', form.errors)
+
     def test_duplicate_mode_difficulty_and_level_is_rejected(self):
         Material.objects.create(
             title='Existing Practice',
