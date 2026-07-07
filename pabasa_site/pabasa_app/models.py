@@ -870,6 +870,21 @@ class Material(models.Model):
         db_table = "materials"
         ordering = ["section", "created_at"]
 
+    def get_saved_language(self):
+        content_json = self.content_json or {}
+        if isinstance(content_json, dict):
+            for key in ("language", "language_context", "languageContext"):
+                value = content_json.get(key)
+                if isinstance(value, str):
+                    value = value.strip()
+                    if value:
+                        return value
+        return ""
+
+    def get_saved_language_display(self):
+        value = self.get_saved_language()
+        return value if value else "Not Set"
+
     def __str__(self):
         parent = self.code or (self.section.class_code if self.section else 'UNLINKED')
         title_part = f" - {self.title}" if self.title else ''

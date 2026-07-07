@@ -65,6 +65,9 @@
                     <td>{{ material.created_at|date:"M d, Y g:i A" }}</td>
                     <td>{{ material.updated_at|date:"M d, Y g:i A" }}</td>
                     <td>
+                        <span class="text-secondary">{{ material.get_saved_language_display }}</span>
+                    </td>
+                    <td>
                         {% if material.is_active %}
                         <span class="badge rounded-pill text-bg-success">{{ material.get_status_display }}</span>
                         {% else %}

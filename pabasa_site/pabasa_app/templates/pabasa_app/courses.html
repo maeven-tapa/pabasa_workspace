@@ -5423,11 +5423,15 @@
                             <div class="small text-muted fw-bold text-uppercase">Use</div>
                             <div id="viewMaterialUse" class="fw-semibold">-</div>
                         </div>
-                        <div class="col-sm-6 col-lg-3">
+                        <div class="col-sm-6 col-lg-2">
                             <div class="small text-muted fw-bold text-uppercase">Assigned Week</div>
                             <div id="viewMaterialWeek" class="fw-semibold">Unassigned</div>
                         </div>
-                        <div class="col-sm-6 col-lg-3">
+                        <div class="col-sm-6 col-lg-2">
+                            <div class="small text-muted fw-bold text-uppercase">Language</div>
+                            <div id="viewMaterialLanguage" class="fw-semibold">Not Set</div>
+                        </div>
+                        <div class="col-sm-6 col-lg-2">
                             <div class="small text-muted fw-bold text-uppercase">Status</div>
                             <div id="viewMaterialStatus" class="fw-semibold">Published</div>
                         </div>
@@ -5816,6 +5820,36 @@
         return titleCaseLabel(status, 'Published');
     }
 
+    function getMaterialLanguageDisplayValue(material, fallback = 'Not Set') {
+        const candidates = [
+            material?.language,
+            material?.language_context,
+            material?.languageContext,
+            material?.content_json?.language,
+            material?.content_json?.language_context,
+            material?.content_json?.languageContext,
+            material?.content_json?.languageContext,
+            material?.metadata?.language,
+            material?.metadata?.language_context,
+            material?.metadata?.languageContext,
+            material?.saved_language,
+            material?.savedLanguage,
+            material?.language_value,
+            material?.languageValue,
+            material?.data?.language,
+            material?.data?.language_context,
+            material?.data?.languageContext,
+        ];
+
+        const foundValue = candidates.map(value => String(value ?? '').trim()).find(Boolean);
+        if (!foundValue) return fallback;
+
+        const normalized = foundValue.toLowerCase();
+        if (normalized === 'english' || normalized === 'en') return 'English';
+        if (normalized === 'tagalog' || normalized === 'tl' || normalized.includes('tagalog') || normalized.includes('filipino')) return 'Tagalog';
+        return foundValue;
+    }
+
     function showMaterialPreviewModal(material) {
         const viewModalEl = document.getElementById('viewMaterialModal');
         if (!viewModalEl || !material) return;
@@ -5825,6 +5859,7 @@
         const usage = titleCaseLabel(material.usage || material.usage_type || material.type, 'Practice');
         const assignedWeek = getMaterialAssignedWeekLabel(material);
         const status = getMaterialStatusLabel(material);
+        const language = getMaterialLanguageDisplayValue(material, 'Not Set');
         const items = getMaterialContentItems(material);
 
         document.getElementById('viewMaterialModalLabel').textContent = title;
@@ -5832,6 +5867,7 @@
         document.getElementById('viewMaterialType').textContent = itemType;
         document.getElementById('viewMaterialUse').textContent = usage;
         document.getElementById('viewMaterialWeek').textContent = assignedWeek;
+        document.getElementById('viewMaterialLanguage').textContent = language;
         document.getElementById('viewMaterialStatus').textContent = status;
 
         const modalIcon = document.getElementById('viewMaterialIcon');
@@ -10020,6 +10056,31 @@
             return div.innerHTML;
         }
 
+        function getMaterialLanguageSelectionValue(material) {
+            const resolved = getMaterialLanguageDisplayValue(material, 'English');
+            if (resolved === 'Tagalog') return 'Tagalog';
+            if (resolved === 'English') return 'English';
+            return resolved || 'English';
+        }
+
+        function applyMaterialLanguageSelection(material) {
+            if (!materialLanguageSelect) return;
+            const selection = getMaterialLanguageSelectionValue(material);
+            const optionValues = Array.from(materialLanguageSelect.options).map(option => String(option.value));
+
+            if (optionValues.includes(selection)) {
+                materialLanguageSelect.value = selection;
+                return;
+            }
+
+            if (optionValues.includes('Tagalog') && (selection === 'Tagalog' || selection === 'Filipino')) {
+                materialLanguageSelect.value = 'Tagalog';
+                return;
+            }
+
+            materialLanguageSelect.value = optionValues.includes('English') ? 'English' : (optionValues[0] || 'English');
+        }
+
         function countPeriodSeparatedSentences(value) {
             return String(value || '')
                 .split('.')
@@ -10235,6 +10296,27 @@
             return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
+        function getUsedOtherMaterialIds() {
+            try {
+                const stored = localStorage.getItem('pabasa_used_shared_materials') || '[]';
+                const parsed = JSON.parse(stored);
+                return Array.isArray(parsed) ? parsed.map(String) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function markOtherMaterialUsed(materialId) {
+            if (!materialId) return;
+            const usedIds = new Set(getUsedOtherMaterialIds());
+            usedIds.add(String(materialId));
+            localStorage.setItem('pabasa_used_shared_materials', JSON.stringify([...usedIds]));
+        }
+
+        function isOtherMaterialUsed(materialId) {
+            return getUsedOtherMaterialIds().includes(String(materialId));
+        }
+
         function renderOtherMaterialPanel() {
             if (!otherMaterialTableBody) return;
             const search = (otherMaterialSearchInput?.value || '').trim().toLowerCase();
@@ -10277,40 +10359,46 @@
                 return;
             }
 
-            otherMaterialTableBody.innerHTML = sorted.map(item => `
-                <tr>
-                    <td class="align-middle">
-                        <div class="fw-semibold">${escapeHtml(item.title)}</div>
-                        <div class="small text-muted">${escapeHtml(item.courseTitle)}</div>
-                    </td>
-                    <td class="align-middle">${escapeHtml(item.author)}</td>
-                    <td class="align-middle">${escapeHtml(formatMaterialDate(item.published_at))}</td>
-                    <td class="align-middle text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.04em;">
-                        ${escapeHtml(item.originalStatus.toString())}
-                    </td>
-                    <td class="align-middle text-end">
-                        <button type="button" class="btn btn-sm btn-primary use-other-material-btn" data-material-id="${escapeHtml(item.id)}">Use</button>
-                    </td>
-                </tr>
-            `).join('');
+            otherMaterialTableBody.innerHTML = sorted.map(item => {
+                const used = isOtherMaterialUsed(item.id);
+                return `
+                    <tr>
+                        <td class="align-middle">
+                            <div class="fw-semibold">${escapeHtml(item.title)}</div>
+                            <div class="small text-muted">${escapeHtml(item.courseTitle)}</div>
+                        </td>
+                        <td class="align-middle">${escapeHtml(item.author)}</td>
+                        <td class="align-middle">${escapeHtml(formatMaterialDate(item.published_at))}</td>
+                        <td class="align-middle text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.04em;">
+                            ${escapeHtml(item.originalStatus.toString())}
+                        </td>
+                        <td class="align-middle text-end">
+                            <button type="button" class="btn btn-sm btn-primary use-other-material-btn" data-material-id="${escapeHtml(item.id)}" ${used ? 'disabled aria-disabled="true"' : ''}>${used ? 'Used' : 'Use'}</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
 
             if (otherMaterialCardGrid) {
-                otherMaterialCardGrid.innerHTML = sorted.map(item => `
-                    <article class="other-material-card" role="button" tabindex="0" data-material-id="${escapeHtml(item.id)}">
-                        <div class="material-card-actions">
-                            <button type="button" class="btn btn-sm btn-outline-primary use-other-material-btn" data-material-id="${escapeHtml(item.id)}">Select</button>
-                        </div>
+                otherMaterialCardGrid.innerHTML = sorted.map(item => {
+                    const used = isOtherMaterialUsed(item.id);
+                    return `
+                        <article class="other-material-card" role="button" tabindex="0" data-material-id="${escapeHtml(item.id)}">
+                            <div class="material-card-actions">
+                                <button type="button" class="btn btn-sm btn-outline-primary use-other-material-btn" data-material-id="${escapeHtml(item.id)}" ${used ? 'disabled aria-disabled="true"' : ''}>${used ? 'Used' : 'Select'}</button>
+                            </div>
                         <div class="material-card-header">
                             <div class="material-card-title">${escapeHtml(item.title)}</div>
                         </div>
-                        <div class="material-card-meta">
-                            <span class="material-card-chip">Term: ${escapeHtml(item.termLabel)}</span>
-                            <span class="material-card-chip">Author: ${escapeHtml(item.author)}</span>
-                            <span class="material-card-chip">${escapeHtml(formatMaterialDate(item.published_at))}</span>
-                            <span class="material-card-status status-${escapeHtml(String(item.originalStatus).toLowerCase())}">${escapeHtml(item.originalStatus.toString())}</span>
-                        </div>
-                    </article>
-                `).join('');
+                            <div class="material-card-meta">
+                                <span class="material-card-chip">Term: ${escapeHtml(item.termLabel)}</span>
+                                <span class="material-card-chip">Author: ${escapeHtml(item.author)}</span>
+                                <span class="material-card-chip">${escapeHtml(formatMaterialDate(item.published_at))}</span>
+                                <span class="material-card-status status-${escapeHtml(String(item.originalStatus).toLowerCase())}">${escapeHtml(item.originalStatus.toString())}</span>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
             }
         }
 
@@ -10354,6 +10442,7 @@
                 return;
             }
 
+            markOtherMaterialUsed(materialId);
             resetAddMaterialModalState({ clearEditing: true, clearAttachTarget: false, resetForm: true });
             window._pendingSharedMaterialOrigin = true;
             setAddMaterialMode('personal');
@@ -10366,9 +10455,8 @@
             if (publicationStatusSelect) {
                 publicationStatusSelect.value = (material.status || 'published').toString().toLowerCase();
             }
-            const selectedLanguage = material.language || (material.content_json && typeof material.content_json === 'object' ? material.content_json.language : '') || (material.metadata && material.metadata.language) || 'English';
             if (materialLanguageSelect) {
-                materialLanguageSelect.value = selectedLanguage === 'Tagalog' ? 'Tagalog' : 'English';
+                applyMaterialLanguageSelection(material);
             }
             buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || material.week || null);
 
@@ -10593,8 +10681,7 @@
                 // Prefill type/status/assigned week/schedule
                 try { materialTypeSelect.value = material.type || material.usage || material.usage_type || 'practice'; } catch (e) { /* ignore */ }
                 try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
-                const editLanguage = material.language || (material.content_json && typeof material.content_json === 'object' ? material.content_json.language : '') || 'English';
-                if (materialLanguageSelect) materialLanguageSelect.value = editLanguage === 'Tagalog' ? 'Tagalog' : 'English';
+                if (materialLanguageSelect) applyMaterialLanguageSelection(material);
                 buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || null);
                 if ((material.status || '').toString().toLowerCase() === 'scheduled' && material.schedule) {
                     try {
@@ -11189,7 +11276,7 @@
                         // Search in all possible singular/plural keys
                         for (const key of ['word', 'sentence', 'paragraph', 'words', 'sentences', 'paragraphs']) {
                             if (readings[key]) {
-                                const found = readings[key].find(m => String(m.id) === String(materialId));
+                                const found = readings[key].find(m => String(m.id) === String(materialId) || String(m.raw_id) === String(materialId) || String(m.material_id) === String(materialId));
                                 if (found) return found;
                             }
                         }
@@ -11236,6 +11323,8 @@
                         // Title
                         if (materialTitleInput) materialTitleInput.value = material.title || '';
 
+                        if (materialLanguageSelect) applyMaterialLanguageSelection(material);
+
                         // Items -> populate currentItemsList used by the Add modal chips UI
                         try {
                             const items = getMaterialContentItemsForEdit(material);
@@ -11247,6 +11336,7 @@
                         // Type / status / assigned week / schedule
                         try { materialTypeSelect.value = material.type || 'practice'; } catch (e) { /* ignore */ }
                         try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
+                        if (materialLanguageSelect) applyMaterialLanguageSelection(material);
                         buildAssignedWeekOptions('assignedWeek', material.assigned_week);
 
                         if ((material.status || '').toLowerCase() === 'scheduled' && material.schedule) {
@@ -11671,11 +11761,34 @@
                             // If this was an edit/update action, handle update-specific UI and exit
                             if (isEdit) {
                                 try {
-                                    bootstrap.Modal.getInstance(addMaterialModal).hide();
+                                    if (apiData && apiData.material) {
+                                        const savedMaterial = apiData.material;
+                                        const normalizedMaterial = Object.assign({}, savedMaterial, {
+                                            id: editingMaterialId,
+                                            raw_id: savedMaterial.raw_id || editingMaterialId,
+                                            action_id: savedMaterial.action_id || editingMaterialId,
+                                            material_id: savedMaterial.raw_id || editingMaterialId,
+                                            language: savedMaterial.language || '',
+                                            content_json: savedMaterial.content_json || (savedMaterial.content_json ? savedMaterial.content_json : {})
+                                        });
+                                        const readings = ensureClassReadings(currentClassCode || '');
+                                        ['word', 'sentence', 'paragraph'].forEach(typeKey => {
+                                            const list = readings[typeKey] || [];
+                                            const index = list.findIndex(item => String(item.id) === String(editingMaterialId) || String(item.raw_id) === String(editingMaterialId));
+                                            if (index >= 0) {
+                                                list[index] = Object.assign({}, list[index], normalizedMaterial);
+                                            }
+                                        });
+                                        saveStoredReadings();
+                                    }
                                 } catch (e) { /* ignore */ }
 
-                                showSuccessModal('Updated', `"${title}" has been updated.`);
-                                if (currentClassCode) await loadReadings(currentClassCode);
+                                try { showSuccessModal('Updated', `"${title}" has been updated.`); } catch (e) { console.warn('Could not show update success modal', e); }
+                                try {
+                                    if (currentClassCode) {
+                                        await loadReadings(currentClassCode);
+                                    }
+                                } catch (e) { console.warn('Could not reload readings after update', e); }
 
                                 // Persist overview returned by backend (if any)
                                 try {
@@ -11803,16 +11916,20 @@
                             }
                             
                             if (createdIds.length > 0 && apiData.material) {
-                                if (effectiveRefreshCode) {
-                                    cacheCreatedMaterialForClass(effectiveRefreshCode, apiData.material);
-                                    await loadReadings(effectiveRefreshCode);
-                                }
-                                await refreshCourseCardsFromServer();
-                                await renderClasses();
+                                try {
+                                    if (effectiveRefreshCode) {
+                                        cacheCreatedMaterialForClass(effectiveRefreshCode, apiData.material);
+                                        await loadReadings(effectiveRefreshCode);
+                                    }
+                                } catch (e) { console.warn('Could not reload readings after add', e); }
+                                try { await refreshCourseCardsFromServer(); } catch (e) { console.warn('Could not refresh course cards after add', e); }
+                                try { await renderClasses(); } catch (e) { console.warn('Could not render classes after add', e); }
                             } else {
-                                if (effectiveRefreshCode) await loadReadings(effectiveRefreshCode);
-                                await refreshCourseCardsFromServer();
-                                await renderClasses();
+                                try {
+                                    if (effectiveRefreshCode) await loadReadings(effectiveRefreshCode);
+                                } catch (e) { console.warn('Could not reload readings after add', e); }
+                                try { await refreshCourseCardsFromServer(); } catch (e) { console.warn('Could not refresh course cards after add', e); }
+                                try { await renderClasses(); } catch (e) { console.warn('Could not render classes after add', e); }
                             }
 
                             // If this add action was initiated from a Course view, attach created materials to that course
@@ -11900,7 +12017,7 @@
                             }
 
                             console.log('[AddMaterial] Save success:', successMsg);
-                            showSuccessModal('Material Added', successMsg); // Show success modal
+                            try { showSuccessModal('Material Added', successMsg); } catch (e) { console.warn('Could not show add success modal', e); }
 
                             // Notify other modules (profile, teacher dashboard, other tabs)
                             try {

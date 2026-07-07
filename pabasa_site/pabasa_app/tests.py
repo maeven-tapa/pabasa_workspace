@@ -17,7 +17,7 @@ from reportlab.pdfgen import canvas
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _create_notification, _notify_principals
+from .views import _create_notification, _notify_principals, _material_response_payload
 from .weekly_digest import send_weekly_digest
 
 
@@ -41,6 +41,107 @@ class ReadingMatcherTests(TestCase):
 
         self.assertEqual(result["correct_word_count"], 1)
         self.assertFalse(result["complete"])
+
+
+class SharedMaterialImportTests(TestCase):
+    def setUp(self):
+        self.teacher = User.objects.create(
+            custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}",
+            role="teacher",
+            first_name="Tina",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=5,
+            birth_day=10,
+            birth_year=1988,
+            email="shared-import-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        self.other_teacher = User.objects.create(
+            custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}",
+            role="teacher",
+            first_name="Mina",
+            last_name="Shared",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=7,
+            birth_day=4,
+            birth_year=1991,
+            email="shared-source-teacher@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        self.shared_material = Material.objects.create(
+            teacher=self.other_teacher,
+            title="Shared Reading",
+            item_type="word",
+            prompt_text="One",
+            content_text="One\nTwo",
+            content_json={"items": ["One", "Two"], "language": "English"},
+            type="assessment",
+            source_type="shared",
+            status="published",
+            is_active=True,
+        )
+        session = self.client.session
+        session["user_id"] = self.teacher.id
+        session["user_role"] = self.teacher.role
+        session["first_name"] = self.teacher.first_name
+        session["last_name"] = self.teacher.last_name
+        session["email"] = self.teacher.email
+        session["custom_id"] = self.teacher.custom_id
+        session.save()
+
+    def test_importing_shared_material_without_changes_reuses_original(self):
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Shared Reading",
+                "reading_type": "word",
+                "content": "One\nTwo",
+                "status": "published",
+                "usage_type": "assessment",
+                "source_type": "shared",
+                "source_material_id": self.shared_material.id,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertTrue(data.get("reused", False))
+        self.assertEqual(Material.objects.filter(teacher=self.teacher).count(), 0)
+        self.assertEqual(Material.objects.filter(source_type="shared", teacher=self.other_teacher).count(), 1)
+
+    def test_importing_shared_material_with_changes_creates_updated_duplicate(self):
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Shared Reading",
+                "reading_type": "word",
+                "content": "One\nTwo\nThree",
+                "status": "draft",
+                "usage_type": "assessment",
+                "source_type": "shared",
+                "source_material_id": self.shared_material.id,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertFalse(data.get("reused", False))
+        duplicate_materials = Material.objects.filter(teacher=self.teacher, source_type="shared")
+        self.assertEqual(duplicate_materials.count(), 1)
+        duplicate_material = duplicate_materials.get()
+        self.assertTrue(duplicate_material.title.startswith("[UPDATED]"))
+        self.assertEqual(duplicate_material.status, "draft")
 
 
 class MaterialUploadExtractionTests(TestCase):
@@ -527,6 +628,59 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(material.type, "assessment")
         self.assertEqual(material.source_type, "shared")
 
+    def test_material_response_payload_preserves_saved_language(self):
+        material = Material.objects.create(
+            teacher=self.teacher,
+            title="Language reading",
+            item_type="word",
+            prompt_text="Araw",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "Filipino"},
+            type="assessment",
+            source_type="shared",
+            status="published",
+            is_active=True,
+        )
+
+        payload = _material_response_payload(material)
+
+        self.assertEqual(payload["language"], "Filipino")
+
+    def test_material_saved_language_display_uses_saved_value_or_not_set(self):
+        material = Material.objects.create(
+            teacher=self.teacher,
+            title="Language reading",
+            item_type="word",
+            prompt_text="Araw",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "Filipino"},
+            type="assessment",
+            source_type="shared",
+            status="published",
+            is_active=True,
+        )
+
+        self.assertEqual(material.get_saved_language_display(), "Filipino")
+
+        material.content_json = {"items": ["Araw"], "language": "English"}
+        material.save(update_fields=["content_json", "updated_at"])
+        self.assertEqual(material.get_saved_language_display(), "English")
+
+        legacy_material = Material.objects.create(
+            teacher=self.teacher,
+            title="Legacy reading",
+            item_type="word",
+            prompt_text="Araw",
+            content_text="Araw",
+            content_json={},
+            type="assessment",
+            source_type="shared",
+            status="published",
+            is_active=True,
+        )
+
+        self.assertEqual(legacy_material.get_saved_language_display(), "Not Set")
+
     def test_add_reading_material_response_includes_shared_source_type(self):
         user = User.objects.create(
             custom_id="TCH-0003",
@@ -940,6 +1094,70 @@ class MaterialCreationTests(TestCase):
             "students": 1,
             "average_progress": 100.0,
         })
+
+    def test_teacher_courses_api_preserves_saved_material_language(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0012",
+            role="teacher",
+            first_name="Language",
+            last_name="Owner",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="language-owner@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        section = Section.objects.create(
+            class_code="LANG-1001",
+            class_name="Language Class",
+            header="Reading Class",
+            description="",
+            teacher=teacher,
+            subject="Reading",
+        )
+        course = Course.objects.create(
+            code="C-LANG-1",
+            title="Language Course",
+            description="",
+            teacher=teacher,
+        )
+        course.sections.add(section)
+        material = Material.objects.create(
+            teacher=teacher,
+            title="Language reading",
+            item_type="word",
+            content_text="Araw",
+            content_json={"items": ["Araw"], "language": "Tagalog"},
+            type="assessment",
+            source_type="personal",
+            status="published",
+            is_active=True,
+            section=section,
+        )
+        course.materials.add(material)
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.get(reverse("get_teacher_courses_api"))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        course_payload = next(item for item in payload["courses"] if item["id"] == course.id)
+        material_payload = next(item for item in course_payload["materials"] if item["id"] == material.id)
+        self.assertEqual(material_payload["language"], "Tagalog")
+        self.assertEqual(material_payload["content_json"]["language"], "Tagalog")
 
     def test_teacher_courses_api_keeps_personal_materials_unmarked_as_shared(self):
         current_teacher = User.objects.create(

@@ -3073,6 +3073,7 @@ def _admin_materials_context(request, page_title):
         'Created By',
         'Created At',
         'Updated At',
+        'Language',
         'Status',
         'Actions',
     ])
@@ -5128,6 +5129,15 @@ def get_teacher_courses_api(request):
                 source_type = str(getattr(m, 'source_type', 'personal') or 'personal').strip().lower()
                 is_shared_material = source_type == 'shared'
 
+                content_json = getattr(m, 'content_json', None) or {}
+                language_value = ''
+                if isinstance(content_json, dict):
+                    language_value = str(content_json.get('language') or '').strip()
+                if not language_value:
+                    language_value = str(getattr(m, 'language', '') or '').strip()
+                if not language_value:
+                    language_value = 'English'
+
                 materials_list.append({
                     'id': m.id,
                     'raw_id': m.id,
@@ -5154,6 +5164,8 @@ def get_teacher_courses_api(request):
                     'material_source': getattr(m, 'source_type', 'personal') or 'personal',
                     'is_shared_material': is_shared_material,
                     'shared_owner_teacher_name': material_teacher_name if is_shared_material else None,
+                    'language': language_value,
+                    'content_json': content_json,
                 })
 
             # Practices (normalized)
@@ -6293,6 +6305,13 @@ def get_class_materials(request):
                     else:
                         attempt_count = 0
 
+                content_json = getattr(m, 'content_json', None) or {}
+                language_value = ''
+                if isinstance(content_json, dict):
+                    language_value = str(content_json.get('language') or '').strip()
+                if not language_value:
+                    language_value = str(getattr(m, 'language', '') or '').strip()
+
                 item = {
                     'id': f"material-{m.id}",
                     'raw_id': m.id,
@@ -6318,7 +6337,8 @@ def get_class_materials(request):
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
-                    'language': (m.content_json or {}).get('language', ''),
+                    'language': language_value,
+                    'content_json': content_json,
                 }
             elif kind == 'assessment':
                 a = obj
@@ -6752,6 +6772,49 @@ def _shared_material_fingerprint(title, content, item_type, language=''):
     )
 
 
+def _build_updated_shared_material_title(title):
+    cleaned = (title or '').strip()
+    if not cleaned:
+        return '[UPDATED] Shared Material'
+    if cleaned.startswith('[UPDATED]'):
+        return cleaned
+    return f"[UPDATED] {cleaned}"
+
+
+def _shared_material_import_is_unchanged(source_material, title, content, reading_type, status, language, scheduled_at, assigned_week):
+    if not source_material:
+        return False
+
+    source_language = ''
+    if isinstance(getattr(source_material, 'content_json', None), dict):
+        source_language = str(source_material.content_json.get('language') or '').strip() or 'English'
+
+    source_scheduled_at = getattr(source_material, 'scheduled_at', None)
+    normalized_source_scheduled = None
+    if source_scheduled_at:
+        try:
+            normalized_source_scheduled = source_scheduled_at.isoformat()
+        except Exception:
+            normalized_source_scheduled = str(source_scheduled_at)
+
+    normalized_scheduled = None
+    if scheduled_at:
+        try:
+            normalized_scheduled = scheduled_at.isoformat()
+        except Exception:
+            normalized_scheduled = str(scheduled_at)
+
+    return (
+        str(title or '').strip() == str(getattr(source_material, 'title', '') or '').strip()
+        and str(content or '').strip() == str(getattr(source_material, 'content_text', '') or '').strip()
+        and str(reading_type or '').strip().lower() == str(getattr(source_material, 'item_type', '') or '').strip().lower()
+        and str(status or '').strip().lower() == str(getattr(source_material, 'status', '') or '').strip().lower()
+        and str(language or '').strip() == source_language
+        and str(assigned_week or '') == str(getattr(source_material, 'assigned_week', '') or '')
+        and normalized_scheduled == normalized_source_scheduled
+    )
+
+
 def _find_existing_shared_material(title, content, item_type, language='', source_material_id=None):
     qs = Material.objects.filter(source_type='shared', is_active=True)
     if source_material_id:
@@ -6779,6 +6842,15 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
     source_type = str(getattr(material, 'source_type', 'personal') or 'personal').strip().lower()
     resolved_shared = bool(is_shared_material) if is_shared_material is not None else (source_type == 'shared')
 
+    content_json = getattr(material, 'content_json', None) or {}
+    language_value = ''
+    if isinstance(content_json, dict):
+        language_value = str(content_json.get('language') or '').strip()
+    if not language_value:
+        language_value = str(getattr(material, 'language', '') or '').strip()
+    if not language_value:
+        language_value = 'English'
+
     return {
         'id': f"material-{material.id}",
         'raw_id': material.id,
@@ -6792,6 +6864,7 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'shared_owner_teacher_name': shared_owner_teacher_name if resolved_shared else None,
         'content': material.content_text,
         'status': material.status,
+        'language': language_value,
         'schedule': timezone.localtime(material.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if material.scheduled_at else None,
         'items': item_count,
         'created_at': material.created_at.isoformat() if getattr(material, 'created_at', None) else None,
@@ -6896,14 +6969,35 @@ def add_reading_material(request):
 
         with transaction.atomic():
             existing_shared = None
+            source_material = None
+            needs_duplicate = False
             if source_type == 'shared':
-                existing_shared = _find_existing_shared_material(
-                    title,
-                    content,
-                    reading_type,
-                    language,
-                    source_material_id=source_material_id,
-                )
+                if source_material_id:
+                    _, parsed_id = _parse_prefixed_id(source_material_id)
+                    if parsed_id:
+                        source_material = Material.objects.filter(id=parsed_id, source_type='shared', is_active=True).first()
+
+                if source_material:
+                    needs_duplicate = not _shared_material_import_is_unchanged(
+                        source_material,
+                        title,
+                        content,
+                        reading_type,
+                        status,
+                        language,
+                        scheduled_at,
+                        assigned_week,
+                    )
+                    if not needs_duplicate:
+                        existing_shared = source_material
+                else:
+                    existing_shared = _find_existing_shared_material(
+                        title,
+                        content,
+                        reading_type,
+                        language,
+                        source_material_id=source_material_id,
+                    )
             if existing_shared:
                 existing_owner_id = existing_shared.teacher_id or getattr(getattr(existing_shared, 'section', None), 'teacher_id', None)
                 existing_is_from_other_teacher = bool(existing_owner_id and teacher_user and existing_owner_id != teacher_user.id)
@@ -6936,13 +7030,17 @@ def add_reading_material(request):
             # results exist.
             assessment_obj = None
 
+            material_title = title
+            if source_type == 'shared' and needs_duplicate:
+                material_title = _build_updated_shared_material_title(title)
+
             m = Material.objects.create(
                 assessment=None,
                 section=section,
                 teacher=teacher_user,
                 item_type=reading_type,
-                title=title,
-                prompt_text=(tokens[0] if tokens else title) or title,
+                title=material_title,
+                prompt_text=(tokens[0] if tokens else material_title) or material_title,
                 content_text=content,
                 content_json={'items': tokens, 'language': language},
                 type=usage_type,
