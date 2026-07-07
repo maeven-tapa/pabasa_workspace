@@ -802,36 +802,79 @@
 
             .scrolls-phone-device {
                 aspect-ratio: 9 / 19.5;
+                gap: 0;
                 max-height: min(100dvh - 0.7rem, 56rem);
                 min-height: min(100dvh - 0.7rem, 56rem);
+                padding-bottom: 0;
                 width: min(100%, 100%);
             }
 
+            .scrolls-phone-device::after {
+                display: none;
+            }
+
+            .scrolls-phone-shell {
+                display: flex;
+                flex: 1 1 auto;
+                flex-direction: column;
+                min-height: 0;
+            }
+
             .scrolls-phone-header {
-                align-items: flex-start;
+                align-items: center;
+                border-radius: 14px;
                 flex-wrap: wrap;
-                gap: 0.45rem;
-                padding: 0.55rem 0.65rem;
+                gap: 0.24rem 0.35rem;
+                padding: 0.34rem 0.44rem;
+            }
+
+            .scrolls-phone-header .back-link {
+                font-size: 0.86rem;
+                min-height: 32px;
+                min-width: 32px;
             }
 
             .scrolls-header-copy {
-                order: 2;
+                flex: 1 1 8rem;
+                order: 0;
                 text-align: left;
-                width: 100%;
+                width: auto;
+            }
+
+            .scrolls-header-copy h1 {
+                font-size: clamp(0.95rem, 4vw, 1.08rem);
+                line-height: 1.02;
             }
 
             .scrolls-status-pill {
+                align-self: center;
+                font-size: 0.64rem;
                 margin-left: 0;
-                order: 1;
-                align-self: flex-end;
+                order: 0;
+                padding: 0.24rem 0.4rem;
             }
 
             .scrolls-header-meta {
+                gap: 0.2rem;
                 justify-content: flex-start;
+                margin-top: 0.12rem;
+            }
+
+            .scrolls-meta-pill {
+                font-size: 0.62rem;
+                padding: 0.18rem 0.38rem;
             }
 
             .scrolls-screen {
+                flex: 1 1 auto;
+                min-height: 0;
                 padding: 0.65rem;
+            }
+
+            .scrolls-bottom-nav {
+                border-radius: 0 0 16px 16px;
+                flex-shrink: 0;
+                margin-top: 0;
             }
 
             .scrolls-card {
@@ -856,6 +899,7 @@
             .scrolls-phone-device {
                 max-height: min(100dvh - 0.4rem, 56rem);
                 min-height: min(100dvh - 0.4rem, 56rem);
+                padding-bottom: 0;
                 width: min(100%, 100%);
             }
         }
