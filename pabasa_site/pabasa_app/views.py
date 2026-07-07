@@ -33,6 +33,12 @@ from io import BytesIO
 
 # Use a static Windows Tesseract path so OCR activates immediately in the app.
 TESSERACT_STATIC_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+try:
+    import pytesseract
+    if os.path.isfile(TESSERACT_STATIC_PATH):
+        pytesseract.pytesseract.tesseract_cmd = TESSERACT_STATIC_PATH
+except Exception:
+    pass
 
 from .forms import AdminPracticeMaterialForm, parse_practice_items
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal_account
@@ -7034,6 +7040,8 @@ def _extract_text_from_image(upload):
 
             configs = [
                 '--oem 3 --psm 6',
+                '--oem 3 --psm 7',
+                '--oem 3 --psm 8',
                 '--oem 3 --psm 11',
                 '--oem 3 --psm 3',
                 '--oem 3 --psm 4',
@@ -7080,6 +7088,15 @@ def _extract_text_from_image(upload):
                 fallback_cleaned = re.sub(r'\s+', ' ', fallback_text).strip()
                 if fallback_cleaned:
                     return fallback_cleaned
+            except Exception:
+                pass
+
+            try:
+                inverted = ImageOps.invert(grayscale)
+                inverted_text = pytesseract.image_to_string(inverted, config='--oem 3 --psm 6', lang='eng').strip()
+                inverted_cleaned = re.sub(r'\s+', ' ', inverted_text).strip()
+                if inverted_cleaned:
+                    return inverted_cleaned
             except Exception:
                 pass
 
