@@ -1,0 +1,262 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    body.dashboard-body {
+        background:
+            radial-gradient(circle at 10% 20%, rgba(31, 182, 255, 0.06), transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.08), transparent 40%),
+            linear-gradient(rgba(248, 250, 252, 0.45), rgba(248, 250, 252, 0.35)),
+            url("{% static 'pabasa_app/images/student_bg.jpg' %}") center / cover fixed no-repeat !important;
+    }
+    .progression-shell { display: grid; gap: 1rem; }
+    .progression-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(21,94,117,0.12); border-radius: 24px; box-shadow: 0 16px 32px rgba(31,111,139,0.08); padding: 1.2rem 1.25rem; }
+    .progression-hero { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr); align-items: center; }
+    .progression-stat-grid { display: grid; gap: 0.8rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .progression-stat { background: linear-gradient(135deg, rgba(31,111,139,0.1), rgba(255,255,255,0.95)); border: 1px solid rgba(31,111,139,0.1); border-radius: 18px; padding: 0.8rem 0.9rem; }
+    .progression-stat strong { display: block; font-size: 1.15rem; color: var(--dash-text); }
+    .progression-stat span { color: var(--dash-muted); font-size: 0.82rem; }
+    .progression-hero-status { color: #0f766e; font-size: 0.95rem; font-weight: 700; }
+    .progression-difficulty-group { display: grid; gap: 0.8rem; }
+    .difficulty-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+    .difficulty-header .difficulty-badge { background: rgba(31,111,139,0.12); border-radius: 999px; color: var(--dash-primary); font-size: 0.78rem; font-weight: 800; padding: 0.35rem 0.6rem; }
+    .level-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .level-card { display: grid; gap: 0.6rem; border: 1px solid rgba(21,94,117,0.14); border-radius: 20px; padding: 0.95rem; background: rgba(255,255,255,0.92); }
+    .level-card.is-locked { opacity: 0.74; }
+    .level-card.is-completed { border-color: rgba(16,185,129,0.28); }
+    .level-card .level-title-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+    .level-status { font-size: 0.82rem; font-weight: 700; }
+    .level-status.is-unlocked { color: #0f766e; }
+    .level-status.is-completed { color: #047857; }
+    .level-status.is-locked { color: #b45309; }
+    .level-status.is-unavailable { color: #64748b; }
+    .level-play-btn { align-items: center; background: linear-gradient(135deg, #1f6f8b 0%, #0f766e 100%); border: 2px solid rgba(255,255,255,0.95); border-radius: 999px; box-shadow: 0 10px 20px rgba(31,111,139,0.2); color: #fff; display: inline-flex; font-size: 0.84rem; font-weight: 800; justify-content: center; min-height: 42px; min-width: 122px; opacity: 1; padding: 0.6rem 0.9rem; position: relative; text-decoration: none; visibility: visible; white-space: nowrap; z-index: 2; }
+    .level-play-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(31,111,139,0.24); color: #fff; }
+    .level-play-btn.is-locked, .level-play-btn.is-unavailable { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); pointer-events: none; }
+    .level-play-btn.is-completed { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); }
+    .back-link { align-items: center; background: rgba(255,255,255,0.96); border: 1px solid rgba(21,94,117,0.16); border-radius: 999px; box-shadow: 0 10px 24px rgba(31,111,139,0.08); color: var(--dash-primary); display: inline-flex; font-weight: 800; gap: 0.45rem; justify-content: center; min-height: 44px; padding: 0.6rem 0.95rem; text-decoration: none; width: fit-content; }
+    @media (max-width: 991.98px) { .progression-hero { grid-template-columns: 1fr; } .level-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Practice Adventure" page_date="" %}
+{% endblock %}
+
+{% block content %}
+<section class="progression-shell">
+    <a class="back-link" href="{% url 'practice' %}"><i class="bi bi-arrow-left"></i> Back to game hub</a>
+
+    <section class="progression-card progression-hero">
+        <div>
+            <span class="dash-pill mb-2"><i class="bi bi-map"></i> {{ game_mode_title }}</span>
+            <h2 class="mb-2">{{ game_mode_title }} Adventure</h2>
+            <p id="progressionHeroIntro" class="mb-0" style="color: var(--dash-muted);">Follow the map, unlock each level, and collect stars as you grow into a stronger reader.</p>
+            <div class="mt-3 small fw-bold" style="color: var(--dash-primary);">Current challenge: <span id="progressionCurrentChallenge">{{ game_progression_summary.current_difficulty }} {{ game_progression_summary.current_level }}</span></div>
+            <div id="progressionHeroStatus" class="progression-hero-status mt-2">Live progress is updating as you play.</div>
+        </div>
+        <div class="progression-stat-grid">
+            <div class="progression-stat">
+                <strong id="progressionStarsCount">{{ game_progression_summary.stars_earned }}</strong>
+                <span>Total stars</span>
+            </div>
+            <div class="progression-stat">
+                <strong id="progressionCompletedCount">{{ game_progression_summary.completed_levels }}/{{ game_progression_summary.total_levels }}</strong>
+                <span>Levels done</span>
+            </div>
+            <div class="progression-stat">
+                <strong id="progressionProgressPercent">{{ game_progression_summary.progress_percent }}%</strong>
+                <span>Progress</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="progression-card">
+        <div class="section-heading mb-3">
+            <h3>Adventure path</h3>
+            <p>Your next challenge is {{ game_progression_summary.next_label }}.</p>
+        </div>
+        {% for section in game_progression.sections %}
+            <div class="progression-difficulty-group mb-3">
+                <div class="difficulty-header">
+                    <div>
+                        <h4 class="mb-1">{{ section.difficulty_label }}</h4>
+                        <p class="mb-0" style="color: var(--dash-muted); font-size: 0.9rem;">{{ section.locked_reason|default:"Ready when you are." }}</p>
+                    </div>
+                    <span class="difficulty-badge">{% if section.unlocked %}Unlocked{% else %}Locked{% endif %}</span>
+                </div>
+                <div class="level-grid">
+                    {% for level in section.levels %}
+                        <article class="level-card {% if level.state == 'locked' %}is-locked{% endif %} {% if level.state == 'completed' %}is-completed{% elif level.state == 'unlocked' %}is-unlocked{% endif %}" data-difficulty="{{ level.difficulty }}" data-level="{{ level.level }}">
+                            <div class="level-title-row">
+                                <div>
+                                    <strong>{{ level.level_label }}</strong>
+                                    <div class="small text-muted">{{ level.title }}</div>
+                                </div>
+                                <span class="level-status {% if level.state == 'completed' %}is-completed{% elif level.state == 'unlocked' %}is-unlocked{% elif level.state == 'content_unavailable' %}is-unavailable{% else %}is-locked{% endif %}">
+                                    {% if level.state == 'completed' %}Completed{% elif level.state == 'unlocked' %}Unlocked{% elif level.state == 'content_unavailable' %}Content unavailable{% else %}Locked{% endif %}
+                                </span>
+                            </div>
+                            <div class="small text-muted">{{ level.difficulty_label }}</div>
+                            <div class="small text-muted">{% if level.state == 'completed' %}Stars: {{ level.stars_earned }}{% elif level.state == 'locked' %}{{ level.locked_reason }}{% elif level.state == 'content_unavailable' %}No practice content uploaded for this level yet.{% else %}Ready to play{% endif %}</div>
+                            <a class="level-play-btn {% if level.state == 'locked' or level.state == 'content_unavailable' %}is-locked{% elif level.state == 'completed' %}is-completed{% endif %}" href="{% if level.material_exists %}{{ level.play_url }}?id={{ level.material_id }}&game={{ selected_game_mode }}&difficulty={{ level.difficulty }}&level={{ level.level }}{% else %}#{% endif %}">
+                                {% if level.state == 'completed' %}<i class="bi bi-arrow-repeat"></i>{% elif level.state == 'unlocked' %}<i class="bi bi-play-fill"></i>{% elif level.state == 'content_unavailable' %}<i class="bi bi-slash-circle"></i>{% else %}<i class="bi bi-lock-fill"></i>{% endif %}
+                                {{ level.button_label }}
+                            </a>
+                        </article>
+                    {% endfor %}
+                </div>
+            </div>
+        {% empty %}
+            <p class="mb-0 text-muted">No progression content is available for this game yet.</p>
+        {% endfor %}
+    </section>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    (() => {
+        const storageKey = 'pabasa_practice_progress_v1';
+        const mode = '{{ selected_game_mode|default:"free" }}';
+        const levelCards = Array.from(document.querySelectorAll('.level-card[data-difficulty][data-level]'));
+        const levelSequence = [
+            ['easy', 'level_1'],
+            ['easy', 'level_2'],
+            ['easy', 'level_3'],
+            ['easy', 'level_4'],
+            ['easy', 'level_5'],
+            ['medium', 'level_1'],
+            ['medium', 'level_2'],
+            ['medium', 'level_3'],
+            ['medium', 'level_4'],
+            ['medium', 'level_5'],
+            ['hard', 'level_1'],
+            ['hard', 'level_2'],
+            ['hard', 'level_3'],
+            ['hard', 'level_4'],
+            ['hard', 'level_5'],
+        ];
+        const starsCount = document.getElementById('progressionStarsCount');
+        const completedCount = document.getElementById('progressionCompletedCount');
+        const progressPercent = document.getElementById('progressionProgressPercent');
+        const currentChallenge = document.getElementById('progressionCurrentChallenge');
+        const heroIntro = document.getElementById('progressionHeroIntro');
+        const heroStatus = document.getElementById('progressionHeroStatus');
+
+        const isLevelUnlocked = (modeState, difficulty, level, entry, initialUnlocked = false) => {
+            const normalizedDifficulty = String(difficulty || '').toLowerCase();
+            const normalizedLevel = String(level || '').toLowerCase();
+            const normalizedEntry = entry && typeof entry === 'object' ? entry : {};
+            if (normalizedEntry.completed || initialUnlocked || normalizedEntry.unlocked) return true;
+            const sequenceIndex = levelSequence.findIndex((item) => item[0] === normalizedDifficulty && item[1] === normalizedLevel);
+            if (sequenceIndex === 0) return true;
+            for (let index = 0; index < sequenceIndex; index += 1) {
+                const [previousDifficulty, previousLevel] = levelSequence[index];
+                const previousEntry = modeState[previousDifficulty]?.[previousLevel] || {};
+                if (previousEntry.completed) return true;
+            }
+            return false;
+        };
+
+        const readProgress = () => {
+            if (!levelCards.length) {
+                levelCards.push(...Array.from(document.querySelectorAll('.level-card[data-difficulty][data-level]')));
+            }
+            let state = {};
+            try {
+                state = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            } catch (error) {
+                state = {};
+            }
+
+            const modeState = state[mode] && typeof state[mode] === 'object' ? state[mode] : {};
+            const totalLevels = levelCards.length;
+            let completedLevels = 0;
+            let starsEarned = 0;
+
+            levelCards.forEach((card) => {
+                const difficulty = card.dataset.difficulty;
+                const level = card.dataset.level;
+                const entry = modeState[difficulty]?.[level] || {};
+                const initialUnlocked = card.classList.contains('is-unlocked') || card.classList.contains('is-completed');
+                const completed = Boolean(entry.completed) || card.classList.contains('is-completed');
+                const unlocked = isLevelUnlocked(modeState, difficulty, level, entry, initialUnlocked);
+
+                card.classList.toggle('is-completed', completed);
+                card.classList.toggle('is-unlocked', unlocked && !completed);
+                card.classList.toggle('is-locked', !unlocked && !completed);
+
+                const status = card.querySelector('.level-status');
+                const button = card.querySelector('.level-play-btn');
+                if (status) {
+                    status.textContent = completed ? 'Completed' : unlocked ? 'Unlocked' : 'Locked';
+                    status.className = `level-status ${completed ? 'is-completed' : unlocked ? 'is-unlocked' : 'is-locked'}`;
+                }
+                if (button) {
+                    button.classList.toggle('is-completed', completed);
+                    button.classList.toggle('is-locked', !unlocked && !completed);
+                    button.innerHTML = completed
+                        ? '<i class="bi bi-arrow-repeat"></i> Replay'
+                        : unlocked
+                            ? '<i class="bi bi-play-fill"></i> Play Level'
+                            : '<i class="bi bi-lock-fill"></i> Locked';
+                }
+
+                if (completed) {
+                    completedLevels += 1;
+                    starsEarned += Number(entry.stars_earned || 0) || 0;
+                }
+            });
+
+            if (starsCount) starsCount.textContent = starsEarned;
+            if (completedCount) completedCount.textContent = `${completedLevels}/${totalLevels}`;
+            if (progressPercent) progressPercent.textContent = `${totalLevels ? Math.round((completedLevels / totalLevels) * 100) : 0}%`;
+            const nextCard = levelCards.find((card) => {
+                const difficulty = card.dataset.difficulty;
+                const level = card.dataset.level;
+                const entry = modeState[difficulty]?.[level] || {};
+                const initialUnlocked = card.classList.contains('is-unlocked') || card.classList.contains('is-completed');
+                const unlocked = isLevelUnlocked(modeState, difficulty, level, entry, initialUnlocked);
+                return unlocked && !entry.completed;
+            });
+            if (currentChallenge) {
+                if (nextCard) {
+                    currentChallenge.textContent = `${nextCard.dataset.difficulty} ${nextCard.dataset.level}`.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+                } else if (completedLevels >= totalLevels) {
+                    currentChallenge.textContent = 'Adventure complete';
+                }
+            }
+            if (heroIntro) {
+                heroIntro.textContent = nextCard
+                    ? `You are building momentum. ${currentChallenge?.textContent || 'Your next challenge'} is ready to play.`
+                    : completedLevels >= totalLevels
+                        ? 'Every level has been completed. You have finished the adventure.'
+                        : 'Start with the first level to begin your adventure.';
+            }
+            if (heroStatus) {
+                heroStatus.textContent = completedLevels >= totalLevels
+                    ? 'Adventure complete — every unlocked level has been celebrated.'
+                    : completedLevels > 0
+                        ? `${completedLevels} level${completedLevels === 1 ? '' : 's'} complete. Keep going to unlock the next challenge.`
+                        : 'Start the first level to begin your streak.';
+            }
+        };
+
+        const applyProgressionState = () => {
+            readProgress();
+            window.setTimeout(readProgress, 120);
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyProgressionState, { once: true });
+        } else {
+            applyProgressionState();
+        }
+        window.addEventListener('load', applyProgressionState);
+        window.addEventListener('storage', readProgress);
+        window.addEventListener('pabasa:practice-progress-updated', readProgress);
+    })();
+</script>
+{% endblock %}
