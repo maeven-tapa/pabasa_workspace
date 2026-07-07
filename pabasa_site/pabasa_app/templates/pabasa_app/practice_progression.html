@@ -23,7 +23,7 @@
     .difficulty-header .difficulty-badge { background: rgba(31,111,139,0.12); border-radius: 999px; color: var(--dash-primary); font-size: 0.78rem; font-weight: 800; padding: 0.35rem 0.6rem; }
     .level-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .level-card { display: grid; gap: 0.6rem; border: 1px solid rgba(21,94,117,0.14); border-radius: 20px; padding: 0.95rem; background: rgba(255,255,255,0.92); }
-    .level-card.is-locked { opacity: 0.74; }
+    .level-card.is-locked { background: #e2e8f0; border-color: #cbd5e1; color: #64748b; }
     .level-card.is-completed { border-color: rgba(16,185,129,0.28); }
     .level-card .level-title-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
     .level-status { font-size: 0.82rem; font-weight: 700; }
@@ -31,7 +31,7 @@
     .level-status.is-completed { color: #047857; }
     .level-status.is-locked { color: #b45309; }
     .level-status.is-unavailable { color: #64748b; }
-    .level-play-btn { align-items: center; background: linear-gradient(135deg, #1f6f8b 0%, #0f766e 100%); border: 2px solid rgba(255,255,255,0.95); border-radius: 999px; box-shadow: 0 10px 20px rgba(31,111,139,0.2); color: #f0fdfa; display: inline-flex; font-size: 0.84rem; font-weight: 800; gap: 0.4rem; justify-content: center; min-height: 42px; min-width: 122px; opacity: 1; padding: 0.6rem 0.9rem; position: relative; text-decoration: none; visibility: visible; white-space: nowrap; z-index: 2; }
+    .level-play-btn { align-items: center; background: linear-gradient(135deg, #1f6f8b 0%, #0f766e 100%); border: 2px solid rgba(255,255,255,0.95); border-radius: 999px; box-shadow: 0 10px 20px rgba(31,111,139,0.2); color: #f0fdfa; display: inline-flex; font-size: 0.84rem; font-weight: 800; gap: 0.4rem; justify-content: center; min-height: 42px; min-width: 122px; padding: 0.6rem 0.9rem; position: relative; text-decoration: none; visibility: visible; white-space: nowrap; z-index: 2; }
     .level-play-btn i { color: #ccfbf1; }
     .level-play-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(31,111,139,0.24); color: #f0fdfa; }
     .level-play-btn.is-locked, .level-play-btn.is-unavailable { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); pointer-events: none; }
@@ -40,6 +40,42 @@
     .level-play-btn.is-completed { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ecfdf5; }
     .level-play-btn.is-completed i { color: #bbf7d0; }
     .back-link { align-items: center; background: rgba(255,255,255,0.96); border: 1px solid rgba(21,94,117,0.16); border-radius: 999px; box-shadow: 0 10px 24px rgba(31,111,139,0.08); color: var(--dash-primary); display: inline-flex; font-weight: 800; gap: 0.45rem; justify-content: center; min-height: 44px; padding: 0.6rem 0.95rem; text-decoration: none; width: fit-content; }
+    body.dark-theme.dashboard-body { background: #0f172a !important; color: #f1f5f9 !important; }
+    body.dark-theme .progression-shell { color: #f1f5f9; }
+    body.dark-theme .progression-card { background: #1e293b; background-image: none; border-color: #334155; box-shadow: 0 18px 42px #020617; color: #f1f5f9; }
+    body.dark-theme .progression-card h2,
+    body.dark-theme .progression-card h3,
+    body.dark-theme .progression-card h4,
+    body.dark-theme .level-card strong,
+    body.dark-theme .progression-stat strong { color: #f1f5f9; }
+    body.dark-theme .progression-card p,
+    body.dark-theme .progression-card .text-muted,
+    body.dark-theme .progression-stat span,
+    body.dark-theme .level-card .small { color: #94a3b8 !important; }
+    body.dark-theme .progression-stat,
+    body.dark-theme .level-card { background: #0f172a; background-image: none; border-color: #334155; box-shadow: none; color: #f1f5f9; }
+    body.dark-theme .level-card.is-locked,
+    body.dark-theme .level-card.is-unavailable { background: #334155; border-color: #475569; color: #cbd5e1; }
+    body.dark-theme .level-card.is-completed { border-color: #15803d; }
+    body.dark-theme .dash-pill,
+    body.dark-theme .difficulty-header .difficulty-badge { background: #0f172a; border-color: #334155; color: #7dd3fc; }
+    body.dark-theme .progression-hero-status,
+    body.dark-theme #progressionCurrentChallenge { color: #38bdf8; }
+    body.dark-theme .level-status.is-unlocked { color: #5eead4; }
+    body.dark-theme .level-status.is-completed { color: #86efac; }
+    body.dark-theme .level-status.is-locked { color: #fbbf24; }
+    body.dark-theme .level-status.is-unavailable { color: #cbd5e1; }
+    body.dark-theme .level-play-btn { background: #0284c7; border-color: #38bdf8; box-shadow: 0 10px 22px #082f49; color: #f0f9ff; }
+    body.dark-theme .level-play-btn i { color: #e0f2fe; }
+    body.dark-theme .level-play-btn:hover { box-shadow: 0 12px 26px #082f49; color: #f0f9ff; }
+    body.dark-theme .level-play-btn.is-locked,
+    body.dark-theme .level-play-btn.is-unavailable { background: #475569; border-color: #64748b; color: #e2e8f0; }
+    body.dark-theme .level-play-btn.is-locked i,
+    body.dark-theme .level-play-btn.is-unavailable i { color: #e2e8f0; }
+    body.dark-theme .level-play-btn.is-completed { background: #15803d; border-color: #22c55e; color: #ecfdf5; }
+    body.dark-theme .level-play-btn.is-completed i { color: #bbf7d0; }
+    body.dark-theme .back-link { background: #1e293b; border-color: #334155; box-shadow: 0 10px 24px #020617; color: #7dd3fc; }
+    body.dark-theme .back-link i { color: #38bdf8; }
     @media (max-width: 991.98px) { .progression-hero { grid-template-columns: 1fr; } .level-grid { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}

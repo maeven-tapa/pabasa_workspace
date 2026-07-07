@@ -261,7 +261,8 @@
         }
         if (practiceFeedback) {
             practiceFeedback.textContent = nextLevel ? "Scene complete! Loading the next level..." : "Scene complete! Great work.";
-            practiceFeedback.style.color = "#0f766e";
+            practiceFeedback.classList.remove("is-warning");
+            practiceFeedback.classList.add("is-success");
         }
         if (nextBtn) nextBtn.disabled = true;
         if (recordBtn) recordBtn.disabled = true;
@@ -986,7 +987,7 @@
         if (skipBtn) skipBtn.disabled = false;
         setupColorModeScene();
         practiceFeedback.textContent = "Ready when you are.";
-        practiceFeedback.style.color = "";
+        practiceFeedback.classList.remove("is-success", "is-warning");
         updateCompletionSummary();
         render();
     }
@@ -994,7 +995,8 @@
     skipBtn?.addEventListener("click", function () {
         setCurrentItemOutcome("skipped");
         practiceFeedback.textContent = "Skipped. That item will count as a chance to improve next time.";
-        practiceFeedback.style.color = "#b95f44";
+        practiceFeedback.classList.remove("is-success");
+        practiceFeedback.classList.add("is-warning");
         playCoachAnimation('skip');
         updateCompletionSummary();
         render();
@@ -1005,7 +1007,8 @@
         setCurrentItemOutcome("read");
         const revealedObject = wasAlreadyRead ? false : revealNextColorObject();
         practiceFeedback.textContent = "Nice reading. You earned a practice star.";
-        practiceFeedback.style.color = "#0f766e";
+        practiceFeedback.classList.remove("is-warning");
+        practiceFeedback.classList.add("is-success");
         playCoachAnimation('read');
         updateCompletionSummary();
         if (isColorMode && revealedObject && colorRevealedCount >= Math.min(getColorSceneConfig().objects.length, items.length || 5)) {
@@ -1019,6 +1022,7 @@
         if (currentIndex < items.length - 1) {
             currentIndex += 1;
             practiceFeedback.textContent = "New item ready. Take your time.";
+            practiceFeedback.classList.remove("is-success", "is-warning");
             playCoachAnimation('next');
             render();
             return;
@@ -1065,7 +1069,10 @@
         if (skipBtn) skipBtn.classList.add("d-none");
         if (recordBtn) recordBtn.classList.add("d-none");
         if (starCount) starCount.classList.add("d-none");
-        if (practiceFeedback) practiceFeedback.textContent = "Reviewing completed content.";
+        if (practiceFeedback) {
+            practiceFeedback.textContent = "Reviewing completed content.";
+            practiceFeedback.classList.remove("is-success", "is-warning");
+        }
     }
 
     if (isFreeMode) {

@@ -1815,6 +1815,14 @@
             z-index: 1;
         }
 
+        .practice-feedback.is-success {
+            color: #0f766e;
+        }
+
+        .practice-feedback.is-warning {
+            color: #b95f44;
+        }
+
         .practice-complete {
             display: none;
             min-height: calc(100vh - clamp(0.85rem, 2vw, 1.4rem) * 2);
@@ -2272,15 +2280,23 @@
             color: #f1f5f9 !important;
         }
         body.dark-theme .practice-text,
+        body.dark-theme #practiceText,
+        body.dark-theme #colorPracticeText,
         body.dark-theme .coach-panel h2,
+        body.dark-theme .play-status,
         body.dark-theme .practice-complete-card h2,
-        body.dark-theme .practice-stat strong {
+        body.dark-theme .practice-stat strong,
+        body.dark-theme .practice-breakdown-title,
+        body.dark-theme .practice-feedback-copy h3,
+        body.dark-theme .practice-metric-body strong {
             color: #f1f5f9 !important;
         }
         body.dark-theme .practice-title p,
         body.dark-theme .coach-panel p,
         body.dark-theme .mini-step,
-        body.dark-theme .practice-complete-card p {
+        body.dark-theme .practice-complete-card p,
+        body.dark-theme .practice-feedback-copy p,
+        body.dark-theme .practice-metric-body span {
             color: #cbd5e1 !important;
         }
         body.dark-theme .practice-progress {
@@ -2288,6 +2304,13 @@
         }
         body.dark-theme .practice-feedback {
             background: #000 !important;
+            color: #f8fafc !important;
+        }
+        body.dark-theme .practice-feedback.is-success {
+            color: #86efac !important;
+        }
+        body.dark-theme .practice-feedback.is-warning {
+            color: #fca5a5 !important;
         }
         body.dark-theme .practice-controls button,
         body.dark-theme .skip-btn {
@@ -2334,8 +2357,25 @@
         }
         body.dark-theme .practice-paragraph .practice-text {
             background: #1e293b !important;
+            color: #f1f5f9 !important;
             border-color: rgba(255, 255, 255, 0.1) !important;
             box-shadow: inset 0 0 0 8px rgba(31, 111, 139, 0.1) !important;
+        }
+        body.dark-theme .color-dialogue,
+        body.dark-theme .color-dialogue::before,
+        body.dark-theme .practice-feedback-card,
+        body.dark-theme .practice-metric-card {
+            background: #0f172a !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .color-dialogue .practice-text {
+            color: #f1f5f9 !important;
+        }
+        body.dark-theme .practice-feedback-icon,
+        body.dark-theme .practice-metric-icon {
+            background: #1e293b !important;
+            color: #38bdf8 !important;
         }
         body.dark-theme .practice-complete-card::after {
             color: rgba(125, 211, 252, 0.08) !important;

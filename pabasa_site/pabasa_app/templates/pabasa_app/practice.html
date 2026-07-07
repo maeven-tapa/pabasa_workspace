@@ -235,13 +235,11 @@
     }
 
     .game-card.is-locked {
-        background: linear-gradient(180deg, rgba(241, 245, 249, 0.96), rgba(226, 232, 240, 0.9));
-        border-color: rgba(100, 116, 139, 0.24);
+        background: #e2e8f0;
+        border-color: #cbd5e1;
         box-shadow: none;
         color: #64748b;
         cursor: not-allowed;
-        filter: grayscale(0.45);
-        opacity: 0.78;
     }
 
     .game-card .card-top {
@@ -447,6 +445,206 @@
         font-size: 0.93rem;
         font-weight: 700;
         margin-top: 0.2rem;
+    }
+
+    .practice-empty-state {
+        background: #ffffff;
+        border: 1px dashed #9cc7d8;
+        border-radius: 22px;
+        grid-column: 1 / -1;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .practice-empty-state .practice-empty-icon {
+        color: #94a3b8;
+        font-size: 2.5rem;
+    }
+
+    body.dark-theme.dashboard-body {
+        background: #0f172a !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .practice-board {
+        color: #f1f5f9;
+    }
+
+    body.dark-theme .practice-hero,
+    body.dark-theme .hub-section {
+        background: #1e293b;
+        background-image: none;
+        border-color: #334155;
+        box-shadow: 0 18px 42px #020617;
+        color: #f1f5f9;
+    }
+
+    body.dark-theme .practice-hero::after {
+        color: #334155;
+    }
+
+    body.dark-theme .practice-meter,
+    body.dark-theme .challenge-badge,
+    body.dark-theme .achievement-item,
+    body.dark-theme .achievement-stat {
+        background: #0f172a;
+        background-image: none;
+        border-color: #334155;
+        box-shadow: none;
+        color: #f1f5f9;
+    }
+
+    body.dark-theme .section-heading h3,
+    body.dark-theme .challenge-copy strong,
+    body.dark-theme .challenge-badge .badge-label,
+    body.dark-theme .achievement-item strong,
+    body.dark-theme .achievement-stat strong {
+        color: #f1f5f9;
+    }
+
+    body.dark-theme .practice-hero p,
+    body.dark-theme .section-heading p,
+    body.dark-theme .challenge-copy p,
+    body.dark-theme .practice-meter .small,
+    body.dark-theme .achievement-item span,
+    body.dark-theme .achievement-stat span {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .challenge-badge .badge-number,
+    body.dark-theme .achievement-item .achievement-icon,
+    body.dark-theme .achievement-message {
+        color: #38bdf8;
+    }
+
+    body.dark-theme .meter-track,
+    body.dark-theme .challenge-bar {
+        background: #334155;
+    }
+
+    body.dark-theme .meter-track span,
+    body.dark-theme .challenge-bar span {
+        background: linear-gradient(90deg, #38bdf8, #f59e0b);
+    }
+
+    body.dark-theme .intro-pill,
+    body.dark-theme .dash-pill {
+        background: #0f172a;
+        border-color: #334155;
+        color: #7dd3fc;
+    }
+
+    body.dark-theme .game-card {
+        background: #1e293b;
+        background-image: none;
+        border-color: #334155;
+        box-shadow: 0 16px 34px #020617;
+        color: #f1f5f9;
+    }
+
+    body.dark-theme .game-card:not(.is-locked):hover {
+        border-color: #38bdf8;
+        box-shadow: 0 20px 40px #020617;
+    }
+
+    body.dark-theme .game-card.is-active {
+        border-color: #38bdf8;
+        box-shadow: 0 18px 42px #082f49;
+    }
+
+    body.dark-theme .game-card.is-locked {
+        background: #334155;
+        background-image: none;
+        border-color: #475569;
+        box-shadow: none;
+        color: #cbd5e1;
+    }
+
+    body.dark-theme .mode-emoji {
+        background: #0f172a;
+        color: #e0f2fe;
+    }
+
+    body.dark-theme .game-card.is-locked .mode-emoji {
+        background: #1e293b;
+        color: #cbd5e1;
+    }
+
+    body.dark-theme .game-card .difficulty-pill {
+        background: #78350f;
+        color: #fde68a;
+    }
+
+    body.dark-theme .game-card.is-locked .difficulty-pill {
+        background: #475569;
+        color: #e2e8f0;
+    }
+
+    body.dark-theme .skill-list li {
+        background: #0f172a;
+        border-color: #334155;
+        color: #dbeafe;
+    }
+
+    body.dark-theme .game-card.is-locked .skill-list li {
+        background: #1e293b;
+        border-color: #475569;
+        color: #cbd5e1;
+    }
+
+    body.dark-theme .game-card h4,
+    body.dark-theme .game-card .text-dark,
+    body.dark-theme .game-card .fw-bold.text-dark {
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .game-card p,
+    body.dark-theme .game-card .text-muted,
+    body.dark-theme .card-footer .state-label {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .game-card .text-warning {
+        color: #facc15 !important;
+    }
+
+    body.dark-theme .game-card.is-locked h4,
+    body.dark-theme .game-card.is-locked p,
+    body.dark-theme .game-card.is-locked .state-label,
+    body.dark-theme .game-card.is-locked .text-muted,
+    body.dark-theme .game-card.is-locked .text-dark,
+    body.dark-theme .game-card.is-locked .text-warning {
+        color: #cbd5e1 !important;
+    }
+
+    body.dark-theme .card-footer .play-btn {
+        background: #0284c7;
+        color: #f0f9ff;
+        box-shadow: 0 10px 22px #082f49;
+    }
+
+    body.dark-theme .card-footer .unlock-requirement {
+        background: #1e293b;
+        border-color: #475569;
+        color: #e2e8f0;
+    }
+
+    body.dark-theme .practice-empty-state {
+        background: #1e293b;
+        border-color: #475569;
+        color: #f1f5f9;
+    }
+
+    body.dark-theme .practice-empty-state .practice-empty-icon {
+        color: #94a3b8;
+    }
+
+    body.dark-theme .practice-empty-state h4 {
+        color: #f1f5f9;
+    }
+
+    body.dark-theme .practice-empty-state p {
+        color: #94a3b8;
     }
 
     @media (max-width: 991.98px) {
@@ -661,8 +859,8 @@
 
             if (!sortedMaterials.length) {
                 grid.innerHTML = `
-                    <div class="practice-empty-state" style="grid-column: 1 / -1; background: rgba(255,255,255,0.8); border: 1px dashed rgba(21,94,117,0.2); border-radius: 22px; padding: 2rem; text-align: center;">
-                        <i class="bi bi-journal-x" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                    <div class="practice-empty-state">
+                        <i class="bi bi-journal-x practice-empty-icon"></i>
                         <h4 class="mt-3">No practice content yet</h4>
                         <p class="mb-0">Practice adventures will appear here once your teacher publishes new reading sets.</p>
                     </div>`;
