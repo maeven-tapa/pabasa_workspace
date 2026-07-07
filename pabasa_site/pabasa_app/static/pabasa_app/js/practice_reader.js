@@ -19,6 +19,23 @@
     const skipBtn = document.getElementById("skipBtn");
     const recordBtn = document.getElementById("recordBtn");
     const nextBtn = document.getElementById("practiceNextBtn");
+    const isFreeMode = shell.getAttribute("data-free-mode") === "true";
+    const scrollsTrack = document.getElementById("scrollsTrack");
+    const scrollsDots = document.getElementById("scrollsDots");
+    const scrollsProgressBarFill = document.getElementById("scrollsProgressBarFill");
+    const scrollsProgressMeta = document.getElementById("scrollsProgressMeta");
+    const scrollsFeedback = document.getElementById("scrollsFeedback");
+    const scrollsAppTitle = document.getElementById("scrollsAppTitle");
+    const scrollsDifficultyPill = document.getElementById("scrollsDifficultyPill");
+    const scrollsLevelPill = document.getElementById("scrollsLevelPill");
+    const scrollsProgressPill = document.getElementById("scrollsProgressPill");
+    const scrollsStatusPill = document.getElementById("scrollsStatusPill");
+    const scrollRecordBtn = document.getElementById("scrollRecordBtn");
+    let scrollCurrentIndex = 0;
+    let scrollTouchStartY = 0;
+    let scrollTouchEndY = 0;
+    let freeModeGestureLocked = false;
+    let freeModeGestureTimer = null;
     const coachAnimationPlayerActive = document.getElementById("coachAnimationPlayerActive");
     const coachAnimationPlayerBuffer = document.getElementById("coachAnimationPlayerBuffer");
     const completeScore = document.getElementById("completeScore");
@@ -48,6 +65,116 @@
     const testTitle = urlParams.get("test");
     const viewMode = urlParams.get("viewMode");
     const selectedDifficulty = (urlParams.get("difficulty") || "").trim().toLowerCase();
+    const selectedGameMode = (urlParams.get("game") || "free").trim().toLowerCase();
+    const selectedProgressLevel = (urlParams.get("level") || "level_1").trim().toLowerCase();
+    const practiceProgressStorageKey = "pabasa_practice_progress_v1";
+    const practiceProgressLevelSequence = Object.freeze([
+        ['easy', 'level_1'],
+        ['easy', 'level_2'],
+        ['easy', 'level_3'],
+        ['easy', 'level_4'],
+        ['easy', 'level_5'],
+        ['medium', 'level_1'],
+        ['medium', 'level_2'],
+        ['medium', 'level_3'],
+        ['medium', 'level_4'],
+        ['medium', 'level_5'],
+        ['hard', 'level_1'],
+        ['hard', 'level_2'],
+        ['hard', 'level_3'],
+        ['hard', 'level_4'],
+        ['hard', 'level_5'],
+    ]);
+
+    function getPracticeProgressState() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(practiceProgressStorageKey) || "{}");
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+            console.warn("PABASA [Practice]: Unable to read local progress state.", error);
+            return {};
+        }
+    }
+
+    function savePracticeProgressState(progressState) {
+        localStorage.setItem(practiceProgressStorageKey, JSON.stringify(progressState));
+        window.dispatchEvent(new CustomEvent("pabasa:practice-progress-updated", { detail: progressState }));
+        try {
+            window.dispatchEvent(new StorageEvent("storage", { key: practiceProgressStorageKey }));
+        } catch (error) {
+            window.dispatchEvent(new Event("storage"));
+        }
+    }
+
+    function getLevelProgressContext() {
+        return {
+            mode: selectedGameMode || "free",
+            difficulty: (selectedDifficulty || "easy").toLowerCase(),
+            level: (selectedProgressLevel || "level_1").toLowerCase(),
+        };
+    }
+
+    function getStoredLevelEntry(progressState, mode, difficulty, level) {
+        const modeState = progressState[mode] && typeof progressState[mode] === "object" ? progressState[mode] : {};
+        const difficultyState = modeState[difficulty] && typeof modeState[difficulty] === "object" ? modeState[difficulty] : {};
+        const existingEntry = difficultyState[level] && typeof difficultyState[level] === "object" ? difficultyState[level] : {};
+        return existingEntry;
+    }
+
+    function ensureLevelProgressEntry(progressState, mode, difficulty, level) {
+        if (!progressState[mode] || typeof progressState[mode] !== "object") {
+            progressState[mode] = {};
+        }
+        if (!progressState[mode][difficulty] || typeof progressState[mode][difficulty] !== "object") {
+            progressState[mode][difficulty] = {};
+        }
+
+        const entry = progressState[mode][difficulty][level] && typeof progressState[mode][difficulty][level] === "object"
+            ? progressState[mode][difficulty][level]
+            : {};
+
+        const sequenceIndex = practiceProgressLevelSequence.findIndex((candidate) => candidate[0] === difficulty && candidate[1] === level);
+        const isFirstLevel = sequenceIndex === 0;
+        const unlocked = entry.unlocked !== undefined
+            ? Boolean(entry.unlocked)
+            : (isFirstLevel || (() => {
+                for (let index = 0; index < sequenceIndex; index += 1) {
+                    const [previousDifficulty, previousLevel] = practiceProgressLevelSequence[index];
+                    const previousEntry = getStoredLevelEntry(progressState, mode, previousDifficulty, previousLevel);
+                    if (previousEntry?.completed) {
+                        return true;
+                    }
+                }
+                return false;
+            })());
+
+        entry.completed = Boolean(entry.completed);
+        entry.unlocked = unlocked;
+        entry.cards_completed = Number(entry.cards_completed || 0) || 0;
+        entry.completed_cards = Array.isArray(entry.completed_cards) ? entry.completed_cards : [];
+        entry.stars_earned = Number(entry.stars_earned || 0) || 0;
+
+        progressState[mode][difficulty][level] = entry;
+        return entry;
+    }
+
+    function saveLevelProgressEntry(mode, difficulty, level, updates) {
+        const progressState = getPracticeProgressState();
+        const entry = ensureLevelProgressEntry(progressState, mode, difficulty, level);
+        Object.assign(entry, updates);
+        progressState[mode][difficulty][level] = entry;
+        savePracticeProgressState(progressState);
+        return entry;
+    }
+
+    function getNextLevelContext(currentMode, currentDifficulty, currentLevel) {
+        const currentIndex = practiceProgressLevelSequence.findIndex((candidate) => candidate[0] === currentDifficulty && candidate[1] === currentLevel);
+        if (currentIndex < 0 || currentIndex === practiceProgressLevelSequence.length - 1) {
+            return null;
+        }
+        const [nextDifficulty, nextLevel] = practiceProgressLevelSequence[currentIndex + 1];
+        return { mode: currentMode, difficulty: nextDifficulty, level: nextLevel };
+    }
 
     function getServerPracticeMaterials() {
         const dataElement = document.getElementById("practiceMaterialsData");
@@ -59,6 +186,30 @@
             console.warn("PABASA [Practice]: Unable to parse server practice materials.", e);
             return [];
         }
+    }
+
+    function normalizeMaterialValue(value) {
+        return String(value || "").trim();
+    }
+
+    function matchesMaterial(material) {
+        if (!material) return false;
+        const mItemType = material.item_type || material.type;
+        if (mItemType !== mode) return false;
+
+        const materialDifficulty = normalizeMaterialValue(material.difficulty || material.difficulty_level || selectedDifficulty || "").toLowerCase();
+        const requestedDifficulty = normalizeMaterialValue(selectedDifficulty).toLowerCase();
+        if (requestedDifficulty && materialDifficulty && materialDifficulty !== requestedDifficulty) return false;
+
+        const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+        return !materialId && !testTitle
+            || (materialId && mId === String(materialId).trim())
+            || (testTitle && material.title === testTitle);
+    }
+
+    function getActiveMaterialMeta() {
+        const serverMaterials = getServerPracticeMaterials();
+        return serverMaterials.find(matchesMaterial) || null;
     }
 
     function parseItems(material, currentMode) {
@@ -77,20 +228,8 @@
         if (!serverMaterials.length) return [];
 
         return serverMaterials.reduce((aggregatedItems, material) => {
-            // Fix: Check item_type (word/sentence/para) and type (practice/both)
-            const mItemType = material.item_type || material.type; // Fallback for various JSON structures
-            if (!material || mItemType !== mode) return aggregatedItems;
-            if (selectedDifficulty && material.difficulty !== selectedDifficulty) return aggregatedItems;
-
-            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
-            const matchesTarget = !materialId && !testTitle
-                || (materialId && mId === String(materialId).trim())
-                || (testTitle && material.title === testTitle);
-
-            if (matchesTarget) {
-                aggregatedItems.push(...parseItems(material, mode));
-            }
-
+            if (!material || !matchesMaterial(material)) return aggregatedItems;
+            aggregatedItems.push(...parseItems(material, mode));
             return aggregatedItems;
         }, []);
     }
@@ -171,7 +310,11 @@
             items = serverItems.slice();
             currentIndex = 0;
             itemOutcomes = Array(items.length).fill(null);
-            render();
+            if (isFreeMode) {
+                renderFreeMode();
+            } else {
+                render();
+            }
             setCoachAnimationSource(initialCoachAnimation);
             return;
         }
@@ -280,6 +423,235 @@
         if (nextBtn) {
             nextBtn.textContent = currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next";
             nextBtn.disabled = false;
+        }
+    }
+
+    function renderFreeMode() {
+        if (!scrollsTrack) return;
+        if (!items.length) {
+            scrollsTrack.innerHTML = '<div class="scrolls-card"><div class="scrolls-card-badge"><i class="bi bi-journal-text"></i> No cards yet</div><p class="scrolls-card-text">No reading cards are available right now.</p></div>';
+            return;
+        }
+
+        const currentLevelContext = getLevelProgressContext();
+        const levelEntry = ensureLevelProgressEntry(getPracticeProgressState(), currentLevelContext.mode, currentLevelContext.difficulty, currentLevelContext.level);
+        const completedCards = new Set(levelEntry.completed_cards || []);
+
+        const cardMarkup = items.map((item, index) => {
+            const illustration = index % 2 === 0 ? '📖' : '✨';
+            const badge = index === 0 ? 'New card' : `Card ${index + 1}`;
+            const isComplete = completedCards.has(index);
+            return `
+                <section class="scrolls-card${isComplete ? ' is-complete' : ''}" data-index="${index}">
+                    <span class="scrolls-card-badge"><i class="bi bi-stars"></i> ${badge}</span>
+                    <div class="scrolls-illustration" aria-hidden="true">${illustration}</div>
+                    <h2 class="scrolls-card-text">${escapeHtml(item)}</h2>
+                    <p class="scrolls-card-note">Read slowly, then tap the mic to record your voice.</p>
+                    <p class="scrolls-hint">Swipe up for the next challenge</p>
+                    <div class="scrolls-card-actions">
+                        <button class="scrolls-record-btn${isComplete ? ' is-read' : ''}" type="button"><i class="bi bi-${isComplete ? 'check-circle-fill' : 'mic-fill'}"></i> ${isComplete ? 'Completed' : 'Read aloud'}</button>
+                    </div>
+                </section>`;
+        }).join('');
+
+        scrollsTrack.innerHTML = cardMarkup;
+        scrollsTrack.style.transform = `translateY(-${scrollCurrentIndex * 100}%)`;
+        updateFreeModeProgress();
+    }
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function updateFreeModeProgress() {
+        if (!items.length) return;
+        const current = Math.min(items.length - 1, Math.max(0, scrollCurrentIndex));
+        const progressPercent = ((current + 1) / items.length) * 100;
+        const activeMaterial = getActiveMaterialMeta();
+        const difficultyLabelText = normalizeMaterialValue(activeMaterial?.difficulty_label || activeMaterial?.difficulty || selectedDifficulty || 'Easy');
+        const levelLabelText = normalizeMaterialValue(activeMaterial?.level_label || activeMaterial?.level || 'Level 2');
+        const titleText = normalizeMaterialValue(activeMaterial?.title || 'PABASA Scrolls');
+        const currentLevelContext = getLevelProgressContext();
+        const levelEntry = ensureLevelProgressEntry(getPracticeProgressState(), currentLevelContext.mode, currentLevelContext.difficulty, currentLevelContext.level);
+        const completedCards = Array.isArray(levelEntry.completed_cards) ? levelEntry.completed_cards.length : 0;
+
+        if (scrollsProgressBarFill) scrollsProgressBarFill.style.width = `${progressPercent}%`;
+        if (scrollsProgressMeta) scrollsProgressMeta.textContent = levelEntry.completed ? 'Level complete! The next challenge is unlocked.' : current === items.length - 1 ? 'You reached the end of this level' : 'Swipe up for the next challenge';
+        if (scrollsAppTitle) scrollsAppTitle.textContent = titleText;
+        if (scrollsDifficultyPill) scrollsDifficultyPill.textContent = difficultyLabelText || 'Easy';
+        if (scrollsLevelPill) scrollsLevelPill.textContent = levelLabelText || 'Level 2';
+        if (scrollsProgressPill) scrollsProgressPill.textContent = `Card ${current + 1} of ${items.length}`;
+        if (scrollsStatusPill) scrollsStatusPill.textContent = levelEntry.completed ? 'Level complete' : completedCards > 0 ? `${completedCards} completed` : 'Ready';
+        if (scrollsDots) {
+            scrollsDots.innerHTML = items.map((_, index) => `<span class="${index === current ? 'is-active' : ''}"></span>`).join('');
+        }
+    }
+
+    function lockFreeModeGesture() {
+        if (freeModeGestureLocked) return false;
+        freeModeGestureLocked = true;
+        if (freeModeGestureTimer) {
+            window.clearTimeout(freeModeGestureTimer);
+        }
+        freeModeGestureTimer = window.setTimeout(() => {
+            freeModeGestureLocked = false;
+        }, 450);
+        return true;
+    }
+
+    function goToFreeModeCard(nextIndex) {
+        if (!items.length) return;
+        const safeIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
+        scrollCurrentIndex = safeIndex;
+        if (scrollsTrack) scrollsTrack.style.transform = `translateY(-${scrollCurrentIndex * 100}%)`;
+        updateFreeModeProgress();
+    }
+
+    function handleFreeModeSwipe(direction) {
+        if (!items.length || !lockFreeModeGesture()) return;
+        if (direction === 'up') {
+            goToFreeModeCard(scrollCurrentIndex + 1);
+        } else if (direction === 'down') {
+            goToFreeModeCard(scrollCurrentIndex - 1);
+        }
+    }
+
+    function handleFreeModeKeyboard(event) {
+        if (!isFreeMode || !items.length) return false;
+        const activeElement = document.activeElement;
+        if (isInteractiveElement(activeElement)) return false;
+
+        const isSpace = event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
+        if (isSpace) {
+            event.preventDefault();
+            if (!lockFreeModeGesture()) return true;
+            handleFreeModeReadAttempt();
+            return true;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            if (!lockFreeModeGesture()) return true;
+            setCurrentItemOutcome('skipped');
+            if (scrollsFeedback) scrollsFeedback.textContent = 'Skipped. That card will wait for you next time.';
+            if (scrollsStatusPill) scrollsStatusPill.textContent = 'Skipped';
+            updateCompletionSummary();
+            goToFreeModeCard(scrollCurrentIndex + 1);
+            return true;
+        }
+
+        return false;
+    }
+
+    function hideLevelCompleteOverlay() {
+        const overlay = document.getElementById("scrollsLevelOverlay");
+        if (overlay) overlay.hidden = true;
+    }
+
+    function showLevelCompleteOverlay() {
+        const overlay = document.getElementById("scrollsLevelOverlay");
+        const title = document.getElementById("scrollsLevelOverlayTitle");
+        const message = document.getElementById("scrollsLevelOverlayMessage");
+        const action = document.getElementById("scrollsLevelOverlayAction");
+        if (!overlay) return;
+
+        const levelContext = getLevelProgressContext();
+        const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
+        if (title) {
+            title.textContent = 'Level Complete';
+        }
+        if (message) {
+            message.textContent = nextLevel
+                ? `You finished every card in this level. ${nextLevel.difficulty} ${nextLevel.level} is now unlocked.`
+                : 'You finished every card in this level. Great work!';
+        }
+        if (action) {
+            const unlockQuery = nextLevel ? `?unlock=${encodeURIComponent(`${nextLevel.difficulty}_${nextLevel.level}`)}` : '';
+            action.href = `/dashboard/practice/progression/${selectedGameMode}/${unlockQuery}`;
+            action.textContent = nextLevel ? 'View Adventure Map' : 'Back to Practice';
+        }
+        overlay.hidden = false;
+    }
+
+    function handleFreeModeReadAttempt() {
+        const currentItem = items[scrollCurrentIndex];
+        if (!currentItem) return false;
+
+        const levelContext = getLevelProgressContext();
+        const progressState = getPracticeProgressState();
+        const entry = ensureLevelProgressEntry(progressState, levelContext.mode, levelContext.difficulty, levelContext.level);
+        const alreadyCompleted = Array.isArray(entry.completed_cards) && entry.completed_cards.includes(scrollCurrentIndex);
+        const awardStar = !alreadyCompleted;
+
+        if (awardStar) {
+            entry.completed_cards = [...new Set([...(entry.completed_cards || []), scrollCurrentIndex])];
+            entry.cards_completed = entry.completed_cards.length;
+            entry.stars_earned = entry.cards_completed;
+            entry.unlocked = true;
+            entry.completed = entry.cards_completed >= items.length;
+            progressState[levelContext.mode][levelContext.difficulty][levelContext.level] = entry;
+            savePracticeProgressState(progressState);
+        }
+
+        setCurrentItemOutcome('read');
+        if (scrollsFeedback) {
+            scrollsFeedback.textContent = awardStar ? '⭐ Great job! You earned 1 Star!' : '⭐ You already completed this card.';
+        }
+        if (scrollsStatusPill) {
+            scrollsStatusPill.textContent = awardStar ? 'Great job' : 'Completed';
+        }
+        if (scrollRecordBtn) {
+            scrollRecordBtn.classList.add('is-read');
+        }
+        updateCompletionSummary();
+        renderFreeMode();
+
+        if (entry.completed) {
+            const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
+            if (nextLevel) {
+                saveLevelProgressEntry(nextLevel.mode, nextLevel.difficulty, nextLevel.level, { unlocked: true });
+            }
+            showLevelCompleteOverlay();
+            return true;
+        }
+
+        goToFreeModeCard(scrollCurrentIndex + 1);
+        hideLevelCompleteOverlay();
+        return true;
+    }
+
+    function attachFreeModeInteractions() {
+        if (!isFreeMode || !scrollsTrack) return;
+        scrollsTrack.addEventListener('touchstart', (event) => {
+            scrollTouchStartY = event.touches[0]?.clientY || 0;
+        }, { passive: true });
+        scrollsTrack.addEventListener('touchend', (event) => {
+            scrollTouchEndY = event.changedTouches[0]?.clientY || 0;
+            const delta = scrollTouchEndY - scrollTouchStartY;
+            if (Math.abs(delta) > 110) {
+                handleFreeModeSwipe(delta < 0 ? 'up' : 'down');
+            }
+        }, { passive: true });
+        scrollsTrack.addEventListener('wheel', (event) => {
+            if (Math.abs(event.deltaY) > 120) {
+                event.preventDefault();
+                handleFreeModeSwipe(event.deltaY > 0 ? 'up' : 'down');
+            }
+        }, { passive: false });
+        scrollsTrack.addEventListener('click', (event) => {
+            const card = event.target.closest('.scrolls-record-btn');
+            if (!card) return;
+            handleFreeModeReadAttempt();
+        });
+        if (scrollRecordBtn) {
+            scrollRecordBtn.addEventListener('click', () => {
+                handleFreeModeReadAttempt();
+            });
         }
     }
 
@@ -460,6 +832,8 @@
 
     document.addEventListener("keydown", function (event) {
         if (event.defaultPrevented) return;
+        if (handleFreeModeKeyboard(event)) return;
+
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return;
 
@@ -487,6 +861,10 @@
         if (recordBtn) recordBtn.classList.add("d-none");
         if (starCount) starCount.classList.add("d-none");
         if (practiceFeedback) practiceFeedback.textContent = "Reviewing completed content.";
+    }
+
+    if (isFreeMode) {
+        attachFreeModeInteractions();
     }
 
     loadItems();

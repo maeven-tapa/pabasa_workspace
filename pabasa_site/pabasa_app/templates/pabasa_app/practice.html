@@ -20,29 +20,23 @@
         gap: 1.15rem;
     }
 
-    .practice-hero,
-    .subject-card {
-        background: rgba(255, 255, 255, 0.74);
-        border: 1px solid rgba(21, 94, 117, 0.12);
-        backdrop-filter: blur(12px) saturate(160%);
-        -webkit-backdrop-filter: blur(12px) saturate(160%);
-        box-shadow: 0 16px 38px rgba(21, 94, 117, 0.08);
-    }
-
     .practice-hero {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(21, 94, 117, 0.12);
         border-radius: 32px;
+        box-shadow: 0 16px 38px rgba(21, 94, 117, 0.08);
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
         gap: 0.85rem;
+        grid-template-columns: minmax(0, 1fr) auto;
         overflow: hidden;
         padding: 1.5rem 2rem;
         position: relative;
     }
 
     .practice-hero::after {
-        content: "ba";
         bottom: -48px;
         color: rgba(31, 111, 139, 0.08);
+        content: "ba";
         font-size: 3.5rem;
         font-weight: 700;
         line-height: 1;
@@ -51,19 +45,19 @@
     }
 
     .practice-hero h2 {
-        font-size: clamp(1rem, 1.6vw, 1.4rem);
-        font-weight: 700;
-        line-height: 1;
+        font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+        font-weight: 800;
+        line-height: 1.15;
         margin: 0 0 0.65rem;
         max-width: 720px;
     }
 
     .practice-hero p {
         color: var(--dash-ink-soft);
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         line-height: 1.6;
         margin: 0;
-        max-width: 620px;
+        max-width: 640px;
     }
 
     .practice-meter {
@@ -98,401 +92,320 @@
         width: 0;
     }
 
-    .subject-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-        gap: 1.15rem;
-        align-items: stretch;
+    .hub-section {
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid rgba(21, 94, 117, 0.12);
+        border-radius: 28px;
+        box-shadow: 0 16px 38px rgba(21, 94, 117, 0.08);
+        padding: 1.2rem 1.25rem;
     }
 
-    .subject-card {
-        border-radius: 24px;
+    .intro-card {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .section-heading {
         display: flex;
         flex-direction: column;
-        overflow: hidden;
-        position: relative;
-        text-decoration: none;
+        gap: 0.25rem;
     }
 
-    .subject-card::before {
-        content: "";
-        height: 4px;
-        left: 1rem;
-        position: absolute;
-        right: 1rem;
-        top: 0;
-        border-radius: 0 0 999px 999px;
-        z-index: 1;
-    }
-
-    .subject-card[data-difficulty="easy"]::before { background: #16a34a; }
-    .subject-card[data-difficulty="medium"]::before { background: #f59e0b; }
-    .subject-card[data-difficulty="hard"]::before { background: #b95f44; }
-
-    .practice-card {
-        background:
-            linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(231, 245, 248, 0.78)),
-            rgba(255, 255, 255, 0.82);
-        border: 1px solid rgba(21, 94, 117, 0.12);
-        box-shadow: 0 16px 38px rgba(21, 94, 117, 0.07);
-        gap: 1rem;
-        min-height: 236px;
-        padding: 1.1rem;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    }
-
-    .practice-card:hover {
-        border-color: rgba(31, 111, 139, 0.22);
-        box-shadow: 0 22px 48px rgba(31, 38, 135, 0.12);
-        transform: translateY(-2px);
-    }
-
-    .practice-card .card-header {
-        align-items: flex-start;
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        gap: 0.85rem;
-        padding: 0;
-        background: transparent;
-        border: 0;
-    }
-
-    .practice-card .card-title-wrap {
-        min-width: 0;
-    }
-
-    .practice-card .material-icon {
-        align-items: center;
-        background: rgba(31, 111, 139, 0.1);
-        border: 1px solid rgba(31, 111, 139, 0.14);
-        border-radius: 16px;
-        color: #1f6f8b;
-        display: inline-flex;
-        flex: 0 0 auto;
-        font-size: 1.15rem;
-        height: 46px;
-        justify-content: center;
-        width: 46px;
-    }
-
-    .practice-card[data-difficulty="easy"] .material-icon {
-        background: rgba(22, 163, 74, 0.1);
-        border-color: rgba(22, 163, 74, 0.16);
-        color: #15803d;
-    }
-
-    .practice-card[data-difficulty="medium"] .material-icon {
-        background: rgba(245, 158, 11, 0.12);
-        border-color: rgba(245, 158, 11, 0.18);
-        color: #b45309;
-    }
-
-    .practice-card[data-difficulty="hard"] .material-icon {
-        background: rgba(185, 95, 68, 0.12);
-        border-color: rgba(185, 95, 68, 0.18);
-        color: #b95f44;
-    }
-
-    .practice-card .card-header h3 {
-        color: var(--dash-text);
-        font-size: 1.08rem;
-        font-weight: 900;
-        line-height: 1.22;
-        margin: 0 0 0.35rem;
-        overflow-wrap: anywhere;
-    }
-
-    .practice-card .card-header h3 .badge-done-marker {
-        margin-left: 0.45rem;
-        vertical-align: middle;
-    }
-
-    .practice-card .card-header p {
-        color: var(--dash-muted);
-        font-size: 0.82rem;
-        font-weight: 700;
-        line-height: 1.35;
-        margin: 0;
-    }
-
-    .practice-card .subject-code,
-    .practice-card .status-badge {
-        align-items: center;
-        border-radius: 999px;
-        display: inline-flex;
-        font-size: 0.72rem;
-        font-weight: 900;
-        gap: 0.35rem;
-        line-height: 1;
-        padding: 0.48rem 0.7rem;
-        white-space: nowrap;
-    }
-
-    .practice-card .subject-code {
-        background: rgba(31, 111, 139, 0.09);
-        border: 1px solid rgba(31, 111, 139, 0.12);
-        color: var(--sky);
-    }
-
-    .practice-card .status-badge {
-        background: rgba(22, 163, 74, 0.1);
-        border: 1px solid rgba(22, 163, 74, 0.16);
-        color: #15803d;
-    }
-
-    .practice-card .card-meta {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.65rem;
-        font-size: 0.82rem;
-    }
-
-    .practice-card .meta-pill {
-        align-items: center;
-        background: rgba(255, 253, 247, 0.72);
-        border: 1px solid rgba(27, 26, 23, 0.07);
-        border-radius: 16px;
-        color: var(--dash-text);
-        display: inline-flex;
-        font-weight: 800;
-        gap: 0.5rem;
-        min-height: 42px;
-        padding: 0.58rem 0.7rem;
-    }
-
-    .practice-card .meta-pill i {
-        color: var(--sky);
-        font-size: 0.95rem;
-    }
-
-    .practice-card .card-bottom {
-        align-items: center;
-        border-top: 1px solid rgba(27, 26, 23, 0.07);
-        display: flex;
-        justify-content: space-between;
-        gap: 0.85rem;
-        margin-top: auto;
-        padding-top: 0.95rem;
-    }
-
-    .practice-card .item-count,
-    .practice-card .card-status {
-        color: var(--dash-muted);
-        font-size: 0.86rem;
-        font-weight: 800;
-    }
-
-    .practice-card .start-practice-btn {
-        align-items: center;
-        border: 0;
-        border-radius: 16px;
-        box-shadow: 0 12px 26px rgba(31, 111, 139, 0.16);
-        display: inline-flex;
-        font-size: 0.9rem;
-        font-weight: 900;
-        gap: 0.45rem;
-        justify-content: center;
-        min-height: 44px;
-        min-width: 154px;
-        padding: 0.65rem 1rem;
-        text-decoration: none;
-        transition: box-shadow 0.2s ease, transform 0.2s ease;
-    }
-
-    .practice-card .start-practice-btn:hover {
-        box-shadow: 0 16px 30px rgba(31, 111, 139, 0.22);
-        transform: translateY(-1px);
-    }
-
-    .subject-card.practice-card.is-done,
-    .subject-card.practice-card.material-card-done {
-        background:
-            linear-gradient(180deg, rgba(240, 253, 244, 0.95), rgba(255, 255, 255, 0.78)),
-            rgba(240, 253, 244, 0.84) !important;
-        border-color: rgba(22, 163, 74, 0.22) !important;
-    }
-
-    .practice-status-done {
-        color: #15803d;
-        font-weight: 800;
-    }
-
-    body.dark-theme .subject-card.practice-card {
-        background:
-            linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.84)),
-            #1e293b !important;
-        border-color: rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
-        color: #f1f5f9 !important;
-    }
-
-    body.dark-theme .subject-card.practice-card.is-done,
-    body.dark-theme .subject-card.practice-card.material-card-done {
-        background:
-            linear-gradient(180deg, rgba(20, 83, 45, 0.5), rgba(15, 23, 42, 0.88)),
-            #102316 !important;
-        border-color: rgba(34, 197, 94, 0.24) !important;
-        color: #f1f5f9 !important;
-    }
-
-    body.dark-theme .practice-card .card-header h3,
-    body.dark-theme .practice-card .meta-pill {
-        color: #f1f5f9 !important;
-    }
-
-    body.dark-theme .practice-card .card-header p,
-    body.dark-theme .practice-card .card-status,
-    body.dark-theme .practice-card .item-count {
-        color: #cbd5e1 !important;
-    }
-
-    body.dark-theme .practice-card .meta-pill,
-    body.dark-theme .practice-card .material-icon,
-    body.dark-theme .practice-card .subject-code {
-        background: rgba(15, 23, 42, 0.72) !important;
-        border-color: rgba(255, 255, 255, 0.08) !important;
-    }
-
-    body.dark-theme .practice-card .subject-code,
-    body.dark-theme .practice-card .meta-pill i,
-    body.dark-theme .practice-card .material-icon {
-        color: #7dd3fc !important;
-    }
-
-    body.dark-theme .practice-card .status-badge,
-    body.dark-theme .practice-status-done {
-        background: rgba(34, 197, 94, 0.14) !important;
-        border-color: rgba(34, 197, 94, 0.24) !important;
-        color: #86efac !important;
-    }
-
-    body.dark-theme .practice-card .card-bottom {
-        border-top-color: rgba(255, 255, 255, 0.08);
-    }
-
-    .subject-info {
-        align-items: flex-start;
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 0.5rem;
-    }
-
-    .subject-info h3 {
+    .section-heading h3 {
         color: var(--dash-text);
         font-size: 1.25rem;
         font-weight: 800;
         margin: 0;
     }
 
-    .subject-code {
-        background: var(--sky-soft);
-        border-radius: 6px;
-        color: var(--sky);
-        font-size: 0.75rem;
-        font-weight: 800;
-        padding: 2px 8px;
-        text-transform: uppercase;
+    .section-heading p {
+        color: var(--dash-muted);
+        font-size: 0.92rem;
+        margin: 0;
     }
 
-    .practice-type-link {
+    .intro-illustrations {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+    }
+
+    .intro-pill {
         align-items: center;
-        background: #f8f9fa;
-        border: 1px solid rgba(27, 26, 23, 0.05);
-        border-radius: 16px;
+        background: rgba(31, 111, 139, 0.08);
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 999px;
         color: var(--dash-text);
-        display: flex;
-        justify-content: space-between;
-        padding: 0.75rem 1rem;
-        text-decoration: none;
-        transition: all 0.2s ease;
-    }
-
-    .practice-type-link:hover {
-        background: #fff;
-        border-color: var(--sky);
-        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.1);
-        transform: translateX(4px);
-    }
-
-    .practice-type-link.is-disabled {
-        filter: grayscale(1);
-        opacity: 0.5;
-        pointer-events: none;
-    }
-
-    .type-meta {
-        align-items: center;
-        display: flex;
-        gap: 0.75rem;
-    }
-
-    .type-icon {
-        align-items: center;
-        border-radius: 10px;
-        color: white;
-        display: flex;
+        display: inline-flex;
         font-size: 0.9rem;
-        height: 32px;
-        justify-content: center;
-        width: 32px;
+        font-weight: 700;
+        gap: 0.45rem;
+        padding: 0.45rem 0.7rem;
     }
 
-    .type-word .type-icon { background: #1f6f8b; }
-    .type-sentence .type-icon { background: #b95f44; }
-    .type-paragraph .type-icon { background: #7a8b5f; }
+    .challenge-panel {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
+        align-items: center;
+    }
 
-    .type-info strong {
+    .challenge-copy strong {
+        color: var(--dash-text);
         display: block;
-        font-size: 0.95rem;
-        font-weight: 800;
+        font-size: 1.05rem;
+        margin-bottom: 0.35rem;
     }
 
-    .type-info span {
+    .challenge-copy p {
         color: var(--dash-muted);
-        font-size: 0.78rem;
+        font-size: 0.92rem;
+        margin: 0;
     }
 
-    .practice-empty-state,
-    .practice-tip-strip {
+    .challenge-badge {
+        background: linear-gradient(135deg, rgba(255, 199, 76, 0.25), rgba(255, 255, 255, 0.8));
+        border: 1px solid rgba(251, 191, 36, 0.3);
         border-radius: 22px;
-    }
-
-    .practice-empty-state {
-        background: white;
-        border: 1px dashed var(--line);
-        color: var(--dash-muted);
-        grid-column: 1 / -1;
-        padding: 3rem;
+        padding: 1rem;
         text-align: center;
     }
 
-    .practice-tip-strip {
-        align-items: center;
-        background: #ffffff;
-        border: 1px solid rgba(21, 94, 117, 0.12);
-        color: var(--dash-muted);
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        gap: 1rem;
-        padding: 1rem;
+    .challenge-badge .badge-number {
+        color: var(--dash-primary);
+        display: block;
+        font-size: 1.65rem;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 0.4rem;
     }
 
-    .practice-tip-strip strong { color: var(--dash-text); }
+    .challenge-badge .badge-label {
+        color: var(--dash-text);
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
 
-    .tip-mark {
+    .challenge-bar {
+        background: rgba(31, 111, 139, 0.12);
+        border-radius: 999px;
+        height: 10px;
+        margin-top: 0.75rem;
+        overflow: hidden;
+    }
+
+    .challenge-bar span {
+        background: linear-gradient(90deg, var(--dash-primary), #f59e0b);
+        border-radius: inherit;
+        display: block;
+        height: 100%;
+        width: 0;
+    }
+
+    .game-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .game-card {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(240, 248, 252, 0.9));
+        border: 1px solid rgba(21, 94, 117, 0.12);
+        border-radius: 24px;
+        box-shadow: 0 16px 32px rgba(31, 111, 139, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        min-height: 100%;
+        padding: 1rem;
+        position: relative;
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .game-card:hover {
+        border-color: rgba(31, 111, 139, 0.24);
+        box-shadow: 0 18px 36px rgba(31, 111, 139, 0.13);
+        transform: translateY(-2px);
+    }
+
+    .game-card.is-active {
+        border-color: rgba(31, 111, 139, 0.28);
+        box-shadow: 0 18px 42px rgba(31, 111, 139, 0.16);
+    }
+
+    .game-card.is-locked {
+        filter: grayscale(0.16);
+        opacity: 0.82;
+    }
+
+    .game-card .card-top {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.6rem;
+    }
+
+    .mode-emoji {
         align-items: center;
         background: rgba(31, 111, 139, 0.1);
-        border-radius: 15px;
-        color: var(--dash-primary);
+        border-radius: 16px;
         display: inline-flex;
+        font-size: 1.25rem;
         height: 46px;
         justify-content: center;
-        width: 46px;
+        min-width: 46px;
+    }
+
+    .game-card .difficulty-pill {
+        background: rgba(251, 191, 36, 0.15);
+        border-radius: 999px;
+        color: #b45309;
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 0.35rem 0.6rem;
+    }
+
+    .game-card h4 {
+        color: var(--dash-text);
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .game-card p {
+        color: var(--dash-muted);
+        font-size: 0.88rem;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .skill-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+
+    .skill-list li {
+        background: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(21, 94, 117, 0.1);
+        border-radius: 999px;
+        color: var(--dash-text);
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.32rem 0.55rem;
+    }
+
+    .card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.65rem;
+        margin-top: auto;
+        padding-top: 0.2rem;
+    }
+
+    .card-footer .state-label {
+        color: var(--dash-muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    .card-footer .play-btn {
+        align-items: center;
+        background: var(--dash-primary);
+        border-radius: 999px;
+        color: #fff;
+        display: inline-flex;
+        font-size: 0.84rem;
+        font-weight: 800;
+        gap: 0.35rem;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0.55rem 0.8rem;
+        text-decoration: none;
+    }
+
+    .card-footer .play-btn.is-locked {
+        background: #94a3b8;
+        pointer-events: none;
+    }
+
+    .achievement-panel {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .achievement-grid {
+        display: grid;
+        gap: 0.8rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .achievement-item {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(21, 94, 117, 0.12);
+        border-radius: 20px;
+        padding: 0.85rem;
+    }
+
+    .achievement-item .achievement-icon {
+        color: var(--dash-primary);
+        font-size: 1rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .achievement-item strong {
+        color: var(--dash-text);
+        display: block;
+        font-size: 1rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .achievement-item span {
+        color: var(--dash-muted);
+        display: block;
+        font-size: 0.8rem;
+    }
+
+    .achievement-stats {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .achievement-stat {
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.1), rgba(255, 255, 255, 0.95));
+        border: 1px solid rgba(31, 111, 139, 0.1);
+        border-radius: 18px;
+        padding: 0.8rem 0.9rem;
+    }
+
+    .achievement-stat strong {
+        color: var(--dash-text);
+        display: block;
+        font-size: 1.25rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .achievement-stat span {
+        color: var(--dash-muted);
+        font-size: 0.8rem;
+    }
+
+    .achievement-message {
+        color: var(--dash-primary);
+        font-size: 0.93rem;
+        font-weight: 700;
+        margin-top: 0.2rem;
     }
 
     @media (max-width: 991.98px) {
         .practice-hero,
-        .practice-tip-strip {
+        .challenge-panel {
             grid-template-columns: 1fr;
         }
 
@@ -500,31 +413,22 @@
             min-width: 0;
             width: 100%;
         }
+
+        .game-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .achievement-grid,
+        .achievement-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
     @media (max-width: 575.98px) {
-        .subject-grid {
+        .game-grid,
+        .achievement-grid,
+        .achievement-stats {
             grid-template-columns: 1fr;
-        }
-
-        .practice-card {
-            min-height: 0;
-        }
-
-        .practice-card .card-header,
-        .practice-card .card-meta,
-        .practice-card .card-bottom {
-            grid-template-columns: 1fr;
-        }
-
-        .practice-card .card-bottom {
-            align-items: stretch;
-            display: grid;
-        }
-
-        .practice-card .subject-code,
-        .practice-card .start-practice-btn {
-            width: 100%;
         }
     }
 </style>
@@ -536,40 +440,118 @@
 
 {% block content %}
 <section class="practice-board">
-    <div class="practice-hero">
-        <div>
-            <span class="dash-pill mb-3"><i class="bi bi-stars"></i> Reading warm-up</span>
-            <h2>Choose a difficulty, then start a focused practice set.</h2>
-            <p>Practice content comes from the active Admin Practice library. Pick Easy, Medium, or Hard, then choose words, sentences, or paragraphs.</p>
+    <section class="hub-section challenge-panel">
+        <div class="challenge-copy">
+            <span class="dash-pill mb-2"><i class="bi bi-trophy"></i> Challenge board</span>
+            <strong id="challengeCount">1 Practice Set Unlocked</strong>
+            <p>Choose a game and practice reading through exciting challenges!</p>
         </div>
-        <aside class="practice-meter">
-            <p class="small mb-1">Available</p>
-            <strong id="practiceMeterCount">0 practice sets</strong>
-            <div class="meter-track" aria-hidden="true"><span></span></div>
-        </aside>
-    </div>
+        <div class="challenge-badge">
+            <span class="badge-number" id="challengeStars">0</span>
+            <span class="badge-label">Stars earned</span>
+            <div class="challenge-bar" aria-hidden="true"><span id="challengeProgressFill"></span></div>
+        </div>
+    </section>
 
-    <div class="subject-grid" id="subjectGrid">
-        <!-- Rendered by JS -->
-    </div>
+    <section class="hub-section">
+        <div class="section-heading mb-3">
+            <h3>Choose Your Reading Game</h3>
+            <p>Select a game card to begin your next reading challenge.</p>
+        </div>
+        <div class="game-grid" id="gameGrid"></div>
+    </section>
 
-    <div class="practice-tip-strip">
-        <span class="tip-mark"><i class="bi bi-mic"></i></span>
-        <p class="mb-0"><strong>Practice tip:</strong> Find a quiet spot, read slowly first, then repeat once with smoother pacing.</p>
-        <span class="dash-pill">Daily habit</span>
-    </div>
+    <section class="hub-section achievement-panel">
+        <div class="section-heading">
+            <h3>My Reading Achievements</h3>
+            <p>Celebrate your progress and keep building confidence.</p>
+        </div>
+        <div class="achievement-grid">
+            <div class="achievement-item">
+                <div class="achievement-icon"><i class="bi bi-trophy"></i></div>
+                <strong>First Reading Challenge</strong>
+                <span>Start your first adventure</span>
+            </div>
+            <div class="achievement-item">
+                <div class="achievement-icon"><i class="bi bi-star-fill"></i></div>
+                <strong>Star Collector</strong>
+                <span>Earn stars by finishing games</span>
+            </div>
+            <div class="achievement-item">
+                <div class="achievement-icon"><i class="bi bi-book"></i></div>
+                <strong>Word Master</strong>
+                <span>Practice reading with accuracy</span>
+            </div>
+            <div class="achievement-item">
+                <div class="achievement-icon"><i class="bi bi-fire"></i></div>
+                <strong>Practice Streak</strong>
+                <span>Keep coming back to learn</span>
+            </div>
+        </div>
+        <div class="achievement-stats">
+            <div class="achievement-stat">
+                <strong id="totalStars">0</strong>
+                <span>Total stars earned</span>
+            </div>
+            <div class="achievement-stat">
+                <strong id="completedChallenges">0</strong>
+                <span>Completed challenges</span>
+            </div>
+            <div class="achievement-stat">
+                <strong id="readingProgress">0%</strong>
+                <span>Reading progress</span>
+            </div>
+        </div>
+        <div class="achievement-message" id="achievementMessage">Great job! Keep practicing!</div>
+    </section>
 </section>
 
 {{ practice_materials|json_script:"practiceMaterialsData" }}
+{{ game_progression_summary|json_script:"gameProgressionSummary" }}
 <script>
     (() => {
         const practiceMaterials = JSON.parse(document.getElementById("practiceMaterialsData")?.textContent || "[]");
-        const difficultyLabels = { easy: "Easy", medium: "Medium", hard: "Hard" };
-        const typeLabels = {
-            word: { label: "Word", icon: "bi-type", url: "{% url 'practice_word_page' %}" },
-            sentence: { label: "Sentence", icon: "bi-chat-left-text", url: "{% url 'practice_sentence_page' %}" },
-            paragraph: { label: "Paragraph", icon: "bi-card-text", url: "{% url 'practice_para_page' %}" },
+        const practiceProgressStorageKey = "pabasa_practice_progress_v1";
+        const practiceRoutes = {
+            word: "{% url 'practice_word_page' %}",
+            sentence: "{% url 'practice_sentence_page' %}",
+            paragraph: "{% url 'practice_para_page' %}",
         };
+        const gameModes = [
+            {
+                key: "free",
+                title: "Free Mode",
+                description: "Practice reading at your own pace and build confidence.",
+                skills: ["Read", "Scroll", "Collect"],
+                difficulty: "Game Mode 1",
+                emoji: "📖",
+                routeType: "word",
+                buttonLabel: "Continue Adventure",
+                feedback: "Awesome reading!"
+            },
+            {
+                key: "color",
+                title: "Color Mode",
+                description: "Bring each scene to life by reading aloud and filling it with color. ",
+                skills: ["Color", "Read", "Create"],
+                difficulty: "Game Mode 2",
+                emoji: "🎨",
+                routeType: "sentence",
+                buttonLabel: "Continue Adventure",
+                feedback: "You earned a new star!"
+            },
+            {
+                key: "hunt",
+                title: "Hunt Mode",
+                description: "Fly across islands, complete reading challenges, and discover the treasure!",
+                skills: ["Search", "Read", "Discover"],
+                difficulty: "Game Mode 3",
+                emoji: "🔍",
+                routeType: "paragraph",
+                buttonLabel: "Continue Adventure",
+                feedback: "Keep practicing!"
+            }
+        ];
 
         const escapeHtml = (value) => {
             const div = document.createElement("div");
@@ -577,18 +559,45 @@
             return div.innerHTML;
         };
 
-        const getItemCount = (material) => Array.isArray(material.items) ? material.items.length : 0;
-        const formatDate = (value) => {
-            if (!value) return "";
-            const date = new Date(value);
-            if (Number.isNaN(date.getTime())) return "";
-            return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+        const getLocalPracticeProgress = () => {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(practiceProgressStorageKey) || "{}");
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (error) {
+                return {};
+            }
         };
 
-        const renderPracticeHub = () => {
-            const grid = document.getElementById("subjectGrid");
+        const getModeProgressSummary = (modeKey, fallbackSummary) => {
+            const localProgress = getLocalPracticeProgress();
+            const modeState = localProgress[modeKey] && typeof localProgress[modeKey] === "object" ? localProgress[modeKey] : {};
+            let completedLevels = 0;
+            let starsEarned = 0;
+
+            Object.values(modeState).forEach((difficultyState) => {
+                if (!difficultyState || typeof difficultyState !== "object") return;
+                Object.values(difficultyState).forEach((entry) => {
+                    if (entry && entry.completed) {
+                        completedLevels += 1;
+                        starsEarned += Number(entry.stars_earned || 0) || 0;
+                    }
+                });
+            });
+
+            return {
+                completed_levels: completedLevels || fallbackSummary?.completed_levels || 0,
+                total_levels: fallbackSummary?.total_levels || 15,
+                progress_percent: fallbackSummary?.total_levels ? Math.round((completedLevels / fallbackSummary.total_levels) * 100) : (fallbackSummary?.progress_percent || 0),
+                stars_earned: starsEarned || fallbackSummary?.stars_earned || 0,
+                next_label: fallbackSummary?.next_label || "Easy Level 1",
+            };
+        };
+
+        const renderGameHub = () => {
+            const grid = document.getElementById("gameGrid");
             if (!grid) return;
 
+            const progressionSummaries = JSON.parse(document.getElementById("gameProgressionSummary")?.textContent || "{}");
             const sortedMaterials = practiceMaterials.slice().sort((a, b) => {
                 const aDate = new Date(a.created_at || 0).getTime();
                 const bDate = new Date(b.created_at || 0).getTime();
@@ -596,56 +605,100 @@
             });
 
             const availableMaterials = sortedMaterials.filter((material) => !material.is_done);
-            const totalSets = availableMaterials.length;
+            const completedGames = sortedMaterials.filter((material) => material.is_done).length;
+            const totalGames = sortedMaterials.length;
+            const progressPercent = totalGames ? Math.round((completedGames / totalGames) * 100) : 0;
+            const localProgress = getLocalPracticeProgress();
+            let aggregateLevelsCompleted = 0;
+            let aggregateStars = 0;
+            Object.keys(localProgress).forEach((modeKey) => {
+                const modeState = localProgress[modeKey] || {};
+                Object.values(modeState).forEach((difficultyState) => {
+                    if (!difficultyState || typeof difficultyState !== "object") return;
+                    Object.values(difficultyState).forEach((entry) => {
+                        if (entry && entry.completed) {
+                            aggregateLevelsCompleted += 1;
+                            aggregateStars += Number(entry.stars_earned || 0) || 0;
+                        }
+                    });
+                });
+            });
+            const starsEarned = aggregateStars || completedGames * 2 + (completedGames > 0 ? 1 : 0);
+            const lockedMessage = completedGames > 0 ? "Great job!" : "Keep practicing!";
+
             const meterCount = document.getElementById("practiceMeterCount");
-            if (meterCount) meterCount.textContent = `${totalSets} practice set${totalSets !== 1 ? "s" : ""}`;
+            if (meterCount) meterCount.textContent = `${availableMaterials.length} practice set${availableMaterials.length !== 1 ? "s" : ""}`;
             const meterProgress = document.querySelector(".meter-track span");
-            if (meterProgress) meterProgress.style.width = (totalSets > 0 ? 100 : 0) + "%";
+            if (meterProgress) meterProgress.style.width = `${Math.max(12, totalGames ? 100 : 0)}%`;
+
+            const challengeCount = document.getElementById("challengeCount");
+            if (challengeCount) challengeCount.textContent = `${Math.max(1, availableMaterials.length)} Practice Set${availableMaterials.length !== 1 ? "s" : ""} Unlocked`;
+            const challengeStars = document.getElementById("challengeStars");
+            if (challengeStars) challengeStars.textContent = starsEarned;
+            const challengeProgress = document.getElementById("challengeProgressFill");
+            if (challengeProgress) challengeProgress.style.width = `${Math.max(12, progressPercent)}%`;
+            const totalStars = document.getElementById("totalStars");
+            if (totalStars) totalStars.textContent = starsEarned;
+            const completedChallenges = document.getElementById("completedChallenges");
+            if (completedChallenges) completedChallenges.textContent = completedGames;
+            const readingProgress = document.getElementById("readingProgress");
+            if (readingProgress) readingProgress.textContent = `${progressPercent}%`;
+            const achievementMessage = document.getElementById("achievementMessage");
+            if (achievementMessage) achievementMessage.textContent = completedGames > 0 ? gameModes[completedGames % gameModes.length].feedback : lockedMessage;
 
             if (!sortedMaterials.length) {
                 grid.innerHTML = `
-                    <div class="practice-empty-state">
-                        <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
-                        <h3>No practice content yet</h3>
-                        <p>Practice content will appear here once the admin publishes it.</p>
+                    <div class="practice-empty-state" style="grid-column: 1 / -1; background: rgba(255,255,255,0.8); border: 1px dashed rgba(21,94,117,0.2); border-radius: 22px; padding: 2rem; text-align: center;">
+                        <i class="bi bi-journal-x" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                        <h4 class="mt-3">No practice content yet</h4>
+                        <p class="mb-0">Practice adventures will appear here once your teacher publishes new reading sets.</p>
                     </div>`;
                 return;
             }
 
-            grid.innerHTML = sortedMaterials.map((material) => {
-                const typeMeta = typeLabels[material.type] || { label: material.type || "Practice", icon: "bi-journal-text", url: "{% url 'practice_word_page' %}" };
-                const difficultyLabel = difficultyLabels[material.difficulty] || material.difficulty || "Unknown";
-                const itemCount = getItemCount(material);
-                const href = `${typeMeta.url}?id=${encodeURIComponent(material.id)}`;
-                const isDone = Boolean(material.is_done);
-                const statusText = isDone ? "Done" : (material.status || "");
-                const createdDate = formatDate(material.created_at);
+            grid.innerHTML = gameModes.map((mode) => {
+                const route = practiceRoutes[mode.routeType] || practiceRoutes.word;
+                const matchingMaterials = sortedMaterials.filter((material) => (material.type || "").toLowerCase() === mode.routeType || ((mode.routeType === "word" && (material.type || "").toLowerCase() === "word") || (mode.routeType === "sentence" && (material.type || "").toLowerCase() === "sentence") || (mode.routeType === "paragraph" && (material.type || "").toLowerCase() === "paragraph")));
+                const firstMaterial = matchingMaterials[0];
+                const isAvailable = Boolean(firstMaterial);
+                const isCompleted = Boolean(firstMaterial && firstMaterial.is_done);
+                const progressionSummary = getModeProgressSummary(mode.key, progressionSummaries?.[mode.key] || null);
+                const completedLevels = progressionSummary.completed_levels;
+                const totalLevels = progressionSummary.total_levels;
+                const progressPercent = progressionSummary.progress_percent;
+                const starsEarned = progressionSummary.stars_earned;
+                const nextLabel = progressionSummary.next_label;
+                const href = `/dashboard/practice/progression/${mode.key}/`;
+                const isModeOpen = mode.key === "free" ? isAvailable : true;
+                const stateText = isModeOpen ? (isCompleted ? "Completed" : "Ready to play") : "Locked";
+                const buttonClass = isModeOpen ? "play-btn" : "play-btn is-locked";
+                const cardClass = isModeOpen ? "game-card is-active" : "game-card is-locked";
 
                 return `
-                <article class="subject-card practice-card ${isDone ? "is-done material-card-done" : ""}" data-material-id="${escapeHtml(material.id)}" data-difficulty="${escapeHtml(material.difficulty)}">
-                    <div class="card-header">
-                        <span class="material-icon" aria-hidden="true"><i class="bi ${escapeHtml(typeMeta.icon)}"></i></span>
-                        <div class="card-title-wrap">
-                            <h3>${escapeHtml(material.title || `${difficultyLabel} ${typeMeta.label}`)}${isDone ? ' <span class="status-badge badge-done-marker"><i class="bi bi-check2"></i>Done</span>' : ""}</h3>
-                            <p>${escapeHtml(`${difficultyLabel} • ${typeMeta.label}`)}</p>
+                    <a href="${href}" class="${cardClass}">
+                        <div class="card-top">
+                            <span class="mode-emoji" aria-hidden="true">${escapeHtml(mode.emoji)}</span>
+                            <span class="difficulty-pill">${escapeHtml(mode.difficulty)}</span>
                         </div>
-                        <span class="subject-code">${escapeHtml(typeMeta.label)}</span>
-                    </div>
-                    <div class="card-meta">
-                        <span class="meta-pill"><i class="bi bi-speedometer2"></i>${escapeHtml(difficultyLabel)}</span>
-                        <span class="meta-pill"><i class="bi bi-list-check"></i>${itemCount} item${itemCount !== 1 ? "s" : ""}</span>
-                        ${createdDate ? `<span class="meta-pill"><i class="bi bi-calendar3"></i>${escapeHtml(createdDate)}</span>` : ""}
-                        <span class="meta-pill"><i class="bi bi-bookmark-check"></i>${escapeHtml(statusText || "Ready")}</span>
-                    </div>
-                    <div class="card-bottom">
-                        <span class="card-status ${isDone ? "practice-status-done" : ""}">${isDone ? '<i class="bi bi-check-circle me-1"></i>Completed' : '<i class="bi bi-play-circle me-1"></i>Ready to practice'}</span>
-                        <a href="${href}" class="btn ${isDone ? "btn-outline-success" : "btn-primary"} start-practice-btn"><i class="bi ${isDone ? "bi-arrow-repeat" : "bi-play-fill"}"></i>${isDone ? "Review" : "Start Practice"}</a>
-                    </div>
-                </article>`;
+                        <h4>${escapeHtml(mode.title)}</h4>
+                        <p>${escapeHtml(mode.description)}</p>
+                        <ul class="skill-list">
+                            ${mode.skills.map((skill) => `<li>${escapeHtml(skill)}</li>`).join("")}
+                        </ul>
+                        <div class="small fw-bold text-dark">Progress: ${completedLevels} / ${totalLevels} Levels Completed</div>
+                        <div class="small text-muted">Current progress: ${escapeHtml(nextLabel)}</div>
+                        <div class="small text-warning fw-bold">⭐ ${starsEarned} Stars</div>
+                        <div class="card-footer">
+                            <span class="state-label">${escapeHtml(stateText)}</span>
+                            <span class="${buttonClass}"><i class="bi ${isAvailable ? "bi-play-fill" : "bi-lock-fill"}"></i>${escapeHtml(mode.buttonLabel)}</span>
+                        </div>
+                    </a>`;
             }).join("");
         };
 
-        renderPracticeHub();
+        renderGameHub();
+        window.addEventListener("storage", renderGameHub);
+        window.addEventListener("pabasa:practice-progress-updated", renderGameHub);
     })();
 </script>
 {% endblock %}

@@ -1712,6 +1712,60 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("practice"))
 
+    def test_progression_page_renders_unlock_states_for_game_levels(self):
+        Material.objects.create(
+            title="Free Easy Level 1",
+            item_type="word",
+            content_text="sun",
+            content_json={
+                "mode": "free",
+                "difficulty": "easy",
+                "level": "level_1",
+                "items": ["sun"],
+                "student_completions": {
+                    str(self.student.id): {
+                        "student_id": self.student.id,
+                        "status": "completed",
+                        "completed_at": timezone.now().isoformat(),
+                        "stars_earned": 3,
+                    }
+                },
+            },
+            type="practice",
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+        Material.objects.create(
+            title="Free Easy Level 2",
+            item_type="word",
+            content_text="moon",
+            content_json={
+                "mode": "free",
+                "difficulty": "easy",
+                "level": "level_2",
+                "items": ["moon"],
+            },
+            type="practice",
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+
+        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Free Mode Adventure")
+        self.assertContains(response, "Level 1")
+        self.assertContains(response, "Level 2")
+        self.assertContains(response, "Complete Level 1 to unlock this level.")
+
+    def test_progression_page_marks_levels_without_content_as_unavailable(self):
+        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Content unavailable")
+
     def test_practice_reader_template_shows_results_breakdown(self):
         response = self.client.get(reverse("practice_word_page"))
 

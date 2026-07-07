@@ -3,6 +3,7 @@ from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.cache import never_cache
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMultiAlternatives
 from django.core import signing
@@ -3252,6 +3253,214 @@ def _practice_config_label(value, choices):
     return str(value).replace('_', ' ').title()
 
 
+def _practice_progression_mode_title(mode):
+    titles = {
+        'free': 'Free Mode',
+        'color': 'Color Mode',
+        'hunt': 'Hunt Mode',
+    }
+    return titles.get((mode or '').strip().lower(), 'Practice Mode')
+
+
+def _practice_progression_level_keys():
+    return [f'level_{index}' for index in range(1, 6)]
+
+
+def _practice_progression_difficulty_keys():
+    return ['easy', 'medium', 'hard']
+
+
+def _material_level_completion(material, student_user):
+    if not material or not student_user:
+        return None
+    content_json = getattr(material, 'content_json', None) or {}
+    if not isinstance(content_json, dict):
+        return None
+    completions = content_json.get('student_completions') or {}
+    if not isinstance(completions, dict):
+        return None
+    completion = completions.get(str(student_user.id)) or {}
+    return completion if isinstance(completion, dict) else None
+
+
+def _apply_progression_unlock_override(progression, unlock_target):
+    normalized_target = (unlock_target or '').strip().lower().replace('-', '_')
+    if not normalized_target:
+        return progression
+
+    parts = normalized_target.split('_')
+    if len(parts) < 2:
+        return progression
+
+    difficulty = parts[0]
+    level = '_'.join(parts[1:])
+    for section in progression.get('sections', []):
+        if section.get('difficulty') != difficulty:
+            continue
+        section['unlocked'] = True
+        section['locked_reason'] = ''
+        for level_payload in section.get('levels', []):
+            if level_payload.get('level') != level:
+                continue
+            level_payload['state'] = 'unlocked'
+            level_payload['unlocked'] = True
+            level_payload['button_label'] = 'Play Level'
+            level_payload['locked_reason'] = ''
+            break
+        break
+    return progression
+
+
+def _practice_game_progression(mode, student_user=None):
+    normalized_mode = (mode or '').strip().lower()
+    if normalized_mode not in {'free', 'color', 'hunt'}:
+        normalized_mode = 'free'
+
+    level_keys = _practice_progression_level_keys()
+    difficulty_keys = _practice_progression_difficulty_keys()
+    materials_by_slot = {}
+
+    for material in Material.objects.filter(
+        type='practice',
+        is_active=True,
+        status='published',
+        content_json__mode=normalized_mode,
+    ).order_by('created_at', 'id'):
+        content_json = getattr(material, 'content_json', None) or {}
+        if not isinstance(content_json, dict):
+            continue
+        slot_mode = str(content_json.get('mode') or '').strip().lower()
+        slot_difficulty = str(content_json.get('difficulty') or getattr(material, 'difficulty_level', '') or '').strip().lower()
+        slot_level = str(content_json.get('level') or '').strip().lower()
+        if slot_mode != normalized_mode:
+            continue
+        if slot_difficulty not in difficulty_keys or slot_level not in level_keys:
+            continue
+        materials_by_slot[(slot_difficulty, slot_level)] = material
+
+    section_payloads = []
+    total_completed = 0
+    total_stars = 0
+    next_challenge = None
+
+    for difficulty in difficulty_keys:
+        level_payloads = []
+        difficulty_unlocked = difficulty == 'easy'
+        is_free_mode = normalized_mode == 'free'
+        previous_difficulty = None
+        previous_levels = []
+        if difficulty == 'medium':
+            previous_difficulty = 'easy'
+        elif difficulty == 'hard':
+            previous_difficulty = 'medium'
+
+        if is_free_mode and previous_difficulty:
+            previous_slots = [
+                {
+                    'difficulty': previous_difficulty,
+                    'level': level_key,
+                    'material': materials_by_slot.get((previous_difficulty, level_key)),
+                    'completion': _material_level_completion(materials_by_slot.get((previous_difficulty, level_key)), student_user),
+                }
+                for level_key in level_keys
+            ]
+            previous_levels = previous_slots
+            difficulty_unlocked = all(
+                slot['completion'] and slot['completion'].get('status') == 'completed' and slot['material'] is not None
+                for slot in previous_levels
+            )
+
+        for level_key in level_keys:
+            material = materials_by_slot.get((difficulty, level_key))
+            completion = _material_level_completion(material, student_user)
+            is_completed = bool(completion and completion.get('status') == 'completed')
+            material_exists = material is not None
+            previous_level_key = level_keys[level_keys.index(level_key) - 1] if level_key != level_keys[0] else None
+            previous_completed = True
+            if previous_level_key:
+                previous_material = materials_by_slot.get((difficulty, previous_level_key))
+                previous_completion = _material_level_completion(previous_material, student_user)
+                previous_completed = bool(previous_completion and previous_completion.get('status') == 'completed')
+
+            unlocked = False
+            if is_free_mode:
+                if difficulty == 'easy' and level_key == 'level_1':
+                    unlocked = True
+                elif material_exists and difficulty_unlocked and previous_completed:
+                    unlocked = True
+                elif difficulty != 'easy' and difficulty_unlocked and level_key == 'level_1' and material_exists:
+                    unlocked = True
+            else:
+                unlocked = material_exists
+
+            if not material_exists:
+                state = 'content_unavailable'
+                button_label = 'Content unavailable'
+            elif is_completed:
+                state = 'completed'
+                button_label = 'Replay'
+            elif unlocked:
+                state = 'unlocked'
+                button_label = 'Play Level'
+            else:
+                state = 'locked'
+                button_label = 'Locked'
+
+            stars_earned = 0
+            if completion and isinstance(completion, dict):
+                stars_earned = int(completion.get('stars_earned') or 0)
+            total_stars += stars_earned if is_completed else 0
+            if is_completed:
+                total_completed += 1
+
+            level_payloads.append({
+                'difficulty': difficulty,
+                'difficulty_label': _practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
+                'level': level_key,
+                'level_label': _practice_config_label(level_key, AdminPracticeMaterialForm.LEVEL_CHOICES),
+                'title': material.title if material else 'Coming soon',
+                'material_exists': material_exists,
+                'state': state,
+                'unlocked': unlocked and material_exists,
+                'completed': is_completed,
+                'stars_earned': stars_earned,
+                'button_label': button_label,
+                'play_url': reverse('practice_word_page') if material and (material.item_type or 'word') == 'word' else reverse('practice_sentence_page') if material and (material.item_type or 'word') == 'sentence' else reverse('practice_para_page') if material else '#',
+                'material_id': f"practice-{material.id}" if material else None,
+                'completion': completion,
+                'locked_reason': 'Complete Level 1 to unlock this level.' if level_key != 'level_1' and state == 'locked' else 'Complete all previous difficulty levels to unlock this section.' if state == 'locked' and difficulty != 'easy' else '',
+            })
+
+        section_payloads.append({
+            'difficulty': difficulty,
+            'difficulty_label': _practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
+            'unlocked': True if not is_free_mode else (difficulty == 'easy' or difficulty_unlocked),
+            'levels': level_payloads,
+            'locked_reason': 'Complete all previous difficulty levels to unlock this section.' if is_free_mode and difficulty != 'easy' and not difficulty_unlocked else '',
+        })
+
+        if next_challenge is None:
+            candidate = next((level for level in level_payloads if level['state'] == 'unlocked' or level['state'] == 'content_unavailable' or level['state'] == 'completed'), None)
+            if candidate:
+                next_challenge = candidate
+
+    total_levels = len(level_keys) * len(difficulty_keys)
+    return {
+        'mode': normalized_mode,
+        'mode_title': _practice_progression_mode_title(normalized_mode),
+        'sections': section_payloads,
+        'summary': {
+            'completed_levels': total_completed,
+            'total_levels': total_levels,
+            'progress_percent': round((total_completed / total_levels) * 100) if total_levels else 0,
+            'stars_earned': total_stars,
+            'current_difficulty': next_challenge['difficulty_label'] if next_challenge else 'Easy',
+            'current_level': next_challenge['level_label'] if next_challenge else 'Level 1',
+            'next_label': f"{next_challenge['difficulty_label']} {next_challenge['level_label']}" if next_challenge else 'Easy Level 1',
+        },
+    }
+
+
 def _practice_row_summary(material):
     content_json = getattr(material, 'content_json', None) or {}
     selected_difficulty = getattr(material, 'difficulty_level', '') or content_json.get('difficulty', '')
@@ -3710,11 +3919,17 @@ def _record_material_practice_completion(material, student_user, attempt_payload
 def _serialize_student_practice_material(material, student_user=None):
     completion = _material_practice_completion(material, student_user)
     is_done = completion.get('status') in {'completed', 'done'}
+    content_json = dict(getattr(material, 'content_json', None) or {})
+    selected_difficulty = getattr(material, 'difficulty_level', '') or content_json.get('difficulty', '')
+    selected_level = content_json.get('level', '')
     return {
         'id': f"practice-{material.id}",
         'raw_id': material.id,
         'title': material.title,
-        'difficulty': material.difficulty_level,
+        'difficulty': selected_difficulty,
+        'difficulty_label': _practice_config_label(selected_difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
+        'level': selected_level,
+        'level_label': _practice_config_label(selected_level, AdminPracticeMaterialForm.LEVEL_CHOICES),
         'type': material.item_type,
         'status': 'Done' if is_done else material.status,
         'raw_status': material.status,
@@ -4033,14 +4248,17 @@ def start_live_assessment(request):
     })
 
 
+@never_cache
 @login_required(role='student')
 def practice_word_page(request):
     return render(request, 'pabasa_app/practice_word_page.html', _student_practice_context(request, 'word'))
 
+@never_cache
 @login_required(role='student')
 def practice_sentence_page(request):
     return render(request, 'pabasa_app/practice_sentence_page.html', _student_practice_context(request, 'sentence'))
 
+@never_cache
 @login_required(role='student')
 def practice_para_page(request):
     return render(request, 'pabasa_app/practice_para_page.html', _student_practice_context(request, 'paragraph'))
@@ -4112,9 +4330,36 @@ def settings_view(request):
     context['notification_settings'] = notification_settings
     return render(request, 'pabasa_app/settings.html', context)
 
+@never_cache
 @login_required(role='student')
 def practice(request):
-    return render(request, 'pabasa_app/practice.html', _student_practice_context(request))
+    student_user = User.objects.filter(id=request.session.get('user_id')).first()
+    context = _student_practice_context(request)
+    context['game_progression_summary'] = {
+        mode: _practice_game_progression(mode, student_user)['summary']
+        for mode in ['free', 'color', 'hunt']
+    }
+    return render(request, 'pabasa_app/practice.html', context)
+
+
+@never_cache
+@login_required(role='student')
+def practice_game_progression(request, mode):
+    student_user = User.objects.filter(id=request.session.get('user_id')).first()
+    normalized_mode = (mode or '').strip().lower()
+    if normalized_mode not in {'free', 'color', 'hunt'}:
+        return redirect('practice')
+
+    context = _student_practice_context(request)
+    progression = _practice_game_progression(normalized_mode, student_user)
+    progression = _apply_progression_unlock_override(progression, request.GET.get('unlock', ''))
+    context.update({
+        'selected_game_mode': normalized_mode,
+        'game_mode_title': progression['mode_title'],
+        'game_progression': progression,
+        'game_progression_summary': progression['summary'],
+    })
+    return render(request, 'pabasa_app/practice_progression.html', context)
 
 @csrf_protect
 @require_http_methods(["GET", "POST"])
