@@ -7007,6 +7007,11 @@ def _extract_text_from_image(upload):
 
     if tesseract_path:
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
+    # Debug info: report which tesseract cmd will be used
+    try:
+        logger.debug('OCR init: pytesseract.tesseract_cmd=%s', getattr(pytesseract.pytesseract, 'tesseract_cmd', None))
+    except Exception:
+        logger.debug('OCR init: could not read pytesseract.tesseract_cmd')
 
     upload.seek(0)
     try:
@@ -7053,13 +7058,15 @@ def _extract_text_from_image(upload):
                 for config in configs:
                     try:
                         text = pytesseract.image_to_string(candidate, config=config, lang='eng').strip()
-                    except Exception:
+                    except Exception as exc:
+                        logger.debug('pytesseract.image_to_string raised: %s', exc)
                         continue
 
                     cleaned = re.sub(r'\s+', ' ', text).strip()
                     if not cleaned:
                         continue
 
+                    # Collect confidence info where possible
                     try:
                         data = pytesseract.image_to_data(
                             candidate,
@@ -7070,16 +7077,25 @@ def _extract_text_from_image(upload):
                         confidences = [int(conf) for conf in data.get('conf', []) if str(conf).strip().isdigit()]
                         avg_confidence = sum(confidences) / len(confidences) if confidences else 0
                     except Exception:
+                        confidences = []
                         avg_confidence = 0
+
+                    # Debug: log candidate extraction summary
+                    try:
+                        logger.debug('OCR candidate: words=%d avg_conf=%s config=%s text=%r', len(cleaned.split()), avg_confidence, config, cleaned[:200])
+                    except Exception:
+                        logger.debug('OCR candidate summary could not be produced')
 
                     if avg_confidence >= best_confidence or len(cleaned) > len(best_text):
                         best_text = cleaned
                         best_confidence = avg_confidence
 
                     if avg_confidence >= 60:
+                        logger.info('OCR accepted candidate with avg_conf=%s config=%s', avg_confidence, config)
                         return cleaned
 
             if best_text:
+                logger.info('OCR returning best_text with avg_conf=%s len=%d', best_confidence, len(best_text.split()))
                 return best_text
 
             try:
@@ -7087,9 +7103,10 @@ def _extract_text_from_image(upload):
                 fallback_text = pytesseract.image_to_string(fallback, config='--oem 3 --psm 6', lang='eng').strip()
                 fallback_cleaned = re.sub(r'\s+', ' ', fallback_text).strip()
                 if fallback_cleaned:
+                    logger.info('OCR fallback returned text')
                     return fallback_cleaned
             except Exception:
-                pass
+                logger.debug('OCR fallback failed', exc_info=True)
 
             try:
                 inverted = ImageOps.invert(grayscale)
@@ -7201,13 +7218,26 @@ def extract_reading_material_file(request):
                 extraction_warnings.append(f'PDF extraction encountered an issue: {str(e)}')
 
         # Normalize and clean extracted text
-        text = re.sub(r'\s+', ' ', extracted_text.strip())
+        try:
+            text = re.sub(r'\s+', ' ', extracted_text.strip())
+        except Exception:
+            text = ''
+
+        # Diagnostic logging: record what was extracted and current pytesseract command
+        try:
+            import pytesseract as _pyt
+            tcmd = getattr(_pyt.pytesseract, 'tesseract_cmd', None)
+        except Exception:
+            tcmd = None
+        logger.debug('Material extraction: filename=%s ext=%s upload_size=%s tesseract_cmd=%s warnings=%s text_len=%d', filename, ext, getattr(upload, 'size', None), tcmd, extraction_warnings, len(text) if text else 0)
         
         detected_type, items = _build_extracted_material_items(text, '')
         if not items:
             warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
             if text:
                 logger.warning(f'Extraction produced text but no items: {text[:100]}...')
+                # Debug capture: include a longer sample for investigation
+                logger.debug('Extraction produced text (long sample): %s', text[:2000])
                 if extraction_warnings:
                     return JsonResponse({
                         'success': True,
