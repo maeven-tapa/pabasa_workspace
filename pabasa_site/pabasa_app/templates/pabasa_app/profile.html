@@ -59,7 +59,7 @@
         align-items: start;
     }
 
-    .profile-summary {
+.profile-summary {
         position: relative;
         overflow: hidden;
         width: 100%;
@@ -71,6 +71,99 @@
         box-shadow: 0 18px 36px rgba(16, 70, 110, 0.12);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    /* Make summary-side mini cards readable in dark theme */
+    body.dark-theme .profile-details-mini > div {
+        background: rgba(30, 41, 59, 0.45) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        box-shadow:
+            0 6px 18px rgba(0, 0, 0, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+    }
+
+    body.dark-theme .profile-detail-icon {
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.85), rgba(30, 58, 138, 0.15)) !important;
+        border-color: rgba(46, 168, 229, 0.22) !important;
+        box-shadow:
+            0 4px 10px rgba(46, 168, 229, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        color: var(--dash-primary) !important;
+    }
+
+    body.dark-theme .profile-details-mini .label {
+        color: rgba(148, 163, 184, 0.95) !important;
+    }
+
+    body.dark-theme .profile-details-mini .value {
+        color: var(--dash-text) !important;
+    }
+
+    body.dark-theme .profile-status-badge.status-active {
+        color: #22c55e !important;
+    }
+    body.dark-theme .profile-status-badge.status-idle {
+        color: #fbbf24 !important;
+    }
+    body.dark-theme .profile-status-badge.status-inactive {
+        color: #cbd5e1 !important;
+    }
+    body.dark-theme .profile-status-badge.status-pending {
+        color: #60a5fa !important;
+    }
+
+    /* Replace remaining white controls (inputs/selects/textareas) in dark theme */
+    body.dark-theme .profile-edit-grid .form-control,
+    body.dark-theme .profile-edit-grid .form-select {
+        border-color: rgba(255, 255, 255, 0.16) !important;
+        background: rgba(15, 23, 42, 0.55) !important;
+        color: rgba(248, 250, 252, 0.95) !important;
+    }
+
+    body.dark-theme .profile-edit-grid .form-control::placeholder {
+        color: rgba(148, 163, 184, 0.85) !important;
+    }
+
+    body.dark-theme .profile-edit-grid .form-control:focus,
+    body.dark-theme .profile-edit-grid .form-select:focus {
+        border-color: var(--dash-primary) !important;
+        background: rgba(15, 23, 42, 0.7) !important;
+        box-shadow: 0 0 0 3px rgba(31, 111, 139, 0.2) !important;
+    }
+
+    body.dark-theme .profile-section-card .form-control,
+    body.dark-theme .profile-section-card .form-select,
+    body.dark-theme .profile-section-card .form-range {
+        border-color: rgba(255, 255, 255, 0.16) !important;
+        color: rgba(248, 250, 252, 0.95) !important;
+    }
+
+    body.dark-theme .profile-section-card .form-control,
+    body.dark-theme .profile-section-card .form-select {
+        background: rgba(15, 23, 42, 0.55) !important;
+    }
+
+    body.dark-theme .profile-section-card .text-muted,
+    body.dark-theme .profile-section-card .small.text-secondary {
+        color: rgba(148, 163, 184, 0.95) !important;
+    }
+
+    body.dark-theme .profile-section-card .badge {
+        color: rgba(248, 250, 252, 0.95) !important;
+        border-color: rgba(255, 255, 255, 0.16) !important;
+    }
+
+    body.dark-theme .profile-section-card .btn-light {
+        background: rgba(15, 23, 42, 0.55) !important;
+        border-color: rgba(255, 255, 255, 0.16) !important;
+        color: rgba(248, 250, 252, 0.95) !important;
+    }
+
+    body.dark-theme .profile-section-card .btn-light:focus,
+    body.dark-theme .profile-section-card .btn-light:hover {
+        filter: brightness(1.08);
+    }
+
+
 
     .profile-summary:hover {
         border-color: rgba(31, 111, 139, 0.16);
