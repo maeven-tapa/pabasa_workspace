@@ -54,7 +54,7 @@
                         <p>Welcome inside PABASA, where teachers guide reading practice, celebrate progress, and turn every lesson into a confident next step.</p>
                         <div class="hero-cta-group">
                             <a href="{% url 'signup' %}" class="btn btn-primary">Get Started</a>
-                            <a href="{% url 'login_user' %}" class="btn btn-outline-primary">Login</a>
+                            <a href="{% url 'auth' %}" class="btn btn-outline-primary">Login</a>
                         </div>
                     </div>
 
@@ -175,47 +175,44 @@
 <section id="key-features" class="fade-in-section section-container section-container-3">
     <div class="section-wrapper">
     <div class="tools-showcase">
-        <aside class="tools-preview">
+        <div class="tools-preview">
             <div class="section-kicker">Platform Tools</div>
             <h2>Everything teachers need after a learner reads aloud.</h2>
             <p>PABASA keeps the toolset focused on assessment signals, readable summaries, and classroom follow-up without making the experience feel noisy.</p>
-            <div class="tools-preview-metrics">
-                <div>
-                    <strong>3</strong>
-                    <span>Reading levels</span>
-                </div>
-                <div>
-                    <strong>2</strong>
-                    <span>Languages</span>
-                </div>
-                <div>
-                    <strong>1</strong>
-                    <span>Progress view</span>
-                </div>
+        </div>
+        <div class="tools-orbit" aria-label="PABASA platform tools">
+            <svg class="tools-connectors" viewBox="0 0 900 560" aria-hidden="true" focusable="false">
+                <path class="tools-connector tools-connector--top" d="M450 150 C450 206 450 236 450 285" />
+                <path class="tools-connector tools-connector--left" d="M263 412 C332 386 381 352 430 315" />
+                <path class="tools-connector tools-connector--right" d="M637 412 C568 386 519 352 470 315" />
+            </svg>
+
+            <div class="tools-logo-hub">
+                <span class="tools-logo-glow" aria-hidden="true"></span>
+                <img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA" class="tools-logo">
             </div>
-        </aside>
-        <div class="tools-list">
-            <article class="tool-item">
-                <div class="tool-icon">
-                    <img src="{% static 'pabasa_app/images/oral_read.png' %}" alt="Oral Reading">
+
+            <article class="tool-item tool-item--top">
+                <div class="tool-icon" aria-hidden="true">
+                    <i class="bi bi-mic-fill"></i>
                 </div>
                 <div>
                     <h3>Oral Reading</h3>
                     <p>Students read aloud through reading activities that support fluency, accuracy, and confidence.</p>
                 </div>
             </article>
-            <article class="tool-item">
-                <div class="tool-icon">
-                    <img src="{% static 'pabasa_app/images/reports.png' %}" alt="Automated Reports">
+            <article class="tool-item tool-item--left">
+                <div class="tool-icon" aria-hidden="true">
+                    <i class="bi bi-file-earmark-bar-graph"></i>
                 </div>
                 <div>
                     <h3>Automated Reports</h3>
                     <p>Clear summaries help teachers see strengths, needs, and next practice areas quickly.</p>
                 </div>
             </article>
-            <article class="tool-item">
-                <div class="tool-icon">
-                    <img src="{% static 'pabasa_app/images/dual_lang.png' %}" alt="Dual Language Support">
+            <article class="tool-item tool-item--right">
+                <div class="tool-icon" aria-hidden="true">
+                    <i class="bi bi-translate"></i>
                 </div>
                 <div>
                     <h3>Dual Language Support</h3>
@@ -232,7 +229,7 @@
         <h2 class="turning-pages-title">#TurningPagesTogether</h2>
         <p class="turning-pages-subtitle">Reading Forward with PABASA</p>
     </div>
-    <div class="turning-pages-container" style="max-width:none; width:100vw; margin:0 calc(-50vw + 50%);">
+    <div class="turning-pages-container" style="max-width:none;">
         <div style="position:relative; width:100%; display:flex; align-items:center;">
             <button class="turning-pages-arrow" id="sliderLeftBtn" aria-label="Scroll left" style="position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:2;">
                 <span>&#8249;</span>
