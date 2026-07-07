@@ -7207,6 +7207,42 @@ def extract_reading_material_file(request):
             except Exception as e:
                 logger.warning('Image extraction failed: %s', e)
                 extraction_warnings.append(f'Image OCR encountered an issue: {str(e)}')
+            # Save uploaded image and any extracted text for offline debugging
+            try:
+                # ensure upload pointer is at start
+                try:
+                    upload.seek(0)
+                except Exception:
+                    pass
+
+                debug_dir = Path(settings.BASE_DIR) / 'debug_ocr'
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                ts = int(time.time())
+                safe_name = ''.join(c for c in (filename or 'upload') if c.isalnum() or c in (' ', '.', '_', '-')).strip()
+                debug_image_name = f"{ts}_{safe_name}"
+                debug_image_path = debug_dir / debug_image_name
+                # write binary contents
+                with open(debug_image_path, 'wb') as _f:
+                    _f.write(upload.read())
+                logger.debug('Saved uploaded image for OCR debugging: %s', str(debug_image_path))
+
+                # write extracted text (if any)
+                if extracted_text:
+                    debug_text_path = debug_dir / f"{ts}_{Path(safe_name).stem}.txt"
+                    try:
+                        with open(debug_text_path, 'w', encoding='utf-8') as _tf:
+                            _tf.write(extracted_text)
+                        logger.debug('Saved OCR extracted text to: %s', str(debug_text_path))
+                    except Exception:
+                        logger.exception('Failed to save OCR extracted text')
+
+                # reset stream for any further processing
+                try:
+                    upload.seek(0)
+                except Exception:
+                    pass
+            except Exception:
+                logger.exception('Failed to write debug OCR artifacts')
         else:
             try:
                 extracted = _extract_text_from_pdf(upload, selected_pages if selection_mode == 'selected' else None)
