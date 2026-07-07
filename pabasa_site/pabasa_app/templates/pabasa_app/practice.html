@@ -223,7 +223,7 @@
         transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
-    .game-card:hover {
+    .game-card:not(.is-locked):hover {
         border-color: rgba(31, 111, 139, 0.24);
         box-shadow: 0 18px 36px rgba(31, 111, 139, 0.13);
         transform: translateY(-2px);
@@ -235,8 +235,13 @@
     }
 
     .game-card.is-locked {
-        filter: grayscale(0.16);
-        opacity: 0.82;
+        background: linear-gradient(180deg, rgba(241, 245, 249, 0.96), rgba(226, 232, 240, 0.9));
+        border-color: rgba(100, 116, 139, 0.24);
+        box-shadow: none;
+        color: #64748b;
+        cursor: not-allowed;
+        filter: grayscale(0.45);
+        opacity: 0.78;
     }
 
     .game-card .card-top {
@@ -257,6 +262,11 @@
         min-width: 46px;
     }
 
+    .game-card.is-locked .mode-emoji {
+        background: rgba(100, 116, 139, 0.14);
+        color: #64748b;
+    }
+
     .game-card .difficulty-pill {
         background: rgba(251, 191, 36, 0.15);
         border-radius: 999px;
@@ -264,6 +274,11 @@
         font-size: 0.72rem;
         font-weight: 800;
         padding: 0.35rem 0.6rem;
+    }
+
+    .game-card.is-locked .difficulty-pill {
+        background: rgba(100, 116, 139, 0.14);
+        color: #475569;
     }
 
     .game-card h4 {
@@ -278,6 +293,15 @@
         font-size: 0.88rem;
         line-height: 1.5;
         margin: 0;
+    }
+
+    .game-card.is-locked h4,
+    .game-card.is-locked p,
+    .game-card.is-locked .state-label,
+    .game-card.is-locked .text-muted,
+    .game-card.is-locked .text-dark,
+    .game-card.is-locked .text-warning {
+        color: #64748b !important;
     }
 
     .skill-list {
@@ -297,6 +321,12 @@
         font-size: 0.72rem;
         font-weight: 700;
         padding: 0.32rem 0.55rem;
+    }
+
+    .game-card.is-locked .skill-list li {
+        background: rgba(248, 250, 252, 0.78);
+        border-color: rgba(100, 116, 139, 0.16);
+        color: #64748b;
     }
 
     .card-footer {
@@ -332,6 +362,22 @@
     .card-footer .play-btn.is-locked {
         background: #94a3b8;
         pointer-events: none;
+    }
+
+    .card-footer .unlock-requirement {
+        align-items: center;
+        background: rgba(100, 116, 139, 0.14);
+        border: 1px solid rgba(100, 116, 139, 0.22);
+        border-radius: 999px;
+        color: #475569;
+        display: inline-flex;
+        font-size: 0.82rem;
+        font-weight: 800;
+        gap: 0.35rem;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0.55rem 0.8rem;
+        white-space: nowrap;
     }
 
     .achievement-panel {
@@ -511,12 +557,6 @@
 <script>
     (() => {
         const practiceMaterials = JSON.parse(document.getElementById("practiceMaterialsData")?.textContent || "[]");
-        const practiceProgressStorageKey = "pabasa_practice_progress_v1";
-        const practiceRoutes = {
-            word: "{% url 'practice_word_page' %}",
-            sentence: "{% url 'practice_sentence_page' %}",
-            paragraph: "{% url 'practice_para_page' %}",
-        };
         const gameModes = [
             {
                 key: "free",
@@ -526,6 +566,7 @@
                 difficulty: "Game Mode 1",
                 emoji: "📖",
                 routeType: "word",
+                unlockAt: 0,
                 buttonLabel: "Continue Adventure",
                 feedback: "Awesome reading!"
             },
@@ -537,6 +578,7 @@
                 difficulty: "Game Mode 2",
                 emoji: "🎨",
                 routeType: "sentence",
+                unlockAt: 50,
                 buttonLabel: "Continue Adventure",
                 feedback: "You earned a new star!"
             },
@@ -548,6 +590,7 @@
                 difficulty: "Game Mode 3",
                 emoji: "🔍",
                 routeType: "paragraph",
+                unlockAt: 150,
                 buttonLabel: "Continue Adventure",
                 feedback: "Keep practicing!"
             }
@@ -627,10 +670,8 @@
             }
 
             grid.innerHTML = gameModes.map((mode) => {
-                const route = practiceRoutes[mode.routeType] || practiceRoutes.word;
                 const matchingMaterials = sortedMaterials.filter((material) => (material.type || "").toLowerCase() === mode.routeType || ((mode.routeType === "word" && (material.type || "").toLowerCase() === "word") || (mode.routeType === "sentence" && (material.type || "").toLowerCase() === "sentence") || (mode.routeType === "paragraph" && (material.type || "").toLowerCase() === "paragraph")));
                 const firstMaterial = matchingMaterials[0];
-                const isAvailable = Boolean(firstMaterial);
                 const isCompleted = Boolean(firstMaterial && firstMaterial.is_done);
                 const progressionSummary = getModeProgressSummary(mode.key, progressionSummaries?.[mode.key] || null);
                 const completedLevels = progressionSummary.completed_levels;
@@ -639,29 +680,41 @@
                 const starsEarned = progressionSummary.stars_earned;
                 const nextLabel = progressionSummary.next_label;
                 const href = `/dashboard/practice/progression/${mode.key}/`;
-                const isModeOpen = mode.key === "free" ? isAvailable : true;
+                const unlockAt = Number(mode.unlockAt || 0) || 0;
+                const isModeOpen = aggregateStars >= unlockAt;
                 const stateText = isModeOpen ? (isCompleted ? "Completed" : "Ready to play") : "Locked";
-                const buttonClass = isModeOpen ? "play-btn" : "play-btn is-locked";
                 const cardClass = isModeOpen ? "game-card is-active" : "game-card is-locked";
+                const lockMarkup = `
+                    <span class="unlock-requirement" aria-label="Unlock at ${unlockAt} Stars">
+                        <i class="bi bi-lock-fill" aria-hidden="true"></i> Unlock at ${unlockAt} Stars
+                    </span>`;
+                const actionMarkup = `
+                    <span class="play-btn"><i class="bi bi-play-fill" aria-hidden="true"></i>${escapeHtml(mode.buttonLabel)}</span>`;
+                const cardInner = `
+                    <div class="card-top">
+                        <span class="mode-emoji" aria-hidden="true">${escapeHtml(mode.emoji)}</span>
+                        <span class="difficulty-pill">${escapeHtml(mode.difficulty)}</span>
+                    </div>
+                    <h4>${escapeHtml(mode.title)}</h4>
+                    <p>${escapeHtml(mode.description)}</p>
+                    <ul class="skill-list">
+                        ${mode.skills.map((skill) => `<li>${escapeHtml(skill)}</li>`).join("")}
+                    </ul>
+                    <div class="small fw-bold text-dark">Progress: ${completedLevels} / ${totalLevels} Levels Completed</div>
+                    <div class="small text-muted">Current progress: ${escapeHtml(nextLabel)}</div>
+                    <div class="small text-warning fw-bold">⭐ ${starsEarned} Stars</div>
+                    <div class="card-footer">
+                        <span class="state-label">${escapeHtml(stateText)}</span>
+                        ${isModeOpen ? actionMarkup : lockMarkup}
+                    </div>`;
+
+                if (!isModeOpen) {
+                    return `<article class="${cardClass}" aria-disabled="true">${cardInner}</article>`;
+                }
 
                 return `
                     <a href="${href}" class="${cardClass}">
-                        <div class="card-top">
-                            <span class="mode-emoji" aria-hidden="true">${escapeHtml(mode.emoji)}</span>
-                            <span class="difficulty-pill">${escapeHtml(mode.difficulty)}</span>
-                        </div>
-                        <h4>${escapeHtml(mode.title)}</h4>
-                        <p>${escapeHtml(mode.description)}</p>
-                        <ul class="skill-list">
-                            ${mode.skills.map((skill) => `<li>${escapeHtml(skill)}</li>`).join("")}
-                        </ul>
-                        <div class="small fw-bold text-dark">Progress: ${completedLevels} / ${totalLevels} Levels Completed</div>
-                        <div class="small text-muted">Current progress: ${escapeHtml(nextLabel)}</div>
-                        <div class="small text-warning fw-bold">⭐ ${starsEarned} Stars</div>
-                        <div class="card-footer">
-                            <span class="state-label">${escapeHtml(stateText)}</span>
-                            <span class="${buttonClass}"><i class="bi ${isAvailable ? "bi-play-fill" : "bi-lock-fill"}"></i>${escapeHtml(mode.buttonLabel)}</span>
-                        </div>
+                        ${cardInner}
                     </a>`;
             }).join("");
         };
