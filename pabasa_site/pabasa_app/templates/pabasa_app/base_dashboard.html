@@ -1881,6 +1881,13 @@
             transition: opacity 0.08s ease, visibility 0.08s ease;
         }
 
+        html.dark-theme .dashboard-page-loader,
+        body.dark-theme .dashboard-page-loader,
+        .dashboard-page-loader.is-dark {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
         .dashboard-page-loader.is-branded {
             left: 0;
         }
@@ -1922,6 +1929,13 @@
             border-top-color: #54c2f0;
             border-radius: 50%;
             animation: dashboard-loader-spin 0.85s linear infinite;
+        }
+
+        html.dark-theme .dashboard-page-loader__spinner,
+        body.dark-theme .dashboard-page-loader__spinner,
+        .dashboard-page-loader.is-dark .dashboard-page-loader__spinner {
+            border-color: #334155;
+            border-top-color: #38bdf8;
         }
 
         @keyframes dashboard-loader-spin {

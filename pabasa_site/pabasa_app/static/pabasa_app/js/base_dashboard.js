@@ -146,9 +146,26 @@ var getStudentClassData = window.getStudentClassData = function() {
         return document.getElementById("dashboardPageLoader");
     }
 
+    function isDashboardDarkThemeActive() {
+        let theme = localStorage.getItem("pabasa_theme");
+        try { theme = JSON.parse(theme); } catch(e) {}
+        return theme === "dark" ||
+            document.documentElement.classList.contains("dark-theme") ||
+            document.body.classList.contains("dark-theme");
+    }
+
+    function syncDashboardPageLoaderTheme(loader) {
+        const targetLoader = loader || getLoader();
+        if (!targetLoader) return;
+        targetLoader.classList.toggle("is-dark", isDashboardDarkThemeActive());
+    }
+
     function ensureDashboardPageLoader() {
         let loader = getLoader();
-        if (loader) return loader;
+        if (loader) {
+            syncDashboardPageLoaderTheme(loader);
+            return loader;
+        }
 
         loader = document.createElement("div");
         loader.id = "dashboardPageLoader";
@@ -163,6 +180,7 @@ var getStudentClassData = window.getStudentClassData = function() {
             </div>
         `;
         document.body.prepend(loader);
+        syncDashboardPageLoaderTheme(loader);
         return loader;
     }
 
@@ -190,6 +208,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     function showDashboardPageLoader(options) {
         const loader = ensureDashboardPageLoader();
         const useBrandedLoader = Boolean(options && options.branded);
+        syncDashboardPageLoaderTheme(loader);
         loader.classList.toggle("is-branded", useBrandedLoader);
         loader.classList.add("is-visible");
         loader.setAttribute("aria-hidden", "false");
@@ -222,6 +241,14 @@ var getStudentClassData = window.getStudentClassData = function() {
             window.requestAnimationFrame(hideDashboardPageLoader);
         }, remaining);
     }
+
+    window.addEventListener("storage", function (event) {
+        if (event.key === "pabasa_theme") syncDashboardPageLoaderTheme();
+    });
+
+    window.addEventListener("pabasa:preferences-updated", function () {
+        syncDashboardPageLoaderTheme();
+    });
 
     function hideActiveNavTooltips() {
         if (window.bootstrap && bootstrap.Tooltip) {
