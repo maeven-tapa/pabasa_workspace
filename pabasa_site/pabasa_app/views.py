@@ -6742,11 +6742,11 @@ def _extract_text_from_image(upload):
         raise RuntimeError('Image OCR requires pytesseract to be installed.') from exc
 
     tesseract_path = _resolve_tesseract_executable(pytesseract)
+    if not tesseract_path:
+        logger.warning('Tesseract executable not found; image OCR will be attempted with system Tesseract')
+
     if tesseract_path:
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
-    else:
-        logger.warning('Tesseract executable not found; image OCR will return empty text.')
-        return ''
 
     upload.seek(0)
     try:
@@ -6888,38 +6888,67 @@ def extract_reading_material_file(request):
     selected_pages = request.POST.get('selected_pages') or request.POST.getlist('selected_pages')
 
     try:
+        extracted_text = ''
+        page_count = 1
+        selected_pages_list = [1]
+        extraction_warnings = []
+        
         if ext == '.txt':
             raw = upload.read()
-            text = raw.decode('utf-8', errors='replace')
-            page_count = 1
-            selected_pages_list = [1]
+            extracted_text = raw.decode('utf-8', errors='replace')
         elif ext == '.docx':
-            with zipfile.ZipFile(upload) as docx_zip:
-                xml = docx_zip.read('word/document.xml').decode('utf-8', errors='ignore')
-            text = re.sub(r'</w:p[^>]*>', '\n', xml)
-            text = re.sub(r'<[^>]+>', '', text)
-            text = (
-                text.replace('&amp;', '&')
-                    .replace('&lt;', '<')
-                    .replace('&gt;', '>')
-                    .replace('&quot;', '"')
-                    .replace('&apos;', "'")
-            )
-            page_count = 1
-            selected_pages_list = [1]
+            try:
+                with zipfile.ZipFile(upload) as docx_zip:
+                    xml = docx_zip.read('word/document.xml').decode('utf-8', errors='ignore')
+                extracted_text = re.sub(r'</w:p[^>]*>', '\n', xml)
+                extracted_text = re.sub(r'<[^>]+>', '', extracted_text)
+                extracted_text = (
+                    extracted_text.replace('&amp;', '&')
+                        .replace('&lt;', '<')
+                        .replace('&gt;', '>')
+                        .replace('&quot;', '"')
+                        .replace('&apos;', "'")
+                )
+            except (KeyError, zipfile.BadZipFile):
+                return JsonResponse({'success': False, 'error': 'That DOCX file could not be read. Please ensure it is a valid Word document.'}, status=400)
         elif ext in {'.jpg', '.jpeg', '.png'}:
-            text = _extract_text_from_image(upload)
-            page_count = 1
-            selected_pages_list = [1]
+            try:
+                extracted_text = _extract_text_from_image(upload)
+                if not extracted_text:
+                    extraction_warnings.append('No text could be detected in this image. This may be because the image is not clear or Tesseract OCR is not properly configured.')
+            except Exception as e:
+                logger.warning('Image extraction failed: %s', e)
+                extraction_warnings.append(f'Image OCR encountered an issue: {str(e)}')
         else:
-            extracted = _extract_text_from_pdf(upload, selected_pages if selection_mode == 'selected' else None)
-            text = extracted['text']
-            page_count = extracted['page_count']
-            selected_pages_list = extracted['selected_pages']
+            try:
+                extracted = _extract_text_from_pdf(upload, selected_pages if selection_mode == 'selected' else None)
+                extracted_text = extracted['text']
+                page_count = extracted['page_count']
+                selected_pages_list = extracted['selected_pages']
+            except Exception as e:
+                logger.warning('PDF extraction failed: %s', e)
+                extraction_warnings.append(f'PDF extraction encountered an issue: {str(e)}')
 
+        # Normalize and clean extracted text
+        text = re.sub(r'\s+', ' ', extracted_text.strip())
+        
         detected_type, items = _build_extracted_material_items(text, '')
         if not items:
-            return JsonResponse({'success': False, 'error': 'No readable text was found in that file.'}, status=400)
+            # If no items found, but we have some text, try to provide a helpful error
+            if text:
+                logger.warning(f'Extraction produced text but no items: {text[:100]}...')
+                if extraction_warnings:
+                    warning_msg = '. '.join(extraction_warnings)
+                    return JsonResponse({'success': False, 'error': f'Could not parse text from file: {warning_msg}'}, status=400)
+                return JsonResponse({'success': False, 'error': f'No readable text was found that could be split into {detected_type}s.'}, status=400)
+            elif extraction_warnings:
+                # Text extraction warned but produced nothing
+                warning_msg = '. '.join(extraction_warnings)
+                return JsonResponse({'success': False, 'error': warning_msg}, status=400)
+            else:
+                # No text extracted at all
+                return JsonResponse({'success': False, 'error': 'No readable text was found in that file. Please ensure the file contains text content.'}, status=400)
+        
         return JsonResponse({
             'success': True,
             'items': items,
@@ -6934,7 +6963,7 @@ def extract_reading_material_file(request):
         return JsonResponse({'success': False, 'error': 'That DOCX file could not be read.'}, status=400)
     except Exception as e:
         logger.error('Material file extraction failed: %s', e, exc_info=True)
-        return JsonResponse({'success': False, 'error': 'Could not extract text from that file.'}, status=500)
+        return JsonResponse({'success': False, 'error': 'Could not extract text from that file. Please try a different file.'}, status=500)
 
 
 def _detect_material_type(text, requested_reading_type=''):
@@ -6970,19 +6999,51 @@ def _detect_material_type(text, requested_reading_type=''):
 def _split_material_content(text, rtype, requested_reading_type=''):
     if not text:
         return []
+    
+    # Clean and normalize text
+    cleaned = re.sub(r'\s+', ' ', text.strip())
+    if not cleaned:
+        return []
+    
     if rtype == 'word':
-        return re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
+        # Try Unicode word pattern first
+        words = re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
+        if words:
+            return words
+        # Fallback: try splitting on whitespace/punctuation for non-Latin scripts
+        fallback = re.split(r'[\s\-,;.!?()[\]{}]+', cleaned)
+        fallback = [w.strip() for w in fallback if w.strip()]
+        if fallback:
+            return fallback
+        # Last resort: return the whole text as one word
+        return [cleaned] if cleaned else []
+    
     if rtype == 'sentence':
         line_items = [line.strip() for line in text.splitlines() if line.strip()]
         if len(line_items) > 1 and '\n\n' not in text:
             return line_items
-        return [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+        # Try splitting on sentence-ending punctuation
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+        if sentences:
+            return sentences
+        # Fallback: return lines if available
+        if line_items:
+            return line_items
+        # Last resort: return the whole text as one sentence
+        return [cleaned] if cleaned else []
+    
     if rtype == 'paragraph':
         paragraphs = [p.strip() for p in re.split(r'\n{2,}', text) if p.strip()]
         if paragraphs:
             return paragraphs
-        return [text.strip()]
-    return [text]
+        # Fallback: try splitting on newlines
+        line_items = [line.strip() for line in text.splitlines() if line.strip()]
+        if len(line_items) > 1:
+            return line_items
+        # Last resort: return the whole text as one paragraph
+        return [cleaned] if cleaned else []
+    
+    return [cleaned] if cleaned else []
 
 
 def _shared_material_fingerprint(title, content, item_type, language=''):
