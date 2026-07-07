@@ -559,37 +559,16 @@
             return div.innerHTML;
         };
 
-        const getLocalPracticeProgress = () => {
-            try {
-                const parsed = JSON.parse(localStorage.getItem(practiceProgressStorageKey) || "{}");
-                return parsed && typeof parsed === "object" ? parsed : {};
-            } catch (error) {
-                return {};
-            }
-        };
-
         const getModeProgressSummary = (modeKey, fallbackSummary) => {
-            const localProgress = getLocalPracticeProgress();
-            const modeState = localProgress[modeKey] && typeof localProgress[modeKey] === "object" ? localProgress[modeKey] : {};
-            let completedLevels = 0;
-            let starsEarned = 0;
-
-            Object.values(modeState).forEach((difficultyState) => {
-                if (!difficultyState || typeof difficultyState !== "object") return;
-                Object.values(difficultyState).forEach((entry) => {
-                    if (entry && entry.completed) {
-                        completedLevels += 1;
-                        starsEarned += Number(entry.stars_earned || 0) || 0;
-                    }
-                });
-            });
-
+            const summary = fallbackSummary || {};
+            const completedLevels = Number(summary.completed_levels || 0) || 0;
+            const totalLevels = Number(summary.total_levels || 15) || 15;
             return {
-                completed_levels: completedLevels || fallbackSummary?.completed_levels || 0,
-                total_levels: fallbackSummary?.total_levels || 15,
-                progress_percent: fallbackSummary?.total_levels ? Math.round((completedLevels / fallbackSummary.total_levels) * 100) : (fallbackSummary?.progress_percent || 0),
-                stars_earned: starsEarned || fallbackSummary?.stars_earned || 0,
-                next_label: fallbackSummary?.next_label || "Easy Level 1",
+                completed_levels: completedLevels,
+                total_levels: totalLevels,
+                progress_percent: Number(summary.progress_percent || 0) || 0,
+                stars_earned: Number(summary.stars_earned || 0) || 0,
+                next_label: summary.next_label || "Easy Level 1",
             };
         };
 
@@ -608,20 +587,11 @@
             const completedGames = sortedMaterials.filter((material) => material.is_done).length;
             const totalGames = sortedMaterials.length;
             const progressPercent = totalGames ? Math.round((completedGames / totalGames) * 100) : 0;
-            const localProgress = getLocalPracticeProgress();
             let aggregateLevelsCompleted = 0;
             let aggregateStars = 0;
-            Object.keys(localProgress).forEach((modeKey) => {
-                const modeState = localProgress[modeKey] || {};
-                Object.values(modeState).forEach((difficultyState) => {
-                    if (!difficultyState || typeof difficultyState !== "object") return;
-                    Object.values(difficultyState).forEach((entry) => {
-                        if (entry && entry.completed) {
-                            aggregateLevelsCompleted += 1;
-                            aggregateStars += Number(entry.stars_earned || 0) || 0;
-                        }
-                    });
-                });
+            Object.values(progressionSummaries || {}).forEach((summary) => {
+                aggregateLevelsCompleted += Number(summary?.completed_levels || 0) || 0;
+                aggregateStars += Number(summary?.stars_earned || 0) || 0;
             });
             const starsEarned = aggregateStars || completedGames * 2 + (completedGames > 0 ? 1 : 0);
             const lockedMessage = completedGames > 0 ? "Great job!" : "Keep practicing!";

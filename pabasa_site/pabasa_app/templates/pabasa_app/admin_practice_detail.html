@@ -8,7 +8,11 @@
                 <i class="bi bi-arrow-left me-1"></i>Back to practice
             </a>
             <h2 class="h4 fw-bold mb-1">{{ practice.title }}</h2>
-            <p class="text-secondary mb-0">{{ practice.difficulty_level|title }} &middot; {{ practice.get_item_type_display }}</p>
+            <p class="text-secondary mb-0">
+                {{ practice.content_json.mode|default:"-"|title }} Mode &middot;
+                {{ practice.content_json.difficulty|default:practice.difficulty_level|title }} &middot;
+                {% if practice.content_json.level %}Level {{ practice.content_json.level|cut:"level_" }}{% else %}-{% endif %}
+            </p>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-outline-primary" href="{% url 'admin_practice_edit' practice.id %}">
@@ -34,20 +38,20 @@
     <div class="row g-3 mb-4">
         <div class="col-12 col-md-3">
             <div class="border rounded-3 p-3 h-100 bg-white">
+                <span class="small text-secondary text-uppercase fw-bold">Mode</span>
+                <strong class="d-block">{{ practice.content_json.mode|default:"-"|title }}</strong>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="border rounded-3 p-3 h-100 bg-white">
                 <span class="small text-secondary text-uppercase fw-bold">Difficulty</span>
-                <strong class="d-block">{{ practice.difficulty_level|title }}</strong>
+                <strong class="d-block">{{ practice.content_json.difficulty|default:practice.difficulty_level|title }}</strong>
             </div>
         </div>
         <div class="col-12 col-md-3">
             <div class="border rounded-3 p-3 h-100 bg-white">
-                <span class="small text-secondary text-uppercase fw-bold">Type</span>
-                <strong class="d-block">{{ practice.get_item_type_display }}</strong>
-            </div>
-        </div>
-        <div class="col-12 col-md-3">
-            <div class="border rounded-3 p-3 h-100 bg-white">
-                <span class="small text-secondary text-uppercase fw-bold">Items</span>
-                <strong class="d-block fs-4">{{ practice_item_count }}</strong>
+                <span class="small text-secondary text-uppercase fw-bold">Level</span>
+                <strong class="d-block">{% if practice.content_json.level %}Level {{ practice.content_json.level|cut:"level_" }}{% else %}-{% endif %}</strong>
             </div>
         </div>
         <div class="col-12 col-md-3">
@@ -69,17 +73,19 @@
             <div class="border rounded-3 p-3 h-100 bg-white">
                 <h3 class="h6 fw-bold mb-3">Practice Content</h3>
                 <dl class="mb-0">
-                    <dt class="text-secondary">Prompt</dt>
-                    <dd>{{ practice.prompt_text|default:"-"|linebreaksbr }}</dd>
+                    <dt class="text-secondary">Item Type</dt>
+                    <dd>{{ practice.get_item_type_display|default:"-" }}</dd>
+                    <dt class="text-secondary">Items</dt>
+                    <dd>{{ practice_item_count }}</dd>
                     <dt class="text-secondary">Content</dt>
-                    <dd class="mb-0">{{ practice.content_text|linebreaksbr }}</dd>
+                    <dd class="mb-0">{{ practice.content_text|default:"-"|linebreaksbr }}</dd>
                 </dl>
             </div>
         </div>
         <div class="col-12 col-lg-5">
             <div class="border rounded-3 p-3 h-100 bg-white">
                 <h3 class="h6 fw-bold mb-3">Student Practice Preparation</h3>
-                <p class="text-secondary mb-3">This content is stored as standalone practice material and grouped by difficulty for the future student difficulty picker.</p>
+                <p class="text-secondary mb-3">This content is stored as standalone practice material and grouped by mode, difficulty, and level for the student progression flow.</p>
                 <dl class="mb-0">
                     <dt class="text-secondary">Created</dt>
                     <dd>{{ practice.created_at|date:"M d, Y g:i A" }}</dd>

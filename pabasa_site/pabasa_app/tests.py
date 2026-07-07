@@ -18,7 +18,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _create_notification, _notify_principals, _material_response_payload
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload
 from .weekly_digest import send_weekly_digest
 
 
@@ -42,6 +42,30 @@ class ReadingMatcherTests(TestCase):
 
         self.assertEqual(result["correct_word_count"], 1)
         self.assertFalse(result["complete"])
+
+
+class PracticeProgressionTests(TestCase):
+    def test_apply_progression_unlock_override_only_marks_ui_hint_without_changing_state(self):
+        progression = {
+            "sections": [
+                {
+                    "difficulty": "easy",
+                    "levels": [
+                        {"difficulty": "easy", "level": "level_1", "state": "locked", "unlocked": False, "button_label": "Locked"},
+                        {"difficulty": "easy", "level": "level_2", "state": "locked", "unlocked": False, "button_label": "Locked"},
+                    ],
+                }
+            ]
+        }
+
+        updated = _apply_progression_unlock_override(progression, "easy_level_2")
+        levels = updated["sections"][0]["levels"]
+
+        self.assertEqual(levels[0]["state"], "locked")
+        self.assertFalse(levels[0]["unlocked"])
+        self.assertEqual(levels[1]["state"], "locked")
+        self.assertFalse(levels[1]["unlocked"])
+        self.assertEqual(updated["ui_unlock_target"], "easy_level_2")
 
 
 class SharedMaterialImportTests(TestCase):

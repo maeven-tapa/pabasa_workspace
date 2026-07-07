@@ -118,74 +118,16 @@
 {% block extra_scripts %}
 <script>
     (() => {
-        const storageKey = 'pabasa_practice_progress_v1';
-        const mode = '{{ selected_game_mode|default:"free" }}';
         const levelCards = Array.from(document.querySelectorAll('.level-card[data-difficulty][data-level]'));
-        const levelSequence = [
-            ['easy', 'level_1'],
-            ['easy', 'level_2'],
-            ['easy', 'level_3'],
-            ['easy', 'level_4'],
-            ['easy', 'level_5'],
-            ['medium', 'level_1'],
-            ['medium', 'level_2'],
-            ['medium', 'level_3'],
-            ['medium', 'level_4'],
-            ['medium', 'level_5'],
-            ['hard', 'level_1'],
-            ['hard', 'level_2'],
-            ['hard', 'level_3'],
-            ['hard', 'level_4'],
-            ['hard', 'level_5'],
-        ];
-        const starsCount = document.getElementById('progressionStarsCount');
-        const completedCount = document.getElementById('progressionCompletedCount');
-        const progressPercent = document.getElementById('progressionProgressPercent');
-        const currentChallenge = document.getElementById('progressionCurrentChallenge');
-        const heroIntro = document.getElementById('progressionHeroIntro');
-        const heroStatus = document.getElementById('progressionHeroStatus');
-
-        const isLevelUnlocked = (modeState, difficulty, level, entry, initialUnlocked = false) => {
-            const normalizedDifficulty = String(difficulty || '').toLowerCase();
-            const normalizedLevel = String(level || '').toLowerCase();
-            const normalizedEntry = entry && typeof entry === 'object' ? entry : {};
-            if (normalizedEntry.completed || initialUnlocked || normalizedEntry.unlocked) return true;
-            const sequenceIndex = levelSequence.findIndex((item) => item[0] === normalizedDifficulty && item[1] === normalizedLevel);
-            if (sequenceIndex === 0) return true;
-            for (let index = 0; index < sequenceIndex; index += 1) {
-                const [previousDifficulty, previousLevel] = levelSequence[index];
-                const previousEntry = modeState[previousDifficulty]?.[previousLevel] || {};
-                if (previousEntry.completed) return true;
-            }
-            return false;
-        };
 
         const readProgress = () => {
             if (!levelCards.length) {
-                levelCards.push(...Array.from(document.querySelectorAll('.level-card[data-difficulty][data-level]')));
+                return;
             }
-            let state = {};
-            try {
-                state = JSON.parse(localStorage.getItem(storageKey) || '{}');
-            } catch (error) {
-                state = {};
-            }
-
-            const modeState = state[mode] && typeof state[mode] === 'object' ? state[mode] : {};
-            const totalLevels = levelCards.length;
-            let completedLevels = 0;
-            let starsEarned = 0;
 
             levelCards.forEach((card) => {
-                const difficulty = card.dataset.difficulty;
-                const level = card.dataset.level;
-                const entry = modeState[difficulty]?.[level] || {};
-                const initialUnlocked = card.classList.contains('is-unlocked') || card.classList.contains('is-completed');
-                const completed = Boolean(entry.completed) || card.classList.contains('is-completed');
-                const unlocked = isLevelUnlocked(modeState, difficulty, level, entry, initialUnlocked);
-
-                card.classList.toggle('is-completed', completed);
-                card.classList.toggle('is-unlocked', unlocked && !completed);
+                const completed = card.classList.contains('is-completed');
+                const unlocked = card.classList.contains('is-unlocked') || completed;
                 card.classList.toggle('is-locked', !unlocked && !completed);
 
                 const status = card.querySelector('.level-status');
@@ -203,45 +145,7 @@
                             ? '<i class="bi bi-play-fill"></i> Play Level'
                             : '<i class="bi bi-lock-fill"></i> Locked';
                 }
-
-                if (completed) {
-                    completedLevels += 1;
-                    starsEarned += Number(entry.stars_earned || 0) || 0;
-                }
             });
-
-            if (starsCount) starsCount.textContent = starsEarned;
-            if (completedCount) completedCount.textContent = `${completedLevels}/${totalLevels}`;
-            if (progressPercent) progressPercent.textContent = `${totalLevels ? Math.round((completedLevels / totalLevels) * 100) : 0}%`;
-            const nextCard = levelCards.find((card) => {
-                const difficulty = card.dataset.difficulty;
-                const level = card.dataset.level;
-                const entry = modeState[difficulty]?.[level] || {};
-                const initialUnlocked = card.classList.contains('is-unlocked') || card.classList.contains('is-completed');
-                const unlocked = isLevelUnlocked(modeState, difficulty, level, entry, initialUnlocked);
-                return unlocked && !entry.completed;
-            });
-            if (currentChallenge) {
-                if (nextCard) {
-                    currentChallenge.textContent = `${nextCard.dataset.difficulty} ${nextCard.dataset.level}`.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-                } else if (completedLevels >= totalLevels) {
-                    currentChallenge.textContent = 'Adventure complete';
-                }
-            }
-            if (heroIntro) {
-                heroIntro.textContent = nextCard
-                    ? `You are building momentum. ${currentChallenge?.textContent || 'Your next challenge'} is ready to play.`
-                    : completedLevels >= totalLevels
-                        ? 'Every level has been completed. You have finished the adventure.'
-                        : 'Start with the first level to begin your adventure.';
-            }
-            if (heroStatus) {
-                heroStatus.textContent = completedLevels >= totalLevels
-                    ? 'Adventure complete — every unlocked level has been celebrated.'
-                    : completedLevels > 0
-                        ? `${completedLevels} level${completedLevels === 1 ? '' : 's'} complete. Keep going to unlock the next challenge.`
-                        : 'Start the first level to begin your streak.';
-            }
         };
 
         const applyProgressionState = () => {
@@ -255,8 +159,6 @@
             applyProgressionState();
         }
         window.addEventListener('load', applyProgressionState);
-        window.addEventListener('storage', readProgress);
-        window.addEventListener('pabasa:practice-progress-updated', readProgress);
     })();
 </script>
 {% endblock %}

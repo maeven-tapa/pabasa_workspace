@@ -3294,20 +3294,22 @@ def _apply_progression_unlock_override(progression, unlock_target):
 
     difficulty = parts[0]
     level = '_'.join(parts[1:])
+    ordered_levels = []
     for section in progression.get('sections', []):
-        if section.get('difficulty') != difficulty:
-            continue
-        section['unlocked'] = True
-        section['locked_reason'] = ''
         for level_payload in section.get('levels', []):
-            if level_payload.get('level') != level:
-                continue
-            level_payload['state'] = 'unlocked'
-            level_payload['unlocked'] = True
-            level_payload['button_label'] = 'Play Level'
-            level_payload['locked_reason'] = ''
+            ordered_levels.append((section, level_payload))
+
+    target_index = None
+    for index, (section, level_payload) in enumerate(ordered_levels):
+        if section.get('difficulty') == difficulty and level_payload.get('level') == level:
+            target_index = index
             break
-        break
+
+    if target_index is None:
+        return progression
+
+    progression['ui_unlock_target'] = normalized_target
+    progression['ui_unlock_indices'] = [index for index in range(target_index + 1)]
     return progression
 
 

@@ -504,12 +504,73 @@
         return true;
     }
 
+    function persistFreeModeCardProgress(cardIndex) {
+        if (!Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= items.length) return null;
+
+        const levelContext = getLevelProgressContext();
+        const progressState = getPracticeProgressState();
+        const entry = ensureLevelProgressEntry(progressState, levelContext.mode, levelContext.difficulty, levelContext.level);
+        const completedCards = Array.isArray(entry.completed_cards) ? entry.completed_cards : [];
+        if (!completedCards.includes(cardIndex)) {
+            entry.completed_cards = [...completedCards, cardIndex];
+            entry.cards_completed = entry.completed_cards.length;
+            entry.unlocked = true;
+            entry.completed = entry.cards_completed >= items.length;
+            progressState[levelContext.mode][levelContext.difficulty][levelContext.level] = entry;
+            savePracticeProgressState(progressState);
+        }
+        return entry;
+    }
+
+    function completeFreeModeLevel() {
+        const levelContext = getLevelProgressContext();
+        const progressState = getPracticeProgressState();
+        const entry = ensureLevelProgressEntry(progressState, levelContext.mode, levelContext.difficulty, levelContext.level);
+        entry.cards_completed = Math.max(entry.cards_completed || 0, items.length);
+        entry.completed_cards = Array.isArray(entry.completed_cards) ? Array.from(new Set(entry.completed_cards)) : [];
+        entry.unlocked = true;
+        entry.completed = true;
+        progressState[levelContext.mode][levelContext.difficulty][levelContext.level] = entry;
+        savePracticeProgressState(progressState);
+
+        const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
+        if (nextLevel) {
+            saveLevelProgressEntry(nextLevel.mode, nextLevel.difficulty, nextLevel.level, { unlocked: true });
+        }
+
+        showLevelCompleteOverlay();
+        return submitPracticeCompletion().then((saved) => {
+            if (saved) {
+                window.location.assign(`/dashboard/practice/progression/${selectedGameMode}/`);
+            }
+            return saved;
+        }).catch(() => {
+            window.location.assign(`/dashboard/practice/progression/${selectedGameMode}/`);
+            return false;
+        });
+    }
+
     function goToFreeModeCard(nextIndex) {
-        if (!items.length) return;
+        if (!items.length) return false;
         const safeIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
+        const movedForward = safeIndex > scrollCurrentIndex;
+        if (movedForward) {
+            persistFreeModeCardProgress(scrollCurrentIndex);
+        }
+
         scrollCurrentIndex = safeIndex;
         if (scrollsTrack) scrollsTrack.style.transform = `translateY(-${scrollCurrentIndex * 100}%)`;
         updateFreeModeProgress();
+
+        if (scrollCurrentIndex >= items.length - 1) {
+            const finalEntry = persistFreeModeCardProgress(scrollCurrentIndex);
+            if (finalEntry?.completed || scrollCurrentIndex === items.length - 1) {
+                completeFreeModeLevel();
+                return true;
+            }
+        }
+
+        return false;
     }
 
     function handleFreeModeSwipe(direction) {
@@ -530,17 +591,13 @@
         if (isSpace) {
             event.preventDefault();
             if (!lockFreeModeGesture()) return true;
-            handleFreeModeReadAttempt();
+            goToFreeModeCard(scrollCurrentIndex + 1);
             return true;
         }
 
         if (event.key === 'Escape') {
             event.preventDefault();
             if (!lockFreeModeGesture()) return true;
-            setCurrentItemOutcome('skipped');
-            if (scrollsFeedback) scrollsFeedback.textContent = 'Skipped. That card will wait for you next time.';
-            if (scrollsStatusPill) scrollsStatusPill.textContent = 'Skipped';
-            updateCompletionSummary();
             goToFreeModeCard(scrollCurrentIndex + 1);
             return true;
         }
@@ -567,12 +624,11 @@
         }
         if (message) {
             message.textContent = nextLevel
-                ? `You finished every card in this level. ${nextLevel.difficulty} ${nextLevel.level} is now unlocked.`
+                ? `You finished every card in this level. The next level will be available on the Adventure Map.`
                 : 'You finished every card in this level. Great work!';
         }
         if (action) {
-            const unlockQuery = nextLevel ? `?unlock=${encodeURIComponent(`${nextLevel.difficulty}_${nextLevel.level}`)}` : '';
-            action.href = `/dashboard/practice/progression/${selectedGameMode}/${unlockQuery}`;
+            action.href = `/dashboard/practice/progression/${selectedGameMode}/`;
             action.textContent = nextLevel ? 'View Adventure Map' : 'Back to Practice';
         }
         overlay.hidden = false;
@@ -582,46 +638,20 @@
         const currentItem = items[scrollCurrentIndex];
         if (!currentItem) return false;
 
-        const levelContext = getLevelProgressContext();
-        const progressState = getPracticeProgressState();
-        const entry = ensureLevelProgressEntry(progressState, levelContext.mode, levelContext.difficulty, levelContext.level);
-        const alreadyCompleted = Array.isArray(entry.completed_cards) && entry.completed_cards.includes(scrollCurrentIndex);
-        const awardStar = !alreadyCompleted;
-
-        if (awardStar) {
-            entry.completed_cards = [...new Set([...(entry.completed_cards || []), scrollCurrentIndex])];
-            entry.cards_completed = entry.completed_cards.length;
-            entry.stars_earned = entry.cards_completed;
-            entry.unlocked = true;
-            entry.completed = entry.cards_completed >= items.length;
-            progressState[levelContext.mode][levelContext.difficulty][levelContext.level] = entry;
-            savePracticeProgressState(progressState);
-        }
-
-        setCurrentItemOutcome('read');
         if (scrollsFeedback) {
-            scrollsFeedback.textContent = awardStar ? '⭐ Great job! You earned 1 Star!' : '⭐ You already completed this card.';
+            scrollsFeedback.textContent = 'Nice work. Keep going to the next card.';
         }
         if (scrollsStatusPill) {
-            scrollsStatusPill.textContent = awardStar ? 'Great job' : 'Completed';
+            scrollsStatusPill.textContent = 'Reading';
         }
         if (scrollRecordBtn) {
             scrollRecordBtn.classList.add('is-read');
         }
-        updateCompletionSummary();
-        renderFreeMode();
 
-        if (entry.completed) {
-            const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
-            if (nextLevel) {
-                saveLevelProgressEntry(nextLevel.mode, nextLevel.difficulty, nextLevel.level, { unlocked: true });
-            }
-            showLevelCompleteOverlay();
-            return true;
+        const reachedEnd = goToFreeModeCard(scrollCurrentIndex + 1);
+        if (!reachedEnd) {
+            hideLevelCompleteOverlay();
         }
-
-        goToFreeModeCard(scrollCurrentIndex + 1);
-        hideLevelCompleteOverlay();
         return true;
     }
 
@@ -673,12 +703,12 @@
     }
 
     function submitPracticeCompletion() {
-        if (viewMode === 'view' || !materialId || completionSubmitted) return;
+        if (viewMode === 'view' || !materialId || completionSubmitted) return Promise.resolve(false);
 
         const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
         if (!token) {
             console.warn("PABASA: Missing CSRF token; practice completion was not saved.");
-            return;
+            return Promise.resolve(false);
         }
 
         const metrics = getCompletionMetrics();
@@ -702,7 +732,7 @@
                 : 0,
         };
 
-        fetch('/record-assessment-completion/', {
+        return fetch('/record-assessment-completion/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
             body: JSON.stringify(completionPayload)
@@ -712,17 +742,15 @@
                 if (!ok || !data.success) {
                     completionSubmitted = false;
                     console.warn("PABASA: Practice completion was not saved.", data.error || data);
-                    return;
+                    return false;
                 }
                 markMaterialSeen(data.material_id || materialId);
-                // NOTE: Intentionally do NOT follow `data.redirect_url` here.
-                // Keeping the results screen visible prevents automatic refresh/redirect
-                // so students can review their score. Servers may include a redirect_url
-                // for other flows; we ignore it to honor the UI requirement.
+                return true;
             })
             .catch(e => {
                 completionSubmitted = false;
                 console.warn("PABASA: Practice completion API error", e);
+                return false;
             });
     }
 
