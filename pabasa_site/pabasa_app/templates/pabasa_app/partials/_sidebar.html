@@ -1,16 +1,16 @@
+{% load static %}
 <div class="sidebar-inner d-flex flex-column p-3 p-xl-4{% if nav_role == 'student' %} student-sidebar{% endif %}">
     <div class="sidebar-top-section flex-shrink-0 mb-4">
-        <div class="sidebar-brand-row d-flex align-items-center justify-content-between gap-2 mb-3">
+        <a class="sidebar-logo-link" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
+            <img class="sidebar-logo-img" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
+            <span class="sidebar-logo-text">PABASA</span>
+        </a>
+
+        <div class="sidebar-brand-row sidebar-profile-card d-flex align-items-center justify-content-between gap-2 mt-3">
             <a class="d-flex align-items-center gap-2 text-decoration-none text-reset" href="{% url 'profile' %}?role={{ nav_role|default:'student' }}" aria-label="Go to profile">
-                <span class="dash-brand-mark{% if profile_photo_url %} has-photo{% endif %}" {% if profile_photo_url %}style="--dash-brand-bg: url('{{ profile_photo_url }}');"{% endif %}>
-                    {% if not profile_photo_url %}
-                    <i class="bi bi-journal-check"></i>
-                    {% endif %}
-                </span>
                 <div class="sidebar-text">
-                    <div class="fs-6 fw-bold lh-1 sidebar-user-id" data-sidebar-brand-id>{{ user_id|default:"PABASA ID" }}</div>
                     <div class="sidebar-user-name">{{ user_full_name|default:first_name|default:"PABASA User" }}</div>
-                    <div class="brand-note mt-1 small">{% if nav_role == 'teacher' %}Teacher Workspace{% else %}Student Workspace{% endif %}</div>
+                    <div class="brand-note mt-1 small">{% if nav_role == 'teacher' %}Teacher{% else %}Student{% endif %}</div>
                 </div>
             </a>
         </div>
@@ -60,25 +60,6 @@
 
 <script>
     (() => {
-        const currentUserId = "{{ user_id|default:''|escapejs }}";
-        const fallbackUserId = "{% if nav_role == 'teacher' %}TCH-0000{% else %}G2-0000{% endif %}";
-
-        // Update ALL instances of the brand ID (desktop + mobile sidebars)
-        const updateBrandId = () => {
-            const brandIdElements = document.querySelectorAll("[data-sidebar-brand-id]");
-
-            const storedUserId = window.localStorage.getItem("pabasaCurrentUserId") || "";
-            const displayUserId = currentUserId || storedUserId || fallbackUserId;
-
-            if (currentUserId) {
-                window.localStorage.setItem("pabasaCurrentUserId", currentUserId);
-            }
-
-            brandIdElements.forEach(element => {
-                element.textContent = displayUserId;
-            });
-        };
-
         const normalizePath = (value) => value.replace(/\/+$/, '') || '/';
 
         const setActiveNav = () => {
@@ -114,16 +95,9 @@
 
         // Update on page load
         if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => {
-                updateBrandId();
-                setActiveNav();
-            });
+            document.addEventListener("DOMContentLoaded", setActiveNav);
         } else {
-            updateBrandId();
             setActiveNav();
         }
-        
-        // Update when localStorage changes
-        window.addEventListener("storage", updateBrandId);
     })();
 </script>

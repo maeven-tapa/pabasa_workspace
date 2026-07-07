@@ -180,6 +180,42 @@
             box-shadow: 0 10px 22px rgba(245, 184, 0, 0.22);
         }
 
+        .principal-logo-link {
+            align-items: center;
+            color: #fff;
+            display: flex;
+            gap: 0.85rem;
+            min-height: 58px;
+            padding: 0.45rem 0;
+            text-decoration: none;
+        }
+
+        .principal-logo-link:hover,
+        .principal-logo-link:focus {
+            color: #fff;
+        }
+
+        .principal-logo-img {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 24px rgba(6, 23, 38, 0.2);
+            flex: 0 0 54px;
+            height: 54px;
+            object-fit: contain;
+            padding: 0.35rem;
+            width: 54px;
+        }
+
+        .principal-logo-text {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 900;
+            line-height: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .principal-role-card {
             background: rgba(255, 255, 255, 0.12);
             border: 1px solid rgba(255, 255, 255, 0.16);
@@ -187,6 +223,30 @@
             color: #ffffff;
             padding: 0.85rem;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .principal-profile-name,
+        .principal-profile-role {
+            display: block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .principal-profile-name {
+            color: rgba(255, 255, 255, 0.94);
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .principal-profile-role {
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 0.74rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            margin-top: 0.2rem;
+            text-transform: uppercase;
         }
 
         .principal-nav-label {
@@ -652,17 +712,14 @@
         </div>
         <div class="offcanvas-body d-flex flex-column">
             <div class="principal-sidebar-top">
-                <a class="principal-brand" href="{% url 'principal_settings' %}" aria-label="Go to principal settings">
-                    <span class="principal-brand-icon"><i class="bi bi-mortarboard"></i></span>
-                    <span>
-                        <strong class="d-block">{{ principal_id|default:"PRN-SES" }}</strong>
-                        <span class="small" style="color: #ffffff;">PABASA Principal</span>
-                    </span>
+                <a class="principal-logo-link" href="{% url 'dashboard_principal' %}" aria-label="Go to principal dashboard">
+                    <img class="principal-logo-img" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
+                    <span class="principal-logo-text">PABASA</span>
                 </a>
 
-                <div class="principal-role-card mt-3">
-                    <span class="small d-block">Principal workspace</span>
-                    <strong class="text-dark">School Management & Performance</strong>
+                <div class="principal-role-card principal-profile-card mt-3">
+                    <strong class="principal-profile-name">{{ first_name|default:"PABASA" }} {{ last_name|default:"Principal" }}</strong>
+                    <span class="principal-profile-role">Principal</span>
                 </div>
             </div>
 

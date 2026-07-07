@@ -161,6 +161,7 @@
         body.sidebar-collapsed .dashboard-sidebar .sidebar-text,
         body.sidebar-collapsed .dashboard-sidebar .sidebar-subtext,
         body.sidebar-collapsed .dashboard-sidebar .sidebar-section-label,
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-logo-text,
         body.sidebar-collapsed .dashboard-sidebar .brand-note {
             width: 0 !important;
             max-width: 0 !important;
@@ -173,6 +174,10 @@
         }
 
         body.sidebar-collapsed .dashboard-sidebar .sidebar-role-card {
+            display: none !important;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-profile-card {
             display: none !important;
         }
 
@@ -231,6 +236,20 @@
             flex: 0 0 auto;
             gap: 0 !important;
             justify-content: center;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-logo-link {
+            gap: 0 !important;
+            justify-content: center;
+            min-height: 54px;
+            padding: 0;
+            width: 56px;
+        }
+
+        body.sidebar-collapsed .dashboard-sidebar .sidebar-logo-img {
+            flex: 0 0 42px;
+            height: 42px;
+            width: 42px;
         }
 
         body.sidebar-collapsed .dashboard-sidebar .dash-brand-mark {
@@ -864,6 +883,44 @@
             width: 100%;
         }
 
+        .sidebar-logo-link {
+            align-items: center;
+            color: #fff;
+            display: flex;
+            gap: 0.85rem;
+            min-height: 58px;
+            padding: 0.45rem 0.2rem;
+            text-decoration: none;
+        }
+
+        .sidebar-logo-link:hover,
+        .sidebar-logo-link:focus {
+            color: #fff;
+        }
+
+        .sidebar-logo-img {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 24px rgba(6, 23, 38, 0.2);
+            flex: 0 0 54px;
+            height: 54px;
+            object-fit: contain;
+            padding: 0.35rem;
+            width: 54px;
+        }
+
+        .sidebar-logo-text {
+            color: #fff;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1.1rem;
+            font-weight: 900;
+            letter-spacing: 0;
+            line-height: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .sidebar-brand-row {
             background: rgba(255, 255, 255, 0.12);
             border: 1px solid rgba(255, 255, 255, 0.16);
@@ -877,6 +934,10 @@
             gap: 1rem;
             margin-bottom: 0.5rem;
             position: relative;
+        }
+
+        .sidebar-profile-card {
+            min-height: 66px;
         }
 
         .sidebar-brand-row a {
