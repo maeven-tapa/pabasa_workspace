@@ -89,6 +89,7 @@
             right: 50%;
             margin-left: -50vw;
             margin-right: -50vw;
+            box-shadow: 0 8px 22px rgba(16, 70, 110, 0.08);
         }
 
         .modern-nav-wrap .navbar {
@@ -104,20 +105,20 @@
         .modern-nav-shell {
             display: flex;
             width: 100%;
-            min-height: 94px;
+            min-height: clamp(70px, 5.4vw, 82px);
             align-items: stretch;
             border-radius: 0;
             overflow: hidden;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+            box-shadow: none;
             margin: 0;
         }
 
         .modern-brand-panel {
-            flex: 0 0 250px;
+            flex: 0 0 clamp(145px, 13vw, 170px);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0 2rem;
+            padding: 0 clamp(0.8rem, 1.4vw, 1.2rem);
             background: #FFC845;
             border-radius: 0;
         }
@@ -132,15 +133,15 @@
         }
 
         .modern-brand-panel .pabasa-logo-svg {
-            width: 92px;
-            height: 82px;
+            width: clamp(90px, 7vw, 104px);
+            height: auto;
         }
 
         .modern-nav-area {
             flex: 1;
             display: flex;
             align-items: center;
-            padding: 0 2.4rem;
+            padding: 0 clamp(1.25rem, 2.6vw, 2.2rem);
             background: linear-gradient(135deg, #2f6a93 0%, #1B3B63 100%);
             border-radius: 0;
             min-width: 0;
@@ -151,7 +152,7 @@
             align-items: center;
             justify-content: space-between;
             width: 100%;
-            gap: 1.25rem;
+            gap: clamp(0.9rem, 2vw, 1.4rem);
         }
 
         .modern-nav-links {
@@ -159,7 +160,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 4.25rem;
+            gap: clamp(1.6rem, 4vw, 3.2rem);
             list-style: none;
             padding: 0;
             margin: 0;
@@ -168,9 +169,9 @@
         .nav-link-modern {
             color: #FFFFFF;
             font-family: 'Poppins', sans-serif;
-            font-size: 1.05rem;
-            font-weight: 500;
-            padding: 0.5rem 0;
+            font-size: clamp(0.94rem, 1vw, 1rem);
+            font-weight: 600;
+            padding: 0.45rem 0;
             position: relative;
             display: inline-flex;
             align-items: center;
@@ -181,9 +182,9 @@
             content: "";
             position: absolute;
             left: 50%;
-            bottom: -0.7rem;
-            width: 170px;
-            height: 4px;
+            bottom: -0.45rem;
+            width: min(100%, 8.75rem);
+            height: 3px;
             border-radius: 999px;
             background: #FFC845;
             transform: translateX(-50%) scaleX(0);
@@ -206,7 +207,7 @@
         .modern-nav-actions {
             display: flex;
             align-items: center;
-            gap: 1.25rem;
+            gap: clamp(0.65rem, 1.2vw, 0.95rem);
             margin-left: auto;
         }
 
@@ -218,8 +219,8 @@
             box-shadow: none;
             color: #FFFFFF;
             font-family: 'Poppins', sans-serif;
-            font-size: 0.98rem;
-            font-weight: 500;
+            font-size: clamp(0.9rem, 0.95vw, 0.96rem);
+            font-weight: 600;
         }
 
         .header-inline-link:hover {
@@ -230,20 +231,20 @@
 
         .header-divider {
             width: 1px;
-            height: 42px;
-            background: rgba(255, 255, 255, 0.15);
-            margin: 0 0.25rem;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 0 0.1rem;
         }
 
         .header-icon-group {
             display: inline-flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.55rem;
         }
 
         .header-icon-btn {
-            width: 2.7rem;
-            height: 2.7rem;
+            width: 2.5rem;
+            height: 2.5rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -264,8 +265,8 @@
         }
 
         .header-avatar {
-            width: 3.35rem;
-            height: 3.35rem;
+            width: 2.9rem;
+            height: 2.9rem;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -281,10 +282,18 @@
             display: none;
             border-color: rgba(255, 255, 255, 0.18);
             margin-left: auto;
+            min-width: 44px;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
         }
 
         .navbar-toggler:focus {
             box-shadow: none;
+        }
+
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.92%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
         }
 
         .account-cta {
@@ -300,38 +309,174 @@
             }
 
             .modern-nav-shell {
-                flex-direction: column;
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr);
+                min-height: 0;
+                overflow: visible;
             }
 
             .modern-brand-panel {
-                flex-basis: auto;
-                min-height: 88px;
-                border-radius: 1.25rem 1.25rem 0 0;
+                min-height: clamp(56px, 8vw, 64px);
+                width: clamp(96px, 24vw, 136px);
+                padding: 0 0.8rem;
             }
 
             .modern-nav-area {
-                padding: 1rem 1.1rem 1.15rem;
+                min-width: 0;
+                justify-content: flex-end;
+                padding: 0 clamp(0.75rem, 3vw, 1.25rem);
             }
 
             .modern-nav-content {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 0;
+                padding: 0.65rem 0 0.85rem;
             }
 
             .navbar-toggler {
                 display: inline-flex;
             }
 
+            .modern-brand-panel .pabasa-logo-svg {
+                width: clamp(70px, 18vw, 92px);
+            }
+
+            .modern-nav-area .navbar-collapse {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                z-index: 1030;
+                background: linear-gradient(135deg, #2f6a93 0%, #1B3B63 100%);
+                box-shadow: 0 16px 30px rgba(16, 70, 110, 0.18);
+            }
+
             .modern-nav-links {
                 flex-direction: column;
-                gap: 0.65rem;
-                margin-bottom: 0.7rem;
+                align-items: stretch;
+                gap: 0;
+                width: min(100%, 720px);
+                margin: 0 auto;
+                padding: 0.35rem clamp(0.75rem, 4vw, 1.25rem) 0;
+            }
+
+            .modern-nav-links .nav-item {
+                width: 100%;
+            }
+
+            .nav-link-modern,
+            .header-inline-link,
+            .header-icon-btn,
+            .header-avatar {
+                min-height: 44px;
+            }
+
+            .nav-link-modern {
+                width: 100%;
+                padding: 0.8rem 0.2rem;
+                font-size: 0.98rem;
+            }
+
+            .nav-link-modern::after {
+                left: 0.2rem;
+                right: 0.2rem;
+                bottom: 0.35rem;
+                width: auto;
+                transform: scaleX(0);
+                transform-origin: left;
+            }
+
+            .nav-link-modern:hover::after,
+            .nav-link-modern:focus-visible::after,
+            .nav-link-modern.active::after {
+                transform: scaleX(1);
             }
 
             .modern-nav-actions {
-                justify-content: space-between;
-                flex-wrap: wrap;
+                width: min(100%, 720px);
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0;
                 margin-left: 0;
+                margin-right: auto;
+                margin-left: auto;
+                padding: 0 clamp(0.75rem, 4vw, 1.25rem) 0.5rem;
+            }
+
+            .header-inline-link {
+                display: flex;
+                align-items: center;
+                width: 100%;
+                padding: 0.8rem 0.2rem;
+            }
+
+            .header-divider {
+                width: 100%;
+                height: 1px;
+                margin: 0.35rem 0;
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            .header-icon-group {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .header-icon-btn,
+            .header-avatar {
+                width: 100%;
+                height: auto;
+                justify-content: flex-start;
+                border-radius: 0;
+                gap: 0.65rem;
+                padding: 0.8rem 0.2rem;
+                background: transparent;
+                color: #fff;
+            }
+
+            .header-icon-btn::after,
+            .header-avatar::after {
+                color: #fff;
+                font-family: 'Poppins', sans-serif;
+                font-size: 0.98rem;
+                font-weight: 600;
+            }
+
+            .header-icon-btn[aria-label="Settings"]::after {
+                content: "Settings";
+            }
+
+            .header-avatar::after {
+                content: "Profile";
+            }
+
+            .header-icon-btn[aria-label="Open menu"]::after {
+                content: "More";
+            }
+
+            .header-logout-link::after {
+                content: "Logout";
+            }
+        }
+
+        @media (min-width: 992px) and (max-width: 1120px) {
+            .modern-brand-panel {
+                flex-basis: 138px;
+            }
+
+            .modern-nav-area {
+                padding-inline: 1rem;
+            }
+
+            .modern-nav-links {
+                gap: 1.25rem;
+            }
+
+            .header-inline-link {
+                max-width: 6.4rem;
+                line-height: 1.2;
             }
         }
 
@@ -970,6 +1115,11 @@
                                         <a class="header-icon-btn" href="{% url 'about' %}" aria-label="Open menu" title="Menu">
                                             <i class="bi bi-chevron-down"></i>
                                         </a>
+                                        {% if user.is_authenticated %}
+                                        <a class="header-icon-btn header-logout-link" href="{% url 'logout' %}" aria-label="Logout" title="Logout">
+                                            <i class="bi bi-box-arrow-right"></i>
+                                        </a>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>

@@ -112,72 +112,61 @@
 
 <section class="fade-in-section section-container section-container-2">
     <div class="section-wrapper">
-    <div class="text-center">
-        <div class="section-kicker">Who It Supports</div>
-        <h2 class="h4 mb-2">Designed for Every User</h2>
-        <p class="section-intro">A focused workspace for reading practice, assessment, and reporting across the people who guide student progress.</p>
-    </div>
     <div class="support-map">
-        <aside class="support-context">
-            <img src="{% static 'pabasa_app/images/students.png' %}" alt="Students using PABASA">
-            <div class="support-context-copy">
-                <span>Support Map</span>
-                <h3>Different users, one reading workflow.</h3>
-                <p>PABASA connects classroom reading practice, teacher review, and school-level progress visibility in a single flow.</p>
+        <aside class="support-context support-context--gallery" aria-label="A stacked collage showing teachers, students, and schools connected through reading support">
+            <div class="support-visual support-visual--stacked">
+                <div class="support-visual__tag">Built for reading growth</div>
+                <div class="support-visual__stack">
+                    <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Teachers supporting reading growth">
+                    <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="A student engaging with reading practice">
+                    <img src="{% static 'pabasa_app/images/ses.jpg' %}" alt="A school community focused on literacy support">
+                </div>
             </div>
         </aside>
-        <div class="support-lanes">
-            <article class="support-lane">
-                <div class="support-lane-index">01</div>
-                <div>
-                    <h3>Teachers</h3>
-                    <p>Run oral reading checks and turn results into practical next steps.</p>
-                    <div class="support-lane-details">
-                        <div>
-                            <strong>They do</strong>
-                            <span>Set reading levels, review fluency, and monitor learner needs.</span>
-                        </div>
-                        <div>
-                            <strong>They get</strong>
-                            <span>Readable summaries for feedback, practice, and intervention.</span>
-                        </div>
-                    </div>
-                </div>
-            </article>
-            <article class="support-lane">
-                <div class="support-lane-index">02</div>
-                <div>
-                    <h3>Students</h3>
-                    <p>Practice reading aloud through clear prompts and supportive feedback.</p>
-                    <div class="support-lane-details">
-                        <div>
-                            <strong>They do</strong>
-                            <span>Read word, sentence, or paragraph tasks matched to skill level.</span>
-                        </div>
-                        <div>
-                            <strong>They get</strong>
-                            <span>A calmer practice experience that helps build confidence.</span>
+        <div class="support-editorial">
+            <div class="support-heading">
+                <div class="section-kicker">Who It Supports</div>
+                <h2>Designed for every learner. Built for every classroom.</h2>
+                <p class="section-intro">PABASA connects classroom reading practice, teacher review, and school-level progress visibility in a single flow.</p>
+            </div>
+            <div class="support-lanes">
+                <article class="support-lane">
+                    <div class="support-lane-index">01</div>
+                    <div>
+                        <h3>Teachers</h3>
+                        <p>Run oral reading checks and turn results into practical next steps.</p>
+                        <div class="support-lane-details">
+                            <span>Set reading levels</span>
+                            <span>Review fluency</span>
+                            <span>Monitor learner needs</span>
                         </div>
                     </div>
-                </div>
-            </article>
-            <article class="support-lane">
-                <div class="support-lane-index">03</div>
-                <div>
-                    <h3>Schools</h3>
-                    <p>Use a more consistent structure for reading assessment across classrooms.</p>
-                    <div class="support-lane-details">
-                        <div>
-                            <strong>They do</strong>
-                            <span>Track classroom reading progress with shared assessment steps.</span>
-                        </div>
-                        <div>
-                            <strong>They get</strong>
-                            <span>Better visibility for remediation planning and literacy support.</span>
+                </article>
+                <article class="support-lane">
+                    <div class="support-lane-index">02</div>
+                    <div>
+                        <h3>Students</h3>
+                        <p>Practice reading aloud through clear prompts and supportive feedback.</p>
+                        <div class="support-lane-details">
+                            <span>Read matched tasks</span>
+                            <span>Build confidence</span>
+                            <span>Practice calmly</span>
                         </div>
                     </div>
-                </div>
-            </article>
+                </article>
+                <article class="support-lane">
+                    <div class="support-lane-index">03</div>
+                    <div>
+                        <h3>Schools</h3>
+                        <p>Use a more consistent structure for reading assessment across classrooms.</p>
+                        <div class="support-lane-details">
+                            <span>Track classroom progress</span>
+                            <span>Use shared assessment steps</span>
+                            <span>Plan literacy support</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
         </div>
     </div>
     </div>
@@ -185,18 +174,11 @@
 
 <section id="key-features" class="fade-in-section section-container section-container-3">
     <div class="section-wrapper">
-    <div class="text-center">
-        <div class="section-kicker">Platform Tools</div>
-        <h2 class="h4 mb-2">Key Features</h2>
-        <p class="section-intro">Practical tools for reading sessions, feedback, and language support without making the experience feel noisy.</p>
-    </div>
     <div class="tools-showcase">
         <aside class="tools-preview">
-            <div>
-                <span class="tools-preview-kicker">Teacher Workspace</span>
-                <h3>Everything needed after a learner reads aloud.</h3>
-                <p>PABASA keeps the toolset focused on assessment signals, readable summaries, and classroom follow-up.</p>
-            </div>
+            <div class="section-kicker">Platform Tools</div>
+            <h2>Everything teachers need after a learner reads aloud.</h2>
+            <p>PABASA keeps the toolset focused on assessment signals, readable summaries, and classroom follow-up without making the experience feel noisy.</p>
             <div class="tools-preview-metrics">
                 <div>
                     <strong>3</strong>
@@ -218,7 +200,6 @@
                     <img src="{% static 'pabasa_app/images/oral_read.png' %}" alt="Oral Reading">
                 </div>
                 <div>
-                    <span>Reading Practice</span>
                     <h3>Oral Reading</h3>
                     <p>Students read aloud through reading activities that support fluency, accuracy, and confidence.</p>
                 </div>
@@ -228,7 +209,6 @@
                     <img src="{% static 'pabasa_app/images/reports.png' %}" alt="Automated Reports">
                 </div>
                 <div>
-                    <span>Progress Review</span>
                     <h3>Automated Reports</h3>
                     <p>Clear summaries help teachers see strengths, needs, and next practice areas quickly.</p>
                 </div>
@@ -238,7 +218,6 @@
                     <img src="{% static 'pabasa_app/images/dual_lang.png' %}" alt="Dual Language Support">
                 </div>
                 <div>
-                    <span>Language Support</span>
                     <h3>Dual Language Support</h3>
                     <p>Reading tasks can support Filipino and English so learners can build skill in both languages.</p>
                 </div>
