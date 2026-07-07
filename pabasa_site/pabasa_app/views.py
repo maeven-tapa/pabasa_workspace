@@ -30,6 +30,10 @@ import uuid
 import zipfile
 import csv
 from io import BytesIO
+
+# Use a static Windows Tesseract path so OCR activates immediately in the app.
+TESSERACT_STATIC_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
 from .forms import AdminPracticeMaterialForm, parse_practice_items
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal_account
 from django.db import transaction
@@ -6951,6 +6955,9 @@ def _extract_text_from_pdf(upload, selected_pages=None):
 
 
 def _resolve_tesseract_executable(pytesseract_module):
+    if os.path.isfile(TESSERACT_STATIC_PATH):
+        return TESSERACT_STATIC_PATH
+
     explicit = os.environ.get('TESSERACT_CMD') or os.environ.get('TESSERACT_PATH')
     if explicit:
         candidate = os.path.expandvars(os.path.expanduser(explicit))
@@ -7057,11 +7064,11 @@ def _extract_text_from_image(upload):
                     except Exception:
                         avg_confidence = 0
 
-                    if len(cleaned.split()) >= 4 and (avg_confidence >= best_confidence or len(cleaned) > len(best_text)):
+                    if avg_confidence >= best_confidence or len(cleaned) > len(best_text):
                         best_text = cleaned
                         best_confidence = avg_confidence
 
-                    if len(cleaned.split()) >= 4 and avg_confidence >= 60:
+                    if avg_confidence >= 60:
                         return cleaned
 
             if best_text:
