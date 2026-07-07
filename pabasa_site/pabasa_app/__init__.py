@@ -1,0 +1,1 @@
+default_app_config = 'pabasa_app.apps.PabasaAppConfig'

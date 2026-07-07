@@ -30,6 +30,16 @@ import uuid
 import zipfile
 import csv
 from io import BytesIO
+
+# Use a static Windows Tesseract path so OCR activates immediately in the app.
+TESSERACT_STATIC_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+try:
+    import pytesseract
+    if os.path.isfile(TESSERACT_STATIC_PATH):
+        pytesseract.pytesseract.tesseract_cmd = TESSERACT_STATIC_PATH
+except Exception:
+    pass
+
 from .forms import AdminPracticeMaterialForm, parse_practice_items
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal_account
 from django.db import transaction
@@ -6951,6 +6961,9 @@ def _extract_text_from_pdf(upload, selected_pages=None):
 
 
 def _resolve_tesseract_executable(pytesseract_module):
+    if os.path.isfile(TESSERACT_STATIC_PATH):
+        return TESSERACT_STATIC_PATH
+
     explicit = os.environ.get('TESSERACT_CMD') or os.environ.get('TESSERACT_PATH')
     if explicit:
         candidate = os.path.expandvars(os.path.expanduser(explicit))
@@ -6994,6 +7007,11 @@ def _extract_text_from_image(upload):
 
     if tesseract_path:
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
+    # Debug info: report which tesseract cmd will be used
+    try:
+        logger.debug('OCR init: pytesseract.tesseract_cmd=%s', getattr(pytesseract.pytesseract, 'tesseract_cmd', None))
+    except Exception:
+        logger.debug('OCR init: could not read pytesseract.tesseract_cmd')
 
     upload.seek(0)
     try:
@@ -7027,6 +7045,8 @@ def _extract_text_from_image(upload):
 
             configs = [
                 '--oem 3 --psm 6',
+                '--oem 3 --psm 7',
+                '--oem 3 --psm 8',
                 '--oem 3 --psm 11',
                 '--oem 3 --psm 3',
                 '--oem 3 --psm 4',
@@ -7038,13 +7058,15 @@ def _extract_text_from_image(upload):
                 for config in configs:
                     try:
                         text = pytesseract.image_to_string(candidate, config=config, lang='eng').strip()
-                    except Exception:
+                    except Exception as exc:
+                        logger.debug('pytesseract.image_to_string raised: %s', exc)
                         continue
 
                     cleaned = re.sub(r'\s+', ' ', text).strip()
                     if not cleaned:
                         continue
 
+                    # Collect confidence info where possible
                     try:
                         data = pytesseract.image_to_data(
                             candidate,
@@ -7055,16 +7077,25 @@ def _extract_text_from_image(upload):
                         confidences = [int(conf) for conf in data.get('conf', []) if str(conf).strip().isdigit()]
                         avg_confidence = sum(confidences) / len(confidences) if confidences else 0
                     except Exception:
+                        confidences = []
                         avg_confidence = 0
 
-                    if len(cleaned.split()) >= 4 and (avg_confidence >= best_confidence or len(cleaned) > len(best_text)):
+                    # Debug: log candidate extraction summary
+                    try:
+                        logger.debug('OCR candidate: words=%d avg_conf=%s config=%s text=%r', len(cleaned.split()), avg_confidence, config, cleaned[:200])
+                    except Exception:
+                        logger.debug('OCR candidate summary could not be produced')
+
+                    if avg_confidence >= best_confidence or len(cleaned) > len(best_text):
                         best_text = cleaned
                         best_confidence = avg_confidence
 
-                    if len(cleaned.split()) >= 4 and avg_confidence >= 60:
+                    if avg_confidence >= 60:
+                        logger.info('OCR accepted candidate with avg_conf=%s config=%s', avg_confidence, config)
                         return cleaned
 
             if best_text:
+                logger.info('OCR returning best_text with avg_conf=%s len=%d', best_confidence, len(best_text.split()))
                 return best_text
 
             try:
@@ -7072,7 +7103,17 @@ def _extract_text_from_image(upload):
                 fallback_text = pytesseract.image_to_string(fallback, config='--oem 3 --psm 6', lang='eng').strip()
                 fallback_cleaned = re.sub(r'\s+', ' ', fallback_text).strip()
                 if fallback_cleaned:
+                    logger.info('OCR fallback returned text')
                     return fallback_cleaned
+            except Exception:
+                logger.debug('OCR fallback failed', exc_info=True)
+
+            try:
+                inverted = ImageOps.invert(grayscale)
+                inverted_text = pytesseract.image_to_string(inverted, config='--oem 3 --psm 6', lang='eng').strip()
+                inverted_cleaned = re.sub(r'\s+', ' ', inverted_text).strip()
+                if inverted_cleaned:
+                    return inverted_cleaned
             except Exception:
                 pass
 
@@ -7166,6 +7207,42 @@ def extract_reading_material_file(request):
             except Exception as e:
                 logger.warning('Image extraction failed: %s', e)
                 extraction_warnings.append(f'Image OCR encountered an issue: {str(e)}')
+            # Save uploaded image and any extracted text for offline debugging
+            try:
+                # ensure upload pointer is at start
+                try:
+                    upload.seek(0)
+                except Exception:
+                    pass
+
+                debug_dir = Path(settings.BASE_DIR) / 'debug_ocr'
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                ts = int(time.time())
+                safe_name = ''.join(c for c in (filename or 'upload') if c.isalnum() or c in (' ', '.', '_', '-')).strip()
+                debug_image_name = f"{ts}_{safe_name}"
+                debug_image_path = debug_dir / debug_image_name
+                # write binary contents
+                with open(debug_image_path, 'wb') as _f:
+                    _f.write(upload.read())
+                logger.debug('Saved uploaded image for OCR debugging: %s', str(debug_image_path))
+
+                # write extracted text (if any)
+                if extracted_text:
+                    debug_text_path = debug_dir / f"{ts}_{Path(safe_name).stem}.txt"
+                    try:
+                        with open(debug_text_path, 'w', encoding='utf-8') as _tf:
+                            _tf.write(extracted_text)
+                        logger.debug('Saved OCR extracted text to: %s', str(debug_text_path))
+                    except Exception:
+                        logger.exception('Failed to save OCR extracted text')
+
+                # reset stream for any further processing
+                try:
+                    upload.seek(0)
+                except Exception:
+                    pass
+            except Exception:
+                logger.exception('Failed to write debug OCR artifacts')
         else:
             try:
                 extracted = _extract_text_from_pdf(upload, selected_pages if selection_mode == 'selected' else None)
@@ -7177,13 +7254,26 @@ def extract_reading_material_file(request):
                 extraction_warnings.append(f'PDF extraction encountered an issue: {str(e)}')
 
         # Normalize and clean extracted text
-        text = re.sub(r'\s+', ' ', extracted_text.strip())
+        try:
+            text = re.sub(r'\s+', ' ', extracted_text.strip())
+        except Exception:
+            text = ''
+
+        # Diagnostic logging: record what was extracted and current pytesseract command
+        try:
+            import pytesseract as _pyt
+            tcmd = getattr(_pyt.pytesseract, 'tesseract_cmd', None)
+        except Exception:
+            tcmd = None
+        logger.debug('Material extraction: filename=%s ext=%s upload_size=%s tesseract_cmd=%s warnings=%s text_len=%d', filename, ext, getattr(upload, 'size', None), tcmd, extraction_warnings, len(text) if text else 0)
         
         detected_type, items = _build_extracted_material_items(text, '')
         if not items:
             warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
             if text:
                 logger.warning(f'Extraction produced text but no items: {text[:100]}...')
+                # Debug capture: include a longer sample for investigation
+                logger.debug('Extraction produced text (long sample): %s', text[:2000])
                 if extraction_warnings:
                     return JsonResponse({
                         'success': True,
