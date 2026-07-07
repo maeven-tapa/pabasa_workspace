@@ -28,84 +28,40 @@
         .practice-scrolls-shell {
             align-items: center;
             display: grid;
-            gap: clamp(1rem, 2.2vw, 1.5rem);
-            grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
             justify-items: center;
             margin: 0 auto;
-            max-width: 1200px;
-            padding: clamp(0.6rem, 1.5vw, 1rem);
-            width: min(100%, 1200px);
+            max-width: min(100%, 1800px);
+            min-height: 100dvh;
+            padding: clamp(0.8rem, 2vw, 1.5rem);
+            width: min(100%, 1800px);
         }
 
-        .scrolls-side-panel {
+        .scrolls-desktop-stage {
             display: grid;
-            gap: 0.85rem;
-            max-width: min(100%, 320px);
-            width: 100%;
-        }
-
-        .scrolls-side-card {
-            background: rgba(255,255,255,0.8);
-            border: 1px solid rgba(31,111,139,0.12);
-            border-radius: 20px;
-            box-shadow: 0 12px 24px rgba(31,111,139,0.08);
-            padding: 1rem 1rem 1.1rem;
-        }
-
-        .scrolls-side-eyebrow {
-            color: var(--sky-deep);
-            font-size: 0.72rem;
-            font-weight: 900;
-            letter-spacing: 0.2em;
-            margin: 0 0 0.35rem;
-            text-transform: uppercase;
-        }
-
-        .scrolls-side-card h2 {
-            color: var(--ink);
-            font-size: 1.05rem;
-            font-weight: 900;
-            margin: 0 0 0.4rem;
-        }
-
-        .scrolls-side-card p {
-            color: var(--muted);
-            font-size: 0.95rem;
-            margin: 0;
-        }
-
-        .scrolls-side-stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.55rem;
-        }
-
-        .scrolls-side-stats span {
-            background: rgba(31,111,139,0.1);
-            border: 1px solid rgba(31,111,139,0.12);
-            border-radius: 999px;
-            color: var(--sky-deep);
-            font-size: 0.85rem;
-            font-weight: 800;
-            padding: 0.45rem 0.7rem;
+            justify-items: center;
+            margin-inline: auto;
+            width: min(100%, 100%);
         }
 
         .scrolls-phone-device {
+            align-self: stretch;
             aspect-ratio: 9 / 19.5;
             background: linear-gradient(145deg, #1f2937 0%, #030712 60%, #111827 100%);
             border: 1px solid rgba(255,255,255,0.14);
             border-radius: clamp(24px, 3.5vw, 42px);
             box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -12px 24px rgba(0,0,0,0.34);
-            display: grid;
-            gap: clamp(0.55rem, 1.1vw, 0.7rem);
+            display: flex;
+            flex-direction: column;
+            gap: clamp(0.5rem, 1.1vw, 0.7rem);
             justify-self: center;
-            max-width: min(100%, 38rem);
-            min-height: min(72vh, 44rem);
+            min-height: min(100dvh - 2rem, 56rem);
+            max-height: min(90dvh, 56rem);
+            max-width: min(100%, 48rem);
+            min-width: 0;
             overflow: hidden;
-            padding: clamp(0.8rem, 1.8vw, 1.05rem) clamp(0.7rem, 1.4vw, 0.9rem) clamp(0.8rem, 1.6vw, 1rem);
+            padding: clamp(0.7rem, 1.6vw, 1rem) clamp(0.6rem, 1.4vw, 0.85rem) clamp(0.75rem, 1.6vw, 1rem);
             position: relative;
-            width: min(100%, 30rem);
+            width: min(100%, clamp(18rem, 76vw, 40rem));
         }
 
         .scrolls-phone-device::before {
@@ -241,12 +197,14 @@
             align-items: center;
             background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(221,239,246,0.95));
             border: 1px solid rgba(31,111,139,0.16);
-            border-radius: clamp(16px, 2.2vw, 24px);
+            border-radius: clamp(14px, 2vw, 20px);
             box-shadow: 0 10px 22px rgba(31,111,139,0.08);
             display: flex;
-            gap: clamp(0.45rem, 1vw, 0.65rem);
-            padding: clamp(0.65rem, 1.2vw, 0.8rem) clamp(0.7rem, 1.2vw, 0.85rem);
+            flex-shrink: 0;
+            gap: clamp(0.35rem, 0.9vw, 0.55rem);
+            padding: clamp(0.5rem, 1vw, 0.7rem) clamp(0.55rem, 1.1vw, 0.75rem);
             position: relative;
+            width: 100%;
             z-index: 2;
         }
 
@@ -257,6 +215,7 @@
             border-radius: 999px;
             color: var(--sky-deep);
             display: inline-flex;
+            flex-shrink: 0;
             font-size: 0.95rem;
             font-weight: 900;
             justify-content: center;
@@ -266,7 +225,7 @@
         }
 
         .scrolls-header-copy {
-            flex: 1;
+            flex: 1 1 0;
             min-width: 0;
             text-align: center;
         }
@@ -277,6 +236,7 @@
             font-weight: 900;
             line-height: 1.1;
             margin: 0;
+            overflow-wrap: anywhere;
         }
 
         .scrolls-header-meta {
@@ -294,6 +254,7 @@
             color: var(--sky-deep);
             font-size: 0.72rem;
             font-weight: 800;
+            max-width: 100%;
             padding: 0.28rem 0.55rem;
             white-space: nowrap;
         }
@@ -303,10 +264,17 @@
             border: 1px solid rgba(31,111,139,0.16);
             border-radius: 999px;
             color: var(--sky-deep);
+            flex-shrink: 0;
             font-size: 0.74rem;
             font-weight: 800;
+            margin-left: auto;
+            max-width: 100%;
             padding: 0.4rem 0.6rem;
             white-space: nowrap;
+        }
+
+        .scrolls-progress-pill {
+            display: none;
         }
 
         .scrolls-phone-shell {
@@ -326,12 +294,12 @@
             border: 2px solid #05070d;
             border-radius: clamp(16px, 2.2vw, 22px);
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), inset 0 0 0 1px rgba(31,111,139,0.08);
-            display: grid;
-            gap: clamp(0.55rem, 1vw, 0.7rem);
-            grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(0.35rem, 0.8vw, 0.55rem);
             min-height: 0;
             overflow: hidden;
-            padding: clamp(0.6rem, 1.1vw, 0.7rem);
+            padding: clamp(0.45rem, 0.9vw, 0.6rem);
             position: relative;
         }
 
@@ -347,9 +315,9 @@
         .scrolls-feed {
             background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244,249,252,0.92));
             border: 1px solid rgba(31,111,139,0.14);
-            border-radius: 22px;
+            border-radius: 20px;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
-            flex: 1;
+            flex: 1 1 auto;
             min-height: 0;
             overflow: hidden;
             position: relative;
@@ -399,17 +367,13 @@
             z-index: 1;
         }
 
-        .scrolls-card-badge {
-            align-items: center;
-            background: rgba(31,111,139,0.1);
-            border: 1px solid rgba(31,111,139,0.16);
-            border-radius: 999px;
+        .scrolls-card-label {
             color: var(--sky-deep);
-            display: inline-flex;
-            font-size: 0.78rem;
+            font-size: clamp(1.12rem, 2vw, 1.35rem);
             font-weight: 800;
-            gap: 0.35rem;
-            padding: 0.42rem 0.72rem;
+            letter-spacing: 0.01em;
+            margin: 0 0 0.28rem;
+            text-align: center;
         }
 
         .scrolls-illustration {
@@ -426,30 +390,31 @@
         }
 
         .scrolls-card-text {
-            font-size: clamp(1.25rem, 3.2vw, 2rem);
+            font-size: clamp(1.6rem, 4.2vw, 2.55rem);
             font-weight: 900;
             letter-spacing: 0.02em;
-            line-height: 1.15;
+            line-height: 1.12;
             margin: 0;
             max-width: min(100%, 34rem);
         }
 
         .scrolls-card-note {
             color: var(--muted);
-            font-size: 0.92rem;
-            font-weight: 800;
+            font-size: 0.82rem;
+            font-weight: 700;
             margin: 0;
             max-width: 560px;
         }
 
         .scrolls-card .scrolls-hint {
-            margin-top: -0.1rem;
+            margin-top: -0.15rem;
         }
 
         .scrolls-card-actions {
             align-items: center;
             display: flex;
             flex-wrap: wrap;
+            flex-shrink: 0;
             gap: 0.75rem;
             justify-content: center;
             margin-top: 0.1rem;
@@ -471,8 +436,8 @@
             inset: 0;
             justify-content: center;
             padding: 1rem;
-            position: absolute;
-            z-index: 12;
+            position: fixed;
+            z-index: 30;
         }
 
         .scrolls-level-overlay[hidden] {
@@ -534,11 +499,11 @@
             border-radius: 999px;
             color: #fff;
             display: inline-flex;
-            font-size: clamp(0.92rem, 1.5vw, 1rem);
-            font-weight: 900;
-            gap: 0.45rem;
-            min-height: clamp(2.5rem, 4.8vw, 3rem);
-            padding: clamp(0.6rem, 1.2vw, 0.75rem) clamp(0.9rem, 1.7vw, 1.1rem);
+            font-size: clamp(0.82rem, 1.3vw, 0.92rem);
+            font-weight: 800;
+            gap: 0.4rem;
+            min-height: clamp(2.1rem, 3.8vw, 2.5rem);
+            padding: clamp(0.5rem, 1vw, 0.65rem) clamp(0.8rem, 1.4vw, 0.95rem);
         }
 
         .scrolls-record-btn.is-read {
@@ -547,15 +512,17 @@
 
         .scrolls-hint {
             color: var(--muted);
-            font-size: 0.8rem;
-            font-weight: 800;
+            font-size: 0.74rem;
+            font-weight: 700;
             margin: 0;
         }
 
         .scrolls-progress {
             display: flex;
             flex-direction: column;
-            gap: 0.45rem;
+            flex-shrink: 0;
+            gap: 0.35rem;
+            margin-top: auto;
         }
 
         .scrolls-progress-bar {
@@ -605,6 +572,7 @@
             font-size: 0.86rem;
             font-weight: 700;
             margin: 0;
+            padding-top: 0.1rem;
             text-align: center;
         }
 
@@ -632,25 +600,234 @@
             color: var(--sky-deep);
         }
 
-        @media (max-width: 900px) {
+        @media (min-width: 1024px) {
             .practice-scrolls-shell {
-                grid-template-columns: 1fr;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100dvh;
+                padding: clamp(0.75rem, 2vh, 1.75rem) clamp(1rem, 3vw, 3rem);
             }
 
-            .scrolls-side-panel {
-                max-width: 560px;
+            .scrolls-desktop-stage {
+                margin-inline: auto;
+                width: min(100%, 1800px);
             }
-        }
 
-        @media (max-width: 768px) {
             .scrolls-phone-device {
-                aspect-ratio: 9 / 18.5;
-                min-height: min(70vh, 36rem);
-                width: min(100%, 26rem);
+                align-self: center;
+                aspect-ratio: 16 / 10;
+                background:
+                    linear-gradient(145deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04)),
+                    linear-gradient(145deg, #151923 0%, #05070d 58%, #111827 100%);
+                border: 1px solid rgba(255,255,255,0.18);
+                border-radius: clamp(26px, 3vw, 42px);
+                box-shadow:
+                    0 34px 90px rgba(15, 23, 42, 0.3),
+                    inset 0 1px 0 rgba(255,255,255,0.25),
+                    inset 0 -12px 24px rgba(0,0,0,0.26);
+                height: min(84dvh, 980px);
+                max-height: 980px;
+                max-width: min(96vw, 1800px);
+                min-height: 0;
+                padding: clamp(0.8rem, 1.15vw, 1.25rem);
+                width: auto;
+            }
+
+            .scrolls-phone-device::before,
+            .scrolls-phone-device::after,
+            .scrolls-phone-notch {
+                display: none;
+            }
+
+            .scrolls-phone-shell {
+                background: #05070d;
+                border: 1px solid rgba(255,255,255,0.14);
+                border-radius: clamp(20px, 2.25vw, 32px);
+                box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                min-height: 0;
+                padding: clamp(0.35rem, 0.55vw, 0.55rem);
+            }
+
+            .scrolls-screen {
+                border: 0;
+                border-radius: clamp(17px, 2vw, 27px);
+                flex: 1 1 auto;
+                gap: clamp(0.75rem, 1vw, 1.15rem);
+                height: 100%;
+                min-height: 0;
+                padding: clamp(1rem, 1.4vw, 1.7rem);
+            }
+
+            .scrolls-level-overlay {
+                padding: clamp(1.5rem, 3vw, 3rem);
+            }
+
+            .scrolls-level-overlay-card {
+                border-radius: clamp(24px, 2.5vw, 36px);
+                max-width: min(38rem, 72%);
+                padding: clamp(1.75rem, 3vw, 3rem);
+            }
+
+            .scrolls-level-overlay-icon {
+                font-size: clamp(2rem, 2.6vw, 3rem);
+                height: clamp(4rem, 5vw, 5.5rem);
+                width: clamp(4rem, 5vw, 5.5rem);
+            }
+
+            .scrolls-level-overlay-card h3 {
+                font-size: clamp(1.7rem, 2.5vw, 2.6rem);
+            }
+
+            .scrolls-level-overlay-card p {
+                font-size: clamp(1rem, 1.25vw, 1.25rem);
+            }
+
+            .scrolls-status-bar,
+            .scrolls-bottom-nav {
+                display: none;
             }
 
             .scrolls-phone-header {
-                padding: 0.6rem 0.7rem;
+                border-radius: clamp(18px, 1.7vw, 26px);
+                gap: clamp(0.8rem, 1.2vw, 1.25rem);
+                padding: clamp(0.8rem, 1vw, 1.15rem) clamp(1rem, 1.5vw, 1.65rem);
+            }
+
+            .scrolls-phone-header .back-link {
+                font-size: clamp(1rem, 1.25vw, 1.25rem);
+                min-height: clamp(3rem, 3.4vw, 4rem);
+                min-width: clamp(3rem, 3.4vw, 4rem);
+            }
+
+            .scrolls-header-copy h1 {
+                font-size: clamp(1.5rem, 2vw, 2.25rem);
+            }
+
+            .scrolls-meta-pill,
+            .scrolls-status-pill {
+                font-size: clamp(0.86rem, 1vw, 1.08rem);
+                padding: 0.45rem 0.85rem;
+            }
+
+            .scrolls-progress-pill {
+                display: inline-flex;
+            }
+
+            .scrolls-feed {
+                border-radius: clamp(20px, 2vw, 30px);
+                display: flex;
+                flex: 1 1 auto;
+                min-height: 0;
+            }
+
+            .scrolls-track {
+                flex: 1 1 auto;
+                height: 100%;
+                min-height: 0;
+            }
+
+            .scrolls-card {
+                flex: 0 0 100%;
+                gap: clamp(1rem, 1.7vw, 1.6rem);
+                justify-content: center;
+                min-height: 0;
+                overflow: hidden;
+                padding: clamp(1.2rem, 2.4vw, 2.6rem);
+            }
+
+            .scrolls-card-text {
+                font-size: clamp(3.2rem, 5.4vw, 7rem);
+                max-width: min(100%, 68rem);
+            }
+
+            .scrolls-card-note {
+                font-size: clamp(1rem, 1.25vw, 1.3rem);
+            }
+
+            .scrolls-hint,
+            .scrolls-progress-meta {
+                font-size: clamp(0.9rem, 1vw, 1.08rem);
+            }
+
+            .scrolls-feedback {
+                font-size: clamp(1rem, 1.15vw, 1.25rem);
+            }
+
+            .scrolls-record-btn {
+                font-size: clamp(1rem, 1.18vw, 1.25rem);
+                min-height: clamp(3.25rem, 3.6vw, 4.25rem);
+                padding: clamp(0.8rem, 1vw, 1rem) clamp(1.25rem, 1.6vw, 1.8rem);
+            }
+
+            .scrolls-progress-bar {
+                height: 12px;
+            }
+
+            .scrolls-dots span {
+                height: 10px;
+                width: 10px;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1023px) {
+            .practice-scrolls-shell {
+                padding-inline: 1rem;
+            }
+
+            .scrolls-phone-device {
+                max-width: min(100%, 38rem);
+                width: min(100%, 38rem);
+            }
+
+            .scrolls-card {
+                padding: 1rem 1.05rem;
+            }
+
+            .scrolls-card-label {
+                font-size: clamp(1.16rem, 2.2vw, 1.4rem);
+                margin-bottom: 0.32rem;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .practice-scrolls-shell {
+                justify-items: center;
+                min-height: 100dvh;
+                padding: 0.35rem 0.35rem 0.45rem;
+            }
+
+            .scrolls-phone-device {
+                aspect-ratio: 9 / 19.5;
+                max-height: min(100dvh - 0.7rem, 56rem);
+                min-height: min(100dvh - 0.7rem, 56rem);
+                width: min(100%, 100%);
+            }
+
+            .scrolls-phone-header {
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 0.45rem;
+                padding: 0.55rem 0.65rem;
+            }
+
+            .scrolls-header-copy {
+                order: 2;
+                text-align: left;
+                width: 100%;
+            }
+
+            .scrolls-status-pill {
+                margin-left: 0;
+                order: 1;
+                align-self: flex-end;
+            }
+
+            .scrolls-header-meta {
+                justify-content: flex-start;
             }
 
             .scrolls-screen {
@@ -671,14 +848,15 @@
             }
         }
 
-        @media (min-width: 1400px) {
-            .scrolls-phone-device {
-                max-width: 32rem;
-                width: min(34vw, 32rem);
+        @media (max-width: 480px) {
+            .practice-scrolls-shell {
+                padding: 0.2rem 0.2rem 0.3rem;
             }
 
-            .scrolls-side-panel {
-                max-width: 18rem;
+            .scrolls-phone-device {
+                max-height: min(100dvh - 0.4rem, 56rem);
+                min-height: min(100dvh - 0.4rem, 56rem);
+                width: min(100%, 100%);
             }
         }
 
@@ -730,6 +908,25 @@
         .scrolls-dots span.is-active {
             background: var(--sky);
             transform: scale(1.15);
+        }
+
+        @media (min-width: 1024px) {
+            .scrolls-progress-bar {
+                height: 12px;
+            }
+
+            .scrolls-progress-meta {
+                font-size: clamp(0.9rem, 1vw, 1.08rem);
+            }
+
+            .scrolls-feedback {
+                font-size: clamp(1rem, 1.15vw, 1.25rem);
+            }
+
+            .scrolls-dots span {
+                height: 10px;
+                width: 10px;
+            }
         }
 
         * {
@@ -1755,7 +1952,8 @@
     </script>
     <main class="practice-shell{% if request.GET.game == 'free' %} practice-scrolls-shell{% else %} {% block mode_class %}{% endblock %}{% endif %}" data-practice-mode="{% block data_mode %}word{% endblock %}"{% if request.GET.game == 'free' %} data-free-mode="true"{% endif %}>
         {% if request.GET.game == 'free' %}
-        <div class="scrolls-phone-device">
+        <div class="scrolls-desktop-stage">
+            <div class="scrolls-phone-device">
             <div class="scrolls-phone-notch" aria-hidden="true">
                 <span class="scrolls-speaker"></span>
                 <span class="scrolls-camera"></span>
@@ -1779,6 +1977,7 @@
                             <div class="scrolls-header-meta">
                                 <span class="scrolls-meta-pill" id="scrollsDifficultyPill">Easy</span>
                                 <span class="scrolls-meta-pill" id="scrollsLevelPill">Level 2</span>
+                                <span class="scrolls-meta-pill scrolls-progress-pill" id="scrollsProgressPill">Card 1 of 1</span>
                             </div>
                         </div>
                         <div class="scrolls-status-pill" id="scrollsStatusPill">Ready</div>
@@ -1814,23 +2013,9 @@
                 <span><i class="bi bi-star-fill"></i> Progress</span>
                 <span><i class="bi bi-person-circle"></i> Profile</span>
             </nav>
+            </div>
         </div>
 
-        <aside class="scrolls-side-panel" aria-label="Free mode tips">
-            <div class="scrolls-side-card">
-                <p class="scrolls-side-eyebrow">Practice flow</p>
-                <h2>Swipe through a cozy reading stream.</h2>
-                <p>Each card fills the screen like a mobile app so students can focus on one challenge at a time.</p>
-            </div>
-            <div class="scrolls-side-card">
-                <p class="scrolls-side-eyebrow">Your streak</p>
-                <div class="scrolls-side-stats">
-                    <span>✅ Reach the end</span>
-                    <span>🎯 Swipe or press space</span>
-                    <span>🗣️ Read at your own pace</span>
-                </div>
-            </div>
-        </aside>
         {% else %}
         <header class="practice-top">
             <a class="back-link" href="{% url 'practice' %}">Back</a>

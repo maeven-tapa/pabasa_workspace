@@ -429,7 +429,7 @@
     function renderFreeMode() {
         if (!scrollsTrack) return;
         if (!items.length) {
-            scrollsTrack.innerHTML = '<div class="scrolls-card"><div class="scrolls-card-badge"><i class="bi bi-journal-text"></i> No cards yet</div><p class="scrolls-card-text">No reading cards are available right now.</p></div>';
+            scrollsTrack.innerHTML = '<div class="scrolls-card"><p class="scrolls-card-text">No reading cards are available right now.</p></div>';
             return;
         }
 
@@ -438,25 +438,25 @@
         const completedCards = new Set(levelEntry.completed_cards || []);
 
         const cardMarkup = items.map((item, index) => {
-            const illustration = index % 2 === 0 ? '📖' : '✨';
-            const badge = index === 0 ? 'New card' : `Card ${index + 1}`;
             const isComplete = completedCards.has(index);
             return `
                 <section class="scrolls-card${isComplete ? ' is-complete' : ''}" data-index="${index}">
-                    <span class="scrolls-card-badge"><i class="bi bi-stars"></i> ${badge}</span>
-                    <div class="scrolls-illustration" aria-hidden="true">${illustration}</div>
                     <h2 class="scrolls-card-text">${escapeHtml(item)}</h2>
-                    <p class="scrolls-card-note">Read slowly, then tap the mic to record your voice.</p>
                     <p class="scrolls-hint">Swipe up for the next challenge</p>
-                    <div class="scrolls-card-actions">
-                        <button class="scrolls-record-btn${isComplete ? ' is-read' : ''}" type="button"><i class="bi bi-${isComplete ? 'check-circle-fill' : 'mic-fill'}"></i> ${isComplete ? 'Completed' : 'Read aloud'}</button>
-                    </div>
                 </section>`;
         }).join('');
 
         scrollsTrack.innerHTML = cardMarkup;
         scrollsTrack.style.transform = `translateY(-${scrollCurrentIndex * 100}%)`;
         updateFreeModeProgress();
+    }
+
+    function setFreeModeReadButton(isComplete) {
+        if (!scrollRecordBtn) return;
+        scrollRecordBtn.classList.toggle('is-read', isComplete);
+        scrollRecordBtn.innerHTML = isComplete
+            ? '<i class="bi bi-check-circle-fill"></i> Completed'
+            : '<i class="bi bi-mic-fill"></i> Read aloud';
     }
 
     function escapeHtml(value) {
@@ -479,6 +479,7 @@
         const currentLevelContext = getLevelProgressContext();
         const levelEntry = ensureLevelProgressEntry(getPracticeProgressState(), currentLevelContext.mode, currentLevelContext.difficulty, currentLevelContext.level);
         const completedCards = Array.isArray(levelEntry.completed_cards) ? levelEntry.completed_cards.length : 0;
+        const currentCardIsComplete = Array.isArray(levelEntry.completed_cards) && levelEntry.completed_cards.includes(current);
 
         if (scrollsProgressBarFill) scrollsProgressBarFill.style.width = `${progressPercent}%`;
         if (scrollsProgressMeta) scrollsProgressMeta.textContent = levelEntry.completed ? 'Level complete! The next challenge is unlocked.' : current === items.length - 1 ? 'You reached the end of this level' : 'Swipe up for the next challenge';
@@ -490,6 +491,7 @@
         if (scrollsDots) {
             scrollsDots.innerHTML = items.map((_, index) => `<span class="${index === current ? 'is-active' : ''}"></span>`).join('');
         }
+        setFreeModeReadButton(currentCardIsComplete);
     }
 
     function lockFreeModeGesture() {
@@ -539,15 +541,7 @@
         }
 
         showLevelCompleteOverlay();
-        return submitPracticeCompletion().then((saved) => {
-            if (saved) {
-                window.location.assign(`/dashboard/practice/progression/${selectedGameMode}/`);
-            }
-            return saved;
-        }).catch(() => {
-            window.location.assign(`/dashboard/practice/progression/${selectedGameMode}/`);
-            return false;
-        });
+        return submitPracticeCompletion().catch(() => false);
     }
 
     function goToFreeModeCard(nextIndex) {
@@ -644,14 +638,16 @@
         if (scrollsStatusPill) {
             scrollsStatusPill.textContent = 'Reading';
         }
-        if (scrollRecordBtn) {
-            scrollRecordBtn.classList.add('is-read');
-        }
+        persistFreeModeCardProgress(scrollCurrentIndex);
+        scrollsTrack?.querySelector(`.scrolls-card[data-index="${scrollCurrentIndex}"]`)?.classList.add('is-complete');
+        setFreeModeReadButton(true);
 
-        const reachedEnd = goToFreeModeCard(scrollCurrentIndex + 1);
-        if (!reachedEnd) {
-            hideLevelCompleteOverlay();
-        }
+        window.setTimeout(() => {
+            const reachedEnd = goToFreeModeCard(scrollCurrentIndex + 1);
+            if (!reachedEnd) {
+                hideLevelCompleteOverlay();
+            }
+        }, 320);
         return true;
     }
 
