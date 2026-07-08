@@ -7442,28 +7442,30 @@ def extract_reading_material_file(request):
             fallback_items = _fallback_material_items_from_text(text)
             if fallback_items:
                 items = fallback_items
+                if not extraction_warnings:
+                    extraction_warnings.append('The extracted text could not be converted into reading items. Please try a different file or a clearer image.')
 
+        warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
         if not items:
-            warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
             if text:
-                logger.warning(f'Extraction produced text but no items: {text[:100]}...')
-                # Debug capture: include a longer sample for investigation
+                logger.warning('Extraction produced text but no items: %s...', text[:100])
                 logger.debug('Extraction produced text (long sample): %s', text[:2000])
-                if extraction_warnings:
-                    return JsonResponse({
-                        'success': True,
-                        'items': [],
-                        'text': text[:12000],
-                        'filename': filename,
-                        'reading_type': detected_type,
-                        'page_count': page_count,
-                        'selected_pages': selected_pages_list,
-                        'selection_mode': selection_mode,
-                        'warnings': extraction_warnings,
-                        'warning_message': warning_msg,
-                    })
-                return JsonResponse({'success': False, 'error': f'No readable text was found that could be split into {detected_type}s.'}, status=400)
-            elif extraction_warnings:
+                if not warning_msg:
+                    warning_msg = 'The extracted text could not be converted into reading items. Please try a different file or a clearer image.'
+                    extraction_warnings.append(warning_msg)
+                return JsonResponse({
+                    'success': True,
+                    'items': [],
+                    'text': text[:12000],
+                    'filename': filename,
+                    'reading_type': detected_type,
+                    'page_count': page_count,
+                    'selected_pages': selected_pages_list,
+                    'selection_mode': selection_mode,
+                    'warnings': extraction_warnings,
+                    'warning_message': warning_msg,
+                })
+            if extraction_warnings:
                 return JsonResponse({
                     'success': True,
                     'items': [],
@@ -7476,9 +7478,8 @@ def extract_reading_material_file(request):
                     'warnings': extraction_warnings,
                     'warning_message': warning_msg,
                 })
-            else:
-                return JsonResponse({'success': False, 'error': 'No readable text was found in that file. Please ensure the file contains text content.'}, status=400)
-        
+            return JsonResponse({'success': False, 'error': 'No readable text was found in that file. Please ensure the file contains text content.'}, status=400)
+
         return JsonResponse({
             'success': True,
             'items': items,
@@ -7494,21 +7495,21 @@ def extract_reading_material_file(request):
         return JsonResponse({'success': False, 'error': 'That DOCX file could not be read.'}, status=400)
     except Exception as e:
         logger.error('Material file extraction failed: %s', e, exc_info=True)
-        warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
-        if extraction_warnings:
-            return JsonResponse({
-                'success': True,
-                'items': [],
-                'text': '',
-                'filename': filename,
-                'reading_type': 'word',
-                'page_count': page_count,
-                'selected_pages': selected_pages_list,
-                'selection_mode': selection_mode,
-                'warnings': extraction_warnings,
-                'warning_message': warning_msg,
-            })
-        return JsonResponse({'success': False, 'error': 'Could not extract text from that file. Please try a different file.'}, status=500)
+        warning_msg = '. '.join(extraction_warnings) if extraction_warnings else 'Could not extract text from that file. Please try a different file or a clearer image.'
+        if not extraction_warnings:
+            extraction_warnings.append(warning_msg)
+        return JsonResponse({
+            'success': True,
+            'items': [],
+            'text': '',
+            'filename': filename,
+            'reading_type': 'word',
+            'page_count': page_count,
+            'selected_pages': selected_pages_list,
+            'selection_mode': selection_mode,
+            'warnings': extraction_warnings,
+            'warning_message': warning_msg,
+        })
 
 
 def _detect_material_type(text, requested_reading_type=''):

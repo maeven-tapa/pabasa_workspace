@@ -10647,7 +10647,10 @@
                 body: formData
             });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok || !data.success) {
+            if (!response.ok && !(data && (data.warning_message || (Array.isArray(data.warnings) && data.warnings.length)))) {
+                throw new Error(data.error || 'Could not extract text from that file.');
+            }
+            if (!data.success && !(data && (data.warning_message || (Array.isArray(data.warnings) && data.warnings.length)))) {
                 throw new Error(data.error || 'Could not extract text from that file.');
             }
             applyUploadedItems(Array.isArray(data.items) ? data.items : [], file.name, {
