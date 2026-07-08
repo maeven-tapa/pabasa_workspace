@@ -7023,6 +7023,15 @@ def _extract_text_from_image(upload):
             else:
                 image = image.convert('RGB')
 
+            try:
+                direct_text = pytesseract.image_to_string(image, config='--oem 3 --psm 6', lang='eng').strip()
+                direct_cleaned = re.sub(r'\s+', ' ', direct_text).strip()
+                if direct_cleaned:
+                    logger.info('OCR fast path returned text: %r', direct_cleaned[:200])
+                    return direct_cleaned
+            except Exception as exc:
+                logger.debug('OCR fast path failed: %s', exc)
+
             grayscale = ImageOps.grayscale(image)
             candidates = [image, grayscale, ImageOps.autocontrast(grayscale)]
 
