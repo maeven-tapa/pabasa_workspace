@@ -7360,7 +7360,14 @@ def extract_reading_material_file(request):
             tcmd = None
         logger.debug('Material extraction: filename=%s ext=%s upload_size=%s tesseract_cmd=%s warnings=%s text_len=%d', filename, ext, getattr(upload, 'size', None), tcmd, extraction_warnings, len(text) if text else 0)
         
-        detected_type, items = _build_extracted_material_items(text, '')
+        try:
+            detected_type, items = _build_extracted_material_items(text, '')
+        except Exception as build_exc:
+            logger.exception('Material item building failed: %s', build_exc)
+            extraction_warnings.append('The extracted text could not be processed into reading items. Please try a different file or a clearer image.')
+            detected_type = _detect_material_type(text, '')
+            items = []
+
         if not items:
             warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
             if text:
@@ -7412,6 +7419,20 @@ def extract_reading_material_file(request):
         return JsonResponse({'success': False, 'error': 'That DOCX file could not be read.'}, status=400)
     except Exception as e:
         logger.error('Material file extraction failed: %s', e, exc_info=True)
+        warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
+        if extraction_warnings:
+            return JsonResponse({
+                'success': True,
+                'items': [],
+                'text': '',
+                'filename': filename,
+                'reading_type': 'word',
+                'page_count': page_count,
+                'selected_pages': selected_pages_list,
+                'selection_mode': selection_mode,
+                'warnings': extraction_warnings,
+                'warning_message': warning_msg,
+            })
         return JsonResponse({'success': False, 'error': 'Could not extract text from that file. Please try a different file.'}, status=500)
 
 

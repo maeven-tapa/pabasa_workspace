@@ -246,6 +246,27 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertTrue(any("No text could be detected" in warning for warning in data.get("warnings", [])))
         mock_extract_text_from_image.assert_called_once()
 
+    @patch("pabasa_app.views._build_extracted_material_items", side_effect=RuntimeError("boom"))
+    def test_extract_endpoint_returns_warning_response_when_item_building_fails(self, mock_build_extracted_material_items):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["items"], [])
+        self.assertTrue(any("could not be processed" in warning.lower() for warning in data.get("warnings", [])))
+        mock_build_extracted_material_items.assert_called_once()
+
 
 class PrincipalReportsExportTests(TestCase):
     def test_default_timezone_is_asia_manila(self):
