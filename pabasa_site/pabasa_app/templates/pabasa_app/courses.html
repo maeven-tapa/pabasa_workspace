@@ -11414,11 +11414,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!resolvedItems.length && metadata && typeof metadata.text === 'string' && metadata.text.trim()) {
                 resolvedItems = excerptUploadedItems(metadata.text);
             }
+
+            const warningText = Array.isArray(metadata.warnings) && metadata.warnings.length > 0
+                ? metadata.warnings[0]
+                : (typeof metadata.warning_message === 'string' && metadata.warning_message.trim() ? metadata.warning_message : '');
+            const hasVisibleWarning = Boolean(warningText);
+
             if (!resolvedItems.length) {
-                const warningText = Array.isArray(metadata.warnings) && metadata.warnings.length > 0
-                    ? metadata.warnings[0]
-                    : 'No readable items were found in that file.';
-                setUploadStatus(warningText, 'warning');
+                if (hasVisibleWarning) {
+                    setUploadStatus(warningText, 'warning');
+                } else {
+                    setUploadStatus('', 'muted');
+                }
                 return;
             }
             currentItemsList = resolvedItems;
