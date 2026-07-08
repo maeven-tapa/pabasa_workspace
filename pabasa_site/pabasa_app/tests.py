@@ -18,7 +18,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout
 from .weekly_digest import send_weekly_digest
 
 
@@ -167,6 +167,47 @@ class SharedMaterialImportTests(TestCase):
         duplicate_material = duplicate_materials.get()
         self.assertTrue(duplicate_material.title.startswith("[UPDATED]"))
         self.assertEqual(duplicate_material.status, "draft")
+
+
+class OcrLayoutGroupingTests(TestCase):
+    def test_build_material_items_from_ocr_layout_returns_words_in_reading_order(self):
+        layout = [
+            {"text": "Hello", "left": 10, "top": 20, "width": 40, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 0},
+            {"text": "world", "left": 60, "top": 20, "width": 40, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 1},
+        ]
+
+        items = _build_material_items_from_ocr_layout(layout, "word")
+
+        self.assertEqual(items, ["Hello", "world"])
+
+    def test_build_material_items_from_ocr_layout_groups_lines_into_sentences(self):
+        layout = [
+            {"text": "The", "left": 10, "top": 20, "width": 20, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 0},
+            {"text": "quick", "left": 40, "top": 20, "width": 30, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 1},
+            {"text": "brown", "left": 80, "top": 20, "width": 30, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 2},
+            {"text": "fox", "left": 120, "top": 20, "width": 20, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 3},
+            {"text": "jumps", "left": 10, "top": 45, "width": 35, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 1, "word_num": 0},
+            {"text": "over", "left": 50, "top": 45, "width": 25, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 1, "word_num": 1},
+            {"text": "the", "left": 80, "top": 45, "width": 20, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 1, "word_num": 2},
+            {"text": "lazy", "left": 105, "top": 45, "width": 25, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 1, "word_num": 3},
+            {"text": "dog", "left": 135, "top": 45, "width": 20, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 1, "word_num": 4},
+        ]
+
+        items = _build_material_items_from_ocr_layout(layout, "sentence")
+
+        self.assertEqual(items, ["The quick brown fox", "jumps over the lazy dog"])
+
+    def test_build_material_items_from_ocr_layout_groups_paragraphs_by_vertical_gap(self):
+        layout = [
+            {"text": "First", "left": 10, "top": 20, "width": 30, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 0},
+            {"text": "paragraph", "left": 45, "top": 20, "width": 50, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 1},
+            {"text": "Second", "left": 10, "top": 70, "width": 34, "height": 12, "conf": 95, "block_num": 0, "par_num": 1, "line_num": 0, "word_num": 0},
+            {"text": "paragraph", "left": 50, "top": 70, "width": 50, "height": 12, "conf": 95, "block_num": 0, "par_num": 1, "line_num": 0, "word_num": 1},
+        ]
+
+        items = _build_material_items_from_ocr_layout(layout, "paragraph")
+
+        self.assertEqual(items, ["First paragraph", "Second paragraph"])
 
 
 class MaterialUploadExtractionTests(TestCase):

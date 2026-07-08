@@ -7052,6 +7052,129 @@ def _looks_like_ocr_text(text):
     return (letters >= 2) or (digits >= 2 and letters >= 1)
 
 
+def _coerce_image_ocr_result(result):
+    if isinstance(result, dict):
+        return {
+            'text': str(result.get('text') or ''),
+            'layout': list(result.get('layout') or []),
+        }
+    if isinstance(result, str):
+        return {'text': result, 'layout': []}
+    return {'text': '', 'layout': []}
+
+
+def _infer_material_type_from_ocr_layout(layout):
+    if not layout:
+        return 'word'
+
+    normalized = []
+    for entry in layout:
+        if not isinstance(entry, dict):
+            continue
+        text = re.sub(r'\s+', ' ', str(entry.get('text') or '').strip())
+        if not text:
+            continue
+        normalized.append(entry)
+
+    if not normalized:
+        return 'word'
+
+    paragraph_ids = {
+        (entry.get('block_num'), entry.get('par_num'))
+        for entry in normalized
+        if entry.get('par_num') is not None
+    }
+    if len(paragraph_ids) > 1:
+        return 'paragraph'
+
+    line_ids = {
+        (entry.get('block_num'), entry.get('par_num'), entry.get('line_num'))
+        for entry in normalized
+        if entry.get('line_num') is not None
+    }
+    if len(line_ids) > 1:
+        return 'sentence'
+
+    return 'word'
+
+
+def _build_material_items_from_ocr_layout(layout, reading_type=''):
+    if not layout:
+        return []
+
+    normalized = []
+    for entry in layout:
+        if not isinstance(entry, dict):
+            continue
+        text = re.sub(r'\s+', ' ', str(entry.get('text') or '').strip())
+        if not text:
+            continue
+        normalized.append({
+            'text': text,
+            'left': int(entry.get('left') or 0),
+            'top': int(entry.get('top') or 0),
+            'width': int(entry.get('width') or 0),
+            'height': int(entry.get('height') or 0),
+            'conf': int(entry.get('conf') or 0),
+            'block_num': int(entry.get('block_num') or 0),
+            'par_num': int(entry.get('par_num') or 0),
+            'line_num': int(entry.get('line_num') or 0),
+            'word_num': int(entry.get('word_num') or 0),
+        })
+
+    if not normalized:
+        return []
+
+    normalized.sort(key=lambda item: (
+        item.get('block_num', 0),
+        item.get('par_num', 0),
+        item.get('line_num', 0),
+        item.get('word_num', 0),
+        item.get('top', 0),
+        item.get('left', 0),
+    ))
+
+    reading_type = (reading_type or '').strip().lower() or _infer_material_type_from_ocr_layout(normalized)
+    if reading_type == 'word':
+        return [item['text'] for item in normalized]
+
+    if reading_type == 'sentence':
+        grouped = []
+        current_group = None
+        current_words = []
+        for item in normalized:
+            group_key = (item.get('block_num', 0), item.get('par_num', 0), item.get('line_num', 0))
+            if current_group is None or group_key != current_group:
+                if current_group is not None:
+                    grouped.append(' '.join(current_words))
+                current_group = group_key
+                current_words = [item['text']]
+            else:
+                current_words.append(item['text'])
+        if current_group is not None:
+            grouped.append(' '.join(current_words))
+        return grouped
+
+    if reading_type == 'paragraph':
+        grouped = []
+        current_group = None
+        current_words = []
+        for item in normalized:
+            group_key = (item.get('block_num', 0), item.get('par_num', 0))
+            if current_group is None or group_key != current_group:
+                if current_group is not None:
+                    grouped.append(' '.join(current_words))
+                current_group = group_key
+                current_words = [item['text']]
+            else:
+                current_words.append(item['text'])
+        if current_group is not None:
+            grouped.append(' '.join(current_words))
+        return grouped
+
+    return [item['text'] for item in normalized]
+
+
 def _build_ocr_image_candidates(image):
     try:
         from PIL import Image, ImageEnhance, ImageFilter, ImageOps
@@ -7169,6 +7292,11 @@ def _extract_text_from_image(upload):
     except ImportError as exc:
         raise RuntimeError('Image OCR requires pytesseract to be installed.') from exc
 
+    try:
+        from pytesseract import Output as TesseractOutput
+    except Exception:
+        TesseractOutput = None
+
     tesseract_path = _resolve_tesseract_executable(pytesseract)
     if tesseract_path:
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
@@ -7180,76 +7308,10 @@ def _extract_text_from_image(upload):
             if image.mode not in {'RGB', 'L'}:
                 image = image.convert('RGB')
 
-            candidates = []
-
-            def add_candidate(img):
-                if img is None:
-                    return
-                try:
-                    if img.mode not in {'RGB', 'L'}:
-                        img = img.convert('RGB')
-                except Exception:
-                    pass
-                if img not in candidates:
-                    candidates.append(img)
-
-            add_candidate(image)
-
-            grayscale = ImageOps.grayscale(image)
-            add_candidate(grayscale)
-            add_candidate(ImageOps.autocontrast(grayscale))
-            add_candidate(grayscale.filter(ImageFilter.SHARPEN))
-            add_candidate(grayscale.filter(ImageFilter.MedianFilter(size=3)))
-            add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.MedianFilter(size=3))))
-
-            try:
-                sharpened = grayscale.filter(ImageFilter.UnsharpMask(radius=1.5, percent=200, threshold=3))
-                add_candidate(sharpened)
-                add_candidate(ImageOps.autocontrast(sharpened))
-            except Exception:
-                pass
-
-            try:
-                edge_enhanced = grayscale.filter(ImageFilter.EDGE_ENHANCE_MORE)
-                add_candidate(edge_enhanced)
-                add_candidate(ImageOps.autocontrast(edge_enhanced))
-            except Exception:
-                pass
-
-            width, height = image.size
-            max_dim = max(width, height)
-            for scale in [1.25, 1.5, 2.0, 2.5]:
-                if max_dim * scale > 4000:
-                    continue
-                try:
-                    resized = grayscale.resize(
-                        (max(1, int(width * scale)), max(1, int(height * scale))),
-                        resample=getattr(Image, 'Resampling', Image).LANCZOS,
-                    )
-                    add_candidate(resized)
-                    add_candidate(ImageOps.autocontrast(resized))
-                    add_candidate(resized.filter(ImageFilter.SHARPEN))
-                except Exception:
-                    continue
-
-            try:
-                color = image.convert('RGB')
-                enhancer = ImageEnhance.Contrast(color)
-                for factor in [1.2, 1.5, 2.0, 2.5]:
-                    add_candidate(enhancer.enhance(factor))
-            except Exception:
-                pass
-
-            for base in [grayscale, ImageOps.autocontrast(grayscale)]:
-                for threshold in [120, 140, 160, 180]:
-                    try:
-                        threshold_image = base.point(lambda p: 255 if p > threshold else 0, mode='1')
-                        add_candidate(threshold_image)
-                        add_candidate(ImageOps.invert(threshold_image))
-                    except Exception:
-                        continue
-
+            candidates = _build_ocr_image_candidates(image)
             best_text = ''
+            best_layout = []
+
             for candidate in candidates:
                 try:
                     candidate_text = pytesseract.image_to_string(candidate, config='--psm 6').strip()
@@ -7262,15 +7324,61 @@ def _extract_text_from_image(upload):
                 cleaned = re.sub(r'\s+', ' ', candidate_text).strip()
                 if not cleaned:
                     continue
-                if len(cleaned) > len(best_text):
-                    best_text = cleaned
 
-            return best_text
+                try:
+                    if TesseractOutput is None:
+                        data = pytesseract.image_to_data(candidate, config='--psm 6')
+                    else:
+                        data = pytesseract.image_to_data(candidate, config='--psm 6', output_type=TesseractOutput.DICT)
+                except Exception:
+                    try:
+                        if TesseractOutput is None:
+                            data = pytesseract.image_to_data(candidate)
+                        else:
+                            data = pytesseract.image_to_data(candidate, output_type=TesseractOutput.DICT)
+                    except Exception:
+                        data = None
+
+                layout = []
+                if data:
+                    texts = data.get('text') or []
+                    lefts = data.get('left') or []
+                    tops = data.get('top') or []
+                    widths = data.get('width') or []
+                    heights = data.get('height') or []
+                    confs = data.get('conf') or []
+                    blocks = data.get('block_num') or []
+                    paragraphs = data.get('par_num') or []
+                    lines = data.get('line_num') or []
+                    words = data.get('word_num') or []
+
+                    for index, text_value in enumerate(texts):
+                        cleaned_word = re.sub(r'\s+', ' ', str(text_value or '').strip())
+                        if not cleaned_word:
+                            continue
+                        layout.append({
+                            'text': cleaned_word,
+                            'left': int(lefts[index]) if index < len(lefts) else 0,
+                            'top': int(tops[index]) if index < len(tops) else 0,
+                            'width': int(widths[index]) if index < len(widths) else 0,
+                            'height': int(heights[index]) if index < len(heights) else 0,
+                            'conf': int(float(confs[index])) if index < len(confs) and str(confs[index]).strip() not in {'', '-1'} else 0,
+                            'block_num': int(blocks[index]) if index < len(blocks) else 0,
+                            'par_num': int(paragraphs[index]) if index < len(paragraphs) else 0,
+                            'line_num': int(lines[index]) if index < len(lines) else 0,
+                            'word_num': int(words[index]) if index < len(words) else 0,
+                        })
+
+                if len(layout) > len(best_layout) or (len(layout) == len(best_layout) and len(cleaned) > len(best_text)):
+                    best_text = cleaned
+                    best_layout = layout
+
+            return {'text': best_text, 'layout': best_layout}
     except UnidentifiedImageError:
-        return ''
+        return {'text': '', 'layout': []}
     except Exception:
         logger.exception('Image OCR failed for uploaded material')
-        return ''
+        return {'text': '', 'layout': []}
 
 
 def _fallback_material_items_from_text(text):
@@ -7347,6 +7455,29 @@ def _build_extracted_material_items(text, requested_reading_type=''):
     return detected_type, cleaned_items
 
 
+def _build_extracted_material_items_from_ocr_layout(layout, requested_reading_type=''):
+    detected_type = _infer_material_type_from_ocr_layout(layout)
+    if requested_reading_type in {'word', 'sentence', 'paragraph'}:
+        detected_type = requested_reading_type
+
+    items = _build_material_items_from_ocr_layout(layout, detected_type)
+    if not items:
+        return detected_type, []
+
+    cleaned_items = []
+    seen = set()
+    for item in items:
+        normalized = re.sub(r'\s+', ' ', str(item).strip())
+        key = normalized.lower()
+        if not normalized or key in seen:
+            continue
+        seen.add(key)
+        if len(normalized) > 220:
+            normalized = normalized[:217].strip() + '...'
+        cleaned_items.append(normalized)
+    return detected_type, cleaned_items
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -7372,6 +7503,7 @@ def extract_reading_material_file(request):
         page_count = 1
         selected_pages_list = [1]
         extraction_warnings = []
+        ocr_layout = []
         
         if ext == '.txt':
             raw = upload.read()
@@ -7392,8 +7524,13 @@ def extract_reading_material_file(request):
             except (KeyError, zipfile.BadZipFile):
                 return JsonResponse({'success': False, 'error': 'That DOCX file could not be read. Please ensure it is a valid Word document.'}, status=400)
         elif ext in {'.jpg', '.jpeg', '.png'}:
+            ocr_layout = []
             try:
-                extracted_text = _extract_text_from_image(upload)
+                ocr_result = _extract_text_from_image(upload)
+                ocr_data = _coerce_image_ocr_result(ocr_result)
+                extracted_text = ocr_data.get('text') or ''
+                ocr_layout = list(ocr_data.get('layout') or [])
+
                 if not extracted_text:
                     logger.info('Image extraction produced no text for %s', filename)
                 else:
@@ -7462,7 +7599,10 @@ def extract_reading_material_file(request):
         logger.debug('Material extraction: filename=%s ext=%s upload_size=%s tesseract_cmd=%s warnings=%s text_len=%d', filename, ext, getattr(upload, 'size', None), tcmd, extraction_warnings, len(text) if text else 0)
         
         try:
-            detected_type, items = _build_extracted_material_items(text, '')
+            if ocr_layout:
+                detected_type, items = _build_extracted_material_items_from_ocr_layout(ocr_layout, '')
+            else:
+                detected_type, items = _build_extracted_material_items(text, '')
         except Exception as build_exc:
             logger.exception('Material item building failed: %s', build_exc)
             extraction_warnings.append('The extracted text could not be processed into reading items. Please try a different file or a clearer image.')
