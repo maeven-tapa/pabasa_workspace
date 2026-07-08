@@ -13,12 +13,13 @@ from unittest.mock import patch
 
 from pypdf import PdfReader
 from reportlab.pdfgen import canvas
+from PIL import Image
 
 from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_ocr_image_candidates
 from .weekly_digest import send_weekly_digest
 
 
@@ -170,6 +171,14 @@ class SharedMaterialImportTests(TestCase):
 
 
 class OcrLayoutGroupingTests(TestCase):
+    def test_build_ocr_image_candidates_stays_small_for_speed(self):
+        image = Image.new("RGB", (120, 60), "white")
+
+        candidates = _build_ocr_image_candidates(image)
+
+        self.assertGreater(len(candidates), 0)
+        self.assertLessEqual(len(candidates), 5)
+
     def test_build_material_items_from_ocr_layout_returns_words_in_reading_order(self):
         layout = [
             {"text": "Hello", "left": 10, "top": 20, "width": 40, "height": 12, "conf": 95, "block_num": 0, "par_num": 0, "line_num": 0, "word_num": 0},

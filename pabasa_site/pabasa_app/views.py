@@ -7177,7 +7177,7 @@ def _build_material_items_from_ocr_layout(layout, reading_type=''):
 
 def _build_ocr_image_candidates(image):
     try:
-        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+        from PIL import Image, ImageFilter, ImageOps
     except ImportError:
         return [image]
 
@@ -7203,27 +7203,22 @@ def _build_ocr_image_candidates(image):
 
     add_candidate(grayscale)
     add_candidate(ImageOps.autocontrast(grayscale))
-    add_candidate(grayscale.filter(ImageFilter.SHARPEN))
-    add_candidate(grayscale.filter(ImageFilter.MedianFilter(size=3)))
-    add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.MedianFilter(size=3))))
 
     try:
-        sharpened = grayscale.filter(ImageFilter.UnsharpMask(radius=1.5, percent=200, threshold=3))
+        sharpened = grayscale.filter(ImageFilter.SHARPEN)
         add_candidate(sharpened)
-        add_candidate(ImageOps.autocontrast(sharpened))
     except Exception:
         pass
 
     try:
-        edge_enhanced = grayscale.filter(ImageFilter.EDGE_ENHANCE_MORE)
-        add_candidate(edge_enhanced)
-        add_candidate(ImageOps.autocontrast(edge_enhanced))
+        median = grayscale.filter(ImageFilter.MedianFilter(size=3))
+        add_candidate(median)
     except Exception:
         pass
 
     width, height = image.size
     max_dim = max(width, height)
-    for scale in [1.25, 1.5, 2.0, 2.5]:
+    for scale in [1.25, 1.5]:
         if max_dim * scale > 4000:
             continue
         try:
@@ -7233,50 +7228,8 @@ def _build_ocr_image_candidates(image):
             )
             add_candidate(resized)
             add_candidate(ImageOps.autocontrast(resized))
-            add_candidate(resized.filter(ImageFilter.SHARPEN))
-            add_candidate(resized.filter(ImageFilter.MedianFilter(size=3)))
         except Exception:
             continue
-
-    try:
-        enhancer = ImageEnhance.Contrast(image.convert('RGB'))
-        for factor in [1.2, 1.5, 2.0, 2.5]:
-            add_candidate(enhancer.enhance(factor))
-    except Exception:
-        pass
-
-    try:
-        color = image.convert('RGB')
-        for factor in [1.1, 1.3, 1.6]:
-            enhanced = ImageEnhance.Brightness(color).enhance(factor)
-            add_candidate(ImageOps.autocontrast(ImageOps.grayscale(enhanced)))
-    except Exception:
-        pass
-
-    for base in [grayscale, ImageOps.autocontrast(grayscale)]:
-        for threshold in [120, 140, 160, 180]:
-            try:
-                threshold_image = base.point(lambda p: 255 if p > threshold else 0, mode='1')
-                add_candidate(threshold_image)
-                add_candidate(ImageOps.invert(threshold_image))
-                add_candidate(threshold_image.filter(ImageFilter.MaxFilter(3)))
-            except Exception:
-                continue
-
-    # Create a blurred-denoised version for photo-like uploads.
-    try:
-        denoised = grayscale.filter(ImageFilter.GaussianBlur(radius=0.6))
-        add_candidate(ImageOps.autocontrast(denoised))
-        add_candidate(denoised.filter(ImageFilter.SHARPEN))
-    except Exception:
-        pass
-
-    try:
-        deskewed = ImageOps.autocontrast(grayscale)
-        deskewed = deskewed.filter(ImageFilter.MaxFilter(3))
-        add_candidate(deskewed)
-    except Exception:
-        pass
 
     return candidates
 
