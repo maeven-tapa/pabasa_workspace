@@ -7270,7 +7270,7 @@ def extract_reading_material_file(request):
             try:
                 extracted_text = _extract_text_from_image(upload)
                 if not extracted_text:
-                    extraction_warnings.append('No text could be detected in this image. This may be because the image is not clear or Tesseract OCR is not properly configured.')
+                    logger.info('Image extraction produced no text for %s', filename)
                 else:
                     logger.info('Image extraction succeeded for %s with %d characters', filename, len(extracted_text))
             except Exception as e:
@@ -7384,7 +7384,18 @@ def extract_reading_material_file(request):
                     'warnings': extraction_warnings,
                     'warning_message': warning_msg,
                 })
-            return JsonResponse({'success': False, 'error': 'No readable text was found in that file. Please ensure the file contains text content.'}, status=400)
+            return JsonResponse({
+                'success': True,
+                'items': [],
+                'text': '',
+                'filename': filename,
+                'reading_type': detected_type,
+                'page_count': page_count,
+                'selected_pages': selected_pages_list,
+                'selection_mode': selection_mode,
+                'warnings': [],
+                'warning_message': '',
+            })
 
         return JsonResponse({
             'success': True,
