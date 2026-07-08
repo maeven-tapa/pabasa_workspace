@@ -7154,6 +7154,7 @@ def _extract_text_from_image(upload):
                 '--oem 3 --psm 13',
                 '--oem 3 --psm 1',
                 '--oem 3 --psm 5',
+                '--oem 3 --psm 10',
                 '--oem 1 --psm 6',
                 '--oem 1 --psm 11',
             ]
@@ -7183,14 +7184,26 @@ def _extract_text_from_image(upload):
                         )
                         confidences = [int(conf) for conf in data.get('conf', []) if str(conf).strip().isdigit()]
                         avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+                        recognized_words = [str(item).strip() for item in data.get('text', []) if str(item).strip()]
+                        if recognized_words:
+                            cleaned = ' '.join(recognized_words)
                     except Exception:
                         confidences = []
                         avg_confidence = 0
+                        recognized_words = []
+
+                    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+                    if not cleaned:
+                        continue
 
                     score = avg_confidence / 100.0
-                    score += min(len(cleaned.split()), 12) * 0.01
+                    score += min(len(cleaned.split()), 12) * 0.03
                     if _looks_like_ocr_text(cleaned):
-                        score += 0.2
+                        score += 0.15
+                    if len(cleaned.split()) >= 2:
+                        score += 0.05
+                    if len(cleaned) >= 8:
+                        score += 0.03
 
                     try:
                         logger.debug('OCR candidate: words=%d avg_conf=%s config=%s text=%r', len(cleaned.split()), avg_confidence, config, cleaned[:200])
@@ -7202,7 +7215,7 @@ def _extract_text_from_image(upload):
                         best_confidence = avg_confidence
                         best_score = score
 
-                    if _looks_like_ocr_text(cleaned) and (avg_confidence >= 60 or len(cleaned.split()) >= 3 or len(cleaned) >= 12):
+                    if _looks_like_ocr_text(cleaned) and (avg_confidence >= 40 or len(cleaned.split()) >= 2 or len(cleaned) >= 8):
                         logger.info('OCR accepted candidate with avg_conf=%s config=%s', avg_confidence, config)
                         return cleaned
 

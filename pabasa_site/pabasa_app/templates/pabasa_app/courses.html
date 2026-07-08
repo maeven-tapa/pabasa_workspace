@@ -10640,15 +10640,10 @@
             if (options.selectedPages) {
                 formData.append('selected_pages', options.selectedPages);
             }
-            const response = await fetch('/dashboard/teacher/extract-material/', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'X-CSRFToken': await ensureCsrfToken() },
-                body: formData
-            });
             let data = {};
+            let responseText = '';
             try {
-                const responseText = await response.text();
+                responseText = await response.text();
                 if (responseText) {
                     data = JSON.parse(responseText);
                 }
@@ -10667,16 +10662,30 @@
                         warningText.includes('No text could be detected') ||
                         warningText.includes('OCR') ||
                         warningText.includes('could not be converted') ||
-                        warningText.includes('could not be processed')
+                        warningText.includes('could not be processed') ||
+                        warningText.includes('clearer image')
                     )
                 )
             );
 
             if (!response.ok && !hasWarningResponse) {
-                throw new Error(data.error || 'Could not extract text from that file.');
+                const fallbackWarning = responseText && responseText.includes('No text could be detected')
+                    ? responseText
+                    : 'OCR could not read that image. Please try a clearer image or a different file.';
+                applyUploadedItems([], file.name, {
+                    reading_type: 'word',
+                    warnings: [fallbackWarning],
+                    text: '',
+                });
+                return;
             }
             if (!data.success && !hasWarningResponse) {
-                throw new Error(data.error || 'Could not extract text from that file.');
+                applyUploadedItems([], file.name, {
+                    reading_type: 'word',
+                    warnings: ['OCR could not read that image. Please try a clearer image or a different file.'],
+                    text: '',
+                });
+                return;
             }
             applyUploadedItems(Array.isArray(data.items) ? data.items : [], file.name, {
                 reading_type: data.reading_type,
