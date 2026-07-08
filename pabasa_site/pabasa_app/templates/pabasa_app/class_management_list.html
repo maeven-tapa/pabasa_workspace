@@ -116,6 +116,50 @@
     .manage-entry-card .border-top {
         border-top: 1px solid rgba(15, 23, 42, 0.08);
     }
+
+    body.dark-theme.dashboard-body {
+        background: #0f172a !important;
+    }
+
+    body.dark-theme .page-back-btn,
+    body.dark-theme .manage-entry-card,
+    body.dark-theme .dash-page-head {
+        background: #1e293b !important;
+        background-image: none !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+        box-shadow: 0 22px 44px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    body.dark-theme .manage-entry-card::before {
+        background: rgba(56, 189, 248, 0.12);
+    }
+
+    body.dark-theme .manage-entry-card::after {
+        background: linear-gradient(180deg, rgba(56, 189, 248, 0.9), rgba(56, 189, 248, 0.16));
+    }
+
+    body.dark-theme .manage-entry-card h3,
+    body.dark-theme .dash-page-head h2,
+    body.dark-theme strong {
+        color: #f8fafc !important;
+    }
+
+    body.dark-theme .manage-entry-card p,
+    body.dark-theme .manage-entry-card .text-secondary,
+    body.dark-theme .manage-entry-card .text-muted,
+    body.dark-theme .dash-page-head .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .entry-badge {
+        background: rgba(56, 189, 248, 0.12) !important;
+        color: #7dd3fc !important;
+    }
+
+    body.dark-theme .manage-entry-card .border-top {
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
+    }
 </style>
 {% endblock %}
 
