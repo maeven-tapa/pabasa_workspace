@@ -10646,11 +10646,36 @@
                 headers: { 'X-CSRFToken': await ensureCsrfToken() },
                 body: formData
             });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok && !(data && (data.warning_message || (Array.isArray(data.warnings) && data.warnings.length)))) {
+            let data = {};
+            try {
+                const responseText = await response.text();
+                if (responseText) {
+                    data = JSON.parse(responseText);
+                }
+            } catch (error) {
+                data = {};
+            }
+
+            const warningText = typeof data.warning_message === 'string' && data.warning_message.trim()
+                ? data.warning_message
+                : (Array.isArray(data.warnings) && data.warnings.length ? data.warnings[0] : '');
+            const hasWarningResponse = Boolean(
+                data && (
+                    data.success === true && (data.warning_message || (Array.isArray(data.warnings) && data.warnings.length))
+                ) || (
+                    typeof warningText === 'string' && (
+                        warningText.includes('No text could be detected') ||
+                        warningText.includes('OCR') ||
+                        warningText.includes('could not be converted') ||
+                        warningText.includes('could not be processed')
+                    )
+                )
+            );
+
+            if (!response.ok && !hasWarningResponse) {
                 throw new Error(data.error || 'Could not extract text from that file.');
             }
-            if (!data.success && !(data && (data.warning_message || (Array.isArray(data.warnings) && data.warnings.length)))) {
+            if (!data.success && !hasWarningResponse) {
                 throw new Error(data.error || 'Could not extract text from that file.');
             }
             applyUploadedItems(Array.isArray(data.items) ? data.items : [], file.name, {
