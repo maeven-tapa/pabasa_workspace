@@ -4342,6 +4342,38 @@ def settings_view(request):
     context['notification_settings'] = notification_settings
     return render(request, 'pabasa_app/settings.html', context)
 
+def _practice_tutorial_flag_key(mode):
+    mode_key = (mode or '').strip().lower()
+    mapping = {
+        'free': 'free_mode_tutorial_seen',
+        'color': 'color_mode_tutorial_seen',
+        'hunt': 'hunt_mode_tutorial_seen',
+    }
+    return mapping.get(mode_key)
+
+
+def _practice_tutorial_content(mode):
+    mode_key = (mode or '').strip().lower()
+    mapping = {
+        'free': [
+            'Welcome to Free Mode! Read the word aloud.',
+            'Swipe up to read. Swipe down to skip.',
+            'Finish all the words and have fun reading!',
+        ],
+        'color': [
+            'Welcome to Color Mode! The picture is empty.',
+            'Read a word correctly. A new part appears!',
+            'Keep reading until the whole picture is complete!',
+        ],
+        'hunt': [
+            'Welcome to Hunt Mode! Get ready for a challenge.',
+            'Read words correctly to score points.',
+            'Beat the timer and aim for the highest score!',
+        ],
+    }
+    return mapping.get(mode_key, mapping['free'])
+
+
 @never_cache
 @login_required(role='student')
 def practice(request):
@@ -4356,6 +4388,18 @@ def practice(request):
 
 @never_cache
 @login_required(role='student')
+@require_http_methods(["POST"])
+def practice_mark_tutorial_seen(request, mode):
+    normalized_mode = (mode or '').strip().lower()
+    flag_key = _practice_tutorial_flag_key(normalized_mode)
+    if flag_key:
+        request.session[flag_key] = True
+        request.session.modified = True
+    return redirect('practice_game_progression', mode=normalized_mode)
+
+
+@never_cache
+@login_required(role='student')
 def practice_game_progression(request, mode):
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     normalized_mode = (mode or '').strip().lower()
@@ -4365,11 +4409,16 @@ def practice_game_progression(request, mode):
     context = _student_practice_context(request)
     progression = _practice_game_progression(normalized_mode, student_user)
     progression = _apply_progression_unlock_override(progression, request.GET.get('unlock', ''))
+    flag_key = _practice_tutorial_flag_key(normalized_mode)
     context.update({
         'selected_game_mode': normalized_mode,
         'game_mode_title': progression['mode_title'],
         'game_progression': progression,
         'game_progression_summary': progression['summary'],
+        'tutorial_mode': normalized_mode,
+        'tutorial_title': progression['mode_title'],
+        'tutorial_cards': _practice_tutorial_content(normalized_mode),
+        'show_tutorial': not bool(flag_key and request.session.get(flag_key)),
     })
     return render(request, 'pabasa_app/practice_progression.html', context)
 

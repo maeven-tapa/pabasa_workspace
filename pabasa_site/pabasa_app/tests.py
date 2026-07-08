@@ -1882,6 +1882,42 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Content unavailable")
 
+    def test_progression_page_shows_mode_tutorial_and_how_to_play_button(self):
+        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "How to Play")
+        self.assertContains(response, "Welcome to Free Mode! Read the word aloud.")
+        self.assertContains(response, 'data-tutorial-mode="free"')
+
+    def test_tutorial_header_shows_refined_storybook_prompt(self):
+        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Quick Guide")
+        self.assertContains(response, "Learn at your own pace.")
+
+    def test_first_time_tutorial_overlay_shows_start_button(self):
+        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'tutorial-start-btn')
+
+    def test_seen_tutorial_overlay_hides_start_button(self):
+        self.client.session['free_mode_tutorial_seen'] = True
+        self.client.session.save()
+
+        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'tutorial-start-btn')
+
+    def test_mark_tutorial_seen_sets_session_flag(self):
+        response = self.client.post(reverse("practice_mark_tutorial_seen", args=["color"]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(self.client.session.get("color_mode_tutorial_seen"))
+
     def test_practice_reader_template_shows_results_breakdown(self):
         response = self.client.get(reverse("practice_word_page"))
 

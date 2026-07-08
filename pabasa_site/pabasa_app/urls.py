@@ -66,6 +66,7 @@ urlpatterns = [
     path('dashboard/practice/sentence/', views.practice_sentence_page, name='practice_sentence_page'),
     path('dashboard/practice/paragraph/', views.practice_para_page, name='practice_para_page'),
     path('dashboard/practice/results/', views.practice_results, name='practice_results'),
+    path('dashboard/practice/tutorial/<str:mode>/seen/', views.practice_mark_tutorial_seen, name='practice_mark_tutorial_seen'),
     path('dashboard/practice/progression/<str:mode>/', views.practice_game_progression, name='practice_game_progression'),
     path('dashboard/courses/teacher-view/', views.course_teacher_view, name='course_teacher_view'),
     path('dashboard/courses/student-view/', views.course_student_view, name='course_student_view'),

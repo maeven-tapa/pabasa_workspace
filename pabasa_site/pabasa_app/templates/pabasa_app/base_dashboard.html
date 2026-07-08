@@ -2378,6 +2378,7 @@
             }
         })();
     </script>
+    {% block extra_scripts %}{% endblock %}
     <script>
         // Global user context for notifications
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";

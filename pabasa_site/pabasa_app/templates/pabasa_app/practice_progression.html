@@ -3,6 +3,8 @@
 
 {% block extra_head %}
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap');
+
     body.dashboard-body {
         background:
             radial-gradient(circle at 10% 20%, rgba(31, 182, 255, 0.06), transparent 40%),
@@ -40,6 +42,260 @@
     .level-play-btn.is-completed { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ecfdf5; }
     .level-play-btn.is-completed i { color: #bbf7d0; }
     .back-link { align-items: center; background: rgba(255,255,255,0.96); border: 1px solid rgba(21,94,117,0.16); border-radius: 999px; box-shadow: 0 10px 24px rgba(31,111,139,0.08); color: var(--dash-primary); display: inline-flex; font-weight: 800; gap: 0.45rem; justify-content: center; min-height: 44px; padding: 0.6rem 0.95rem; text-decoration: none; width: fit-content; }
+    .tutorial-launch-btn { align-items: center; background: rgba(31,111,139,0.08); border: 1px solid rgba(31,111,139,0.16); border-radius: 999px; color: var(--dash-primary); display: inline-flex; font-size: 0.84rem; font-weight: 800; gap: 0.35rem; justify-content: center; min-height: 38px; padding: 0.5rem 0.8rem; }
+    .tutorial-launch-btn:hover { background: rgba(31,111,139,0.14); color: var(--dash-primary); }
+    .tutorial-overlay { align-items: center; background: rgba(2,6,23,0.72); display: none; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 1200; }
+    .tutorial-overlay.is-open { display: flex; }
+    .tutorial-card-shell {
+        animation: tutorialFadeIn 0.4s ease;
+        background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(31,111,139,0.16);
+        border-radius: 24px;
+        box-shadow: 0 12px 30px rgba(31,111,139,0.16);
+        color: #1a1a1a;
+        max-width: 500px;
+        min-height: 330px;
+        overflow: hidden;
+        padding: 0;
+        position: relative;
+        width: min(100%, 500px);
+    }
+    .tutorial-card {
+        display: none;
+        align-items: center;
+        flex-direction: column;
+        gap: 1rem;
+        justify-content: center;
+        min-height: 210px;
+        padding: 1.25rem 1.35rem 1.4rem;
+        text-align: center;
+        transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    .tutorial-card.is-active {
+        display: flex;
+        animation: tutorialCardSlide 0.25s ease;
+    }
+    .tutorial-header {
+        background: linear-gradient(135deg, #1f6f8b 0%, #2f8fb4 100%);
+        border-bottom: 1px solid rgba(31,111,139,0.16);
+        padding: 1rem 1.15rem 1.35rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .tutorial-header::before {
+        background:
+            radial-gradient(circle, rgba(255,255,255,0.2) 0 2px, transparent 3px) 0 0 / 18px 18px,
+            radial-gradient(circle, rgba(255,255,255,0.14) 0 1.5px, transparent 2.5px) 120px 22px / 20px 20px;
+        content: "";
+        inset: 0;
+        opacity: 0.5;
+        pointer-events: none;
+        position: absolute;
+    }
+    .tutorial-header::after {
+        background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.92));
+        border-radius: 60% 60% 0 0 / 100% 100% 0 0;
+        bottom: -18px;
+        content: "";
+        height: 28px;
+        left: -3%;
+        position: absolute;
+        right: -3%;
+        z-index: 1;
+    }
+    .tutorial-badge {
+        background: #fffdf4;
+        border: 1px solid rgba(251,191,36,0.36);
+        border-radius: 999px;
+        box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+        color: #1f6f8b;
+        display: inline-flex;
+        font-size: 0.78rem;
+        font-weight: 900;
+        gap: 0.35rem;
+        padding: 0.42rem 0.72rem;
+        position: absolute;
+        text-transform: uppercase;
+        top: 0.8rem;
+        left: 1rem;
+        transition: transform 180ms ease, box-shadow 180ms ease;
+        z-index: 2;
+    }
+    .tutorial-badge:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.16);
+        transform: translateY(-1px);
+    }
+    .tutorial-title-row {
+        align-items: flex-start;
+        display: flex;
+        gap: 0.6rem;
+        justify-content: flex-start;
+        padding: 2.7rem 0 0.15rem;
+        position: relative;
+        z-index: 2;
+    }
+    .tutorial-title-icon-bubble {
+        align-items: center;
+        background: rgba(255,253,244,0.18);
+        border: 1px solid rgba(255,255,255,0.24);
+        border-radius: 999px;
+        display: inline-flex;
+        flex-shrink: 0;
+        height: 2.25rem;
+        justify-content: center;
+        margin-top: 0.18rem;
+        width: 2.25rem;
+    }
+    .tutorial-title-icon-bubble i {
+        color: #fffdf4;
+        font-size: 0.96rem;
+    }
+    .tutorial-title-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+    .tutorial-edit-icon {
+        color: rgba(255,253,244,0.86);
+        cursor: pointer;
+        font-size: 0.95rem;
+        margin-left: 0.2rem;
+        margin-top: 0.28rem;
+        opacity: 0.7;
+        transition: opacity 180ms ease, transform 180ms ease;
+    }
+    .tutorial-edit-icon:hover {
+        opacity: 1;
+        transform: scale(1.08) rotate(-6deg);
+    }
+    .tutorial-header h3 {
+        color: #fbbf24;
+        font-family: 'Baloo 2', 'Trebuchet MS', 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
+        font-size: clamp(1.8rem, 4.4vw, 2.5rem);
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        line-height: 1.05;
+        margin: 0;
+        text-align: left;
+        text-transform: none;
+    }
+    .tutorial-subtitle {
+        color: rgba(255,253,244,0.9);
+        font-family: 'Baloo 2', 'Trebuchet MS', 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        line-height: 1.45;
+        margin: 0;
+    }
+    .tutorial-deco {
+        color: rgba(255,255,255,0.24);
+        pointer-events: none;
+        position: absolute;
+        z-index: 1;
+    }
+    .tutorial-deco-star {
+        font-size: 0.9rem;
+        right: 4.25rem;
+        top: 1.05rem;
+    }
+    .tutorial-deco-sparkle {
+        bottom: 0.95rem;
+        font-size: 0.8rem;
+        right: 2rem;
+    }
+    .tutorial-deco-dot {
+        background: rgba(251,191,36,0.6);
+        border-radius: 999px;
+        bottom: 1.05rem;
+        box-shadow: 0 0 0 4px rgba(255,255,255,0.08);
+        height: 0.7rem;
+        left: 42%;
+        width: 0.7rem;
+    }
+    .tutorial-card p {
+        color: #2f3f56;
+        font-family: 'Trebuchet MS', 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
+        font-size: clamp(1.16rem, 2.6vw, 1.32rem);
+        font-weight: 700;
+        line-height: 1.7;
+        margin: 0;
+    }
+    .tutorial-nav-row { align-items: center; display: flex; justify-content: space-between; margin: 0.2rem 1rem 0.9rem; }
+    .tutorial-nav {
+        align-items: center;
+        background-color: #0078d4;
+        border: none;
+        border-radius: 50%;
+        color: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        font-size: 1.1rem;
+        height: 44px;
+        justify-content: center;
+        transition: background-color 0.3s ease;
+        width: 44px;
+    }
+    .tutorial-nav:hover { background-color: #005fa3; }
+    .tutorial-nav:disabled { cursor: not-allowed; opacity: 0.45; }
+    .tutorial-step-dots { align-items: center; display: inline-flex; gap: 0.45rem; }
+    .tutorial-step-dot {
+        background: #dbeafe;
+        border-radius: 999px;
+        display: inline-block;
+        height: 10px;
+        transition: all 0.25s ease;
+        width: 10px;
+    }
+    .tutorial-step-dot.is-active { background: #1f6f8b; transform: scale(1.2); }
+    .tutorial-step-dot.is-done { background: #fbbf24; }
+    .tutorial-start-btn {
+        background-color: #0078d4;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 10px 24px rgba(31,111,139,0.2);
+        color: #fff;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 700;
+        min-height: 46px;
+        padding: 0.8rem 1rem;
+        transition: background-color 0.3s ease;
+        width: 100%;
+    }
+    .tutorial-start-btn:hover { background-color: #005fa3; }
+    .tutorial-overlay-close {
+        align-items: center;
+        background: rgba(255,255,255,0.95);
+        border: 1px solid rgba(31,111,139,0.16);
+        border-radius: 999px;
+        box-shadow: 0 6px 12px rgba(15,23,42,0.12);
+        color: #1f6f8b;
+        cursor: pointer;
+        display: inline-flex;
+        font-size: 1rem;
+        height: 40px;
+        justify-content: center;
+        position: absolute;
+        right: 0.8rem;
+        top: 0.8rem;
+        transition: transform 180ms ease, box-shadow 180ms ease;
+        width: 40px;
+        z-index: 2;
+    }
+    .tutorial-overlay-close:hover {
+        box-shadow: 0 8px 16px rgba(15,23,42,0.16);
+        transform: scale(1.05);
+    }
+    @keyframes tutorialFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes tutorialCardSlide {
+        from { opacity: 0; transform: translateX(8px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
     body.dark-theme.dashboard-body { background: #0f172a !important; color: #f1f5f9 !important; }
     body.dark-theme .progression-shell { color: #f1f5f9; }
     body.dark-theme .progression-card { background: #1e293b; background-image: none; border-color: #334155; box-shadow: 0 18px 42px #020617; color: #f1f5f9; }
@@ -95,6 +351,7 @@
             <p id="progressionHeroIntro" class="mb-0" style="color: var(--dash-muted);">Follow the map, unlock each level, and collect stars as you grow into a stronger reader.</p>
             <div class="mt-3 small fw-bold" style="color: var(--dash-primary);">Current challenge: <span id="progressionCurrentChallenge">{{ game_progression_summary.current_difficulty }} {{ game_progression_summary.current_level }}</span></div>
             <div id="progressionHeroStatus" class="progression-hero-status mt-2">Live progress is updating as you play.</div>
+            <button type="button" class="tutorial-launch-btn mt-3" id="openTutorialButton"><i class="bi bi-question-circle"></i> How to Play</button>
         </div>
         <div class="progression-stat-grid">
             <div class="progression-stat">
@@ -153,12 +410,148 @@
         {% endfor %}
     </section>
 </section>
+
+<div id="practiceTutorialOverlay" class="tutorial-overlay {% if show_tutorial %}is-open{% endif %}" data-tutorial-mode="{{ tutorial_mode }}" aria-hidden="{% if show_tutorial %}false{% else %}true{% endif %}">
+    <div class="tutorial-card-shell" role="dialog" aria-modal="true" aria-label="Practice tutorial">
+        <div class="tutorial-header">
+            <div class="tutorial-badge"><i class="bi bi-stars"></i> Quick Guide</div>
+            <button type="button" class="tutorial-overlay-close" id="tutorialOverlayCloseButton" aria-label="Close tutorial"><i class="bi bi-x-lg"></i></button>
+            <span class="tutorial-deco tutorial-deco-star" aria-hidden="true">✦</span>
+            <span class="tutorial-deco tutorial-deco-sparkle" aria-hidden="true">✧</span>
+            <span class="tutorial-deco tutorial-deco-dot" aria-hidden="true"></span>
+            <div class="tutorial-title-row">
+                <div class="tutorial-title-icon-bubble" aria-hidden="true"><i class="bi bi-book-half"></i></div>
+                <div class="tutorial-title-copy">
+                    <h3 id="tutorialCardTitle">{{ tutorial_title }}</h3>
+                    <p class="tutorial-subtitle">Learn at your own pace.</p>
+                </div>
+                <i class="tutorial-edit-icon bi bi-pencil-fill" aria-hidden="true"></i>
+            </div>
+        </div>
+        {% for card_text in tutorial_cards %}
+            <div class="tutorial-card {% if forloop.first %}is-active{% endif %}" data-card-index="{{ forloop.counter0 }}">
+                <p id="tutorialCardText{% if not forloop.first %}{{ forloop.counter0 }}{% endif %}">{{ card_text }}</p>
+            </div>
+        {% endfor %}
+        <div class="tutorial-nav-row">
+            <button type="button" class="tutorial-nav" id="tutorialPrevButton" aria-label="Previous card"><i class="bi bi-chevron-left"></i></button>
+            <div class="tutorial-step-dots" id="tutorialStepIndicator" aria-label="Tutorial progress">
+                <span class="tutorial-step-dot is-active"></span>
+                <span class="tutorial-step-dot"></span>
+                <span class="tutorial-step-dot"></span>
+            </div>
+            <button type="button" class="tutorial-nav" id="tutorialNextButton" aria-label="Next card"><i class="bi bi-chevron-right"></i></button>
+        </div>
+        <div class="mt-3" id="tutorialFooterActions">
+            {% if show_tutorial %}
+                <form method="post" action="{% url 'practice_mark_tutorial_seen' tutorial_mode %}" id="tutorialStartForm" style="display: none;">
+                    {% csrf_token %}
+                    <button type="submit" class="tutorial-start-btn">Start</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
     (() => {
         const levelCards = Array.from(document.querySelectorAll('.level-card[data-difficulty][data-level]'));
+        const overlay = document.getElementById('practiceTutorialOverlay');
+        const openButton = document.getElementById('openTutorialButton');
+        const prevButton = document.getElementById('tutorialPrevButton');
+        const nextButton = document.getElementById('tutorialNextButton');
+        const stepIndicator = document.getElementById('tutorialStepIndicator');
+        const overlayCloseButton = document.getElementById('tutorialOverlayCloseButton');
+        const cards = Array.from(document.querySelectorAll('.tutorial-card'));
+        const startForm = document.getElementById('tutorialStartForm');
+        let currentCard = 0;
+
+        const updateTutorialCard = () => {
+            if (!cards.length) return;
+            cards.forEach((card, index) => card.classList.toggle('is-active', index === currentCard));
+            const dots = Array.from(stepIndicator?.querySelectorAll('.tutorial-step-dot') || []);
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('is-active', index === currentCard);
+                dot.classList.toggle('is-done', index < currentCard);
+            });
+            if (prevButton) {
+                prevButton.disabled = currentCard === 0;
+            }
+            if (nextButton) {
+                nextButton.disabled = currentCard === cards.length - 1;
+            }
+            if (startForm) {
+                startForm.style.display = currentCard === cards.length - 1 ? 'block' : 'none';
+            }
+        };
+
+        const showTutorialCard = (index) => {
+            if (!cards.length) return;
+            currentCard = Math.max(0, Math.min(index, cards.length - 1));
+            updateTutorialCard();
+        };
+
+        const openTutorial = () => {
+            if (!overlay) return;
+            showTutorialCard(0);
+            overlay.classList.add('is-open');
+            overlay.setAttribute('aria-hidden', 'false');
+        };
+
+        const closeTutorial = () => {
+            if (!overlay) return;
+            overlay.classList.remove('is-open');
+            overlay.setAttribute('aria-hidden', 'true');
+        };
+
+        const handleSwipe = (startX, endX) => {
+            const delta = endX - startX;
+            if (Math.abs(delta) < 50) return;
+            if (delta < 0) {
+                showTutorialCard(currentCard + 1);
+            } else {
+                showTutorialCard(currentCard - 1);
+            }
+        };
+
+        let touchStartX = 0;
+        if (overlay) {
+            overlay.addEventListener('touchstart', (event) => {
+                if (event.touches.length) {
+                    touchStartX = event.touches[0].clientX;
+                }
+            }, { passive: true });
+            overlay.addEventListener('touchend', (event) => {
+                const endX = event.changedTouches[0]?.clientX || 0;
+                handleSwipe(touchStartX, endX);
+            }, { passive: true });
+        }
+
+        if (prevButton) {
+            prevButton.addEventListener('click', () => {
+                showTutorialCard(currentCard - 1);
+            });
+        }
+        if (nextButton) {
+            nextButton.addEventListener('click', () => {
+                showTutorialCard(currentCard + 1);
+            });
+        }
+        if (openButton) {
+            openButton.addEventListener('click', openTutorial);
+        }
+        if (overlayCloseButton) {
+            overlayCloseButton.addEventListener('click', closeTutorial);
+        }
+        if (overlay) {
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) {
+                    closeTutorial();
+                }
+            });
+        }
 
         const readProgress = () => {
             if (!levelCards.length) {
