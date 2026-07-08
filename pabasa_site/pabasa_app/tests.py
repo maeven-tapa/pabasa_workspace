@@ -18,7 +18,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text
 from .weekly_digest import send_weekly_digest
 
 
@@ -288,6 +288,10 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertEqual(data["items"], ["Alpha", "beta", "gamma"])
         mock_extract_text_from_image.assert_called_once()
         mock_build_extracted_material_items.assert_called_once()
+
+    def test_fallback_material_items_preserve_paragraph_blocks(self):
+        text = "First line\nSecond line\n\nThird line"
+        self.assertEqual(_fallback_material_items_from_text(text), ["First line Second line", "Third line"])
 
 
 class PrincipalReportsExportTests(TestCase):

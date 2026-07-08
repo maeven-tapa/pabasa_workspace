@@ -53,3 +53,7 @@ Thumbs.db
 __pycache__/
 *.pyc
 ocr_simulator_app.py
+pabasa_site/debug_ocr/1783476027_scan.png
+pabasa_site/debug_ocr/1783476027_scan.txt
+pabasa_site/debug_ocr/1783476028_scan.png
+pabasa_site/debug_ocr/1783476029_scan.png

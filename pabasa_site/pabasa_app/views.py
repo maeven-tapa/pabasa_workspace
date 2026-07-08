@@ -7035,6 +7035,20 @@ def _build_ocr_image_candidates(image):
     add_candidate(grayscale.filter(ImageFilter.MedianFilter(size=3)))
     add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.MedianFilter(size=3))))
 
+    try:
+        sharpened = grayscale.filter(ImageFilter.UnsharpMask(radius=1.5, percent=200, threshold=3))
+        add_candidate(sharpened)
+        add_candidate(ImageOps.autocontrast(sharpened))
+    except Exception:
+        pass
+
+    try:
+        edge_enhanced = grayscale.filter(ImageFilter.EDGE_ENHANCE_MORE)
+        add_candidate(edge_enhanced)
+        add_candidate(ImageOps.autocontrast(edge_enhanced))
+    except Exception:
+        pass
+
     width, height = image.size
     max_dim = max(width, height)
     for scale in [1.25, 1.5, 2.0, 2.5]:
@@ -7085,6 +7099,13 @@ def _build_ocr_image_candidates(image):
     except Exception:
         pass
 
+    try:
+        deskewed = ImageOps.autocontrast(grayscale)
+        deskewed = deskewed.filter(ImageFilter.MaxFilter(3))
+        add_candidate(deskewed)
+    except Exception:
+        pass
+
     return candidates
 
 
@@ -7130,6 +7151,11 @@ def _extract_text_from_image(upload):
                 '--oem 3 --psm 3',
                 '--oem 3 --psm 7',
                 '--oem 3 --psm 8',
+                '--oem 3 --psm 13',
+                '--oem 3 --psm 1',
+                '--oem 3 --psm 5',
+                '--oem 1 --psm 6',
+                '--oem 1 --psm 11',
             ]
 
             best_text = ''
@@ -7220,15 +7246,36 @@ def _fallback_material_items_from_text(text):
     if not text:
         return []
 
-    cleaned = re.sub(r'\s+', ' ', str(text).strip())
+    raw_text = str(text).strip()
+    if not raw_text:
+        return []
+
+    cleaned = re.sub(r'\s+', ' ', raw_text)
     if not cleaned:
         return []
 
-    line_items = [line.strip() for line in str(text).splitlines() if line.strip()]
-    if len(line_items) > 1:
-        return line_items[:80]
+    paragraphs = [p.strip() for p in re.split(r'\n\s*\n', raw_text) if p.strip()]
+    if len(paragraphs) > 1:
+        return [re.sub(r'\s+', ' ', p).strip() for p in paragraphs[:80] if re.sub(r'\s+', ' ', p).strip()]
 
-    sentence_items = [segment.strip() for segment in re.split(r'(?<=[.!?])\s+', str(text)) if segment.strip()]
+    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+    if len(lines) > 1:
+        grouped = []
+        current = []
+        for line in lines:
+            if len(current) and len(line.split()) <= 3 and len(current[-1].split()) <= 3:
+                current.append(line)
+            else:
+                if current:
+                    grouped.append(' '.join(current))
+                current = [line]
+        if current:
+            grouped.append(' '.join(current))
+        if len(grouped) > 1:
+            return grouped[:80]
+        return [re.sub(r'\s+', ' ', ' '.join(lines)).strip()]
+
+    sentence_items = [segment.strip() for segment in re.split(r'(?<=[.!?])\s+', raw_text) if segment.strip()]
     if len(sentence_items) > 1:
         return sentence_items[:80]
 
