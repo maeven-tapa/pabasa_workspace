@@ -10640,6 +10640,12 @@
             if (options.selectedPages) {
                 formData.append('selected_pages', options.selectedPages);
             }
+            const response = await fetch('/dashboard/teacher/extract-material/', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'X-CSRFToken': await ensureCsrfToken() },
+                body: formData
+            });
             let data = {};
             let responseText = '';
             try {
