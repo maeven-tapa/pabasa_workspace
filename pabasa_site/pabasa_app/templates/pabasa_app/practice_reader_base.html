@@ -1379,6 +1379,7 @@
             background: linear-gradient(180deg, #dff7ff 0%, #f8fbff 52%, #fff8d9 100%);
             min-height: clamp(520px, 72vh, 760px);
             isolation: isolate;
+            padding: 0.8rem 0.8rem 0.9rem;
         }
 
         .practice-color .play-card::before,
@@ -1389,6 +1390,21 @@
         .color-mode-stage,
         .color-scene {
             display: none;
+        }
+
+        .play-card {
+            position: relative;
+        }
+
+        .practice-color .color-scene {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+
+            width: 100%;
+            height: 100%;
         }
 
         .practice-color .color-scene {
@@ -1406,17 +1422,66 @@
             z-index: 6;
         }
 
+        .practice-color .practice-action-shell {
+            display: grid;
+            gap: 0.55rem;
+            inset: auto 0.5rem 0.7rem;
+            justify-items: center;
+            pointer-events: none;
+            position: absolute;
+            z-index: 8;
+        }
+
+        .practice-color .practice-action-shell > * {
+            pointer-events: auto;
+        }
+
         .practice-color .practice-feedback {
-            background: rgba(255, 253, 247, 0.88);
-            backdrop-filter: blur(5px);
+            align-items: center;
+            background: rgba(255, 253, 247, 0.96);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(31, 111, 139, 0.16);
+            border-radius: 999px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+            display: inline-flex;
+            font-size: 0.9rem;
+            justify-content: center;
+            line-height: 1.3;
+            margin: 0;
+            max-width: min(100%, 360px);
+            min-height: auto;
+            padding: 0.55rem 0.85rem;
+            width: fit-content;
+        }
+
+        .practice-color .practice-feedback.is-success {
+            color: #0f766e;
+        }
+
+        .practice-color .practice-feedback.is-warning {
+            color: #b95f44;
+        }
+
+        .practice-color .practice-controls {
+            gap: 0.6rem;
+            max-width: min(100%, 430px);
+            padding: 0;
+            width: 100%;
+        }
+
+        .practice-color .practice-controls button {
+            border-radius: 14px;
+            font-size: 0.92rem;
+            min-height: 44px;
+            padding: 0.5rem 0.7rem;
         }
 
         .practice-color .practice-stage {
             align-items: center;
             display: grid;
-            min-height: clamp(280px, 44vh, 420px);
+            min-height: clamp(240px, 40vh, 380px);
             overflow: visible;
-            padding: clamp(1.2rem, 3vw, 2rem) clamp(1rem, 2.2vw, 2.5rem) clamp(1.6rem, 3.8vw, 2.4rem);
+            padding: clamp(0.8rem, 2.2vw, 1.4rem) clamp(0.8rem, 2vw, 1.6rem) clamp(0.8rem, 2.2vw, 1.3rem);
             pointer-events: none;
             position: relative;
             z-index: 7;
@@ -1551,6 +1616,15 @@
             z-index: 4;
         }
 
+        .color-scene-object[data-color-object="pavement"] {
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 52%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
 
         .color-scene-object[data-color-object="sea"],
         .color-scene-object[data-color-object="clouds"] {
@@ -1572,28 +1646,26 @@
         }
 
         .color-scene-object[data-color-object="tiger"] {
-            right: 3%;
-            top: 45%;
-            width: clamp(110px, 13vw, 180px);
+            left: 1%;
+            top: 58%;
+            width: 240px !important;
+            height: auto;
             z-index: 3;
-            transform: scaleX(-1);
         }
 
-        .color-scene-object[data-color-object="fence"] {
-            position: absolute;
-            inset: -26%;
+        .color-scene-object[data-color-object="vines"] {
+            top: 0%;
             left: 0;
             width: 100%;
             height: auto;
-            object-fit: contain;
-            z-index: 1;
+            z-index: 2;
         }
 
-        .color-scene-object[data-color-object="barn"] {
-            inset: 38%;
-            left: 8%;
-            width: clamp(220px, 30vw, 380px);
-            z-index: 2;
+        .color-scene-object[data-color-object="zookeeper"] {
+            bottom: 5%;
+            right: 1%;
+            width: clamp(120px, 16vw, 220px);
+            z-index: 6;
         }
 
 
@@ -1621,12 +1693,6 @@
             width: clamp(115px, 17vw, 210px);
         }
 
-        .color-scene-object[data-color-object="fence"] {
-            bottom: 2%;
-            left: 0;
-            width: 100%;
-            z-index: 1;
-        }
 
         .color-scene-object[data-color-object="entrance"] {
             top: 18%;
@@ -1650,13 +1716,11 @@
 
         .color-scene-object[data-color-object="elephant"] {
             top: 50%;
-            right: 25%;
+            right: 55%;
             bottom: auto;
             width: clamp(120px, 15vw, 200px);
             z-index: 2;
         }
-
-
 
         
 
@@ -1821,6 +1885,98 @@
 
         .practice-feedback.is-warning {
             color: #b95f44;
+        }
+
+        @media (min-width: 2560px) and (min-height: 1440px) {
+            .practice-shell {
+                max-width: 1980px;
+                min-height: calc(100vh - 4.5rem);
+                padding: 1.1rem 1.35rem 1.8rem;
+                width: min(100%, 1980px);
+            }
+
+            .practice-top {
+                border-radius: 24px;
+                padding: 0.85rem 1.1rem;
+            }
+
+            .practice-board {
+                align-items: start;
+                gap: clamp(1.5rem, 2.2vw, 2.2rem);
+                grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+                margin-block: auto;
+                width: min(100%, 1820px);
+            }
+
+            .coach-panel {
+                align-content: start;
+                gap: 1.1rem;
+                min-height: clamp(720px, 78vh, 840px);
+                padding: 1.2rem 1.25rem 1.35rem;
+            }
+
+            .coach-badge {
+                border-radius: 28px;
+                min-height: 168px;
+            }
+
+            .coach-panel h2 {
+                font-size: 1.28rem;
+            }
+
+            .coach-panel p {
+                font-size: 1.02rem;
+            }
+
+            .mini-steps {
+                gap: 0.7rem;
+            }
+
+            .mini-step {
+                padding: 0.72rem 0.82rem;
+            }
+
+            .mini-step strong {
+                height: 36px;
+                width: 36px;
+            }
+
+            .play-card {
+                padding: 1.15rem;
+            }
+
+            .play-card::before {
+                inset: 14px;
+            }
+
+            .practice-stage {
+                padding: clamp(1rem, 2vw, 1.35rem) 0.25rem clamp(1rem, 2vw, 1.35rem);
+            }
+
+            .practice-controls {
+                gap: 0.9rem;
+                margin: 0 auto;
+                max-width: 560px;
+                padding: 0;
+            }
+
+            .practice-controls button {
+                border-radius: 18px;
+                min-height: 56px;
+                padding: 0.72rem 1rem;
+            }
+
+            .practice-shell.practice-color {
+                max-width: 1820px;
+            }
+
+            .practice-color .practice-board {
+                width: min(100%, 1820px);
+            }
+
+            .practice-color .play-card {
+                min-height: clamp(680px, 72vh, 860px);
+            }
         }
 
         .practice-complete {
@@ -2189,6 +2345,127 @@
             }
         }
 
+        @media (max-width: 768px) and (orientation: portrait) {
+            .practice-instructions {
+                display: none !important;
+            }
+
+            .practice-shell {
+                padding: 0.7rem 0.65rem 1rem;
+            }
+
+            .practice-board {
+                gap: 0.7rem;
+                width: 100%;
+            }
+
+            .practice-top {
+                margin-bottom: 0.35rem;
+                padding: 0.75rem 0.7rem;
+            }
+
+            .play-card {
+                gap: 0.65rem;
+                padding: 0.7rem;
+            }
+
+            .practice-color .play-card {
+                min-height: clamp(560px, 84vh, 760px);
+                padding: 0.7rem 0.7rem 0.95rem;
+            }
+
+            .play-status {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 0.45rem;
+                padding: 0;
+            }
+
+            .practice-progress {
+                max-width: none;
+                width: 100%;
+            }
+
+            .practice-color .practice-stage {
+                min-height: clamp(250px, 46vh, 360px);
+                padding: 0.3rem 0 0.9rem;
+            }
+
+            .practice-color .practice-action-shell {
+                gap: 0.55rem;
+                inset: auto 0.55rem 0.6rem;
+                justify-items: stretch;
+            }
+
+            .practice-color .practice-feedback {
+                border-radius: 999px;
+                box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
+                display: inline-flex;
+                font-size: 0.82rem;
+                justify-content: center;
+                left: 50%;
+                margin: 0 auto;
+                max-width: min(100%, 390px);
+                min-height: 36px;
+                padding: 0.5rem 1rem;
+                position: absolute;
+                right: auto;
+                top: -2.6rem;
+                transform: translateX(-50%);
+                width: calc(100% - 0.8rem);
+            }
+
+            .practice-color .practice-controls {
+                display: grid;
+                gap: 0.55rem;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                margin: 0 auto;
+                max-width: min(100%, 420px);
+                width: 100%;
+            }
+
+            .practice-color .practice-controls button {
+                border-radius: 12px;
+                font-size: 0.9rem;
+                min-height: 46px;
+                padding: 0.5rem 0.7rem;
+                width: 100%;
+            }
+
+            .color-guide-panel {
+                gap: 0.6rem;
+                grid-template-columns: 1fr;
+                justify-items: center;
+                max-width: min(100%, 320px);
+                padding: 0.2rem 0 0.35rem;
+                width: 100%;
+            }
+
+            .color-guide-mascot {
+                max-height: clamp(86px, 19vw, 110px);
+                max-width: min(100%, 118px);
+            }
+
+            .color-dialogue {
+                border-radius: 20px;
+                min-height: 84px;
+                padding: 0.7rem 0.8rem;
+                width: min(100%, 230px);
+            }
+
+            .color-dialogue::before {
+                bottom: -10px;
+                height: 20px;
+                left: 50%;
+                top: auto;
+                transform: translateX(-50%) rotate(45deg);
+            }
+
+            .color-dialogue .practice-text {
+                font-size: clamp(1.05rem, 4.2vw, 1.45rem);
+            }
+        }
+
         @media (max-width: 560px) {
             .practice-metrics-grid {
                 grid-template-columns: 1fr;
@@ -2250,6 +2527,306 @@
 
             .practice-feedback {
                 font-size: 0.9rem;
+            }
+        }
+
+        /* Scene object positioning: desktop, laptop, and mobile */
+        .color-scene-object[data-color-object="clouds"] {
+            bottom: auto;
+            height: 100%;
+            inset: 0;
+            left: 0;
+            object-fit: cover;
+            right: 0;
+            top: 0;
+            width: 100%;
+            z-index: 0;
+        }
+
+        .color-scene-object[data-color-object="palm_tree"] {
+            bottom: 18%;
+            left: 1%;
+            width: clamp(180px, 24vw, 320px);
+            z-index: 2;
+        }
+
+        .color-scene-object[data-color-object="umbrella"] {
+            bottom: 15%;
+            right: 4%;
+            width: clamp(118px, 20vw, 250px);
+            z-index: 2;
+        }
+
+        .color-scene-object[data-color-object="barn"] {
+            bottom: 24%;
+            left: 5%;
+            width: clamp(138px, 22vw, 290px);
+            z-index: 2;
+        }
+
+        .color-scene-object[data-color-object="sheep"] {
+            bottom: 16%;
+            right: 7%;
+            width: clamp(115px, 17vw, 210px);
+            z-index: 2;
+        }
+
+        .color-scene-object[data-color-object="fence"] {
+            bottom: -34%;
+            left: 0;
+            height: auto;
+            object-fit: contain;
+            top: auto;
+            width: 100%;
+            z-index: 1;
+        }
+
+        @media (min-width: 2560px) and (min-height: 1440px) {
+            .color-scene-object[data-color-object="palm_tree"] {
+                bottom: 16%;
+                left: 2%;
+            }
+
+            .color-scene-object[data-color-object="umbrella"] {
+                bottom: 12%;
+                right: 3%;
+            }
+
+            .color-scene-object[data-color-object="fence"] {
+                bottom: -34%;
+                top: auto;
+            }
+
+            .color-scene-object[data-color-object="elephant"] {
+                bottom: 1.2%;
+                right: 52%;
+                top: auto;
+                width: clamp(220px, 26vw, 340px);
+                z-index: 3;
+            }
+        }
+
+        .color-scene-object[data-color-object="entrance"] {
+            bottom: auto;
+            left: 0%;
+            top: 18%;
+            width: clamp(220px, 30vw, 360px);
+            z-index: 1;
+        }
+
+        .color-scene-object[data-color-object="tiger"] {
+            bottom: 5%;
+            right: 6%;
+            transform: scaleX(-1);
+            width: clamp(110px, 13vw, 180px);
+            z-index: 3;
+        }
+
+        .color-scene-object[data-color-object="elephant"] {
+            bottom: auto;
+            right: 55%;
+            top: 50%;
+            width: clamp(120px, 15vw, 200px);
+            z-index: 2;
+        }
+
+        .color-scene-object[data-color-object="zebra"] {
+            bottom: 10%;
+            left: 40%;
+            width: clamp(92px, 11.5vw, 140px);
+            z-index: 3;
+        }
+
+        .color-scene-object[data-color-object="butterfly"] {
+            right: 20%;
+            top: 10%;
+            transform-origin: center;
+            width: clamp(62px, 8vw, 96px);
+            z-index: 3;
+        }
+
+        .color-scene-object[data-color-object="vines"] {
+            height: auto;
+            left: 0;
+            top: 0%;
+            width: 100%;
+            z-index: 2;
+        }
+
+        .color-scene-object[data-color-object="zookeeper"] {
+            bottom: 5%;
+            right: 1%;
+            width: clamp(120px, 16vw, 220px);
+            z-index: 6;
+        }
+
+        @media (min-width: 2560px) and (min-height: 1440px) {
+            .color-scene-object[data-color-object="elephant"] {
+                bottom: 0.5%;
+                right: 48%;
+                top: auto;
+                width: clamp(280px, 30vw, 430px);
+                z-index: 3;
+            }
+        }
+
+        @media (max-width: 1920px) {
+            .color-scene-object[data-color-object="clouds"] {
+                inset: 0;
+                top: -2%;
+                width: 100%;
+            }
+
+            .color-scene-object[data-color-object="palm_tree"] {
+                bottom: 12%;
+                left: 0;
+                width: clamp(170px, 24vw, 280px);
+            }
+
+            .color-scene-object[data-color-object="umbrella"] {
+                bottom: 8%;
+                right: 2%;
+                width: clamp(140px, 20vw, 220px);
+            }
+
+            .color-scene-object[data-color-object="barn"] {
+                bottom: 16%;
+                left: 4%;
+                width: clamp(150px, 20vw, 250px);
+            }
+
+            .color-scene-object[data-color-object="sheep"] {
+                bottom: 12%;
+                right: 6%;
+                width: clamp(100px, 15vw, 160px);
+            }
+
+            .color-scene-object[data-color-object="fence"] {
+                bottom: -34%;
+                top: auto;
+            }
+
+            .color-scene-object[data-color-object="entrance"] {
+                left: 1%;
+                top: 22%;
+                width: clamp(180px, 24vw, 280px);
+            }
+
+            .color-scene-object[data-color-object="tiger"] {
+                bottom: 4%;
+                right: 3%;
+                width: clamp(130px, 16vw, 190px);
+            }
+
+            .color-scene-object[data-color-object="elephant"] {
+                right: 50%;
+                top: 60%;
+                width: clamp(140px, 16vw, 220px);
+            }
+
+            .color-scene-object[data-color-object="zebra"] {
+                bottom: 9%;
+                left: 42%;
+                width: clamp(90px, 12vw, 140px);
+            }
+
+            .color-scene-object[data-color-object="butterfly"] {
+                right: 18%;
+                top: 12%;
+                width: clamp(60px, 8vw, 90px);
+            }
+
+            .color-scene-object[data-color-object="vines"] {
+                top: 0%;
+            }
+
+            .color-scene-object[data-color-object="zookeeper"] {
+                bottom: 4%;
+                right: 1%;
+                width: clamp(130px, 14vw, 200px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .color-scene-object[data-color-object="clouds"] {
+                inset: 0;
+                top: -6%;
+                width: 100%;
+            }
+
+            .color-scene-object[data-color-object="palm_tree"] {
+                bottom: 10%;
+                left: -4%;
+                width: clamp(150px, 48vw, 240px);
+            }
+
+            .color-scene-object[data-color-object="umbrella"] {
+                bottom: 8%;
+                right: 1%;
+                width: clamp(110px, 38vw, 180px);
+            }
+
+            .color-scene-object[data-color-object="barn"] {
+                bottom: 12%;
+                left: 1%;
+                width: clamp(150px, 45vw, 240px);
+            }
+
+            .color-scene-object[data-color-object="sheep"] {
+                bottom: 10%;
+                right: 4%;
+                width: clamp(95px, 32vw, 140px);
+            }
+
+            .color-scene-object[data-color-object="fence"] {
+                bottom: 5%;
+                top: auto;
+                z-index: 1;
+            }
+
+            .color-scene-object[data-color-object="entrance"] {
+                left: 1%;
+                top: 20%;
+                width: min(48vw, 220px);
+            }
+
+            img.color-scene-object[data-color-object="tiger"] {
+                bottom: 0%;
+                height: auto !important;
+                max-height: 120px !important;
+                max-width: 120px !important;
+                right: -6%;
+                top: auto;
+                transform: scale(1.2) scaleX(-1) !important;
+                width: 120px !important;
+            }
+
+            .color-scene-object[data-color-object="elephant"] {
+                right: 30%;
+                top: 68%;
+                width: clamp(84px, 24vw, 128px);
+            }
+
+            .color-scene-object[data-color-object="zebra"] {
+                bottom: 12%;
+                left: 40%;
+                width: clamp(90px, 28vw, 120px);
+            }
+
+            .color-scene-object[data-color-object="butterfly"] {
+                right: 12%;
+                top: 8%;
+                width: clamp(56px, 16vw, 78px);
+            }
+
+            .color-scene-object[data-color-object="vines"] {
+                top: 0%;
+            }
+
+            .color-scene-object[data-color-object="zookeeper"] {
+                bottom: 2%;
+                right: 1%;
+                width: clamp(100px, 28vw, 160px);
             }
         }
 
@@ -2539,12 +3116,14 @@
                     <h2 class="practice-text" id="practiceText">{% block initial_text %}bahay{% endblock %}</h2>
                 </section>
 
-                <p class="practice-feedback" id="practiceFeedback">Ready when you are.</p>
+                <div class="practice-action-shell">
+                    <p class="practice-feedback" id="practiceFeedback">Ready when you are.</p>
 
-                <div class="practice-controls">
-                    <button class="skip-btn" id="skipBtn" type="button">Skip</button>
-                    <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Read</button>
-                    <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
+                    <div class="practice-controls">
+                        <button class="skip-btn" id="skipBtn" type="button">Skip</button>
+                        <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Read</button>
+                        <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
+                    </div>
                 </div>
             </article>
         </section>

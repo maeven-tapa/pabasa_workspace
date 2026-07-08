@@ -99,15 +99,16 @@
         hard: {
             theme: "zoo",
             objects: [
-                { key: "grass", file: "grass.png", label: "Grass" },
-                { key: "entrance", file: "entrance.png", label: "Zoo Entrance" },
-                { key: "tiger", file: "tiger.png", label: "Tiger" },
+                { key: "pavement", file: "pavement.png", label: "Pavement" },
+                { key: "vines", file: "vines.png", label: "Vines" },
+                { key: "zookeeper", file: "zookeeper.png", label: "Zookeeper" },
                 { key: "elephant", file: "elephant.png", label: "Elephant" },
-                { key: "butterfly", file: "butterfly.png", label: "Butterfly" },
+                { key: "tiger", file: "tiger.png", label: "Tiger" },
             ],
         },
     });
     let colorRevealedCount = 0;
+    let colorModeCompletionReady = false;
     let colorCompletionTimer = null;
     const practiceProgressStorageKey = "pabasa_practice_progress_v1";
     const practiceProgressLevelSequence = Object.freeze([
@@ -164,6 +165,26 @@
         return `${colorAssetBase}${theme}/${file}`;
     }
 
+    function getColorSceneRevealTargetCount() {
+        return Math.min(5, getColorSceneConfig().objects.length || 5);
+    }
+
+    function updateColorModeControls() {
+        if (!isColorMode || !skipBtn || !recordBtn || !nextBtn) return;
+
+        if (colorModeCompletionReady) {
+            skipBtn.classList.add("d-none");
+            recordBtn.classList.add("d-none");
+            nextBtn.textContent = "Finish";
+            nextBtn.disabled = false;
+        } else {
+            skipBtn.classList.remove("d-none");
+            recordBtn.classList.remove("d-none");
+            nextBtn.textContent = "Next";
+            nextBtn.disabled = false;
+        }
+    }
+
     function setupColorModeScene() {
         if (!isColorMode || !colorModeStage || !colorScene || !colorSceneBackground) return;
 
@@ -187,6 +208,8 @@
         });
 
         colorRevealedCount = 0;
+        colorModeCompletionReady = false;
+        hideLevelCompleteOverlay();
         if (colorCompletionTimer) {
             window.clearTimeout(colorCompletionTimer);
             colorCompletionTimer = null;
@@ -209,6 +232,8 @@
             objectLayer.classList.add("is-revealed");
         }
         colorRevealedCount += 1;
+        colorModeCompletionReady = colorRevealedCount >= getColorSceneRevealTargetCount();
+        updateColorModeControls();
         return true;
     }
 
@@ -237,8 +262,12 @@
         return `/dashboard/practice/${mode}/?${query.toString()}`;
     }
 
+    function getPracticeProgressionMapUrl(modeContext = selectedGameMode) {
+        return `/dashboard/practice/progression/${modeContext || "word"}/`;
+    }
+
     function completeColorModeLevel() {
-        if (!isColorMode) return false;
+        if (!isColorMode || !colorModeCompletionReady) return false;
 
         const levelContext = getLevelProgressContext();
         const progressState = getPracticeProgressState();
@@ -252,7 +281,8 @@
         savePracticeProgressState(progressState);
 
         const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
-        if (nextLevel) {
+        const nextLevelIsAvailable = Boolean(nextLevel && getMaterialForLevel(nextLevel));
+        if (nextLevelIsAvailable) {
             saveLevelProgressEntry(nextLevel.mode, nextLevel.difficulty, nextLevel.level, { unlocked: true });
         }
 
@@ -260,22 +290,30 @@
             colorCompleteBurst.classList.add("is-visible");
         }
         if (practiceFeedback) {
-            practiceFeedback.textContent = nextLevel ? "Scene complete! Loading the next level..." : "Scene complete! Great work.";
+            practiceFeedback.textContent = "Scene complete! Great work.";
             practiceFeedback.classList.remove("is-warning");
             practiceFeedback.classList.add("is-success");
         }
         if (nextBtn) nextBtn.disabled = true;
         if (recordBtn) recordBtn.disabled = true;
         if (skipBtn) skipBtn.disabled = true;
+        colorModeCompletionReady = false;
 
         submitPracticeCompletion().catch(() => false);
-        colorCompletionTimer = window.setTimeout(() => {
-            if (nextLevel) {
-                window.location.href = getPracticeProgressionUrl(nextLevel);
-            } else {
-                window.location.href = `/dashboard/practice/progression/${levelContext.mode}/`;
-            }
-        }, 1500);
+        if (!nextLevelIsAvailable) {
+            window.location.assign(getPracticeProgressionMapUrl(levelContext.mode));
+            return true;
+        }
+
+        showLevelCompleteOverlay({
+            title: "Scene Complete",
+            message: nextLevelIsAvailable
+                ? "You finished the whole scene. Choose your next step."
+                : "You finished the whole scene. Great work!",
+            actionLabel: nextLevelIsAvailable ? "Next" : "View Progression",
+            actionUrl: nextLevelIsAvailable ? getPracticeProgressionUrl(nextLevel) : getPracticeProgressionMapUrl(levelContext.mode),
+            nextLevelContext: nextLevelIsAvailable ? nextLevel : null,
+        });
         return true;
     }
 
@@ -589,6 +627,7 @@
 
         practiceText.textContent = items[currentIndex];
         updateColorModeReadingText();
+        updateColorModeControls();
         const label = mode.charAt(0).toUpperCase() + mode.slice(1);
         practiceCounter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
         practiceProgress.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
@@ -777,7 +816,7 @@
         if (overlay) overlay.hidden = true;
     }
 
-    function showLevelCompleteOverlay() {
+    function showLevelCompleteOverlay(options = {}) {
         const overlay = document.getElementById("scrollsLevelOverlay");
         const title = document.getElementById("scrollsLevelOverlayTitle");
         const message = document.getElementById("scrollsLevelOverlayMessage");
@@ -785,18 +824,20 @@
         if (!overlay) return;
 
         const levelContext = getLevelProgressContext();
-        const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
+        const nextLevel = options.nextLevelContext || getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
+        const actionLabel = options.actionLabel || (nextLevel ? 'View Adventure Map' : 'Back to Practice');
+        const actionUrl = options.actionUrl || (nextLevel ? getPracticeProgressionUrl(nextLevel) : `/dashboard/practice/progression/${selectedGameMode}/`);
         if (title) {
-            title.textContent = 'Level Complete';
+            title.textContent = options.title || 'Level Complete';
         }
         if (message) {
-            message.textContent = nextLevel
+            message.textContent = options.message || (nextLevel
                 ? `You finished every card in this level. The next level will be available on the Adventure Map.`
-                : 'You finished every card in this level. Great work!';
+                : 'You finished every card in this level. Great work!');
         }
         if (action) {
-            action.href = `/dashboard/practice/progression/${selectedGameMode}/`;
-            action.textContent = nextLevel ? 'View Adventure Map' : 'Back to Practice';
+            action.href = actionUrl;
+            action.textContent = actionLabel;
         }
         overlay.hidden = false;
     }
@@ -982,6 +1023,8 @@
         itemOutcomes = Array(items.length).fill(null);
         sessionStartedAt = Date.now();
         completionSubmitted = false;
+        colorModeCompletionReady = false;
+        hideLevelCompleteOverlay();
         // No deferred Done button to clear.
         if (recordBtn) recordBtn.disabled = false;
         if (skipBtn) skipBtn.disabled = false;
@@ -1011,14 +1054,32 @@
         practiceFeedback.classList.add("is-success");
         playCoachAnimation('read');
         updateCompletionSummary();
-        if (isColorMode && revealedObject && colorRevealedCount >= Math.min(getColorSceneConfig().objects.length, items.length || 5)) {
-            completeColorModeLevel();
-            return;
+        if (isColorMode && revealedObject && colorModeCompletionReady) {
+            practiceFeedback.textContent = "All 5 scene details have been revealed. Tap Finish to complete the scene.";
+            practiceFeedback.classList.remove("is-warning");
+            practiceFeedback.classList.add("is-success");
         }
         render();
     });
 
     nextBtn?.addEventListener("click", function () {
+        if (isColorMode) {
+            if (colorModeCompletionReady) {
+                completeColorModeLevel();
+                return;
+            }
+            if (currentIndex < items.length - 1) {
+                currentIndex += 1;
+                practiceFeedback.textContent = "New item ready. Take your time.";
+                practiceFeedback.classList.remove("is-success", "is-warning");
+                playCoachAnimation('next');
+                render();
+                return;
+            }
+            showCompletion();
+            return;
+        }
+
         if (currentIndex < items.length - 1) {
             currentIndex += 1;
             practiceFeedback.textContent = "New item ready. Take your time.";
