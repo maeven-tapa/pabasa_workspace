@@ -7032,7 +7032,8 @@ def _build_ocr_image_candidates(image):
     add_candidate(grayscale)
     add_candidate(ImageOps.autocontrast(grayscale))
     add_candidate(grayscale.filter(ImageFilter.SHARPEN))
-    add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.SHARPEN)))
+    add_candidate(grayscale.filter(ImageFilter.MedianFilter(size=3)))
+    add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.MedianFilter(size=3))))
 
     width, height = image.size
     max_dim = max(width, height)
@@ -7047,18 +7048,27 @@ def _build_ocr_image_candidates(image):
             add_candidate(resized)
             add_candidate(ImageOps.autocontrast(resized))
             add_candidate(resized.filter(ImageFilter.SHARPEN))
+            add_candidate(resized.filter(ImageFilter.MedianFilter(size=3)))
         except Exception:
             continue
 
     try:
         enhancer = ImageEnhance.Contrast(image.convert('RGB'))
-        for factor in [1.2, 1.5, 2.0]:
+        for factor in [1.2, 1.5, 2.0, 2.5]:
             add_candidate(enhancer.enhance(factor))
     except Exception:
         pass
 
+    try:
+        color = image.convert('RGB')
+        for factor in [1.1, 1.3, 1.6]:
+            enhanced = ImageEnhance.Brightness(color).enhance(factor)
+            add_candidate(ImageOps.autocontrast(ImageOps.grayscale(enhanced)))
+    except Exception:
+        pass
+
     for base in [grayscale, ImageOps.autocontrast(grayscale)]:
-        for threshold in [120, 150, 180]:
+        for threshold in [120, 140, 160, 180]:
             try:
                 threshold_image = base.point(lambda p: 255 if p > threshold else 0, mode='1')
                 add_candidate(threshold_image)
@@ -7066,6 +7076,14 @@ def _build_ocr_image_candidates(image):
                 add_candidate(threshold_image.filter(ImageFilter.MaxFilter(3)))
             except Exception:
                 continue
+
+    # Create a blurred-denoised version for photo-like uploads.
+    try:
+        denoised = grayscale.filter(ImageFilter.GaussianBlur(radius=0.6))
+        add_candidate(ImageOps.autocontrast(denoised))
+        add_candidate(denoised.filter(ImageFilter.SHARPEN))
+    except Exception:
+        pass
 
     return candidates
 
