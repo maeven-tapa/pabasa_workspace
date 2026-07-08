@@ -10921,11 +10921,27 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             renderAddedItemsChips();
         }
 
+        function getActiveItemChipsContainer() {
+            const modalContainer = document.getElementById('addMaterialModal');
+            if (modalContainer) {
+                const scopedContainer = modalContainer.querySelector('#itemChipsContainer');
+                if (scopedContainer) return scopedContainer;
+            }
+            return document.getElementById('itemChipsContainer');
+        }
+
         function renderAddedItemsChips() {
-            const chipsContainer = document.getElementById('itemChipsContainer');
+            const chipsContainer = getActiveItemChipsContainer();
             if (!chipsContainer) return;
-            
-            if (currentItemsList.length === 0) {
+
+            const normalizedItems = Array.isArray(currentItemsList)
+                ? currentItemsList
+                    .map(item => (item == null ? '' : String(item).trim()))
+                    .filter(Boolean)
+                : [];
+            currentItemsList = normalizedItems;
+
+            if (normalizedItems.length === 0) {
                 chipsContainer.innerHTML = `
                     <div class="text-center w-100 text-muted small py-4 mt-2 opacity-50">
                         No items added yet.
@@ -10934,7 +10950,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
 
             const paragraphMode = currentItemsAreParagraph;
-            chipsContainer.innerHTML = currentItemsList.map((item, index) => `
+            chipsContainer.innerHTML = normalizedItems.map((item, index) => `
                 <div class="badge d-flex align-items-${paragraphMode ? 'start' : 'center'} gap-2 p-2 px-3 shadow-sm border ${paragraphMode ? 'w-100 justify-content-between text-start' : ''}"
                      style="background: #fff; color: #1e293b; border-color: #e2e8f0; border-radius: 10px; font-weight: 700; font-size: 0.85rem; border-left: 3px solid var(--dash-primary) !important; white-space: ${paragraphMode ? 'normal' : 'nowrap'};">
                     <span class="${paragraphMode ? '' : 'text-truncate'}" style="${paragraphMode ? 'max-width: calc(100% - 28px); line-height: 1.45;' : 'max-width: 150px;'}">${escapeChipText(item)}</span>
@@ -11415,12 +11431,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 resolvedItems = excerptUploadedItems(metadata.text);
             }
 
+            const normalizedItems = resolvedItems
+                .map(item => (item == null ? '' : String(item).trim()))
+                .filter(Boolean);
+
             const warningText = Array.isArray(metadata.warnings) && metadata.warnings.length > 0
                 ? metadata.warnings[0]
                 : (typeof metadata.warning_message === 'string' && metadata.warning_message.trim() ? metadata.warning_message : '');
             const hasVisibleWarning = Boolean(warningText);
 
-            if (!resolvedItems.length) {
+            if (!normalizedItems.length) {
                 if (hasVisibleWarning) {
                     setUploadStatus(warningText, 'warning');
                 } else {
@@ -11428,7 +11448,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
                 return;
             }
-            currentItemsList = resolvedItems;
+            currentItemsList = normalizedItems;
             const readingType = String(metadata.reading_type || '').toLowerCase();
             resetDetectedParagraphState(readingType === 'paragraph');
             renderAddedItemsChips();
@@ -11436,7 +11456,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 materialTitleInput.value = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
             }
             const selectionLabel = metadata.selection_mode === 'selected' ? ` using page${Array.isArray(metadata.selected_pages) && metadata.selected_pages.length === 1 ? '' : 's'} ${String(metadata.selected_pages || '').replace(/,/g, ', ')}` : '';
-            setUploadStatus(`Extracted ${resolvedItems.length} item${resolvedItems.length === 1 ? '' : 's'} from ${fileName}${selectionLabel ? ` (${selectionLabel})` : ''}.`, 'success');
+            setUploadStatus(`Extracted ${normalizedItems.length} item${normalizedItems.length === 1 ? '' : 's'} from ${fileName}${selectionLabel ? ` (${selectionLabel})` : ''}.`, 'success');
         }
 
         async function extractUploadedMaterial(file, options = {}) {
