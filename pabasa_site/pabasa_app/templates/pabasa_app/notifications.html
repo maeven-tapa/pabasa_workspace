@@ -4,6 +4,37 @@
     {% include "pabasa_app/partials/_header.html" with page_title="Notifications" page_date="" %}
 {% endblock %}
 
+{% block extra_head %}
+{% if nav_role == 'teacher' %}
+<style>
+    body.dark-theme .dash-page-head,
+    body.dark-theme .dash-card,
+    body.dark-theme #notificationsPageContainer .bg-white,
+    body.dark-theme #notificationsPageContainer .bg-light,
+    body.dark-theme #notificationsPageContainer .border,
+    body.dark-theme #notificationsPageContainer .notif-item {
+        background: #1e293b !important;
+        background-image: none !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+        box-shadow: 0 22px 44px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    body.dark-theme #notificationsPageContainer .text-secondary,
+    body.dark-theme #notificationsPageContainer .text-muted,
+    body.dark-theme .dash-page-head .text-secondary {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme #notificationsPageContainer strong,
+    body.dark-theme #notificationsPageContainer .fw-bold,
+    body.dark-theme .dash-page-head strong {
+        color: #f8fafc !important;
+    }
+</style>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <section>
     <div class="dash-page-head">

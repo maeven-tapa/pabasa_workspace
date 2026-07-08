@@ -1999,6 +1999,158 @@
             border-top-color: #38bdf8;
         }
 
+        {% if nav_role == 'teacher' %}
+        body.dark-theme .help-panel {
+            background: #1e293b !important;
+            border-color: rgba(148, 163, 184, 0.18) !important;
+            box-shadow: 0 22px 48px rgba(2, 6, 23, 0.38) !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-theme .help-panel-head {
+            border-bottom-color: rgba(148, 163, 184, 0.18) !important;
+        }
+
+        body.dark-theme .help-panel-head h2 {
+            color: #f8fafc !important;
+        }
+
+        body.dark-theme .help-panel [data-help-close] {
+            --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e2e8f0'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293A1 1 0 0 1 .293 14.293L6.586 8 .293 1.707A1 1 0 0 1 .293.293z'/%3e%3c/svg%3e");
+            background-color: rgba(15, 23, 42, 0.86) !important;
+            background-image: var(--bs-btn-close-bg) !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            background-size: 0.72rem 0.72rem !important;
+            border-color: rgba(148, 163, 184, 0.2) !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-theme .help-panel [data-help-close] i {
+            opacity: 0;
+        }
+
+        body.dark-theme .help-links li {
+            background: #0f172a !important;
+            border-color: rgba(148, 163, 184, 0.18) !important;
+            box-shadow: none !important;
+        }
+
+        body.dark-theme .help-links li:hover {
+            background: rgba(37, 99, 235, 0.18) !important;
+            border-color: rgba(96, 165, 250, 0.38) !important;
+        }
+
+        body.dark-theme .help-link-btn {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-theme .help-link-btn i {
+            color: #38bdf8 !important;
+        }
+
+        body.dark-theme .help-link-btn:hover {
+            color: #f8fafc !important;
+        }
+
+        body.dark-theme .help-content {
+            background: rgba(15, 23, 42, 0.72) !important;
+            border-top-color: rgba(148, 163, 184, 0.18) !important;
+        }
+
+        body.dark-theme .help-content p {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-theme #notificationPane,
+        body.dark-theme .notif-pane,
+        body.dark-theme .notif-pane .offcanvas-body,
+        body.dark-theme #notifContainer {
+            background: #1e293b !important;
+            background-image: none !important;
+            border-color: rgba(148, 163, 184, 0.18) !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-theme .notif-pane .offcanvas-header {
+            background: #0f172a !important;
+            background-image: none !important;
+            border-bottom-color: rgba(148, 163, 184, 0.18) !important;
+            color: #f8fafc !important;
+        }
+
+        body.dark-theme .notif-pane .offcanvas-title {
+            color: #f8fafc !important;
+        }
+
+        body.dark-theme .notif-clear-btn {
+            background: rgba(15, 23, 42, 0.86) !important;
+            border-color: rgba(96, 165, 250, 0.3) !important;
+            color: #bfdbfe !important;
+            box-shadow: none !important;
+        }
+
+        body.dark-theme .notif-clear-btn:hover,
+        body.dark-theme .notif-clear-btn:focus {
+            background: rgba(37, 99, 235, 0.24) !important;
+            border-color: rgba(96, 165, 250, 0.46) !important;
+            color: #ffffff !important;
+        }
+
+        body.dark-theme .notif-pane .btn-close {
+            --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e2e8f0'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293A1 1 0 0 1 .293 14.293L6.586 8 .293 1.707A1 1 0 0 1 .293.293z'/%3e%3c/svg%3e");
+            background-color: rgba(30, 41, 59, 0.95) !important;
+            background-image: var(--bs-btn-close-bg) !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            background-size: 0.72rem 0.72rem !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+            border-radius: 10px !important;
+            filter: none !important;
+            height: 34px;
+            opacity: 1 !important;
+            padding: 0 !important;
+            width: 34px;
+        }
+
+        body.dark-theme .notif-pane .btn-close:hover,
+        body.dark-theme .notif-pane .btn-close:focus {
+            background-color: rgba(37, 99, 235, 0.24) !important;
+            border-color: rgba(96, 165, 250, 0.44) !important;
+        }
+
+        body.dark-theme .notif-list {
+            background: transparent !important;
+        }
+
+        body.dark-theme .notif-item {
+            background: #0f172a !important;
+            background-image: none !important;
+            border-color: rgba(148, 163, 184, 0.18) !important;
+            box-shadow: 0 14px 30px rgba(2, 6, 23, 0.28) !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-theme .notif-item:hover {
+            border-color: rgba(96, 165, 250, 0.36) !important;
+            background: rgba(15, 23, 42, 0.96) !important;
+        }
+
+        body.dark-theme .notif-item p {
+            color: #94a3b8 !important;
+        }
+
+        body.dark-theme .notif-item p:first-child,
+        body.dark-theme .notif-item strong,
+        body.dark-theme .notif-time {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-theme #notifContainer .text-muted {
+            color: #94a3b8 !important;
+        }
+        {% endif %}
+
         @keyframes dashboard-loader-spin {
             to {
                 transform: rotate(360deg);

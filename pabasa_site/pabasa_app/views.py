@@ -7032,7 +7032,22 @@ def _build_ocr_image_candidates(image):
     add_candidate(grayscale)
     add_candidate(ImageOps.autocontrast(grayscale))
     add_candidate(grayscale.filter(ImageFilter.SHARPEN))
-    add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.SHARPEN)))
+    add_candidate(grayscale.filter(ImageFilter.MedianFilter(size=3)))
+    add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.MedianFilter(size=3))))
+
+    try:
+        sharpened = grayscale.filter(ImageFilter.UnsharpMask(radius=1.5, percent=200, threshold=3))
+        add_candidate(sharpened)
+        add_candidate(ImageOps.autocontrast(sharpened))
+    except Exception:
+        pass
+
+    try:
+        edge_enhanced = grayscale.filter(ImageFilter.EDGE_ENHANCE_MORE)
+        add_candidate(edge_enhanced)
+        add_candidate(ImageOps.autocontrast(edge_enhanced))
+    except Exception:
+        pass
 
     width, height = image.size
     max_dim = max(width, height)
@@ -7047,18 +7062,27 @@ def _build_ocr_image_candidates(image):
             add_candidate(resized)
             add_candidate(ImageOps.autocontrast(resized))
             add_candidate(resized.filter(ImageFilter.SHARPEN))
+            add_candidate(resized.filter(ImageFilter.MedianFilter(size=3)))
         except Exception:
             continue
 
     try:
         enhancer = ImageEnhance.Contrast(image.convert('RGB'))
-        for factor in [1.2, 1.5, 2.0]:
+        for factor in [1.2, 1.5, 2.0, 2.5]:
             add_candidate(enhancer.enhance(factor))
     except Exception:
         pass
 
+    try:
+        color = image.convert('RGB')
+        for factor in [1.1, 1.3, 1.6]:
+            enhanced = ImageEnhance.Brightness(color).enhance(factor)
+            add_candidate(ImageOps.autocontrast(ImageOps.grayscale(enhanced)))
+    except Exception:
+        pass
+
     for base in [grayscale, ImageOps.autocontrast(grayscale)]:
-        for threshold in [120, 150, 180]:
+        for threshold in [120, 140, 160, 180]:
             try:
                 threshold_image = base.point(lambda p: 255 if p > threshold else 0, mode='1')
                 add_candidate(threshold_image)
@@ -7067,12 +7091,27 @@ def _build_ocr_image_candidates(image):
             except Exception:
                 continue
 
+    # Create a blurred-denoised version for photo-like uploads.
+    try:
+        denoised = grayscale.filter(ImageFilter.GaussianBlur(radius=0.6))
+        add_candidate(ImageOps.autocontrast(denoised))
+        add_candidate(denoised.filter(ImageFilter.SHARPEN))
+    except Exception:
+        pass
+
+    try:
+        deskewed = ImageOps.autocontrast(grayscale)
+        deskewed = deskewed.filter(ImageFilter.MaxFilter(3))
+        add_candidate(deskewed)
+    except Exception:
+        pass
+
     return candidates
 
 
 def _extract_text_from_image(upload):
     try:
-        from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
     except ImportError as exc:
         raise RuntimeError('Image OCR requires Pillow to be installed.') from exc
 
@@ -7082,120 +7121,151 @@ def _extract_text_from_image(upload):
         raise RuntimeError('Image OCR requires pytesseract to be installed.') from exc
 
     tesseract_path = _resolve_tesseract_executable(pytesseract)
-    if not tesseract_path:
-        logger.warning('Tesseract executable not found; image OCR will be attempted with system Tesseract')
-
     if tesseract_path:
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
-    # Debug info: report which tesseract cmd will be used
-    try:
-        logger.debug('OCR init: pytesseract.tesseract_cmd=%s', getattr(pytesseract.pytesseract, 'tesseract_cmd', None))
-    except Exception:
-        logger.debug('OCR init: could not read pytesseract.tesseract_cmd')
 
     upload.seek(0)
     try:
         with Image.open(BytesIO(upload.read())) as image:
             image = ImageOps.exif_transpose(image)
-            if image.mode in {'RGBA', 'LA', 'P'}:
-                background = Image.new('RGBA', image.size, (255, 255, 255, 255))
-                image = Image.alpha_composite(background, image.convert('RGBA')).convert('RGB')
-            else:
+            if image.mode not in {'RGB', 'L'}:
                 image = image.convert('RGB')
 
-            candidates = _build_ocr_image_candidates(image)
-            configs = [
-                '--oem 3 --psm 6',
-                '--oem 3 --psm 11',
-                '--oem 3 --psm 4',
-                '--oem 3 --psm 12',
-                '--oem 3 --psm 3',
-                '--oem 3 --psm 7',
-                '--oem 3 --psm 8',
-            ]
+            candidates = []
 
-            best_text = ''
-            best_confidence = 0
-            best_score = -1
-            for candidate in candidates:
-                for config in configs:
-                    try:
-                        text = pytesseract.image_to_string(candidate, config=config, lang='eng').strip()
-                    except Exception as exc:
-                        logger.debug('pytesseract.image_to_string raised: %s', exc)
-                        continue
+            def add_candidate(img):
+                if img is None:
+                    return
+                try:
+                    if img.mode not in {'RGB', 'L'}:
+                        img = img.convert('RGB')
+                except Exception:
+                    pass
+                if img not in candidates:
+                    candidates.append(img)
 
-                    cleaned = re.sub(r'\s+', ' ', text).strip()
-                    if not cleaned:
-                        continue
+            add_candidate(image)
 
-                    # Collect confidence info where possible
-                    try:
-                        data = pytesseract.image_to_data(
-                            candidate,
-                            config=config,
-                            lang='eng',
-                            output_type=getattr(pytesseract, 'Output', None).DICT if getattr(pytesseract, 'Output', None) else None,
-                        )
-                        confidences = [int(conf) for conf in data.get('conf', []) if str(conf).strip().isdigit()]
-                        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
-                    except Exception:
-                        confidences = []
-                        avg_confidence = 0
-
-                    score = avg_confidence / 100.0
-                    score += min(len(cleaned.split()), 12) * 0.01
-                    if _looks_like_ocr_text(cleaned):
-                        score += 0.2
-
-                    try:
-                        logger.debug('OCR candidate: words=%d avg_conf=%s config=%s text=%r', len(cleaned.split()), avg_confidence, config, cleaned[:200])
-                    except Exception:
-                        logger.debug('OCR candidate summary could not be produced')
-
-                    if score > best_score or (score == best_score and len(cleaned) > len(best_text)):
-                        best_text = cleaned
-                        best_confidence = avg_confidence
-                        best_score = score
-
-                    if _looks_like_ocr_text(cleaned) and (avg_confidence >= 60 or len(cleaned.split()) >= 3 or len(cleaned) >= 12):
-                        logger.info('OCR accepted candidate with avg_conf=%s config=%s', avg_confidence, config)
-                        return cleaned
-
-            if best_text and _looks_like_ocr_text(best_text):
-                logger.info('OCR returning best_text with avg_conf=%s len=%d', best_confidence, len(best_text.split()))
-                return best_text
-
-            # Last-resort fallback: if Tesseract returned any non-empty text, use it.
-            if best_text and best_text.strip():
-                logger.info('OCR returning last non-empty candidate text from runtime fallback')
-                return best_text.strip()
+            grayscale = ImageOps.grayscale(image)
+            add_candidate(grayscale)
+            add_candidate(ImageOps.autocontrast(grayscale))
+            add_candidate(grayscale.filter(ImageFilter.SHARPEN))
+            add_candidate(grayscale.filter(ImageFilter.MedianFilter(size=3)))
+            add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.MedianFilter(size=3))))
 
             try:
-                fallback = ImageOps.grayscale(image).point(lambda p: 255 if p > 120 else 0, mode='1')
-                fallback_text = pytesseract.image_to_string(fallback, config='--oem 3 --psm 6', lang='eng').strip()
-                fallback_cleaned = re.sub(r'\s+', ' ', fallback_text).strip()
-                if fallback_cleaned and _looks_like_ocr_text(fallback_cleaned):
-                    logger.info('OCR fallback returned text')
-                    return fallback_cleaned
-            except Exception:
-                logger.debug('OCR fallback failed', exc_info=True)
-
-            try:
-                inverted = ImageOps.invert(ImageOps.grayscale(image))
-                inverted_text = pytesseract.image_to_string(inverted, config='--oem 3 --psm 6', lang='eng').strip()
-                inverted_cleaned = re.sub(r'\s+', ' ', inverted_text).strip()
-                if inverted_cleaned and _looks_like_ocr_text(inverted_cleaned):
-                    return inverted_cleaned
+                sharpened = grayscale.filter(ImageFilter.UnsharpMask(radius=1.5, percent=200, threshold=3))
+                add_candidate(sharpened)
+                add_candidate(ImageOps.autocontrast(sharpened))
             except Exception:
                 pass
 
-            return ''
+            try:
+                edge_enhanced = grayscale.filter(ImageFilter.EDGE_ENHANCE_MORE)
+                add_candidate(edge_enhanced)
+                add_candidate(ImageOps.autocontrast(edge_enhanced))
+            except Exception:
+                pass
+
+            width, height = image.size
+            max_dim = max(width, height)
+            for scale in [1.25, 1.5, 2.0, 2.5]:
+                if max_dim * scale > 4000:
+                    continue
+                try:
+                    resized = grayscale.resize(
+                        (max(1, int(width * scale)), max(1, int(height * scale))),
+                        resample=getattr(Image, 'Resampling', Image).LANCZOS,
+                    )
+                    add_candidate(resized)
+                    add_candidate(ImageOps.autocontrast(resized))
+                    add_candidate(resized.filter(ImageFilter.SHARPEN))
+                except Exception:
+                    continue
+
+            try:
+                color = image.convert('RGB')
+                enhancer = ImageEnhance.Contrast(color)
+                for factor in [1.2, 1.5, 2.0, 2.5]:
+                    add_candidate(enhancer.enhance(factor))
+            except Exception:
+                pass
+
+            for base in [grayscale, ImageOps.autocontrast(grayscale)]:
+                for threshold in [120, 140, 160, 180]:
+                    try:
+                        threshold_image = base.point(lambda p: 255 if p > threshold else 0, mode='1')
+                        add_candidate(threshold_image)
+                        add_candidate(ImageOps.invert(threshold_image))
+                    except Exception:
+                        continue
+
+            best_text = ''
+            for candidate in candidates:
+                try:
+                    candidate_text = pytesseract.image_to_string(candidate, config='--psm 6').strip()
+                except Exception:
+                    try:
+                        candidate_text = pytesseract.image_to_string(candidate).strip()
+                    except Exception:
+                        continue
+
+                cleaned = re.sub(r'\s+', ' ', candidate_text).strip()
+                if not cleaned:
+                    continue
+                if len(cleaned) > len(best_text):
+                    best_text = cleaned
+
+            return best_text
     except UnidentifiedImageError:
         return ''
     except Exception:
         logger.exception('Image OCR failed for uploaded material')
         return ''
+
+
+def _fallback_material_items_from_text(text):
+    if not text:
+        return []
+
+    raw_text = str(text).strip()
+    if not raw_text:
+        return []
+
+    cleaned = re.sub(r'\s+', ' ', raw_text)
+    if not cleaned:
+        return []
+
+    paragraphs = [p.strip() for p in re.split(r'\n\s*\n', raw_text) if p.strip()]
+    if len(paragraphs) > 1:
+        return [re.sub(r'\s+', ' ', p).strip() for p in paragraphs[:80] if re.sub(r'\s+', ' ', p).strip()]
+
+    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+    if len(lines) > 1:
+        grouped = []
+        current = []
+        for line in lines:
+            if len(current) and len(line.split()) <= 3 and len(current[-1].split()) <= 3:
+                current.append(line)
+            else:
+                if current:
+                    grouped.append(' '.join(current))
+                current = [line]
+        if current:
+            grouped.append(' '.join(current))
+        if len(grouped) > 1:
+            return grouped[:80]
+        return [re.sub(r'\s+', ' ', ' '.join(lines)).strip()]
+
+    sentence_items = [segment.strip() for segment in re.split(r'(?<=[.!?])\s+', raw_text) if segment.strip()]
+    if len(sentence_items) > 1:
+        return sentence_items[:80]
+
+    words = re.findall(r"\b[\w']+\b", cleaned, flags=re.UNICODE)
+    if words:
+        return words[:80]
+
+    return [cleaned]
 
 
 def _build_extracted_material_items(text, requested_reading_type=''):
@@ -7276,7 +7346,7 @@ def extract_reading_material_file(request):
             try:
                 extracted_text = _extract_text_from_image(upload)
                 if not extracted_text:
-                    extraction_warnings.append('No text could be detected in this image. This may be because the image is not clear or Tesseract OCR is not properly configured.')
+                    logger.info('Image extraction produced no text for %s', filename)
                 else:
                     logger.info('Image extraction succeeded for %s with %d characters', filename, len(extracted_text))
             except Exception as e:
@@ -7342,28 +7412,42 @@ def extract_reading_material_file(request):
             tcmd = None
         logger.debug('Material extraction: filename=%s ext=%s upload_size=%s tesseract_cmd=%s warnings=%s text_len=%d', filename, ext, getattr(upload, 'size', None), tcmd, extraction_warnings, len(text) if text else 0)
         
-        detected_type, items = _build_extracted_material_items(text, '')
+        try:
+            detected_type, items = _build_extracted_material_items(text, '')
+        except Exception as build_exc:
+            logger.exception('Material item building failed: %s', build_exc)
+            extraction_warnings.append('The extracted text could not be processed into reading items. Please try a different file or a clearer image.')
+            detected_type = _detect_material_type(text, '')
+            items = []
+
+        if not items and text:
+            fallback_items = _fallback_material_items_from_text(text)
+            if fallback_items:
+                items = fallback_items
+                if not extraction_warnings:
+                    extraction_warnings.append('The extracted text could not be converted into reading items. Please try a different file or a clearer image.')
+
+        warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
         if not items:
-            warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
             if text:
-                logger.warning(f'Extraction produced text but no items: {text[:100]}...')
-                # Debug capture: include a longer sample for investigation
+                logger.warning('Extraction produced text but no items: %s...', text[:100])
                 logger.debug('Extraction produced text (long sample): %s', text[:2000])
-                if extraction_warnings:
-                    return JsonResponse({
-                        'success': True,
-                        'items': [],
-                        'text': text[:12000],
-                        'filename': filename,
-                        'reading_type': detected_type,
-                        'page_count': page_count,
-                        'selected_pages': selected_pages_list,
-                        'selection_mode': selection_mode,
-                        'warnings': extraction_warnings,
-                        'warning_message': warning_msg,
-                    })
-                return JsonResponse({'success': False, 'error': f'No readable text was found that could be split into {detected_type}s.'}, status=400)
-            elif extraction_warnings:
+                if not warning_msg:
+                    warning_msg = 'The extracted text could not be converted into reading items. Please try a different file or a clearer image.'
+                    extraction_warnings.append(warning_msg)
+                return JsonResponse({
+                    'success': True,
+                    'items': [],
+                    'text': text[:12000],
+                    'filename': filename,
+                    'reading_type': detected_type,
+                    'page_count': page_count,
+                    'selected_pages': selected_pages_list,
+                    'selection_mode': selection_mode,
+                    'warnings': extraction_warnings,
+                    'warning_message': warning_msg,
+                })
+            if extraction_warnings:
                 return JsonResponse({
                     'success': True,
                     'items': [],
@@ -7376,9 +7460,19 @@ def extract_reading_material_file(request):
                     'warnings': extraction_warnings,
                     'warning_message': warning_msg,
                 })
-            else:
-                return JsonResponse({'success': False, 'error': 'No readable text was found in that file. Please ensure the file contains text content.'}, status=400)
-        
+            return JsonResponse({
+                'success': True,
+                'items': [],
+                'text': '',
+                'filename': filename,
+                'reading_type': detected_type,
+                'page_count': page_count,
+                'selected_pages': selected_pages_list,
+                'selection_mode': selection_mode,
+                'warnings': [],
+                'warning_message': '',
+            })
+
         return JsonResponse({
             'success': True,
             'items': items,
@@ -7394,7 +7488,21 @@ def extract_reading_material_file(request):
         return JsonResponse({'success': False, 'error': 'That DOCX file could not be read.'}, status=400)
     except Exception as e:
         logger.error('Material file extraction failed: %s', e, exc_info=True)
-        return JsonResponse({'success': False, 'error': 'Could not extract text from that file. Please try a different file.'}, status=500)
+        warning_msg = '. '.join(extraction_warnings) if extraction_warnings else 'Could not extract text from that file. Please try a different file or a clearer image.'
+        if not extraction_warnings:
+            extraction_warnings.append(warning_msg)
+        return JsonResponse({
+            'success': True,
+            'items': [],
+            'text': '',
+            'filename': filename,
+            'reading_type': 'word',
+            'page_count': page_count,
+            'selected_pages': selected_pages_list,
+            'selection_mode': selection_mode,
+            'warnings': extraction_warnings,
+            'warning_message': warning_msg,
+        })
 
 
 def _detect_material_type(text, requested_reading_type=''):

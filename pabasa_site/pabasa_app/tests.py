@@ -18,7 +18,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text
 from .weekly_digest import send_weekly_digest
 
 
@@ -226,7 +226,7 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertEqual(data["items"], ["Page 2"])
 
     @patch("pabasa_app.views._extract_text_from_image", return_value="")
-    def test_extract_endpoint_returns_empty_items_when_image_ocr_detects_no_text(self, mock_extract_text_from_image):
+    def test_extract_endpoint_returns_empty_items_without_warning_when_image_ocr_detects_no_text(self, mock_extract_text_from_image):
         image_file = SimpleUploadedFile(
             "scan.png",
             b"not-a-real-image",
@@ -243,8 +243,79 @@ class MaterialUploadExtractionTests(TestCase):
         data = response.json()
         self.assertTrue(data["success"])
         self.assertEqual(data["items"], [])
-        self.assertTrue(any("No text could be detected" in warning for warning in data.get("warnings", [])))
+        self.assertEqual(data.get("warnings", []), [])
+        self.assertEqual(data.get("warning_message", ""), "")
         mock_extract_text_from_image.assert_called_once()
+
+    @patch("pabasa_app.views._extract_text_from_image", return_value="Alpha beta gamma")
+    @patch("pabasa_app.views._build_extracted_material_items", return_value=("word", []))
+    def test_extract_endpoint_returns_warning_response_when_extracted_text_cannot_be_split(self, mock_build_extracted_material_items, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["items"], ["Alpha", "beta", "gamma"])
+        self.assertTrue(any("could not be converted" in warning.lower() for warning in data.get("warnings", [])))
+        mock_extract_text_from_image.assert_called_once()
+        mock_build_extracted_material_items.assert_called_once()
+
+    @patch("pabasa_app.views._build_extracted_material_items", side_effect=RuntimeError("boom"))
+    def test_extract_endpoint_returns_warning_response_when_item_building_fails(self, mock_build_extracted_material_items):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["items"], [])
+        self.assertTrue(any("could not be processed" in warning.lower() for warning in data.get("warnings", [])))
+        mock_build_extracted_material_items.assert_called_once()
+
+    @patch("pabasa_app.views._extract_text_from_image", return_value="Alpha beta gamma")
+    @patch("pabasa_app.views._build_extracted_material_items", return_value=("word", []))
+    def test_extract_endpoint_falls_back_to_text_items_when_server_returns_no_items(self, mock_build_extracted_material_items, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["items"], ["Alpha", "beta", "gamma"])
+        mock_extract_text_from_image.assert_called_once()
+        mock_build_extracted_material_items.assert_called_once()
+
+    def test_fallback_material_items_preserve_paragraph_blocks(self):
+        text = "First line\nSecond line\n\nThird line"
+        self.assertEqual(_fallback_material_items_from_text(text), ["First line Second line", "Third line"])
 
 
 class PrincipalReportsExportTests(TestCase):

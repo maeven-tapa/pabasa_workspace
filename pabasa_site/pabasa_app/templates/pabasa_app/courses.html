@@ -402,22 +402,250 @@
     }
 
     body.dark-theme .course-dashboard-card {
-        background: #111827;
-        border-color: rgba(148, 163, 184, 0.18);
-        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.32);
+        background: #1e293b !important;
+        background-image: none !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 22px 44px rgba(0, 0, 0, 0.35) !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .course-dashboard-card:hover {
+        background: #1e293b !important;
+        border-color: rgba(56, 189, 248, 0.28) !important;
+        box-shadow: 0 24px 52px rgba(0, 0, 0, 0.42) !important;
+    }
+
+    body.dark-theme .course-card-badges {
+        background: transparent !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .course-card-header-actions {
+        background: rgba(15, 23, 42, 0.72) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 999px;
+        padding: 0.25rem;
     }
 
     body.dark-theme .course-card-title,
     body.dark-theme .course-card-metric strong {
-        color: #f8fafc;
+        color: #f8fafc !important;
     }
 
     body.dark-theme .course-card-subtitle {
-        color: #cbd5e1;
+        color: #cbd5e1 !important;
     }
 
     body.dark-theme .course-card-divider {
-        background: rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    body.dark-theme .course-code-pill,
+    body.dark-theme .class-code-badge,
+    body.dark-theme .readings-count-badge,
+    body.dark-theme .course-modal-code-badge {
+        background: rgba(56, 189, 248, 0.12) !important;
+        border-color: rgba(125, 211, 252, 0.22) !important;
+        color: #7dd3fc !important;
+    }
+
+    body.dark-theme .course-status-pill {
+        background: rgba(34, 197, 94, 0.12) !important;
+        border-color: rgba(134, 239, 172, 0.22) !important;
+        color: #86efac !important;
+    }
+
+    body.dark-theme .course-status-dot {
+        background: #22c55e !important;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18) !important;
+    }
+
+    body.dark-theme .course-card-delete-btn,
+    body.dark-theme .class-card-delete-btn,
+    body.dark-theme .material-btn.delete {
+        background: rgba(239, 68, 68, 0.12) !important;
+        border-color: rgba(248, 113, 113, 0.22) !important;
+        color: #fca5a5 !important;
+    }
+
+    body.dark-theme .course-card-delete-btn:hover,
+    body.dark-theme .class-card-delete-btn:hover,
+    body.dark-theme .material-btn.delete:hover {
+        background: rgba(239, 68, 68, 0.2) !important;
+        border-color: rgba(248, 113, 113, 0.35) !important;
+        color: #fecaca !important;
+    }
+
+    body.dark-theme .course-card-metrics,
+    body.dark-theme .class-card-stats,
+    body.dark-theme .overview-stats-grid,
+    body.dark-theme .class-banner-stats {
+        background: rgba(15, 23, 42, 0.42) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: var(--radius-lg);
+        padding: 0.7rem 0.4rem;
+    }
+
+    body.dark-theme .course-card-metric,
+    body.dark-theme .class-stat,
+    body.dark-theme .class-banner-stat,
+    body.dark-theme .student-stat,
+    body.dark-theme .course-report-metric,
+    body.dark-theme .student-metric-badge {
+        background: rgba(15, 23, 42, 0.66) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .course-card-metric i,
+    body.dark-theme .material-leading-icon,
+    body.dark-theme .course-modal-icon {
+        color: #38bdf8 !important;
+    }
+
+    body.dark-theme .course-card-metric span,
+    body.dark-theme .class-stat span,
+    body.dark-theme .class-banner-stat span,
+    body.dark-theme .course-modal-subtitle,
+    body.dark-theme .class-banner-subject,
+    body.dark-theme .class-banner-meta,
+    body.dark-theme .reading-section-note {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .course-card-footer {
+        background: rgba(15, 23, 42, 0.64) !important;
+        border-top-color: rgba(255, 255, 255, 0.1) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .course-card-footer .ccf-icon,
+    body.dark-theme .course-card-footer:hover .ccf-arrow {
+        color: #38bdf8 !important;
+    }
+
+    body.dark-theme .course-card-footer .ccf-label {
+        color: #f8fafc !important;
+    }
+
+    body.dark-theme .course-card-footer .ccf-arrow {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .course-card-footer:hover {
+        background: rgba(56, 189, 248, 0.12) !important;
+    }
+
+    body.dark-theme .class-card-full,
+    body.dark-theme .empty-state,
+    body.dark-theme .course-modal-content,
+    body.dark-theme .course-modal-header,
+    body.dark-theme .course-sidebar,
+    body.dark-theme .course-tab-content,
+    body.dark-theme .readings-section,
+    body.dark-theme .material-card-modern,
+    body.dark-theme .assessment-card,
+    body.dark-theme .student-card-modern,
+    body.dark-theme .students-empty-card,
+    body.dark-theme .readings-empty,
+    body.dark-theme .assessment-empty,
+    body.dark-theme .stream-empty,
+    body.dark-theme .course-report-preview,
+    body.dark-theme .course-report-recommendation,
+    body.dark-theme .assist-queue-panel {
+        background: #1e293b !important;
+        background-image: none !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+        box-shadow: 0 22px 44px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    body.dark-theme #addMaterialModal .modal-content,
+    body.dark-theme #materialUploadSelectModal .modal-content,
+    body.dark-theme #addCourseStudentModal .modal-content,
+    body.dark-theme #editMaterialModal .modal-content,
+    body.dark-theme #viewMaterialModal .modal-content,
+    body.dark-theme #deleteConfirmModal .modal-content,
+    body.dark-theme .system-modal {
+        background: #1e293b !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme #addMaterialModal .rounded-4,
+    body.dark-theme #addMaterialModal .rounded-3,
+    body.dark-theme #otherMaterialPanel,
+    body.dark-theme #otherMaterialTableWrapper,
+    body.dark-theme #itemChipsContainer,
+    body.dark-theme .table-responsive,
+    body.dark-theme .bg-white,
+    body.dark-theme .bg-light,
+    body.dark-theme .bg-light-subtle,
+    body.dark-theme .input-group-text,
+    body.dark-theme .table,
+    body.dark-theme .table > :not(caption) > * > * {
+        background: #0f172a !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+        color: #e2e8f0 !important;
+    }
+
+    body.dark-theme .table thead,
+    body.dark-theme .table th {
+        background: rgba(15, 23, 42, 0.95) !important;
+        color: #cbd5e1 !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
+    }
+
+    body.dark-theme .form-control,
+    body.dark-theme .form-select,
+    body.dark-theme textarea {
+        background: #0f172a !important;
+        border-color: rgba(255, 255, 255, 0.16) !important;
+        color: #f1f5f9 !important;
+    }
+
+    body.dark-theme .form-control::placeholder,
+    body.dark-theme textarea::placeholder {
+        color: #94a3b8 !important;
+        opacity: 1;
+    }
+
+    body.dark-theme .text-dark,
+    body.dark-theme .form-label,
+    body.dark-theme h1,
+    body.dark-theme h2,
+    body.dark-theme h3,
+    body.dark-theme h4,
+    body.dark-theme h5,
+    body.dark-theme h6,
+    body.dark-theme strong,
+    body.dark-theme b {
+        color: #f8fafc !important;
+    }
+
+    body.dark-theme .text-muted,
+    body.dark-theme .text-secondary,
+    body.dark-theme .small,
+    body.dark-theme small {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-theme .material-type-badge,
+    body.dark-theme .shared-material-badge,
+    body.dark-theme .course-report-pill {
+        background: rgba(56, 189, 248, 0.12) !important;
+        border-color: rgba(125, 211, 252, 0.22) !important;
+        color: #7dd3fc !important;
+    }
+
+    body.dark-theme .btn-outline-secondary,
+    body.dark-theme .btn-outline-primary,
+    body.dark-theme .btn-light,
+    body.dark-theme .btn-secondary,
+    body.dark-theme .material-btn {
+        background: rgba(15, 23, 42, 0.72) !important;
+        border-color: rgba(125, 211, 252, 0.22) !important;
+        color: #7dd3fc !important;
     }
 
     .class-card-delete-btn {
@@ -5152,6 +5380,587 @@
 #otherMaterialTableWrapper .use-other-material-btn:focus {
     background: linear-gradient(135deg, rgba(59,130,246,0.9), rgba(191,219,254,0.9));
     color: #0f172a;
+}
+body.dark-theme .course-dashboard-card,
+body.dark-theme .course-card-header,
+body.dark-theme .course-card-body,
+body.dark-theme .course-card-footer,
+body.dark-theme .course-card-metrics,
+body.dark-theme .course-card-metric,
+body.dark-theme .course-card-badges,
+body.dark-theme .course-card-header-actions {
+    background-color: #1e293b !important;
+    background-image: none !important;
+    border-color: rgba(148, 163, 184, 0.16) !important;
+    color: #e2e8f0 !important;
+}
+body.dark-theme .course-card-footer,
+body.dark-theme .course-card-metrics,
+body.dark-theme .course-card-header-actions {
+    background-color: rgba(15, 23, 42, 0.68) !important;
+}
+body.dark-theme .course-dashboard-card:hover,
+body.dark-theme .course-card-footer:hover {
+    background-color: #1e293b !important;
+    border-color: rgba(96, 165, 250, 0.34) !important;
+    box-shadow: 0 24px 52px rgba(2, 6, 23, 0.44) !important;
+}
+body.dark-theme .course-card-title,
+body.dark-theme .course-card-metric strong,
+body.dark-theme .course-card-footer .ccf-label {
+    color: #f8fafc !important;
+}
+body.dark-theme .course-card-subtitle,
+body.dark-theme .course-card-metric span,
+body.dark-theme .course-card-footer .ccf-arrow {
+    color: #94a3b8 !important;
+}
+body.dark-theme .course-card-metric i,
+body.dark-theme .course-card-footer .ccf-icon,
+body.dark-theme .course-card-footer:hover .ccf-arrow {
+    color: #38bdf8 !important;
+}
+body.dark-theme .course-card-divider {
+    background: rgba(148, 163, 184, 0.18) !important;
+}
+body.dark-theme .course-code-pill,
+body.dark-theme .class-code-badge,
+body.dark-theme .readings-count-badge,
+body.dark-theme .course-modal-code-badge {
+    background: rgba(59, 130, 246, 0.16) !important;
+    border-color: rgba(96, 165, 250, 0.34) !important;
+    color: #bfdbfe !important;
+}
+body.dark-theme .course-status-pill {
+    background: rgba(34, 197, 94, 0.14) !important;
+    border-color: rgba(74, 222, 128, 0.32) !important;
+    color: #bbf7d0 !important;
+}
+body.dark-theme .course-card-delete-btn {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: rgba(248, 113, 113, 0.34) !important;
+    color: #fecaca !important;
+}
+body.dark-theme .other-material-card,
+body.dark-theme .other-material-card .material-card-status,
+body.dark-theme #addMaterialModal .rounded-4,
+body.dark-theme #addMaterialModal .rounded-3,
+body.dark-theme #addMaterialModal #itemChipsContainer,
+body.dark-theme #addMaterialModal .badge[style*="background: #fff"],
+body.dark-theme .student-stat[style*="background:#fff"],
+body.dark-theme .bg-light[style*="min-height"] {
+    background: #0f172a !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+    color: #e2e8f0 !important;
+    box-shadow: none !important;
+}
+body.dark-theme #addMaterialModal .badge[style*="background: #fff"] span,
+body.dark-theme .other-material-card strong,
+body.dark-theme .other-material-card .material-card-title {
+    color: #f8fafc !important;
+}
+body.dark-theme .other-material-card .material-card-meta,
+body.dark-theme .other-material-card .material-card-status {
+    color: #94a3b8 !important;
+}
+
+/* Final dark-mode pass for the opened Teacher Course detail experience. */
+body.dark-theme #courseDetailModal .course-modal-content,
+body.dark-theme #courseDetailModal .course-modal-header,
+body.dark-theme #courseDetailModal .course-modal-body,
+body.dark-theme #courseDetailModal .course-sidebar,
+body.dark-theme #courseDetailModal .course-tab-content,
+body.dark-theme #courseDetailModal .workspace-hero,
+body.dark-theme #courseDetailModal .section-panel,
+body.dark-theme #courseDetailModal #materialsPane .section-panel.assigned-section,
+body.dark-theme #courseDetailModal .overview-stat-card,
+body.dark-theme #courseDetailModal .students-shell,
+body.dark-theme #courseDetailModal .students-header-card,
+body.dark-theme #courseDetailModal .students-toolbar,
+body.dark-theme #courseDetailModal .assessment-toolbar,
+body.dark-theme #courseDetailModal .assessment-summary-card,
+body.dark-theme #courseDetailModal .assessment-card,
+body.dark-theme #courseDetailModal .student-card-modern,
+body.dark-theme #courseDetailModal .student-metric-card,
+body.dark-theme #courseDetailModal .readings-empty,
+body.dark-theme #courseDetailModal .assessment-empty,
+body.dark-theme #courseDetailModal .students-empty-card,
+body.dark-theme #courseDetailModal .reading-preview-list,
+body.dark-theme #courseDetailModal .assist-queue-panel,
+body.dark-theme #courseDetailModal .assist-transition-summary div {
+    background: #1e293b !important;
+    background-image: none !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+    box-shadow: 0 18px 38px rgba(2, 6, 23, 0.34) !important;
+    color: #e2e8f0 !important;
+}
+
+body.dark-theme #courseDetailModal .course-modal-header,
+body.dark-theme #courseDetailModal .students-toolbar,
+body.dark-theme #courseDetailModal .assessment-toolbar,
+body.dark-theme #courseDetailModal .student-metric-card,
+body.dark-theme #courseDetailModal .assessment-metric-chip,
+body.dark-theme #courseDetailModal .assessment-search,
+body.dark-theme #courseDetailModal .students-search,
+body.dark-theme #courseDetailModal .course-side-nav .nav-link,
+body.dark-theme #courseDetailModal .overview-stat-icon,
+body.dark-theme #courseDetailModal .material-leading-icon,
+body.dark-theme #courseDetailModal .student-avatar-large,
+body.dark-theme #courseDetailModal .assessment-icon,
+body.dark-theme #courseDetailModal .assist-student-option,
+body.dark-theme #courseDetailModal .assist-queue-current {
+    background: #0f172a !important;
+    background-image: none !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+    color: #e2e8f0 !important;
+    box-shadow: none !important;
+}
+
+body.dark-theme #courseDetailModal .course-modal-header::before {
+    background: linear-gradient(90deg, #38bdf8, #2563eb) !important;
+}
+
+body.dark-theme #courseDetailModal .course-sidebar {
+    border-right-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+body.dark-theme #courseDetailModal .course-side-nav .nav-link:hover {
+    background: rgba(37, 99, 235, 0.2) !important;
+    border-color: rgba(96, 165, 250, 0.36) !important;
+    color: #f8fafc !important;
+}
+
+body.dark-theme #courseDetailModal .course-side-nav .nav-link.active {
+    background: linear-gradient(135deg, #2563eb, #38bdf8) !important;
+    border-color: rgba(147, 197, 253, 0.44) !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme #courseDetailModal #materialsPane .course-readings-header {
+    border-bottom-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+body.dark-theme #courseDetailModal .material-card-modern,
+body.dark-theme #courseDetailModal #materialsPane .material-card-modern.course-readings-card,
+body.dark-theme #courseDetailModal .material-card-modern.practice-card {
+    background: #0f172a !important;
+    background-image: none !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+    box-shadow: 0 14px 30px rgba(2, 6, 23, 0.32) !important;
+    color: #e2e8f0 !important;
+}
+
+body.dark-theme #courseDetailModal .material-card-modern:hover,
+body.dark-theme #courseDetailModal #materialsPane .material-card-modern.course-readings-card:hover,
+body.dark-theme #courseDetailModal .assessment-card:hover,
+body.dark-theme #courseDetailModal .student-card-modern:hover {
+    background: rgba(15, 23, 42, 0.96) !important;
+    border-color: rgba(96, 165, 250, 0.38) !important;
+    box-shadow: 0 20px 42px rgba(2, 6, 23, 0.44) !important;
+}
+
+body.dark-theme #courseDetailModal .course-modal-title,
+body.dark-theme #courseDetailModal .workspace-hero h5,
+body.dark-theme #courseDetailModal .overview-stat-value,
+body.dark-theme #courseDetailModal .reading-section-title,
+body.dark-theme #courseDetailModal .material-title,
+body.dark-theme #courseDetailModal .assessment-title,
+body.dark-theme #courseDetailModal .assessment-summary-card strong,
+body.dark-theme #courseDetailModal .assessment-metric-chip strong,
+body.dark-theme #courseDetailModal .student-name,
+body.dark-theme #courseDetailModal .student-metric-badge,
+body.dark-theme #courseDetailModal .assist-queue-head,
+body.dark-theme #courseDetailModal .assist-transition-summary strong,
+body.dark-theme #courseDetailModal h1,
+body.dark-theme #courseDetailModal h2,
+body.dark-theme #courseDetailModal h3,
+body.dark-theme #courseDetailModal h4,
+body.dark-theme #courseDetailModal h5,
+body.dark-theme #courseDetailModal h6,
+body.dark-theme #courseDetailModal strong,
+body.dark-theme #courseDetailModal label {
+    color: #f8fafc !important;
+}
+
+body.dark-theme #courseDetailModal .course-modal-subtitle,
+body.dark-theme #courseDetailModal .workspace-hero p,
+body.dark-theme #courseDetailModal .overview-stat-label,
+body.dark-theme #courseDetailModal .class-banner-subject,
+body.dark-theme #courseDetailModal .class-banner-meta,
+body.dark-theme #courseDetailModal .class-banner-stat span,
+body.dark-theme #courseDetailModal .reading-section-note,
+body.dark-theme #courseDetailModal .material-preview,
+body.dark-theme #courseDetailModal .material-meta,
+body.dark-theme #courseDetailModal .assessment-summary-card span,
+body.dark-theme #courseDetailModal .assessment-meta,
+body.dark-theme #courseDetailModal .assessment-card-footer .assessment-date,
+body.dark-theme #courseDetailModal .assessment-metric-chip .metric-label,
+body.dark-theme #courseDetailModal .students-header-copy,
+body.dark-theme #courseDetailModal .student-detail-line,
+body.dark-theme #courseDetailModal .student-metric-label,
+body.dark-theme #courseDetailModal .assist-student-option small,
+body.dark-theme #courseDetailModal .assist-queue-head span,
+body.dark-theme #courseDetailModal .assist-queue-row,
+body.dark-theme #courseDetailModal .assist-queue-row em,
+body.dark-theme #courseDetailModal .assist-transition-summary span,
+body.dark-theme #courseDetailModal .text-muted,
+body.dark-theme #courseDetailModal .text-secondary,
+body.dark-theme #courseDetailModal small {
+    color: #94a3b8 !important;
+}
+
+body.dark-theme #courseDetailModal .course-modal-code-badge,
+body.dark-theme #courseDetailModal .readings-count-badge,
+body.dark-theme #courseDetailModal .students-count-pill,
+body.dark-theme #courseDetailModal .assessment-id-pill,
+body.dark-theme #courseDetailModal .material-type-badge,
+body.dark-theme #courseDetailModal .shared-material-badge {
+    background: rgba(59, 130, 246, 0.16) !important;
+    border: 1px solid rgba(96, 165, 250, 0.32) !important;
+    color: #bfdbfe !important;
+}
+
+body.dark-theme #courseDetailModal .material-type-badge.assessment,
+body.dark-theme #courseDetailModal .assessment-status-pill.status-archived {
+    background: rgba(239, 68, 68, 0.16) !important;
+    border-color: rgba(248, 113, 113, 0.34) !important;
+    color: #fecaca !important;
+}
+
+body.dark-theme #courseDetailModal .material-type-badge.both,
+body.dark-theme #courseDetailModal .assessment-status-pill.status-completed,
+body.dark-theme #courseDetailModal .student-status-pill.status-completed,
+body.dark-theme #courseDetailModal .student-metric-badge.badge-success {
+    background: rgba(34, 197, 94, 0.16) !important;
+    border-color: rgba(74, 222, 128, 0.32) !important;
+    color: #bbf7d0 !important;
+}
+
+body.dark-theme #courseDetailModal .assessment-status-pill.status-in-progress,
+body.dark-theme #courseDetailModal .student-status-pill.status-in-progress,
+body.dark-theme #courseDetailModal .student-metric-badge.badge-warning,
+body.dark-theme #courseDetailModal .material-type-badge.status-scheduled {
+    background: rgba(245, 158, 11, 0.16) !important;
+    border-color: rgba(251, 191, 36, 0.32) !important;
+    color: #fde68a !important;
+}
+
+body.dark-theme #courseDetailModal .assessment-status-pill.status-not-started,
+body.dark-theme #courseDetailModal .student-status-pill.status-not-started,
+body.dark-theme #courseDetailModal .material-type-badge.status-draft {
+    background: rgba(100, 116, 139, 0.22) !important;
+    border-color: rgba(148, 163, 184, 0.28) !important;
+    color: #cbd5e1 !important;
+}
+
+body.dark-theme #courseDetailModal .form-control,
+body.dark-theme #courseDetailModal .form-select,
+body.dark-theme #courseDetailModal textarea,
+body.dark-theme #courseDetailModal .assessment-search input,
+body.dark-theme #courseDetailModal .students-search input,
+body.dark-theme #courseDetailModal .assessment-sort-group select,
+body.dark-theme #courseDetailModal .students-sort-select {
+    background: #020617 !important;
+    border-color: rgba(148, 163, 184, 0.22) !important;
+    color: #f1f5f9 !important;
+    box-shadow: none !important;
+}
+
+body.dark-theme #courseDetailModal .form-control::placeholder,
+body.dark-theme #courseDetailModal .assessment-search input::placeholder,
+body.dark-theme #courseDetailModal .students-search input::placeholder,
+body.dark-theme #courseDetailModal textarea::placeholder {
+    color: #64748b !important;
+    opacity: 1;
+}
+
+body.dark-theme #courseDetailModal .table,
+body.dark-theme #courseDetailModal .table-responsive,
+body.dark-theme #courseDetailModal .table > :not(caption) > * > * {
+    background: #0f172a !important;
+    border-color: rgba(148, 163, 184, 0.16) !important;
+    color: #e2e8f0 !important;
+}
+
+body.dark-theme #courseDetailModal .table thead,
+body.dark-theme #courseDetailModal .table th {
+    background: #020617 !important;
+    color: #bfdbfe !important;
+}
+
+body.dark-theme #courseDetailModal .btn-outline-primary,
+body.dark-theme #courseDetailModal .btn-outline-secondary,
+body.dark-theme #courseDetailModal .btn-light,
+body.dark-theme #courseDetailModal .material-btn,
+body.dark-theme #courseDetailModal .assessment-action-btn,
+body.dark-theme #courseDetailModal .student-icon-btn,
+body.dark-theme #courseDetailModal .assessment-filter-btn,
+body.dark-theme #courseDetailModal .students-filter .filter-btn {
+    background: rgba(15, 23, 42, 0.86) !important;
+    background-image: none !important;
+    border-color: rgba(96, 165, 250, 0.28) !important;
+    color: #bfdbfe !important;
+    box-shadow: none !important;
+}
+
+body.dark-theme #courseDetailModal .btn-outline-primary:hover,
+body.dark-theme #courseDetailModal .btn-outline-secondary:hover,
+body.dark-theme #courseDetailModal .btn-light:hover,
+body.dark-theme #courseDetailModal .material-btn:hover,
+body.dark-theme #courseDetailModal .assessment-action-btn:hover,
+body.dark-theme #courseDetailModal .student-icon-btn:hover,
+body.dark-theme #courseDetailModal .assessment-filter-btn:hover,
+body.dark-theme #courseDetailModal .assessment-filter-btn.active,
+body.dark-theme #courseDetailModal .students-filter .filter-btn:hover,
+body.dark-theme #courseDetailModal .students-filter .filter-btn.active {
+    background: rgba(37, 99, 235, 0.24) !important;
+    border-color: rgba(96, 165, 250, 0.44) !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme #courseDetailModal .btn-outline-danger,
+body.dark-theme #courseDetailModal .material-btn.delete,
+body.dark-theme #courseDetailModal .assessment-action-btn.delete,
+body.dark-theme #courseDetailModal .student-icon-btn.danger {
+    background: rgba(239, 68, 68, 0.14) !important;
+    background-image: none !important;
+    border-color: rgba(248, 113, 113, 0.34) !important;
+    color: #fecaca !important;
+}
+
+body.dark-theme #courseDetailModal .dropdown-menu {
+    background: #0f172a !important;
+    border-color: rgba(148, 163, 184, 0.2) !important;
+    color: #e2e8f0 !important;
+}
+
+body.dark-theme #courseDetailModal .dropdown-item {
+    color: #e2e8f0 !important;
+}
+
+body.dark-theme #courseDetailModal .dropdown-item:hover,
+body.dark-theme #courseDetailModal .dropdown-item:focus {
+    background: rgba(37, 99, 235, 0.22) !important;
+    color: #ffffff !important;
+}
+
+body.dark-theme #courseDetailModal .modal-content,
+body.dark-theme #courseDetailModal .modal-header,
+body.dark-theme #courseDetailModal .modal-body,
+body.dark-theme #courseDetailModal .modal-footer,
+body.dark-theme #addCourseStudentModal .modal-content,
+body.dark-theme #addCourseStudentModal .modal-header,
+body.dark-theme #addCourseStudentModal .modal-body,
+body.dark-theme #addCourseStudentModal .modal-footer,
+body.dark-theme #addMaterialModal .modal-content,
+body.dark-theme #addMaterialModal .modal-header,
+body.dark-theme #addMaterialModal .modal-body,
+body.dark-theme #addMaterialModal .modal-footer,
+body.dark-theme #materialUploadSelectModal .modal-content,
+body.dark-theme #materialUploadSelectModal .modal-header,
+body.dark-theme #materialUploadSelectModal .modal-body,
+body.dark-theme #materialUploadSelectModal .modal-footer,
+body.dark-theme #viewMaterialModal .modal-content,
+body.dark-theme #editMaterialModal .modal-content,
+body.dark-theme #deleteConfirmModal .modal-content,
+body.dark-theme #liveAssessmentLoadingModal .modal-content {
+    background: #1e293b !important;
+    background-image: none !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+    color: #e2e8f0 !important;
+}
+
+body.dark-theme #addCourseStudentModal .card,
+body.dark-theme #addCourseStudentModal .table-responsive,
+body.dark-theme #addMaterialModal .upload-material-panel,
+body.dark-theme #addMaterialModal .other-material-panel,
+body.dark-theme #addMaterialModal #itemChipsContainer,
+body.dark-theme #materialUploadSelectModal .card,
+body.dark-theme #materialUploadSelectModal .bg-white,
+body.dark-theme #materialUploadSelectModal .bg-light,
+body.dark-theme #assistAssessmentModal .modal-content,
+body.dark-theme #assistAssessmentModal .modal-header,
+body.dark-theme #assistAssessmentModal .modal-body,
+body.dark-theme #assistAssessmentModal .modal-footer,
+body.dark-theme #assistTransitionModal .modal-content,
+body.dark-theme #assistTransitionModal .modal-header,
+body.dark-theme #assistTransitionModal .modal-body,
+body.dark-theme #assistTransitionModal .modal-footer,
+body.dark-theme #assistLoadingModal .modal-content,
+body.dark-theme #assistLoadingModal .modal-body,
+body.dark-theme .course-student-add-loading-dialog {
+    background: #0f172a !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+    color: #e2e8f0 !important;
+}
+
+body.dark-theme #assistAssessmentModal .assist-student-option,
+body.dark-theme #assistTransitionModal .assist-transition-summary div,
+body.dark-theme .assist-queue-panel,
+body.dark-theme .assist-queue-current {
+    background: #1e293b !important;
+    background-image: none !important;
+    border-color: rgba(148, 163, 184, 0.2) !important;
+    color: #e2e8f0 !important;
+    box-shadow: 0 14px 30px rgba(2, 6, 23, 0.32) !important;
+}
+
+body.dark-theme #assistAssessmentModal .assist-select-all-option {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+body.dark-theme #assistAssessmentModal .assist-student-option:hover {
+    background: rgba(37, 99, 235, 0.2) !important;
+    border-color: rgba(96, 165, 250, 0.38) !important;
+}
+
+body.dark-theme #assistAssessmentModal .assist-student-option input,
+body.dark-theme #assistAssessmentModal .form-check-input {
+    background-color: #020617 !important;
+    border-color: rgba(148, 163, 184, 0.46) !important;
+}
+
+body.dark-theme #assistAssessmentModal .assist-student-option input:checked,
+body.dark-theme #assistAssessmentModal .form-check-input:checked {
+    background-color: #38bdf8 !important;
+    border-color: #38bdf8 !important;
+}
+
+body.dark-theme #assistAssessmentModal .assist-student-option strong,
+body.dark-theme #assistAssessmentModal .assist-select-all-option strong,
+body.dark-theme #assistTransitionModal .assist-transition-summary strong,
+body.dark-theme #assistAssessmentModal .modal-title,
+body.dark-theme #assistTransitionModal .modal-title,
+body.dark-theme #assistLoadingModal .modal-title,
+body.dark-theme #assistLoadingModal h5,
+body.dark-theme .assist-queue-head,
+body.dark-theme .assist-queue-row.is-current {
+    color: #f8fafc !important;
+}
+
+body.dark-theme #assistAssessmentModal .assist-student-option small,
+body.dark-theme #assistAssessmentModal #assistAssessmentSubtitle,
+body.dark-theme #assistTransitionModal .assist-transition-summary span,
+body.dark-theme #assistAssessmentModal .text-muted,
+body.dark-theme #assistTransitionModal .text-muted,
+body.dark-theme #assistLoadingModal .text-muted,
+body.dark-theme .assist-queue-head span,
+body.dark-theme .assist-queue-row,
+body.dark-theme .assist-queue-row em {
+    color: #94a3b8 !important;
+}
+
+body.dark-theme .assist-queue-row {
+    border-top-color: rgba(148, 163, 184, 0.16) !important;
+}
+
+body.dark-theme #addMaterialModal .material-source-toggle {
+    background: #020617 !important;
+    border-color: rgba(148, 163, 184, 0.24) !important;
+}
+
+body.dark-theme #addMaterialModal .material-source-toggle::before {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.75), rgba(56, 189, 248, 0.75)) !important;
+}
+
+body.dark-theme #addMaterialModal .material-source-toggle button {
+    color: #cbd5e1 !important;
+}
+
+body.dark-theme #addMaterialModal .material-source-toggle button.active {
+    color: #ffffff !important;
+}
+
+body.dark-theme #addMaterialModal .modal-header h4,
+body.dark-theme #addCourseStudentModal .modal-title,
+body.dark-theme #materialUploadSelectModal .modal-title,
+body.dark-theme #viewMaterialModal .modal-title,
+body.dark-theme #editMaterialModal .modal-title,
+body.dark-theme #deleteConfirmModal .modal-title,
+body.dark-theme #liveAssessmentLoadingModal h5 {
+    color: #f8fafc !important;
+}
+
+body.dark-theme #addMaterialModal .form-control,
+body.dark-theme #addMaterialModal .form-select,
+body.dark-theme #addMaterialModal textarea,
+body.dark-theme #addMaterialModal .input-group-text,
+body.dark-theme #addCourseStudentModal .form-control,
+body.dark-theme #addCourseStudentModal .form-select,
+body.dark-theme #materialUploadSelectModal .form-control,
+body.dark-theme #materialUploadSelectModal .form-select {
+    background: #020617 !important;
+    border-color: rgba(148, 163, 184, 0.22) !important;
+    color: #f1f5f9 !important;
+}
+
+body.dark-theme #addMaterialModal .teacher-field .form-label,
+body.dark-theme #addMaterialModal .form-label,
+body.dark-theme #addMaterialModal .text-dark,
+body.dark-theme #addCourseStudentModal label,
+body.dark-theme #materialUploadSelectModal label {
+    color: #f8fafc !important;
+}
+
+body.dark-theme #addMaterialModal .text-muted,
+body.dark-theme #addCourseStudentModal .text-muted,
+body.dark-theme #materialUploadSelectModal .text-muted,
+body.dark-theme #liveAssessmentLoadingModal .text-muted {
+    color: #94a3b8 !important;
+}
+
+body.dark-theme #addMaterialModal #itemChipsContainer .badge,
+body.dark-theme #addMaterialModal .badge[style*="background: #fff"] {
+    background: #1e293b !important;
+    border-color: rgba(148, 163, 184, 0.18) !important;
+    color: #f8fafc !important;
+}
+
+body.dark-theme #addMaterialModal .modal-header > .btn-close,
+body.dark-theme #addCourseStudentModal .modal-header > .btn-close,
+body.dark-theme #materialUploadSelectModal .modal-header > .btn-close,
+body.dark-theme #viewMaterialModal .modal-header > .btn-close,
+body.dark-theme #editMaterialModal .modal-header > .btn-close,
+body.dark-theme #deleteConfirmModal .modal-header > .btn-close,
+body.dark-theme #courseDetailModal .modal-header > .btn-close,
+body.dark-theme #courseDetailModal .course-modal-close-btn,
+body.dark-theme #liveAssessmentLoadingModal .modal-header > .btn-close {
+    --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23e2e8f0'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293A1 1 0 0 1 .293 14.293L6.586 8 .293 1.707A1 1 0 0 1 .293.293z'/%3e%3c/svg%3e");
+    background-color: rgba(15, 23, 42, 0.86) !important;
+    background-image: var(--bs-btn-close-bg) !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-size: 0.78rem 0.78rem !important;
+    border: 1px solid rgba(148, 163, 184, 0.18) !important;
+    border-radius: 12px !important;
+    color: #e2e8f0 !important;
+    filter: none !important;
+    height: 36px;
+    opacity: 1 !important;
+    padding: 0 !important;
+    width: 36px;
+}
+
+body.dark-theme #addMaterialModal .modal-header > .btn-close:hover,
+body.dark-theme #addCourseStudentModal .modal-header > .btn-close:hover,
+body.dark-theme #materialUploadSelectModal .modal-header > .btn-close:hover,
+body.dark-theme #viewMaterialModal .modal-header > .btn-close:hover,
+body.dark-theme #editMaterialModal .modal-header > .btn-close:hover,
+body.dark-theme #deleteConfirmModal .modal-header > .btn-close:hover,
+body.dark-theme #courseDetailModal .modal-header > .btn-close:hover,
+body.dark-theme #courseDetailModal .course-modal-close-btn:hover,
+body.dark-theme #liveAssessmentLoadingModal .modal-header > .btn-close:hover {
+    background-color: rgba(30, 41, 59, 0.98) !important;
+    border-color: rgba(96, 165, 250, 0.36) !important;
+}
+
+body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
+    background-color: rgba(15, 23, 42, 0.72) !important;
+    border: 1px solid rgba(148, 163, 184, 0.16) !important;
+    filter: none !important;
+    opacity: 1 !important;
 }
 @media (max-width: 767.98px) {
     #otherMaterialTableWrapper { display: none !important; }
@@ -10601,14 +11410,25 @@
         }
 
         function applyUploadedItems(items, fileName, metadata = {}) {
-            if (!Array.isArray(items) || items.length === 0) {
-                const warningText = Array.isArray(metadata.warnings) && metadata.warnings.length > 0
-                    ? metadata.warnings[0]
-                    : 'No readable items were found in that file.';
-                setUploadStatus(warningText, 'warning');
+            let resolvedItems = Array.isArray(items) ? items : [];
+            if (!resolvedItems.length && metadata && typeof metadata.text === 'string' && metadata.text.trim()) {
+                resolvedItems = excerptUploadedItems(metadata.text);
+            }
+
+            const warningText = Array.isArray(metadata.warnings) && metadata.warnings.length > 0
+                ? metadata.warnings[0]
+                : (typeof metadata.warning_message === 'string' && metadata.warning_message.trim() ? metadata.warning_message : '');
+            const hasVisibleWarning = Boolean(warningText);
+
+            if (!resolvedItems.length) {
+                if (hasVisibleWarning) {
+                    setUploadStatus(warningText, 'warning');
+                } else {
+                    setUploadStatus('', 'muted');
+                }
                 return;
             }
-            currentItemsList = items;
+            currentItemsList = resolvedItems;
             const readingType = String(metadata.reading_type || '').toLowerCase();
             resetDetectedParagraphState(readingType === 'paragraph');
             renderAddedItemsChips();
@@ -10616,7 +11436,7 @@
                 materialTitleInput.value = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
             }
             const selectionLabel = metadata.selection_mode === 'selected' ? ` using page${Array.isArray(metadata.selected_pages) && metadata.selected_pages.length === 1 ? '' : 's'} ${String(metadata.selected_pages || '').replace(/,/g, ', ')}` : '';
-            setUploadStatus(`Extracted ${items.length} item${items.length === 1 ? '' : 's'} from ${fileName}${selectionLabel ? ` (${selectionLabel})` : ''}.`, 'success');
+            setUploadStatus(`Extracted ${resolvedItems.length} item${resolvedItems.length === 1 ? '' : 's'} from ${fileName}${selectionLabel ? ` (${selectionLabel})` : ''}.`, 'success');
         }
 
         async function extractUploadedMaterial(file, options = {}) {
@@ -10642,15 +11462,45 @@
                 headers: { 'X-CSRFToken': await ensureCsrfToken() },
                 body: formData
             });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Could not extract text from that file.');
+            let data = {};
+            let responseText = '';
+            try {
+                responseText = await response.text();
+                if (responseText) {
+                    data = JSON.parse(responseText);
+                }
+            } catch (error) {
+                data = {};
             }
-            applyUploadedItems(Array.isArray(data.items) ? data.items : excerptUploadedItems(data.text || ''), file.name, {
+
+            const warningText = typeof data.warning_message === 'string' && data.warning_message.trim()
+                ? data.warning_message
+                : (Array.isArray(data.warnings) && data.warnings.length ? data.warnings[0] : '');
+            const hasExtractedContent = (Array.isArray(data.items) && data.items.length > 0)
+                || (typeof data.text === 'string' && data.text.trim().length > 0);
+
+            if (!response.ok && !hasExtractedContent) {
+                applyUploadedItems([], file.name, {
+                    reading_type: 'word',
+                    warnings: [warningText || 'OCR could not read that image. Please try a clearer image or a different file.'],
+                    text: '',
+                });
+                return;
+            }
+            if (!data.success && !hasExtractedContent) {
+                applyUploadedItems([], file.name, {
+                    reading_type: 'word',
+                    warnings: [warningText || 'OCR could not read that image. Please try a clearer image or a different file.'],
+                    text: '',
+                });
+                return;
+            }
+            applyUploadedItems(Array.isArray(data.items) ? data.items : [], file.name, {
                 reading_type: data.reading_type,
                 selection_mode: data.selection_mode,
                 selected_pages: data.selected_pages,
                 warnings: Array.isArray(data.warnings) ? data.warnings : [],
+                text: data.text || '',
             });
         }
 
