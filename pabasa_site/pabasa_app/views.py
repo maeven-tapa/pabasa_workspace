@@ -6990,6 +6990,86 @@ def _resolve_tesseract_executable(pytesseract_module):
     return None
 
 
+def _looks_like_ocr_text(text):
+    if not text:
+        return False
+    cleaned = re.sub(r'\s+', ' ', str(text).strip())
+    if not cleaned:
+        return False
+    if len(cleaned) < 3:
+        return False
+    letters = sum(1 for ch in cleaned if ch.isalpha())
+    digits = sum(1 for ch in cleaned if ch.isdigit())
+    return (letters >= 2) or (digits >= 2 and letters >= 1)
+
+
+def _build_ocr_image_candidates(image):
+    try:
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+    except ImportError:
+        return [image]
+
+    candidates = []
+
+    def add_candidate(img):
+        if img is None:
+            return
+        try:
+            if img.mode not in {'RGB', 'L'}:
+                img = img.convert('RGB')
+        except Exception:
+            pass
+        if img not in candidates:
+            candidates.append(img)
+
+    add_candidate(image)
+
+    try:
+        grayscale = ImageOps.grayscale(image)
+    except Exception:
+        grayscale = image.convert('L') if hasattr(image, 'convert') else image
+
+    add_candidate(grayscale)
+    add_candidate(ImageOps.autocontrast(grayscale))
+    add_candidate(grayscale.filter(ImageFilter.SHARPEN))
+    add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.SHARPEN)))
+
+    width, height = image.size
+    max_dim = max(width, height)
+    for scale in [1.25, 1.5, 2.0, 2.5]:
+        if max_dim * scale > 4000:
+            continue
+        try:
+            resized = grayscale.resize(
+                (max(1, int(width * scale)), max(1, int(height * scale))),
+                resample=getattr(Image, 'Resampling', Image).LANCZOS,
+            )
+            add_candidate(resized)
+            add_candidate(ImageOps.autocontrast(resized))
+            add_candidate(resized.filter(ImageFilter.SHARPEN))
+        except Exception:
+            continue
+
+    try:
+        enhancer = ImageEnhance.Contrast(image.convert('RGB'))
+        for factor in [1.2, 1.5, 2.0]:
+            add_candidate(enhancer.enhance(factor))
+    except Exception:
+        pass
+
+    for base in [grayscale, ImageOps.autocontrast(grayscale)]:
+        for threshold in [120, 150, 180]:
+            try:
+                threshold_image = base.point(lambda p: 255 if p > threshold else 0, mode='1')
+                add_candidate(threshold_image)
+                add_candidate(ImageOps.invert(threshold_image))
+                add_candidate(threshold_image.filter(ImageFilter.MaxFilter(3)))
+            except Exception:
+                continue
+
+    return candidates
+
+
 def _extract_text_from_image(upload):
     try:
         from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
@@ -7023,46 +7103,20 @@ def _extract_text_from_image(upload):
             else:
                 image = image.convert('RGB')
 
-            try:
-                direct_text = pytesseract.image_to_string(image, config='--oem 3 --psm 6', lang='eng').strip()
-                direct_cleaned = re.sub(r'\s+', ' ', direct_text).strip()
-                if direct_cleaned:
-                    logger.info('OCR fast path returned text: %r', direct_cleaned[:200])
-                    return direct_cleaned
-            except Exception as exc:
-                logger.debug('OCR fast path failed: %s', exc)
-
-            grayscale = ImageOps.grayscale(image)
-            candidates = [image, grayscale, ImageOps.autocontrast(grayscale)]
-
-            for base in [image, grayscale]:
-                candidates.append(base.filter(ImageFilter.SHARPEN))
-                candidates.append(base.filter(ImageFilter.MedianFilter(size=3)))
-                candidates.append(ImageOps.autocontrast(base))
-
-            if max(image.size) < 1800:
-                scale = 1800 / max(image.size)
-                resized = grayscale.resize(
-                    (max(1, int(image.size[0] * scale)), max(1, int(image.size[1] * scale))),
-                    resample=getattr(Image, 'Resampling', Image).LANCZOS,
-                )
-                candidates.extend([resized, ImageOps.autocontrast(resized)])
-
-            for base in [grayscale, ImageOps.autocontrast(grayscale)]:
-                threshold = base.point(lambda p: 255 if p > 170 else 0, mode='1')
-                candidates.extend([threshold, ImageOps.invert(threshold)])
-
+            candidates = _build_ocr_image_candidates(image)
             configs = [
                 '--oem 3 --psm 6',
-                '--oem 3 --psm 7',
-                '--oem 3 --psm 8',
                 '--oem 3 --psm 11',
-                '--oem 3 --psm 3',
                 '--oem 3 --psm 4',
                 '--oem 3 --psm 12',
+                '--oem 3 --psm 3',
+                '--oem 3 --psm 7',
+                '--oem 3 --psm 8',
             ]
+
             best_text = ''
             best_confidence = 0
+            best_score = -1
             for candidate in candidates:
                 for config in configs:
                     try:
@@ -7089,39 +7143,49 @@ def _extract_text_from_image(upload):
                         confidences = []
                         avg_confidence = 0
 
-                    # Debug: log candidate extraction summary
+                    score = avg_confidence / 100.0
+                    score += min(len(cleaned.split()), 12) * 0.01
+                    if _looks_like_ocr_text(cleaned):
+                        score += 0.2
+
                     try:
                         logger.debug('OCR candidate: words=%d avg_conf=%s config=%s text=%r', len(cleaned.split()), avg_confidence, config, cleaned[:200])
                     except Exception:
                         logger.debug('OCR candidate summary could not be produced')
 
-                    if avg_confidence >= best_confidence or len(cleaned) > len(best_text):
+                    if score > best_score or (score == best_score and len(cleaned) > len(best_text)):
                         best_text = cleaned
                         best_confidence = avg_confidence
+                        best_score = score
 
-                    if avg_confidence >= 60:
+                    if _looks_like_ocr_text(cleaned) and (avg_confidence >= 60 or len(cleaned.split()) >= 3 or len(cleaned) >= 12):
                         logger.info('OCR accepted candidate with avg_conf=%s config=%s', avg_confidence, config)
                         return cleaned
 
-            if best_text:
+            if best_text and _looks_like_ocr_text(best_text):
                 logger.info('OCR returning best_text with avg_conf=%s len=%d', best_confidence, len(best_text.split()))
                 return best_text
 
+            # Last-resort fallback: if Tesseract returned any non-empty text, use it.
+            if best_text and best_text.strip():
+                logger.info('OCR returning last non-empty candidate text from runtime fallback')
+                return best_text.strip()
+
             try:
-                fallback = grayscale.point(lambda p: 255 if p > 120 else 0, mode='1')
+                fallback = ImageOps.grayscale(image).point(lambda p: 255 if p > 120 else 0, mode='1')
                 fallback_text = pytesseract.image_to_string(fallback, config='--oem 3 --psm 6', lang='eng').strip()
                 fallback_cleaned = re.sub(r'\s+', ' ', fallback_text).strip()
-                if fallback_cleaned:
+                if fallback_cleaned and _looks_like_ocr_text(fallback_cleaned):
                     logger.info('OCR fallback returned text')
                     return fallback_cleaned
             except Exception:
                 logger.debug('OCR fallback failed', exc_info=True)
 
             try:
-                inverted = ImageOps.invert(grayscale)
+                inverted = ImageOps.invert(ImageOps.grayscale(image))
                 inverted_text = pytesseract.image_to_string(inverted, config='--oem 3 --psm 6', lang='eng').strip()
                 inverted_cleaned = re.sub(r'\s+', ' ', inverted_text).strip()
-                if inverted_cleaned:
+                if inverted_cleaned and _looks_like_ocr_text(inverted_cleaned):
                     return inverted_cleaned
             except Exception:
                 pass
@@ -7213,6 +7277,8 @@ def extract_reading_material_file(request):
                 extracted_text = _extract_text_from_image(upload)
                 if not extracted_text:
                     extraction_warnings.append('No text could be detected in this image. This may be because the image is not clear or Tesseract OCR is not properly configured.')
+                else:
+                    logger.info('Image extraction succeeded for %s with %d characters', filename, len(extracted_text))
             except Exception as e:
                 logger.warning('Image extraction failed: %s', e)
                 extraction_warnings.append(f'Image OCR encountered an issue: {str(e)}')
