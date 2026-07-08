@@ -7111,7 +7111,7 @@ def _build_ocr_image_candidates(image):
 
 def _extract_text_from_image(upload):
     try:
-        from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
+        from PIL import Image, ImageOps, UnidentifiedImageError
     except ImportError as exc:
         raise RuntimeError('Image OCR requires Pillow to be installed.') from exc
 
@@ -7121,131 +7121,24 @@ def _extract_text_from_image(upload):
         raise RuntimeError('Image OCR requires pytesseract to be installed.') from exc
 
     tesseract_path = _resolve_tesseract_executable(pytesseract)
-    if not tesseract_path:
-        logger.warning('Tesseract executable not found; image OCR will be attempted with system Tesseract')
-
     if tesseract_path:
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
-    # Debug info: report which tesseract cmd will be used
-    try:
-        logger.debug('OCR init: pytesseract.tesseract_cmd=%s', getattr(pytesseract.pytesseract, 'tesseract_cmd', None))
-    except Exception:
-        logger.debug('OCR init: could not read pytesseract.tesseract_cmd')
 
     upload.seek(0)
     try:
         with Image.open(BytesIO(upload.read())) as image:
             image = ImageOps.exif_transpose(image)
-            if image.mode in {'RGBA', 'LA', 'P'}:
-                background = Image.new('RGBA', image.size, (255, 255, 255, 255))
-                image = Image.alpha_composite(background, image.convert('RGBA')).convert('RGB')
-            else:
+            if image.mode not in {'RGB', 'L'}:
                 image = image.convert('RGB')
 
-            candidates = _build_ocr_image_candidates(image)
-            configs = [
-                '--oem 3 --psm 6',
-                '--oem 3 --psm 11',
-                '--oem 3 --psm 4',
-                '--oem 3 --psm 12',
-                '--oem 3 --psm 3',
-                '--oem 3 --psm 7',
-                '--oem 3 --psm 8',
-                '--oem 3 --psm 13',
-                '--oem 3 --psm 1',
-                '--oem 3 --psm 5',
-                '--oem 3 --psm 10',
-                '--oem 1 --psm 6',
-                '--oem 1 --psm 11',
-            ]
+            text = pytesseract.image_to_string(image).strip()
+            if text:
+                return re.sub(r'\s+', ' ', text).strip()
 
-            best_text = ''
-            best_confidence = 0
-            best_score = -1
-            for candidate in candidates:
-                for config in configs:
-                    try:
-                        text = pytesseract.image_to_string(candidate, config=config, lang='eng').strip()
-                    except Exception as exc:
-                        logger.debug('pytesseract.image_to_string raised: %s', exc)
-                        continue
-
-                    cleaned = re.sub(r'\s+', ' ', text).strip()
-                    if not cleaned:
-                        continue
-
-                    # Collect confidence info where possible
-                    try:
-                        data = pytesseract.image_to_data(
-                            candidate,
-                            config=config,
-                            lang='eng',
-                            output_type=getattr(pytesseract, 'Output', None).DICT if getattr(pytesseract, 'Output', None) else None,
-                        )
-                        confidences = [int(conf) for conf in data.get('conf', []) if str(conf).strip().isdigit()]
-                        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
-                        recognized_words = [str(item).strip() for item in data.get('text', []) if str(item).strip()]
-                        if recognized_words:
-                            cleaned = ' '.join(recognized_words)
-                    except Exception:
-                        confidences = []
-                        avg_confidence = 0
-                        recognized_words = []
-
-                    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-                    if not cleaned:
-                        continue
-
-                    score = avg_confidence / 100.0
-                    score += min(len(cleaned.split()), 12) * 0.03
-                    if _looks_like_ocr_text(cleaned):
-                        score += 0.15
-                    if len(cleaned.split()) >= 2:
-                        score += 0.05
-                    if len(cleaned) >= 8:
-                        score += 0.03
-
-                    try:
-                        logger.debug('OCR candidate: words=%d avg_conf=%s config=%s text=%r', len(cleaned.split()), avg_confidence, config, cleaned[:200])
-                    except Exception:
-                        logger.debug('OCR candidate summary could not be produced')
-
-                    if score > best_score or (score == best_score and len(cleaned) > len(best_text)):
-                        best_text = cleaned
-                        best_confidence = avg_confidence
-                        best_score = score
-
-                    if _looks_like_ocr_text(cleaned) and (avg_confidence >= 40 or len(cleaned.split()) >= 2 or len(cleaned) >= 8):
-                        logger.info('OCR accepted candidate with avg_conf=%s config=%s', avg_confidence, config)
-                        return cleaned
-
-            if best_text and _looks_like_ocr_text(best_text):
-                logger.info('OCR returning best_text with avg_conf=%s len=%d', best_confidence, len(best_text.split()))
-                return best_text
-
-            # Last-resort fallback: if Tesseract returned any non-empty text, use it.
-            if best_text and best_text.strip():
-                logger.info('OCR returning last non-empty candidate text from runtime fallback')
-                return best_text.strip()
-
-            try:
-                fallback = ImageOps.grayscale(image).point(lambda p: 255 if p > 120 else 0, mode='1')
-                fallback_text = pytesseract.image_to_string(fallback, config='--oem 3 --psm 6', lang='eng').strip()
-                fallback_cleaned = re.sub(r'\s+', ' ', fallback_text).strip()
-                if fallback_cleaned and _looks_like_ocr_text(fallback_cleaned):
-                    logger.info('OCR fallback returned text')
-                    return fallback_cleaned
-            except Exception:
-                logger.debug('OCR fallback failed', exc_info=True)
-
-            try:
-                inverted = ImageOps.invert(ImageOps.grayscale(image))
-                inverted_text = pytesseract.image_to_string(inverted, config='--oem 3 --psm 6', lang='eng').strip()
-                inverted_cleaned = re.sub(r'\s+', ' ', inverted_text).strip()
-                if inverted_cleaned and _looks_like_ocr_text(inverted_cleaned):
-                    return inverted_cleaned
-            except Exception:
-                pass
+            grayscale = ImageOps.grayscale(image)
+            fallback_text = pytesseract.image_to_string(grayscale).strip()
+            if fallback_text:
+                return re.sub(r'\s+', ' ', fallback_text).strip()
 
             return ''
     except UnidentifiedImageError:

@@ -10660,35 +10660,21 @@
             const warningText = typeof data.warning_message === 'string' && data.warning_message.trim()
                 ? data.warning_message
                 : (Array.isArray(data.warnings) && data.warnings.length ? data.warnings[0] : '');
-            const hasWarningResponse = Boolean(
-                data && (
-                    data.success === true && (data.warning_message || (Array.isArray(data.warnings) && data.warnings.length))
-                ) || (
-                    typeof warningText === 'string' && (
-                        warningText.includes('No text could be detected') ||
-                        warningText.includes('OCR') ||
-                        warningText.includes('could not be converted') ||
-                        warningText.includes('could not be processed') ||
-                        warningText.includes('clearer image')
-                    )
-                )
-            );
+            const hasExtractedContent = (Array.isArray(data.items) && data.items.length > 0)
+                || (typeof data.text === 'string' && data.text.trim().length > 0);
 
-            if (!response.ok && !hasWarningResponse) {
-                const fallbackWarning = responseText && responseText.includes('No text could be detected')
-                    ? responseText
-                    : 'OCR could not read that image. Please try a clearer image or a different file.';
+            if (!response.ok && !hasExtractedContent) {
                 applyUploadedItems([], file.name, {
                     reading_type: 'word',
-                    warnings: [fallbackWarning],
+                    warnings: [warningText || 'OCR could not read that image. Please try a clearer image or a different file.'],
                     text: '',
                 });
                 return;
             }
-            if (!data.success && !hasWarningResponse) {
+            if (!data.success && !hasExtractedContent) {
                 applyUploadedItems([], file.name, {
                     reading_type: 'word',
-                    warnings: ['OCR could not read that image. Please try a clearer image or a different file.'],
+                    warnings: [warningText || 'OCR could not read that image. Please try a clearer image or a different file.'],
                     text: '',
                 });
                 return;
