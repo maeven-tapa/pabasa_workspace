@@ -7111,7 +7111,7 @@ def _build_ocr_image_candidates(image):
 
 def _extract_text_from_image(upload):
     try:
-        from PIL import Image, ImageOps, UnidentifiedImageError
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
     except ImportError as exc:
         raise RuntimeError('Image OCR requires Pillow to be installed.') from exc
 
@@ -7131,16 +7131,92 @@ def _extract_text_from_image(upload):
             if image.mode not in {'RGB', 'L'}:
                 image = image.convert('RGB')
 
-            text = pytesseract.image_to_string(image).strip()
-            if text:
-                return re.sub(r'\s+', ' ', text).strip()
+            candidates = []
+
+            def add_candidate(img):
+                if img is None:
+                    return
+                try:
+                    if img.mode not in {'RGB', 'L'}:
+                        img = img.convert('RGB')
+                except Exception:
+                    pass
+                if img not in candidates:
+                    candidates.append(img)
+
+            add_candidate(image)
 
             grayscale = ImageOps.grayscale(image)
-            fallback_text = pytesseract.image_to_string(grayscale).strip()
-            if fallback_text:
-                return re.sub(r'\s+', ' ', fallback_text).strip()
+            add_candidate(grayscale)
+            add_candidate(ImageOps.autocontrast(grayscale))
+            add_candidate(grayscale.filter(ImageFilter.SHARPEN))
+            add_candidate(grayscale.filter(ImageFilter.MedianFilter(size=3)))
+            add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.MedianFilter(size=3))))
 
-            return ''
+            try:
+                sharpened = grayscale.filter(ImageFilter.UnsharpMask(radius=1.5, percent=200, threshold=3))
+                add_candidate(sharpened)
+                add_candidate(ImageOps.autocontrast(sharpened))
+            except Exception:
+                pass
+
+            try:
+                edge_enhanced = grayscale.filter(ImageFilter.EDGE_ENHANCE_MORE)
+                add_candidate(edge_enhanced)
+                add_candidate(ImageOps.autocontrast(edge_enhanced))
+            except Exception:
+                pass
+
+            width, height = image.size
+            max_dim = max(width, height)
+            for scale in [1.25, 1.5, 2.0, 2.5]:
+                if max_dim * scale > 4000:
+                    continue
+                try:
+                    resized = grayscale.resize(
+                        (max(1, int(width * scale)), max(1, int(height * scale))),
+                        resample=getattr(Image, 'Resampling', Image).LANCZOS,
+                    )
+                    add_candidate(resized)
+                    add_candidate(ImageOps.autocontrast(resized))
+                    add_candidate(resized.filter(ImageFilter.SHARPEN))
+                except Exception:
+                    continue
+
+            try:
+                color = image.convert('RGB')
+                enhancer = ImageEnhance.Contrast(color)
+                for factor in [1.2, 1.5, 2.0, 2.5]:
+                    add_candidate(enhancer.enhance(factor))
+            except Exception:
+                pass
+
+            for base in [grayscale, ImageOps.autocontrast(grayscale)]:
+                for threshold in [120, 140, 160, 180]:
+                    try:
+                        threshold_image = base.point(lambda p: 255 if p > threshold else 0, mode='1')
+                        add_candidate(threshold_image)
+                        add_candidate(ImageOps.invert(threshold_image))
+                    except Exception:
+                        continue
+
+            best_text = ''
+            for candidate in candidates:
+                try:
+                    candidate_text = pytesseract.image_to_string(candidate, config='--psm 6').strip()
+                except Exception:
+                    try:
+                        candidate_text = pytesseract.image_to_string(candidate).strip()
+                    except Exception:
+                        continue
+
+                cleaned = re.sub(r'\s+', ' ', candidate_text).strip()
+                if not cleaned:
+                    continue
+                if len(cleaned) > len(best_text):
+                    best_text = cleaned
+
+            return best_text
     except UnidentifiedImageError:
         return ''
     except Exception:
