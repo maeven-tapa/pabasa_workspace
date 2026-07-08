@@ -267,6 +267,28 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertTrue(any("could not be processed" in warning.lower() for warning in data.get("warnings", [])))
         mock_build_extracted_material_items.assert_called_once()
 
+    @patch("pabasa_app.views._extract_text_from_image", return_value="Alpha beta gamma")
+    @patch("pabasa_app.views._build_extracted_material_items", return_value=("word", []))
+    def test_extract_endpoint_falls_back_to_text_items_when_server_returns_no_items(self, mock_build_extracted_material_items, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["items"], ["Alpha", "beta", "gamma"])
+        mock_extract_text_from_image.assert_called_once()
+        mock_build_extracted_material_items.assert_called_once()
+
 
 class PrincipalReportsExportTests(TestCase):
     def test_default_timezone_is_asia_manila(self):

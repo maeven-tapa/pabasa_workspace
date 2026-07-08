@@ -7216,6 +7216,29 @@ def _extract_text_from_image(upload):
         return ''
 
 
+def _fallback_material_items_from_text(text):
+    if not text:
+        return []
+
+    cleaned = re.sub(r'\s+', ' ', str(text).strip())
+    if not cleaned:
+        return []
+
+    line_items = [line.strip() for line in str(text).splitlines() if line.strip()]
+    if len(line_items) > 1:
+        return line_items[:80]
+
+    sentence_items = [segment.strip() for segment in re.split(r'(?<=[.!?])\s+', str(text)) if segment.strip()]
+    if len(sentence_items) > 1:
+        return sentence_items[:80]
+
+    words = re.findall(r"\b[\w']+\b", cleaned, flags=re.UNICODE)
+    if words:
+        return words[:80]
+
+    return [cleaned]
+
+
 def _build_extracted_material_items(text, requested_reading_type=''):
     detected_type = _detect_material_type(text, requested_reading_type)
     items = _split_material_content(text, detected_type, requested_reading_type)
@@ -7367,6 +7390,11 @@ def extract_reading_material_file(request):
             extraction_warnings.append('The extracted text could not be processed into reading items. Please try a different file or a clearer image.')
             detected_type = _detect_material_type(text, '')
             items = []
+
+        if not items and text:
+            fallback_items = _fallback_material_items_from_text(text)
+            if fallback_items:
+                items = fallback_items
 
         if not items:
             warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''

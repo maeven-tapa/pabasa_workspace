@@ -10601,14 +10601,18 @@
         }
 
         function applyUploadedItems(items, fileName, metadata = {}) {
-            if (!Array.isArray(items) || items.length === 0) {
+            let resolvedItems = Array.isArray(items) ? items : [];
+            if (!resolvedItems.length && metadata && typeof metadata.text === 'string' && metadata.text.trim()) {
+                resolvedItems = excerptUploadedItems(metadata.text);
+            }
+            if (!resolvedItems.length) {
                 const warningText = Array.isArray(metadata.warnings) && metadata.warnings.length > 0
                     ? metadata.warnings[0]
                     : 'No readable items were found in that file.';
                 setUploadStatus(warningText, 'warning');
                 return;
             }
-            currentItemsList = items;
+            currentItemsList = resolvedItems;
             const readingType = String(metadata.reading_type || '').toLowerCase();
             resetDetectedParagraphState(readingType === 'paragraph');
             renderAddedItemsChips();
@@ -10616,7 +10620,7 @@
                 materialTitleInput.value = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
             }
             const selectionLabel = metadata.selection_mode === 'selected' ? ` using page${Array.isArray(metadata.selected_pages) && metadata.selected_pages.length === 1 ? '' : 's'} ${String(metadata.selected_pages || '').replace(/,/g, ', ')}` : '';
-            setUploadStatus(`Extracted ${items.length} item${items.length === 1 ? '' : 's'} from ${fileName}${selectionLabel ? ` (${selectionLabel})` : ''}.`, 'success');
+            setUploadStatus(`Extracted ${resolvedItems.length} item${resolvedItems.length === 1 ? '' : 's'} from ${fileName}${selectionLabel ? ` (${selectionLabel})` : ''}.`, 'success');
         }
 
         async function extractUploadedMaterial(file, options = {}) {
@@ -10646,11 +10650,12 @@
             if (!response.ok || !data.success) {
                 throw new Error(data.error || 'Could not extract text from that file.');
             }
-            applyUploadedItems(Array.isArray(data.items) ? data.items : excerptUploadedItems(data.text || ''), file.name, {
+            applyUploadedItems(Array.isArray(data.items) ? data.items : [], file.name, {
                 reading_type: data.reading_type,
                 selection_mode: data.selection_mode,
                 selected_pages: data.selected_pages,
                 warnings: Array.isArray(data.warnings) ? data.warnings : [],
+                text: data.text || '',
             });
         }
 
