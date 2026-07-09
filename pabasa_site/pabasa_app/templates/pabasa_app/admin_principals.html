@@ -82,7 +82,7 @@
             </div>
         </div>
 
-        <form method="get" class="row g-3 align-items-center principal-filter-form mb-3">
+        <form method="get" class="row g-3 align-items-center principal-filter-form mb-3" data-admin-auto-filter>
             <div class="col-12 col-md-6">
                 <label class="form-label visually-hidden" for="principalSearch">Search</label>
                 <div class="input-group">
@@ -92,14 +92,16 @@
             </div>
             <div class="col-12 col-md-3">
                 <label class="form-label visually-hidden" for="principalStatusFilter">Status</label>
-                <select id="principalStatusFilter" name="status" class="form-select" onchange="this.form.submit()">
+                <select id="principalStatusFilter" name="status" class="form-select">
                     <option value="" {% if not status_filter %}selected{% endif %}>All statuses</option>
                     <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
                     <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
                 </select>
             </div>
             <div class="col-12 col-md-3 text-md-end">
-                <button type="submit" class="btn btn-outline-secondary w-100">Apply</button>
+                <a class="btn btn-outline-secondary admin-filter-clear-btn w-100" href="{% url 'admin_principals' %}" aria-label="Clear filters">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span>
+                </a>
             </div>
         </form>
 

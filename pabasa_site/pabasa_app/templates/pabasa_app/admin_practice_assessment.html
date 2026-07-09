@@ -115,7 +115,7 @@
         }
     </style>
 
-    <form class="practice-filter-bar mb-4" method="get">
+    <form class="practice-filter-bar mb-4" method="get" data-admin-auto-filter>
         <div class="practice-filter-row practice-filter-search">
             <div class="w-100">
                 <label class="form-label small fw-bold text-secondary" for="practiceSearch">Search</label>
@@ -160,10 +160,7 @@
                 </select>
             </div>
             <div class="practice-filter-actions">
-                <button class="btn btn-primary" type="submit">
-                    <i class="bi bi-funnel me-1"></i>Apply
-                </button>
-                <a class="btn btn-outline-secondary" href="{% url 'admin_practice_assessment' %}">
+                <a class="btn btn-outline-secondary admin-filter-clear-btn" href="{% url 'admin_practice_assessment' %}">
                     <i class="bi bi-x-lg me-1"></i>Clear
                 </a>
             </div>
@@ -171,22 +168,12 @@
 
         <div class="practice-filter-row practice-filter-sort">
             <label class="form-label small fw-bold text-secondary" for="sortFilter">Sort by</label>
-            <select class="form-select" id="sortFilter" name="sort" form="practice-sort-form" style="max-width: 280px; min-width: 220px;">
+            <select class="form-select" id="sortFilter" name="sort" style="max-width: 280px; min-width: 220px;">
                 {% for value, label in sort_options %}
                 <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
-    </form>
-
-
-    <form id="practice-sort-form" method="get" class="d-none">
-        {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
-        {% if mode_filter != 'all' %}<input type="hidden" name="mode" value="{{ mode_filter }}">{% endif %}
-        {% if difficulty_filter != 'all' %}<input type="hidden" name="difficulty" value="{{ difficulty_filter }}">{% endif %}
-        {% if level_filter != 'all' %}<input type="hidden" name="level" value="{{ level_filter }}">{% endif %}
-        {% if status_filter != 'all' %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
-        {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
     </form>
 
     <div class="table-responsive">
@@ -371,24 +358,4 @@
     {% endfor %}
 </div>
 
-<script>
-(function () {
-    const sortForm = document.getElementById('practice-sort-form');
-    const sortSelect = document.getElementById('sortFilter');
-    if (sortSelect && sortForm) {
-        sortSelect.addEventListener('change', function () {
-            let existingSort = sortForm.querySelector('input[name="sort"]');
-            if (!existingSort) {
-                existingSort = document.createElement('input');
-                existingSort.type = 'hidden';
-                existingSort.name = 'sort';
-                sortForm.appendChild(existingSort);
-            }
-            existingSort.value = sortSelect.value;
-            sortForm.submit();
-        });
-    }
-
-})();
-</script>
 {% endblock %}

@@ -7026,6 +7026,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
         courseAssessmentTableInitialized = true;
     }
+
+    function resetCourseAssessmentFilters() {
+        const searchInput = document.getElementById('courseAssessmentSearch');
+        const sortField = document.getElementById('courseAssessmentSortField');
+        const sortOrder = document.getElementById('courseAssessmentSortOrder');
+        const filterGroup = document.getElementById('courseAssessmentFilterGroup');
+        if (searchInput) searchInput.value = '';
+        if (sortField) sortField.value = 'name';
+        if (sortOrder) sortOrder.value = 'desc';
+        if (filterGroup) {
+            filterGroup.querySelectorAll('.assessment-filter-btn').forEach(button => {
+                button.classList.toggle('active', (button.dataset.filter || 'all') === 'all');
+            });
+        }
+    }
     const sharedTeacherCoursesKey = () => {
         const email = (window.PABASA_USER_EMAIL || '').trim();
         return email ? `pabasa_shared_teacher_courses_${email}` : null;
@@ -8533,6 +8548,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         async function loadCourseAssessments(courseId) {
             initializeCourseAssessmentTableHandlers();
+            resetCourseAssessmentFilters();
             courseAssessmentsTableData = [];
 
             try {
@@ -8835,6 +8851,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const countPill = document.getElementById('studentsCountPill');
             const searchInput = document.getElementById('studentsSearchInput');
             const sortSelect = document.getElementById('studentsSortSelect');
+            const filterGroup = document.getElementById('studentsFilterGroup');
             if (!grid) return;
 
             const filtered = currentCourseStudents.filter(student => {
@@ -8867,6 +8884,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             if (sortSelect) {
                 sortSelect.value = currentStudentSort;
+            }
+            if (filterGroup) {
+                filterGroup.querySelectorAll('.filter-btn').forEach(button => {
+                    button.classList.toggle('active', (button.dataset.filter || 'all') === currentStudentFilter);
+                });
             }
 
             if (sorted.length === 0) {
@@ -13263,27 +13285,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         // ===== STUDENTS TAB HANDLERS =====
         function setupStudentsHandlers() {
-            const filterBtns = document.querySelectorAll('.filter-btn');
-            filterBtns.forEach(btn => {
-                if (btn.dataset.bound) return;
-                btn.dataset.bound = 'true';
-                btn.addEventListener('click', function() {
-                    // Remove active class from all buttons
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                    // Add active class to clicked button
-                    this.classList.add('active');
-                    
-                    const filter = this.dataset.filter;
-                    const cards = document.querySelectorAll('.student-card-modern');
-                    
-                    // Simple filter demo - in real app would filter actual data
-                    cards.forEach(card => {
-                        card.style.display = '';
-                    });
-                    
-                    showSuccessModal('Filtered', `Showing: ${filter.charAt(0).toUpperCase() + filter.slice(1)}`);
-                });
-            });
+            // Student searching, filtering, and sorting are handled by
+            // bindStudentToolbarEvents() so results update without popups.
         }
 
         function setupReportActions() {

@@ -219,8 +219,9 @@
     document.addEventListener('DOMContentLoaded', function () {
         const reportTypeSelect = document.getElementById('reportType');
         const gradeLevelSelect = document.getElementById('gradeLevel');
+        const reportsForm = document.getElementById('reportsForm');
 
-        if (!reportTypeSelect || !gradeLevelSelect) {
+        if (!reportTypeSelect || !gradeLevelSelect || !reportsForm) {
             return;
         }
 
@@ -228,9 +229,18 @@
             const isGradeReport = reportTypeSelect.value === 'grade';
             gradeLevelSelect.disabled = !isGradeReport;
             gradeLevelSelect.classList.toggle('opacity-50', !isGradeReport);
+            if (!isGradeReport) {
+                gradeLevelSelect.value = '';
+            }
         };
 
-        reportTypeSelect.addEventListener('change', syncGradeFilter);
+        const submitReportFilters = () => {
+            syncGradeFilter();
+            reportsForm.submit();
+        };
+
+        reportTypeSelect.addEventListener('change', submitReportFilters);
+        gradeLevelSelect.addEventListener('change', submitReportFilters);
         syncGradeFilter();
     });
 </script>

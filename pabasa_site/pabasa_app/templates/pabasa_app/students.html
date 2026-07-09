@@ -1058,6 +1058,115 @@ function updateReadingLevelChart(levelCounts) {
     });
 }
 
+function escapeStudentDirectoryHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value == null ? '' : String(value);
+    return div.innerHTML;
+}
+
+function getStudentDirectoryRows() {
+    try {
+        const stored = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+        return Array.isArray(stored) ? stored : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function getStudentInitials(name) {
+    return String(name || 'Student')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part.charAt(0).toUpperCase())
+        .join('') || 'S';
+}
+
+function renderStudentDirectory(sourceStudents) {
+    const directory = document.querySelector('.student-directory');
+    const emptyState = document.getElementById('studentEmptyState');
+    const countEl = document.getElementById('studentResultCount');
+    const searchInput = document.getElementById('studentSearchInput');
+    const levelFilter = document.getElementById('readingLevelFilter');
+    if (!directory || !emptyState) return;
+
+    const query = String(searchInput?.value || '').trim().toLowerCase();
+    const selectedLevel = String(levelFilter?.value || 'All levels').trim();
+    const allStudents = (Array.isArray(sourceStudents) ? sourceStudents : getStudentDirectoryRows())
+        .filter(student => String(student.name || '').trim() && String(student.name || '').trim() !== 'Jay Park')
+        .map(student => ({
+            ...student,
+            level: normalizeStudentLevel(student.level || student.reading_level || student.classification || '')
+        }))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+
+    const filtered = allStudents.filter(student => {
+        const haystack = [
+            student.name,
+            student.email,
+            student.class,
+            student.section,
+            student.pabasa_id,
+            student.custom_id,
+            student.student_id,
+            student.level
+        ].map(value => String(value || '').toLowerCase()).join(' ');
+        const matchesSearch = !query || haystack.includes(query);
+        const matchesLevel = selectedLevel === 'All levels' || student.level === selectedLevel;
+        return matchesSearch && matchesLevel;
+    });
+
+    directory.querySelectorAll('.student-card-row').forEach(card => card.remove());
+    emptyState.classList.toggle('d-none', filtered.length > 0);
+    if (countEl) {
+        countEl.textContent = filtered.length;
+    }
+
+    const cards = filtered.map(student => {
+        const name = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
+        const className = student.class || student.section || 'No class';
+        const accuracy = Number.isFinite(Number(student.accuracy)) ? `${Math.round(Number(student.accuracy))}%` : 'Pending';
+        const wpm = Number.isFinite(Number(student.wpm)) ? Math.round(Number(student.wpm)) : 'Pending';
+        return `
+            <article class="student-card-row">
+                <div class="student-avatar" aria-hidden="true">${escapeStudentDirectoryHtml(getStudentInitials(name))}</div>
+                <div class="student-row-main">
+                    <div class="student-name-line">
+                        <strong>${escapeStudentDirectoryHtml(name)}</strong>
+                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">${escapeStudentDirectoryHtml(student.level)}</span>
+                    </div>
+                    <div class="small text-secondary">${escapeStudentDirectoryHtml(student.email || student.pabasa_id || student.custom_id || '')}</div>
+                    <div class="student-meta">
+                        <div class="student-meta-box"><span>Class</span><strong>${escapeStudentDirectoryHtml(className)}</strong></div>
+                        <div class="student-meta-box"><span>Accuracy</span><strong>${escapeStudentDirectoryHtml(accuracy)}</strong></div>
+                        <div class="student-meta-box"><span>WPM</span><strong>${escapeStudentDirectoryHtml(wpm)}</strong></div>
+                    </div>
+                </div>
+            </article>
+        `;
+    }).join('');
+
+    emptyState.insertAdjacentHTML('beforebegin', cards);
+}
+
+function bindStudentDirectoryFilters() {
+    const searchInput = document.getElementById('studentSearchInput');
+    const levelFilter = document.getElementById('readingLevelFilter');
+    if (searchInput && !searchInput.dataset.autoFilterBound) {
+        searchInput.dataset.autoFilterBound = 'true';
+        searchInput.addEventListener('input', function () {
+            renderStudentDirectory();
+        });
+    }
+    if (levelFilter && !levelFilter.dataset.autoFilterBound) {
+        levelFilter.dataset.autoFilterBound = 'true';
+        levelFilter.addEventListener('change', function () {
+            renderStudentDirectory();
+        });
+    }
+}
+
 // Fetch student data from the server API with localStorage fallback
 async function refreshStudentOverview() {
     try {
@@ -1085,10 +1194,12 @@ async function refreshStudentOverview() {
     
     // Always update statistics (from either API data or localStorage)
     updateStudentStatistics();
+    renderStudentDirectory();
 }
 
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", function() {
+    bindStudentDirectoryFilters();
     refreshStudentOverview();
     setInterval(refreshStudentOverview, 60000);
 

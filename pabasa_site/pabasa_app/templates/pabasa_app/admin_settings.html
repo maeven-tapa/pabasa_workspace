@@ -1,68 +1,112 @@
 {% extends "pabasa_app/admin_base.html" %}
 
 {% block content %}
-<div class="admin-panel">
+<div class="admin-settings-shell">
     {% if settings_success %}
-        <div class="alert alert-success" role="alert">{{ settings_success }}</div>
+        <div class="alert alert-success d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+            <span>{{ settings_success }}</span>
+        </div>
     {% endif %}
     {% if settings_error %}
-        <div class="alert alert-danger" role="alert">{{ settings_error }}</div>
+        <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <span>{{ settings_error }}</span>
+        </div>
     {% endif %}
 
-    <div class="row g-3">
-        <div class="col-lg-6">
-            <section class="border rounded-3 p-3 h-100">
-                <h2 class="h5 fw-bold mb-3">Push Notifications</h2>
-                <form method="post" class="d-grid gap-3">
-                    {% csrf_token %}
-                    <input type="hidden" name="settings_action" value="save_notifications">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="pushEnabled" name="push_enabled" {% if notification_settings.push_enabled %}checked{% endif %}>
-                        <label class="form-check-label" for="pushEnabled">Enable Notifications</label>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" {% if notification_settings.email_notifications %}checked{% endif %}>
-                        <label class="form-check-label" for="emailNotifications">Email Notifications</label>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="weeklyDigestEnabled" name="weekly_digest_enabled" {% if notification_settings.weekly_digest_enabled %}checked{% endif %}>
-                        <label class="form-check-label" for="weeklyDigestEnabled">Weekly Digest</label>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="newMaterials" name="new_materials" {% if notification_settings.new_materials %}checked{% endif %}>
-                        <label class="form-check-label" for="newMaterials">New materials and assignments</label>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="progressUpdates" name="progress_updates" {% if notification_settings.progress_updates %}checked{% endif %}>
-                        <label class="form-check-label" for="progressUpdates">Progress updates</label>
-                    </div>
-                    <button class="btn btn-primary btn-sm w-auto" type="submit">Save Preferences</button>
-                </form>
-            </section>
+    <section class="admin-account-summary">
+        <div class="admin-account-avatar" aria-hidden="true">
+            <i class="bi bi-person-gear"></i>
         </div>
+        <div>
+            <p class="admin-account-eyebrow">Admin Account</p>
+            <h2>{{ first_name|default:"PABASA" }} {{ last_name|default:"Admin" }}</h2>
+            <p>Manage notification preferences and secure access for this administrative account.</p>
+        </div>
+    </section>
 
-        <div class="col-lg-6">
-            <section class="border rounded-3 p-3 h-100">
-                <h2 class="h5 fw-bold mb-3">Change Password</h2>
-                <form method="post" class="d-grid gap-3">
-                    {% csrf_token %}
-                    <input type="hidden" name="settings_action" value="change_password">
-                    <div>
-                        <label class="form-label small" for="currentPassword">Current Password</label>
-                        <input class="form-control" id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
-                    </div>
-                    <div>
-                        <label class="form-label small" for="newPassword">New Password</label>
-                        <input class="form-control" id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" required>
-                    </div>
-                    <div>
-                        <label class="form-label small" for="confirmPassword">Confirm Password</label>
-                        <input class="form-control" id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
-                    </div>
-                    <button class="btn btn-primary btn-sm w-auto" type="submit">Update Password</button>
-                </form>
-            </section>
-        </div>
-    </div>
+    <section class="admin-settings-grid" aria-label="Admin account settings">
+        <article class="admin-settings-card">
+            <div class="admin-settings-card-header">
+                <span class="admin-settings-card-icon" aria-hidden="true">
+                    <i class="bi bi-bell"></i>
+                </span>
+                <div>
+                    <h3>Push Notifications</h3>
+                    <p>Choose which updates should reach this admin account.</p>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="settings_action" value="save_notifications">
+
+                <div class="admin-setting-row">
+                    <label for="pushEnabled">Enable Notifications</label>
+                    <input class="form-check-input" type="checkbox" id="pushEnabled" name="push_enabled" {% if notification_settings.push_enabled %}checked{% endif %}>
+                </div>
+                <div class="admin-setting-row">
+                    <label for="emailNotifications">Email Notifications</label>
+                    <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" {% if notification_settings.email_notifications %}checked{% endif %}>
+                </div>
+                <div class="admin-setting-row">
+                    <label for="weeklyDigestEnabled">Weekly Digest</label>
+                    <input class="form-check-input" type="checkbox" id="weeklyDigestEnabled" name="weekly_digest_enabled" {% if notification_settings.weekly_digest_enabled %}checked{% endif %}>
+                </div>
+                <div class="admin-setting-row">
+                    <label for="newMaterials">New materials and assignments</label>
+                    <input class="form-check-input" type="checkbox" id="newMaterials" name="new_materials" {% if notification_settings.new_materials %}checked{% endif %}>
+                </div>
+                <div class="admin-setting-row">
+                    <label for="progressUpdates">Progress updates</label>
+                    <input class="form-check-input" type="checkbox" id="progressUpdates" name="progress_updates" {% if notification_settings.progress_updates %}checked{% endif %}>
+                </div>
+
+                <div class="admin-settings-actions">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-save" aria-hidden="true"></i>
+                        <span>Save Preferences</span>
+                    </button>
+                </div>
+            </form>
+        </article>
+
+        <article class="admin-settings-card">
+            <div class="admin-settings-card-header">
+                <span class="admin-settings-card-icon" aria-hidden="true">
+                    <i class="bi bi-shield-lock"></i>
+                </span>
+                <div>
+                    <h3>Change Password</h3>
+                    <p>Update the password used to access the admin workspace.</p>
+                </div>
+            </div>
+
+            <form method="post" class="d-grid gap-3">
+                {% csrf_token %}
+                <input type="hidden" name="settings_action" value="change_password">
+                <div>
+                    <label class="form-label small" for="currentPassword">Current Password</label>
+                    <input class="form-control" id="currentPassword" name="current_password" type="password" autocomplete="current-password" required>
+                </div>
+                <div>
+                    <label class="form-label small" for="newPassword">New Password</label>
+                    <input class="form-control" id="newPassword" name="new_password" type="password" autocomplete="new-password" minlength="8" required>
+                </div>
+                <div>
+                    <label class="form-label small" for="confirmPassword">Confirm Password</label>
+                    <input class="form-control" id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required>
+                </div>
+
+                <div class="admin-settings-actions">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-key" aria-hidden="true"></i>
+                        <span>Update Password</span>
+                    </button>
+                </div>
+            </form>
+        </article>
+    </section>
 </div>
 {% endblock %}
