@@ -7010,31 +7010,51 @@ def _extract_text_from_pdf(upload, selected_pages=None):
 
 
 def _resolve_tesseract_executable(pytesseract_module):
+    candidates = []
+
     if os.path.isfile(TESSERACT_STATIC_PATH):
-        return TESSERACT_STATIC_PATH
+        candidates.append(TESSERACT_STATIC_PATH)
 
     explicit = os.environ.get('TESSERACT_CMD') or os.environ.get('TESSERACT_PATH')
     if explicit:
         candidate = os.path.expandvars(os.path.expanduser(explicit))
-        if os.path.isfile(candidate):
-            return candidate
+        if candidate:
+            candidates.append(candidate)
 
     try:
         resolved = shutil.which('tesseract')
         if resolved:
-            return resolved
+            candidates.append(resolved)
     except Exception:
         pass
 
-    common_paths = [
+    for candidate in [
         r'C:\Program Files\Tesseract-OCR\tesseract.exe',
         r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
         os.path.expandvars(r'%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe'),
         os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR\tesseract.exe'),
-    ]
-    for path in common_paths:
-        if path and os.path.isfile(path):
-            return path
+        os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR\tesseract.exe'),
+        os.path.expandvars(r'%LOCALAPPDATA%\Tesseract-OCR\tesseract.exe'),
+    ]:
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+
+    if pytesseract_module and hasattr(pytesseract_module, 'pytesseract'):
+        for attr in ('tesseract_cmd', 'tesseract_executable'):
+            value = getattr(getattr(pytesseract_module, 'pytesseract', None), attr, None)
+            if value and value not in candidates:
+                candidates.append(value)
+
+    seen = set()
+    for candidate in candidates:
+        if not candidate:
+            continue
+        normalized = os.path.normcase(os.path.normpath(str(candidate)))
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        if os.path.isfile(candidate):
+            return candidate
 
     return None
 
@@ -7263,7 +7283,6 @@ def _build_ocr_image_candidates(image):
             except Exception:
                 continue
 
-    # Create a blurred-denoised version for photo-like uploads.
     try:
         denoised = grayscale.filter(ImageFilter.GaussianBlur(radius=0.6))
         add_candidate(ImageOps.autocontrast(denoised))
@@ -7275,6 +7294,18 @@ def _build_ocr_image_candidates(image):
         deskewed = ImageOps.autocontrast(grayscale)
         deskewed = deskewed.filter(ImageFilter.MaxFilter(3))
         add_candidate(deskewed)
+    except Exception:
+        pass
+
+    try:
+        rotated = image.rotate(3, expand=False, fillcolor='white')
+        add_candidate(ImageOps.autocontrast(ImageOps.grayscale(rotated)))
+    except Exception:
+        pass
+
+    try:
+        rotated = image.rotate(-3, expand=False, fillcolor='white')
+        add_candidate(ImageOps.autocontrast(ImageOps.grayscale(rotated)))
     except Exception:
         pass
 
@@ -7311,67 +7342,83 @@ def _extract_text_from_image(upload):
             candidates = _build_ocr_image_candidates(image)
             best_text = ''
             best_layout = []
+            best_confidence = -1
 
             for candidate in candidates:
-                try:
-                    candidate_text = pytesseract.image_to_string(candidate, config='--psm 6').strip()
-                except Exception:
-                    try:
-                        candidate_text = pytesseract.image_to_string(candidate).strip()
-                    except Exception:
-                        continue
-
-                cleaned = re.sub(r'\s+', ' ', candidate_text).strip()
-                if not cleaned:
-                    continue
-
-                try:
-                    if TesseractOutput is None:
-                        data = pytesseract.image_to_data(candidate, config='--psm 6')
-                    else:
-                        data = pytesseract.image_to_data(candidate, config='--psm 6', output_type=TesseractOutput.DICT)
-                except Exception:
-                    try:
-                        if TesseractOutput is None:
-                            data = pytesseract.image_to_data(candidate)
-                        else:
-                            data = pytesseract.image_to_data(candidate, output_type=TesseractOutput.DICT)
-                    except Exception:
-                        data = None
-
-                layout = []
-                if data:
-                    texts = data.get('text') or []
-                    lefts = data.get('left') or []
-                    tops = data.get('top') or []
-                    widths = data.get('width') or []
-                    heights = data.get('height') or []
-                    confs = data.get('conf') or []
-                    blocks = data.get('block_num') or []
-                    paragraphs = data.get('par_num') or []
-                    lines = data.get('line_num') or []
-                    words = data.get('word_num') or []
-
-                    for index, text_value in enumerate(texts):
-                        cleaned_word = re.sub(r'\s+', ' ', str(text_value or '').strip())
-                        if not cleaned_word:
+                for psm in ['6', '11', '3']:
+                    for config in [f'--psm {psm}', None]:
+                        try:
+                            if config:
+                                candidate_text = pytesseract.image_to_string(candidate, config=config).strip()
+                            else:
+                                candidate_text = pytesseract.image_to_string(candidate).strip()
+                        except Exception:
                             continue
-                        layout.append({
-                            'text': cleaned_word,
-                            'left': int(lefts[index]) if index < len(lefts) else 0,
-                            'top': int(tops[index]) if index < len(tops) else 0,
-                            'width': int(widths[index]) if index < len(widths) else 0,
-                            'height': int(heights[index]) if index < len(heights) else 0,
-                            'conf': int(float(confs[index])) if index < len(confs) and str(confs[index]).strip() not in {'', '-1'} else 0,
-                            'block_num': int(blocks[index]) if index < len(blocks) else 0,
-                            'par_num': int(paragraphs[index]) if index < len(paragraphs) else 0,
-                            'line_num': int(lines[index]) if index < len(lines) else 0,
-                            'word_num': int(words[index]) if index < len(words) else 0,
-                        })
 
-                if len(layout) > len(best_layout) or (len(layout) == len(best_layout) and len(cleaned) > len(best_text)):
-                    best_text = cleaned
-                    best_layout = layout
+                        cleaned = re.sub(r'\s+', ' ', candidate_text).strip()
+                        if not cleaned:
+                            continue
+
+                        try:
+                            if TesseractOutput is None:
+                                data = pytesseract.image_to_data(candidate, config=(config or '--psm 6'))
+                            else:
+                                data = pytesseract.image_to_data(candidate, config=(config or '--psm 6'), output_type=TesseractOutput.DICT)
+                        except Exception:
+                            try:
+                                if TesseractOutput is None:
+                                    data = pytesseract.image_to_data(candidate)
+                                else:
+                                    data = pytesseract.image_to_data(candidate, output_type=TesseractOutput.DICT)
+                            except Exception:
+                                data = None
+
+                        layout = []
+                        confidence_total = 0
+                        confidence_count = 0
+                        if data:
+                            texts = data.get('text') or []
+                            lefts = data.get('left') or []
+                            tops = data.get('top') or []
+                            widths = data.get('width') or []
+                            heights = data.get('height') or []
+                            confs = data.get('conf') or []
+                            blocks = data.get('block_num') or []
+                            paragraphs = data.get('par_num') or []
+                            lines = data.get('line_num') or []
+                            words = data.get('word_num') or []
+
+                            for index, text_value in enumerate(texts):
+                                cleaned_word = re.sub(r'\s+', ' ', str(text_value or '').strip())
+                                if not cleaned_word:
+                                    continue
+                                confidence = 0
+                                if index < len(confs):
+                                    try:
+                                        confidence = int(float(confs[index]))
+                                    except Exception:
+                                        confidence = 0
+                                if confidence > 0:
+                                    confidence_total += confidence
+                                    confidence_count += 1
+                                layout.append({
+                                    'text': cleaned_word,
+                                    'left': int(lefts[index]) if index < len(lefts) else 0,
+                                    'top': int(tops[index]) if index < len(tops) else 0,
+                                    'width': int(widths[index]) if index < len(widths) else 0,
+                                    'height': int(heights[index]) if index < len(heights) else 0,
+                                    'conf': confidence,
+                                    'block_num': int(blocks[index]) if index < len(blocks) else 0,
+                                    'par_num': int(paragraphs[index]) if index < len(paragraphs) else 0,
+                                    'line_num': int(lines[index]) if index < len(lines) else 0,
+                                    'word_num': int(words[index]) if index < len(words) else 0,
+                                })
+
+                        average_confidence = confidence_total / confidence_count if confidence_count else 0
+                        if len(layout) > len(best_layout) or (len(layout) == len(best_layout) and (average_confidence > best_confidence or (average_confidence == best_confidence and len(cleaned) > len(best_text)))):
+                            best_text = cleaned
+                            best_layout = layout
+                            best_confidence = average_confidence
 
             return {'text': best_text, 'layout': best_layout}
     except UnidentifiedImageError:
@@ -7504,6 +7551,7 @@ def extract_reading_material_file(request):
         selected_pages_list = [1]
         extraction_warnings = []
         ocr_layout = []
+        empty_ocr_result = False
         
         if ext == '.txt':
             raw = upload.read()
@@ -7530,6 +7578,7 @@ def extract_reading_material_file(request):
                 ocr_data = _coerce_image_ocr_result(ocr_result)
                 extracted_text = ocr_data.get('text') or ''
                 ocr_layout = list(ocr_data.get('layout') or [])
+                empty_ocr_result = isinstance(ocr_result, str) and not ocr_result.strip()
 
                 if not extracted_text:
                     logger.info('Image extraction produced no text for %s', filename)
@@ -7584,9 +7633,12 @@ def extract_reading_material_file(request):
                 logger.warning('PDF extraction failed: %s', e)
                 extraction_warnings.append(f'PDF extraction encountered an issue: {str(e)}')
 
-        # Normalize and clean extracted text
+        # Normalize and clean extracted text while preserving paragraph structure.
         try:
-            text = re.sub(r'\s+', ' ', extracted_text.strip())
+            normalized_text = extracted_text.replace('\r\n', '\n').replace('\r', '\n')
+            normalized_text = re.sub(r'[ \t]+', ' ', normalized_text)
+            normalized_text = re.sub(r'\n{3,}', '\n\n', normalized_text)
+            text = normalized_text.strip()
         except Exception:
             text = ''
 
@@ -7615,6 +7667,9 @@ def extract_reading_material_file(request):
                 items = fallback_items
                 if not extraction_warnings:
                     extraction_warnings.append('The extracted text could not be converted into reading items. Please try a different file or a clearer image.')
+            elif not empty_ocr_result:
+                if not extraction_warnings:
+                    extraction_warnings.append('No readable text could be recovered from that image. Please try a clearer image or a different file.')
 
         warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
         if not items:
@@ -7623,6 +7678,10 @@ def extract_reading_material_file(request):
                 logger.debug('Extraction produced text (long sample): %s', text[:2000])
                 if not warning_msg:
                     warning_msg = 'The extracted text could not be converted into reading items. Please try a different file or a clearer image.'
+                    extraction_warnings.append(warning_msg)
+            else:
+                if not warning_msg and not empty_ocr_result:
+                    warning_msg = 'No readable text could be recovered from that image. Please try a clearer image or a different file.'
                     extraction_warnings.append(warning_msg)
                 return JsonResponse({
                     'success': True,

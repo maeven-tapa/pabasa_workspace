@@ -376,6 +376,48 @@ class MaterialUploadExtractionTests(TestCase):
         mock_extract_text_from_image.assert_called_once()
         mock_build_extracted_material_items.assert_called_once()
 
+    @patch("pabasa_app.views._extract_text_from_image", return_value={"text": "Line one\nLine two\n\nLine three", "layout": []})
+    def test_extract_endpoint_preserves_newlines_for_ocr_text(self, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertIn("Line one\nLine two", data["text"])
+        self.assertIn("\n\nLine three", data["text"])
+        mock_extract_text_from_image.assert_called_once()
+
+    @patch("pabasa_app.views._extract_text_from_image", return_value={"text": "", "layout": []})
+    def test_extract_endpoint_returns_warning_when_image_ocr_yields_no_text(self, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["items"], [])
+        self.assertTrue(data.get("warnings") or data.get("warning_message"))
+        mock_extract_text_from_image.assert_called_once()
+
     def test_fallback_material_items_preserve_paragraph_blocks(self):
         text = "First line\nSecond line\n\nThird line"
         self.assertEqual(_fallback_material_items_from_text(text), ["First line Second line", "Third line"])
