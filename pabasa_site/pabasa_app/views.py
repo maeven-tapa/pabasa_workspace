@@ -4380,6 +4380,33 @@ def _practice_tutorial_flag_key(mode):
     return mapping.get(mode_key)
 
 
+def _get_user_preference_dict(user):
+    pref = getattr(user, 'preference', None) or {}
+    return pref if isinstance(pref, dict) else {}
+
+
+def _has_seen_practice_tutorial(request, user, flag_key):
+    if not flag_key:
+        return True
+    preferences = _get_user_preference_dict(user)
+    return bool(preferences.get(flag_key) or request.session.get(flag_key))
+
+
+def _mark_practice_tutorial_seen(request, user, flag_key):
+    if not flag_key:
+        return
+    request.session[flag_key] = True
+    request.session.modified = True
+    if not user:
+        return
+    preferences = dict(_get_user_preference_dict(user))
+    if preferences.get(flag_key) is True:
+        return
+    preferences[flag_key] = True
+    user.preference = preferences
+    user.save(update_fields=['preference', 'updated_at'])
+
+
 def _practice_tutorial_content(mode):
     mode_key = (mode or '').strip().lower()
     mapping = {
@@ -4543,9 +4570,8 @@ def student_theme_action(request):
 def practice_mark_tutorial_seen(request, mode):
     normalized_mode = (mode or '').strip().lower()
     flag_key = _practice_tutorial_flag_key(normalized_mode)
-    if flag_key:
-        request.session[flag_key] = True
-        request.session.modified = True
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    _mark_practice_tutorial_seen(request, student_user, flag_key)
     return redirect('practice_game_progression', mode=normalized_mode)
 
 
@@ -4561,12 +4587,11 @@ def practice_game_progression(request, mode):
     progression = _practice_game_progression(normalized_mode, student_user)
     progression = _apply_progression_unlock_override(progression, request.GET.get('unlock', ''))
     flag_key = _practice_tutorial_flag_key(normalized_mode)
-    show_tutorial = not bool(flag_key and request.session.get(flag_key))
-    if show_tutorial and flag_key:
+    show_tutorial = not _has_seen_practice_tutorial(request, student_user, flag_key)
+    if show_tutorial:
         # The automatic guide is a one-time introduction. Count the first page
         # display itself so closing with X cannot make it auto-open again.
-        request.session[flag_key] = True
-        request.session.modified = True
+        _mark_practice_tutorial_seen(request, student_user, flag_key)
     context.update({
         'selected_game_mode': normalized_mode,
         'game_mode_title': progression['mode_title'],

@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -2074,30 +2074,44 @@ class PracticeReaderMaterialTests(TestCase):
         response = self.client.get(reverse("practice_game_progression", args=["free"]))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="tutorial-overlay is-open')
         self.assertContains(response, 'tutorial-start-btn')
-        self.assertTrue(self.client.session.get("free_mode_tutorial_seen"))
+        self.student.refresh_from_db()
+        self.assertTrue(self.student.preference.get("free_mode_tutorial_seen"))
 
     def test_tutorial_auto_opens_only_on_first_mode_visit(self):
         first_response = self.client.get(reverse("practice_game_progression", args=["hunt"]))
         second_response = self.client.get(reverse("practice_game_progression", args=["hunt"]))
 
-        self.assertContains(first_response, 'tutorial-start-btn')
-        self.assertNotContains(second_response, 'tutorial-start-btn')
+        self.assertContains(first_response, 'class="tutorial-overlay is-open')
+        self.assertNotContains(second_response, 'class="tutorial-overlay is-open')
 
-    def test_seen_tutorial_overlay_hides_start_button(self):
-        self.client.session['free_mode_tutorial_seen'] = True
-        self.client.session.save()
+    def test_seen_tutorial_overlay_does_not_auto_open_after_new_session(self):
+        self.student.preference = {"free_mode_tutorial_seen": True}
+        self.student.save(update_fields=["preference", "updated_at"])
+        new_client = Client()
+        session = new_client.session
+        session["user_id"] = self.student.id
+        session["user_role"] = self.student.role
+        session["first_name"] = self.student.first_name
+        session["last_name"] = self.student.last_name
+        session["email"] = self.student.email
+        session["custom_id"] = self.student.custom_id
+        session.save()
 
-        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+        response = new_client.get(reverse("practice_game_progression", args=["free"]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'tutorial-start-btn')
+        self.assertNotContains(response, 'class="tutorial-overlay is-open')
+        self.assertContains(response, 'tutorial-start-btn')
 
-    def test_mark_tutorial_seen_sets_session_flag(self):
+    def test_mark_tutorial_seen_sets_user_preference_flag(self):
         response = self.client.post(reverse("practice_mark_tutorial_seen", args=["color"]))
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(self.client.session.get("color_mode_tutorial_seen"))
+        self.student.refresh_from_db()
+        self.assertTrue(self.student.preference.get("color_mode_tutorial_seen"))
 
     def test_practice_reader_template_shows_results_breakdown(self):
         response = self.client.get(reverse("practice_word_page"))

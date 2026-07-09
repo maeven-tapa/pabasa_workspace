@@ -3171,6 +3171,374 @@
         body.dark-theme .hunt-guide::after { border-left-color: #1e293b; }
         body.dark-theme .hunt-main::after { opacity: .18; }
         body.dark-theme .hunt-word-area::after { background: linear-gradient(160deg, rgba(56,189,248,.16), rgba(56,189,248,.03)); }
+
+        /* Hunt responsive layout override. Keep the reading task centered and bounded on every viewport. */
+        .practice-hunt-shell {
+            align-items: center;
+            display: grid;
+            justify-items: center;
+            max-width: none;
+            min-height: 100dvh;
+            padding: clamp(1rem, 2.4vw, 2.5rem);
+            width: 100%;
+        }
+
+        .practice-hunt-shell.is-complete {
+            place-items: center;
+        }
+
+        .practice-hunt-shell .practice-complete {
+            min-height: 0;
+            width: min(100%, 900px);
+        }
+
+        .practice-hunt-shell .practice-complete-card {
+            max-width: 860px;
+            width: min(100%, 860px);
+        }
+
+        .hunt-reader {
+            align-content: center;
+            gap: clamp(0.85rem, 1.5vw, 1.15rem);
+            max-width: 1120px;
+            min-width: 0;
+            width: min(100%, 1120px);
+        }
+
+        .hunt-topbar {
+            gap: clamp(0.65rem, 1.4vw, 1rem);
+            width: 100%;
+        }
+
+        .hunt-back,
+        .hunt-stars {
+            justify-content: center;
+            white-space: nowrap;
+        }
+
+        .hunt-heading h1 {
+            font-size: clamp(1.35rem, 2.1vw, 2rem);
+            line-height: 1.1;
+            overflow-wrap: anywhere;
+        }
+
+        .hunt-card {
+            margin-inline: auto;
+            max-width: 1040px;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .hunt-flight {
+            padding: clamp(0.85rem, 1.5vw, 1rem) clamp(1rem, 2vw, 1.35rem) 0.85rem;
+        }
+
+        .hunt-flight-meta {
+            flex-wrap: wrap;
+            gap: 0.4rem 0.8rem;
+        }
+
+        .hunt-flight-track {
+            max-width: 100%;
+        }
+
+        .hunt-meta-row {
+            padding: 0.9rem clamp(1rem, 2vw, 1.35rem) 0;
+        }
+
+        .hunt-status {
+            flex: 1 1 14rem;
+            justify-content: flex-end;
+            min-width: min(100%, 12rem);
+            overflow-wrap: anywhere;
+        }
+
+        .hunt-main {
+            align-items: center;
+            gap: clamp(1rem, 2.2vw, 1.6rem);
+            grid-template-columns: minmax(140px, 210px) minmax(0, 1fr);
+            padding: clamp(1.15rem, 3vw, 2rem);
+        }
+
+        .hunt-guide {
+            justify-self: center;
+            margin-right: 0;
+            min-width: 0;
+            z-index: 3;
+        }
+
+        .hunt-guide::after {
+            display: none;
+        }
+
+        .hunt-bird-wrap {
+            height: clamp(104px, 11vw, 148px);
+            width: clamp(104px, 11vw, 148px);
+        }
+
+        .hunt-guide-copy {
+            font-size: clamp(0.72rem, 1vw, 0.8rem);
+            max-width: 180px;
+            width: min(100%, 180px);
+        }
+
+        .hunt-word-area {
+            min-height: clamp(230px, 25vw, 340px);
+            min-width: 0;
+            padding: clamp(1.25rem, 4vw, 2.8rem);
+            width: 100%;
+        }
+
+        .hunt-word-area .practice-text {
+            font-size: clamp(2.25rem, 5vw, 4.4rem);
+            line-height: 1.15;
+            max-width: 100%;
+        }
+
+        .hunt-actions {
+            padding: clamp(0.9rem, 1.6vw, 1.1rem) clamp(1rem, 2vw, 1.35rem) clamp(1rem, 1.8vw, 1.25rem);
+        }
+
+        .hunt-actions .practice-feedback {
+            margin: 0 auto 0.9rem;
+            max-width: 720px;
+            min-height: 42px;
+            overflow-wrap: anywhere;
+            width: min(100%, 720px);
+        }
+
+        .hunt-actions .practice-controls {
+            display: grid;
+            gap: 0.65rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            margin-inline: auto;
+            max-width: 520px;
+            padding: 0;
+            width: min(100%, 520px);
+        }
+
+        .hunt-actions .practice-controls button {
+            min-width: 0;
+            width: 100%;
+        }
+
+        @media (min-width: 1600px) {
+            .hunt-reader {
+                max-width: 1180px;
+                width: min(100%, 1180px);
+            }
+
+            .hunt-card {
+                max-width: 1080px;
+            }
+
+            .hunt-word-area {
+                min-height: clamp(320px, 24vh, 380px);
+            }
+        }
+
+        @media (min-width: 2200px) {
+            .practice-hunt-shell {
+                padding: clamp(2rem, 3vw, 3rem);
+            }
+
+            .hunt-reader {
+                max-width: 1200px;
+                width: min(100%, 1200px);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .practice-hunt-shell {
+                padding: clamp(0.85rem, 2.5vw, 1.5rem);
+            }
+
+            .hunt-reader {
+                max-width: 920px;
+            }
+
+            .hunt-main {
+                grid-template-columns: minmax(120px, 170px) minmax(0, 1fr);
+            }
+
+            .hunt-bird-wrap {
+                height: clamp(92px, 13vw, 126px);
+                width: clamp(92px, 13vw, 126px);
+            }
+
+            .hunt-guide-copy {
+                max-width: 150px;
+            }
+        }
+
+        @media (max-width: 820px) {
+            .hunt-topbar {
+                grid-template-columns: auto minmax(0, 1fr);
+            }
+
+            .hunt-stars {
+                grid-column: 1 / -1;
+                justify-self: stretch;
+                width: 100%;
+            }
+
+            .hunt-main {
+                gap: 0.8rem;
+                grid-template-columns: minmax(88px, 120px) minmax(0, 1fr);
+                padding: 1rem;
+            }
+
+            .hunt-bird-wrap {
+                height: 86px;
+                width: 86px;
+            }
+
+            .hunt-guide-copy {
+                font-size: 0.7rem;
+                max-width: 108px;
+                padding: 0.45rem 0.5rem;
+            }
+
+            .hunt-word-area {
+                min-height: clamp(210px, 35vw, 260px);
+                padding: 1rem;
+            }
+
+            .hunt-word-area .practice-text {
+                font-size: clamp(1.9rem, 7vw, 3.2rem);
+            }
+
+            .hunt-status {
+                flex-basis: 100%;
+                justify-content: flex-start;
+                margin-left: 0;
+                min-width: 0;
+                width: 100%;
+            }
+
+            .hunt-actions .practice-controls {
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .hunt-actions .practice-controls button {
+                padding-inline: 0.55rem;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .practice-hunt-shell {
+                align-items: start;
+                min-height: 100dvh;
+                padding: 0.75rem 0.65rem 1rem;
+            }
+
+            .hunt-reader {
+                gap: 0.7rem;
+            }
+
+            .hunt-topbar {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hunt-back,
+            .hunt-stars {
+                width: 100%;
+            }
+
+            .hunt-heading {
+                order: -1;
+            }
+
+            .hunt-flight-meta {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .hunt-meta-row {
+                align-items: stretch;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                padding-inline: 0.85rem;
+            }
+
+            .hunt-count,
+            .hunt-difficulty,
+            .hunt-level {
+                text-align: center;
+            }
+
+            .hunt-status {
+                grid-column: 1 / -1;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .hunt-main {
+                grid-template-columns: 1fr;
+                justify-items: center;
+                padding: 0.85rem;
+            }
+
+            .hunt-guide {
+                display: grid;
+                gap: 0.55rem;
+                grid-template-columns: auto minmax(0, 1fr);
+                width: 100%;
+            }
+
+            .hunt-bird-wrap {
+                height: 74px;
+                width: 74px;
+            }
+
+            .hunt-guide-copy {
+                align-self: center;
+                margin-top: 0;
+                max-width: none;
+                text-align: left;
+                width: 100%;
+            }
+
+            .hunt-word-area {
+                min-height: clamp(180px, 42vw, 230px);
+                width: 100%;
+            }
+
+            .hunt-word-area .practice-text {
+                font-size: clamp(1.75rem, 11vw, 3rem);
+            }
+
+            .hunt-actions {
+                padding: 0.85rem;
+            }
+
+            .hunt-actions .practice-feedback {
+                border-radius: 12px;
+                font-size: 0.88rem;
+                min-height: 40px;
+                padding: 0.6rem 0.75rem;
+            }
+
+            .hunt-actions .practice-controls {
+                gap: 0.6rem;
+                grid-template-columns: 1fr;
+            }
+
+            .hunt-actions .practice-controls button {
+                min-height: 52px;
+            }
+
+            .practice-hunt-shell .practice-feedback-card {
+                align-items: center;
+                text-align: left;
+            }
+
+            .practice-hunt-shell .practice-metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
