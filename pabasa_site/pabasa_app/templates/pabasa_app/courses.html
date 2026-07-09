@@ -11497,6 +11497,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (debugInfo.processed_image) {
                 parts.push(`processed image: ${debugInfo.processed_image}`);
             }
+            if (Array.isArray(debugInfo.candidate_images) && debugInfo.candidate_images.length) {
+                parts.push(`candidate images: ${debugInfo.candidate_images.slice(0, 2).join(', ')}`);
+            }
             if (debugInfo.metadata) {
                 parts.push(`metadata: ${debugInfo.metadata}`);
             }

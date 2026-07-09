@@ -7454,6 +7454,12 @@ def _build_ocr_image_candidates(image):
         except Exception:
             return
 
+    original_resized = _resize_ocr_image(image)
+    try:
+        add_candidate('original-resized-grayscale', ImageOps.autocontrast(ImageOps.grayscale(original_resized)))
+    except Exception:
+        add_candidate('original-resized', original_resized)
+
     prepared = _resize_ocr_image(_trim_ocr_border(image))
     rotation = _estimate_ocr_rotation(prepared)
     if rotation:
@@ -7499,7 +7505,7 @@ def _build_ocr_image_candidates(image):
         except Exception:
             continue
 
-    return candidates[:6] or [{'label': 'original', 'image': image}]
+    return candidates[:7] or [{'label': 'original', 'image': image}]
 
 
 def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
@@ -7541,7 +7547,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
             for candidate_entry in candidates:
                 candidate = candidate_entry.get('image') if isinstance(candidate_entry, dict) else candidate_entry
                 candidate_label = candidate_entry.get('label', 'candidate') if isinstance(candidate_entry, dict) else 'candidate'
-                for config in ['--oem 3 --psm 6', '--oem 3 --psm 11']:
+                for config in ['--oem 3 --psm 6', '--oem 3 --psm 4', '--oem 3 --psm 11']:
                     attempt_count += 1
                     try:
                         if TesseractOutput is None:
@@ -7657,10 +7663,21 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                     debug_dir = Path(debug_dir)
                     debug_dir.mkdir(parents=True, exist_ok=True)
                     safe_label = re.sub(r'[^A-Za-z0-9_.-]+', '_', debug_label or 'ocr').strip('_') or 'ocr'
+                    candidate_debug_paths = []
                     if best_candidate is not None:
                         processed_path = debug_dir / f'{safe_label}_processed.png'
                         best_candidate.save(processed_path)
                         debug_info['processed_image'] = str(processed_path)
+                    else:
+                        for index, candidate_entry in enumerate(candidates[:4], start=1):
+                            candidate = candidate_entry.get('image') if isinstance(candidate_entry, dict) else candidate_entry
+                            candidate_label = candidate_entry.get('label', f'candidate-{index}') if isinstance(candidate_entry, dict) else f'candidate-{index}'
+                            candidate_label = re.sub(r'[^A-Za-z0-9_.-]+', '_', candidate_label).strip('_') or f'candidate-{index}'
+                            candidate_path = debug_dir / f'{safe_label}_{index}_{candidate_label}.png'
+                            candidate.save(candidate_path)
+                            candidate_debug_paths.append(str(candidate_path))
+                        if candidate_debug_paths:
+                            debug_info['candidate_images'] = candidate_debug_paths
                     metadata_path = debug_dir / f'{safe_label}_metadata.json'
                     metadata_path.write_text(json.dumps(debug_info, indent=2), encoding='utf-8')
                     debug_info['metadata'] = str(metadata_path)
