@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 from io import BytesIO
 from pathlib import Path
+import hashlib
 import json
 import uuid
 from unittest.mock import patch
@@ -18,7 +19,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _resolve_tesseract_executable
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _resolve_tesseract_executable, _build_image_upload_debug_info
 from .weekly_digest import send_weekly_digest
 
 
@@ -223,6 +224,16 @@ class OcrLayoutGroupingTests(TestCase):
 
 
 class MaterialUploadExtractionTests(TestCase):
+    def test_build_image_upload_debug_info_reports_upload_size_and_hash(self):
+        upload = SimpleUploadedFile("scan.png", b"abc123", content_type="image/png")
+
+        info = _build_image_upload_debug_info(upload, source="received")
+
+        self.assertEqual(info["source"], "received")
+        self.assertEqual(info["size"], 6)
+        self.assertEqual(info["sha256"], hashlib.sha256(b"abc123").hexdigest())
+        self.assertEqual(info["content_type"], "image/png")
+
     def test_resolve_tesseract_executable_falls_back_to_tesseract_ocr_binary(self):
         class DummyPytesseractModule:
             pass

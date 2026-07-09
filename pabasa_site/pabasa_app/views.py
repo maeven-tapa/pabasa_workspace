@@ -7191,6 +7191,46 @@ def _extract_text_from_pdf(upload, selected_pages=None):
     }
 
 
+def _build_image_upload_debug_info(upload, source='upload'):
+    if upload is None:
+        return {'source': source, 'size': 0, 'sha256': None, 'content_type': None, 'name': None}
+
+    try:
+        size = getattr(upload, 'size', None)
+    except Exception:
+        size = None
+
+    name = None
+    content_type = None
+    try:
+        name = getattr(upload, 'name', None)
+    except Exception:
+        name = None
+    try:
+        content_type = getattr(upload, 'content_type', None)
+    except Exception:
+        content_type = None
+
+    data = b''
+    try:
+        if hasattr(upload, 'read'):
+            upload.seek(0)
+            data = upload.read()
+            upload.seek(0)
+    except Exception:
+        data = b''
+
+    import hashlib
+    sha256 = hashlib.sha256(data).hexdigest() if data is not None else None
+    return {
+        'source': source,
+        'name': name,
+        'size': size if size is not None else len(data),
+        'sha256': sha256,
+        'content_type': content_type,
+    }
+
+
 def _resolve_tesseract_executable(pytesseract_module):
     candidates = []
 
@@ -7850,6 +7890,9 @@ def extract_reading_material_file(request):
     selection_mode = (request.POST.get('selection_mode') or 'all').strip().lower()
     selected_pages = request.POST.get('selected_pages') or request.POST.getlist('selected_pages')
 
+    upload_debug = _build_image_upload_debug_info(upload, source='received')
+    logger.debug('Image upload debug received: %s', json.dumps(upload_debug, default=str))
+
     try:
         extracted_text = ''
         page_count = 1
@@ -7894,6 +7937,11 @@ def extract_reading_material_file(request):
                 ocr_layout = list(ocr_data.get('layout') or [])
                 ocr_debug = ocr_data.get('debug') or {}
                 empty_ocr_result = isinstance(ocr_result, str) and not ocr_result.strip()
+
+                ocr_debug['upload_received'] = upload_debug
+                ocr_debug['upload_after_ocr'] = _build_image_upload_debug_info(upload, source='after-ocr')
+                logger.debug('OCR extraction debug: %s', json.dumps(ocr_debug, default=str))
+                logger.debug('OCR extraction summary: filename=%s extracted_chars=%d layout_words=%d', filename, len(extracted_text), len(ocr_layout))
 
                 if not extracted_text:
                     logger.info('Image extraction produced no text for %s', filename)
