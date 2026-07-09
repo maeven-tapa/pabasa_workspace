@@ -7234,14 +7234,20 @@ def _build_image_upload_debug_info(upload, source='upload'):
 def _resolve_tesseract_executable(pytesseract_module):
     candidates = []
 
-    if os.path.isfile(TESSERACT_STATIC_PATH):
-        candidates.append(TESSERACT_STATIC_PATH)
-
     explicit = os.environ.get('TESSERACT_CMD') or os.environ.get('TESSERACT_PATH')
     if explicit:
         candidate = os.path.expandvars(os.path.expanduser(explicit))
         if candidate:
             candidates.append(candidate)
+
+    if pytesseract_module and hasattr(pytesseract_module, 'pytesseract'):
+        for attr in ('tesseract_cmd', 'tesseract_executable'):
+            value = getattr(getattr(pytesseract_module, 'pytesseract', None), attr, None)
+            if value and value not in candidates:
+                candidates.append(value)
+
+    if os.path.isfile(TESSERACT_STATIC_PATH):
+        candidates.append(TESSERACT_STATIC_PATH)
 
     try:
         resolved = shutil.which('tesseract')
@@ -7262,7 +7268,6 @@ def _resolve_tesseract_executable(pytesseract_module):
         r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
         os.path.expandvars(r'%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe'),
         os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR\tesseract.exe'),
-        os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR\tesseract.exe'),
         os.path.expandvars(r'%LOCALAPPDATA%\Tesseract-OCR\tesseract.exe'),
         '/usr/bin/tesseract',
         '/usr/bin/tesseract-ocr',
@@ -7271,12 +7276,6 @@ def _resolve_tesseract_executable(pytesseract_module):
     ]:
         if candidate and candidate not in candidates:
             candidates.append(candidate)
-
-    if pytesseract_module and hasattr(pytesseract_module, 'pytesseract'):
-        for attr in ('tesseract_cmd', 'tesseract_executable'):
-            value = getattr(getattr(pytesseract_module, 'pytesseract', None), attr, None)
-            if value and value not in candidates:
-                candidates.append(value)
 
     seen = set()
     for candidate in candidates:
@@ -7608,6 +7607,8 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
     tesseract_path = _resolve_tesseract_executable(pytesseract)
     if tesseract_path:
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
+    else:
+        logger.warning('OCR could not resolve a Tesseract executable. Checked env vars and common install paths.')
 
     upload.seek(0)
     try:
@@ -7635,13 +7636,15 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                             data = pytesseract.image_to_data(candidate, config=config)
                         else:
                             data = pytesseract.image_to_data(candidate, config=config, output_type=TesseractOutput.DICT)
-                    except Exception:
+                    except Exception as exc:
+                        logger.warning('OCR attempt failed for candidate %s config %s: %s', candidate_label, config, repr(exc))
                         try:
                             if TesseractOutput is None:
                                 data = pytesseract.image_to_data(candidate)
                             else:
                                 data = pytesseract.image_to_data(candidate, output_type=TesseractOutput.DICT)
-                        except Exception:
+                        except Exception as fallback_exc:
+                            logger.warning('OCR fallback failed for candidate %s: %s', candidate_label, repr(fallback_exc))
                             data = None
 
                     layout = []
