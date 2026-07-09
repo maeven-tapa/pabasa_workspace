@@ -3497,6 +3497,7 @@ def _practice_row_summary(material):
         'mode_label': _practice_config_label(content_json.get('mode', ''), AdminPracticeMaterialForm.MODE_CHOICES),
         'difficulty_label': _practice_config_label(selected_difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
         'level_label': _practice_config_label(content_json.get('level', ''), AdminPracticeMaterialForm.LEVEL_CHOICES),
+        'language_label': content_json.get('language', ''),
         'item_count': item_count,
         'item_summary': summary_text,
         'items': items,
@@ -3515,6 +3516,7 @@ def _practice_matches_search(material, search_query):
         row['mode_label'].lower(),
         row['difficulty_label'].lower(),
         row['level_label'].lower(),
+        row['language_label'].lower(),
         ' '.join(row['items']).lower(),
         (material.content_text or '').lower(),
     ])
@@ -3574,6 +3576,7 @@ def _admin_practice_context(request, page_title):
         'Mode',
         'Difficulty',
         'Level',
+        'Language',
         'Items',
         'Status',
         'Date Created',
@@ -3616,6 +3619,7 @@ def _admin_practice_template_context(request, material=None, page_title='Practic
             'difficulty_level': material.difficulty_level,
             'level': content_json.get('level', ''),
             'status': material.status if getattr(material, 'status', None) in dict(AdminPracticeMaterialForm.STATUS_CHOICES) else 'draft',
+            'language': content_json.get('language', ''),
             'content_text': material.content_text,
         }
 
@@ -3648,6 +3652,7 @@ def _save_admin_practice_material(form, material=None, request=None):
         'mode': cleaned['mode'],
         'difficulty': cleaned['difficulty_level'],
         'level': cleaned['level'],
+        'language': cleaned.get('language', ''),
     }
     material_obj.type = 'practice'
     material_obj.status = cleaned['status']
@@ -8256,7 +8261,7 @@ def add_reading_material(request):
         requested_source_type = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
         source_type = requested_source_type if requested_source_type in ('personal', 'shared') else 'shared'
         class_code   = (data.get('class_code') or '').strip()
-        language     = (data.get('language') or 'English').strip() or 'English'
+        language     = Material.normalize_language_value(data.get('language'))
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
         assigned_week, week_error = parse_assigned_week(assigned_week_raw)
@@ -8518,7 +8523,7 @@ def teacher_update_material(request):
         material.title = data.get('title', material.title).strip()
         content = data.get('content', material.content_text).strip()
         requested_reading_type = (data.get('reading_type') or '').strip().lower()
-        language = (data.get('language') or '').strip() or 'English'
+        language = Material.normalize_language_value(data.get('language'))
         material.status = data.get('status', material.status)
         material.type = 'assessment'
 

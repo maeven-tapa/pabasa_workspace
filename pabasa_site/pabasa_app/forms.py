@@ -43,11 +43,16 @@ class AdminPracticeMaterialForm(forms.Form):
         ("published", "Published"),
         ("draft", "Draft"),
     ]
+    LANGUAGE_CHOICES = [
+        ("Filipino", "Filipino"),
+        ("English", "English"),
+    ]
 
     mode = forms.ChoiceField(choices=MODE_CHOICES)
     difficulty_level = forms.ChoiceField(choices=DIFFICULTY_CHOICES)
     level = forms.ChoiceField(choices=LEVEL_CHOICES)
     status = forms.ChoiceField(choices=STATUS_CHOICES)
+    language = forms.ChoiceField(choices=LANGUAGE_CHOICES, required=True)
     content_text = forms.CharField(required=False, widget=forms.HiddenInput())
 
     def __init__(self, *args, **kwargs):

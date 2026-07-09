@@ -31,7 +31,7 @@
             </div>
             <div class="row g-3">
                 <div class="col-12">
-                    <label class="form-label fw-bold">Mode</label>
+                    <label class="form-label fw-bold">Mode *</label>
                     <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="Practice mode">
                         {% for value, label in form.fields.mode.choices %}
                         <button type="button" class="mode-option btn btn-sm px-3 py-2 {% if form.mode.value == value %}btn-primary{% else %}btn-outline-secondary{% endif %}" data-value="{{ value }}">{{ label }}</button>
@@ -46,7 +46,7 @@
                     {% for error in form.mode.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                 </div>
                 <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold" for="{{ form.difficulty_level.id_for_label }}">Difficulty</label>
+                    <label class="form-label fw-bold" for="{{ form.difficulty_level.id_for_label }}">Difficulty *</label>
                     <select class="form-select {% if form.difficulty_level.errors %}is-invalid{% endif %}" id="{{ form.difficulty_level.id_for_label }}" name="{{ form.difficulty_level.html_name }}" required disabled>
                         <option value="">Select difficulty</option>
                         {% for value, label in form.fields.difficulty_level.choices %}
@@ -56,7 +56,7 @@
                     {% for error in form.difficulty_level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                 </div>
                 <div class="col-12 col-md-6">
-                    <label class="form-label fw-bold" for="{{ form.level.id_for_label }}">Level</label>
+                    <label class="form-label fw-bold" for="{{ form.level.id_for_label }}">Level *</label>
                     <select class="form-select {% if form.level.errors %}is-invalid{% endif %}" id="{{ form.level.id_for_label }}" name="{{ form.level.html_name }}" required disabled>
                         <option value="">Select level</option>
                         {% for value, label in form.fields.level.choices %}
@@ -65,6 +65,16 @@
                     </select>
                     <div class="form-text text-secondary mt-2" id="level-availability-help">Select a mode and difficulty to view available levels.</div>
                     {% for error in form.level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold" for="{{ form.language.id_for_label }}">Language *</label>
+                    <select class="form-select {% if form.language.errors %}is-invalid{% endif %}" id="{{ form.language.id_for_label }}" name="{{ form.language.html_name }}" required disabled>
+                        <option value="">Select language</option>
+                        {% for value, label in form.fields.language.choices %}
+                        <option value="{{ value }}" {% if form.language.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% for error in form.language.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                 </div>
             </div>
             <div class="mt-3">
@@ -84,12 +94,13 @@
                         <li><strong>Mode:</strong> <span id="summary-mode">—</span></li>
                         <li><strong>Difficulty:</strong> <span id="summary-difficulty">—</span></li>
                         <li><strong>Level:</strong> <span id="summary-level">—</span></li>
+                        <li><strong>Language:</strong> <span id="summary-language">—</span></li>
                         <li><strong>Items Added:</strong> <span id="summary-items">0</span></li>
                         <li><strong>Status:</strong> <span id="summary-status">—</span></li>
                     </ul>
                 </div>
                 <div class="min-w-220px">
-                    <label class="form-label fw-bold" for="{{ form.status.id_for_label }}">Status</label>
+                    <label class="form-label fw-bold" for="{{ form.status.id_for_label }}">Status *</label>
                     <select class="form-select {% if form.status.errors %}is-invalid{% endif %}" id="{{ form.status.id_for_label }}" name="{{ form.status.html_name }}" required disabled>
                         {% for value, label in form.fields.status.choices %}
                         <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>
@@ -103,7 +114,7 @@
         <div class="border rounded-3 p-3 bg-white mb-3" id="items-section">
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                 <div>
-                    <h3 class="h6 fw-bold mb-1">Items</h3>
+                    <h3 class="h6 fw-bold mb-1">Items *</h3>
                     <p class="text-secondary small mb-0">Add the content for this game challenge.</p>
                 </div>
                 <div class="small text-secondary" id="difficulty-helper">Choose a difficulty to start adding items.</div>
@@ -144,6 +155,7 @@
     const difficulty = document.getElementById('{{ form.difficulty_level.id_for_label }}');
     const level = document.getElementById('{{ form.level.id_for_label }}');
     const status = document.getElementById('{{ form.status.id_for_label }}');
+    const language = document.getElementById('{{ form.language.id_for_label }}');
     const itemsInput = document.getElementById('practice-items-input');
     const itemsList = document.getElementById('items-list');
     const itemsCount = document.getElementById('items-count');
@@ -159,6 +171,7 @@
     const summaryMode = document.getElementById('summary-mode');
     const summaryDifficulty = document.getElementById('summary-difficulty');
     const summaryLevel = document.getElementById('summary-level');
+    const summaryLanguage = document.getElementById('summary-language');
     const summaryItems = document.getElementById('summary-items');
     const summaryStatus = document.getElementById('summary-status');
     const modeTitle = document.getElementById('mode-context-title');
@@ -267,7 +280,8 @@
         const hasDifficulty = Boolean(difficulty.value);
         const hasLevel = Boolean(level.value);
         const hasStatus = Boolean(status.value);
-        const canEditItems = hasMode && hasDifficulty && hasLevel && hasStatus;
+        const hasLanguage = Boolean(language.value);
+        const canEditItems = hasMode && hasDifficulty && hasLevel && hasStatus && hasLanguage;
         const allLevelsOccupied = hasMode && hasDifficulty && Array.from(level.options).filter(function (option) {
             return option.value && !option.disabled;
         }).length === 0;
@@ -275,6 +289,7 @@
         setDisabledState(difficulty, !hasMode);
         setDisabledState(level, !hasMode || !hasDifficulty || allLevelsOccupied);
         setDisabledState(status, !hasMode || !hasDifficulty || !hasLevel);
+        setDisabledState(language, !hasMode || !hasDifficulty || !hasLevel);
 
         itemsSection.classList.toggle('opacity-50', !canEditItems);
         itemsSection.style.pointerEvents = canEditItems ? '' : 'none';
@@ -288,7 +303,7 @@
             ? Boolean(itemsTextarea.value.trim())
             : Boolean(getSelectedItems().length);
 
-        submitButton.disabled = !(hasMode && hasDifficulty && hasLevel && hasStatus && hasContent);
+        submitButton.disabled = !(hasMode && hasDifficulty && hasLevel && hasStatus && hasLanguage && hasContent);
         submitButton.classList.toggle('opacity-50', submitButton.disabled);
         submitButton.style.pointerEvents = submitButton.disabled ? 'none' : '';
     }
@@ -383,6 +398,7 @@
         summaryMode.textContent = modeSelect.value ? modeSelect.value.replace(/_/g, ' ').replace(/\b\w/g, function (char) { return char.toUpperCase(); }) : '—';
         summaryDifficulty.textContent = difficulty.value ? difficulty.options[difficulty.selectedIndex].text : '—';
         summaryLevel.textContent = level.value ? level.options[level.selectedIndex].text : '—';
+        summaryLanguage.textContent = language.value ? language.options[language.selectedIndex].text : '—';
         summaryStatus.textContent = status.value ? status.options[status.selectedIndex].text : '—';
     }
 
@@ -434,7 +450,7 @@
         });
     });
 
-    [modeSelect, difficulty, level, status].forEach(function (field) {
+    [modeSelect, difficulty, level, status, language].forEach(function (field) {
         field.addEventListener('change', function () {
             updateModeSelection(modeSelect.value);
             updateDifficultyUI();

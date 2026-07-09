@@ -56,6 +56,16 @@
                 <div class="form-text text-secondary mt-2" id="level-availability-help">Select a mode and difficulty to view available levels.</div>
                 {% for error in form.level.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
             </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-bold" for="{{ form.language.id_for_label }}">Language</label>
+                <select class="form-select {% if form.language.errors %}is-invalid{% endif %}" id="{{ form.language.id_for_label }}" name="{{ form.language.html_name }}" required>
+                    <option value="">Select language</option>
+                    {% for value, label in form.fields.language.choices %}
+                    <option value="{{ value }}" {% if form.language.value == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                {% for error in form.language.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
             <div class="col-12 col-md-8">
                 <label class="form-label fw-bold" for="{{ form.status.id_for_label }}">Status</label>
                 <select class="form-select {% if form.status.errors %}is-invalid{% endif %}" id="{{ form.status.id_for_label }}" name="{{ form.status.html_name }}" required>

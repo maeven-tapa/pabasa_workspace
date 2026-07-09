@@ -6123,7 +6123,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="position-relative">
                                     <select id="materialLanguage" class="form-select border-light shadow-sm" style="border-radius: 12px; appearance: none; padding-right: 2.5rem; min-height: 44px;">
                                         <option value="English" selected>English</option>
-                                        <option value="Tagalog">Tagalog</option>
+                                        <option value="Filipino">Filipino</option>
                                     </select>
                                     <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-3 text-muted pointer-events-none" style="font-size: 0.8rem;"></i>
                                 </div>
@@ -6669,7 +6669,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         const normalized = foundValue.toLowerCase();
         if (normalized === 'english' || normalized === 'en') return 'English';
-        if (normalized === 'tagalog' || normalized === 'tl' || normalized.includes('tagalog') || normalized.includes('filipino')) return 'Tagalog';
+        if (normalized === 'tagalog' || normalized === 'tl' || normalized.includes('tagalog') || normalized.includes('filipino') || normalized.includes('fil')) return 'Filipino';
         return foundValue;
     }
 
@@ -10883,7 +10883,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getMaterialLanguageSelectionValue(material) {
             const resolved = getMaterialLanguageDisplayValue(material, 'English');
-            if (resolved === 'Tagalog') return 'Tagalog';
+            if (resolved === 'Filipino' || resolved === 'Tagalog') return 'Filipino';
             if (resolved === 'English') return 'English';
             return resolved || 'English';
         }
@@ -10898,8 +10898,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return;
             }
 
-            if (optionValues.includes('Tagalog') && (selection === 'Tagalog' || selection === 'Filipino')) {
-                materialLanguageSelect.value = 'Tagalog';
+            if (selection === 'Filipino' && optionValues.includes('Filipino')) {
+                materialLanguageSelect.value = 'Filipino';
                 return;
             }
 

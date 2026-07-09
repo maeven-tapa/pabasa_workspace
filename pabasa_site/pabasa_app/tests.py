@@ -816,7 +816,7 @@ class ProfileUpdateTests(TestCase):
 
 
 class MaterialCreationTests(TestCase):
-    def test_add_reading_material_saves_selected_language(self):
+    def test_add_reading_material_saves_selected_filipino_language(self):
         user = User.objects.create(
             custom_id="TCH-0002",
             role="teacher",
@@ -844,13 +844,13 @@ class MaterialCreationTests(TestCase):
         response = self.client.post(
             reverse("add_reading_material"),
             json.dumps({
-                "title": "Tagalog reading",
+                "title": "Filipino reading",
                 "content": "Araw\nBuwan",
                 "reading_type": "word",
                 "status": "published",
                 "usage_type": "practice",
                 "class_code": "",
-                "language": "Tagalog",
+                "language": "Filipino",
             }),
             content_type="application/json",
         )
@@ -858,7 +858,7 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
         material = Material.objects.latest("id")
-        self.assertEqual(material.content_json.get("language"), "Tagalog")
+        self.assertEqual(material.content_json.get("language"), "Filipino")
         self.assertEqual(material.type, "assessment")
         self.assertEqual(material.source_type, "shared")
 

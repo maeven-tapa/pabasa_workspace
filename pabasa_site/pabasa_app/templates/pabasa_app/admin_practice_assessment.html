@@ -196,6 +196,7 @@
                     <th>Mode</th>
                     <th>Difficulty</th>
                     <th>Level</th>
+                    <th>Language</th>
                     <th>Items</th>
                     <th>Status</th>
                     <th>Date Created</th>
@@ -212,6 +213,7 @@
                     </td>
                     <td>{{ row.difficulty_label }}</td>
                     <td>{{ row.level_label }}</td>
+                    <td>{{ row.language_label }}</td>
                     <td>
                         <span class="fw-semibold">{{ row.item_count }}</span>
                         <span class="small text-secondary">{% if row.is_hard %}sentences{% else %}words{% endif %}</span>
@@ -272,7 +274,7 @@
                 {% endwith %}
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center text-secondary py-5">
+                    <td colspan="9" class="text-center text-secondary py-5">
                         <div class="fw-semibold mb-2">No Practice Content Yet</div>
                         <p class="mb-3">Create your first game configuration by clicking Add Practice Content.</p>
                         <a class="btn btn-primary" href="{% url 'admin_practice_create' %}">Add Practice Content</a>
@@ -313,6 +315,12 @@
                             <div class="border rounded-3 p-3 bg-light">
                                 <div class="small text-secondary text-uppercase fw-bold">Level</div>
                                 <div class="fw-semibold mt-1">{{ row.level_label }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="border rounded-3 p-3 bg-light">
+                                <div class="small text-secondary text-uppercase fw-bold">Language</div>
+                                <div class="fw-semibold mt-1">{{ row.language_label }}</div>
                             </div>
                         </div>
                         <div class="col-12 col-md-6">

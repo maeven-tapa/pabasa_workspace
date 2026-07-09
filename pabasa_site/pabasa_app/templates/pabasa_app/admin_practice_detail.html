@@ -11,7 +11,8 @@
             <p class="text-secondary mb-0">
                 {{ practice.content_json.mode|default:"-"|title }} Mode &middot;
                 {{ practice.content_json.difficulty|default:practice.difficulty_level|title }} &middot;
-                {% if practice.content_json.level %}Level {{ practice.content_json.level|cut:"level_" }}{% else %}-{% endif %}
+                {% if practice.content_json.level %}Level {{ practice.content_json.level|cut:"level_" }}{% else %}-{% endif %} &middot;
+                {{ practice.content_json.language|default:"-" }}
             </p>
         </div>
         <div class="d-flex flex-wrap gap-2">
@@ -48,13 +49,19 @@
                 <strong class="d-block">{{ practice.content_json.difficulty|default:practice.difficulty_level|title }}</strong>
             </div>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-2">
             <div class="border rounded-3 p-3 h-100 bg-white">
                 <span class="small text-secondary text-uppercase fw-bold">Level</span>
                 <strong class="d-block">{% if practice.content_json.level %}Level {{ practice.content_json.level|cut:"level_" }}{% else %}-{% endif %}</strong>
             </div>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-2">
+            <div class="border rounded-3 p-3 h-100 bg-white">
+                <span class="small text-secondary text-uppercase fw-bold">Language</span>
+                <strong class="d-block">{{ practice.content_json.language|default:"-" }}</strong>
+            </div>
+        </div>
+        <div class="col-12 col-md-2">
             <div class="border rounded-3 p-3 h-100 bg-white">
                 <span class="small text-secondary text-uppercase fw-bold">Status</span>
                 <div class="mt-2">

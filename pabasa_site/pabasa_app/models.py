@@ -878,6 +878,22 @@ class Material(models.Model):
         db_table = "materials"
         ordering = ["section", "created_at"]
 
+    @staticmethod
+    def normalize_language_value(value):
+        if value is None:
+            return "English"
+
+        normalized = str(value).strip()
+        if not normalized:
+            return "English"
+
+        lowered = normalized.lower()
+        if lowered in {"english", "en", "eng"}:
+            return "English"
+        if lowered in {"filipino", "fil", "filipina", "tl", "tagalog", "tag", "tagalog language", "filipino language"}:
+            return "Filipino"
+        return normalized
+
     def get_saved_language(self):
         content_json = self.content_json or {}
         if isinstance(content_json, dict):
@@ -886,7 +902,7 @@ class Material(models.Model):
                 if isinstance(value, str):
                     value = value.strip()
                     if value:
-                        return value
+                        return self.normalize_language_value(value)
         return ""
 
     def get_saved_language_display(self):
