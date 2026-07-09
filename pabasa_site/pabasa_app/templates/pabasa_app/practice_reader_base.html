@@ -3572,6 +3572,381 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Phone-first safeguards across the three practice reader modes. */
+        @media (max-width: 560px) {
+            .practice-shell {
+                gap: 0.55rem;
+                min-height: 100dvh;
+                padding: 0.55rem;
+                width: 100%;
+            }
+
+            .practice-complete {
+                min-height: calc(100dvh - 1.1rem);
+                width: 100%;
+            }
+
+            .practice-complete-card {
+                border-radius: 20px;
+                gap: 0.75rem;
+                max-height: none;
+                overflow: visible;
+                padding: 0.9rem;
+                width: 100%;
+            }
+
+            .practice-feedback-card {
+                gap: 0.65rem;
+                padding: 0.8rem;
+            }
+
+            .practice-metric-card {
+                min-height: 0;
+                padding: 0.75rem;
+            }
+
+            .practice-complete-actions {
+                grid-template-columns: 1fr;
+                width: 100%;
+            }
+
+            .practice-complete-actions button,
+            .practice-complete-actions a {
+                min-height: 48px;
+                width: 100%;
+            }
+
+            .practice-scrolls-shell {
+                padding: 0.35rem;
+            }
+
+            .scrolls-phone-device {
+                border-radius: 22px;
+                max-height: none;
+                min-height: calc(100dvh - 0.7rem);
+                width: 100%;
+            }
+
+            .scrolls-screen {
+                gap: 0.45rem;
+                padding: 0.55rem;
+            }
+
+            .scrolls-feed {
+                min-height: 0;
+            }
+
+            .scrolls-card {
+                gap: 0.55rem;
+                padding: 0.65rem;
+            }
+
+            .scrolls-illustration {
+                height: 70px;
+                width: 70px;
+            }
+
+            .scrolls-card-text {
+                font-size: 1.65rem;
+            }
+
+            .scrolls-progress-meta,
+            .scrolls-feedback {
+                font-size: 0.8rem;
+            }
+
+            .scrolls-record-btn {
+                min-height: 48px;
+                width: 100%;
+            }
+
+            .practice-color {
+                grid-template-rows: auto minmax(0, 1fr);
+                overflow: visible;
+            }
+
+            .practice-color .practice-board {
+                min-height: 0;
+                width: 100%;
+            }
+
+            .practice-color .play-card {
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr) auto;
+                min-height: min(620px, calc(100dvh - 8.2rem));
+                overflow: hidden;
+                padding: 0.55rem;
+            }
+
+            .practice-color .practice-stage {
+                min-height: 0;
+                padding: 0.4rem 0 0.5rem;
+            }
+
+            .practice-color .practice-action-shell {
+                align-self: end;
+                gap: 0.45rem;
+                inset: auto;
+                position: relative;
+                width: 100%;
+            }
+
+            .practice-color .practice-feedback {
+                max-width: 100%;
+                min-height: 38px;
+                padding: 0.5rem 0.75rem;
+                position: static;
+                transform: none;
+                width: 100%;
+            }
+
+            .practice-color .practice-controls {
+                gap: 0.5rem;
+                grid-template-columns: 1fr;
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .practice-color .practice-controls button {
+                min-height: 48px;
+                width: 100%;
+            }
+
+            .color-guide-panel {
+                gap: 0.5rem;
+                max-width: 100%;
+            }
+
+            .color-guide-mascot {
+                max-height: 74px;
+                max-width: 86px;
+            }
+
+            .color-dialogue {
+                min-height: 72px;
+                padding: 0.55rem 0.7rem;
+                width: min(100%, 220px);
+            }
+
+            .color-dialogue .practice-text {
+                font-size: 1.25rem;
+            }
+
+            .practice-hunt-shell {
+                align-items: start;
+                padding: 0.55rem;
+                place-items: start center;
+            }
+
+            .hunt-reader {
+                gap: 0.45rem;
+                width: 100%;
+            }
+
+            .hunt-topbar {
+                gap: 0.45rem;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .hunt-heading {
+                grid-column: 1 / -1;
+                order: -1;
+            }
+
+            .hunt-heading p {
+                font-size: 0.68rem;
+            }
+
+            .hunt-heading h1 {
+                font-size: 1.65rem;
+                line-height: 1.05;
+            }
+
+            .hunt-back,
+            .hunt-stars {
+                min-height: 44px;
+                padding: 0.5rem 0.65rem;
+                width: 100%;
+            }
+
+            .hunt-card {
+                border-radius: 18px;
+                display: grid;
+                grid-template-rows: auto auto minmax(0, 1fr) auto;
+                max-height: none;
+                min-height: calc(100dvh - 8.6rem);
+                overflow: hidden;
+            }
+
+            .hunt-flight {
+                padding: 0.7rem 0.85rem 0.6rem;
+            }
+
+            .hunt-flight-meta {
+                flex-direction: row;
+                font-size: 0.78rem;
+                justify-content: space-between;
+            }
+
+            .hunt-meta-row {
+                gap: 0.45rem;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                padding: 0.65rem 0.85rem 0;
+            }
+
+            .hunt-count,
+            .hunt-difficulty,
+            .hunt-level {
+                font-size: 0.72rem;
+                padding: 0.32rem 0.45rem;
+            }
+
+            .hunt-status {
+                font-size: 0.78rem;
+                grid-column: 1 / -1;
+            }
+
+            .hunt-main {
+                align-items: stretch;
+                gap: 0.6rem;
+                grid-template-columns: 1fr;
+                min-height: 0;
+                padding: 0.65rem 0.85rem;
+            }
+
+            .hunt-guide {
+                align-items: center;
+                display: grid;
+                gap: 0.55rem;
+                grid-template-columns: 72px minmax(0, 1fr);
+                width: 100%;
+            }
+
+            .hunt-bird-wrap {
+                height: 72px;
+                width: 72px;
+            }
+
+            .hunt-guide-copy {
+                font-size: 0.78rem;
+                margin: 0;
+                max-width: none;
+                padding: 0.45rem 0.6rem;
+                text-align: left;
+                width: 100%;
+            }
+
+            .hunt-word-area {
+                height: auto;
+                min-height: 150px;
+                padding: 0.85rem;
+            }
+
+            .hunt-word-area::before {
+                font-size: 1.5rem;
+                right: 0.7rem;
+                top: 0.55rem;
+            }
+
+            .hunt-word-area .practice-text {
+                font-size: 2.2rem;
+            }
+
+            .hunt-actions {
+                padding: 0.65rem 0.85rem 0.8rem;
+            }
+
+            .hunt-actions .practice-feedback {
+                font-size: 0.82rem;
+                margin-bottom: 0.55rem;
+                min-height: 38px;
+                padding: 0.5rem 0.65rem;
+            }
+
+            .hunt-actions .practice-controls {
+                gap: 0.5rem;
+                grid-template-columns: 1fr;
+                width: 100%;
+            }
+
+            .hunt-actions .practice-controls button {
+                min-height: 48px;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 390px), (max-height: 700px) and (max-width: 560px) {
+            .practice-shell {
+                padding: 0.4rem;
+            }
+
+            .scrolls-phone-device {
+                min-height: calc(100dvh - 0.8rem);
+            }
+
+            .scrolls-phone-header {
+                padding: 0.3rem 0.38rem;
+            }
+
+            .scrolls-card-note,
+            .scrolls-hint {
+                display: none;
+            }
+
+            .practice-color .play-card {
+                min-height: calc(100dvh - 7.3rem);
+            }
+
+            .color-guide-mascot {
+                max-height: 62px;
+            }
+
+            .color-dialogue {
+                min-height: 62px;
+            }
+
+            .hunt-heading h1 {
+                font-size: 1.45rem;
+            }
+
+            .hunt-card {
+                min-height: calc(100dvh - 7.9rem);
+            }
+
+            .hunt-flight {
+                padding: 0.55rem 0.7rem 0.5rem;
+            }
+
+            .hunt-meta-row {
+                padding: 0.5rem 0.7rem 0;
+            }
+
+            .hunt-main {
+                padding: 0.55rem 0.7rem;
+            }
+
+            .hunt-guide {
+                grid-template-columns: 60px minmax(0, 1fr);
+            }
+
+            .hunt-bird-wrap {
+                height: 60px;
+                width: 60px;
+            }
+
+            .hunt-word-area {
+                min-height: 128px;
+            }
+
+            .hunt-word-area .practice-text {
+                font-size: 2rem;
+            }
+
+            .hunt-actions {
+                padding: 0.55rem 0.7rem 0.65rem;
+            }
+        }
     </style>
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
