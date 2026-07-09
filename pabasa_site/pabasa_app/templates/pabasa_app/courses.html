@@ -5994,6 +5994,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             </div>
             <div class="modal-body px-4 pb-4">
                 <form id="addMaterialForm" class="row g-4 mt-1">
+                    {% csrf_token %}
                     <div id="amValidationError" class="col-12 alert alert-danger d-none mb-0 rounded-3" role="alert"></div>
 
                     <div class="col-12">
@@ -9940,7 +9941,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
             return v ? v.pop() : null;
         }
-        let token = document.querySelector("[name=csrfmiddlewaretoken]")?.value || getCookie('csrftoken') || '';
+        let token = document.querySelector('#addMaterialForm [name=csrfmiddlewaretoken]')?.value
+            || document.querySelector("[name=csrfmiddlewaretoken]")?.value
+            || getCookie('csrftoken') || '';
         if (token && !forceRefresh) return token;
         try {
             // Make a safe GET to refresh CSRF cookie if server sets it on GET
