@@ -49,6 +49,8 @@
     const feedbackIcon = document.getElementById("feedbackIcon");
     const resultsSummaryText = document.getElementById("resultsSummaryText");
     const practiceAgainBtn = document.getElementById("practiceAgainBtn");
+    const practiceNextLevelBtn = document.getElementById("practiceNextLevelBtn");
+    const nextLevelAvailabilityMessage = document.getElementById("nextLevelAvailabilityMessage");
     let completionSubmitted = false;
 
     const PERFORMANCE_FEEDBACK_RULES = Object.freeze([
@@ -69,6 +71,13 @@
     const hasSelectedProgressLevel = urlParams.has("level");
     const selectedProgressLevel = (urlParams.get("level") || "level_1").trim().toLowerCase();
     const isColorMode = selectedGameMode === "color";
+    const isHuntMode = selectedGameMode === "hunt";
+    const huntFlightBird = document.getElementById("huntFlightBird");
+    const huntProgressLabel = document.getElementById("huntProgressLabel");
+    const huntDifficultyLabel = document.getElementById("huntDifficultyLabel");
+    const huntLevelLabel = document.getElementById("huntLevelLabel");
+    const huntReadingStatus = document.getElementById("huntReadingStatus");
+    const huntGuideMessage = document.getElementById("huntGuideMessage");
     const colorModeStage = document.getElementById("colorModeStage");
     const colorPracticeText = document.getElementById("colorPracticeText");
     const colorScene = document.getElementById("colorScene");
@@ -110,6 +119,9 @@
     let colorRevealedCount = 0;
     let colorModeCompletionReady = false;
     let colorCompletionTimer = null;
+    let colorNewStarsToCommit = null;
+    let colorStarsCommitted = false;
+    let huntLevelTransitionInProgress = false;
     const practiceProgressStorageKey = "pabasa_practice_progress_v1";
     const practiceProgressLevelSequence = Object.freeze([
         ['easy', 'level_1'],
@@ -157,6 +169,29 @@
         };
     }
 
+    function formatHuntLabel(value, fallback) {
+        return String(value || fallback || "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    }
+
+    function updateHuntVisuals() {
+        if (!isHuntMode) return;
+
+        const total = Math.max(items.length, 1);
+        const position = Math.min(currentIndex + 1, total);
+        const percentage = Math.round((position / total) * 100);
+        const feedbackText = practiceFeedback?.textContent || "Ready when you are.";
+
+        if (huntFlightBird) huntFlightBird.style.left = `${Math.min(percentage, 96)}%`;
+        if (huntProgressLabel) huntProgressLabel.textContent = `${formatHuntLabel(mode, "word")} ${position} of ${total}`;
+        if (huntDifficultyLabel) huntDifficultyLabel.textContent = formatHuntLabel(selectedDifficulty, "easy");
+        if (huntLevelLabel) huntLevelLabel.textContent = formatHuntLabel(selectedProgressLevel, "level_1");
+        if (huntReadingStatus) huntReadingStatus.textContent = feedbackText;
+        if (huntGuideMessage) huntGuideMessage.textContent = feedbackText;
+        if (practiceProgress?.parentElement) practiceProgress.parentElement.setAttribute("aria-valuenow", String(percentage));
+    }
+
     function getColorSceneConfig() {
         return colorModeScenes[selectedDifficulty] || colorModeScenes.easy;
     }
@@ -166,7 +201,8 @@
     }
 
     function getColorSceneRevealTargetCount() {
-        return Math.min(5, getColorSceneConfig().objects.length || 5);
+        const availableItems = items.length > 0 ? items.length : 5;
+        return Math.min(5, getColorSceneConfig().objects.length || 5, availableItems);
     }
 
     function updateColorModeControls() {
@@ -209,6 +245,8 @@
 
         colorRevealedCount = 0;
         colorModeCompletionReady = false;
+        colorNewStarsToCommit = null;
+        colorStarsCommitted = false;
         hideLevelCompleteOverlay();
         if (colorCompletionTimer) {
             window.clearTimeout(colorCompletionTimer);
@@ -266,22 +304,101 @@
         return `/dashboard/practice/progression/${modeContext || "word"}/`;
     }
 
+    function getPracticeModeMaterialForLevel(context) {
+        if (!context) return null;
+        return getServerPracticeMaterials().find((material) => {
+            if (!material) return false;
+            const materialGameMode = normalizeMaterialValue(material.game_mode || material.mode).toLowerCase();
+            const materialDifficulty = normalizeMaterialValue(material.difficulty || material.difficulty_level).toLowerCase();
+            const materialLevel = normalizeMaterialValue(material.level).toLowerCase();
+            return materialGameMode === context.mode
+                && materialDifficulty === context.difficulty
+                && materialLevel === context.level;
+        }) || null;
+    }
+
+    function getPracticeModeLevelUrl(context, material) {
+        const materialType = normalizeMaterialValue(material?.item_type || material?.type || "word").toLowerCase();
+        const readerType = materialType === "paragraph" ? "paragraph" : materialType === "sentence" ? "sentence" : "word";
+        const query = new URLSearchParams({
+            id: String(material.id),
+            game: context.mode,
+            difficulty: context.difficulty,
+            level: context.level,
+        });
+        return `/dashboard/practice/${readerType}/?${query.toString()}`;
+    }
+
+    function configureNextLevelAction() {
+        if (!practiceNextLevelBtn) return null;
+        const levelContext = getLevelProgressContext();
+        const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
+        const nextMaterial = getPracticeModeMaterialForLevel(nextLevel);
+        const isAvailable = Boolean(nextLevel && nextMaterial);
+
+        practiceNextLevelBtn.classList.toggle("is-disabled", !isAvailable);
+        practiceNextLevelBtn.setAttribute("aria-disabled", isAvailable ? "false" : "true");
+        practiceNextLevelBtn.title = isAvailable ? "Continue to the next level" : "Next level not available.";
+        practiceNextLevelBtn.href = isAvailable ? getPracticeModeLevelUrl(nextLevel, nextMaterial) : "#";
+        if (nextLevelAvailabilityMessage) {
+            nextLevelAvailabilityMessage.classList.toggle("is-visible", !isAvailable);
+            nextLevelAvailabilityMessage.textContent = isAvailable ? "" : "Next level not available.";
+        }
+        return isAvailable ? { context: nextLevel, material: nextMaterial } : null;
+    }
+
+    function completeHuntModeLevel() {
+        if (!isHuntMode || huntLevelTransitionInProgress) return false;
+        huntLevelTransitionInProgress = true;
+
+        const levelContext = getLevelProgressContext();
+        const progressState = getPracticeProgressState();
+        const entry = ensureLevelProgressEntry(progressState, levelContext.mode, levelContext.difficulty, levelContext.level);
+        const metrics = getCompletionMetrics();
+        entry.cards_completed = Math.max(entry.cards_completed || 0, items.length);
+        entry.completed_cards = Array.from({ length: items.length }, (_, index) => index);
+        entry.unlocked = true;
+        entry.completed = true;
+        entry.stars_earned = Math.max(Number(entry.stars_earned || 0) || 0, metrics.earnedStars);
+        progressState[levelContext.mode][levelContext.difficulty][levelContext.level] = entry;
+        savePracticeProgressState(progressState);
+
+        const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
+        const nextMaterial = getPracticeModeMaterialForLevel(nextLevel);
+        if (nextLevel && nextMaterial) {
+            saveLevelProgressEntry(nextLevel.mode, nextLevel.difficulty, nextLevel.level, { unlocked: true });
+        }
+
+        if (nextBtn) nextBtn.disabled = true;
+        if (recordBtn) recordBtn.disabled = true;
+        if (skipBtn) skipBtn.disabled = true;
+        if (practiceFeedback) practiceFeedback.textContent = "Level complete. Saving your reading journey...";
+
+        showCompletion();
+        return true;
+    }
+
     function completeColorModeLevel() {
         if (!isColorMode || !colorModeCompletionReady) return false;
 
         const levelContext = getLevelProgressContext();
         const progressState = getPracticeProgressState();
         const entry = ensureLevelProgressEntry(progressState, levelContext.mode, levelContext.difficulty, levelContext.level);
+        const serverSavedStars = Math.max(0, Number(getActiveMaterialMeta()?.stars_earned || 0) || 0);
+        const previouslySavedStars = Math.max(0, Number(entry.stars_earned || 0) || 0, serverSavedStars);
+        const sessionStars = Math.max(0, correctResponses * 10);
+        colorNewStarsToCommit = Math.max(0, sessionStars - previouslySavedStars);
+        colorStarsCommitted = false;
         entry.cards_completed = Math.max(entry.cards_completed || 0, Math.min(items.length, 5));
         entry.completed_cards = Array.from({ length: Math.min(items.length, 5) }, (_, index) => index);
         entry.unlocked = true;
         entry.completed = true;
-        entry.stars_earned = Math.max(Number(entry.stars_earned || 0) || 0, correctResponses * 10);
+        entry.stars_earned = Math.max(previouslySavedStars, sessionStars);
         progressState[levelContext.mode][levelContext.difficulty][levelContext.level] = entry;
         savePracticeProgressState(progressState);
 
         const nextLevel = getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
-        const nextLevelIsAvailable = Boolean(nextLevel && getMaterialForLevel(nextLevel));
+        const nextLevelIsAvailable = Boolean(nextLevel && getPracticeModeMaterialForLevel(nextLevel));
         if (nextLevelIsAvailable) {
             saveLevelProgressEntry(nextLevel.mode, nextLevel.difficulty, nextLevel.level, { unlocked: true });
         }
@@ -299,21 +416,7 @@
         if (skipBtn) skipBtn.disabled = true;
         colorModeCompletionReady = false;
 
-        submitPracticeCompletion().catch(() => false);
-        if (!nextLevelIsAvailable) {
-            window.location.assign(getPracticeProgressionMapUrl(levelContext.mode));
-            return true;
-        }
-
-        showLevelCompleteOverlay({
-            title: "Scene Complete",
-            message: nextLevelIsAvailable
-                ? "You finished the whole scene. Choose your next step."
-                : "You finished the whole scene. Great work!",
-            actionLabel: nextLevelIsAvailable ? "Next" : "View Progression",
-            actionUrl: nextLevelIsAvailable ? getPracticeProgressionUrl(nextLevel) : getPracticeProgressionMapUrl(levelContext.mode),
-            nextLevelContext: nextLevelIsAvailable ? nextLevel : null,
-        });
+        showCompletion();
         return true;
     }
 
@@ -631,6 +734,7 @@
         const label = mode.charAt(0).toUpperCase() + mode.slice(1);
         practiceCounter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
         practiceProgress.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
+        updateHuntVisuals();
         updateCompletionSummary();
         if (nextBtn) {
             nextBtn.textContent = currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next";
@@ -752,8 +856,7 @@
             saveLevelProgressEntry(nextLevel.mode, nextLevel.difficulty, nextLevel.level, { unlocked: true });
         }
 
-        showLevelCompleteOverlay();
-        return submitPracticeCompletion().catch(() => false);
+        return showCompletion();
     }
 
     function goToFreeModeCard(nextIndex) {
@@ -821,7 +924,7 @@
         const title = document.getElementById("scrollsLevelOverlayTitle");
         const message = document.getElementById("scrollsLevelOverlayMessage");
         const action = document.getElementById("scrollsLevelOverlayAction");
-        if (!overlay) return;
+        if (!overlay) return false;
 
         const levelContext = getLevelProgressContext();
         const nextLevel = options.nextLevelContext || getNextLevelContext(levelContext.mode, levelContext.difficulty, levelContext.level);
@@ -840,6 +943,7 @@
             action.textContent = actionLabel;
         }
         overlay.hidden = false;
+        return true;
     }
 
     function handleFreeModeReadAttempt() {
@@ -926,6 +1030,7 @@
         const completionPayload = {
             material_id: materialId,
             activity_type: 'practice',
+            game_mode: selectedGameMode,
             stars_earned: metrics.earnedStars,
             items_completed: items.length,
             total_practice_items: metrics.totalItems,
@@ -967,17 +1072,32 @@
     function showCompletion() {
         shell.classList.add("is-complete");
         updateCompletionSummary();
+        configureNextLevelAction();
 
         // Skip updating stats if in view mode
-        if (viewMode === 'view') return;
+        if (viewMode === 'view') return Promise.resolve(false);
 
         const metrics = getCompletionMetrics();
 
         // Persist stars to total progress
-        const currentTotal = parseInt(localStorage.getItem("pabasa_total_stars") || "0");
-        localStorage.setItem("pabasa_total_stars", currentTotal + metrics.earnedStars);
+        const parsedCurrentTotal = Number.parseInt(localStorage.getItem("pabasa_total_stars") || "0", 10);
+        const currentTotal = Math.max(0, Number.isFinite(parsedCurrentTotal) ? parsedCurrentTotal : 0);
+        let newlyEarnedStars = Math.max(0, Number(metrics.earnedStars) || 0);
+        if (isColorMode) {
+            if (colorNewStarsToCommit === null) {
+                const levelContext = getLevelProgressContext();
+                const progressState = getPracticeProgressState();
+                const savedEntry = getStoredLevelEntry(progressState, levelContext.mode, levelContext.difficulty, levelContext.level);
+                const serverSavedStars = Math.max(0, Number(getActiveMaterialMeta()?.stars_earned || 0) || 0);
+                const savedStars = Math.max(0, Number(savedEntry.stars_earned || 0) || 0, serverSavedStars);
+                colorNewStarsToCommit = Math.max(0, newlyEarnedStars - savedStars);
+            }
+            newlyEarnedStars = colorStarsCommitted ? 0 : Math.max(0, colorNewStarsToCommit || 0);
+            colorStarsCommitted = true;
+        }
+        localStorage.setItem("pabasa_total_stars", String(currentTotal + newlyEarnedStars));
 
-        submitPracticeCompletion();
+        const completionRequest = submitPracticeCompletion();
 
         // Notify admin that practice activity finished
         const studentName = window.PABASA_USER_NAME || window.localStorage.getItem("pabasaUserName") || "A student";
@@ -1011,7 +1131,8 @@
         });
         localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
         window.dispatchEvent(new Event('pabasa:notifications-updated'));
-        
+
+        return completionRequest;
     }
 
     function restartPractice() {
@@ -1024,6 +1145,9 @@
         sessionStartedAt = Date.now();
         completionSubmitted = false;
         colorModeCompletionReady = false;
+        colorNewStarsToCommit = null;
+        colorStarsCommitted = false;
+        huntLevelTransitionInProgress = false;
         hideLevelCompleteOverlay();
         // No deferred Done button to clear.
         if (recordBtn) recordBtn.disabled = false;
@@ -1080,6 +1204,11 @@
             return;
         }
 
+        if (isHuntMode && currentIndex >= items.length - 1) {
+            completeHuntModeLevel();
+            return;
+        }
+
         if (currentIndex < items.length - 1) {
             currentIndex += 1;
             practiceFeedback.textContent = "New item ready. Take your time.";
@@ -1125,6 +1254,11 @@
     });
 
     practiceAgainBtn?.addEventListener("click", restartPractice);
+    practiceNextLevelBtn?.addEventListener("click", function (event) {
+        if (practiceNextLevelBtn.getAttribute("aria-disabled") === "true") {
+            event.preventDefault();
+        }
+    });
 
     if (viewMode === 'view') {
         if (skipBtn) skipBtn.classList.add("d-none");

@@ -1901,6 +1901,34 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertEqual(completion["total_read_words"], 2)
         self.assertEqual(completion["total_skipped_words"], 0)
 
+    def test_color_mode_replay_never_reduces_saved_stars(self):
+        material = Material.objects.create(
+            title="Color score protection",
+            item_type="word",
+            content_text="HA\nhe\nhi\nho\nhu",
+            content_json={"mode": "color", "difficulty": "easy", "level": "level_1"},
+            type="practice",
+            status="published",
+            difficulty_level="easy",
+            is_active=True,
+        )
+        endpoint = reverse("record_assessment_completion")
+        base_payload = {
+            "material_id": f"practice-{material.id}",
+            "activity_type": "practice",
+            "game_mode": "color",
+            "items_completed": 5,
+        }
+
+        first = self.client.post(endpoint, data=json.dumps({**base_payload, "stars_earned": 50}), content_type="application/json")
+        replay = self.client.post(endpoint, data=json.dumps({**base_payload, "stars_earned": 20}), content_type="application/json")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(replay.status_code, 200)
+        material.refresh_from_db()
+        completion = material.content_json["student_completions"][str(self.student.id)]
+        self.assertEqual(completion["stars_earned"], 50)
+
     def test_practice_results_route_redirects_to_shared_practice_flow(self):
         material = Material.objects.create(
             title="Results practice",
@@ -1995,6 +2023,34 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, "Welcome to Free Mode! Read the word aloud.")
         self.assertContains(response, 'data-tutorial-mode="free"')
 
+    def test_student_theme_shop_renders_ui_only_catalog(self):
+        response = self.client.get(reverse("theme_shop"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Theme Shop")
+        self.assertContains(response, "Sky Island")
+        self.assertContains(response, "Magic Library")
+        self.assertContains(response, "Light and Dark Mode stay separate.")
+
+    def test_theme_unlock_is_charged_once_and_can_be_equipped(self):
+        self.student.available_stars = 200
+        self.student.unlocked_themes = ["sky"]
+        self.student.equipped_theme = "sky"
+        self.student.save(update_fields=["available_stars", "unlocked_themes", "equipped_theme", "updated_at"])
+        endpoint = reverse("student_theme_action")
+
+        first = self.client.post(endpoint, data=json.dumps({"theme": "forest", "action": "unlock"}), content_type="application/json")
+        duplicate = self.client.post(endpoint, data=json.dumps({"theme": "forest", "action": "unlock"}), content_type="application/json")
+        equipped = self.client.post(endpoint, data=json.dumps({"theme": "forest", "action": "equip"}), content_type="application/json")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertEqual(equipped.status_code, 200)
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.available_stars, 125)
+        self.assertIn("forest", self.student.unlocked_themes)
+        self.assertEqual(self.student.equipped_theme, "forest")
+
     def test_tutorial_header_shows_refined_storybook_prompt(self):
         response = self.client.get(reverse("practice_game_progression", args=["free"]))
 
@@ -2007,6 +2063,14 @@ class PracticeReaderMaterialTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'tutorial-start-btn')
+        self.assertTrue(self.client.session.get("free_mode_tutorial_seen"))
+
+    def test_tutorial_auto_opens_only_on_first_mode_visit(self):
+        first_response = self.client.get(reverse("practice_game_progression", args=["hunt"]))
+        second_response = self.client.get(reverse("practice_game_progression", args=["hunt"]))
+
+        self.assertContains(first_response, 'tutorial-start-btn')
+        self.assertNotContains(second_response, 'tutorial-start-btn')
 
     def test_seen_tutorial_overlay_hides_start_button(self):
         self.client.session['free_mode_tutorial_seen'] = True

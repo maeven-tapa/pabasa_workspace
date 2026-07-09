@@ -24,6 +24,12 @@
             --line: rgba(27, 26, 23, 0.1);
             --shadow: 0 24px 54px rgba(27, 26, 23, 0.14);
         }
+        body[data-student-theme="forest"] { --sky: #2f855a; --sky-deep: #22543d; --sky-soft: #e8f5ec; --sun: #a3d65c; }
+        body[data-student-theme="treasure"] { --sky: #16877f; --sky-deep: #115e59; --sky-soft: #e2f7f3; --sun: #f4bd42; }
+        body[data-student-theme="ocean"] { --sky: #168ac2; --sky-deep: #075985; --sky-soft: #e3f6fd; --sun: #67e8f9; }
+        body[data-student-theme="space"] { --sky: #7160d8; --sky-deep: #4338a8; --sky-soft: #eeecff; --sun: #c4b5fd; }
+        body[data-student-theme="zoo"] { --sky: #6b8e23; --sky-deep: #3f6212; --sky-soft: #f0f6df; --sun: #f5cc65; }
+        body[data-student-theme="library"] { --sky: #9a4dcc; --sky-deep: #6b21a8; --sky-soft: #f7eafd; --sun: #f0abfc; }
 
         .practice-scrolls-shell {
             align-items: center;
@@ -1012,7 +1018,8 @@
         }
 
         .practice-shell.is-complete .practice-top,
-        .practice-shell.is-complete .practice-board {
+        .practice-shell.is-complete .practice-board,
+        .practice-shell.is-complete .scrolls-desktop-stage {
             display: none;
         }
 
@@ -2178,6 +2185,27 @@
             transform: translateY(-1px);
         }
 
+        .practice-complete-actions .is-disabled,
+        .practice-complete-actions [aria-disabled="true"] {
+            background: #94a3b8 !important;
+            box-shadow: none !important;
+            color: #e2e8f0 !important;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .next-level-availability {
+            color: #64748b;
+            display: none;
+            flex-basis: 100%;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-top: -0.15rem;
+            text-align: center;
+        }
+
+        .next-level-availability.is-visible { display: block; }
+
         .complete-primary {
             background: #2EA8E5;
             color: #fff;
@@ -2913,6 +2941,14 @@
             background: linear-gradient(135deg, #166534, #15803d) !important;
             color: #fff !important;
         }
+        body.dark-theme .practice-complete-actions .complete-primary.is-disabled,
+        body.dark-theme .practice-complete-actions .complete-primary[aria-disabled="true"] {
+            background: #475569 !important;
+            border-color: #64748b !important;
+            box-shadow: none !important;
+            color: #cbd5e1 !important;
+            cursor: not-allowed;
+        }
         body.dark-theme .complete-secondary {
             background: #334155 !important;
             color: #cbd5e1 !important;
@@ -2968,9 +3004,176 @@
         body.dark-theme .practice-stat span {
             color: #94a3b8 !important;
         }
+
+        /* Hunt reader — a quiet treasure-voyage skin around the original layout. */
+        .practice-hunt-shell {
+            --hunt: #197a73;
+            --hunt-deep: #115e59;
+            --hunt-soft: #e6f5f2;
+            background: linear-gradient(180deg, #edf8fb 0%, #f8faf7 100%);
+        }
+        .practice-hunt-shell[data-hunt-difficulty="medium"] { --hunt: #b7791f; --hunt-deep: #8a5715; --hunt-soft: #fff6df; }
+        .practice-hunt-shell[data-hunt-difficulty="hard"] { --hunt: #7160a8; --hunt-deep: #554489; --hunt-soft: #f0edfb; }
+        .practice-hunt-shell.is-complete .hunt-reader { display: none; }
+        .hunt-reader { display: grid; gap: 1rem; margin: 0 auto; max-width: 1180px; width: 100%; }
+        .hunt-topbar { align-items: center; display: grid; gap: 1rem; grid-template-columns: auto minmax(0,1fr) auto; }
+        .hunt-back { align-items: center; background: #fff; border: 1px solid #d8e5e3; border-radius: 12px; color: #31545a; display: inline-flex; font-weight: 800; gap: .4rem; min-height: 42px; padding: .55rem .8rem; text-decoration: none; }
+        .hunt-heading { min-width: 0; }
+        .hunt-heading p { color: var(--hunt); font-size: .76rem; font-weight: 900; letter-spacing: .1em; margin: 0; text-transform: uppercase; }
+        .hunt-heading h1 { color: #233c4a; font-size: clamp(1.35rem, 3vw, 1.9rem); font-weight: 900; margin: .1rem 0 0; }
+        .hunt-stars { align-items: center; background: #fffaf0; border: 1px solid #f4d58b; border-radius: 12px; color: #8a5a08; display: inline-flex; font-weight: 900; gap: .4rem; min-height: 42px; padding: .55rem .8rem; white-space: nowrap; }
+        .hunt-card { background: #fff; border: 1px solid #dce8e6; border-radius: 22px; box-shadow: 0 14px 34px rgba(33,73,76,.1); overflow: hidden; position: relative; }
+        .hunt-card::after { border: 2px dashed rgba(25,122,115,.12); border-radius: 50%; bottom: -35px; content: ""; height: 100px; pointer-events: none; position: absolute; right: -24px; width: 100px; }
+        .hunt-flight { background: #fbfdfd; border-bottom: 1px solid #e3eceb; padding: .9rem 1.15rem .8rem; }
+        .hunt-flight-meta { align-items: center; color: #527078; display: flex; font-size: .8rem; font-weight: 800; justify-content: space-between; margin-bottom: .5rem; }
+        .hunt-flight-track { background: #dcebe9; border-radius: 999px; height: 8px; position: relative; }
+        .hunt-flight-fill { background: linear-gradient(90deg, var(--hunt), #e8b443); border-radius: inherit; display: block; height: 100%; transition: width .35s ease; width: 0; }
+        .hunt-flight-bird { align-items: center; background: #fff; border: 2px solid var(--hunt); border-radius: 50%; color: var(--hunt); display: flex; font-size: .75rem; height: 25px; justify-content: center; left: 0; position: absolute; top: 50%; transform: translate(-50%,-50%); transition: left .35s ease; width: 25px; z-index: 2; }
+        .hunt-flight-end { color: #b7791f; font-size: .9rem; position: absolute; right: -2px; top: 50%; transform: translateY(-50%); }
+        .hunt-meta-row { align-items: center; display: flex; flex-wrap: wrap; gap: .55rem; padding: .9rem 1.15rem 0; }
+        .hunt-count, .hunt-difficulty, .hunt-level { border-radius: 999px; font-size: .76rem; font-weight: 900; padding: .38rem .7rem; }
+        .hunt-count { background: var(--hunt-soft); color: var(--hunt-deep); }
+        .hunt-difficulty { background: var(--hunt); color: #fff; text-transform: capitalize; }
+        .hunt-level { background: #f1f5f9; color: #526579; }
+        .hunt-status { align-items: center; color: #587078; display: inline-flex; font-size: .8rem; font-weight: 800; gap: .35rem; margin-left: auto; }
+        .hunt-status-dot { background: #f0b429; border-radius: 50%; height: 8px; width: 8px; }
+        .hunt-main { align-items: stretch; display: grid; gap: clamp(1rem,3vw,2rem); grid-template-columns: minmax(170px, .48fr) minmax(0, 1.52fr); padding: clamp(1.2rem,4vw,2.2rem); position: relative; }
+        .hunt-main::before { background: radial-gradient(circle, rgba(25,122,115,.16) 1.5px, transparent 2px); background-size: 19px 19px; content: ""; inset: 0; mask-image: linear-gradient(90deg,#000,transparent 45%); opacity: .38; pointer-events: none; position: absolute; }
+        .hunt-guide { align-items: center; align-self: center; display: flex; flex-direction: column; position: relative; z-index: 1; }
+        .hunt-bird-wrap { align-items: center; background: var(--hunt-soft); border: 1px solid color-mix(in srgb, var(--hunt) 20%, white); border-radius: 50%; display: flex; height: clamp(120px,16vw,165px); justify-content: center; overflow: hidden; width: clamp(120px,16vw,165px); }
+        .hunt-bird-wrap img { height: 92%; object-fit: contain; transform: rotate(3deg) scaleX(-1); width: 92%; }
+        .hunt-guide-copy { background: #fff; border: 1px solid #dbe6e4; border-radius: 13px; color: #527078; font-size: .78rem; font-weight: 700; margin-top: .65rem; max-width: 190px; padding: .55rem .7rem; text-align: center; }
+        .hunt-word-area { align-items: center; background: linear-gradient(145deg,#fff,#fbfdfd); border: 2px solid color-mix(in srgb, var(--hunt) 28%, #e2e8f0); border-radius: 20px; display: flex; justify-content: center; min-height: clamp(210px,28vw,340px); padding: clamp(1.5rem,5vw,3.2rem); position: relative; z-index: 1; }
+        .hunt-word-area::before { color: rgba(183,121,31,.18); content: "\F52A"; font-family: bootstrap-icons; font-size: 2rem; position: absolute; right: 1rem; top: .8rem; }
+        .hunt-word-area .practice-text { color: #213b4a; font-size: clamp(2.25rem,6vw,4.8rem); font-weight: 900; line-height: 1.2; margin: 0; overflow-wrap: anywhere; text-align: center; }
+        .hunt-actions { background: #fbfdfd; border-top: 1px solid #e3eceb; padding: 1rem 1.15rem 1.15rem; }
+        .hunt-actions .practice-feedback { color: #526d75; font-weight: 700; margin: 0 0 .8rem; text-align: center; }
+        .hunt-actions .practice-controls { justify-content: center; }
+        .hunt-actions .record-btn { background: var(--hunt); }
+        .hunt-actions .next-btn { background: var(--hunt-deep); }
+        @media (min-width: 1400px) { .hunt-reader { max-width: 1280px; } .hunt-word-area { min-height: 380px; } }
+        @media (max-width: 720px) {
+            .hunt-topbar { grid-template-columns: auto 1fr; }
+            .hunt-stars { grid-column: 1 / -1; justify-self: end; }
+            .hunt-main { gap: .8rem; grid-template-columns: 92px minmax(0,1fr); padding: 1rem; }
+            .hunt-bird-wrap { height: 82px; width: 82px; }
+            .hunt-guide-copy { font-size: .68rem; padding: .42rem; }
+            .hunt-word-area { min-height: 210px; padding: 1rem; }
+            .hunt-word-area .practice-text { font-size: clamp(1.8rem,9vw,3rem); }
+            .hunt-status { margin-left: 0; width: 100%; }
+            .hunt-actions .practice-controls { display: grid; grid-template-columns: 1fr 1.35fr 1fr; width: 100%; }
+            .hunt-actions .practice-controls button { min-width: 0; padding-inline: .45rem; width: 100%; }
+        }
+        body.dark-theme .practice-hunt-shell { background: linear-gradient(180deg,#0b1825,#111d24); }
+        body.dark-theme .hunt-card, body.dark-theme .hunt-flight, body.dark-theme .hunt-actions { background: #111c2f; border-color: #334155; }
+        body.dark-theme .hunt-heading h1, body.dark-theme .hunt-word-area .practice-text { color: #f1f5f9; }
+        body.dark-theme .hunt-back, body.dark-theme .hunt-guide-copy, body.dark-theme .hunt-word-area { background: #1e293b; border-color: #475569; color: #cbd5e1; }
+        body.dark-theme .hunt-flight-track { background: #334155; }
+        body.dark-theme .hunt-flight-meta, body.dark-theme .hunt-status, body.dark-theme .hunt-actions .practice-feedback { color: #cbd5e1; }
+
+        /* Hunt refinement: contain the reading task and keep voyage details peripheral. */
+        .hunt-reader { max-width: 1040px; }
+        .hunt-card { margin-inline: auto; max-width: 980px; width: 100%; }
+        .hunt-main {
+            gap: .35rem;
+            grid-template-columns: minmax(150px, 205px) minmax(0, 680px);
+            justify-content: center;
+            padding: clamp(1.35rem, 3vw, 2rem) clamp(1.1rem, 3vw, 2rem);
+        }
+        .hunt-guide { margin-right: -18px; z-index: 3; }
+        .hunt-bird-wrap {
+            box-shadow: 0 10px 24px rgba(17, 94, 89, .1);
+            height: clamp(116px, 13vw, 148px);
+            position: relative;
+            width: clamp(116px, 13vw, 148px);
+        }
+        .hunt-guide::after {
+            border-bottom: 9px solid transparent;
+            border-left: 13px solid var(--hunt-soft);
+            border-top: 9px solid transparent;
+            content: "";
+            position: absolute;
+            right: 2px;
+            top: 46%;
+            transform: translateX(100%);
+        }
+        .hunt-guide-copy { max-width: 172px; position: relative; }
+        .hunt-word-area { min-height: clamp(230px, 25vw, 315px); padding: clamp(1.5rem, 4vw, 2.8rem); }
+        .hunt-word-area::after {
+            background: linear-gradient(160deg, rgba(25,122,115,.12), rgba(25,122,115,.03));
+            border-radius: 60% 45% 52% 48%;
+            bottom: 12px;
+            content: "";
+            height: 18px;
+            left: 28px;
+            opacity: .7;
+            position: absolute;
+            transform: rotate(-7deg);
+            width: 42px;
+        }
+        .hunt-card::before {
+            color: rgba(25,122,115,.18);
+            content: "\F18B";
+            font-family: bootstrap-icons;
+            font-size: 1.15rem;
+            pointer-events: none;
+            position: absolute;
+            right: 1rem;
+            top: 4.55rem;
+            z-index: 2;
+        }
+        .hunt-main::after {
+            background: rgba(255,255,255,.72);
+            border-radius: 999px;
+            box-shadow: 18px 4px 0 -3px rgba(255,255,255,.58), 34px 0 0 -7px rgba(255,255,255,.5);
+            content: "";
+            height: 7px;
+            pointer-events: none;
+            position: absolute;
+            right: 14%;
+            top: 14px;
+            width: 24px;
+        }
+        .hunt-actions .practice-feedback {
+            background: #eef4f5;
+            border: 1px solid #dae6e8;
+            border-radius: 10px;
+            color: #304d5a;
+            margin: 0 auto .9rem;
+            max-width: 720px;
+            min-height: 42px;
+            padding: .65rem .9rem;
+        }
+        .hunt-actions .practice-controls { gap: .65rem; margin-inline: auto; max-width: 500px; }
+        .hunt-actions .practice-controls button { flex: 0 1 130px; min-width: 108px; padding-inline: 1rem; }
+        .hunt-actions .practice-controls .record-btn { flex-basis: 148px; }
+        @media (min-width: 1400px) {
+            .hunt-reader { max-width: 1100px; }
+            .hunt-card { max-width: 1020px; }
+            .hunt-word-area { min-height: 330px; }
+        }
+        @media (max-width: 720px) {
+            .hunt-main { gap: .25rem; grid-template-columns: 82px minmax(0,1fr); }
+            .hunt-guide { margin-right: -10px; }
+            .hunt-guide::after { border-bottom-width: 7px; border-left-width: 10px; border-top-width: 7px; right: -1px; }
+            .hunt-bird-wrap { height: 76px; width: 76px; }
+            .hunt-guide-copy { max-width: 90px; }
+            .hunt-actions .practice-controls { max-width: 100%; }
+            .hunt-actions .practice-controls button { min-height: 44px; min-width: 0; padding-inline: .4rem; }
+        }
+        body.dark-theme .hunt-actions .practice-feedback {
+            background: #17243a !important;
+            border-color: #33445f !important;
+            box-shadow: inset 3px 0 0 var(--hunt);
+            color: #d7e2ee !important;
+        }
+        body.dark-theme .hunt-bird-wrap { box-shadow: 0 10px 26px rgba(2,6,23,.35); }
+        body.dark-theme .hunt-guide::after { border-left-color: #1e293b; }
+        body.dark-theme .hunt-main::after { opacity: .18; }
+        body.dark-theme .hunt-word-area::after { background: linear-gradient(160deg, rgba(56,189,248,.16), rgba(56,189,248,.03)); }
     </style>
 </head>
-<body>
+<body data-student-theme="{{ student_theme_slug|default:'sky' }}">
     <script>
         (function() {
             const readTheme = () => {
@@ -2996,7 +3199,7 @@
             });
         })();
     </script>
-    <main class="practice-shell{% if request.GET.game == 'free' %} practice-scrolls-shell{% else %} {% block mode_class %}{% endblock %}{% endif %}" data-practice-mode="{% block data_mode %}word{% endblock %}"{% if request.GET.game == 'free' %} data-free-mode="true"{% endif %}>
+    <main class="practice-shell{% if request.GET.game == 'free' %} practice-scrolls-shell{% elif request.GET.game == 'hunt' %} practice-hunt-shell{% else %} {% block mode_class %}{% endblock %}{% endif %}" data-practice-mode="{% block data_mode %}word{% endblock %}"{% if request.GET.game == 'free' %} data-free-mode="true"{% elif request.GET.game == 'hunt' %} data-hunt-mode="true" data-hunt-difficulty="{{ request.GET.difficulty|default:'easy' }}"{% endif %}>
         {% if request.GET.game == 'free' %}
         <div class="scrolls-desktop-stage">
             <div class="scrolls-phone-device">
@@ -3063,6 +3266,58 @@
         </div>
 
         {% else %}
+        {% if request.GET.game == 'hunt' %}
+        <div class="hunt-reader">
+            <header class="hunt-topbar">
+                <a class="hunt-back" href="{% url 'practice' %}"><i class="bi bi-arrow-left"></i> Back</a>
+                <div class="hunt-heading">
+                    <p>Treasure Voyage</p>
+                    <h1>Hunt Mode Reading</h1>
+                </div>
+                <div class="hunt-stars"><i class="bi bi-star-fill"></i><span id="starCount">0 stars</span></div>
+            </header>
+
+            <article class="hunt-card">
+                <div class="hunt-flight">
+                    <div class="hunt-flight-meta">
+                        <span>Reading journey</span>
+                        <span id="huntProgressLabel">Word 1 of 1</span>
+                    </div>
+                    <div class="hunt-flight-track" role="progressbar" aria-label="Reading journey progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <span class="hunt-flight-fill" id="practiceProgress"></span>
+                        <span class="hunt-flight-bird" id="huntFlightBird" aria-hidden="true"><i class="bi bi-feather"></i></span>
+                        <span class="hunt-flight-end" aria-hidden="true"><i class="bi bi-gem"></i></span>
+                    </div>
+                </div>
+
+                <div class="hunt-meta-row">
+                    <span class="hunt-count" id="practiceCounter">Word 1/1</span>
+                    <span class="hunt-difficulty" id="huntDifficultyLabel">{{ request.GET.difficulty|default:'easy' }}</span>
+                    <span class="hunt-level" id="huntLevelLabel">{{ request.GET.level|default:'level_1' }}</span>
+                    <span class="hunt-status"><span class="hunt-status-dot"></span><span id="huntReadingStatus">Ready to read</span></span>
+                </div>
+
+                <section class="hunt-main" aria-live="polite" aria-atomic="true">
+                    <aside class="hunt-guide" aria-label="PABASA bird reading guide">
+                        <div class="hunt-bird-wrap"><img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA bird guide looking toward the word"></div>
+                        <div class="hunt-guide-copy" id="huntGuideMessage">Look at the word, then read it aloud.</div>
+                    </aside>
+                    <div class="hunt-word-area">
+                        <h2 class="practice-text" id="practiceText">Ready?</h2>
+                    </div>
+                </section>
+
+                <div class="hunt-actions">
+                    <p class="practice-feedback" id="practiceFeedback">Ready when you are.</p>
+                    <div class="practice-controls">
+                        <button class="skip-btn" id="skipBtn" type="button">Skip</button>
+                        <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Read</button>
+                        <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
+                    </div>
+                </div>
+            </article>
+        </div>
+        {% else %}
         <header class="practice-top">
             <a class="back-link" href="{% url 'practice' %}">Back</a>
             <div class="practice-title">
@@ -3127,6 +3382,8 @@
                 </div>
             </article>
         </section>
+        {% endif %}
+        {% endif %}
 
         <section class="practice-complete" id="practiceComplete" aria-live="polite" aria-atomic="true">
             <article class="practice-complete-card">
@@ -3193,11 +3450,11 @@
                 </div>
                 <div class="practice-complete-actions">
                     <button class="complete-secondary" id="practiceAgainBtn" type="button">Practice Again</button>
+                    <a class="complete-primary is-disabled" id="practiceNextLevelBtn" href="#" aria-disabled="true" title="Next level not available.">Next Level</a>
                     <a class="complete-primary" href="{% url 'practice' %}">Back to Practice</a>
                 </div>
             </article>
         </section>
-        {% endif %}
     </main>
 
     <script>

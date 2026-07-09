@@ -6,6 +6,10 @@ from django.utils import timezone
 from datetime import datetime
 
 
+def default_unlocked_themes():
+    return ["sky"]
+
+
 class User(models.Model):
     ROLE_CHOICES = [
         ("admin", "Admin"),
@@ -41,6 +45,10 @@ class User(models.Model):
     grade_level = models.CharField(max_length=20, blank=True, null=True)
     section = models.CharField(max_length=50, blank=True, null=True)
     reading_level = models.CharField(max_length=50, blank=True, null=True)
+    available_stars = models.PositiveIntegerField(default=0)
+    theme_stars_credited = models.PositiveIntegerField(default=0)
+    unlocked_themes = models.JSONField(default=default_unlocked_themes, blank=True)
+    equipped_theme = models.CharField(max_length=30, default="sky")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

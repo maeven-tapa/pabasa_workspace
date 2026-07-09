@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate, login
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils.text import slugify
 from functools import wraps
@@ -2260,6 +2260,11 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'account_status_label': account_status_label,
         'account_status_class': account_status_class,
         'account_status_tooltip': account_status_tooltip,
+        'student_theme_slug': (
+            user.equipped_theme
+            if user and user.role == 'student' and user.equipped_theme in STUDENT_THEME_CATALOG
+            else 'sky'
+        ),
     })
     if extra:
         context.update(extra)
@@ -3904,11 +3909,22 @@ def _material_practice_completion(material, student_user):
 def _record_material_practice_completion(material, student_user, attempt_payload):
     content_json = dict(getattr(material, 'content_json', None) or {})
     completions = dict(content_json.get('student_completions') or {})
+    existing_completion = completions.get(str(student_user.id)) or {}
+    try:
+        incoming_stars = max(0, int(attempt_payload.get('stars_earned', 0) or 0))
+    except (TypeError, ValueError):
+        incoming_stars = 0
+    try:
+        existing_stars = max(0, int(existing_completion.get('stars_earned', 0) or 0))
+    except (TypeError, ValueError):
+        existing_stars = 0
+    game_mode = str(content_json.get('mode') or attempt_payload.get('game_mode') or '').strip().lower()
+    saved_stars = max(existing_stars, incoming_stars) if game_mode == 'color' else incoming_stars
     completion = {
         'student_id': student_user.id,
         'status': 'completed',
         'completed_at': attempt_payload.get('completed_at') or timezone.now().isoformat(),
-        'stars_earned': attempt_payload.get('stars_earned', 0),
+        'stars_earned': saved_stars,
         'items_completed': attempt_payload.get('items_completed', 0),
         'total_practice_items': attempt_payload.get('total_practice_items', 0),
         'total_read_words': attempt_payload.get('total_read_words', 0),
@@ -3942,11 +3958,13 @@ def _serialize_student_practice_material(material, student_user=None):
         'difficulty_label': _practice_config_label(selected_difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
         'level': selected_level,
         'level_label': _practice_config_label(selected_level, AdminPracticeMaterialForm.LEVEL_CHOICES),
+        'game_mode': str(content_json.get('mode') or '').strip().lower(),
         'type': material.item_type,
         'status': 'Done' if is_done else material.status,
         'raw_status': material.status,
         'is_done': is_done,
         'completed_at': completion.get('completed_at', ''),
+        'stars_earned': max(0, int(completion.get('stars_earned') or 0)),
         'prompt': material.prompt_text,
         'content': material.content_text,
         'items': _practice_material_items(material),
@@ -4386,6 +4404,129 @@ def practice(request):
     return render(request, 'pabasa_app/practice.html', context)
 
 
+STUDENT_THEME_CATALOG = {
+    'sky': {'name': 'Sky Island', 'cost': 0, 'icon': 'cloud-sun', 'note': 'Starter theme'},
+    'forest': {'name': 'Forest', 'cost': 75, 'icon': 'tree', 'note': 'Leafy reading trails'},
+    'treasure': {'name': 'Treasure Island', 'cost': 120, 'icon': 'gem', 'note': 'Golden map accents'},
+    'ocean': {'name': 'Ocean Voyage', 'cost': 160, 'icon': 'water', 'note': 'Calm sea details'},
+    'space': {'name': 'Space Reading', 'cost': 220, 'icon': 'rocket-takeoff', 'note': 'Cosmic reading glow'},
+    'zoo': {'name': 'Zoo', 'cost': 280, 'icon': 'binoculars', 'note': 'Wildlife-inspired accents'},
+    'library': {'name': 'Magic Library', 'cost': 350, 'icon': 'stars', 'note': 'Enchanted book details'},
+}
+
+
+def _student_theme_lifetime_stars(student_user):
+    if not student_user:
+        return 0
+    return sum(
+        max(0, int(_practice_game_progression(mode, student_user)['summary'].get('stars_earned') or 0))
+        for mode in ['free', 'color', 'hunt']
+    )
+
+
+def _sync_student_theme_wallet(student_user):
+    lifetime_stars = _student_theme_lifetime_stars(student_user)
+    credited = max(0, int(student_user.theme_stars_credited or 0))
+    available = max(0, int(student_user.available_stars or 0))
+    if lifetime_stars > credited:
+        available += lifetime_stars - credited
+        credited = lifetime_stars
+
+    unlocked = student_user.unlocked_themes if isinstance(student_user.unlocked_themes, list) else []
+    unlocked = list(dict.fromkeys(['sky', *[slug for slug in unlocked if slug in STUDENT_THEME_CATALOG]]))
+    equipped = student_user.equipped_theme if student_user.equipped_theme in unlocked else 'sky'
+    changed = (
+        available != student_user.available_stars
+        or credited != student_user.theme_stars_credited
+        or unlocked != student_user.unlocked_themes
+        or equipped != student_user.equipped_theme
+    )
+    student_user.available_stars = available
+    student_user.theme_stars_credited = credited
+    student_user.unlocked_themes = unlocked
+    student_user.equipped_theme = equipped
+    if changed:
+        student_user.save(update_fields=[
+            'available_stars', 'theme_stars_credited', 'unlocked_themes', 'equipped_theme', 'updated_at'
+        ])
+    return lifetime_stars
+
+
+@never_cache
+@login_required(role='student')
+def theme_shop(request):
+    with transaction.atomic():
+        student_user = User.objects.select_for_update().get(id=request.session.get('user_id'))
+        lifetime_stars = _sync_student_theme_wallet(student_user)
+
+    context = _student_practice_context(request)
+    unlocked = set(student_user.unlocked_themes or ['sky'])
+    themes = []
+    for slug, theme in STUDENT_THEME_CATALOG.items():
+        owned = slug in unlocked
+        equipped = student_user.equipped_theme == slug
+        themes.append({
+            'slug': slug,
+            **theme,
+            'owned': owned,
+            'equipped': equipped,
+            'can_afford': student_user.available_stars >= theme['cost'],
+            'status': 'equipped' if equipped else 'unlocked' if owned else 'locked',
+        })
+    context.update({
+        'stars_earned': lifetime_stars,
+        'available_stars': student_user.available_stars,
+        'shop_themes': themes,
+    })
+    return render(request, 'pabasa_app/theme_shop.html', context)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='student')
+def student_theme_action(request):
+    try:
+        payload = json.loads(request.body or '{}')
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'success': False, 'error': 'Invalid request.'}, status=400)
+    slug = str(payload.get('theme') or '').strip().lower()
+    action = str(payload.get('action') or '').strip().lower()
+    theme = STUDENT_THEME_CATALOG.get(slug)
+    if not theme or action not in {'unlock', 'equip'}:
+        return JsonResponse({'success': False, 'error': 'Invalid theme action.'}, status=400)
+
+    with transaction.atomic():
+        student_user = User.objects.select_for_update().get(id=request.session.get('user_id'), role='student')
+        lifetime_stars = _sync_student_theme_wallet(student_user)
+        unlocked = list(student_user.unlocked_themes or ['sky'])
+
+        if action == 'unlock' and slug not in unlocked:
+            if student_user.available_stars < theme['cost']:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Not enough stars.',
+                    'available_stars': student_user.available_stars,
+                }, status=400)
+            student_user.available_stars -= theme['cost']
+            unlocked.append(slug)
+            student_user.unlocked_themes = list(dict.fromkeys(unlocked))
+            student_user.save(update_fields=['available_stars', 'unlocked_themes', 'updated_at'])
+        elif action == 'equip':
+            if slug not in unlocked:
+                return JsonResponse({'success': False, 'error': 'Unlock this theme first.'}, status=403)
+            student_user.equipped_theme = slug
+            student_user.save(update_fields=['equipped_theme', 'updated_at'])
+
+    return JsonResponse({
+        'success': True,
+        'theme': slug,
+        'owned': slug in student_user.unlocked_themes,
+        'equipped_theme': student_user.equipped_theme,
+        'available_stars': student_user.available_stars,
+        'total_stars_earned': lifetime_stars,
+    })
+
+
 @never_cache
 @login_required(role='student')
 @require_http_methods(["POST"])
@@ -4410,6 +4551,12 @@ def practice_game_progression(request, mode):
     progression = _practice_game_progression(normalized_mode, student_user)
     progression = _apply_progression_unlock_override(progression, request.GET.get('unlock', ''))
     flag_key = _practice_tutorial_flag_key(normalized_mode)
+    show_tutorial = not bool(flag_key and request.session.get(flag_key))
+    if show_tutorial and flag_key:
+        # The automatic guide is a one-time introduction. Count the first page
+        # display itself so closing with X cannot make it auto-open again.
+        request.session[flag_key] = True
+        request.session.modified = True
     context.update({
         'selected_game_mode': normalized_mode,
         'game_mode_title': progression['mode_title'],
@@ -4418,7 +4565,7 @@ def practice_game_progression(request, mode):
         'tutorial_mode': normalized_mode,
         'tutorial_title': progression['mode_title'],
         'tutorial_cards': _practice_tutorial_content(normalized_mode),
-        'show_tutorial': not bool(flag_key and request.session.get(flag_key)),
+        'show_tutorial': show_tutorial,
     })
     return render(request, 'pabasa_app/practice_progression.html', context)
 
@@ -8557,11 +8704,25 @@ def record_assessment_completion(request):
                 'status': 'completed',
                 'completed_at': timezone.now().isoformat(),
                 'device_info': device_info,
+                'game_mode': str(data.get('game_mode') or '').strip().lower(),
                 'stars_earned': data.get('stars_earned', 0),
                 'items_completed': data.get('items_completed', 0),
                 **score_payload,
             }
             if is_practice:
+                material_content = dict(getattr(material, 'content_json', None) or {}) if material else {}
+                material_game_mode = str(material_content.get('mode') or attempt_payload.get('game_mode') or '').strip().lower()
+                if material and material_game_mode == 'color':
+                    existing_completion = _material_practice_completion(material, student_user)
+                    try:
+                        existing_stars = max(0, int(existing_completion.get('stars_earned', 0) or 0))
+                    except (TypeError, ValueError):
+                        existing_stars = 0
+                    try:
+                        incoming_stars = max(0, int(attempt_payload.get('stars_earned', 0) or 0))
+                    except (TypeError, ValueError):
+                        incoming_stars = 0
+                    attempt_payload['stars_earned'] = max(existing_stars, incoming_stars)
                 if practice_obj:
                     practice_obj.record_attempt(student_user, replace=True, **attempt_payload)
                 if material and material.type == 'practice':

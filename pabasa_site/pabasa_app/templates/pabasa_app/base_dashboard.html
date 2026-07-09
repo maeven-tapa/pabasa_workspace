@@ -67,6 +67,26 @@
             z-index: -1;
         }
 
+        body.dashboard-body[data-student-theme="forest"] { --dash-primary: #2f855a; --dash-primary-soft: #e8f5ec; --dash-primary-deep: #22543d; --dash-accent: #a3d65c; }
+        body.dashboard-body[data-student-theme="treasure"] { --dash-primary: #16877f; --dash-primary-soft: #e2f7f3; --dash-primary-deep: #115e59; --dash-accent: #f4bd42; }
+        body.dashboard-body[data-student-theme="ocean"] { --dash-primary: #168ac2; --dash-primary-soft: #e3f6fd; --dash-primary-deep: #075985; --dash-accent: #67e8f9; }
+        body.dashboard-body[data-student-theme="space"] { --dash-primary: #7160d8; --dash-primary-soft: #eeecff; --dash-primary-deep: #4338a8; --dash-accent: #c4b5fd; }
+        body.dashboard-body[data-student-theme="zoo"] { --dash-primary: #6b8e23; --dash-primary-soft: #f0f6df; --dash-primary-deep: #3f6212; --dash-accent: #f5cc65; }
+        body.dashboard-body[data-student-theme="library"] { --dash-primary: #9a4dcc; --dash-primary-soft: #f7eafd; --dash-primary-deep: #6b21a8; --dash-accent: #f0abfc; }
+        body.dashboard-body[data-student-theme="forest"] { background-image: radial-gradient(circle at 90% 12%, rgba(74,222,128,.14), transparent 30%), linear-gradient(180deg,#f7fbf5,#edf7ef); }
+        body.dashboard-body[data-student-theme="treasure"] { background-image: radial-gradient(circle at 88% 12%, rgba(251,191,36,.16), transparent 28%), linear-gradient(180deg,#f5fbfa,#edf8f4); }
+        body.dashboard-body[data-student-theme="ocean"] { background-image: radial-gradient(circle at 88% 12%, rgba(34,211,238,.16), transparent 30%), linear-gradient(180deg,#f3fbff,#eaf7fc); }
+        body.dashboard-body[data-student-theme="space"] { background-image: radial-gradient(circle at 88% 12%, rgba(167,139,250,.18), transparent 30%), linear-gradient(180deg,#f7f5ff,#efedff); }
+        body.dashboard-body[data-student-theme="zoo"] { background-image: radial-gradient(circle at 88% 12%, rgba(163,230,53,.14), transparent 30%), linear-gradient(180deg,#fafbf2,#f3f6e7); }
+        body.dashboard-body[data-student-theme="library"] { background-image: radial-gradient(circle at 88% 12%, rgba(232,121,249,.15), transparent 30%), linear-gradient(180deg,#fcf6ff,#f7ecfb); }
+        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .dashboard-sidebar {
+            background: linear-gradient(145deg, color-mix(in srgb, var(--dash-primary-deep) 88%, #0f172a), var(--dash-primary-deep));
+        }
+        body.dark-theme.dashboard-body[data-student-theme] {
+            background-color: #0f172a !important;
+            background-image: radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--dash-primary) 16%, transparent), transparent 32%), linear-gradient(180deg,#0f172a,#111827) !important;
+        }
+
         .dashboard-sidebar {
             width: var(--sidebar-width);
             height: 100dvh;
@@ -2276,7 +2296,7 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="dashboard-body dashboard-preloading">
+<body class="dashboard-body dashboard-preloading" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
     <div class="dashboard-page-loader" id="dashboardPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
         <div class="dashboard-page-loader__content">
             <img class="dashboard-page-loader__logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
