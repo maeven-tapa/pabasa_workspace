@@ -11440,6 +11440,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function applyUploadedItems(items, fileName, metadata = {}) {
             let resolvedItems = Array.isArray(items) ? items : [];
+            if (!resolvedItems.length && metadata && Array.isArray(metadata.items)) {
+                resolvedItems = metadata.items;
+            }
+            if (!resolvedItems.length && metadata && Array.isArray(metadata.extracted_items)) {
+                resolvedItems = metadata.extracted_items;
+            }
+            if (!resolvedItems.length && metadata && Array.isArray(metadata.extractedItems)) {
+                resolvedItems = metadata.extractedItems;
+            }
             if (!resolvedItems.length && metadata && typeof metadata.text === 'string' && metadata.text.trim()) {
                 resolvedItems = excerptUploadedItems(metadata.text);
             }
@@ -11492,7 +11501,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const response = await fetch('/dashboard/teacher/extract-material/', {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { 'X-CSRFToken': await ensureCsrfToken() },
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': await ensureCsrfToken()
+                },
                 body: formData
             });
             let data = {};
@@ -11500,17 +11513,32 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             try {
                 responseText = await response.text();
                 if (responseText) {
-                    data = JSON.parse(responseText);
+                    const trimmed = responseText.trim();
+                    try {
+                        data = JSON.parse(trimmed);
+                        if (data && typeof data === 'object') {
+                            data = data;
+                        } else {
+                            data = { success: false, items: [], text: trimmed, warnings: [trimmed] };
+                        }
+                    } catch (parseError) {
+                        data = { success: false, items: [], text: trimmed, warnings: [trimmed || 'The server returned an invalid response.'] };
+                    }
                 }
             } catch (error) {
-                data = {};
+                data = { success: false, items: [], text: responseText || '', warnings: [responseText || 'The server returned an invalid response.'] };
             }
 
+            const responseItems = Array.isArray(data.items)
+                ? data.items
+                : (Array.isArray(data.extracted_items) ? data.extracted_items : (Array.isArray(data.extractedItems) ? data.extractedItems : []));
+            const responseTextValue = typeof data.text === 'string' ? data.text : (typeof responseText === 'string' ? responseText : '');
             const warningText = typeof data.warning_message === 'string' && data.warning_message.trim()
                 ? data.warning_message
-                : (Array.isArray(data.warnings) && data.warnings.length ? data.warnings[0] : '');
-            const hasExtractedContent = (Array.isArray(data.items) && data.items.length > 0)
-                || (typeof data.text === 'string' && data.text.trim().length > 0);
+                : (typeof data.error === 'string' && data.error.trim()
+                    ? data.error
+                    : (Array.isArray(data.warnings) && data.warnings.length ? data.warnings[0] : ''));
+            const hasExtractedContent = responseItems.length > 0 || (typeof responseTextValue === 'string' && responseTextValue.trim().length > 0);
 
             if (!response.ok && !hasExtractedContent) {
                 applyUploadedItems([], file.name, {
@@ -11528,12 +11556,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
                 return;
             }
-            applyUploadedItems(Array.isArray(data.items) ? data.items : [], file.name, {
-                reading_type: data.reading_type,
-                selection_mode: data.selection_mode,
-                selected_pages: data.selected_pages,
+            applyUploadedItems(responseItems, file.name, {
+                reading_type: data.reading_type || data.readingType || 'word',
+                selection_mode: data.selection_mode || data.selectionMode,
+                selected_pages: data.selected_pages || data.selectedPages,
                 warnings: Array.isArray(data.warnings) ? data.warnings : [],
-                text: data.text || '',
+                text: responseTextValue,
+                items: responseItems,
             });
         }
 
