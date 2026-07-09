@@ -7210,6 +7210,13 @@ def _resolve_tesseract_executable(pytesseract_module):
     except Exception:
         pass
 
+    try:
+        resolved_ocr = shutil.which('tesseract-ocr')
+        if resolved_ocr:
+            candidates.append(resolved_ocr)
+    except Exception:
+        pass
+
     for candidate in [
         r'C:\Program Files\Tesseract-OCR\tesseract.exe',
         r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
@@ -7217,6 +7224,10 @@ def _resolve_tesseract_executable(pytesseract_module):
         os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR\tesseract.exe'),
         os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR\tesseract.exe'),
         os.path.expandvars(r'%LOCALAPPDATA%\Tesseract-OCR\tesseract.exe'),
+        '/usr/bin/tesseract',
+        '/usr/bin/tesseract-ocr',
+        '/usr/local/bin/tesseract',
+        '/usr/local/bin/tesseract-ocr',
     ]:
         if candidate and candidate not in candidates:
             candidates.append(candidate)

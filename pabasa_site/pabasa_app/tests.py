@@ -18,7 +18,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _resolve_tesseract_executable
 from .weekly_digest import send_weekly_digest
 
 
@@ -223,6 +223,15 @@ class OcrLayoutGroupingTests(TestCase):
 
 
 class MaterialUploadExtractionTests(TestCase):
+    def test_resolve_tesseract_executable_falls_back_to_tesseract_ocr_binary(self):
+        class DummyPytesseractModule:
+            pass
+
+        with patch("pabasa_app.views.os.path.isfile", side_effect=lambda path: path == "/usr/bin/tesseract-ocr"), patch("pabasa_app.views.shutil.which", side_effect=lambda name: None if name == "tesseract" else None):
+            resolved = _resolve_tesseract_executable(DummyPytesseractModule())
+
+        self.assertEqual(resolved, "/usr/bin/tesseract-ocr")
+
     def setUp(self):
         self.teacher = User.objects.create(
             custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}",
