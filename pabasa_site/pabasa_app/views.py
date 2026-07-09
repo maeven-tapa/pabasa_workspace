@@ -33,6 +33,11 @@ from io import BytesIO
 
 # Use a static Windows Tesseract path so OCR activates immediately in the app.
 TESSERACT_STATIC_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+IMAGE_OCR_EMPTY_MESSAGE = (
+    'No readable text could be recovered from that image. '
+    'Try a straight, well-lit photo with the words in focus, dark text on a light background, '
+    'and minimal extra space around the page.'
+)
 try:
     import pytesseract
     if os.path.isfile(TESSERACT_STATIC_PATH):
@@ -7224,10 +7229,11 @@ def _coerce_image_ocr_result(result):
         return {
             'text': str(result.get('text') or ''),
             'layout': list(result.get('layout') or []),
+            'debug': result.get('debug') if isinstance(result.get('debug'), dict) else {},
         }
     if isinstance(result, str):
-        return {'text': result, 'layout': []}
-    return {'text': '', 'layout': []}
+        return {'text': result, 'layout': [], 'debug': {}}
+    return {'text': '', 'layout': [], 'debug': {}}
 
 
 def _infer_material_type_from_ocr_layout(layout):
@@ -7342,124 +7348,161 @@ def _build_material_items_from_ocr_layout(layout, reading_type=''):
     return [item['text'] for item in normalized]
 
 
+def _trim_ocr_border(image):
+    try:
+        from PIL import ImageChops, ImageOps
+    except ImportError:
+        return image
+    try:
+        grayscale = ImageOps.grayscale(image)
+        contrasted = ImageOps.autocontrast(grayscale)
+        inverted = ImageChops.invert(contrasted)
+        bbox = inverted.point(lambda p: 255 if p > 22 else 0).getbbox()
+        if not bbox:
+            return image
+        width, height = image.size
+        left, top, right, bottom = bbox
+        pad_x = max(8, int(width * 0.025))
+        pad_y = max(8, int(height * 0.025))
+        left = max(0, left - pad_x)
+        top = max(0, top - pad_y)
+        right = min(width, right + pad_x)
+        bottom = min(height, bottom + pad_y)
+        if right - left < width * 0.25 or bottom - top < height * 0.15:
+            return image
+        return image.crop((left, top, right, bottom))
+    except Exception:
+        return image
+
+
+def _resize_ocr_image(image, target_max_dimension=2200):
+    try:
+        from PIL import Image
+    except ImportError:
+        return image
+    try:
+        width, height = image.size
+        max_dim = max(width, height)
+        min_dim = min(width, height)
+        scale = 1.0
+        if max_dim > target_max_dimension:
+            scale = target_max_dimension / max_dim
+        elif min_dim < 900:
+            scale = min(2.0, 900 / max(1, min_dim))
+        if abs(scale - 1.0) < 0.05:
+            return image
+        return image.resize(
+            (max(1, int(width * scale)), max(1, int(height * scale))),
+            resample=getattr(Image, 'Resampling', Image).LANCZOS,
+        )
+    except Exception:
+        return image
+
+
+def _estimate_ocr_rotation(image):
+    try:
+        from PIL import ImageOps
+    except Exception:
+        return 0
+
+    try:
+        sample = ImageOps.autocontrast(ImageOps.grayscale(image))
+        sample = _resize_ocr_image(sample, 700)
+        scores = []
+        for angle in [-3, -2, -1, 0, 1, 2, 3]:
+            rotated = sample.rotate(angle, expand=False, fillcolor=255)
+            rows = []
+            for y in range(rotated.height):
+                dark_pixels = 0
+                for x in range(0, rotated.width, 3):
+                    if rotated.getpixel((x, y)) < 160:
+                        dark_pixels += 1
+                rows.append(dark_pixels)
+            if len(rows) < 3:
+                scores.append((0, angle))
+                continue
+            row_variance = sum(abs(rows[index] - rows[index - 1]) for index in range(1, len(rows)))
+            scores.append((row_variance, angle))
+        best_score, best_angle = max(scores, key=lambda pair: pair[0])
+        if best_score <= 0 or abs(best_angle) < 1:
+            return 0
+        return best_angle
+    except Exception:
+        return 0
+
+
 def _build_ocr_image_candidates(image):
     try:
-        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+        from PIL import ImageEnhance, ImageFilter, ImageOps
     except ImportError:
-        return [image]
+        return [{'label': 'original', 'image': image}]
 
     candidates = []
+    seen = set()
 
-    def add_candidate(img):
+    def add_candidate(label, img):
         if img is None:
             return
         try:
-            if img.mode not in {'RGB', 'L'}:
+            if img.mode not in {'RGB', 'L', '1'}:
                 img = img.convert('RGB')
+            signature = (label, img.mode, img.size)
+            if signature in seen:
+                return
+            seen.add(signature)
+            candidates.append({'label': label, 'image': img})
+        except Exception:
+            return
+
+    prepared = _resize_ocr_image(_trim_ocr_border(image))
+    rotation = _estimate_ocr_rotation(prepared)
+    if rotation:
+        try:
+            prepared = prepared.rotate(rotation, expand=False, fillcolor='white')
         except Exception:
             pass
-        if img not in candidates:
-            candidates.append(img)
-
-    add_candidate(image)
 
     try:
-        grayscale = ImageOps.grayscale(image)
+        grayscale = ImageOps.grayscale(prepared)
     except Exception:
-        grayscale = image.convert('L') if hasattr(image, 'convert') else image
+        grayscale = prepared.convert('L') if hasattr(prepared, 'convert') else prepared
 
-    add_candidate(grayscale)
-    add_candidate(ImageOps.autocontrast(grayscale))
-    add_candidate(grayscale.filter(ImageFilter.SHARPEN))
-    add_candidate(grayscale.filter(ImageFilter.MedianFilter(size=3)))
-    add_candidate(ImageOps.autocontrast(grayscale.filter(ImageFilter.MedianFilter(size=3))))
+    autocontrast = ImageOps.autocontrast(grayscale)
+    add_candidate('prepared-grayscale', autocontrast)
 
     try:
-        sharpened = grayscale.filter(ImageFilter.UnsharpMask(radius=1.5, percent=200, threshold=3))
-        add_candidate(sharpened)
-        add_candidate(ImageOps.autocontrast(sharpened))
-    except Exception:
-        pass
-
-    try:
-        edge_enhanced = grayscale.filter(ImageFilter.EDGE_ENHANCE_MORE)
-        add_candidate(edge_enhanced)
-        add_candidate(ImageOps.autocontrast(edge_enhanced))
-    except Exception:
-        pass
-
-    width, height = image.size
-    max_dim = max(width, height)
-    for scale in [1.25, 1.5, 2.0, 2.5]:
-        if max_dim * scale > 4000:
-            continue
-        try:
-            resized = grayscale.resize(
-                (max(1, int(width * scale)), max(1, int(height * scale))),
-                resample=getattr(Image, 'Resampling', Image).LANCZOS,
+        add_candidate(
+            'contrast-sharpened',
+            ImageOps.autocontrast(
+                autocontrast.filter(ImageFilter.UnsharpMask(radius=1.2, percent=180, threshold=3))
             )
-            add_candidate(resized)
-            add_candidate(ImageOps.autocontrast(resized))
-            add_candidate(resized.filter(ImageFilter.SHARPEN))
-            add_candidate(resized.filter(ImageFilter.MedianFilter(size=3)))
+        )
+    except Exception:
+        pass
+
+    try:
+        denoised = autocontrast.filter(ImageFilter.MedianFilter(size=3))
+        add_candidate('denoised-contrast', ImageOps.autocontrast(denoised))
+    except Exception:
+        pass
+
+    try:
+        contrast_boosted = ImageEnhance.Contrast(prepared.convert('RGB')).enhance(1.8)
+        add_candidate('phone-photo-contrast', ImageOps.autocontrast(ImageOps.grayscale(contrast_boosted)))
+    except Exception:
+        pass
+
+    for threshold in [150, 180]:
+        try:
+            threshold_image = autocontrast.point(lambda p, t=threshold: 255 if p > t else 0, mode='1')
+            add_candidate(f'threshold-{threshold}', threshold_image)
         except Exception:
             continue
 
-    try:
-        enhancer = ImageEnhance.Contrast(image.convert('RGB'))
-        for factor in [1.2, 1.5, 2.0, 2.5]:
-            add_candidate(enhancer.enhance(factor))
-    except Exception:
-        pass
-
-    try:
-        color = image.convert('RGB')
-        for factor in [1.1, 1.3, 1.6]:
-            enhanced = ImageEnhance.Brightness(color).enhance(factor)
-            add_candidate(ImageOps.autocontrast(ImageOps.grayscale(enhanced)))
-    except Exception:
-        pass
-
-    for base in [grayscale, ImageOps.autocontrast(grayscale)]:
-        for threshold in [120, 140, 160, 180]:
-            try:
-                threshold_image = base.point(lambda p: 255 if p > threshold else 0, mode='1')
-                add_candidate(threshold_image)
-                add_candidate(ImageOps.invert(threshold_image))
-                add_candidate(threshold_image.filter(ImageFilter.MaxFilter(3)))
-            except Exception:
-                continue
-
-    try:
-        denoised = grayscale.filter(ImageFilter.GaussianBlur(radius=0.6))
-        add_candidate(ImageOps.autocontrast(denoised))
-        add_candidate(denoised.filter(ImageFilter.SHARPEN))
-    except Exception:
-        pass
-
-    try:
-        deskewed = ImageOps.autocontrast(grayscale)
-        deskewed = deskewed.filter(ImageFilter.MaxFilter(3))
-        add_candidate(deskewed)
-    except Exception:
-        pass
-
-    try:
-        rotated = image.rotate(3, expand=False, fillcolor='white')
-        add_candidate(ImageOps.autocontrast(ImageOps.grayscale(rotated)))
-    except Exception:
-        pass
-
-    try:
-        rotated = image.rotate(-3, expand=False, fillcolor='white')
-        add_candidate(ImageOps.autocontrast(ImageOps.grayscale(rotated)))
-    except Exception:
-        pass
-
-    return candidates
+    return candidates[:6] or [{'label': 'original', 'image': image}]
 
 
-def _extract_text_from_image(upload):
+def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
     try:
         from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
     except ImportError as exc:
@@ -7490,89 +7533,146 @@ def _extract_text_from_image(upload):
             best_text = ''
             best_layout = []
             best_confidence = -1
+            best_candidate = None
+            best_candidate_label = ''
+            best_config = ''
+            attempt_count = 0
 
-            for candidate in candidates:
-                for psm in ['6', '11', '3']:
-                    for config in [f'--psm {psm}', None]:
-                        try:
-                            if config:
-                                candidate_text = pytesseract.image_to_string(candidate, config=config).strip()
-                            else:
-                                candidate_text = pytesseract.image_to_string(candidate).strip()
-                        except Exception:
-                            continue
-
-                        cleaned = re.sub(r'\s+', ' ', candidate_text).strip()
-                        if not cleaned:
-                            continue
-
+            for candidate_entry in candidates:
+                candidate = candidate_entry.get('image') if isinstance(candidate_entry, dict) else candidate_entry
+                candidate_label = candidate_entry.get('label', 'candidate') if isinstance(candidate_entry, dict) else 'candidate'
+                for config in ['--oem 3 --psm 6', '--oem 3 --psm 11']:
+                    attempt_count += 1
+                    try:
+                        if TesseractOutput is None:
+                            data = pytesseract.image_to_data(candidate, config=config)
+                        else:
+                            data = pytesseract.image_to_data(candidate, config=config, output_type=TesseractOutput.DICT)
+                    except Exception:
                         try:
                             if TesseractOutput is None:
-                                data = pytesseract.image_to_data(candidate, config=(config or '--psm 6'))
+                                data = pytesseract.image_to_data(candidate)
                             else:
-                                data = pytesseract.image_to_data(candidate, config=(config or '--psm 6'), output_type=TesseractOutput.DICT)
+                                data = pytesseract.image_to_data(candidate, output_type=TesseractOutput.DICT)
                         except Exception:
+                            data = None
+
+                    layout = []
+                    confidence_total = 0
+                    confidence_count = 0
+                    if data and isinstance(data, dict):
+                        texts = data.get('text') or []
+                        lefts = data.get('left') or []
+                        tops = data.get('top') or []
+                        widths = data.get('width') or []
+                        heights = data.get('height') or []
+                        confs = data.get('conf') or []
+                        blocks = data.get('block_num') or []
+                        paragraphs = data.get('par_num') or []
+                        lines = data.get('line_num') or []
+                        words = data.get('word_num') or []
+
+                        for index, text_value in enumerate(texts):
+                            cleaned_word = re.sub(r'\s+', ' ', str(text_value or '').strip())
+                            if not cleaned_word:
+                                continue
+                            confidence = 0
+                            if index < len(confs):
+                                try:
+                                    confidence = int(float(confs[index]))
+                                except Exception:
+                                    confidence = 0
+                            if confidence > 0:
+                                confidence_total += confidence
+                                confidence_count += 1
+                            layout.append({
+                                'text': cleaned_word,
+                                'left': int(lefts[index]) if index < len(lefts) else 0,
+                                'top': int(tops[index]) if index < len(tops) else 0,
+                                'width': int(widths[index]) if index < len(widths) else 0,
+                                'height': int(heights[index]) if index < len(heights) else 0,
+                                'conf': confidence,
+                                'block_num': int(blocks[index]) if index < len(blocks) else 0,
+                                'par_num': int(paragraphs[index]) if index < len(paragraphs) else 0,
+                                'line_num': int(lines[index]) if index < len(lines) else 0,
+                                'word_num': int(words[index]) if index < len(words) else 0,
+                            })
+                    elif data:
+                        for row in str(data).splitlines()[1:]:
+                            columns = row.split('\t')
+                            if len(columns) < 12:
+                                continue
+                            cleaned_word = re.sub(r'\s+', ' ', columns[11].strip())
+                            if not cleaned_word:
+                                continue
                             try:
-                                if TesseractOutput is None:
-                                    data = pytesseract.image_to_data(candidate)
-                                else:
-                                    data = pytesseract.image_to_data(candidate, output_type=TesseractOutput.DICT)
+                                confidence = int(float(columns[10]))
                             except Exception:
-                                data = None
-
-                        layout = []
-                        confidence_total = 0
-                        confidence_count = 0
-                        if data:
-                            texts = data.get('text') or []
-                            lefts = data.get('left') or []
-                            tops = data.get('top') or []
-                            widths = data.get('width') or []
-                            heights = data.get('height') or []
-                            confs = data.get('conf') or []
-                            blocks = data.get('block_num') or []
-                            paragraphs = data.get('par_num') or []
-                            lines = data.get('line_num') or []
-                            words = data.get('word_num') or []
-
-                            for index, text_value in enumerate(texts):
-                                cleaned_word = re.sub(r'\s+', ' ', str(text_value or '').strip())
-                                if not cleaned_word:
-                                    continue
                                 confidence = 0
-                                if index < len(confs):
-                                    try:
-                                        confidence = int(float(confs[index]))
-                                    except Exception:
-                                        confidence = 0
-                                if confidence > 0:
-                                    confidence_total += confidence
-                                    confidence_count += 1
-                                layout.append({
-                                    'text': cleaned_word,
-                                    'left': int(lefts[index]) if index < len(lefts) else 0,
-                                    'top': int(tops[index]) if index < len(tops) else 0,
-                                    'width': int(widths[index]) if index < len(widths) else 0,
-                                    'height': int(heights[index]) if index < len(heights) else 0,
-                                    'conf': confidence,
-                                    'block_num': int(blocks[index]) if index < len(blocks) else 0,
-                                    'par_num': int(paragraphs[index]) if index < len(paragraphs) else 0,
-                                    'line_num': int(lines[index]) if index < len(lines) else 0,
-                                    'word_num': int(words[index]) if index < len(words) else 0,
-                                })
+                            if confidence > 0:
+                                confidence_total += confidence
+                                confidence_count += 1
+                            layout.append({
+                                'text': cleaned_word,
+                                'left': int(columns[6]) if columns[6].isdigit() else 0,
+                                'top': int(columns[7]) if columns[7].isdigit() else 0,
+                                'width': int(columns[8]) if columns[8].isdigit() else 0,
+                                'height': int(columns[9]) if columns[9].isdigit() else 0,
+                                'conf': confidence,
+                                'block_num': int(columns[2]) if columns[2].isdigit() else 0,
+                                'par_num': int(columns[3]) if columns[3].isdigit() else 0,
+                                'line_num': int(columns[4]) if columns[4].isdigit() else 0,
+                                'word_num': int(columns[5]) if columns[5].isdigit() else 0,
+                            })
 
-                        average_confidence = confidence_total / confidence_count if confidence_count else 0
-                        if len(layout) > len(best_layout) or (len(layout) == len(best_layout) and (average_confidence > best_confidence or (average_confidence == best_confidence and len(cleaned) > len(best_text)))):
-                            best_text = cleaned
-                            best_layout = layout
-                            best_confidence = average_confidence
+                    cleaned = re.sub(r'\s+', ' ', ' '.join(item['text'] for item in layout)).strip()
+                    if not cleaned:
+                        continue
 
-            return {'text': best_text, 'layout': best_layout}
+                    average_confidence = confidence_total / confidence_count if confidence_count else 0
+                    if len(layout) > len(best_layout) or (len(layout) == len(best_layout) and (average_confidence > best_confidence or (average_confidence == best_confidence and len(cleaned) > len(best_text)))):
+                        best_text = cleaned
+                        best_layout = layout
+                        best_confidence = average_confidence
+                        best_candidate = candidate
+                        best_candidate_label = candidate_label
+                        best_config = config
+                    if len(best_layout) >= 4 and best_confidence >= 75:
+                        break
+                if len(best_layout) >= 4 and best_confidence >= 75:
+                    break
+
+            debug_info = {
+                'candidate_count': len(candidates),
+                'attempt_count': attempt_count,
+                'best_candidate': best_candidate_label,
+                'best_config': best_config,
+                'best_confidence': round(best_confidence, 1) if best_confidence >= 0 else 0,
+                'word_count': len(best_layout),
+                'original_size': f'{image.size[0]}x{image.size[1]}',
+            }
+
+            if debug_dir:
+                try:
+                    debug_dir = Path(debug_dir)
+                    debug_dir.mkdir(parents=True, exist_ok=True)
+                    safe_label = re.sub(r'[^A-Za-z0-9_.-]+', '_', debug_label or 'ocr').strip('_') or 'ocr'
+                    if best_candidate is not None:
+                        processed_path = debug_dir / f'{safe_label}_processed.png'
+                        best_candidate.save(processed_path)
+                        debug_info['processed_image'] = str(processed_path)
+                    metadata_path = debug_dir / f'{safe_label}_metadata.json'
+                    metadata_path.write_text(json.dumps(debug_info, indent=2), encoding='utf-8')
+                    debug_info['metadata'] = str(metadata_path)
+                except Exception:
+                    logger.exception('Failed to save OCR processed debug artifacts')
+
+            return {'text': best_text, 'layout': best_layout, 'debug': debug_info}
     except UnidentifiedImageError:
-        return {'text': '', 'layout': []}
+        return {'text': '', 'layout': [], 'debug': {'error': 'unidentified-image'}}
     except Exception:
         logger.exception('Image OCR failed for uploaded material')
-        return {'text': '', 'layout': []}
+        return {'text': '', 'layout': [], 'debug': {'error': 'ocr-failed'}}
 
 
 def _fallback_material_items_from_text(text):
@@ -7698,6 +7798,7 @@ def extract_reading_material_file(request):
         selected_pages_list = [1]
         extraction_warnings = []
         ocr_layout = []
+        ocr_debug = {}
         empty_ocr_result = False
         
         if ext == '.txt':
@@ -7720,11 +7821,20 @@ def extract_reading_material_file(request):
                 return JsonResponse({'success': False, 'error': 'That DOCX file could not be read. Please ensure it is a valid Word document.'}, status=400)
         elif ext in {'.jpg', '.jpeg', '.png'}:
             ocr_layout = []
+            ts = int(time.time())
+            safe_name = ''.join(c for c in (filename or 'upload') if c.isalnum() or c in (' ', '.', '_', '-')).strip()
+            safe_name = safe_name or 'upload'
+            debug_dir = None
+            debug_label = ''
+            if settings.DEBUG:
+                debug_dir = Path(settings.BASE_DIR) / 'debug_ocr'
+                debug_label = f"{ts}_{Path(safe_name).stem}"
             try:
-                ocr_result = _extract_text_from_image(upload)
+                ocr_result = _extract_text_from_image(upload, debug_dir=debug_dir, debug_label=debug_label)
                 ocr_data = _coerce_image_ocr_result(ocr_result)
                 extracted_text = ocr_data.get('text') or ''
                 ocr_layout = list(ocr_data.get('layout') or [])
+                ocr_debug = ocr_data.get('debug') or {}
                 empty_ocr_result = isinstance(ocr_result, str) and not ocr_result.strip()
 
                 if not extracted_text:
@@ -7742,16 +7852,15 @@ def extract_reading_material_file(request):
                 except Exception:
                     pass
 
-                debug_dir = Path(settings.BASE_DIR) / 'debug_ocr'
+                debug_dir = debug_dir or (Path(settings.BASE_DIR) / 'debug_ocr')
                 debug_dir.mkdir(parents=True, exist_ok=True)
-                ts = int(time.time())
-                safe_name = ''.join(c for c in (filename or 'upload') if c.isalnum() or c in (' ', '.', '_', '-')).strip()
                 debug_image_name = f"{ts}_{safe_name}"
                 debug_image_path = debug_dir / debug_image_name
                 # write binary contents
                 with open(debug_image_path, 'wb') as _f:
                     _f.write(upload.read())
                 logger.debug('Saved uploaded image for OCR debugging: %s', str(debug_image_path))
+                ocr_debug['original_image'] = str(debug_image_path)
 
                 # write extracted text (if any)
                 if extracted_text:
@@ -7760,6 +7869,7 @@ def extract_reading_material_file(request):
                         with open(debug_text_path, 'w', encoding='utf-8') as _tf:
                             _tf.write(extracted_text)
                         logger.debug('Saved OCR extracted text to: %s', str(debug_text_path))
+                        ocr_debug['text_file'] = str(debug_text_path)
                     except Exception:
                         logger.exception('Failed to save OCR extracted text')
 
@@ -7816,7 +7926,7 @@ def extract_reading_material_file(request):
                     extraction_warnings.append('The extracted text could not be converted into reading items. Please try a different file or a clearer image.')
             elif not empty_ocr_result:
                 if not extraction_warnings:
-                    extraction_warnings.append('No readable text could be recovered from that image. Please try a clearer image or a different file.')
+                    extraction_warnings.append(IMAGE_OCR_EMPTY_MESSAGE)
 
         warning_msg = '. '.join(extraction_warnings) if extraction_warnings else ''
         if not items:
@@ -7828,7 +7938,7 @@ def extract_reading_material_file(request):
                     extraction_warnings.append(warning_msg)
             else:
                 if not warning_msg and not empty_ocr_result:
-                    warning_msg = 'No readable text could be recovered from that image. Please try a clearer image or a different file.'
+                    warning_msg = IMAGE_OCR_EMPTY_MESSAGE
                     extraction_warnings.append(warning_msg)
                 return JsonResponse({
                     'success': True,
@@ -7843,6 +7953,7 @@ def extract_reading_material_file(request):
                     'selection_mode': selection_mode,
                     'warnings': extraction_warnings,
                     'warning_message': warning_msg,
+                    'ocr_debug': ocr_debug if settings.DEBUG else {},
                 })
             if extraction_warnings:
                 return JsonResponse({
@@ -7858,6 +7969,7 @@ def extract_reading_material_file(request):
                     'selection_mode': selection_mode,
                     'warnings': extraction_warnings,
                     'warning_message': warning_msg,
+                    'ocr_debug': ocr_debug if settings.DEBUG else {},
                 })
             return JsonResponse({
                 'success': True,
@@ -7872,6 +7984,7 @@ def extract_reading_material_file(request):
                 'selection_mode': selection_mode,
                 'warnings': [],
                 'warning_message': '',
+                'ocr_debug': ocr_debug if settings.DEBUG else {},
             })
 
         return JsonResponse({
@@ -7886,6 +7999,7 @@ def extract_reading_material_file(request):
             'selected_pages': selected_pages_list,
             'selection_mode': selection_mode,
             'warnings': extraction_warnings,
+            'ocr_debug': ocr_debug if settings.DEBUG else {},
         })
     except zipfile.BadZipFile:
         return JsonResponse({'success': False, 'error': 'That DOCX file could not be read.'}, status=400)
@@ -7907,6 +8021,7 @@ def extract_reading_material_file(request):
             'selection_mode': selection_mode,
             'warnings': extraction_warnings,
             'warning_message': warning_msg,
+            'ocr_debug': ocr_debug if settings.DEBUG else {},
         })
 
 

@@ -10978,8 +10978,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function setUploadStatus(message, tone = 'muted') {
             if (!materialUploadStatus) return;
-            materialUploadStatus.classList.remove('d-none', 'text-danger', 'text-success', 'text-muted');
-            materialUploadStatus.classList.add(tone === 'danger' ? 'text-danger' : tone === 'success' ? 'text-success' : 'text-muted');
+            materialUploadStatus.classList.remove('d-none', 'text-danger', 'text-success', 'text-muted', 'text-warning');
+            materialUploadStatus.classList.add(tone === 'danger' ? 'text-danger' : tone === 'success' ? 'text-success' : tone === 'warning' ? 'text-warning' : 'text-muted');
             materialUploadStatus.textContent = message || '';
             if (!message) materialUploadStatus.classList.add('d-none');
         }
@@ -11465,12 +11465,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ? metadata.warnings[0]
                 : (typeof metadata.warning_message === 'string' && metadata.warning_message.trim() ? metadata.warning_message : '');
             const hasVisibleWarning = Boolean(warningText);
+            const debugText = formatOcrDebugInfo(metadata.ocr_debug);
 
             if (!normalizedItems.length) {
                 if (hasVisibleWarning) {
-                    setUploadStatus(warningText, 'warning');
+                    setUploadStatus(debugText ? `${warningText} ${debugText}` : warningText, 'warning');
                 } else {
-                    setUploadStatus('', 'muted');
+                    setUploadStatus(debugText, debugText ? 'muted' : 'muted');
                 }
                 return;
             }
@@ -11482,7 +11483,27 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 materialTitleInput.value = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
             }
             const selectionLabel = metadata.selection_mode === 'selected' ? ` using page${Array.isArray(metadata.selected_pages) && metadata.selected_pages.length === 1 ? '' : 's'} ${String(metadata.selected_pages || '').replace(/,/g, ', ')}` : '';
-            setUploadStatus(`Extracted ${normalizedItems.length} item${normalizedItems.length === 1 ? '' : 's'} from ${fileName}${selectionLabel ? ` (${selectionLabel})` : ''}.`, 'success');
+            setUploadStatus(`Extracted ${normalizedItems.length} item${normalizedItems.length === 1 ? '' : 's'} from ${fileName}${selectionLabel ? ` (${selectionLabel})` : ''}.${debugText ? ` ${debugText}` : ''}`, 'success');
+        }
+
+        function formatOcrDebugInfo(debugInfo) {
+            if (!debugInfo || typeof debugInfo !== 'object') return '';
+            const parts = [];
+            if (debugInfo.word_count != null || debugInfo.best_confidence != null) {
+                const words = debugInfo.word_count != null ? `${debugInfo.word_count} OCR word${Number(debugInfo.word_count) === 1 ? '' : 's'}` : 'OCR output';
+                const confidence = debugInfo.best_confidence != null ? `, confidence ${debugInfo.best_confidence}` : '';
+                parts.push(`${words}${confidence}`);
+            }
+            if (debugInfo.processed_image) {
+                parts.push(`processed image: ${debugInfo.processed_image}`);
+            }
+            if (debugInfo.metadata) {
+                parts.push(`metadata: ${debugInfo.metadata}`);
+            }
+            if (!parts.length && debugInfo.original_image) {
+                parts.push(`original image: ${debugInfo.original_image}`);
+            }
+            return parts.length ? `OCR debug saved (${parts.join('; ')}).` : '';
         }
 
         async function extractUploadedMaterial(file, options = {}) {
@@ -11551,16 +11572,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!response.ok && !hasExtractedContent) {
                 applyUploadedItems([], file.name, {
                     reading_type: 'word',
-                    warnings: [warningText || 'OCR could not read that image. Please try a clearer image or a different file.'],
+                    warnings: [warningText || 'OCR could not read that image. Try a straight, well-lit photo with the words in focus.'],
                     text: '',
+                    ocr_debug: data.ocr_debug || data.ocrDebug || {},
                 });
                 return;
             }
             if (!data.success && !hasExtractedContent) {
                 applyUploadedItems([], file.name, {
                     reading_type: 'word',
-                    warnings: [warningText || 'OCR could not read that image. Please try a clearer image or a different file.'],
+                    warnings: [warningText || 'OCR could not read that image. Try a straight, well-lit photo with the words in focus.'],
                     text: '',
+                    ocr_debug: data.ocr_debug || data.ocrDebug || {},
                 });
                 return;
             }
@@ -11569,8 +11592,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 selection_mode: data.selection_mode || data.selectionMode,
                 selected_pages: data.selected_pages || data.selectedPages,
                 warnings: Array.isArray(data.warnings) ? data.warnings : [],
+                warning_message: data.warning_message || data.warningMessage || '',
                 text: responseTextValue,
                 items: responseItems,
+                ocr_debug: data.ocr_debug || data.ocrDebug || {},
             });
         }
 
