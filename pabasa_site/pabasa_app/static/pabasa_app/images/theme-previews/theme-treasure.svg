@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Treasure Island theme preview</title>
+  <desc id="desc">A treasure chest, map, coins, palm island accents, and warm sand.</desc>
+  <defs>
+    <linearGradient id="bg" x1="70" y1="20" x2="570" y2="340" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F766E"/>
+      <stop offset=".55" stop-color="#18B8A7"/>
+      <stop offset="1" stop-color="#F7C948"/>
+    </linearGradient>
+    <linearGradient id="sand" x1="110" y1="232" x2="540" y2="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FDE68A"/>
+      <stop offset="1" stop-color="#E7A934"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#78350F" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="640" height="360" rx="30" fill="url(#bg)"/>
+  <path d="M0 257c106-42 210-33 314-7 106 27 215 35 326-10v120H0z" fill="url(#sand)"/>
+  <path d="M56 281c116 23 225 22 330-5 79-20 139-20 205 2" fill="none" stroke="#FFF4C2" stroke-width="6" opacity=".55" stroke-linecap="round"/>
+  <g filter="url(#shadow)">
+    <g transform="translate(75 92) rotate(-9)">
+      <rect x="0" y="0" width="166" height="116" rx="17" fill="#FCE8A6" stroke="#9A5B18" stroke-width="6"/>
+      <path d="M28 31c23 34 57 44 102 31" fill="none" stroke="#B45309" stroke-width="6" stroke-linecap="round" stroke-dasharray="9 13"/>
+      <path d="M116 31l23-10-8 25z" fill="#EF4444"/>
+      <circle cx="44" cy="78" r="8" fill="#14B8A6"/>
+      <circle cx="104" cy="39" r="7" fill="#F59E0B"/>
+    </g>
+    <g transform="translate(324 129)">
+      <path d="M11 58c8-45 40-71 86-71s78 26 86 71z" fill="#8B4518" stroke="#FACC15" stroke-width="8"/>
+      <rect x="0" y="55" width="194" height="92" rx="15" fill="#92400E" stroke="#FACC15" stroke-width="8"/>
+      <path d="M7 91h181" stroke="#6B2B12" stroke-width="8"/>
+      <rect x="82" y="76" width="31" height="36" rx="7" fill="#FDE047" stroke="#B45309" stroke-width="5"/>
+      <path d="M32 73c36 18 89 22 132 0" stroke="#FFD966" stroke-width="7" opacity=".8" stroke-linecap="round"/>
+    </g>
+  </g>
+  <g fill="#FFE46B" stroke="#B45309" stroke-width="4">
+    <circle cx="295" cy="250" r="17"/>
+    <circle cx="265" cy="270" r="13"/>
+    <circle cx="511" cy="257" r="14"/>
+    <circle cx="540" cy="283" r="11"/>
+  </g>
+  <g transform="translate(250 78)">
+    <path d="M70 142C52 95 53 56 75 18" stroke="#7C3F1E" stroke-width="10" stroke-linecap="round"/>
+    <path d="M77 22C43 5 16 10 0 37c33 11 58 6 77-15z" fill="#2F9E55"/>
+    <path d="M79 24c19-31 48-40 86-26-19 31-48 40-86 26z" fill="#86D957"/>
+    <path d="M75 41c-34 11-61 4-80-21 37-6 64 1 80 21z" fill="#52B45D"/>
+  </g>
+</svg>

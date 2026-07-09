@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Zoo theme preview</title>
+  <desc id="desc">Vines, leaves, animal marks, a fence, and playful zoo field notes.</desc>
+  <defs>
+    <linearGradient id="bg" x1="80" y1="18" x2="560" y2="340" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#365314"/>
+      <stop offset=".56" stop-color="#65A30D"/>
+      <stop offset="1" stop-color="#FDE68A"/>
+    </linearGradient>
+    <linearGradient id="grass" x1="0" y1="250" x2="640" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5FA82F"/>
+      <stop offset="1" stop-color="#D9F99D"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="13" flood-color="#1A2E05" flood-opacity=".3"/>
+    </filter>
+  </defs>
+  <rect width="640" height="360" rx="30" fill="url(#bg)"/>
+  <path d="M0 254c78-24 141-20 205 4 80 30 168 24 246 2 69-20 126-18 189 8v92H0z" fill="url(#grass)"/>
+  <g fill="none" stroke="#BBF7D0" stroke-width="8" stroke-linecap="round" opacity=".8">
+    <path d="M36 0c12 52 8 96-13 132"/>
+    <path d="M587 0c-23 51-26 102-9 153"/>
+  </g>
+  <g fill="#BBF7D0">
+    <path d="M45 86c34-3 54 12 61 45-35 2-55-13-61-45z"/>
+    <path d="M551 99c35-7 58 5 69 36-35 6-58-6-69-36z"/>
+    <path d="M109 42c28 8 42 27 40 55-29-8-42-27-40-55z"/>
+  </g>
+  <g filter="url(#shadow)">
+    <g transform="translate(292 103)">
+      <rect x="0" y="87" width="268" height="28" rx="14" fill="#8B5A2B"/>
+      <rect x="20" y="50" width="22" height="151" rx="11" fill="#A16207"/>
+      <rect x="87" y="38" width="22" height="163" rx="11" fill="#A16207"/>
+      <rect x="154" y="50" width="22" height="151" rx="11" fill="#A16207"/>
+      <rect x="221" y="42" width="22" height="159" rx="11" fill="#A16207"/>
+    </g>
+    <g transform="translate(94 96)">
+      <rect x="8" y="0" width="132" height="150" rx="25" fill="#FFF7ED" stroke="#92400E" stroke-width="7"/>
+      <path d="M34 54c18-40 59-41 80 0" fill="#FCD34D"/>
+      <circle cx="47" cy="65" r="8" fill="#111827"/><circle cx="94" cy="65" r="8" fill="#111827"/>
+      <path d="M63 90c9 8 18 8 27 0" stroke="#92400E" stroke-width="6" stroke-linecap="round"/>
+      <path d="M17 20 0 0M130 20l18-20" stroke="#92400E" stroke-width="9" stroke-linecap="round"/>
+      <path d="M51 18c5-22 12-34 23-18 11-16 18-4 23 18" fill="none" stroke="#92400E" stroke-width="6" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(218 225) rotate(-12)">
+      <ellipse cx="36" cy="47" rx="22" ry="18" fill="#FFF7ED"/>
+      <circle cx="12" cy="21" r="10" fill="#FFF7ED"/><circle cx="37" cy="12" r="10" fill="#FFF7ED"/><circle cx="64" cy="21" r="10" fill="#FFF7ED"/>
+    </g>
+  </g>
+  <g fill="#2F6D1F" opacity=".9">
+    <path d="M514 248c29 0 47 14 52 40-29 1-47-13-52-40z"/>
+    <path d="M50 256c25-8 45-2 58 19-27 7-46 0-58-19z"/>
+  </g>
+</svg>

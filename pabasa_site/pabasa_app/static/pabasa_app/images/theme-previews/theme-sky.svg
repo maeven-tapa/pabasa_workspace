@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Sky Island theme preview</title>
+  <desc id="desc">Clouds, a floating green island, a glowing sun, and a reading book in a bright sky.</desc>
+  <defs>
+    <linearGradient id="skyBg" x1="70" y1="20" x2="560" y2="340" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#39BDF8"/>
+      <stop offset=".6" stop-color="#8BDBFF"/>
+      <stop offset="1" stop-color="#FFF0B8"/>
+    </linearGradient>
+    <linearGradient id="islandTop" x1="185" y1="205" x2="455" y2="250" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#78D978"/>
+      <stop offset=".55" stop-color="#3FA769"/>
+      <stop offset="1" stop-color="#25825A"/>
+    </linearGradient>
+    <linearGradient id="earth" x1="210" y1="238" x2="430" y2="330" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B7793B"/>
+      <stop offset="1" stop-color="#7C3F1E"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#075985" flood-opacity=".22"/>
+    </filter>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="9" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="640" height="360" rx="30" fill="url(#skyBg)"/>
+  <circle cx="528" cy="74" r="45" fill="#FFE67A" filter="url(#glow)"/>
+  <circle cx="528" cy="74" r="28" fill="#FFD84D"/>
+  <g fill="#fff" opacity=".88">
+    <path d="M78 104c14-25 52-23 64 2 20-12 49 2 51 25 26 2 42 20 36 39H38c-9-29 11-59 40-66z"/>
+    <path d="M413 148c12-20 42-18 52 1 18-10 43 2 45 22 22 2 36 16 31 32H381c-8-25 9-50 32-55z" opacity=".78"/>
+    <path d="M155 56c9-14 31-13 39 1 14-7 33 1 35 17 17 1 28 12 24 24H126c-6-19 7-38 29-42z" opacity=".72"/>
+  </g>
+  <g filter="url(#softShadow)">
+    <ellipse cx="320" cy="238" rx="153" ry="45" fill="url(#islandTop)"/>
+    <path d="M183 235c36 80 91 104 138 104 56 0 110-42 136-105-70 30-201 29-274 1z" fill="url(#earth)"/>
+    <path d="M226 266c26 18 53 28 93 30 41 2 77-11 101-31" fill="none" stroke="#D59D62" stroke-width="12" stroke-linecap="round" opacity=".6"/>
+    <path d="M205 227c44 20 184 21 230 0" fill="none" stroke="#B9F68A" stroke-width="12" stroke-linecap="round" opacity=".95"/>
+    <g transform="translate(276 149) rotate(-7)">
+      <path d="M0 22c26-14 48-11 66 8v74c-21-17-42-20-66-8z" fill="#FFFBEA" stroke="#0F6F8B" stroke-width="5"/>
+      <path d="M66 30c18-19 40-22 66-8v74c-24-12-45-9-66 8z" fill="#FFF3C4" stroke="#0F6F8B" stroke-width="5"/>
+      <path d="M66 30v74" stroke="#0F6F8B" stroke-width="4"/>
+      <path d="M17 47h32M17 64h29M83 48h34M84 66h26" stroke="#72B6C8" stroke-width="4" stroke-linecap="round"/>
+    </g>
+  </g>
+  <path d="M42 295c64-34 139-37 222-8 83 30 182 33 331-12" stroke="#fff" stroke-width="5" opacity=".35" stroke-linecap="round"/>
+</svg>

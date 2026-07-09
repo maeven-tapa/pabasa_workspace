@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Forest theme preview</title>
+  <desc id="desc">Tall trees, layered leaves, a soft reading trail, and forest light.</desc>
+  <defs>
+    <linearGradient id="bg" x1="90" y1="10" x2="550" y2="355" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F5E3A"/>
+      <stop offset=".58" stop-color="#188A49"/>
+      <stop offset="1" stop-color="#BFF26B"/>
+    </linearGradient>
+    <linearGradient id="path" x1="303" y1="174" x2="389" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCE7A7"/>
+      <stop offset="1" stop-color="#C98F45"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="13" flood-color="#052E16" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="640" height="360" rx="30" fill="url(#bg)"/>
+  <circle cx="502" cy="72" r="62" fill="#D9F99D" opacity=".24"/>
+  <path d="M352 172c-50 56-64 125-48 188h141c-46-45-62-103-93-188z" fill="url(#path)" opacity=".82"/>
+  <g opacity=".22" fill="#fff">
+    <path d="M70 94c38-25 66-31 102-14-44 10-69 22-102 14z"/>
+    <path d="M461 142c48-34 86-42 125-19-53 12-86 27-125 19z"/>
+  </g>
+  <g filter="url(#shadow)">
+    <g transform="translate(69 72)">
+      <rect x="52" y="118" width="26" height="142" rx="13" fill="#7C4A21"/>
+      <path d="M66 0 8 113h116z" fill="#B9F5A0"/>
+      <path d="M66 39 0 162h132z" fill="#6ED46B"/>
+      <path d="M66 90 13 204h106z" fill="#288A4D"/>
+    </g>
+    <g transform="translate(178 36) scale(1.08)">
+      <rect x="53" y="132" width="30" height="154" rx="15" fill="#8B572B"/>
+      <path d="M68 0 8 126h120z" fill="#D5FF91"/>
+      <path d="M68 48 0 178h136z" fill="#78DA61"/>
+      <path d="M68 105 15 232h106z" fill="#237B46"/>
+    </g>
+    <g transform="translate(438 74)">
+      <rect x="47" y="122" width="27" height="136" rx="13" fill="#74451F"/>
+      <path d="M60 0 5 117h110z" fill="#C8F781"/>
+      <path d="M60 50 0 167h120z" fill="#5BCB5F"/>
+      <path d="M60 102 14 214h92z" fill="#1F6F3C"/>
+    </g>
+  </g>
+  <g fill="#D9F99D" opacity=".9">
+    <path d="M406 85c34 0 55 16 62 47-35-2-57-18-62-47z"/>
+    <path d="M106 222c-31-7-47-27-48-57 32 8 48 27 48 57z"/>
+    <path d="M520 231c-28 10-51 5-69-19 31-9 54-3 69 19z"/>
+  </g>
+  <g transform="translate(294 220) rotate(5)">
+    <rect x="0" y="0" width="84" height="54" rx="10" fill="#FFF8D8" stroke="#255E3A" stroke-width="5"/>
+    <path d="M18 20h48M18 34h34" stroke="#69A87C" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>

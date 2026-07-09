@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+  <title id="title">Ocean Voyage theme preview</title>
+  <desc id="desc">Rolling waves, a small sailboat, compass, bubbles, and sea light.</desc>
+  <defs>
+    <linearGradient id="bg" x1="85" y1="12" x2="560" y2="352" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#075985"/>
+      <stop offset=".56" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#67E8F9"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="218" x2="640" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DDFBFF"/>
+      <stop offset=".55" stop-color="#63D7F2"/>
+      <stop offset="1" stop-color="#0891B2"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="13" flood-color="#083344" flood-opacity=".3"/>
+    </filter>
+  </defs>
+  <rect width="640" height="360" rx="30" fill="url(#bg)"/>
+  <circle cx="116" cy="76" r="48" fill="#CFFAFE" opacity=".18"/>
+  <circle cx="512" cy="118" r="76" fill="#FFFFFF" opacity=".12"/>
+  <path d="M0 247c56-30 108-30 157 0s102 30 157 0 108-30 157 0 110 30 169 0v113H0z" fill="url(#wave)"/>
+  <path d="M0 286c58-26 111-26 160 0s103 26 160 0 108-26 160 0 108 26 160 0" fill="none" stroke="#E0FCFF" stroke-width="12" opacity=".78"/>
+  <path d="M0 320c60-22 112-22 159 0s101 22 161 0 111-22 160 0 101 22 160 0" fill="none" stroke="#BFF5FF" stroke-width="8" opacity=".58"/>
+  <g filter="url(#shadow)" transform="translate(219 93)">
+    <path d="M77 139h153c-15 36-48 55-101 55-49 0-86-19-108-55z" fill="#8B5E34"/>
+    <path d="M131 13v126" stroke="#5B371B" stroke-width="9" stroke-linecap="round"/>
+    <path d="M139 28c51 22 82 56 91 103h-91z" fill="#FFF8DC" stroke="#0F6F8B" stroke-width="6"/>
+    <path d="M123 44c-39 21-65 50-79 87h79z" fill="#DFFBFF" stroke="#0F6F8B" stroke-width="6"/>
+    <path d="M43 139h196" stroke="#FDE68A" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(445 50)" filter="url(#shadow)">
+    <circle cx="62" cy="62" r="48" fill="#FFF8DC" stroke="#0F6F8B" stroke-width="7"/>
+    <circle cx="62" cy="62" r="30" fill="#CFFAFE"/>
+    <path d="M62 18v16M62 90v16M18 62h16M90 62h16" stroke="#0F6F8B" stroke-width="5" stroke-linecap="round"/>
+    <path d="M78 45 64 76 47 84l14-31z" fill="#EF4444" stroke="#0F6F8B" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+  <g fill="#E0FCFF" opacity=".72">
+    <circle cx="93" cy="171" r="9"/><circle cx="132" cy="205" r="6"/><circle cx="568" cy="196" r="8"/><circle cx="531" cy="236" r="5"/>
+  </g>
+</svg>
