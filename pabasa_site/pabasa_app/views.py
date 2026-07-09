@@ -7241,7 +7241,7 @@ def _resolve_tesseract_executable(pytesseract_module):
     explicit = os.environ.get('TESSERACT_CMD') or os.environ.get('TESSERACT_PATH')
     if explicit:
         candidate = os.path.expandvars(os.path.expanduser(explicit))
-        if candidate:
+        if candidate and candidate not in candidates:
             candidates.append(candidate)
 
     if pytesseract_module and hasattr(pytesseract_module, 'pytesseract'):
@@ -7249,6 +7249,23 @@ def _resolve_tesseract_executable(pytesseract_module):
             value = getattr(getattr(pytesseract_module, 'pytesseract', None), attr, None)
             if value and value not in candidates:
                 candidates.append(value)
+
+    path_entries = []
+    try:
+        raw_path = os.environ.get('PATH') or ''
+        if raw_path:
+            path_entries.extend([item for item in raw_path.split(os.pathsep) if item])
+    except Exception:
+        path_entries = []
+
+    for entry in path_entries:
+        expanded = os.path.expandvars(os.path.expanduser(entry))
+        if not expanded:
+            continue
+        for candidate_name in ('tesseract', 'tesseract.exe', 'tesseract-ocr', 'tesseract-ocr.exe'):
+            candidate_path = os.path.join(expanded, candidate_name)
+            if candidate_path and candidate_path not in candidates:
+                candidates.append(candidate_path)
 
     if os.path.isfile(TESSERACT_STATIC_PATH):
         candidates.append(TESSERACT_STATIC_PATH)

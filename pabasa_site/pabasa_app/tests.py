@@ -9,6 +9,7 @@ from io import BytesIO
 from pathlib import Path
 import hashlib
 import json
+import os
 import uuid
 from unittest.mock import patch
 
@@ -242,6 +243,16 @@ class MaterialUploadExtractionTests(TestCase):
             resolved = _resolve_tesseract_executable(DummyPytesseractModule())
 
         self.assertEqual(resolved, "/usr/bin/tesseract-ocr")
+
+    def test_resolve_tesseract_executable_accepts_path_entry_pointing_to_executable(self):
+        class DummyPytesseractModule:
+            pass
+
+        with patch.dict(os.environ, {"PATH": "/usr/bin/tesseract"}, clear=False):
+            with patch("pabasa_app.views.os.path.isfile", side_effect=lambda path: path == "/usr/bin/tesseract"), patch("pabasa_app.views.shutil.which", return_value=None):
+                resolved = _resolve_tesseract_executable(DummyPytesseractModule())
+
+        self.assertEqual(resolved, "/usr/bin/tesseract")
 
     def setUp(self):
         self.teacher = User.objects.create(
