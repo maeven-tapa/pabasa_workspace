@@ -22,6 +22,18 @@ from .views import _apply_progression_unlock_override, _create_notification, _no
 from .weekly_digest import send_weekly_digest
 
 
+class DashboardAchievementBadgeTests(TestCase):
+    def test_dashboard_template_contains_practice_star_achievement(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "dashboard.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("'practice-star'", content)
+        self.assertIn("Complete every level in Free Mode, Color Mode, and Hunt Mode", content)
+        self.assertIn("pabasa_practice_progress_v1", content)
+        self.assertNotIn("pabasa_practice_sessions_completed", content)
+        self.assertNotIn(">= 10", content)
+
+
 class ReadingMatcherTests(TestCase):
     def test_wrong_word_does_not_complete_target(self):
         result = analyze_reading("water", 0, "apple")

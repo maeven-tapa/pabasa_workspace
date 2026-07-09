@@ -1184,7 +1184,7 @@
             {% block content %}{% endblock %}
         </div>
     </main>
-    {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' %}
+    {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' %}
     <footer class="site-footer mt-auto">
         <div class="footer-decor footer-decor--book" aria-hidden="true">📖</div>
         <div class="footer-decor footer-decor--star" aria-hidden="true">⭐</div>

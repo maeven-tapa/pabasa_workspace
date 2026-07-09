@@ -1517,6 +1517,12 @@
                 icon: '⭐'
             },
             {
+                id: 'practice-star',
+                name: '✨ Practice Star',
+                description: 'Complete every level in Free Mode, Color Mode, and Hunt Mode',
+                icon: '✨'
+            },
+            {
                 id: 'reading-champion',
                 name: '🏆 Reading Champion',
                 description: 'Complete 100% of the course',
@@ -1533,6 +1539,7 @@
                 let totalAssessments = 0;
                 let completedAssessments = 0;
                 let readingDays = 0;
+                const practiceProgressStorageKey = "pabasa_practice_progress_v1";
 
                 // Calculate assessment totals across all classes only
                 Object.keys(readings).forEach(classCode => {
@@ -1588,6 +1595,27 @@
                 
                 if (readingPercent >= 100) {
                     unlockedAchievements.add('reading-champion');
+                }
+
+                try {
+                    const practiceProgress = JSON.parse(localStorage.getItem(practiceProgressStorageKey) || "{}");
+                    const allPracticeModes = ["free", "color", "hunt"];
+                    const allPracticeDifficulties = ["easy", "medium", "hard"];
+                    const allPracticeLevels = ["level_1", "level_2", "level_3", "level_4", "level_5"];
+                    const hasCompletedFullPracticeMode = allPracticeModes.every(mode =>
+                        allPracticeDifficulties.every(difficulty =>
+                            allPracticeLevels.every(level => {
+                                const entry = practiceProgress?.[mode]?.[difficulty]?.[level];
+                                return Boolean(entry?.completed);
+                            })
+                        )
+                    );
+
+                    if (hasCompletedFullPracticeMode) {
+                        unlockedAchievements.add('practice-star');
+                    }
+                } catch (error) {
+                    console.error('Error reading practice progress for achievements:', error);
                 }
 
                 return {

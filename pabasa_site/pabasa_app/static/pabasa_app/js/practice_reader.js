@@ -52,6 +52,7 @@
     const practiceNextLevelBtn = document.getElementById("practiceNextLevelBtn");
     const nextLevelAvailabilityMessage = document.getElementById("nextLevelAvailabilityMessage");
     let completionSubmitted = false;
+    const practiceSessionCountStorageKey = "pabasa_practice_sessions_completed";
 
     const PERFORMANCE_FEEDBACK_RULES = Object.freeze([
         { minScore: 90, icon: "🎉", description: "Excellent work! You're all ready for when an assessment comes. Keep up the amazing reading!" },
@@ -1069,6 +1070,19 @@
             });
     }
 
+    function trackPracticeSessionCompletion() {
+        const parsedCurrentCount = Number.parseInt(localStorage.getItem(practiceSessionCountStorageKey) || "0", 10);
+        const currentCount = Number.isFinite(parsedCurrentCount) ? parsedCurrentCount : 0;
+        const nextCount = currentCount + 1;
+        localStorage.setItem(practiceSessionCountStorageKey, String(nextCount));
+        window.dispatchEvent(new CustomEvent("pabasa:practice-session-count-updated", { detail: { count: nextCount } }));
+        try {
+            window.dispatchEvent(new StorageEvent("storage", { key: practiceSessionCountStorageKey }));
+        } catch (error) {
+            window.dispatchEvent(new Event("storage"));
+        }
+    }
+
     function showCompletion() {
         shell.classList.add("is-complete");
         updateCompletionSummary();
@@ -1097,6 +1111,7 @@
         }
         localStorage.setItem("pabasa_total_stars", String(currentTotal + newlyEarnedStars));
 
+        trackPracticeSessionCompletion();
         const completionRequest = submitPracticeCompletion();
 
         // Notify admin that practice activity finished
