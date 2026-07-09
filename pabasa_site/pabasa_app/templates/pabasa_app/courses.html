@@ -11442,15 +11442,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function applyUploadedItems(items, fileName, metadata = {}) {
-            let resolvedItems = Array.isArray(items) ? items : [];
-            if (!resolvedItems.length && metadata && Array.isArray(metadata.items)) {
-                resolvedItems = metadata.items;
+            const pickItemList = (candidate) => Array.isArray(candidate) ? candidate : [];
+            let resolvedItems = pickItemList(items);
+            if (!resolvedItems.length && metadata) {
+                resolvedItems = pickItemList(metadata.items);
             }
-            if (!resolvedItems.length && metadata && Array.isArray(metadata.extracted_items)) {
-                resolvedItems = metadata.extracted_items;
+            if (!resolvedItems.length && metadata) {
+                resolvedItems = pickItemList(metadata.extracted_items);
             }
-            if (!resolvedItems.length && metadata && Array.isArray(metadata.extractedItems)) {
-                resolvedItems = metadata.extractedItems;
+            if (!resolvedItems.length && metadata) {
+                resolvedItems = pickItemList(metadata.extractedItems);
             }
             if (!resolvedItems.length && metadata && typeof metadata.text === 'string' && metadata.text.trim()) {
                 resolvedItems = excerptUploadedItems(metadata.text);
@@ -11534,7 +11535,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             const responseItems = Array.isArray(data.items)
                 ? data.items
-                : (Array.isArray(data.extracted_items) ? data.extracted_items : (Array.isArray(data.extractedItems) ? data.extractedItems : []));
+                : (Array.isArray(data.extracted_items)
+                    ? data.extracted_items
+                    : (Array.isArray(data.extractedItems)
+                        ? data.extractedItems
+                        : []));
             const responseTextValue = typeof data.text === 'string' ? data.text : (typeof responseText === 'string' ? responseText : '');
             const warningText = typeof data.warning_message === 'string' && data.warning_message.trim()
                 ? data.warning_message

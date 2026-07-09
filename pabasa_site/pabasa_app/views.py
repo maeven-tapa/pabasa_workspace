@@ -7627,6 +7627,8 @@ def extract_reading_material_file(request):
                 return JsonResponse({
                     'success': True,
                     'items': [],
+                    'extracted_items': [],
+                    'extractedItems': [],
                     'text': text[:12000],
                     'filename': filename,
                     'reading_type': detected_type,
@@ -7640,6 +7642,8 @@ def extract_reading_material_file(request):
                 return JsonResponse({
                     'success': True,
                     'items': [],
+                    'extracted_items': [],
+                    'extractedItems': [],
                     'text': '',
                     'filename': filename,
                     'reading_type': detected_type,
@@ -7652,6 +7656,8 @@ def extract_reading_material_file(request):
             return JsonResponse({
                 'success': True,
                 'items': [],
+                'extracted_items': [],
+                'extractedItems': [],
                 'text': '',
                 'filename': filename,
                 'reading_type': detected_type,
@@ -7665,6 +7671,8 @@ def extract_reading_material_file(request):
         return JsonResponse({
             'success': True,
             'items': items,
+            'extracted_items': items,
+            'extractedItems': items,
             'text': text[:12000],
             'filename': filename,
             'reading_type': detected_type,
@@ -7683,6 +7691,8 @@ def extract_reading_material_file(request):
         return JsonResponse({
             'success': True,
             'items': [],
+            'extracted_items': [],
+            'extractedItems': [],
             'text': '',
             'filename': filename,
             'reading_type': 'word',

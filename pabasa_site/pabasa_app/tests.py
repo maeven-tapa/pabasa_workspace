@@ -289,6 +289,28 @@ class MaterialUploadExtractionTests(TestCase):
         mock_extract_text_from_image.assert_called_once()
 
     @patch("pabasa_app.views._extract_text_from_image", return_value="Alpha beta gamma")
+    def test_extract_endpoint_exposes_alias_payload_fields_for_upload_ui(self, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["items"], ["Alpha", "beta", "gamma"])
+        self.assertEqual(data["extracted_items"], ["Alpha", "beta", "gamma"])
+        self.assertEqual(data["extractedItems"], ["Alpha", "beta", "gamma"])
+        mock_extract_text_from_image.assert_called_once()
+
+    @patch("pabasa_app.views._extract_text_from_image", return_value="Alpha beta gamma")
     @patch("pabasa_app.views._build_extracted_material_items", return_value=("word", []))
     def test_extract_endpoint_returns_warning_response_when_extracted_text_cannot_be_split(self, mock_build_extracted_material_items, mock_extract_text_from_image):
         image_file = SimpleUploadedFile(
