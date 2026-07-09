@@ -11461,9 +11461,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 .map(item => (item == null ? '' : String(item).trim()))
                 .filter(Boolean);
 
-            const warningText = Array.isArray(metadata.warnings) && metadata.warnings.length > 0
-                ? metadata.warnings[0]
-                : (typeof metadata.warning_message === 'string' && metadata.warning_message.trim() ? metadata.warning_message : '');
+            const warningText = typeof metadata.warning_message === 'string' && metadata.warning_message.trim()
+                ? metadata.warning_message
+                : (Array.isArray(metadata.warnings) && metadata.warnings.length > 0
+                    ? metadata.warnings.find(item => typeof item === 'string' && item.trim()) || metadata.warnings[0]
+                    : '');
             const hasVisibleWarning = Boolean(warningText);
             const debugText = formatOcrDebugInfo(metadata.ocr_debug);
 
@@ -11499,6 +11501,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             if (Array.isArray(debugInfo.candidate_images) && debugInfo.candidate_images.length) {
                 parts.push(`candidate images: ${debugInfo.candidate_images.slice(0, 2).join(', ')}`);
+            }
+            if (debugInfo.tesseract_error) {
+                parts.push(`tesseract error: ${debugInfo.tesseract_error}`);
+            }
+            if (debugInfo.tesseract_path) {
+                parts.push(`tesseract path: ${debugInfo.tesseract_path}`);
+            } else if (debugInfo.tesseract_available === false) {
+                parts.push('tesseract path: not resolved');
             }
             if (debugInfo.metadata) {
                 parts.push(`metadata: ${debugInfo.metadata}`);
