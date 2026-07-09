@@ -450,6 +450,26 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertTrue(data.get("warnings") or data.get("warning_message"))
         mock_extract_text_from_image.assert_called_once()
 
+    @patch("pabasa_app.views._extract_text_from_image", return_value={"text": "", "layout": [], "debug": {"tesseract_available": False, "tesseract_error": "Tesseract executable not found"}})
+    def test_extract_endpoint_uses_tesseract_error_in_warning_message(self, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile(
+            "scan.png",
+            b"not-a-real-image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("extract_reading_material_file"),
+            {"file": image_file},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("Tesseract", data.get("warning_message", ""))
+        self.assertIn("not found", data.get("warning_message", ""))
+        mock_extract_text_from_image.assert_called_once()
+
     def test_fallback_material_items_preserve_paragraph_blocks(self):
         text = "First line\nSecond line\n\nThird line"
         self.assertEqual(_fallback_material_items_from_text(text), ["First line Second line", "Third line"])

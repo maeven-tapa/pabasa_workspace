@@ -7625,6 +7625,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
             best_candidate_label = ''
             best_config = ''
             attempt_count = 0
+            last_ocr_error = None
 
             for candidate_entry in candidates:
                 candidate = candidate_entry.get('image') if isinstance(candidate_entry, dict) else candidate_entry
@@ -7637,6 +7638,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                         else:
                             data = pytesseract.image_to_data(candidate, config=config, output_type=TesseractOutput.DICT)
                     except Exception as exc:
+                        last_ocr_error = repr(exc)
                         logger.warning('OCR attempt failed for candidate %s config %s: %s', candidate_label, config, repr(exc))
                         try:
                             if TesseractOutput is None:
@@ -7732,15 +7734,108 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                 if len(best_layout) >= 4 and best_confidence >= 75:
                     break
 
-            debug_info = {
-                'candidate_count': len(candidates),
-                'attempt_count': attempt_count,
-                'best_candidate': best_candidate_label,
-                'best_config': best_config,
-                'best_confidence': round(best_confidence, 1) if best_confidence >= 0 else 0,
-                'word_count': len(best_layout),
-                'original_size': f'{image.size[0]}x{image.size[1]}',
-            }
+            if not best_text:
+                fallback_errors = []
+                for config in ['--oem 3 --psm 6', '--oem 3 --psm 4', '--oem 3 --psm 11']:
+                    try:
+                        fallback_data = pytesseract.image_to_data(image, config=config)
+                    except Exception as exc:
+                        fallback_errors.append(repr(exc))
+                        continue
+
+                    fallback_layout = []
+                    if isinstance(fallback_data, dict):
+                        texts = fallback_data.get('text') or []
+                        lefts = fallback_data.get('left') or []
+                        tops = fallback_data.get('top') or []
+                        widths = fallback_data.get('width') or []
+                        heights = fallback_data.get('height') or []
+                        confs = fallback_data.get('conf') or []
+                        blocks = fallback_data.get('block_num') or []
+                        paragraphs = fallback_data.get('par_num') or []
+                        lines = fallback_data.get('line_num') or []
+                        words = fallback_data.get('word_num') or []
+                        for index, text_value in enumerate(texts):
+                            cleaned_word = re.sub(r'\s+', ' ', str(text_value or '').strip())
+                            if not cleaned_word:
+                                continue
+                            confidence = 0
+                            if index < len(confs):
+                                try:
+                                    confidence = int(float(confs[index]))
+                                except Exception:
+                                    confidence = 0
+                            fallback_layout.append({
+                                'text': cleaned_word,
+                                'left': int(lefts[index]) if index < len(lefts) else 0,
+                                'top': int(tops[index]) if index < len(tops) else 0,
+                                'width': int(widths[index]) if index < len(widths) else 0,
+                                'height': int(heights[index]) if index < len(heights) else 0,
+                                'conf': confidence,
+                                'block_num': int(blocks[index]) if index < len(blocks) else 0,
+                                'par_num': int(paragraphs[index]) if index < len(paragraphs) else 0,
+                                'line_num': int(lines[index]) if index < len(lines) else 0,
+                                'word_num': int(words[index]) if index < len(words) else 0,
+                            })
+                    elif fallback_data:
+                        fallback_layout = [
+                            {'text': re.sub(r'\s+', ' ', str(row).strip()), 'left': 0, 'top': 0, 'width': 0, 'height': 0, 'conf': 0, 'block_num': 0, 'par_num': 0, 'line_num': 0, 'word_num': 0}
+                            for row in str(fallback_data).splitlines()[1:] if re.sub(r'\s+', ' ', str(row).strip())
+                        ]
+
+                    cleaned = re.sub(r'\s+', ' ', ' '.join(item['text'] for item in fallback_layout)).strip()
+                    if cleaned:
+                        best_text = cleaned
+                        best_layout = fallback_layout
+                        best_confidence = 0
+                        best_candidate = image
+                        best_candidate_label = 'original-image'
+                        best_config = config
+                        break
+
+                if best_text:
+                    debug_info = {
+                        'candidate_count': len(candidates),
+                        'attempt_count': attempt_count,
+                        'best_candidate': best_candidate_label,
+                        'best_config': best_config,
+                        'best_confidence': round(best_confidence, 1) if best_confidence >= 0 else 0,
+                        'word_count': len(best_layout),
+                        'original_size': f'{image.size[0]}x{image.size[1]}',
+                        'tesseract_path': tesseract_path,
+                        'tesseract_available': bool(tesseract_path),
+                        'fallback_used': True,
+                        'fallback_errors': fallback_errors,
+                    }
+                else:
+                    debug_info = {
+                        'candidate_count': len(candidates),
+                        'attempt_count': attempt_count,
+                        'best_candidate': best_candidate_label,
+                        'best_config': best_config,
+                        'best_confidence': round(best_confidence, 1) if best_confidence >= 0 else 0,
+                        'word_count': len(best_layout),
+                        'original_size': f'{image.size[0]}x{image.size[1]}',
+                        'tesseract_path': tesseract_path,
+                        'tesseract_available': bool(tesseract_path),
+                        'fallback_used': False,
+                        'fallback_errors': fallback_errors,
+                        'tesseract_error': last_ocr_error or 'Tesseract produced no text from the uploaded image.',
+                    }
+            else:
+                debug_info = {
+                    'candidate_count': len(candidates),
+                    'attempt_count': attempt_count,
+                    'best_candidate': best_candidate_label,
+                    'best_config': best_config,
+                    'best_confidence': round(best_confidence, 1) if best_confidence >= 0 else 0,
+                    'word_count': len(best_layout),
+                    'original_size': f'{image.size[0]}x{image.size[1]}',
+                    'tesseract_path': tesseract_path,
+                    'tesseract_available': bool(tesseract_path),
+                    'fallback_used': False,
+                    'tesseract_error': last_ocr_error or '',
+                }
 
             if debug_dir:
                 try:
@@ -8049,6 +8144,14 @@ def extract_reading_material_file(request):
                 if not warning_msg and not empty_ocr_result:
                     warning_msg = IMAGE_OCR_EMPTY_MESSAGE
                     extraction_warnings.append(warning_msg)
+                if ocr_debug:
+                    tesseract_error = ocr_debug.get('tesseract_error') or ocr_debug.get('error')
+                    if tesseract_error:
+                        detail_warning = f"{IMAGE_OCR_EMPTY_MESSAGE} OCR detail: {tesseract_error}"
+                        if detail_warning not in extraction_warnings:
+                            extraction_warnings.append(detail_warning)
+                        if not warning_msg or warning_msg == IMAGE_OCR_EMPTY_MESSAGE:
+                            warning_msg = detail_warning
                 return JsonResponse({
                     'success': True,
                     'items': [],
