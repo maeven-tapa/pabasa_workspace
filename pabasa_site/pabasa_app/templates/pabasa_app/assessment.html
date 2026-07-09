@@ -75,7 +75,7 @@
 
     .assessment-dock {
         display: grid;
-        gap: 1.15rem;
+        gap: var(--dash-ui-gap, 1.15rem);
     }
 
     .assessment-stage {
@@ -87,9 +87,9 @@
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
         display: grid;
         grid-template-columns: minmax(0, 1fr) 290px;
-        gap: 1rem;
+        gap: calc(1rem * var(--dash-ui-scale, 1));
         overflow: hidden;
-        padding: 1.5rem 2rem;
+        padding: calc(1.5rem * var(--dash-ui-scale, 1)) calc(2rem * var(--dash-ui-scale, 1));
         position: relative;
         transition: min-height 0.25s ease, grid-template-columns 0.25s ease, padding 0.25s ease;
     }
@@ -108,13 +108,13 @@
         font-size: clamp(1rem, 1.6vw, 1.4rem);
         font-weight: 700;
         line-height: 1;
-        margin: 0 0 0.75rem;
+        margin: 0 0 calc(0.75rem * var(--dash-ui-scale, 1));
         max-width: 720px;
     }
 
     .assessment-stage p {
         color: var(--dash-ink-soft);
-        font-size: 0.85rem;
+        font-size: calc(0.85rem * var(--dash-ui-scale, 1));
         line-height: 1.6;
         margin: 0;
         max-width: 660px;
@@ -128,8 +128,8 @@
         box-shadow: 0 16px 34px rgba(16, 70, 110, 0.1);
         color: var(--dash-primary-deep);
         display: grid;
-        gap: 0.75rem;
-        padding: 1rem;
+        gap: calc(0.75rem * var(--dash-ui-scale, 1));
+        padding: calc(1rem * var(--dash-ui-scale, 1));
         position: relative;
         z-index: 1;
     }
@@ -193,7 +193,7 @@
         box-shadow: 0 22px 44px rgba(27, 26, 23, 0.08);
         display: grid;
         grid-template-columns: auto 1fr auto;
-        gap: 1rem;
+        gap: var(--dash-ui-gap, 1rem);
         padding: 1rem;
     }
 
@@ -214,9 +214,9 @@
         display: flex;
         flex-direction: column;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        gap: 0.85rem;
+        gap: calc(0.85rem * var(--dash-ui-scale, 1));
         overflow: visible;
-        padding: 1.25rem;
+        padding: var(--dash-card-pad, 1.25rem);
         position: relative;
         text-decoration: none;
         width: 100%;
@@ -240,14 +240,14 @@
     }
 
     .subject-info h3 {
-        font-size: 1.25rem;
+        font-size: calc(1.25rem * var(--dash-ui-scale, 1));
         font-weight: 800;
         margin: 0;
         color: var(--dash-text);
     }
 
     .subject-code {
-        font-size: 0.75rem;
+        font-size: calc(0.75rem * var(--dash-ui-scale, 1));
         font-weight: 800;
         color: var(--dash-primary);
         background: var(--dash-primary-soft);
@@ -264,11 +264,11 @@
         border-radius: 16px;
         box-sizing: border-box;
         display: flex;
-        gap: 0.75rem;
+        gap: calc(0.75rem * var(--dash-ui-scale, 1));
         height: 122px;
         justify-content: space-between;
         margin-bottom: 0 !important;
-        padding: 0.85rem 0.95rem;
+        padding: calc(0.85rem * var(--dash-ui-scale, 1)) calc(0.95rem * var(--dash-ui-scale, 1));
         text-decoration: none;
         transition: all 0.2s ease;
         color: var(--dash-text);
@@ -308,11 +308,11 @@
         border-radius: 999px;
         color: var(--dash-primary);
         display: inline-flex;
-        font-size: 0.7rem;
+        font-size: calc(0.7rem * var(--dash-ui-scale, 1));
         font-weight: 800;
-        gap: 0.3rem;
-        margin-top: 0.35rem;
-        padding: 0.24rem 0.6rem;
+        gap: calc(0.3rem * var(--dash-ui-scale, 1));
+        margin-top: calc(0.35rem * var(--dash-ui-scale, 1));
+        padding: calc(0.24rem * var(--dash-ui-scale, 1)) calc(0.6rem * var(--dash-ui-scale, 1));
     }
 
     .type-meta {
@@ -465,11 +465,6 @@
 
     <div class="subject-grid" id="subjectGrid"></div>
 
-    <div class="assessment-prep">
-        <span class="prep-icon"><i class="bi bi-mic"></i></span>
-        <p class="mb-0"><strong>Before you start:</strong> check your microphone, sit close enough to speak clearly, and pause if the room gets noisy.</p>
-        <span class="dash-pill">Ready check</span>
-    </div>
 </section>
 
 <script>

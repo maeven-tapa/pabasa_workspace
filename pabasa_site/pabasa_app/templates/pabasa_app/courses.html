@@ -711,11 +711,11 @@
     }
 
     .course-modal-dialog {
-        margin: 1rem auto;
-        max-height: min(95dvh, calc(100dvh - 2rem));
-        max-width: min(95vw, 1520px);
-        width: min(95vw, 1520px);
-        height: min(95dvh, calc(100dvh - 2rem));
+        max-height: none;
+        max-width: none;
+        width: auto;
+        height: auto;
+        margin: 0;
     }
 
     .course-modal-content {
@@ -922,15 +922,28 @@
         letter-spacing: 0.05em;
     }
 
-    @media (max-width: 1199.98px) {
-        .course-modal-dialog {
-            max-width: min(95vw, calc(100vw - 1.5rem));
-            width: min(95vw, calc(100vw - 1.5rem));
+    @media (min-width: 992px) {
+        #courseDetailModal .modal-dialog.course-modal-dialog {
+            position: fixed;
+            top: 0;
+            left: calc(var(--sidebar-width, 320px));
+            right: 0;
+            bottom: 0;
+            width: auto;
+            max-width: none;
+            margin: 0;
+        }
+
+        #courseDetailModal .modal-content.course-modal-content {
+            width: 100%;
+            height: 100%;
+            max-height: none;
         }
     }
 
     @media (max-width: 991.98px) {
         .course-modal-dialog {
+            position: relative;
             max-height: 95vh;
         }
 

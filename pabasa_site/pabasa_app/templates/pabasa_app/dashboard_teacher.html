@@ -291,7 +291,7 @@
     .teacher-stat-grid {
         display: grid;
         gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .teacher-stat-card {
@@ -613,6 +613,55 @@
     @media (max-width: 1200px) {
         .teacher-stat-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (min-width: 1920px) {
+        .teacher-stat-grid {
+            gap: 1.15rem;
+        }
+
+        .teacher-stat-card {
+            min-height: 138px;
+            padding: 1.15rem;
+        }
+
+        .teacher-stat-card strong {
+            font-size: clamp(1.8rem, 2vw, 2.45rem);
+        }
+
+        .teacher-stat-card::after {
+            font-size: 5rem;
+            bottom: -0.9rem;
+        }
+    }
+
+    @media (min-width: 2560px) {
+        .teacher-stat-grid {
+            gap: 1.35rem;
+        }
+
+        .teacher-stat-card {
+            min-height: 152px;
+            padding: 1.35rem;
+        }
+
+        .teacher-stat-card strong {
+            font-size: clamp(1.9rem, 1.7vw, 2.7rem);
+        }
+
+        .teacher-stat-card span {
+            font-size: 0.9rem;
+        }
+
+        .teacher-stat-card small {
+            line-height: 1.35;
+        }
+
+        .teacher-stat-card::after {
+            font-size: 5.6rem;
+            right: -0.05rem;
+            bottom: -1rem;
         }
     }
 
