@@ -360,6 +360,74 @@
         box-shadow: 0 6px 16px rgba(15,23,42,0.16), inset 0 1px 0 rgba(255,255,255,0.6);
         transform: scale(1.1) rotate(90deg);
     }
+    @media (max-width: 560px) {
+        .tutorial-overlay {
+            align-items: center;
+            padding: 0.55rem;
+        }
+        .tutorial-card-shell {
+            border-radius: 22px;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto auto;
+            max-height: calc(100dvh - 1.1rem);
+            min-height: 0;
+            overflow: hidden;
+            width: 100%;
+        }
+        .tutorial-header {
+            padding: 0.85rem 1rem 1rem;
+        }
+        .tutorial-badge {
+            font-size: 0.62rem;
+            left: 0.8rem;
+            padding: 0.34rem 0.58rem;
+            top: 0.75rem;
+        }
+        .tutorial-overlay-close {
+            height: 42px;
+            right: 0.7rem;
+            top: 0.65rem;
+            width: 42px;
+        }
+        .tutorial-title-row {
+            gap: 0.45rem;
+            padding-top: 2.15rem;
+        }
+        .tutorial-title-icon-bubble {
+            height: 2rem;
+            width: 2rem;
+        }
+        .tutorial-header h3 {
+            font-size: 1.55rem;
+        }
+        .tutorial-subtitle {
+            font-size: 0.82rem;
+        }
+        .tutorial-card {
+            min-height: 150px;
+            overflow-y: auto;
+            padding: 1rem 1rem 1.1rem;
+        }
+        .tutorial-card p {
+            font-size: 1.05rem;
+            line-height: 1.5;
+        }
+        .tutorial-nav-row {
+            margin: 0.25rem 0.75rem 0.7rem;
+            padding: 0.55rem;
+        }
+        .tutorial-nav {
+            height: 44px;
+            width: 44px;
+        }
+        #tutorialFooterActions {
+            margin: 0 0.75rem 0.85rem !important;
+        }
+        .tutorial-start-btn {
+            min-height: 48px;
+            padding: 0.75rem 1rem;
+        }
+    }
     @keyframes tutorialFadeIn {
         from { opacity: 0; transform: scale(0.92) translateY(10px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
