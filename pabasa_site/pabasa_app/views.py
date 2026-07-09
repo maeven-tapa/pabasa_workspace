@@ -31,8 +31,12 @@ import zipfile
 import csv
 from io import BytesIO
 
-# Use a static Windows Tesseract path so OCR activates immediately in the app.
-TESSERACT_STATIC_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Use a platform-aware Tesseract path so OCR works in local and deployed environments.
+TESSERACT_STATIC_PATH = (
+    os.environ.get('TESSERACT_CMD')
+    or os.environ.get('TESSERACT_PATH')
+    or (r"C:\Program Files\Tesseract-OCR\tesseract.exe" if os.name == 'nt' else '/usr/bin/tesseract')
+)
 IMAGE_OCR_EMPTY_MESSAGE = (
     'No readable text could be recovered from that image. '
     'Try a straight, well-lit photo with the words in focus, dark text on a light background, '

@@ -34,6 +34,9 @@ It provides automated feedback and performance reports, enabling data-driven dec
 - Course Title: Technical Research
 - Institution: TUP Cavite
 
+## 🧰 OCR deployment note
+Image uploads use Tesseract OCR. Deployments that run in a Linux container (such as Render) need the Tesseract binary installed. This repository includes an apt package list for that purpose.
+
 ## 📬 Contact
 For any inquiries about this repository, please contact any of the team members listed above.
 
