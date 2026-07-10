@@ -35,7 +35,7 @@ from io import BytesIO
 TESSERACT_STATIC_PATH = (
     os.environ.get('TESSERACT_CMD')
     or os.environ.get('TESSERACT_PATH')
-    or (r"C:\Program Files\Tesseract-OCR\tesseract.exe" if os.name == 'nt' else r'\usr\bin\tesseract')
+    or (r"C:\Program Files\Tesseract-OCR\tesseract.exe" if os.name == 'nt' else '/usr/bin/tesseract')
 )
 IMAGE_OCR_EMPTY_MESSAGE = (
     'No readable text could be recovered from that image. '
@@ -7309,10 +7309,10 @@ def _resolve_tesseract_executable(pytesseract_module):
         os.path.expandvars(r'%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe'),
         os.path.expandvars(r'%ProgramFiles%\Tesseract-OCR\tesseract.exe'),
         os.path.expandvars(r'%LOCALAPPDATA%\Tesseract-OCR\tesseract.exe'),
-        r'\usr\bin\tesseract',
-        r'\usr\bin\tesseract-ocr',
-        r'\usr\local\bin\tesseract',
-        r'\usr\local\bin\tesseract-ocr',
+        '/usr/bin/tesseract',
+        '/usr/bin/tesseract-ocr',
+        '/usr/local/bin/tesseract',
+        '/usr/local/bin/tesseract-ocr',
     ]:
         if candidate and candidate not in candidates:
             candidates.append(candidate)
