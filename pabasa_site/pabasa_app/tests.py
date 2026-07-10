@@ -254,6 +254,16 @@ class MaterialUploadExtractionTests(TestCase):
 
         self.assertEqual(resolved, "/usr/bin/tesseract")
 
+    def test_tesseract_debug_endpoint_reports_path_info(self):
+        response = self.client.get(reverse("tesseract_debug"))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertTrue(data["success"])
+        self.assertIn("tesseract_debug", data)
+        self.assertIn("path_entries", data["tesseract_debug"])
+        self.assertIn("tesseract_available", data["tesseract_debug"])
+
     def setUp(self):
         self.teacher = User.objects.create(
             custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}",
