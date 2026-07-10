@@ -114,6 +114,7 @@ urlpatterns = [
     path('dashboard/student/unenroll/', views.unenroll_class, name='unenroll_class'),
     path('dashboard/teacher/extract-material/', views.extract_reading_material_file, name='extract_reading_material_file'),
     path('dashboard/teacher/add-material/', views.add_reading_material, name='add_reading_material'),
+    path('dashboard/teacher/tesseract-debug/', views.tesseract_debug, name='tesseract_debug'),
     path('api/class/materials/', views.get_class_materials, name='get_class_materials'),
     path(
         'dashboard/teacher/generate-class-code/',

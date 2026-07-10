@@ -7331,6 +7331,69 @@ def _resolve_tesseract_executable(pytesseract_module):
     return None
 
 
+def _collect_tesseract_debug_info():
+    debug_info = {}
+    explicit = os.environ.get('TESSERACT_CMD') or os.environ.get('TESSERACT_PATH') or ''
+    debug_info['explicit_env'] = explicit
+
+    raw_path = os.environ.get('PATH') or ''
+    path_entries = [entry for entry in raw_path.split(os.pathsep) if entry]
+    debug_info['path_entries'] = path_entries
+
+    checked_paths = []
+    existing_paths = []
+    candidate_names = ('tesseract', 'tesseract.exe', 'tesseract-ocr', 'tesseract-ocr.exe')
+    for entry in path_entries:
+        expanded = os.path.expandvars(os.path.expanduser(entry))
+        if not expanded:
+            continue
+        if os.path.isfile(expanded):
+            basename = os.path.basename(expanded).lower()
+            if basename in candidate_names:
+                normalized = os.path.normcase(os.path.normpath(expanded))
+                checked_paths.append(normalized)
+                if os.path.isfile(expanded):
+                    existing_paths.append(normalized)
+            continue
+        for candidate_name in candidate_names:
+            candidate_path = os.path.join(expanded, candidate_name)
+            normalized = os.path.normcase(os.path.normpath(candidate_path))
+            checked_paths.append(normalized)
+            if os.path.isfile(candidate_path):
+                existing_paths.append(normalized)
+
+    if os.path.isfile(TESSERACT_STATIC_PATH):
+        normalized = os.path.normcase(os.path.normpath(TESSERACT_STATIC_PATH))
+        checked_paths.append(normalized)
+        existing_paths.append(normalized)
+
+    debug_info['checked_paths'] = checked_paths
+    debug_info['existing_paths'] = existing_paths
+    debug_info['which'] = {
+        'tesseract': shutil.which('tesseract'),
+        'tesseract-ocr': shutil.which('tesseract-ocr'),
+        'tesseract.exe': shutil.which('tesseract.exe'),
+        'tesseract-ocr.exe': shutil.which('tesseract-ocr.exe'),
+    }
+
+    try:
+        import pytesseract as _pyt
+        debug_info['pytesseract_tesseract_cmd'] = getattr(_pyt.pytesseract, 'tesseract_cmd', None)
+    except Exception as exc:
+        debug_info['pytesseract_import_error'] = str(exc)
+
+    debug_info['resolved_tesseract'] = _resolve_tesseract_executable(globals().get('pytesseract'))
+    debug_info['tesseract_available'] = bool(debug_info['resolved_tesseract'])
+    return debug_info
+
+
+@csrf_protect
+@require_http_methods(['GET'])
+@login_required(role='teacher')
+def tesseract_debug(request):
+    return JsonResponse({'success': True, 'tesseract_debug': _collect_tesseract_debug_info()})
+
+
 # Log Tesseract resolution once during server startup or first module import.
 try:
     _startup_tesseract_path = _resolve_tesseract_executable(globals().get('pytesseract'))
