@@ -124,6 +124,8 @@
     let colorCompletionTimer = null;
     let colorNewStarsToCommit = null;
     let colorStarsCommitted = false;
+    let colorFinalRevealTimer = null;
+    let colorFinalRevealHold = null;
     let huntLevelTransitionInProgress = false;
     const practiceProgressStorageKey = "pabasa_practice_progress_v1";
     const practiceProgressLevelSequence = Object.freeze([
@@ -254,6 +256,14 @@
         colorModeCompletionReady = false;
         colorNewStarsToCommit = null;
         colorStarsCommitted = false;
+        if (colorFinalRevealTimer) {
+            window.clearTimeout(colorFinalRevealTimer);
+            colorFinalRevealTimer = null;
+        }
+        if (colorFinalRevealHold) {
+            window.clearTimeout(colorFinalRevealHold);
+            colorFinalRevealHold = null;
+        }
         hideLevelCompleteOverlay();
         if (colorCompletionTimer) {
             window.clearTimeout(colorCompletionTimer);
@@ -264,6 +274,86 @@
     function updateColorModeReadingText() {
         if (!isColorMode || !colorPracticeText) return;
         colorPracticeText.textContent = items[currentIndex] || "No materials available.";
+    }
+
+    function advanceColorModeFromKeyboard(options = {}) {
+        if (!items.length) return false;
+        const { countAsSkip = false, countAsRead = false } = options;
+
+        if (countAsSkip) {
+            setCurrentItemOutcome("skipped");
+        } else if (countAsRead) {
+            setCurrentItemOutcome("read");
+            revealNextColorObject();
+            if (colorFinalRevealTimer) {
+                window.clearTimeout(colorFinalRevealTimer);
+                colorFinalRevealTimer = null;
+            }
+            if (colorFinalRevealHold) {
+                window.clearTimeout(colorFinalRevealHold);
+                colorFinalRevealHold = null;
+            }
+        }
+
+        if (currentIndex < items.length - 1) {
+            currentIndex += 1;
+            practiceFeedback.textContent = "New item ready. Take your time.";
+            practiceFeedback.classList.remove("is-success", "is-warning");
+            playCoachAnimation('next');
+            render();
+            return true;
+        }
+
+        if (isColorMode && colorModeCompletionReady) {
+            colorFinalRevealHold = window.setTimeout(() => {
+                colorFinalRevealHold = null;
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        colorFinalRevealTimer = window.setTimeout(() => {
+                            colorFinalRevealTimer = null;
+                            completeColorModeLevel();
+                        }, 900);
+                    });
+                });
+            }, 0);
+            return true;
+        }
+
+        showCompletion();
+        return true;
+    }
+
+    function handleColorModeKeyboard(event) {
+        if (!isColorMode || !items.length) return false;
+        const activeElement = document.activeElement;
+        if (isInteractiveElement(activeElement)) return false;
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            advanceColorModeFromKeyboard({ countAsRead: true });
+            return true;
+        }
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            advanceColorModeFromKeyboard({ countAsSkip: true });
+            return true;
+        }
+
+        const isSpace = event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
+        if (isSpace) {
+            event.preventDefault();
+            advanceColorModeFromKeyboard({ countAsRead: true });
+            return true;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            advanceColorModeFromKeyboard({ countAsSkip: true });
+            return true;
+        }
+
+        return false;
     }
 
     function revealNextColorObject() {
@@ -1268,6 +1358,14 @@
         const wasAlreadyRead = itemOutcomes[currentIndex] === "read";
         setCurrentItemOutcome("read");
         const revealedObject = wasAlreadyRead ? false : revealNextColorObject();
+        if (colorFinalRevealTimer) {
+            window.clearTimeout(colorFinalRevealTimer);
+            colorFinalRevealTimer = null;
+        }
+        if (colorFinalRevealHold) {
+            window.clearTimeout(colorFinalRevealHold);
+            colorFinalRevealHold = null;
+        }
         practiceFeedback.textContent = "Nice reading. You earned a practice star.";
         practiceFeedback.classList.remove("is-warning");
         practiceFeedback.classList.add("is-success");
@@ -1277,6 +1375,14 @@
             practiceFeedback.textContent = "All 5 scene details have been revealed. Tap Finish to complete the scene.";
             practiceFeedback.classList.remove("is-warning");
             practiceFeedback.classList.add("is-success");
+        }
+        if (isColorMode && colorModeCompletionReady && currentIndex >= items.length - 1) {
+            colorFinalRevealTimer = window.setTimeout(() => {
+                colorFinalRevealTimer = null;
+                completeColorModeLevel();
+            }, 180);
+            render();
+            return;
         }
         render();
     });
@@ -1326,6 +1432,7 @@
 
     document.addEventListener("keydown", function (event) {
         if (event.defaultPrevented) return;
+        if (handleColorModeKeyboard(event)) return;
         if (handleFreeModeKeyboard(event)) return;
 
         const activeElement = document.activeElement;
@@ -1347,6 +1454,13 @@
             }
         }
     });
+
+    document.addEventListener("wheel", function (event) {
+        if (!isColorMode && !isFreeMode) return;
+        const activeElement = document.activeElement;
+        if (isInteractiveElement(activeElement)) return;
+        event.preventDefault();
+    }, { passive: false });
 
     practiceAgainBtn?.addEventListener("click", restartPractice);
     practiceNextLevelBtn?.addEventListener("click", function (event) {
