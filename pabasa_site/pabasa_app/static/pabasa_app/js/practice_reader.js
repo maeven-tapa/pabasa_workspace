@@ -81,6 +81,11 @@
     const huntLevelLabel = document.getElementById("huntLevelLabel");
     const huntReadingStatus = document.getElementById("huntReadingStatus");
     const huntGuideMessage = document.getElementById("huntGuideMessage");
+    const huntMapPath = document.getElementById("huntMapPath");
+    const huntCheckpoint = document.getElementById("huntCheckpoint");
+    const huntCheckpointToast = document.getElementById("huntCheckpointToast");
+    const huntWordArea = document.querySelector(".practice-hunt-shell .hunt-word-area");
+    const huntWordPosition = document.getElementById("huntWordPosition");
     const colorModeStage = document.getElementById("colorModeStage");
     const colorPracticeText = document.getElementById("colorPracticeText");
     const colorScene = document.getElementById("colorScene");
@@ -127,6 +132,7 @@
     let colorFinalRevealTimer = null;
     let colorFinalRevealHold = null;
     let huntLevelTransitionInProgress = false;
+    let huntAdvanceInProgress = false;
     const practiceProgressStorageKey = "pabasa_practice_progress_v1";
     const practiceProgressLevelSequence = Object.freeze([
         ['easy', 'level_1'],
@@ -192,8 +198,21 @@
         const percentage = Math.round((position / total) * 100);
         const feedbackText = practiceFeedback?.textContent || "Ready when you are.";
 
-        if (huntFlightBird) huntFlightBird.style.left = `${Math.min(percentage, 96)}%`;
+        const dots = document.querySelectorAll("[data-hunt-dot]");
+        dots.forEach((dot, index) => {
+            dot.classList.toggle("is-active", index === currentIndex);
+            dot.classList.toggle("is-complete", index < currentIndex);
+        });
+        const activeDot = dots[currentIndex];
+        if (huntFlightBird && activeDot && huntFlightBird.parentElement !== activeDot) {
+            activeDot.appendChild(huntFlightBird);
+        }
+        if (huntMapPath) {
+            huntMapPath.setAttribute("aria-valuenow", String(position));
+        }
+        if (huntCheckpoint) huntCheckpoint.classList.toggle("is-earned", currentIndex >= 3);
         if (huntProgressLabel) huntProgressLabel.textContent = `${formatHuntLabel(mode, "word")} ${position} of ${total}`;
+        if (huntWordPosition) huntWordPosition.textContent = `${formatHuntLabel(mode, "word")} ${position} of ${total}`;
         if (huntDifficultyLabel) huntDifficultyLabel.textContent = formatHuntLabel(selectedDifficulty, "easy");
         if (huntLevelLabel) huntLevelLabel.textContent = formatHuntLabel(selectedProgressLevel, "level_1");
         if (huntReadingStatus) huntReadingStatus.textContent = feedbackText;
@@ -375,18 +394,6 @@
         }
 
         updateCompletionSummary();
-
-        if (currentIndex >= items.length - 1) {
-            completeHuntModeLevel();
-            return true;
-        }
-
-        currentIndex += 1;
-        practiceFeedback.textContent = countAsSkip
-            ? "Skipped. Keep chasing the treasure!"
-            : "New item ready. Take your time.";
-        practiceFeedback.classList.remove("is-success", "is-warning");
-        playCoachAnimation('next');
         render();
         return true;
     }
@@ -782,7 +789,7 @@
     function loadItems() {
         const serverItems = loadServerPracticeItems();
         if (serverItems.length > 0) {
-            items = serverItems.slice();
+            items = isHuntMode ? serverItems.slice(0, 5) : serverItems.slice();
             currentIndex = 0;
             itemOutcomes = Array(items.length).fill(null);
             setupColorModeScene();
@@ -924,7 +931,9 @@
         updateCompletionSummary();
         if (nextBtn) {
             nextBtn.textContent = currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next";
-            nextBtn.disabled = false;
+            nextBtn.disabled = isHuntMode && viewMode !== 'view'
+                ? !itemOutcomes[currentIndex] || huntAdvanceInProgress
+                : false;
         }
     }
 
@@ -1401,6 +1410,9 @@
         colorNewStarsToCommit = null;
         colorStarsCommitted = false;
         huntLevelTransitionInProgress = false;
+        huntAdvanceInProgress = false;
+        huntCheckpointToast?.setAttribute("hidden", "");
+        huntWordArea?.classList.remove("is-closing");
         hideLevelCompleteOverlay();
         // No deferred Done button to clear.
         if (recordBtn) recordBtn.disabled = false;
@@ -1473,8 +1485,30 @@
             return;
         }
 
-        if (isHuntMode && currentIndex >= items.length - 1) {
-            completeHuntModeLevel();
+        if (isHuntMode) {
+            if (!itemOutcomes[currentIndex] || huntAdvanceInProgress) return;
+            huntAdvanceInProgress = true;
+            nextBtn.disabled = true;
+            huntWordArea?.classList.add("is-closing");
+            window.setTimeout(() => {
+                document.querySelector(`[data-hunt-dot="${currentIndex}"]`)?.classList.add("is-complete");
+                if (currentIndex >= items.length - 1) {
+                    huntAdvanceInProgress = false;
+                    completeHuntModeLevel();
+                    return;
+                }
+                currentIndex += 1;
+                if (currentIndex === 3 && huntCheckpointToast) {
+                    huntCheckpointToast.hidden = false;
+                    window.setTimeout(() => { huntCheckpointToast.hidden = true; }, 2200);
+                }
+                practiceFeedback.textContent = "New word ready. Read or skip, then choose Next.";
+                practiceFeedback.classList.remove("is-success", "is-warning");
+                playCoachAnimation('next');
+                huntWordArea?.classList.remove("is-closing");
+                huntAdvanceInProgress = false;
+                render();
+            }, 220);
             return;
         }
 

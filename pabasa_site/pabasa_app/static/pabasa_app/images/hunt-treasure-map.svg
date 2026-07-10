@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Forest treasure map</title>
+  <desc id="desc">A warm parchment map with a winding dotted trail, pine trees, lakes, hills, and a red checkpoint flag.</desc>
+  <defs>
+    <radialGradient id="paper" cx="48%" cy="42%" r="75%"><stop stop-color="#ffe9a3"/><stop offset="1" stop-color="#e7c46f"/></radialGradient>
+    <filter id="grain"><feTurbulence baseFrequency=".045" numOctaves="2" seed="7" result="n"/><feBlend in="SourceGraphic" in2="n" mode="soft-light"/></filter>
+  </defs>
+  <rect width="1200" height="700" fill="url(#paper)" filter="url(#grain)"/>
+  <g fill="none" stroke="#af8548" stroke-linecap="round" stroke-width="4" opacity=".42">
+    <path d="M42 94Q150 45 265 80M110 525q72-55 145 0M490 610q67-54 136 0M850 500q75-56 151 0M910 160q67-52 135 0"/>
+  </g>
+  <g fill="#62aeb7" stroke="#3b7f83" stroke-width="6" opacity=".88">
+    <path d="M325 105q58-73 120 0-61 65-120 0z"/>
+    <path d="M680 550q75-85 155 0-78 65-155 0z"/>
+  </g>
+  <g stroke="#36684d" stroke-width="6" stroke-linejoin="round">
+    <g transform="translate(95 120)"><path d="m42 0 37 78H5z" fill="#397257"/><path d="m42 42 52 98H-10z" fill="#4b8965"/><path d="M37 140h10v30H37z" fill="#79532d"/></g>
+    <g transform="translate(205 76) scale(.72)"><path d="m42 0 37 78H5z" fill="#397257"/><path d="m42 42 52 98H-10z" fill="#4b8965"/><path d="M37 140h10v30H37z" fill="#79532d"/></g>
+    <g transform="translate(830 80) scale(.9)"><path d="m42 0 37 78H5z" fill="#397257"/><path d="m42 42 52 98H-10z" fill="#4b8965"/><path d="M37 140h10v30H37z" fill="#79532d"/></g>
+    <g transform="translate(980 480) scale(.82)"><path d="m42 0 37 78H5z" fill="#397257"/><path d="m42 42 52 98H-10z" fill="#4b8965"/><path d="M37 140h10v30H37z" fill="#79532d"/></g>
+  </g>
+  <path d="M105 575C155 455 205 390 290 385s130 120 220 120 115-200 230-270 175 150 245 90 105-170 165-240" fill="none" stroke="#896638" stroke-dasharray="5 18" stroke-linecap="round" stroke-width="12" opacity=".78"/>
+  <g transform="translate(683 150)">
+    <path d="M0 0v92" stroke="#74442b" stroke-width="10"/><path d="M4 4h78l-13 28 13 28H4z" fill="#d95d3e" stroke="#823b2b" stroke-width="5"/>
+  </g>
+</svg>
