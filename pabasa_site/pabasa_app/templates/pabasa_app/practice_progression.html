@@ -498,6 +498,32 @@
     body.dark-theme .back-link { background: #1e293b; border-color: #334155; box-shadow: 0 10px 24px #020617; color: #7dd3fc; }
     body.dark-theme .back-link i { color: #38bdf8; }
     @media (max-width: 991.98px) { .progression-hero { grid-template-columns: 1fr; } .level-grid { grid-template-columns: 1fr; } }
+    /* Keep every practice-mode action label readable on its saturated button. */
+    a.level-play-btn,
+    a.level-play-btn:link,
+    a.level-play-btn:visited,
+    a.level-play-btn:hover,
+    a.level-play-btn:focus-visible,
+    .level-play-btn.is-completed,
+    body.dark-theme a.level-play-btn,
+    body.dark-theme a.level-play-btn:visited,
+    body.dark-theme a.level-play-btn:hover {
+        color: #f7ffff !important;
+        text-shadow: 0 1px 2px rgba(0, 45, 48, .4);
+    }
+    a.level-play-btn i,
+    a.level-play-btn:visited i,
+    a.level-play-btn:hover i,
+    a.level-play-btn:focus-visible i,
+    .level-play-btn.is-completed i,
+    body.dark-theme a.level-play-btn i {
+        color: #e6fffb !important;
+        opacity: 1;
+    }
+    a.level-play-btn:focus-visible {
+        outline: 3px solid #fef3c7;
+        outline-offset: 3px;
+    }
 </style>
 {% endblock %}
 

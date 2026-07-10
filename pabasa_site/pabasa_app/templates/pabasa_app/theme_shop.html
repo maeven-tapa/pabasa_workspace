@@ -37,7 +37,8 @@
         backdrop-filter: blur(10px);
     }
     .theme-preview-icon i { color: white; filter: drop-shadow(0 5px 10px rgba(15,23,42,.24)); font-size: 1.85rem; position: relative; z-index: 1; }
-    .preview-chip { background: rgba(15,23,42,.58); border: 1px solid rgba(255,255,255,.3); border-radius: 999px; color: #fff; font-size: .68rem; font-weight: 900; padding: .32rem .55rem; position: relative; text-transform: uppercase; z-index: 2; }
+    .preview-chip { background: rgba(15,23,42,.68); border: 1px solid rgba(255,255,255,.45); border-radius: 999px; color: #fff; cursor:pointer; font-size: .68rem; font-weight: 900; padding: .32rem .55rem; position: relative; text-transform: uppercase; z-index: 2; }
+    .preview-chip:hover, .preview-chip:focus-visible { background:#fff; color:#164e63; outline:2px solid rgba(255,255,255,.6); outline-offset:2px; }
     .theme-preview-art { inset: 0; overflow: hidden; position: absolute; z-index: 0; }
     .theme-preview-art img { display: block; height: 100%; object-fit: cover; transform: scale(1.012); width: 100%; }
     .theme-preview-title { align-self: end; color: #fff; font-size: .78rem; font-weight: 900; letter-spacing: .08em; position: relative; text-shadow: 0 2px 8px rgba(15,23,42,.35); text-transform: uppercase; z-index: 2; }
@@ -60,6 +61,38 @@
     .theme-action:disabled { background: #94a3b8; box-shadow: none; color: #e2e8f0; cursor: not-allowed; }
     .shop-toast { background: #0f172a; border-radius: 12px; bottom: 1rem; color: #fff; font-size: .85rem; font-weight: 700; left: 50%; opacity: 0; padding: .75rem 1rem; pointer-events: none; position: fixed; transform: translate(-50%,12px); transition: .2s ease; z-index: 1500; }
     .shop-toast.is-visible { opacity: 1; transform: translate(-50%,0); }
+    .theme-preview-modal { align-items:center; background:rgba(15,23,42,.68); display:flex; inset:0; justify-content:center; padding:1rem; position:fixed; z-index:2100; }
+    .theme-preview-modal[hidden] { display:none; }
+    .theme-preview-dialog { --preview-primary:#168ac2; --preview-soft:#e3f6fd; --preview-deep:#075985; background:#f8fbfc; border-radius:22px; box-shadow:0 28px 80px rgba(2,6,23,.4); max-width:920px; overflow:hidden; width:100%; }
+    .theme-preview-dialog[data-theme="forest"] { --preview-primary:#2f855a; --preview-soft:#e8f5ec; --preview-deep:#22543d; }
+    .theme-preview-dialog[data-theme="treasure"] { --preview-primary:#16877f; --preview-soft:#fff2c5; --preview-deep:#80551f; }
+    .theme-preview-dialog[data-theme="ocean"] { --preview-primary:#168ac2; --preview-soft:#e3f6fd; --preview-deep:#075985; }
+    .theme-preview-dialog[data-theme="space"] { --preview-primary:#7160d8; --preview-soft:#eeecff; --preview-deep:#4338a8; }
+    .theme-preview-dialog[data-theme="zoo"] { --preview-primary:#6b8e23; --preview-soft:#f0f6df; --preview-deep:#3f6212; }
+    .theme-preview-dialog[data-theme="library"] { --preview-primary:#9a4dcc; --preview-soft:#f7eafd; --preview-deep:#6b21a8; }
+    .theme-preview-dialog[data-theme="sky"] { --preview-primary:#168ac2; --preview-soft:#e3f6fd; --preview-deep:#075985; }
+    .theme-preview-modal-head { align-items:center; background:#fff; border-bottom:1px solid #dce8eb; display:flex; justify-content:space-between; padding:.85rem 1rem; }
+    .theme-preview-modal-head h2 { color:#263f47; font-size:1.1rem; font-weight:900; margin:0; }
+    .theme-preview-close { align-items:center; background:#eef5f6; border:0; border-radius:50%; color:#365c64; display:flex; height:36px; justify-content:center; width:36px; }
+    .theme-preview-window { display:grid; grid-template-columns:190px minmax(0,1fr); min-height:470px; position:relative; }
+    .theme-preview-window-art { inset:0; position:absolute; z-index:0; }
+    .theme-preview-window-art img { height:100%; object-fit:cover; opacity:.22; width:100%; }
+    .theme-preview-sidebar { background:linear-gradient(180deg,var(--preview-deep),var(--preview-primary)); color:#fff; padding:1.1rem; position:relative; z-index:1; }
+    .theme-preview-brand { font-size:1.15rem; font-weight:900; margin-bottom:1.4rem; }
+    .theme-preview-nav { display:grid; gap:.5rem; }
+    .theme-preview-nav span { border-radius:9px; font-size:.78rem; font-weight:800; padding:.6rem .7rem; }
+    .theme-preview-nav span:first-child { background:rgba(255,255,255,.2); }
+    .theme-preview-dashboard { padding:1.25rem; position:relative; z-index:1; }
+    .theme-preview-welcome { background:linear-gradient(135deg,rgba(255,255,255,.96),var(--preview-soft)); border:1px solid color-mix(in srgb,var(--preview-primary) 22%,white); border-radius:18px; padding:1.1rem; }
+    .theme-preview-welcome small { color:var(--preview-primary); font-weight:900; text-transform:uppercase; }
+    .theme-preview-welcome h3 { color:#263f47; font-size:1.4rem; font-weight:900; margin:.25rem 0; }
+    .theme-preview-welcome p { color:#60757b; font-size:.82rem; margin:0; }
+    .theme-preview-samples { display:grid; gap:.8rem; grid-template-columns:repeat(3,1fr); margin-top:.9rem; }
+    .theme-preview-sample { background:rgba(255,255,255,.94); border:1px solid color-mix(in srgb,var(--preview-primary) 18%,white); border-radius:14px; min-height:125px; padding:.9rem; }
+    .theme-preview-sample i { color:var(--preview-primary); font-size:1.3rem; }
+    .theme-preview-sample strong { color:#2c464d; display:block; margin-top:.55rem; }
+    .theme-preview-sample span { color:#718389; display:block; font-size:.7rem; margin-top:.2rem; }
+    .theme-preview-note { background:var(--preview-primary); border-radius:10px; color:#fff; font-size:.78rem; font-weight:800; margin-top:.9rem; padding:.65rem .8rem; text-align:center; }
     body.dark-theme .theme-shop-hero, body.dark-theme .theme-card, body.dark-theme .appearance-note { background: #1e293b; border-color: #334155; box-shadow: 0 14px 34px rgba(2,6,23,.35); }
     body.dark-theme .theme-detail-chip { background: rgba(148,163,184,.12); border-color: rgba(148,163,184,.22); color: #cbd5e1; }
     body.dark-theme .theme-detail-chip i { color: #7dd3fc; }
@@ -76,6 +109,13 @@
         .theme-grid { grid-template-columns: 1fr; }
         .theme-preview { height: 166px; }
         .theme-detail-list { grid-template-columns: 1fr; }
+        .theme-preview-window { grid-template-columns:70px minmax(0,1fr); min-height:420px; }
+        .theme-preview-brand { font-size:0; }
+        .theme-preview-brand::before { content:"P"; font-size:1.2rem; }
+        .theme-preview-nav span { font-size:0; text-align:center; }
+        .theme-preview-nav span i { font-size:1rem; }
+        .theme-preview-samples { grid-template-columns:1fr; }
+        .theme-preview-sample { min-height:80px; }
     }
     @media (max-width: 420px) { .theme-card-footer { align-items: stretch; flex-direction: column; } .theme-action { width: 100%; } }
 </style>
@@ -121,7 +161,7 @@
                 {% endwith %}
                 <div class="theme-preview-header">
                     <span class="theme-preview-icon"><i class="bi bi-{{ theme.icon }}" aria-hidden="true"></i></span>
-                    <span class="preview-chip">Preview</span>
+                    <button class="preview-chip" type="button" data-theme-preview data-theme-slug="{{ theme.slug }}" data-theme-name="{{ theme.name }}" aria-label="Preview {{ theme.name }} theme">Preview</button>
                 </div>
                 <span class="theme-preview-title">{{ theme.name }}</span>
             </div>
@@ -164,6 +204,16 @@
         {% endfor %}
     </section>
 </main>
+<div class="theme-preview-modal" id="themePreviewModal" role="dialog" aria-modal="true" aria-labelledby="themePreviewTitle" hidden>
+    <section class="theme-preview-dialog" id="themePreviewDialog" data-theme="sky">
+        <div class="theme-preview-modal-head"><h2 id="themePreviewTitle">Theme preview</h2><button class="theme-preview-close" id="themePreviewClose" type="button" aria-label="Close theme preview"><i class="bi bi-x-lg"></i></button></div>
+        <div class="theme-preview-window">
+            <picture class="theme-preview-window-art" aria-hidden="true"><img id="themePreviewImage" alt=""></picture>
+            <aside class="theme-preview-sidebar"><div class="theme-preview-brand">PABASA</div><div class="theme-preview-nav"><span><i class="bi bi-house-fill"></i> Dashboard</span><span><i class="bi bi-book-fill"></i> Practice</span><span><i class="bi bi-star-fill"></i> Progress</span></div></aside>
+            <div class="theme-preview-dashboard"><div class="theme-preview-welcome"><small>Student dashboard</small><h3 id="themePreviewWelcome">Your learning space</h3><p>This is how the selected theme changes backgrounds, accents, cards, and navigation.</p></div><div class="theme-preview-samples"><div class="theme-preview-sample"><i class="bi bi-book-half"></i><strong>Continue Reading</strong><span>Practice your next lesson</span></div><div class="theme-preview-sample"><i class="bi bi-trophy-fill"></i><strong>Your Progress</strong><span>Keep building your streak</span></div><div class="theme-preview-sample"><i class="bi bi-stars"></i><strong>Achievements</strong><span>Celebrate your reading wins</span></div></div><div class="theme-preview-note">Preview only — this theme has not been bought or equipped.</div></div>
+        </div>
+    </section>
+</div>
 <div class="shop-toast" id="themeShopToast" role="status" aria-live="polite">Theme purchases are coming soon.</div>
 <form class="d-none">{% csrf_token %}</form>
 {% endblock %}
@@ -174,6 +224,39 @@
         const toast = document.getElementById('themeShopToast');
         let toastTimer = null;
         const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
+        const previewModal = document.getElementById('themePreviewModal');
+        const previewDialog = document.getElementById('themePreviewDialog');
+        const previewTitle = document.getElementById('themePreviewTitle');
+        const previewWelcome = document.getElementById('themePreviewWelcome');
+        const previewImage = document.getElementById('themePreviewImage');
+        const previewClose = document.getElementById('themePreviewClose');
+        let previewTrigger = null;
+
+        const closeThemePreview = () => {
+            if (!previewModal) return;
+            previewModal.hidden = true;
+            previewTrigger?.focus();
+        };
+
+        document.querySelectorAll('[data-theme-preview]').forEach((button) => {
+            button.addEventListener('click', () => {
+                if (!previewModal || !previewDialog) return;
+                previewTrigger = button;
+                const themeName = button.dataset.themeName || 'Theme';
+                previewDialog.dataset.theme = button.dataset.themeSlug || 'sky';
+                if (previewTitle) previewTitle.textContent = `${themeName} preview`;
+                if (previewWelcome) previewWelcome.textContent = `Welcome to ${themeName}`;
+                if (previewImage) previewImage.src = button.closest('.theme-preview')?.querySelector('img')?.src || '';
+                previewModal.hidden = false;
+                previewClose?.focus();
+            });
+        });
+        previewClose?.addEventListener('click', closeThemePreview);
+        previewModal?.addEventListener('click', (event) => { if (event.target === previewModal) closeThemePreview(); });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && previewModal && !previewModal.hidden) closeThemePreview();
+        });
+
         document.querySelectorAll('[data-theme-action]').forEach((button) => {
             button.addEventListener('click', async () => {
                 if (!toast || button.disabled) return;

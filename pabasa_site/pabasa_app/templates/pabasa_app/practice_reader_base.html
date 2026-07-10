@@ -4049,6 +4049,20 @@
             .hunt-map-dot:nth-of-type(3) { left: 36%; }
             .hunt-map-dot:nth-of-type(5) { left: 57%; }
         }
+        .reading-help-btn { align-items:center; background:#fff; border:1px solid #cbdedc; border-radius:999px; box-shadow:0 5px 16px rgba(28,67,68,.14); color:#126d68; display:inline-flex; font-size:.78rem; font-weight:900; gap:.4rem; padding:.55rem .8rem; position:fixed; right:1rem; top:1rem; z-index:100; }
+        .reading-help-btn:hover { background:#eaf8f6; transform:translateY(-1px); }
+        .reading-help-overlay { align-items:center; background:rgba(15,35,42,.58); display:flex; inset:0; justify-content:center; padding:1rem; position:fixed; z-index:2000; }
+        .reading-help-overlay[hidden] { display:none; }
+        .reading-help-card { background:#fff; border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,.25); color:#29464c; max-width:430px; padding:1.25rem; width:100%; }
+        .reading-help-head { align-items:center; display:flex; justify-content:space-between; margin-bottom:.8rem; }
+        .reading-help-head h2 { font-size:1.2rem; font-weight:900; margin:0; }
+        .reading-help-close { align-items:center; background:#eef5f4; border:0; border-radius:50%; color:#365c60; display:flex; height:34px; justify-content:center; width:34px; }
+        .reading-help-steps { display:grid; gap:.65rem; }
+        .reading-help-step { align-items:flex-start; background:#f5faf9; border-radius:11px; display:flex; gap:.7rem; padding:.7rem; }
+        .reading-help-step i { color:#147c75; font-size:1.1rem; }
+        .reading-help-step strong, .reading-help-step span { display:block; }
+        .reading-help-step span { color:#64777a; font-size:.8rem; margin-top:.1rem; }
+        @media (max-width:700px) { .reading-help-btn { font-size:0; padding:.55rem; right:.6rem; top:.6rem; } .reading-help-btn i { font-size:1rem; } }
     </style>
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
@@ -4078,6 +4092,17 @@
         })();
     </script>
     <main class="practice-shell{% if request.GET.game == 'free' %} practice-scrolls-shell{% elif request.GET.game == 'hunt' %} practice-hunt-shell{% else %} {% block mode_class %}{% endblock %}{% endif %}" data-practice-mode="{% block data_mode %}word{% endblock %}"{% if request.GET.game == 'free' %} data-free-mode="true"{% elif request.GET.game == 'hunt' %} data-hunt-mode="true" data-hunt-difficulty="{{ request.GET.difficulty|default:'easy' }}"{% endif %}>
+        <button class="reading-help-btn" id="practiceHelpBtn" type="button" aria-haspopup="dialog"><i class="bi bi-question-circle-fill"></i> Help</button>
+        <div class="reading-help-overlay" id="practiceHelpOverlay" role="dialog" aria-modal="true" aria-labelledby="practiceHelpTitle" hidden>
+            <section class="reading-help-card">
+                <div class="reading-help-head"><h2 id="practiceHelpTitle">How to practice reading</h2><button class="reading-help-close" id="practiceHelpClose" type="button" aria-label="Close help"><i class="bi bi-x-lg"></i></button></div>
+                <div class="reading-help-steps">
+                    <div class="reading-help-step"><i class="bi bi-eye-fill"></i><div><strong>Look at the text</strong><span>Take your time and read the word or passage carefully.</span></div></div>
+                    <div class="reading-help-step"><i class="bi bi-mic-fill"></i><div><strong>Read aloud</strong><span>Choose Read and speak clearly into your microphone.</span></div></div>
+                    <div class="reading-help-step"><i class="bi bi-arrow-right-circle-fill"></i><div><strong>Continue when ready</strong><span>Use Skip if needed, then choose Next to continue.</span></div></div>
+                </div>
+            </section>
+        </div>
         {% if request.GET.game == 'free' %}
         <div class="scrolls-desktop-stage">
             <div class="scrolls-phone-device">
@@ -4348,6 +4373,16 @@
         window.PABASA_USER_ROLE = "{{ nav_role }}";
         window.PABASA_COACH_VIDEO_BASE = "{% static 'pabasa_app/videos/' %}";
         window.PABASA_COLOR_MODE_ASSET_BASE = "{% static 'pabasa_app/color_mode/' %}";
+        (() => {
+            const button = document.getElementById('practiceHelpBtn');
+            const overlay = document.getElementById('practiceHelpOverlay');
+            const close = document.getElementById('practiceHelpClose');
+            const hide = () => { overlay.hidden = true; button.focus(); };
+            button?.addEventListener('click', () => { overlay.hidden = false; close?.focus(); });
+            close?.addEventListener('click', hide);
+            overlay?.addEventListener('click', (event) => { if (event.target === overlay) hide(); });
+            document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && overlay && !overlay.hidden) hide(); });
+        })();
     </script>
     {% csrf_token %}
     {{ practice_materials|json_script:"practiceMaterialsData" }}

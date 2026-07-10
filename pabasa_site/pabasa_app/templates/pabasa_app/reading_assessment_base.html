@@ -1298,7 +1298,21 @@
         body.dark-theme .completion-mark {
             color: var(--sun) !important;
         }
-    </style>
+        .assessment-help-overlay { align-items:center; background:rgba(15,35,42,.6); display:flex; inset:0; justify-content:center; padding:1rem; position:fixed; z-index:3000; }
+        .assessment-help-overlay.d-none { display:none; }
+        .assessment-help-card { background:#fff; border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,.26); color:#29464c; max-width:430px; padding:1.25rem; width:100%; }
+        .assessment-help-head { align-items:center; display:flex; justify-content:space-between; margin-bottom:.8rem; }
+        .assessment-help-head h2 { font-size:1.2rem; font-weight:900; margin:0; }
+        .assessment-help-close { align-items:center; background:#eef5f4; border:0; border-radius:50%; color:#365c60; display:flex; height:34px; justify-content:center; width:34px; }
+        .assessment-help-steps { display:grid; gap:.65rem; }
+        .assessment-help-step { align-items:flex-start; background:#f5faf9; border-radius:11px; display:flex; gap:.7rem; padding:.7rem; }
+        .assessment-help-step i { color:#147c75; font-size:1.1rem; }
+        .assessment-help-step strong, .assessment-help-step span { display:block; }
+        .assessment-help-step span { color:#64777a; font-size:.8rem; margin-top:.1rem; }
+        body.dark-theme .assessment-help-card { background:#172335; color:#edf5f4; }
+        body.dark-theme .assessment-help-step { background:#223146; }
+        body.dark-theme .assessment-help-step span { color:#b7c5ca; }
+</style>
 </head>
 <body>
     <script>
@@ -1339,6 +1353,9 @@
                 <div class="progress-head">
                     <div class="counter" id="counter">{% block counter_text %}Item 1/10{% endblock %}</div>
                     <div class="header-actions">
+                        <button id="assessmentHelpBtn" class="header-action-btn" type="button" title="Reading Help" aria-label="Open reading help" aria-haspopup="dialog">
+                            <i class="bi bi-question-circle-fill"></i>
+                        </button>
                         <button id="btnToggleMic" class="header-action-btn" title="Toggle Microphone">
                             <i class="bi bi-mic-fill"></i>
                         </button>
@@ -1353,6 +1370,17 @@
                 </div>
             </div>
         </header>
+
+        <div class="assessment-help-overlay d-none" id="assessmentHelpOverlay" role="dialog" aria-modal="true" aria-labelledby="assessmentHelpTitle">
+            <section class="assessment-help-card">
+                <div class="assessment-help-head"><h2 id="assessmentHelpTitle">Reading assessment help</h2><button class="assessment-help-close" id="assessmentHelpClose" type="button" aria-label="Close help"><i class="bi bi-x-lg"></i></button></div>
+                <div class="assessment-help-steps">
+                    <div class="assessment-help-step"><i class="bi bi-play-circle-fill"></i><div><strong>Start when ready</strong><span>Choose Start Reading and wait for the reader to begin.</span></div></div>
+                    <div class="assessment-help-step"><i class="bi bi-mic-fill"></i><div><strong>Speak clearly</strong><span>Read the text aloud at a comfortable pace and normal volume.</span></div></div>
+                    <div class="assessment-help-step"><i class="bi bi-arrow-left-right"></i><div><strong>Move through the set</strong><span>Use Back or Next to review the reading items.</span></div></div>
+                </div>
+            </section>
+        </div>
 
         <section class="reader-stage">
             <article class="reader-card {% block content_class %}{% endblock %}" data-level="{% block watermark %}read{% endblock %}">
@@ -1466,6 +1494,16 @@
     <script>
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
+        (() => {
+            const button = document.getElementById('assessmentHelpBtn');
+            const overlay = document.getElementById('assessmentHelpOverlay');
+            const close = document.getElementById('assessmentHelpClose');
+            const hide = () => { overlay.classList.add('d-none'); button.focus(); };
+            button?.addEventListener('click', () => { overlay.classList.remove('d-none'); close?.focus(); });
+            close?.addEventListener('click', hide);
+            overlay?.addEventListener('click', (event) => { if (event.target === overlay) hide(); });
+            document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !overlay?.classList.contains('d-none')) hide(); });
+        })();
     </script>
     {% csrf_token %}
     {% block script %}{% endblock %}
