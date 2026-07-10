@@ -26,14 +26,32 @@
     .progression-hero-status { color: #0f766e; font-size: 0.95rem; font-weight: 700; }
     .progression-difficulty-group { display: grid; gap: 0.8rem; }
     .difficulty-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
-    .difficulty-header .difficulty-badge { background: linear-gradient(135deg, rgba(31,111,139,0.14), rgba(31,111,139,0.08)); border: 1px solid rgba(31,111,139,0.2); border-radius: 999px; color: var(--dash-primary); font-size: 0.76rem; font-weight: 800; padding: 0.4rem 0.75rem; box-shadow: 0 2px 6px rgba(31,111,139,0.08), inset 0 1px 0 rgba(255,255,255,0.3); transition: all 0.3s ease; letter-spacing: 0.02em; }
+    .difficulty-header .difficulty-badge {
+        background: linear-gradient(135deg, rgba(31,111,139,0.14), rgba(31,111,139,0.08));
+        border: 1px solid rgba(31,111,139,0.2);
+        border-radius: 999px;
+        color: var(--dash-primary);
+        font-size: clamp(0.86rem, 1.1vw, 1rem);
+        font-weight: 900;
+        line-height: 1;
+        min-height: 2.35rem;
+        padding: 0.55rem 1rem;
+        box-shadow: 0 2px 6px rgba(31,111,139,0.08), inset 0 1px 0 rgba(255,255,255,0.3);
+        transition: all 0.3s ease;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+    }
+    .difficulty-header .difficulty-badge.is-locked { background: linear-gradient(135deg, #e2e8f0, #cbd5e1); border-color: #cbd5e1; color: #475569; }
+    .difficulty-header .difficulty-badge.is-unlocked { background: linear-gradient(135deg, rgba(59,130,246,0.14), rgba(59,130,246,0.08)); border-color: rgba(59,130,246,0.24); color: #1d4ed8; }
+    .difficulty-header .difficulty-badge.is-ongoing { background: linear-gradient(135deg, rgba(251,191,36,0.22), rgba(251,191,36,0.12)); border-color: rgba(245,158,11,0.28); color: #b45309; }
+    .difficulty-header .difficulty-badge.is-completed { background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.1)); border-color: rgba(16,185,129,0.28); color: #047857; }
     .difficulty-header .difficulty-badge:hover { background: linear-gradient(135deg, rgba(31,111,139,0.2), rgba(31,111,139,0.12)); border-color: rgba(31,111,139,0.3); }
     .level-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .level-card { display: grid; gap: 0.6rem; border: 1.5px solid rgba(31,111,139,0.14); border-radius: 22px; padding: 1rem 1.05rem; background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,251,255,0.94)); box-shadow: 0 4px 12px rgba(31,111,139,0.06), inset 0 1px 0 rgba(255,255,255,0.4); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }\n    .level-card.is-locked { background: linear-gradient(135deg, #e8eef5, #e0e9f0); border-color: #c9d5e3; box-shadow: 0 2px 6px rgba(59,130,246,0.06), inset 0 1px 0 rgba(255,255,255,0.3); color: #64748b; }"}
     .level-card.is-completed { border-color: rgba(16,185,129,0.32); box-shadow: 0 4px 12px rgba(16,185,129,0.1), inset 0 1px 0 rgba(255,255,255,0.4); }
     .level-card:hover { border-color: rgba(31,111,139,0.24); box-shadow: 0 6px 16px rgba(31,111,139,0.1), inset 0 1px 0 rgba(255,255,255,0.4); transform: translateY(-2px); }
     .level-card .level-title-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-    .level-status { font-size: 0.82rem; font-weight: 700; }
+    .level-status { font-size: 0.9rem; font-weight: 800; }
     .level-status.is-unlocked { color: #0f766e; }
     .level-status.is-completed { color: #047857; }
     .level-status.is-locked { color: #b45309; }
@@ -539,7 +557,7 @@
                                     <div class="small text-muted">{{ level.title }}</div>
                                 </div>
                                 <span class="level-status {% if level.state == 'completed' %}is-completed{% elif level.state == 'unlocked' %}is-unlocked{% elif level.state == 'content_unavailable' %}is-unavailable{% else %}is-locked{% endif %}">
-                                    {% if level.state == 'completed' %}Completed{% elif level.state == 'unlocked' %}Unlocked{% elif level.state == 'content_unavailable' %}Content unavailable{% else %}Locked{% endif %}
+                                    {% if level.state == 'completed' %}Finished!{% elif level.state == 'unlocked' %}Unlocked{% elif level.state == 'content_unavailable' %}Content unavailable{% else %}Locked{% endif %}
                                 </span>
                             </div>
                             <div class="small text-muted">{{ level.difficulty_label }}</div>
@@ -726,6 +744,43 @@
                             : unlocked
                             ? '<i class="bi bi-play-fill"></i> Play Level'
                             : '<i class="bi bi-lock-fill"></i> Locked';
+                }
+            });
+
+            document.querySelectorAll('.progression-difficulty-group').forEach((group) => {
+                const difficultyBadge = group.querySelector('.difficulty-badge');
+                const levelStatusEls = Array.from(group.querySelectorAll('.level-status'));
+                const states = levelStatusEls.map((el) => {
+                    if (el.classList.contains('is-completed')) return 'completed';
+                    if (el.classList.contains('is-unlocked')) return 'ongoing';
+                    if (el.classList.contains('is-locked')) return 'locked';
+                    if (el.classList.contains('is-unavailable')) return 'unavailable';
+                    return 'locked';
+                });
+                const hasCompleted = states.includes('completed');
+                const hasOngoing = states.includes('ongoing');
+                const hasUnlocked = levelStatusEls.some((el) => el.classList.contains('is-unlocked'));
+                const allLocked = states.every((state) => state === 'locked' || state === 'unavailable');
+
+                let label = 'Locked';
+                let className = 'is-locked';
+                if (hasCompleted && !hasOngoing) {
+                    label = 'Finished!';
+                    className = 'is-completed';
+                } else if (hasOngoing) {
+                    label = 'On-going';
+                    className = 'is-ongoing';
+                } else if (hasUnlocked) {
+                    label = 'Unlocked';
+                    className = 'is-unlocked';
+                } else if (!allLocked) {
+                    label = 'Unlocked';
+                    className = 'is-unlocked';
+                }
+
+                if (difficultyBadge) {
+                    difficultyBadge.textContent = label;
+                    difficultyBadge.className = `difficulty-badge ${className}`;
                 }
             });
         };

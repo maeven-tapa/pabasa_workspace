@@ -813,6 +813,15 @@
             };
         };
 
+        const getModeStateLabel = (summary, isUnlocked) => {
+            const completedLevels = Number(summary?.completed_levels || 0) || 0;
+            const totalLevels = Number(summary?.total_levels || 15) || 15;
+            if (!isUnlocked) return "Locked";
+            if (completedLevels >= totalLevels) return "Finished!";
+            if (completedLevels > 0) return "On-going";
+            return "Unlocked";
+        };
+
         const renderGameHub = () => {
             const grid = document.getElementById("gameGrid");
             if (!grid) return;
@@ -880,7 +889,7 @@
                 const href = `/dashboard/practice/progression/${mode.key}/`;
                 const unlockAt = Number(mode.unlockAt || 0) || 0;
                 const isModeOpen = aggregateStars >= unlockAt;
-                const stateText = isModeOpen ? (isCompleted ? "Completed" : "Ready to play") : "Locked";
+                const stateText = getModeStateLabel(progressionSummary, isModeOpen);
                 const cardClass = isModeOpen ? "game-card is-active" : "game-card is-locked";
                 const lockMarkup = `
                     <span class="unlock-requirement" aria-label="Unlock at ${unlockAt} Stars">
