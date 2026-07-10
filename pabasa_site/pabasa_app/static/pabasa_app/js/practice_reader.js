@@ -10,6 +10,8 @@
     let incorrectResponses = 0;
     let itemOutcomes = [];
     let sessionStartedAt = Date.now();
+    let freeModeReadSteps = 0;
+    let freeModeSkipSteps = 0;
 
     const practiceText = document.getElementById("practiceText");
     const practiceCounter = document.getElementById("practiceCounter");
@@ -681,12 +683,20 @@
 
     function getCompletionMetrics() {
         const totalItems = items.reduce((total, item) => total + countWords(item), 0);
-        const totalReadWords = itemOutcomes.reduce((total, outcome, index) => {
+        const readItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "read" ? 1 : 0), 0);
+        const skippedItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "skipped" ? 1 : 0), 0);
+        const totalReadWordsRaw = itemOutcomes.reduce((total, outcome, index) => {
             return outcome === "read" ? total + getItemWordCount(index) : total;
         }, 0);
-        const totalSkippedWords = itemOutcomes.reduce((total, outcome, index) => {
+        const totalSkippedWordsRaw = itemOutcomes.reduce((total, outcome, index) => {
             return outcome === "skipped" ? total + getItemWordCount(index) : total;
         }, 0);
+        const totalReadWords = isFreeMode
+            ? Math.max(readItemCount, freeModeReadSteps)
+            : (totalReadWordsRaw > 0 ? totalReadWordsRaw : readItemCount);
+        const totalSkippedWords = isFreeMode
+            ? Math.max(skippedItemCount, freeModeSkipSteps)
+            : (totalSkippedWordsRaw > 0 ? totalSkippedWordsRaw : skippedItemCount);
         const totalAttempts = correctResponses + incorrectResponses;
         const accuracy = totalAttempts > 0 ? Math.round((correctResponses / totalAttempts) * 100) : 0;
         const score = totalAttempts > 0 ? accuracy : 0;
@@ -915,28 +925,55 @@
         }
     }
 
+    function advanceFreeModeFromKeyboard(options = {}) {
+        if (!items.length) return false;
+        const { countAsSkip = false, countAsRead = false } = options;
+
+        if (countAsSkip) {
+            freeModeSkipSteps += 1;
+            setCurrentItemOutcome("skipped");
+        } else if (countAsRead) {
+            freeModeReadSteps += 1;
+            setCurrentItemOutcome("read");
+        }
+
+        if (scrollCurrentIndex >= items.length - 1) {
+            persistFreeModeCardProgress(scrollCurrentIndex);
+            completeFreeModeLevel();
+            return true;
+        }
+
+        goToFreeModeCard(scrollCurrentIndex + 1, { countAsSkip });
+        return true;
+    }
+
     function handleFreeModeKeyboard(event) {
         if (!isFreeMode || !items.length) return false;
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return false;
 
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            advanceFreeModeFromKeyboard({ countAsRead: true });
+            return true;
+        }
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            advanceFreeModeFromKeyboard({ countAsSkip: true });
+            return true;
+        }
+
         const isSpace = event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
         if (isSpace) {
             event.preventDefault();
-            if (!lockFreeModeGesture()) return true;
-            if (scrollCurrentIndex >= items.length - 1) {
-                persistFreeModeCardProgress(scrollCurrentIndex);
-                completeFreeModeLevel();
-                return true;
-            }
-            goToFreeModeCard(scrollCurrentIndex + 1, { countAsSkip: true });
+            advanceFreeModeFromKeyboard({ countAsRead: true });
             return true;
         }
 
         if (event.key === 'Escape') {
             event.preventDefault();
-            if (!lockFreeModeGesture()) return true;
-            goToFreeModeCard(scrollCurrentIndex + 1, { countAsSkip: true });
+            advanceFreeModeFromKeyboard({ countAsSkip: true });
             return true;
         }
 
@@ -979,6 +1016,8 @@
         const currentItem = items[scrollCurrentIndex];
         if (!currentItem) return false;
 
+        freeModeReadSteps += 1;
+        setCurrentItemOutcome("read");
         if (scrollsFeedback) {
             scrollsFeedback.textContent = 'Nice work. Keep going to the next card.';
         }
@@ -1198,6 +1237,8 @@
         itemOutcomes = Array(items.length).fill(null);
         sessionStartedAt = Date.now();
         completionSubmitted = false;
+        freeModeReadSteps = 0;
+        freeModeSkipSteps = 0;
         colorModeCompletionReady = false;
         colorNewStarsToCommit = null;
         colorStarsCommitted = false;
