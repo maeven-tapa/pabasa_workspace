@@ -356,6 +356,74 @@
         return false;
     }
 
+    function advanceHuntModeFromKeyboard(options = {}) {
+        if (!items.length) return false;
+        const { countAsSkip = false, countAsRead = false } = options;
+
+        if (countAsSkip) {
+            setCurrentItemOutcome("skipped");
+            practiceFeedback.textContent = "Skipped. Keep chasing the treasure!";
+            practiceFeedback.classList.remove("is-success");
+            practiceFeedback.classList.add("is-warning");
+            playCoachAnimation('skip');
+        } else if (countAsRead) {
+            setCurrentItemOutcome("read");
+            practiceFeedback.textContent = "Nice reading. Keep flying forward!";
+            practiceFeedback.classList.remove("is-warning");
+            practiceFeedback.classList.add("is-success");
+            playCoachAnimation('read');
+        }
+
+        updateCompletionSummary();
+
+        if (currentIndex >= items.length - 1) {
+            completeHuntModeLevel();
+            return true;
+        }
+
+        currentIndex += 1;
+        practiceFeedback.textContent = countAsSkip
+            ? "Skipped. Keep chasing the treasure!"
+            : "New item ready. Take your time.";
+        practiceFeedback.classList.remove("is-success", "is-warning");
+        playCoachAnimation('next');
+        render();
+        return true;
+    }
+
+    function handleHuntModeKeyboard(event) {
+        if (!isHuntMode || !items.length) return false;
+        const activeElement = document.activeElement;
+        if (isInteractiveElement(activeElement)) return false;
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            advanceHuntModeFromKeyboard({ countAsRead: true });
+            return true;
+        }
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            advanceHuntModeFromKeyboard({ countAsSkip: true });
+            return true;
+        }
+
+        const isSpace = event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
+        if (isSpace) {
+            event.preventDefault();
+            advanceHuntModeFromKeyboard({ countAsRead: true });
+            return true;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            advanceHuntModeFromKeyboard({ countAsSkip: true });
+            return true;
+        }
+
+        return false;
+    }
+
     function revealNextColorObject() {
         if (!isColorMode || !colorScene) return false;
         const config = getColorSceneConfig();
@@ -1433,6 +1501,7 @@
     document.addEventListener("keydown", function (event) {
         if (event.defaultPrevented) return;
         if (handleColorModeKeyboard(event)) return;
+        if (handleHuntModeKeyboard(event)) return;
         if (handleFreeModeKeyboard(event)) return;
 
         const activeElement = document.activeElement;
@@ -1456,7 +1525,7 @@
     });
 
     document.addEventListener("wheel", function (event) {
-        if (!isColorMode && !isFreeMode) return;
+        if (!isColorMode && !isFreeMode && !isHuntMode) return;
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return;
         event.preventDefault();
