@@ -7317,6 +7317,17 @@ def _resolve_tesseract_executable(pytesseract_module):
     return None
 
 
+# Log Tesseract resolution once during server startup or first module import.
+try:
+    _startup_tesseract_path = _resolve_tesseract_executable(globals().get('pytesseract'))
+    if _startup_tesseract_path:
+        logger.info('Tesseract startup resolved: %s', _startup_tesseract_path)
+    else:
+        logger.warning('Tesseract startup resolution failed; PATH=%s', os.environ.get('PATH', ''))
+except Exception as exc:
+    logger.exception('Failed to resolve Tesseract at startup: %s', exc)
+
+
 def _looks_like_ocr_text(text):
     if not text:
         return False
