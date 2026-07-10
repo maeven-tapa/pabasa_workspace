@@ -152,6 +152,10 @@
         }
     }
 
+    function toggleFreeModeBodyLock(enabled) {
+        document.body.classList.toggle("practice-free-mode", Boolean(enabled));
+    }
+
     function savePracticeProgressState(progressState) {
         localStorage.setItem(practiceProgressStorageKey, JSON.stringify(progressState));
         window.dispatchEvent(new CustomEvent("pabasa:practice-progress-updated", { detail: progressState }));
@@ -623,8 +627,10 @@
             itemOutcomes = Array(items.length).fill(null);
             setupColorModeScene();
             if (isFreeMode) {
+                toggleFreeModeBodyLock(true);
                 renderFreeMode();
             } else {
+                toggleFreeModeBodyLock(false);
                 render();
             }
             setCoachAnimationSource(initialCoachAnimation);
@@ -639,6 +645,7 @@
         if (practiceCounter) practiceCounter.textContent = "No items";
         if (practiceProgress) practiceProgress.style.width = "0%";
         if (nextBtn) nextBtn.disabled = true;
+        toggleFreeModeBodyLock(isFreeMode);
         setCoachAnimationSource(initialCoachAnimation);
     }
 
@@ -660,6 +667,16 @@
         correctResponses = itemOutcomes.filter((outcome) => outcome === "read").length;
         incorrectResponses = itemOutcomes.filter((outcome) => outcome === "skipped").length;
         starsEarned = correctResponses * 10;
+    }
+
+    function recordFreeModeSkip(currentCardIndex = scrollCurrentIndex) {
+        if (!Number.isInteger(currentCardIndex) || currentCardIndex < 0 || currentCardIndex >= items.length) return;
+        if (itemOutcomes[currentCardIndex] !== "skipped") {
+            itemOutcomes[currentCardIndex] = "skipped";
+            incorrectResponses = itemOutcomes.filter((outcome) => outcome === "skipped").length;
+            correctResponses = itemOutcomes.filter((outcome) => outcome === "read").length;
+            starsEarned = correctResponses * 10;
+        }
     }
 
     function getCompletionMetrics() {
@@ -797,9 +814,16 @@
         const levelEntry = ensureLevelProgressEntry(getPracticeProgressState(), currentLevelContext.mode, currentLevelContext.difficulty, currentLevelContext.level);
         const completedCards = Array.isArray(levelEntry.completed_cards) ? levelEntry.completed_cards.length : 0;
         const currentCardIsComplete = Array.isArray(levelEntry.completed_cards) && levelEntry.completed_cards.includes(current);
+        const isFinalCard = current === items.length - 1;
 
         if (scrollsProgressBarFill) scrollsProgressBarFill.style.width = `${progressPercent}%`;
-        if (scrollsProgressMeta) scrollsProgressMeta.textContent = levelEntry.completed ? 'Level complete! The next challenge is unlocked.' : current === items.length - 1 ? 'You reached the end of this level' : 'Swipe up for the next challenge';
+        if (scrollsProgressMeta) {
+            scrollsProgressMeta.textContent = levelEntry.completed
+                ? 'Level complete! The next challenge is unlocked.'
+                : isFinalCard
+                    ? 'Swipe up to finish the challenge.'
+                    : 'Swipe up for the next challenge';
+        }
         if (scrollsAppTitle) scrollsAppTitle.textContent = titleText;
         if (scrollsDifficultyPill) scrollsDifficultyPill.textContent = difficultyLabelText || 'Easy';
         if (scrollsLevelPill) scrollsLevelPill.textContent = levelLabelText || 'Level 2';
@@ -860,35 +884,34 @@
         return showCompletion();
     }
 
-    function goToFreeModeCard(nextIndex) {
+    function goToFreeModeCard(nextIndex, options = {}) {
         if (!items.length) return false;
         const safeIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
         const movedForward = safeIndex > scrollCurrentIndex;
         if (movedForward) {
+            if (options.countAsSkip) {
+                recordFreeModeSkip(scrollCurrentIndex);
+            }
             persistFreeModeCardProgress(scrollCurrentIndex);
         }
 
         scrollCurrentIndex = safeIndex;
         if (scrollsTrack) scrollsTrack.style.transform = `translateY(-${scrollCurrentIndex * 100}%)`;
         updateFreeModeProgress();
-
-        if (scrollCurrentIndex >= items.length - 1) {
-            const finalEntry = persistFreeModeCardProgress(scrollCurrentIndex);
-            if (finalEntry?.completed || scrollCurrentIndex === items.length - 1) {
-                completeFreeModeLevel();
-                return true;
-            }
-        }
-
         return false;
     }
 
     function handleFreeModeSwipe(direction) {
         if (!items.length || !lockFreeModeGesture()) return;
         if (direction === 'up') {
+            if (scrollCurrentIndex >= items.length - 1) {
+                persistFreeModeCardProgress(scrollCurrentIndex);
+                completeFreeModeLevel();
+                return;
+            }
             goToFreeModeCard(scrollCurrentIndex + 1);
         } else if (direction === 'down') {
-            goToFreeModeCard(scrollCurrentIndex - 1);
+            goToFreeModeCard(scrollCurrentIndex + 1, { countAsSkip: true });
         }
     }
 
@@ -901,14 +924,19 @@
         if (isSpace) {
             event.preventDefault();
             if (!lockFreeModeGesture()) return true;
-            goToFreeModeCard(scrollCurrentIndex + 1);
+            if (scrollCurrentIndex >= items.length - 1) {
+                persistFreeModeCardProgress(scrollCurrentIndex);
+                completeFreeModeLevel();
+                return true;
+            }
+            goToFreeModeCard(scrollCurrentIndex + 1, { countAsSkip: true });
             return true;
         }
 
         if (event.key === 'Escape') {
             event.preventDefault();
             if (!lockFreeModeGesture()) return true;
-            goToFreeModeCard(scrollCurrentIndex + 1);
+            goToFreeModeCard(scrollCurrentIndex + 1, { countAsSkip: true });
             return true;
         }
 
@@ -962,10 +990,13 @@
         setFreeModeReadButton(true);
 
         window.setTimeout(() => {
-            const reachedEnd = goToFreeModeCard(scrollCurrentIndex + 1);
-            if (!reachedEnd) {
-                hideLevelCompleteOverlay();
+            if (scrollCurrentIndex >= items.length - 1) {
+                persistFreeModeCardProgress(scrollCurrentIndex);
+                completeFreeModeLevel();
+                return;
             }
+            goToFreeModeCard(scrollCurrentIndex + 1);
+            hideLevelCompleteOverlay();
         }, 320);
         return true;
     }
@@ -979,13 +1010,21 @@
             scrollTouchEndY = event.changedTouches[0]?.clientY || 0;
             const delta = scrollTouchEndY - scrollTouchStartY;
             if (Math.abs(delta) > 110) {
-                handleFreeModeSwipe(delta < 0 ? 'up' : 'down');
+                if (delta < 0) {
+                    handleFreeModeSwipe('up');
+                } else {
+                    handleFreeModeSwipe('down');
+                }
             }
         }, { passive: true });
         scrollsTrack.addEventListener('wheel', (event) => {
             if (Math.abs(event.deltaY) > 120) {
                 event.preventDefault();
-                handleFreeModeSwipe(event.deltaY > 0 ? 'up' : 'down');
+                if (event.deltaY > 0) {
+                    handleFreeModeSwipe('up');
+                } else {
+                    handleFreeModeSwipe('down');
+                }
             }
         }, { passive: false });
         scrollsTrack.addEventListener('click', (event) => {
@@ -1286,7 +1325,10 @@
     }
 
     if (isFreeMode) {
+        toggleFreeModeBodyLock(true);
         attachFreeModeInteractions();
+    } else {
+        toggleFreeModeBodyLock(false);
     }
 
     loadItems();

@@ -30,23 +30,30 @@
         body[data-student-theme="space"] { --sky: #7160d8; --sky-deep: #4338a8; --sky-soft: #eeecff; --sun: #c4b5fd; }
         body[data-student-theme="zoo"] { --sky: #6b8e23; --sky-deep: #3f6212; --sky-soft: #f0f6df; --sun: #f5cc65; }
         body[data-student-theme="library"] { --sky: #9a4dcc; --sky-deep: #6b21a8; --sky-soft: #f7eafd; --sun: #f0abfc; }
+        body.practice-free-mode {
+            height: 100dvh;
+            overflow: hidden;
+        }
 
         .practice-scrolls-shell {
             align-items: center;
-            display: grid;
+            display: flex;
             justify-items: center;
+            justify-content: center;
             margin: 0 auto;
-            max-width: min(100%, 1800px);
+            max-width: 100%;
             min-height: 100dvh;
-            padding: clamp(0.8rem, 2vw, 1.5rem);
-            width: min(100%, 1800px);
+            padding: clamp(0.35rem, 0.9vw, 0.9rem);
+            width: 100%;
         }
 
         .scrolls-desktop-stage {
-            display: grid;
-            justify-items: center;
+            align-items: center;
+            display: flex;
+            justify-content: center;
             margin-inline: auto;
-            width: min(100%, 100%);
+            min-height: 100dvh;
+            width: min(100%, 1560px);
         }
 
         .scrolls-phone-device {
@@ -58,16 +65,16 @@
             box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -12px 24px rgba(0,0,0,0.34);
             display: flex;
             flex-direction: column;
-            gap: clamp(0.5rem, 1.1vw, 0.7rem);
+            gap: clamp(0.35rem, 0.8vw, 0.55rem);
             justify-self: center;
-            min-height: min(100dvh - 2rem, 56rem);
-            max-height: min(90dvh, 56rem);
-            max-width: min(100%, 48rem);
+            min-height: min(100dvh - 1rem, 54rem);
+            max-height: min(92dvh, 54rem);
+            max-width: min(100%, 45rem);
             min-width: 0;
             overflow: hidden;
-            padding: clamp(0.7rem, 1.6vw, 1rem) clamp(0.6rem, 1.4vw, 0.85rem) clamp(0.75rem, 1.6vw, 1rem);
+            padding: clamp(0.55rem, 1.1vw, 0.8rem) clamp(0.5rem, 1vw, 0.7rem) clamp(0.55rem, 1.1vw, 0.8rem);
             position: relative;
-            width: min(100%, clamp(18rem, 76vw, 40rem));
+            width: min(100%, clamp(18rem, 72vw, 39rem));
         }
 
         .scrolls-phone-device::before {
@@ -608,16 +615,15 @@
 
         @media (min-width: 1024px) {
             .practice-scrolls-shell {
-                display: flex;
                 align-items: center;
                 justify-content: center;
                 min-height: 100dvh;
-                padding: clamp(0.75rem, 2vh, 1.75rem) clamp(1rem, 3vw, 3rem);
+                padding: clamp(0.35rem, 0.8vh, 0.8rem) clamp(0.75rem, 1.8vw, 1.8rem);
             }
 
             .scrolls-desktop-stage {
                 margin-inline: auto;
-                width: min(100%, 1800px);
+                width: min(100%, 1520px);
             }
 
             .scrolls-phone-device {
@@ -632,11 +638,11 @@
                     0 34px 90px rgba(15, 23, 42, 0.3),
                     inset 0 1px 0 rgba(255,255,255,0.25),
                     inset 0 -12px 24px rgba(0,0,0,0.26);
-                height: min(84dvh, 980px);
-                max-height: 980px;
-                max-width: min(96vw, 1800px);
+                height: min(86dvh, 880px);
+                max-height: 880px;
+                max-width: min(90vw, 1520px);
                 min-height: 0;
-                padding: clamp(0.8rem, 1.15vw, 1.25rem);
+                padding: clamp(0.6rem, 0.85vw, 0.95rem);
                 width: auto;
             }
 
@@ -662,10 +668,10 @@
                 border: 0;
                 border-radius: clamp(17px, 2vw, 27px);
                 flex: 1 1 auto;
-                gap: clamp(0.75rem, 1vw, 1.15rem);
+                gap: clamp(0.55rem, 0.85vw, 0.9rem);
                 height: 100%;
                 min-height: 0;
-                padding: clamp(1rem, 1.4vw, 1.7rem);
+                padding: clamp(0.75rem, 1.05vw, 1.3rem);
             }
 
             .scrolls-level-overlay {
@@ -699,8 +705,8 @@
 
             .scrolls-phone-header {
                 border-radius: clamp(18px, 1.7vw, 26px);
-                gap: clamp(0.8rem, 1.2vw, 1.25rem);
-                padding: clamp(0.8rem, 1vw, 1.15rem) clamp(1rem, 1.5vw, 1.65rem);
+                gap: clamp(0.55rem, 0.95vw, 0.95rem);
+                padding: clamp(0.6rem, 0.85vw, 0.95rem) clamp(0.85rem, 1.15vw, 1.3rem);
             }
 
             .scrolls-phone-header .back-link {
@@ -738,44 +744,44 @@
 
             .scrolls-card {
                 flex: 0 0 100%;
-                gap: clamp(1rem, 1.7vw, 1.6rem);
+                gap: clamp(0.75rem, 1.2vw, 1.2rem);
                 justify-content: center;
                 min-height: 0;
                 overflow: hidden;
-                padding: clamp(1.2rem, 2.4vw, 2.6rem);
+                padding: clamp(0.9rem, 1.6vw, 1.8rem);
             }
 
             .scrolls-card-text {
-                font-size: clamp(3.2rem, 5.4vw, 7rem);
-                max-width: min(100%, 68rem);
+                font-size: clamp(2.8rem, 4.9vw, 6rem);
+                max-width: min(100%, 62rem);
             }
 
             .scrolls-card-note {
-                font-size: clamp(1rem, 1.25vw, 1.3rem);
+                font-size: clamp(0.92rem, 1.05vw, 1.15rem);
             }
 
             .scrolls-hint,
             .scrolls-progress-meta {
-                font-size: clamp(0.9rem, 1vw, 1.08rem);
+                font-size: clamp(0.85rem, 0.95vw, 1rem);
             }
 
             .scrolls-feedback {
-                font-size: clamp(1rem, 1.15vw, 1.25rem);
+                font-size: clamp(0.92rem, 1.05vw, 1.1rem);
             }
 
             .scrolls-record-btn {
-                font-size: clamp(1rem, 1.18vw, 1.25rem);
-                min-height: clamp(3.25rem, 3.6vw, 4.25rem);
-                padding: clamp(0.8rem, 1vw, 1rem) clamp(1.25rem, 1.6vw, 1.8rem);
+                font-size: clamp(0.95rem, 1.05vw, 1.15rem);
+                min-height: clamp(2.9rem, 3.2vw, 3.7rem);
+                padding: clamp(0.65rem, 0.85vw, 0.9rem) clamp(1rem, 1.3vw, 1.5rem);
             }
 
             .scrolls-progress-bar {
-                height: 12px;
+                height: 10px;
             }
 
             .scrolls-dots span {
-                height: 10px;
-                width: 10px;
+                height: 8px;
+                width: 8px;
             }
         }
 
