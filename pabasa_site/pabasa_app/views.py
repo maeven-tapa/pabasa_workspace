@@ -7289,6 +7289,20 @@ def _resolve_tesseract_executable(pytesseract_module):
     except Exception:
         pass
 
+    try:
+        resolved_exe = shutil.which('tesseract.exe')
+        if resolved_exe:
+            candidates.append(resolved_exe)
+    except Exception:
+        pass
+
+    try:
+        resolved_ocr_exe = shutil.which('tesseract-ocr.exe')
+        if resolved_ocr_exe:
+            candidates.append(resolved_ocr_exe)
+    except Exception:
+        pass
+
     for candidate in [
         r'C:\Program Files\Tesseract-OCR\tesseract.exe',
         r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
@@ -7322,6 +7336,11 @@ try:
     _startup_tesseract_path = _resolve_tesseract_executable(globals().get('pytesseract'))
     if _startup_tesseract_path:
         logger.info('Tesseract startup resolved: %s', _startup_tesseract_path)
+        try:
+            import pytesseract as _pyt
+            _pyt.pytesseract.tesseract_cmd = _startup_tesseract_path
+        except Exception:
+            pass
     else:
         logger.warning('Tesseract startup resolution failed; PATH=%s', os.environ.get('PATH', ''))
 except Exception as exc:
