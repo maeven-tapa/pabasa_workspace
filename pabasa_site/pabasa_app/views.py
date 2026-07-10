@@ -7262,6 +7262,11 @@ def _resolve_tesseract_executable(pytesseract_module):
         expanded = os.path.expandvars(os.path.expanduser(entry))
         if not expanded:
             continue
+        if os.path.isfile(expanded):
+            basename = os.path.basename(expanded).lower()
+            if basename in {'tesseract', 'tesseract.exe', 'tesseract-ocr', 'tesseract-ocr.exe'} and expanded not in candidates:
+                candidates.append(expanded)
+            continue
         for candidate_name in ('tesseract', 'tesseract.exe', 'tesseract-ocr', 'tesseract-ocr.exe'):
             candidate_path = os.path.join(expanded, candidate_name)
             if candidate_path and candidate_path not in candidates:
