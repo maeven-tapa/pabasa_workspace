@@ -1303,6 +1303,36 @@
             color: var(--admin-primary-deep);
         }
 
+        .modal {
+            position: fixed;
+            inset: 0;
+        }
+
+        .modal-dialog {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100% - 1rem);
+            margin: 0.5rem auto;
+        }
+
+        .modal-dialog-scrollable {
+            height: calc(100% - 1rem);
+        }
+
+        .modal-dialog-scrollable .modal-content {
+            max-height: 100%;
+        }
+
+        .modal-dialog-scrollable .modal-body {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .modal-content {
+            max-width: 100%;
+        }
+
         .btn:disabled,
         .btn.disabled {
             opacity: 0.65;
@@ -2033,6 +2063,16 @@
             function ensureModalBackdrop() {
                 scheduleModalCleanup();
             }
+
+            document.addEventListener('show.bs.modal', function(event) {
+                const modal = event.target;
+                if (!(modal instanceof HTMLElement)) return;
+
+                const shouldReparent = modal.parentElement !== document.body || modal.closest('.admin-sidebar, .admin-main, .admin-content, .offcanvas, .table-responsive, .panel, .card');
+                if (shouldReparent) {
+                    document.body.appendChild(modal);
+                }
+            });
 
             document.addEventListener('show.bs.modal', removeModalBackdrops);
             document.addEventListener('shown.bs.modal', dedupeModalBackdrops);

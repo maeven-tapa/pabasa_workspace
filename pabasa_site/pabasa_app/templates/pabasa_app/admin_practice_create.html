@@ -206,7 +206,7 @@
 
     function parseItems(value) {
         if (!value) return [];
-        return value.split(/\n|,/).map(item => item.trim()).filter(Boolean);
+        return value.split(/\n+/).map(item => item.trim()).filter(Boolean);
     }
 
     function getSelectedItems() {
@@ -355,7 +355,7 @@
             itemsTextarea.value = '';
             if (selected === 'medium') {
                 helperLabel.textContent = 'Medium difficulty';
-                helperText.textContent = 'Enter one complete sentence per item.';
+                helperText.textContent = 'Enter one complete sentence per line. Commas stay inside the sentence.';
                 itemsInput.placeholder = 'Type a sentence...';
             } else {
                 helperLabel.textContent = 'Easy difficulty';
@@ -408,9 +408,9 @@
 
     if (itemsInput) {
         itemsInput.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter' || event.key === ',') {
+            if (event.key === 'Enter') {
                 event.preventDefault();
-                const value = itemsInput.value.trim().replace(/,$/, '');
+                const value = itemsInput.value.trim();
                 if (!value) {
                     return;
                 }

@@ -2292,6 +2292,18 @@ class AdminPracticeMaterialFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('__all__', form.errors)
 
+    def test_medium_sentence_keeps_commas_inside_the_sentence(self):
+        form = AdminPracticeMaterialForm(data={
+            'mode': 'free',
+            'difficulty_level': 'medium',
+            'level': 'level_1',
+            'status': 'draft',
+            'content_text': 'The cat ran home, and it slept on the couch.',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.practice_items(), ['The cat ran home, and it slept on the couch.'])
+
     def test_occupied_levels_are_detected_for_a_configuration(self):
         Material.objects.create(
             title='Existing Practice',
