@@ -75,6 +75,14 @@
     const selectedProgressLevel = (urlParams.get("level") || "level_1").trim().toLowerCase();
     const isColorMode = selectedGameMode === "color";
     const isHuntMode = selectedGameMode === "hunt";
+    let speechRecorder = null;
+    let speechStream = null;
+    let speechChunks = [];
+    let speechStopTimer = null;
+    let speechActiveButton = null;
+    let speechOriginalButtonHtml = "";
+    let speechRequestActive = false;
+    const speechBypassButtons = new WeakSet();
     const huntFlightBird = document.getElementById("huntFlightBird");
     const huntProgressLabel = document.getElementById("huntProgressLabel");
     const huntDifficultyLabel = document.getElementById("huntDifficultyLabel");
@@ -126,6 +134,178 @@
             ],
         },
     });
+
+    function practiceCsrfToken() {
+        const inputToken = document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+        if (inputToken) return inputToken;
+        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : "";
+    }
+
+    function currentSpeechTarget() {
+        const index = isFreeMode ? scrollCurrentIndex : currentIndex;
+        return String(items[index] || "").trim();
+    }
+
+    function speechFeedback(message, success = false) {
+        const feedback = isFreeMode ? scrollsFeedback : practiceFeedback;
+        if (!feedback) return;
+        feedback.textContent = message;
+        feedback.classList.toggle("is-success", success);
+        feedback.classList.toggle("is-warning", !success);
+    }
+
+    function supportedPracticeAudioType() {
+        const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
+        return candidates.find(type => window.MediaRecorder?.isTypeSupported?.(type)) || "";
+    }
+
+    function restoreSpeechButton() {
+        if (speechActiveButton) {
+            speechActiveButton.disabled = false;
+            speechActiveButton.innerHTML = speechOriginalButtonHtml;
+            speechActiveButton.classList.remove("is-listening");
+        }
+        speechActiveButton = null;
+        speechOriginalButtonHtml = "";
+    }
+
+    function releaseSpeechStream() {
+        if (speechStopTimer) window.clearTimeout(speechStopTimer);
+        speechStopTimer = null;
+        speechStream?.getTracks?.().forEach(track => track.stop());
+        speechStream = null;
+        speechRecorder = null;
+    }
+
+    function completeRecognizedPracticeItem(button) {
+        if (isFreeMode) {
+            handleFreeModeReadAttempt();
+            return;
+        }
+        if (button) {
+            speechBypassButtons.add(button);
+            button.click();
+        }
+    }
+
+    async function submitPracticeSpeech(blob, targetText, button) {
+        speechRequestActive = true;
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Checking';
+        }
+        const formData = new FormData();
+        const extension = String(blob.type || "").includes("ogg") ? "ogg" : "webm";
+        formData.append("audio", blob, `practice-reading-${Date.now()}.${extension}`);
+        formData.append("target_text", targetText);
+        formData.append("current_syllable_index", "0");
+        formData.append("mode", mode);
+        const materialMeta = getActiveMaterialMeta?.() || {};
+        formData.append("language", materialMeta.language || materialMeta.language_context || document.documentElement.lang || "");
+
+        try {
+            const response = await fetch("/api/reading/transcribe/", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "X-CSRFToken": practiceCsrfToken() },
+                body: formData,
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.error || "Speech recognition failed.");
+
+            const transcript = String(data.transcript || "").trim();
+            if (data.complete) {
+                speechFeedback(transcript ? `Great reading! Heard: “${transcript}”` : "Great reading!", true);
+                restoreSpeechButton();
+                completeRecognizedPracticeItem(button);
+            } else {
+                const hint = data.next_word
+                    ? `Try again from “${data.next_word}”.${transcript ? ` Heard: “${transcript}”` : ""}`
+                    : transcript
+                        ? `Please try again. Heard: “${transcript}”`
+                        : "No speech was recognized. Please speak clearly and try again.";
+                speechFeedback(hint, false);
+                restoreSpeechButton();
+            }
+        } catch (error) {
+            console.warn("PABASA [Practice]: Speech-to-text failed", error);
+            speechFeedback(error.message || "Speech recognition is unavailable. Please try again.", false);
+            restoreSpeechButton();
+        } finally {
+            speechRequestActive = false;
+            releaseSpeechStream();
+        }
+    }
+
+    function stopPracticeSpeechRecording() {
+        if (!speechRecorder || speechRecorder.state === "inactive") return;
+        if (speechActiveButton) {
+            speechActiveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Processing';
+        }
+        speechRecorder.stop();
+    }
+
+    async function startPracticeSpeechRecording(button) {
+        const targetText = currentSpeechTarget();
+        if (!targetText || speechRequestActive) return;
+        if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+            speechFeedback("Speech recording is not supported in this browser.", false);
+            return;
+        }
+
+        try {
+            speechStream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            });
+            const mimeType = supportedPracticeAudioType();
+            speechChunks = [];
+            speechActiveButton = button;
+            speechOriginalButtonHtml = button.innerHTML;
+            button.classList.add("is-listening");
+            button.innerHTML = '<i class="bi bi-stop-circle-fill me-1"></i> Stop & check';
+            speechFeedback("Listening… Read the text aloud, then press Stop & check.", true);
+
+            speechRecorder = new MediaRecorder(speechStream, mimeType ? { mimeType } : undefined);
+            speechRecorder.addEventListener("dataavailable", event => {
+                if (event.data?.size) speechChunks.push(event.data);
+            });
+            speechRecorder.addEventListener("stop", () => {
+                const blob = new Blob(speechChunks, { type: speechRecorder?.mimeType || mimeType || "audio/webm" });
+                speechChunks = [];
+                if (!blob.size) {
+                    speechFeedback("No audio was captured. Please try again.", false);
+                    restoreSpeechButton();
+                    releaseSpeechStream();
+                    return;
+                }
+                submitPracticeSpeech(blob, targetText, button);
+            }, { once: true });
+            speechRecorder.start();
+            speechStopTimer = window.setTimeout(stopPracticeSpeechRecording, 8000);
+        } catch (error) {
+            console.warn("PABASA [Practice]: Microphone unavailable", error);
+            speechFeedback("Microphone access is required for speech checking.", false);
+            restoreSpeechButton();
+            releaseSpeechStream();
+        }
+    }
+
+    document.addEventListener("click", event => {
+        const button = event.target.closest("button#recordBtn, button.scrolls-record-btn");
+        if (!button || !shell.contains(button)) return;
+        if (speechBypassButtons.has(button)) {
+            speechBypassButtons.delete(button);
+            return;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (speechRecorder && speechRecorder.state === "recording") {
+            stopPracticeSpeechRecording();
+            return;
+        }
+        startPracticeSpeechRecording(button);
+    }, true);
     let colorRevealedCount = 0;
     let colorModeCompletionReady = false;
     let colorCompletionTimer = null;
