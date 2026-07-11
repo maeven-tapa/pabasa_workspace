@@ -50,6 +50,20 @@ On Debian/Ubuntu, install `tesseract-ocr`, `tesseract-ocr-eng`, and
 `tesseract-ocr-fil`. For container deployments, install these system packages in the
 container image.
 
+### DigitalOcean deployment
+
+**App Platform:** Pabasa includes a root `Dockerfile` that installs the native OCR
+engine and both language models. App Platform detects a root Dockerfile automatically.
+Redeploy the component after pushing it, and remove any custom Run Command so the
+Dockerfile `CMD` is used. No `TESSERACT_CMD` value is needed because the executable
+is on `PATH`. If you use an `ondigitalocean.app` hostname, add that hostname to the
+`ALLOWED_HOSTS` environment variable and its full HTTPS URL to
+`CSRF_TRUSTED_ORIGINS`.
+
+**Droplet:** If Pabasa runs directly on Ubuntu instead of in Docker, install the
+engine with `sudo apt update && sudo apt install tesseract-ocr tesseract-ocr-eng
+tesseract-ocr-fil`, then restart Gunicorn or the Pabasa systemd service.
+
 ## 📬 Contact
 For any inquiries about this repository, please contact any of the team members listed above.
 
