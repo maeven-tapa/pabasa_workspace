@@ -7622,27 +7622,51 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
         return {'text': '', 'layout': [], 'debug': debug}
 
     configured_command = (os.environ.get('TESSERACT_CMD') or '').strip()
-    if configured_command:
-        pytesseract.pytesseract.tesseract_cmd = configured_command
-    elif shutil.which('tesseract'):
-        pytesseract.pytesseract.tesseract_cmd = shutil.which('tesseract')
-    elif os.name == 'nt':
-        common_windows_command = Path(os.environ.get(
-            'ProgramFiles', r'C:\Program Files')) / 'Tesseract-OCR' / 'tesseract.exe'
-        if common_windows_command.exists():
-            pytesseract.pytesseract.tesseract_cmd = str(common_windows_command)
+    command_candidates = [configured_command, shutil.which('tesseract')]
+    if os.name == 'nt':
+        command_candidates.append(str(Path(os.environ.get(
+            'ProgramFiles', r'C:\Program Files')) / 'Tesseract-OCR' / 'tesseract.exe'))
     else:
-        digitalocean_commands = list(Path('/layers/digitalocean_apt/apt').glob(
-            '**/bin/tesseract'))
-        if digitalocean_commands:
-            pytesseract.pytesseract.tesseract_cmd = str(digitalocean_commands[0])
+        command_candidates.extend([
+            '/layers/digitalocean_apt/apt/usr/bin/tesseract',
+            '/layers/digitalocean_apt/apt/bin/tesseract',
+            '/workspace/.apt/usr/bin/tesseract',
+            '/app/.apt/usr/bin/tesseract',
+            '/usr/bin/tesseract',
+            '/usr/local/bin/tesseract',
+        ])
+        for search_root in ('/layers', '/workspace/.apt', '/app/.apt'):
+            root = Path(search_root)
+            if not root.exists():
+                continue
+            try:
+                command_candidates.extend(str(path) for path in root.rglob('tesseract'))
+            except OSError:
+                pass
 
-    tessdata_dir = (os.environ.get('OCR_TESSDATA_DIR') or '').strip()
-    if not tessdata_dir and os.name != 'nt':
-        digitalocean_tessdata = list(Path('/layers/digitalocean_apt/apt').glob(
-            'usr/share/tesseract-ocr/*/tessdata'))
-        if digitalocean_tessdata:
-            tessdata_dir = str(digitalocean_tessdata[0])
+    tesseract_command = next((candidate for candidate in command_candidates
+                              if candidate and Path(candidate).is_file()), '')
+    if tesseract_command:
+        pytesseract.pytesseract.tesseract_cmd = tesseract_command
+    debug['tesseract_command'] = tesseract_command or 'not found'
+    debug['path'] = os.environ.get('PATH', '')
+
+    configured_tessdata = (os.environ.get('OCR_TESSDATA_DIR') or '').strip()
+    tessdata_candidates = [configured_tessdata]
+    if os.name != 'nt':
+        for search_root in ('/layers', '/workspace/.apt', '/app/.apt', '/usr/share'):
+            root = Path(search_root)
+            if not root.exists():
+                continue
+            try:
+                tessdata_candidates.extend(
+                    str(path) for path in root.rglob('tessdata')
+                    if path.is_dir() and (path / 'eng.traineddata').exists()
+                )
+            except OSError:
+                pass
+    tessdata_dir = next((candidate for candidate in tessdata_candidates
+                         if candidate and Path(candidate).is_dir()), '')
     tessdata_config = f'--tessdata-dir "{tessdata_dir}"' if tessdata_dir else ''
 
     try:
@@ -7998,7 +8022,8 @@ def extract_reading_material_file(request):
                 if ocr_debug:
                     ocr_status = ocr_debug.get('ocr_status')
                     if ocr_status == 'no_engine':
-                        detail_warning = OCR_ENGINE_UNAVAILABLE_MESSAGE
+                        engine_error = ocr_debug.get('error') or 'Tesseract executable was not found.'
+                        detail_warning = f'{OCR_ENGINE_UNAVAILABLE_MESSAGE} OCR detail: {engine_error}'
                     elif ocr_status == 'engine_error':
                         engine_name = ocr_debug.get('ocr_engine') or 'OCR engine'
                         engine_error = ocr_debug.get('error') or 'unknown startup error'
