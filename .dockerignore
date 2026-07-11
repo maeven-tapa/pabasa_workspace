@@ -8,3 +8,9 @@ __pycache__
 debug_ocr
 .pytest_cache
 .mypy_cache
+.env
+.env.*
+*.log
+debug_ocr/
+pabasa_info_current_changes.patch
+temp_original.html
