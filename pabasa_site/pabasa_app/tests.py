@@ -20,7 +20,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _resolve_tesseract_executable, _build_image_upload_debug_info
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _resolve_tesseract_executable, _configure_tesseract_runtime_environment, _build_image_upload_debug_info
 from .weekly_digest import send_weekly_digest
 
 
@@ -253,6 +253,21 @@ class MaterialUploadExtractionTests(TestCase):
                 resolved = _resolve_tesseract_executable(DummyPytesseractModule())
 
         self.assertEqual(resolved, "/usr/bin/tesseract")
+
+    def test_configure_tesseract_runtime_environment_adds_buildpack_paths(self):
+        directories = {
+            "/layers/digitalocean_apt/apt/usr/lib",
+            "/layers/digitalocean_apt/apt/usr/lib/x86_64-linux-gnu",
+            "/layers/digitalocean_apt/apt/usr/share/tesseract-ocr/5/tessdata",
+        }
+
+        with patch.object(Path, "is_dir", autospec=True, side_effect=lambda path: str(path).replace('\\', '/') in directories), \
+                patch.object(Path, "glob", autospec=True, return_value=[Path("/layers/digitalocean_apt/apt/usr/lib/x86_64-linux-gnu")]), \
+                patch.dict(os.environ, {}, clear=True):
+            _configure_tesseract_runtime_environment("/layers/digitalocean_apt/apt/usr/bin/tesseract")
+
+            self.assertIn("/layers/digitalocean_apt/apt/usr/lib", os.environ["LD_LIBRARY_PATH"].replace('\\', '/'))
+            self.assertEqual(os.environ["TESSDATA_PREFIX"].replace('\\', '/'), "/layers/digitalocean_apt/apt/usr/share/tesseract-ocr/5/tessdata")
 
     def test_tesseract_debug_endpoint_reports_path_info(self):
         response = self.client.get(reverse("tesseract_debug"))

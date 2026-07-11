@@ -7421,6 +7421,48 @@ def _resolve_tesseract_executable(pytesseract_module):
     return None
 
 
+def _configure_tesseract_runtime_environment(tesseract_path):
+    """Expose shared libraries/data installed beside a buildpack Tesseract binary."""
+    if not tesseract_path:
+        return
+
+    executable = Path(tesseract_path)
+    # DigitalOcean Apt buildpack layout: <layer>/apt/usr/bin/tesseract.
+    try:
+        install_root = executable.parents[2] if executable.parent.name == 'bin' and executable.parent.parent.name == 'usr' else None
+    except (IndexError, AttributeError):
+        install_root = None
+    if not install_root:
+        return
+
+    library_dirs = [
+        install_root / 'usr' / 'lib',
+        install_root / 'lib',
+    ]
+    for parent in (install_root / 'usr' / 'lib', install_root / 'lib'):
+        try:
+            library_dirs.extend(path for path in parent.glob('*-linux-gnu') if path.is_dir())
+        except OSError:
+            pass
+
+    existing_library_dirs = [str(path) for path in library_dirs if path.is_dir()]
+    current_library_path = [item for item in (os.environ.get('LD_LIBRARY_PATH') or '').split(os.pathsep) if item]
+    merged_library_path = list(dict.fromkeys(existing_library_dirs + current_library_path))
+    if merged_library_path:
+        os.environ['LD_LIBRARY_PATH'] = os.pathsep.join(merged_library_path)
+
+    tessdata_candidates = [
+        install_root / 'usr' / 'share' / 'tesseract-ocr' / '5' / 'tessdata',
+        install_root / 'usr' / 'share' / 'tesseract-ocr' / '4.00' / 'tessdata',
+        install_root / 'usr' / 'share' / 'tessdata',
+    ]
+    if not os.environ.get('TESSDATA_PREFIX'):
+        for tessdata_dir in tessdata_candidates:
+            if tessdata_dir.is_dir():
+                os.environ['TESSDATA_PREFIX'] = str(tessdata_dir)
+                break
+
+
 def _collect_tesseract_debug_info():
     debug_info = {}
     explicit = os.environ.get('TESSERACT_CMD') or os.environ.get('TESSERACT_PATH') or ''
@@ -7473,7 +7515,10 @@ def _collect_tesseract_debug_info():
         debug_info['pytesseract_import_error'] = str(exc)
 
     debug_info['resolved_tesseract'] = _resolve_tesseract_executable(globals().get('pytesseract'))
+    _configure_tesseract_runtime_environment(debug_info['resolved_tesseract'])
     debug_info['tesseract_available'] = bool(debug_info['resolved_tesseract'])
+    debug_info['ld_library_path'] = os.environ.get('LD_LIBRARY_PATH') or ''
+    debug_info['tessdata_prefix'] = os.environ.get('TESSDATA_PREFIX') or ''
     return debug_info
 
 
@@ -7488,6 +7533,7 @@ def tesseract_debug(request):
 try:
     _startup_tesseract_path = _resolve_tesseract_executable(globals().get('pytesseract'))
     if _startup_tesseract_path:
+        _configure_tesseract_runtime_environment(_startup_tesseract_path)
         logger.info('Tesseract startup resolved: %s', _startup_tesseract_path)
         try:
             import pytesseract as _pyt
@@ -7815,6 +7861,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
 
     tesseract_path = _resolve_tesseract_executable(pytesseract)
     if tesseract_path:
+        _configure_tesseract_runtime_environment(tesseract_path)
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
     else:
         logger.warning('OCR could not resolve a Tesseract executable. Checked env vars and common install paths.')
