@@ -11513,6 +11513,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function formatOcrDebugInfo(debugInfo) {
             if (!debugInfo || typeof debugInfo !== 'object') return '';
             const parts = [];
+            if (debugInfo.ocr_status === 'unavailable') {
+                parts.push('OCR status: Tesseract is not available on the server');
+            } else if (debugInfo.ocr_status === 'path_error') {
+                parts.push('OCR status: Tesseract path/execution error');
+            } else if (debugInfo.ocr_status === 'no_text') {
+                parts.push('OCR status: Tesseract ran but found no readable text');
+            } else if (debugInfo.ocr_status === 'ok') {
+                parts.push('OCR status: Tesseract ran successfully');
+            }
             if (debugInfo.word_count != null || debugInfo.best_confidence != null) {
                 const words = debugInfo.word_count != null ? `${debugInfo.word_count} OCR word${Number(debugInfo.word_count) === 1 ? '' : 's'}` : 'OCR output';
                 const confidence = debugInfo.best_confidence != null ? `, confidence ${debugInfo.best_confidence}` : '';

@@ -42,6 +42,12 @@ IMAGE_OCR_EMPTY_MESSAGE = (
     'Try a straight, well-lit photo with the words in focus, dark text on a light background, '
     'and minimal extra space around the page.'
 )
+TESSERACT_UNAVAILABLE_MESSAGE = (
+    'OCR is unavailable because the Tesseract executable was not found on the server.'
+)
+TESSERACT_PATH_ERROR_MESSAGE = (
+    'OCR could not start Tesseract from the configured server path.'
+)
 try:
     import pytesseract
     if os.path.isfile(TESSERACT_STATIC_PATH):
@@ -7849,6 +7855,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                             else:
                                 data = pytesseract.image_to_data(candidate, output_type=TesseractOutput.DICT)
                         except Exception as fallback_exc:
+                            last_ocr_error = repr(fallback_exc)
                             logger.warning('OCR fallback failed for candidate %s: %s', candidate_label, repr(fallback_exc))
                             data = None
 
@@ -7943,6 +7950,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                     try:
                         fallback_data = pytesseract.image_to_data(image, config=config)
                     except Exception as exc:
+                        last_ocr_error = repr(exc)
                         fallback_errors.append(repr(exc))
                         continue
 
@@ -8007,10 +8015,17 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                         'original_size': f'{image.size[0]}x{image.size[1]}',
                         'tesseract_path': tesseract_path,
                         'tesseract_available': bool(tesseract_path),
+                        'ocr_status': 'ok',
                         'fallback_used': True,
                         'fallback_errors': fallback_errors,
                     }
                 else:
+                    if not tesseract_path:
+                        ocr_status = 'unavailable'
+                    elif last_ocr_error:
+                        ocr_status = 'path_error'
+                    else:
+                        ocr_status = 'no_text'
                     debug_info = {
                         'candidate_count': len(candidates),
                         'attempt_count': attempt_count,
@@ -8021,9 +8036,10 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                         'original_size': f'{image.size[0]}x{image.size[1]}',
                         'tesseract_path': tesseract_path,
                         'tesseract_available': bool(tesseract_path),
+                        'ocr_status': ocr_status,
                         'fallback_used': False,
                         'fallback_errors': fallback_errors,
-                        'tesseract_error': last_ocr_error or 'Tesseract produced no text from the uploaded image.',
+                        'tesseract_error': last_ocr_error or '',
                     }
             else:
                 debug_info = {
@@ -8036,6 +8052,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                     'original_size': f'{image.size[0]}x{image.size[1]}',
                     'tesseract_path': tesseract_path,
                     'tesseract_available': bool(tesseract_path),
+                    'ocr_status': 'ok',
                     'fallback_used': False,
                     'tesseract_error': last_ocr_error or '',
                 }
@@ -8349,8 +8366,14 @@ def extract_reading_material_file(request):
                     extraction_warnings.append(warning_msg)
                 if ocr_debug:
                     tesseract_error = ocr_debug.get('tesseract_error') or ocr_debug.get('error')
-                    if tesseract_error:
-                        detail_warning = f"{IMAGE_OCR_EMPTY_MESSAGE} OCR detail: {tesseract_error}"
+                    ocr_status = ocr_debug.get('ocr_status')
+                    if ocr_status == 'unavailable' or ocr_debug.get('tesseract_available') is False:
+                        detail_warning = TESSERACT_UNAVAILABLE_MESSAGE
+                    elif ocr_status == 'path_error' or tesseract_error:
+                        detail_warning = f"{TESSERACT_PATH_ERROR_MESSAGE} OCR detail: {tesseract_error}"
+                    else:
+                        detail_warning = IMAGE_OCR_EMPTY_MESSAGE
+                    if detail_warning:
                         if detail_warning not in extraction_warnings:
                             extraction_warnings.append(detail_warning)
                         if not warning_msg or warning_msg == IMAGE_OCR_EMPTY_MESSAGE:

@@ -491,6 +491,28 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertIn("not found", data.get("warning_message", ""))
         mock_extract_text_from_image.assert_called_once()
 
+    @patch("pabasa_app.views._extract_text_from_image", return_value={"text": "", "layout": [], "debug": {"ocr_status": "no_text", "tesseract_available": True, "tesseract_error": ""}})
+    def test_extract_endpoint_distinguishes_no_text_from_tesseract_failure(self, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile("scan.png", b"not-a-real-image", content_type="image/png")
+
+        response = self.client.post(reverse("extract_reading_material_file"), {"file": image_file}, format="multipart")
+
+        self.assertEqual(response.status_code, 200)
+        warning = response.json().get("warning_message", "")
+        self.assertIn("No readable text", warning)
+        self.assertNotIn("could not start Tesseract", warning)
+
+    @patch("pabasa_app.views._extract_text_from_image", return_value={"text": "", "layout": [], "debug": {"ocr_status": "path_error", "tesseract_available": True, "tesseract_error": "exit status 127"}})
+    def test_extract_endpoint_reports_tesseract_path_error_separately(self, mock_extract_text_from_image):
+        image_file = SimpleUploadedFile("scan.png", b"not-a-real-image", content_type="image/png")
+
+        response = self.client.post(reverse("extract_reading_material_file"), {"file": image_file}, format="multipart")
+
+        self.assertEqual(response.status_code, 200)
+        warning = response.json().get("warning_message", "")
+        self.assertIn("could not start Tesseract", warning)
+        self.assertIn("exit status 127", warning)
+
     def test_fallback_material_items_preserve_paragraph_blocks(self):
         text = "First line\nSecond line\n\nThird line"
         self.assertEqual(_fallback_material_items_from_text(text), ["First line Second line", "Third line"])
