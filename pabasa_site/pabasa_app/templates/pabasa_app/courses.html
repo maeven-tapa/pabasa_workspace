@@ -11513,6 +11513,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function formatOcrDebugInfo(debugInfo) {
             if (!debugInfo || typeof debugInfo !== 'object') return '';
             const parts = [];
+            if (debugInfo.ocr_engine) {
+                parts.push(`OCR engine: ${debugInfo.ocr_engine}`);
+            }
             if (debugInfo.ocr_status === 'unavailable') {
                 parts.push('OCR status: Tesseract is not available on the server');
             } else if (debugInfo.ocr_status === 'path_error') {

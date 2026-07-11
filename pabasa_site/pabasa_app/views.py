@@ -7843,6 +7843,48 @@ def _build_ocr_image_candidates(image):
     return candidates[:7] or [{'label': 'original', 'image': image}]
 
 
+_rapidocr_engine = None
+
+
+def _extract_text_with_rapidocr(image):
+    """Run OCR in-process, avoiding system executables unavailable on some hosts."""
+    global _rapidocr_engine
+    from rapidocr import RapidOCR
+
+    if _rapidocr_engine is None:
+        _rapidocr_engine = RapidOCR()
+    result = _rapidocr_engine(image)
+    texts_value = getattr(result, 'txts', None)
+    scores_value = getattr(result, 'scores', None)
+    boxes_value = getattr(result, 'boxes', None)
+    texts = list(texts_value) if texts_value is not None else []
+    scores = list(scores_value) if scores_value is not None else []
+    boxes = list(boxes_value) if boxes_value is not None else []
+    layout = []
+    for index, value in enumerate(texts):
+        cleaned = re.sub(r'\s+', ' ', str(value or '').strip())
+        if not cleaned:
+            continue
+        box = boxes[index] if index < len(boxes) else []
+        points = [point for point in box if len(point) >= 2] if box is not None else []
+        xs = [float(point[0]) for point in points] or [0]
+        ys = [float(point[1]) for point in points] or [0]
+        score = float(scores[index]) if index < len(scores) else 0
+        layout.append({
+            'text': cleaned,
+            'left': int(min(xs)),
+            'top': int(min(ys)),
+            'width': int(max(xs) - min(xs)),
+            'height': int(max(ys) - min(ys)),
+            'conf': int(round(score * 100)),
+            'block_num': 0,
+            'par_num': index,
+            'line_num': index,
+            'word_num': 0,
+        })
+    return re.sub(r'\s+', ' ', ' '.join(item['text'] for item in layout)).strip(), layout
+
+
 def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
     try:
         from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
@@ -8067,6 +8109,35 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                         'fallback_errors': fallback_errors,
                     }
                 else:
+                    rapidocr_error = ''
+                    try:
+                        best_text, best_layout = _extract_text_with_rapidocr(image.copy())
+                        if best_text:
+                            best_confidence = sum(item['conf'] for item in best_layout) / len(best_layout)
+                            best_candidate = image
+                            best_candidate_label = 'rapidocr-original-image'
+                            best_config = 'rapidocr-onnxruntime'
+                    except Exception as exc:
+                        rapidocr_error = repr(exc)
+                        logger.warning('RapidOCR fallback failed: %s', rapidocr_error)
+
+                if best_text and best_config == 'rapidocr-onnxruntime':
+                    debug_info = {
+                        'candidate_count': len(candidates),
+                        'attempt_count': attempt_count,
+                        'best_candidate': best_candidate_label,
+                        'best_config': best_config,
+                        'best_confidence': round(best_confidence, 1),
+                        'word_count': len(best_layout),
+                        'original_size': f'{image.size[0]}x{image.size[1]}',
+                        'tesseract_path': tesseract_path,
+                        'tesseract_available': bool(tesseract_path),
+                        'ocr_status': 'ok',
+                        'ocr_engine': 'RapidOCR (ONNX Runtime)',
+                        'fallback_used': True,
+                        'tesseract_error': last_ocr_error or '',
+                    }
+                elif not best_text:
                     if not tesseract_path:
                         ocr_status = 'unavailable'
                     elif last_ocr_error:
@@ -8086,6 +8157,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
                         'ocr_status': ocr_status,
                         'fallback_used': False,
                         'fallback_errors': fallback_errors,
+                        'rapidocr_error': rapidocr_error,
                         'tesseract_error': last_ocr_error or '',
                     }
             else:
