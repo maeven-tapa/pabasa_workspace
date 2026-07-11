@@ -60,6 +60,11 @@ is on `PATH`. If you use an `ondigitalocean.app` hostname, add that hostname to 
 `ALLOWED_HOSTS` environment variable and its full HTTPS URL to
 `CSRF_TRUSTED_ORIGINS`.
 
+For an existing App Platform component pinned to the Python buildpack, the root
+`Aptfile` installs Tesseract plus the English and Filipino models without changing
+the component or database configuration. Push the `Aptfile`, then use **Force Rebuild
+and Deploy** and confirm the build logs detect the Aptfile buildpack.
+
 **Droplet:** If Pabasa runs directly on Ubuntu instead of in Docker, install the
 engine with `sudo apt update && sudo apt install tesseract-ocr tesseract-ocr-eng
 tesseract-ocr-fil`, then restart Gunicorn or the Pabasa systemd service.
