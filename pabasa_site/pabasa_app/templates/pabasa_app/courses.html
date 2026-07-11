@@ -1273,7 +1273,7 @@
         grid-column: 1 / -1;
         min-width: 0;
         overflow: auto;
-        padding: 0.25rem;
+        padding: 0;
         width: 100%;
     }
 
@@ -1285,16 +1285,48 @@
     }
 
     .course-inline-dialog-host > .modal-header {
-        padding-inline: 0;
+        background: transparent !important;
+        border: 0 !important;
+        padding: 0 0 0.85rem !important;
     }
 
     .course-inline-dialog-host > .modal-body {
+        background: transparent !important;
         overflow: visible;
-        padding-inline: 0;
+        padding: 0.85rem 0 !important;
     }
 
     .course-inline-dialog-host > .modal-footer {
-        padding-inline: 0;
+        background: transparent !important;
+        border: 0 !important;
+        gap: 0.6rem;
+        padding: 1rem 0 0 !important;
+    }
+
+    .course-inline-dialog-host > form {
+        margin: 0;
+    }
+
+    .course-inline-dialog-host .modal-body > :first-child,
+    .course-inline-dialog-host > form > :first-child {
+        margin-top: 0 !important;
+    }
+
+    @media (max-width: 767.98px) {
+        #courseDetailModal .course-inline-dialog-host > .modal-header {
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        #courseDetailModal .course-inline-dialog-host > .modal-footer {
+            align-items: stretch;
+            flex-direction: column-reverse;
+        }
+
+        #courseDetailModal .course-inline-dialog-host > .modal-footer .btn {
+            min-height: 44px;
+            width: 100%;
+        }
     }
 
     body.dark-theme .course-material-detail {
@@ -10769,7 +10801,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const host = document.getElementById('courseInlineDialogHost');
             const mainContent = document.getElementById('courseMainContent');
             const sidebar = document.getElementById('courseSidebar');
-            if (!modalEl || modalEl === courseModal || !courseModal?.classList.contains('show') || !host || !mainContent) return false;
+            const staysAsDialog = modalEl?.id === 'deleteConfirmModal';
+            if (!modalEl || modalEl === courseModal || staysAsDialog || !courseModal?.classList.contains('show') || !host || !mainContent) return false;
 
             if (activeInlineModal) {
                 closeInlineModal(bootstrap.Modal.getInstance(activeInlineModal));
