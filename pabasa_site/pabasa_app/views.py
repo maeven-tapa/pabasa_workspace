@@ -7607,16 +7607,107 @@ def _build_ocr_image_candidates(image):
 
 
 def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
-    return {
-        'text': '',
-        'layout': [],
-        'debug': {
-            'ocr_status': 'no_engine',
-            'word_count': 0,
-            'best_confidence': 0,
-            'engine_message': OCR_ENGINE_UNAVAILABLE_MESSAGE,
-        },
+    """Extract text and word layout from an uploaded image with Tesseract."""
+    debug = {
+        'ocr_status': 'engine_error', 'ocr_engine': 'Tesseract',
+        'word_count': 0, 'best_confidence': 0, 'candidates_tried': [],
     }
+    try:
+        import pytesseract
+        from PIL import Image
+        from pytesseract import Output
+    except ImportError as exc:
+        debug.update({'ocr_status': 'no_engine', 'error': str(exc),
+                      'engine_message': OCR_ENGINE_UNAVAILABLE_MESSAGE})
+        return {'text': '', 'layout': [], 'debug': debug}
+
+    configured_command = (os.environ.get('TESSERACT_CMD') or '').strip()
+    if configured_command:
+        pytesseract.pytesseract.tesseract_cmd = configured_command
+    elif os.name == 'nt' and not shutil.which('tesseract'):
+        common_windows_command = Path(os.environ.get(
+            'ProgramFiles', r'C:\Program Files')) / 'Tesseract-OCR' / 'tesseract.exe'
+        if common_windows_command.exists():
+            pytesseract.pytesseract.tesseract_cmd = str(common_windows_command)
+
+    try:
+        upload.seek(0)
+        with Image.open(upload) as source_image:
+            source_image.load()
+            image = source_image.convert('RGB')
+        upload.seek(0)
+
+        available_languages = set(pytesseract.get_languages(config=''))
+        requested_languages = [lang.strip() for lang in os.environ.get(
+            'OCR_LANGUAGES', 'eng+fil').split('+') if lang.strip()]
+        selected_languages = [lang for lang in requested_languages if lang in available_languages]
+        if not selected_languages and 'eng' in available_languages:
+            selected_languages = ['eng']
+        if not selected_languages:
+            raise RuntimeError('No requested Tesseract language data is installed. '
+                               f"Requested: {', '.join(requested_languages)}.")
+
+        language_config = '+'.join(selected_languages)
+        debug['languages'] = selected_languages
+        debug['missing_languages'] = [lang for lang in requested_languages
+                                      if lang not in available_languages]
+        best = {'score': -1, 'confidence': 0, 'layout': [], 'text': '', 'label': ''}
+        timeout = max(1, int(os.environ.get('OCR_TIMEOUT_SECONDS', '15')))
+
+        for candidate in _build_ocr_image_candidates(image):
+            label = candidate['label']
+            try:
+                data = pytesseract.image_to_data(
+                    candidate['image'], lang=language_config,
+                    config='--oem 1 --psm 6', output_type=Output.DICT, timeout=timeout)
+                layout, confidences = [], []
+                for index, raw_text in enumerate(data.get('text', [])):
+                    word = re.sub(r'\s+', ' ', str(raw_text or '')).strip()
+                    try:
+                        confidence = float(data.get('conf', [])[index])
+                    except (TypeError, ValueError, IndexError):
+                        confidence = -1
+                    if not word or confidence < 0:
+                        continue
+                    layout.append({
+                        'text': word, 'left': int(data['left'][index]),
+                        'top': int(data['top'][index]), 'width': int(data['width'][index]),
+                        'height': int(data['height'][index]), 'conf': int(round(confidence)),
+                        'block_num': int(data['block_num'][index]),
+                        'par_num': int(data['par_num'][index]),
+                        'line_num': int(data['line_num'][index]),
+                        'word_num': int(data['word_num'][index]),
+                    })
+                    confidences.append(confidence)
+                average_confidence = sum(confidences) / len(confidences) if confidences else 0
+                score = average_confidence * max(1, len(layout))
+                debug['candidates_tried'].append({
+                    'label': label, 'word_count': len(layout),
+                    'confidence': round(average_confidence, 2)})
+                if score > best['score']:
+                    best = {'score': score, 'confidence': average_confidence,
+                            'layout': layout, 'text': ' '.join(x['text'] for x in layout),
+                            'label': label}
+            except RuntimeError as exc:
+                debug['candidates_tried'].append({'label': label, 'error': str(exc)})
+
+        debug.update({'ocr_status': 'success' if best['layout'] else 'empty',
+                      'word_count': len(best['layout']),
+                      'best_confidence': round(best['confidence'], 2),
+                      'best_candidate': best['label']})
+        return {'text': best['text'], 'layout': best['layout'], 'debug': debug}
+    except pytesseract.TesseractNotFoundError as exc:
+        debug.update({'ocr_status': 'no_engine', 'error': str(exc),
+                      'engine_message': OCR_ENGINE_UNAVAILABLE_MESSAGE})
+        return {'text': '', 'layout': [], 'debug': debug}
+    except Exception as exc:
+        debug['error'] = str(exc)
+        return {'text': '', 'layout': [], 'debug': debug}
+    finally:
+        try:
+            upload.seek(0)
+        except Exception:
+            pass
 
 
 def _fallback_material_items_from_text(text):

@@ -20,6 +20,7 @@ packaging==26.0
 Pillow==12.2.0
 Pygments==2.20.0
 pypdf==6.4.1
+pytesseract==0.3.13
 PyQt5==5.15.11
 PyQt5-Qt5==5.15.2
 PyQt5_sip==12.18.0

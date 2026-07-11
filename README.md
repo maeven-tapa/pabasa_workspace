@@ -35,7 +35,20 @@ It provides automated feedback and performance reports, enabling data-driven dec
 - Institution: TUP Cavite
 
 ## 🧰 OCR deployment note
-Image upload controls remain available, but no OCR engine is currently configured.
+Image uploads use Tesseract through `pytesseract`. The native Tesseract executable must
+also be installed on every development and production machine; installing Python
+dependencies alone is not enough. Install the English (`eng`) and Filipino (`fil`)
+trained-data files.
+
+Optional environment variables:
+
+- `TESSERACT_CMD`: full executable path when `tesseract` is not on `PATH`
+- `OCR_LANGUAGES`: language combination, default `eng+fil`
+- `OCR_TIMEOUT_SECONDS`: per-image-candidate timeout, default `15`
+
+On Debian/Ubuntu, install `tesseract-ocr`, `tesseract-ocr-eng`, and
+`tesseract-ocr-fil`. For container deployments, install these system packages in the
+container image.
 
 ## 📬 Contact
 For any inquiries about this repository, please contact any of the team members listed above.
