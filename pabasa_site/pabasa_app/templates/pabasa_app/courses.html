@@ -1422,6 +1422,37 @@
         padding-inline: 1.1rem;
     }
 
+    .course-inline-dialog-host[data-inline-modal-id="materialUploadSelectModal"] > .modal-body.course-modal-body {
+        display: block !important;
+        overflow: visible !important;
+        padding: 0.85rem 0 !important;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="materialUploadSelectModal"] .row.g-4.align-items-start {
+        align-items: start !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100%;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="materialUploadSelectModal"] #uploadPagePreviewList {
+        align-content: flex-start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+        max-height: min(58vh, 560px);
+        overflow: auto;
+        width: 100%;
+    }
+
+    @media (max-width: 991.98px) {
+        .course-inline-dialog-host[data-inline-modal-id="materialUploadSelectModal"] .col-12.col-lg-4,
+        .course-inline-dialog-host[data-inline-modal-id="materialUploadSelectModal"] .col-12.col-lg-8 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+
     .course-inline-dialog-host .modal-body > :first-child,
     .course-inline-dialog-host > form > :first-child {
         margin-top: 0 !important;
@@ -10901,12 +10932,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             dispatchModalEvent(modalEl, 'hide.bs.modal');
             state.nodes.forEach(node => state.content.appendChild(node));
             inlineState.delete(modalEl);
-            if (activeInlineModal === modalEl) activeInlineModal = null;
             modalEl.classList.remove('course-inline-active');
-            delete state.host.dataset.inlineModalId;
-            state.host.classList.add('d-none');
-            state.mainContent.classList.remove('d-none');
-            state.sidebar?.classList.remove('d-none');
+
+            const parentModal = state.parentModal;
+            const parentState = parentModal ? inlineState.get(parentModal) : null;
+            if (parentState) {
+                parentState.nodes.forEach(node => state.host.appendChild(node));
+                parentState.suspended = false;
+                activeInlineModal = parentModal;
+                state.host.dataset.inlineModalId = parentModal.id || 'inline-course-form';
+                state.host.classList.remove('d-none');
+                state.mainContent.classList.add('d-none');
+                state.sidebar?.classList.add('d-none');
+            } else {
+                if (activeInlineModal === modalEl) activeInlineModal = null;
+                delete state.host.dataset.inlineModalId;
+                state.host.classList.add('d-none');
+                state.mainContent.classList.remove('d-none');
+                state.sidebar?.classList.remove('d-none');
+            }
             dispatchModalEvent(modalEl, 'hidden.bs.modal');
             return true;
         }
@@ -10920,8 +10964,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const staysAsDialog = modalEl?.id === 'deleteConfirmModal';
             if (!modalEl || modalEl === courseModal || staysAsDialog || !courseModal?.classList.contains('show') || !host || !mainContent) return false;
 
+            let parentModal = null;
             if (activeInlineModal) {
-                closeInlineModal(bootstrap.Modal.getInstance(activeInlineModal));
+                const activeState = inlineState.get(activeInlineModal);
+                if (activeState) {
+                    activeState.nodes.forEach(node => activeState.content.appendChild(node));
+                    activeState.suspended = true;
+                    parentModal = activeInlineModal;
+                }
             }
 
             const dialog = modalEl.querySelector(':scope > .modal-dialog');
@@ -10930,7 +10980,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const nodes = Array.from(content.childNodes);
 
             dispatchModalEvent(modalEl, 'show.bs.modal');
-            inlineState.set(modalEl, { content, nodes, host, mainContent, sidebar });
+            inlineState.set(modalEl, { content, nodes, host, mainContent, sidebar, parentModal, suspended: false });
             activeInlineModal = modalEl;
             modalEl.classList.add('course-inline-active');
             mainContent.classList.add('d-none');
