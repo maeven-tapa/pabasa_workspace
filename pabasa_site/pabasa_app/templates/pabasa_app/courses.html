@@ -1277,13 +1277,24 @@
         width: 100%;
     }
 
-    .course-inline-dialog-host > .modal-content {
-        border: 1px solid rgba(27, 26, 23, 0.08);
-        border-radius: 14px;
-        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
-        max-height: none;
-        min-height: 0;
+    .course-inline-dialog-host > .modal-header,
+    .course-inline-dialog-host > .modal-body,
+    .course-inline-dialog-host > .modal-footer,
+    .course-inline-dialog-host > form {
         width: 100%;
+    }
+
+    .course-inline-dialog-host > .modal-header {
+        padding-inline: 0;
+    }
+
+    .course-inline-dialog-host > .modal-body {
+        overflow: visible;
+        padding-inline: 0;
+    }
+
+    .course-inline-dialog-host > .modal-footer {
+        padding-inline: 0;
     }
 
     body.dark-theme .course-material-detail {
@@ -10722,13 +10733,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     // Any modal launched while Course Detail is open is rendered as an inline
     // course page. This keeps forms and their existing handlers intact while
     // avoiding nested dialogs and backdrops.
-    (function installCourseInlineModalAdapter() {
+    function installCourseInlineModalAdapter() {
         if (!window.bootstrap?.Modal || bootstrap.Modal.prototype._courseInlinePatched) return;
 
         const modalPrototype = bootstrap.Modal.prototype;
         const originalShow = modalPrototype.show;
         const originalHide = modalPrototype.hide;
         const inlineState = new WeakMap();
+        let activeInlineModal = null;
 
         function dispatchModalEvent(modalEl, eventName) {
             try { modalEl.dispatchEvent(new Event(eventName, { bubbles: true })); } catch (e) { /* ignore */ }
@@ -10740,8 +10752,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!state) return false;
 
             dispatchModalEvent(modalEl, 'hide.bs.modal');
-            state.dialog.appendChild(state.content);
+            state.nodes.forEach(node => state.content.appendChild(node));
             inlineState.delete(modalEl);
+            if (activeInlineModal === modalEl) activeInlineModal = null;
             modalEl.classList.remove('course-inline-active');
             state.host.classList.add('d-none');
             state.mainContent.classList.remove('d-none');
@@ -10758,26 +10771,26 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const sidebar = document.getElementById('courseSidebar');
             if (!modalEl || modalEl === courseModal || !courseModal?.classList.contains('show') || !host || !mainContent) return false;
 
-            const activeContent = host.querySelector(':scope > .modal-content');
-            if (activeContent) {
-                const activeModal = Array.from(document.querySelectorAll('.modal')).find(candidate => inlineState.get(candidate)?.content === activeContent);
-                if (activeModal) closeInlineModal(bootstrap.Modal.getInstance(activeModal));
+            if (activeInlineModal) {
+                closeInlineModal(bootstrap.Modal.getInstance(activeInlineModal));
             }
 
             const dialog = modalEl.querySelector(':scope > .modal-dialog');
             const content = dialog?.querySelector(':scope > .modal-content');
             if (!dialog || !content) return false;
+            const nodes = Array.from(content.childNodes);
 
             dispatchModalEvent(modalEl, 'show.bs.modal');
-            inlineState.set(modalEl, { dialog, content, host, mainContent, sidebar });
+            inlineState.set(modalEl, { content, nodes, host, mainContent, sidebar });
+            activeInlineModal = modalEl;
             modalEl.classList.add('course-inline-active');
             mainContent.classList.add('d-none');
             sidebar?.classList.add('d-none');
             host.classList.remove('d-none');
-            host.appendChild(content);
+            nodes.forEach(node => host.appendChild(node));
             host.scrollTop = 0;
             dispatchModalEvent(modalEl, 'shown.bs.modal');
-            content.querySelector('input:not([type="hidden"]), select, textarea, button')?.focus({ preventScroll: true });
+            host.querySelector('input:not([type="hidden"]), select, textarea, button')?.focus({ preventScroll: true });
             return true;
         }
 
@@ -10796,12 +10809,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         document.getElementById('courseInlineDialogHost')?.addEventListener('click', function (event) {
             const dismissButton = event.target.closest('[data-bs-dismiss="modal"]');
             if (!dismissButton) return;
-            const activeContent = this.querySelector(':scope > .modal-content');
-            const activeModal = Array.from(document.querySelectorAll('.modal')).find(candidate => inlineState.get(candidate)?.content === activeContent);
-            if (!activeModal) return;
+            if (!activeInlineModal) return;
             event.preventDefault();
             event.stopPropagation();
-            closeInlineModal(bootstrap.Modal.getInstance(activeModal));
+            closeInlineModal(bootstrap.Modal.getInstance(activeInlineModal));
         });
 
         document.getElementById('courseDetailModal')?.addEventListener('hide.bs.modal', function () {
@@ -10809,7 +10820,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 closeInlineModal(bootstrap.Modal.getInstance(modalEl));
             });
         });
-    })();
+    }
+
+    installCourseInlineModalAdapter();
+    document.addEventListener('DOMContentLoaded', installCourseInlineModalAdapter);
+    window.addEventListener('load', installCourseInlineModalAdapter);
+    const courseInlineModalInstallTimer = window.setInterval(function () {
+        installCourseInlineModalAdapter();
+        if (window.bootstrap?.Modal?.prototype?._courseInlinePatched) {
+            window.clearInterval(courseInlineModalInstallTimer);
+        }
+    }, 100);
+    window.setTimeout(() => window.clearInterval(courseInlineModalInstallTimer), 10000);
 
     function showStackedModal(modalEl) {
         if (!modalEl || !window.bootstrap) return null;
@@ -10868,11 +10890,30 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         if (!targetClassCode) return showToast('Course has no associated section code', 'error');
 
         const loadingModalEl = document.getElementById('addCourseStudentLoadingModal');
+        const loadingDialogEl = loadingModalEl?.querySelector('.course-student-add-loading-dialog');
+        const loadingNodes = loadingDialogEl ? Array.from(loadingDialogEl.childNodes) : [];
+        const courseInlineHost = document.getElementById('courseInlineDialogHost');
+        const courseMainContent = document.getElementById('courseMainContent');
+        const courseSidebar = document.getElementById('courseSidebar');
         const added = [];
 
+        const showInlineStudentLoading = () => {
+            if (!courseInlineHost || !loadingNodes.length) return;
+            courseMainContent?.classList.add('d-none');
+            courseSidebar?.classList.add('d-none');
+            courseInlineHost.classList.remove('d-none');
+            loadingNodes.forEach(node => courseInlineHost.appendChild(node));
+        };
+        const hideInlineStudentLoading = () => {
+            if (loadingDialogEl) loadingNodes.forEach(node => loadingDialogEl.appendChild(node));
+            courseInlineHost?.classList.add('d-none');
+            courseMainContent?.classList.remove('d-none');
+            courseSidebar?.classList.remove('d-none');
+        };
+
         addButton.disabled = true;
-        if (loadingModalEl) loadingModalEl.classList.add('is-visible');
         try { bootstrap.Modal.getInstance(modal)?.hide(); } catch(e){}
+        showInlineStudentLoading();
 
         try {
             for (const cb of checkboxes) {
@@ -10895,7 +10936,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
             }
 
-            if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
+            hideInlineStudentLoading();
 
             if (added.length > 0) {
                 if (typeof showToast === 'function') showToast(`${added.length} student(s) added to course.`, 'success'); else alert(`${added.length} student(s) added to course.`);
@@ -10905,7 +10946,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 addButton.disabled = false;
             }
         } catch (err) {
-            if (loadingModalEl) loadingModalEl.classList.remove('is-visible');
+            hideInlineStudentLoading();
             addButton.disabled = false;
             console.error('Error adding selected students', err);
             if (typeof showToast === 'function') showToast('Unable to add the selected student. Please try again.', 'error'); else alert('Unable to add the selected student. Please try again.');
