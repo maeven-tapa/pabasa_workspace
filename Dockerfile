@@ -20,6 +20,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 10000
+EXPOSE 8080
 
-CMD ["sh", "-c", "gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-tmp-dir /dev/shm --bind 0.0.0.0:${PORT:-10000}"]
+CMD ["sh", "-c", "gunicorn pabasa_site.wsgi:application --chdir pabasa_site --worker-tmp-dir /dev/shm --bind 0.0.0.0:${PORT:-8080}"]
