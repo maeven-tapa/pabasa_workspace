@@ -91,6 +91,8 @@
     const colorScene = document.getElementById("colorScene");
     const colorSceneBackground = document.getElementById("colorSceneBackground");
     const colorCompleteBurst = document.getElementById("colorCompleteBurst");
+    const mascotAnimationElement = document.querySelector("[data-mascot-anim]");
+    const mascotAnimationConfig = window.PABASA_MASCOT_ANIMATION_FRAMES || {};
     const colorAssetBase = window.PABASA_COLOR_MODE_ASSET_BASE || "/static/pabasa_app/color_mode/";
     const colorModeScenes = Object.freeze({
         easy: {
@@ -133,6 +135,22 @@
     let colorFinalRevealHold = null;
     let huntLevelTransitionInProgress = false;
     let huntAdvanceInProgress = false;
+    let mascotAnimationState = "idle";
+    let mascotAnimationVersion = 0;
+    let mascotAnimationTimer = null;
+    let mascotAnimationIdleHoldTimer = null;
+    const mascotAnimationFrames = {
+        idle: Array.isArray(mascotAnimationConfig.idle) ? mascotAnimationConfig.idle : [],
+        reading: Array.isArray(mascotAnimationConfig.reading) ? mascotAnimationConfig.reading : [],
+        next: Array.isArray(mascotAnimationConfig.next) ? mascotAnimationConfig.next : [],
+        skip: Array.isArray(mascotAnimationConfig.skip) ? mascotAnimationConfig.skip : [],
+    };
+    const mascotAnimationPriority = {
+        idle: 0,
+        skip: 1,
+        next: 2,
+        reading: 3,
+    };
     const practiceProgressStorageKey = "pabasa_practice_progress_v1";
     const practiceProgressLevelSequence = Object.freeze([
         ['easy', 'level_1'],
@@ -164,6 +182,87 @@
 
     function toggleFreeModeBodyLock(enabled) {
         document.body.classList.toggle("practice-free-mode", Boolean(enabled));
+    }
+
+    function clearMascotAnimationTimer() {
+        if (mascotAnimationTimer) {
+            window.clearTimeout(mascotAnimationTimer);
+            mascotAnimationTimer = null;
+        }
+    }
+
+    function clearMascotAnimationIdleHold() {
+        if (mascotAnimationIdleHoldTimer) {
+            window.clearTimeout(mascotAnimationIdleHoldTimer);
+            mascotAnimationIdleHoldTimer = null;
+        }
+    }
+
+    function preloadMascotFrameSets() {
+        Object.values(mascotAnimationFrames).flat().forEach((frameSrc) => {
+            const image = new Image();
+            image.decoding = "async";
+            image.src = frameSrc;
+        });
+    }
+
+    function playMascotFrameSet(state, options = {}) {
+        if (!mascotAnimationElement) return;
+        const frames = mascotAnimationFrames[state] || mascotAnimationFrames.idle;
+        const { loop = true, holdIdle = false, duration = 220 } = options;
+        if (!frames.length) return;
+
+        mascotAnimationState = state;
+        mascotAnimationVersion += 1;
+        const version = mascotAnimationVersion;
+        clearMascotAnimationTimer();
+
+        let frameIndex = 0;
+        const renderFrame = () => {
+            if (!mascotAnimationElement || version !== mascotAnimationVersion) return;
+            mascotAnimationElement.src = frames[frameIndex];
+            frameIndex += 1;
+
+            if (loop) {
+                frameIndex %= frames.length;
+            } else if (frameIndex >= frames.length) {
+                if (holdIdle && state !== "idle") {
+                    clearMascotAnimationIdleHold();
+                    mascotAnimationIdleHoldTimer = window.setTimeout(() => {
+                        mascotAnimationIdleHoldTimer = null;
+                        if (version === mascotAnimationVersion) {
+                            playMascotFrameSet("idle", { loop: true, duration: 220 });
+                        }
+                    }, 140);
+                } else if (state !== "idle") {
+                    playMascotFrameSet("idle", { loop: true, duration: 220 });
+                }
+                return;
+            }
+
+            mascotAnimationTimer = window.setTimeout(renderFrame, duration);
+        };
+
+        renderFrame();
+    }
+
+    function setMascotState(nextState, options = {}) {
+        if (!mascotAnimationElement) return;
+        const currentPriority = mascotAnimationPriority[mascotAnimationState] ?? 0;
+        const nextPriority = mascotAnimationPriority[nextState] ?? 0;
+        const force = Boolean(options.force);
+
+        if (!force && nextPriority < currentPriority) {
+            return;
+        }
+
+        clearMascotAnimationIdleHold();
+        const duration = options.duration || (nextState === "idle" ? 220 : 160);
+        playMascotFrameSet(nextState, {
+            loop: options.loop !== undefined ? options.loop : nextState === "idle" || nextState === "reading",
+            holdIdle: Boolean(options.holdIdle),
+            duration,
+        });
     }
 
     function savePracticeProgressState(progressState) {
@@ -800,6 +899,8 @@
                 toggleFreeModeBodyLock(false);
                 render();
             }
+            preloadMascotFrameSets();
+            setMascotState("idle", { loop: true, duration: 220, force: true });
             setCoachAnimationSource(initialCoachAnimation);
             return;
         }
@@ -813,6 +914,8 @@
         if (practiceProgress) practiceProgress.style.width = "0%";
         if (nextBtn) nextBtn.disabled = true;
         toggleFreeModeBodyLock(isFreeMode);
+        preloadMascotFrameSets();
+        setMascotState("idle", { loop: true, duration: 220, force: true });
         setCoachAnimationSource(initialCoachAnimation);
     }
 
@@ -1429,9 +1532,32 @@
         practiceFeedback.textContent = "Skipped. That item will count as a chance to improve next time.";
         practiceFeedback.classList.remove("is-success");
         practiceFeedback.classList.add("is-warning");
+        setMascotState("skip", { loop: false, holdIdle: true, duration: 150, force: true });
         playCoachAnimation('skip');
         updateCompletionSummary();
         render();
+    });
+
+    recordBtn?.addEventListener("pointerdown", function () {
+        setMascotState("reading", { loop: true, duration: 220, force: true });
+    });
+
+    recordBtn?.addEventListener("pointerup", function () {
+        if (mascotAnimationState === "reading") {
+            setMascotState("idle", { loop: true, duration: 220, force: true });
+        }
+    });
+
+    recordBtn?.addEventListener("pointercancel", function () {
+        if (mascotAnimationState === "reading") {
+            setMascotState("idle", { loop: true, duration: 220, force: true });
+        }
+    });
+
+    recordBtn?.addEventListener("pointerleave", function () {
+        if (mascotAnimationState === "reading") {
+            setMascotState("idle", { loop: true, duration: 220, force: true });
+        }
     });
 
     recordBtn?.addEventListener("click", function () {
@@ -1449,6 +1575,14 @@
         practiceFeedback.textContent = "Nice reading. You earned a practice star.";
         practiceFeedback.classList.remove("is-warning");
         practiceFeedback.classList.add("is-success");
+        setMascotState("reading", { loop: true, duration: 220, force: true });
+        clearMascotAnimationIdleHold();
+        mascotAnimationIdleHoldTimer = window.setTimeout(() => {
+            mascotAnimationIdleHoldTimer = null;
+            if (mascotAnimationState === "reading") {
+                setMascotState("idle", { loop: true, duration: 145, force: true });
+            }
+        }, 700);
         playCoachAnimation('read');
         updateCompletionSummary();
         if (isColorMode && revealedObject && colorModeCompletionReady) {
@@ -1470,6 +1604,7 @@
     nextBtn?.addEventListener("click", function () {
         if (isColorMode) {
             if (colorModeCompletionReady) {
+                setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
                 completeColorModeLevel();
                 return;
             }
@@ -1477,6 +1612,7 @@
                 currentIndex += 1;
                 practiceFeedback.textContent = "New item ready. Take your time.";
                 practiceFeedback.classList.remove("is-success", "is-warning");
+                setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
                 playCoachAnimation('next');
                 render();
                 return;
@@ -1504,6 +1640,7 @@
                 }
                 practiceFeedback.textContent = "New word ready. Read or skip, then choose Next.";
                 practiceFeedback.classList.remove("is-success", "is-warning");
+                setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
                 playCoachAnimation('next');
                 huntWordArea?.classList.remove("is-closing");
                 huntAdvanceInProgress = false;
@@ -1516,6 +1653,7 @@
             currentIndex += 1;
             practiceFeedback.textContent = "New item ready. Take your time.";
             practiceFeedback.classList.remove("is-success", "is-warning");
+            setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
             playCoachAnimation('next');
             render();
             return;

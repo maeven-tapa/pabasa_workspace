@@ -1533,12 +1533,24 @@
         .color-guide-mascot {
             align-self: center;
             display: block;
+            flex: 0 0 auto;
             filter: drop-shadow(0 14px 18px rgba(15, 23, 42, 0.16));
             justify-self: center;
+            height: clamp(96px, 16vw, 156px);
             max-height: clamp(96px, 16vw, 156px);
             max-width: min(100%, 160px);
+            min-height: clamp(96px, 16vw, 156px);
+            min-width: min(100%, 160px);
             object-fit: contain;
-            width: 100%;
+            object-position: center center;
+            transition: none !important;
+            transform: none !important;
+            width: min(100%, 160px);
+            object-fit: contain;
+        }
+
+        .color-guide-mascot--animated {
+            image-rendering: auto;
         }
 
         .color-dialogue {
@@ -2476,8 +2488,12 @@
             }
 
             .color-guide-mascot {
+                height: clamp(86px, 19vw, 110px);
                 max-height: clamp(86px, 19vw, 110px);
                 max-width: min(100%, 118px);
+                min-height: clamp(86px, 19vw, 110px);
+                min-width: min(100%, 118px);
+                width: min(100%, 118px);
             }
 
             .color-dialogue {
@@ -4273,7 +4289,12 @@
                 <section class="practice-stage" aria-live="polite" aria-atomic="true">
                     <div class="color-mode-stage" id="colorModeStage" aria-hidden="true">
                         <div class="color-guide-panel">
-                            <img class="color-guide-mascot" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA reading guide">
+                            <img
+                                class="color-guide-mascot color-guide-mascot--animated"
+                                src="{% if mascot_animation_first_frame %}{% static mascot_animation_first_frame %}{% else %}{% static 'pabasa_app/images/pabasalogo.png' %}{% endif %}"
+                                alt="PABASA reading guide"
+                                data-mascot-anim
+                            >
                             <div class="color-dialogue">
                                 <h2 class="practice-text" id="colorPracticeText">Ready?</h2>
                             </div>
@@ -4385,6 +4406,50 @@
         })();
     </script>
     {% csrf_token %}
+    {% if mascot_animation_frames.idle %}
+        {% for frame in mascot_animation_frames.idle %}
+    <link rel="preload" as="image" href="{% static frame %}">
+        {% endfor %}
+    {% endif %}
+    {% if mascot_animation_frames.reading %}
+        {% for frame in mascot_animation_frames.reading %}
+    <link rel="preload" as="image" href="{% static frame %}">
+        {% endfor %}
+    {% endif %}
+    {% if mascot_animation_frames.next %}
+        {% for frame in mascot_animation_frames.next %}
+    <link rel="preload" as="image" href="{% static frame %}">
+        {% endfor %}
+    {% endif %}
+    {% if mascot_animation_frames.skip %}
+        {% for frame in mascot_animation_frames.skip %}
+    <link rel="preload" as="image" href="{% static frame %}">
+        {% endfor %}
+    {% endif %}
+    <script>
+        window.PABASA_MASCOT_ANIMATION_FRAMES = {
+            idle: [
+                {% for frame in mascot_animation_frames.idle %}
+                    "{% static frame %}"{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            reading: [
+                {% for frame in mascot_animation_frames.reading %}
+                    "{% static frame %}"{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            next: [
+                {% for frame in mascot_animation_frames.next %}
+                    "{% static frame %}"{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            skip: [
+                {% for frame in mascot_animation_frames.skip %}
+                    "{% static frame %}"{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ]
+        };
+    </script>
     {{ practice_materials|json_script:"practiceMaterialsData" }}
     <script src="{% static 'pabasa_app/js/practice_reader.js' %}?v={% now 'U' %}"></script>
 </body>

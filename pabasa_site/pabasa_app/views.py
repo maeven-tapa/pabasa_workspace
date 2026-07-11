@@ -2280,7 +2280,23 @@ def _dashboard_context(request, nav_role=None, extra=None):
     return context
 
 def home(request):
-    return render(request, 'pabasa_app/home.html')
+    animation_dir = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'animation' / 'Reading'
+    reading_animation_frames = []
+
+    if animation_dir.exists():
+        def frame_sort_key(path: Path):
+            match = re.search(r'(\d+)', path.stem)
+            return (int(match.group(1)) if match else float('inf'), path.stem.lower())
+
+        reading_animation_frames = [
+            f"pabasa_app/animation/Reading/{frame.name}"
+            for frame in sorted(animation_dir.glob('*.png'), key=frame_sort_key)
+        ]
+
+    return render(request, 'pabasa_app/home.html', {
+        'reading_animation_frames': reading_animation_frames,
+        'reading_animation_first_frame': reading_animation_frames[0] if reading_animation_frames else '',
+    })
 
 def auth(request):
     return render(request, 'pabasa_app/auth.html')
@@ -3989,11 +4005,40 @@ def _student_practice_context(request, mode=None):
     context = _dashboard_context(request, 'student')
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     materials = [_serialize_student_practice_material(material, student_user) for material in _student_practice_queryset()]
+    animation_root = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'animation'
+
+    def load_animation_frames(folder_name: str):
+        folder = animation_root / folder_name
+        if not folder.exists():
+            return []
+
+        def frame_sort_key(path: Path):
+            match = re.search(r'(\d+)', path.stem)
+            return (int(match.group(1)) if match else float('inf'), path.stem.lower())
+
+        return [
+            f"pabasa_app/animation/{folder_name}/{frame.name}"
+            for frame in sorted(folder.glob('*.png'), key=frame_sort_key)
+        ]
+
+    mascot_animation_frames = {
+        'idle': load_animation_frames('Blinking'),
+        'reading': load_animation_frames('Clapping'),
+        'next': load_animation_frames('Jumping'),
+        'skip': load_animation_frames('Shrug'),
+    }
+
     context.update({
         'practice_materials': materials,
         'practice_difficulties': AdminPracticeMaterialForm.DIFFICULTY_CHOICES,
         'selected_practice_mode': mode or '',
         'selected_practice_difficulty': request.GET.get('difficulty', '').strip().lower(),
+        'mascot_animation_frames': mascot_animation_frames,
+        'mascot_animation_first_frame': (
+            mascot_animation_frames['idle'][0]
+            if mascot_animation_frames.get('idle')
+            else ''
+        ),
     })
     return context
 

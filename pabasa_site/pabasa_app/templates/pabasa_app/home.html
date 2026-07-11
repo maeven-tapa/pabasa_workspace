@@ -3,6 +3,11 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}">
+{% if reading_animation_frames %}
+    {% for frame in reading_animation_frames %}
+<link rel="preload" as="image" href="{% static frame %}">
+    {% endfor %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -189,7 +194,12 @@
 
             <div class="tools-logo-hub">
                 <span class="tools-logo-glow" aria-hidden="true"></span>
-                <img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA" class="tools-logo">
+                <img
+                    src="{% if reading_animation_first_frame %}{% static reading_animation_first_frame %}{% else %}{% static 'pabasa_app/images/pabasalogo.png' %}{% endif %}"
+                    alt="PABASA"
+                    class="tools-logo tools-logo--animated"
+                    data-animation-frame
+                >
             </div>
 
             <article class="tool-item tool-item--top">
@@ -370,6 +380,12 @@
 </section>
 
 <script>
+    const readingAnimationFrames = [
+        {% for frame in reading_animation_frames %}
+            "{% static frame %}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
     // Fade-in on scroll functionality
     const observerOptions = {
         threshold: 0.1,
@@ -413,6 +429,55 @@
             sliderGrid.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         });
     }
+
+    // Platform Tools mascot frame animation.
+    (function animatePabasaMascot() {
+        const mascot = document.querySelector('[data-animation-frame]');
+        if (!mascot || readingAnimationFrames.length < 2) {
+            return;
+        }
+
+        const preloadedFrames = [];
+        let currentFrameIndex = 0;
+        let timerId = null;
+        let hasStarted = false;
+        const frameDuration = 140;
+
+        const startAnimation = () => {
+            if (hasStarted) {
+                return;
+            }
+            hasStarted = true;
+
+            const tick = () => {
+                currentFrameIndex = (currentFrameIndex + 1) % readingAnimationFrames.length;
+                mascot.src = preloadedFrames[currentFrameIndex].src;
+            };
+
+            timerId = window.setInterval(tick, frameDuration);
+        };
+
+        readingAnimationFrames.forEach((frameSrc, index) => {
+            const frameImage = new Image();
+            frameImage.decoding = 'async';
+            frameImage.src = frameSrc;
+            preloadedFrames[index] = frameImage;
+
+            if (index === 0) {
+                if (frameImage.complete) {
+                    startAnimation();
+                } else {
+                    frameImage.addEventListener('load', startAnimation, { once: true });
+                }
+            }
+        });
+
+        window.addEventListener('pagehide', () => {
+            if (timerId) {
+                window.clearInterval(timerId);
+            }
+        });
+    })();
 </script>
 
 {% endblock %}
