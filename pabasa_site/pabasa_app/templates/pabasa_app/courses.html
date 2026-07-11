@@ -1246,6 +1246,61 @@
         background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
     }
 
+    .course-material-detail {
+        background: #fff;
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 14px;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+        padding: 1rem;
+    }
+
+    .course-material-detail-header {
+        align-items: flex-start;
+        display: flex;
+        gap: 0.85rem;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .course-material-detail-title {
+        color: var(--dash-ink);
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .course-inline-dialog-host {
+        min-width: 0;
+        overflow: auto;
+        padding: 0.25rem;
+        width: 100%;
+    }
+
+    .course-inline-dialog-host > .modal-dialog {
+        margin: 0;
+        max-width: none;
+        min-height: 0;
+        transform: none !important;
+        width: 100%;
+    }
+
+    .course-inline-dialog-host > .modal-dialog > .modal-content {
+        border: 1px solid rgba(27, 26, 23, 0.08);
+        border-radius: 14px;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+        max-height: none;
+        min-height: 0;
+    }
+
+    body.dark-theme .course-material-detail {
+        background: #1e293b;
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    body.dark-theme .course-material-detail-title {
+        color: #f1f5f9;
+    }
+
     .course-modal-body {
         display: grid;
         flex: 1 1 auto;
@@ -4924,17 +4979,36 @@
                                 </nav>
                             </div>
 
-                            <div class="course-tab-content">
+                            <div id="courseInlineDialogHost" class="course-inline-dialog-host d-none" aria-live="polite"></div>
+                            <div class="course-tab-content" id="courseMainContent">
                                 <div class="tab-content">
                                     <div class="tab-pane fade show active" id="materialsPane" role="tabpanel" aria-labelledby="materials-tab">
-                                        <div class="mb-3 course-readings-header">
-                                            <h6 class="reading-section-title mb-0">Student Reading Materials</h6>
-                                            <button class="btn btn-sm btn-outline-primary course-readings-add-btn" id="btnAddMaterialToCourse">Add Material</button>
+                                        <div id="courseMaterialsListView">
+                                            <div class="mb-3 course-readings-header">
+                                                <h6 class="reading-section-title mb-0">Student Reading Materials</h6>
+                                                <button class="btn btn-sm btn-outline-primary course-readings-add-btn" id="btnAddMaterialToCourse">Add Material</button>
+                                            </div>
+                                            <div id="courseDetailMaterials" class="mb-3">
+                                                <div id="courseAttachedMaterials" class="attached-materials mb-3"></div>
+                                            </div>
+                                            <div id="courseOverviewStats" class="mb-3"></div>
                                         </div>
-                                        <div id="courseDetailMaterials" class="mb-3">
-                                            <div id="courseAttachedMaterials" class="attached-materials mb-3"></div>
+                                        <div id="courseMaterialDetailView" class="course-material-detail d-none" aria-live="polite">
+                                            <div class="course-material-detail-header">
+                                                <div>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary mb-3" id="courseMaterialBackBtn"><i class="bi bi-arrow-left me-1"></i>Back to materials</button>
+                                                    <h6 class="course-material-detail-title" id="courseMaterialDetailTitle">Material</h6>
+                                                    <p class="small text-muted mb-0 mt-1" id="courseMaterialDetailMeta"></p>
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-3" id="courseMaterialDetailFacts"></div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover align-middle mb-0">
+                                                    <thead><tr><th style="width:72px;">#</th><th>Content</th></tr></thead>
+                                                    <tbody id="courseMaterialDetailTableBody"></tbody>
+                                                </table>
+                                            </div>
                                         </div>
-                                        <div id="courseOverviewStats" class="mb-3"></div>
                                     </div>
 
                                     <div class="tab-pane fade" id="assessmentsPane" role="tabpanel" aria-labelledby="assessments-tab">
@@ -6715,6 +6789,54 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
     }
 
+    function closeCourseMaterialDetail() {
+        const listView = document.getElementById('courseMaterialsListView');
+        const detailView = document.getElementById('courseMaterialDetailView');
+        if (listView) listView.classList.remove('d-none');
+        if (detailView) detailView.classList.add('d-none');
+    }
+
+    function showCourseMaterialDetail(material) {
+        if (!material) return;
+
+        const listView = document.getElementById('courseMaterialsListView');
+        const detailView = document.getElementById('courseMaterialDetailView');
+        const titleEl = document.getElementById('courseMaterialDetailTitle');
+        const metaEl = document.getElementById('courseMaterialDetailMeta');
+        const factsEl = document.getElementById('courseMaterialDetailFacts');
+        const tableBody = document.getElementById('courseMaterialDetailTableBody');
+        if (!listView || !detailView || !titleEl || !metaEl || !factsEl || !tableBody) return;
+
+        const itemType = titleCaseLabel(material.item_type || material.reading_type, 'Material');
+        const usage = titleCaseLabel(material.usage || material.usage_type || material.type, 'Practice');
+        const facts = [
+            ['Type', itemType],
+            ['Use', usage],
+            ['Assigned Week', getMaterialAssignedWeekLabel(material)],
+            ['Language', getMaterialLanguageDisplayValue(material, 'Not Set')],
+            ['Status', getMaterialStatusLabel(material)]
+        ];
+        const items = getMaterialContentItems(material);
+
+        titleEl.textContent = material.title || 'Material';
+        metaEl.textContent = `${itemType} - ${usage}`;
+        factsEl.innerHTML = facts.map(([label, value]) => `
+            <div class="col-sm-6 col-lg">
+                <div class="small text-muted fw-bold text-uppercase">${escapeHtml(label)}</div>
+                <div class="fw-semibold">${escapeHtml(value)}</div>
+            </div>
+        `).join('');
+        tableBody.innerHTML = items.length
+            ? items.map((item, index) => `<tr><td class="text-muted fw-semibold">${index + 1}</td><td style="white-space: pre-wrap;">${escapeHtml(item)}</td></tr>`).join('')
+            : '<tr><td colspan="2" class="text-muted text-center py-4">No content available.</td></tr>';
+
+        listView.classList.add('d-none');
+        detailView.classList.remove('d-none');
+        detailView.scrollIntoView({ block: 'start' });
+    }
+
+    document.getElementById('courseMaterialBackBtn')?.addEventListener('click', closeCourseMaterialDetail);
+
     function findRenderedReadingMaterial(card, materialId) {
         if (!card || !materialId) return null;
         const renderedContainer = card.closest('[data-readings-container-id]');
@@ -7501,6 +7623,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     window.openCourseDetail = async function(courseId) {
         try {
+            closeCourseMaterialDetail();
             let course = findCourseById(courseId);
             if (!course) {
                 await loadTeacherCoursesFromServer();
@@ -8058,7 +8181,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         const mat = findCourseMaterial(activeCourse, mid);
                         if (action === 'preview') {
                             if (!mat) return showToast('Material not found', 'error');
-                            showMaterialPreviewModal(mat);
+                            showCourseMaterialDetail(mat);
                             return;
                         }
 
@@ -9436,7 +9559,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             if (e.target.closest('[data-action="view"]') || (!e.target.closest('[data-action]') && card)) {
                 if (!material) return showToast('Material not found', 'error');
-                showMaterialPreviewModal(material);
+                showCourseMaterialDetail(material);
                 return;
             }
 
@@ -10601,6 +10724,94 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             document.body.appendChild(modalEl);
         }
     }
+
+    // Any modal launched while Course Detail is open is rendered as an inline
+    // course page. This keeps forms and their existing handlers intact while
+    // avoiding nested dialogs and backdrops.
+    (function installCourseInlineModalAdapter() {
+        if (!window.bootstrap?.Modal || bootstrap.Modal.prototype._courseInlinePatched) return;
+
+        const modalPrototype = bootstrap.Modal.prototype;
+        const originalShow = modalPrototype.show;
+        const originalHide = modalPrototype.hide;
+        const inlineState = new WeakMap();
+
+        function dispatchModalEvent(modalEl, eventName) {
+            try { modalEl.dispatchEvent(new Event(eventName, { bubbles: true })); } catch (e) { /* ignore */ }
+        }
+
+        function closeInlineModal(instance) {
+            const modalEl = instance?._element;
+            const state = modalEl ? inlineState.get(modalEl) : null;
+            if (!state) return false;
+
+            dispatchModalEvent(modalEl, 'hide.bs.modal');
+            state.originalParent.appendChild(state.dialog);
+            inlineState.delete(modalEl);
+            modalEl.classList.remove('course-inline-active');
+            state.host.classList.add('d-none');
+            state.mainContent.classList.remove('d-none');
+            dispatchModalEvent(modalEl, 'hidden.bs.modal');
+            return true;
+        }
+
+        function openInlineModal(instance) {
+            const modalEl = instance?._element;
+            const courseModal = document.getElementById('courseDetailModal');
+            const host = document.getElementById('courseInlineDialogHost');
+            const mainContent = document.getElementById('courseMainContent');
+            if (!modalEl || modalEl === courseModal || !courseModal?.classList.contains('show') || !host || !mainContent) return false;
+
+            const activeDialog = host.querySelector(':scope > .modal-dialog');
+            if (activeDialog) {
+                const activeModal = Array.from(document.querySelectorAll('.modal')).find(candidate => inlineState.get(candidate)?.dialog === activeDialog);
+                if (activeModal) closeInlineModal(bootstrap.Modal.getInstance(activeModal));
+            }
+
+            const dialog = modalEl.querySelector(':scope > .modal-dialog');
+            if (!dialog) return false;
+
+            dispatchModalEvent(modalEl, 'show.bs.modal');
+            inlineState.set(modalEl, { dialog, originalParent: modalEl, host, mainContent });
+            modalEl.classList.add('course-inline-active');
+            mainContent.classList.add('d-none');
+            host.classList.remove('d-none');
+            host.appendChild(dialog);
+            host.scrollTop = 0;
+            dispatchModalEvent(modalEl, 'shown.bs.modal');
+            dialog.querySelector('input:not([type="hidden"]), select, textarea, button')?.focus({ preventScroll: true });
+            return true;
+        }
+
+        modalPrototype.show = function () {
+            if (openInlineModal(this)) return;
+            return originalShow.apply(this, arguments);
+        };
+
+        modalPrototype.hide = function () {
+            if (closeInlineModal(this)) return;
+            return originalHide.apply(this, arguments);
+        };
+
+        modalPrototype._courseInlinePatched = true;
+
+        document.getElementById('courseInlineDialogHost')?.addEventListener('click', function (event) {
+            const dismissButton = event.target.closest('[data-bs-dismiss="modal"]');
+            if (!dismissButton) return;
+            const activeDialog = this.querySelector(':scope > .modal-dialog');
+            const activeModal = Array.from(document.querySelectorAll('.modal')).find(candidate => inlineState.get(candidate)?.dialog === activeDialog);
+            if (!activeModal) return;
+            event.preventDefault();
+            event.stopPropagation();
+            closeInlineModal(bootstrap.Modal.getInstance(activeModal));
+        });
+
+        document.getElementById('courseDetailModal')?.addEventListener('hide.bs.modal', function () {
+            document.querySelectorAll('.modal.course-inline-active').forEach(modalEl => {
+                closeInlineModal(bootstrap.Modal.getInstance(modalEl));
+            });
+        });
+    })();
 
     function showStackedModal(modalEl) {
         if (!modalEl || !window.bootstrap) return null;
