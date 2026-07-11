@@ -43,6 +43,7 @@ trained-data files.
 Optional environment variables:
 
 - `TESSERACT_CMD`: full executable path when `tesseract` is not on `PATH`
+- `OCR_TESSDATA_DIR`: trained-data directory when it is outside the system path
 - `OCR_LANGUAGES`: language combination, default `eng+fil`
 - `OCR_TIMEOUT_SECONDS`: per-image-candidate timeout, default `15`
 

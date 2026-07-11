@@ -7624,11 +7624,26 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
     configured_command = (os.environ.get('TESSERACT_CMD') or '').strip()
     if configured_command:
         pytesseract.pytesseract.tesseract_cmd = configured_command
-    elif os.name == 'nt' and not shutil.which('tesseract'):
+    elif shutil.which('tesseract'):
+        pytesseract.pytesseract.tesseract_cmd = shutil.which('tesseract')
+    elif os.name == 'nt':
         common_windows_command = Path(os.environ.get(
             'ProgramFiles', r'C:\Program Files')) / 'Tesseract-OCR' / 'tesseract.exe'
         if common_windows_command.exists():
             pytesseract.pytesseract.tesseract_cmd = str(common_windows_command)
+    else:
+        digitalocean_commands = list(Path('/layers/digitalocean_apt/apt').glob(
+            '**/bin/tesseract'))
+        if digitalocean_commands:
+            pytesseract.pytesseract.tesseract_cmd = str(digitalocean_commands[0])
+
+    tessdata_dir = (os.environ.get('OCR_TESSDATA_DIR') or '').strip()
+    if not tessdata_dir and os.name != 'nt':
+        digitalocean_tessdata = list(Path('/layers/digitalocean_apt/apt').glob(
+            'usr/share/tesseract-ocr/*/tessdata'))
+        if digitalocean_tessdata:
+            tessdata_dir = str(digitalocean_tessdata[0])
+    tessdata_config = f'--tessdata-dir "{tessdata_dir}"' if tessdata_dir else ''
 
     try:
         upload.seek(0)
@@ -7637,7 +7652,7 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
             image = source_image.convert('RGB')
         upload.seek(0)
 
-        available_languages = set(pytesseract.get_languages(config=''))
+        available_languages = set(pytesseract.get_languages(config=tessdata_config))
         requested_languages = [lang.strip() for lang in os.environ.get(
             'OCR_LANGUAGES', 'eng+fil').split('+') if lang.strip()]
         selected_languages = [lang for lang in requested_languages if lang in available_languages]
@@ -7651,6 +7666,8 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
         debug['languages'] = selected_languages
         debug['missing_languages'] = [lang for lang in requested_languages
                                       if lang not in available_languages]
+        if tessdata_dir:
+            debug['tessdata_dir'] = tessdata_dir
         best = {'score': -1, 'confidence': 0, 'layout': [], 'text': '', 'label': ''}
         timeout = max(1, int(os.environ.get('OCR_TIMEOUT_SECONDS', '15')))
 
@@ -7659,7 +7676,8 @@ def _extract_text_from_image(upload, debug_dir=None, debug_label=''):
             try:
                 data = pytesseract.image_to_data(
                     candidate['image'], lang=language_config,
-                    config='--oem 1 --psm 6', output_type=Output.DICT, timeout=timeout)
+                    config=f'--oem 1 --psm 6 {tessdata_config}'.strip(),
+                    output_type=Output.DICT, timeout=timeout)
                 layout, confidences = [], []
                 for index, raw_text in enumerate(data.get('text', [])):
                     word = re.sub(r'\s+', ' ', str(raw_text or '')).strip()
