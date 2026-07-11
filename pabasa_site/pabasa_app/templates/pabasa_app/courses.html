@@ -1270,26 +1270,20 @@
     }
 
     .course-inline-dialog-host {
+        grid-column: 1 / -1;
         min-width: 0;
         overflow: auto;
         padding: 0.25rem;
         width: 100%;
     }
 
-    .course-inline-dialog-host > .modal-dialog {
-        margin: 0;
-        max-width: none;
-        min-height: 0;
-        transform: none !important;
-        width: 100%;
-    }
-
-    .course-inline-dialog-host > .modal-dialog > .modal-content {
+    .course-inline-dialog-host > .modal-content {
         border: 1px solid rgba(27, 26, 23, 0.08);
         border-radius: 14px;
         box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
         max-height: none;
         min-height: 0;
+        width: 100%;
     }
 
     body.dark-theme .course-material-detail {
@@ -4965,7 +4959,7 @@
                             </button>
                         </div>
                         <div class="modal-body course-modal-body">
-                            <div class="course-sidebar d-flex flex-column align-items-start">
+                            <div class="course-sidebar d-flex flex-column align-items-start" id="courseSidebar">
                                 <div style="width:100%; margin-bottom:0.6rem;">
                                     <strong>Sections</strong>
                                     <div id="courseDetailSections" class="mt-2 small text-muted"></div>
@@ -10746,11 +10740,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!state) return false;
 
             dispatchModalEvent(modalEl, 'hide.bs.modal');
-            state.originalParent.appendChild(state.dialog);
+            state.dialog.appendChild(state.content);
             inlineState.delete(modalEl);
             modalEl.classList.remove('course-inline-active');
             state.host.classList.add('d-none');
             state.mainContent.classList.remove('d-none');
+            state.sidebar?.classList.remove('d-none');
             dispatchModalEvent(modalEl, 'hidden.bs.modal');
             return true;
         }
@@ -10760,26 +10755,29 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const courseModal = document.getElementById('courseDetailModal');
             const host = document.getElementById('courseInlineDialogHost');
             const mainContent = document.getElementById('courseMainContent');
+            const sidebar = document.getElementById('courseSidebar');
             if (!modalEl || modalEl === courseModal || !courseModal?.classList.contains('show') || !host || !mainContent) return false;
 
-            const activeDialog = host.querySelector(':scope > .modal-dialog');
-            if (activeDialog) {
-                const activeModal = Array.from(document.querySelectorAll('.modal')).find(candidate => inlineState.get(candidate)?.dialog === activeDialog);
+            const activeContent = host.querySelector(':scope > .modal-content');
+            if (activeContent) {
+                const activeModal = Array.from(document.querySelectorAll('.modal')).find(candidate => inlineState.get(candidate)?.content === activeContent);
                 if (activeModal) closeInlineModal(bootstrap.Modal.getInstance(activeModal));
             }
 
             const dialog = modalEl.querySelector(':scope > .modal-dialog');
-            if (!dialog) return false;
+            const content = dialog?.querySelector(':scope > .modal-content');
+            if (!dialog || !content) return false;
 
             dispatchModalEvent(modalEl, 'show.bs.modal');
-            inlineState.set(modalEl, { dialog, originalParent: modalEl, host, mainContent });
+            inlineState.set(modalEl, { dialog, content, host, mainContent, sidebar });
             modalEl.classList.add('course-inline-active');
             mainContent.classList.add('d-none');
+            sidebar?.classList.add('d-none');
             host.classList.remove('d-none');
-            host.appendChild(dialog);
+            host.appendChild(content);
             host.scrollTop = 0;
             dispatchModalEvent(modalEl, 'shown.bs.modal');
-            dialog.querySelector('input:not([type="hidden"]), select, textarea, button')?.focus({ preventScroll: true });
+            content.querySelector('input:not([type="hidden"]), select, textarea, button')?.focus({ preventScroll: true });
             return true;
         }
 
@@ -10798,8 +10796,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         document.getElementById('courseInlineDialogHost')?.addEventListener('click', function (event) {
             const dismissButton = event.target.closest('[data-bs-dismiss="modal"]');
             if (!dismissButton) return;
-            const activeDialog = this.querySelector(':scope > .modal-dialog');
-            const activeModal = Array.from(document.querySelectorAll('.modal')).find(candidate => inlineState.get(candidate)?.dialog === activeDialog);
+            const activeContent = this.querySelector(':scope > .modal-content');
+            const activeModal = Array.from(document.querySelectorAll('.modal')).find(candidate => inlineState.get(candidate)?.content === activeContent);
             if (!activeModal) return;
             event.preventDefault();
             event.stopPropagation();
