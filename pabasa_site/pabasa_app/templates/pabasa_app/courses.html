@@ -11516,14 +11516,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (debugInfo.ocr_engine) {
                 parts.push(`OCR engine: ${debugInfo.ocr_engine}`);
             }
-            if (debugInfo.ocr_status === 'unavailable') {
-                parts.push('OCR status: Tesseract is not available on the server');
-            } else if (debugInfo.ocr_status === 'path_error') {
-                parts.push('OCR status: Tesseract path/execution error');
+            if (debugInfo.ocr_status === 'no_engine') {
+                parts.push('OCR status: no OCR engine configured');
+            } else if (debugInfo.ocr_status === 'engine_error') {
+                parts.push('OCR status: OCR engine startup error');
             } else if (debugInfo.ocr_status === 'no_text') {
-                parts.push('OCR status: Tesseract ran but found no readable text');
+                parts.push('OCR status: no readable text found');
             } else if (debugInfo.ocr_status === 'ok') {
-                parts.push('OCR status: Tesseract ran successfully');
+                parts.push('OCR status: extraction completed');
             }
             if (debugInfo.word_count != null || debugInfo.best_confidence != null) {
                 const words = debugInfo.word_count != null ? `${debugInfo.word_count} OCR word${Number(debugInfo.word_count) === 1 ? '' : 's'}` : 'OCR output';
@@ -11535,14 +11535,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             if (Array.isArray(debugInfo.candidate_images) && debugInfo.candidate_images.length) {
                 parts.push(`candidate images: ${debugInfo.candidate_images.slice(0, 2).join(', ')}`);
-            }
-            if (debugInfo.tesseract_error) {
-                parts.push(`tesseract error: ${debugInfo.tesseract_error}`);
-            }
-            if (debugInfo.tesseract_path) {
-                parts.push(`tesseract path: ${debugInfo.tesseract_path}`);
-            } else if (debugInfo.tesseract_available === false) {
-                parts.push('tesseract path: not resolved');
             }
             if (debugInfo.metadata) {
                 parts.push(`metadata: ${debugInfo.metadata}`);

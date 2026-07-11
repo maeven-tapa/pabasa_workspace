@@ -20,7 +20,7 @@ from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _resolve_tesseract_executable, _configure_tesseract_runtime_environment, _build_image_upload_debug_info
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info
 from .weekly_digest import send_weekly_digest
 
 
@@ -235,50 +235,6 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertEqual(info["sha256"], hashlib.sha256(b"abc123").hexdigest())
         self.assertEqual(info["content_type"], "image/png")
 
-    def test_resolve_tesseract_executable_falls_back_to_tesseract_ocr_binary(self):
-        class DummyPytesseractModule:
-            pass
-
-        with patch("pabasa_app.views.os.path.isfile", side_effect=lambda path: path == "/usr/bin/tesseract-ocr"), patch("pabasa_app.views.shutil.which", side_effect=lambda name: None if name == "tesseract" else None):
-            resolved = _resolve_tesseract_executable(DummyPytesseractModule())
-
-        self.assertEqual(resolved, "/usr/bin/tesseract-ocr")
-
-    def test_resolve_tesseract_executable_accepts_path_entry_pointing_to_executable(self):
-        class DummyPytesseractModule:
-            pass
-
-        with patch.dict(os.environ, {"PATH": "/usr/bin/tesseract"}, clear=False):
-            with patch("pabasa_app.views.os.path.isfile", side_effect=lambda path: path == "/usr/bin/tesseract"), patch("pabasa_app.views.shutil.which", return_value=None):
-                resolved = _resolve_tesseract_executable(DummyPytesseractModule())
-
-        self.assertEqual(resolved, "/usr/bin/tesseract")
-
-    def test_configure_tesseract_runtime_environment_adds_buildpack_paths(self):
-        directories = {
-            "/layers/digitalocean_apt/apt/usr/lib",
-            "/layers/digitalocean_apt/apt/usr/lib/x86_64-linux-gnu",
-            "/layers/digitalocean_apt/apt/usr/share/tesseract-ocr/5/tessdata",
-        }
-
-        with patch.object(Path, "is_dir", autospec=True, side_effect=lambda path: str(path).replace('\\', '/') in directories), \
-                patch.object(Path, "glob", autospec=True, return_value=[Path("/layers/digitalocean_apt/apt/usr/lib/x86_64-linux-gnu")]), \
-                patch.dict(os.environ, {}, clear=True):
-            _configure_tesseract_runtime_environment("/layers/digitalocean_apt/apt/usr/bin/tesseract")
-
-            self.assertIn("/layers/digitalocean_apt/apt/usr/lib", os.environ["LD_LIBRARY_PATH"].replace('\\', '/'))
-            self.assertEqual(os.environ["TESSDATA_PREFIX"].replace('\\', '/'), "/layers/digitalocean_apt/apt/usr/share/tesseract-ocr/5/tessdata")
-
-    def test_tesseract_debug_endpoint_reports_path_info(self):
-        response = self.client.get(reverse("tesseract_debug"))
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-
-        self.assertTrue(data["success"])
-        self.assertIn("tesseract_debug", data)
-        self.assertIn("path_entries", data["tesseract_debug"])
-        self.assertIn("tesseract_available", data["tesseract_debug"])
-
     def setUp(self):
         self.teacher = User.objects.create(
             custom_id=f"TCH-{uuid.uuid4().hex[:8].upper()}",
@@ -485,48 +441,6 @@ class MaterialUploadExtractionTests(TestCase):
         self.assertEqual(data["items"], [])
         self.assertTrue(data.get("warnings") or data.get("warning_message"))
         mock_extract_text_from_image.assert_called_once()
-
-    @patch("pabasa_app.views._extract_text_from_image", return_value={"text": "", "layout": [], "debug": {"tesseract_available": False, "tesseract_error": "Tesseract executable not found"}})
-    def test_extract_endpoint_uses_tesseract_error_in_warning_message(self, mock_extract_text_from_image):
-        image_file = SimpleUploadedFile(
-            "scan.png",
-            b"not-a-real-image",
-            content_type="image/png",
-        )
-
-        response = self.client.post(
-            reverse("extract_reading_material_file"),
-            {"file": image_file},
-            format="multipart",
-        )
-
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("Tesseract", data.get("warning_message", ""))
-        self.assertIn("not found", data.get("warning_message", ""))
-        mock_extract_text_from_image.assert_called_once()
-
-    @patch("pabasa_app.views._extract_text_from_image", return_value={"text": "", "layout": [], "debug": {"ocr_status": "no_text", "tesseract_available": True, "tesseract_error": ""}})
-    def test_extract_endpoint_distinguishes_no_text_from_tesseract_failure(self, mock_extract_text_from_image):
-        image_file = SimpleUploadedFile("scan.png", b"not-a-real-image", content_type="image/png")
-
-        response = self.client.post(reverse("extract_reading_material_file"), {"file": image_file}, format="multipart")
-
-        self.assertEqual(response.status_code, 200)
-        warning = response.json().get("warning_message", "")
-        self.assertIn("No readable text", warning)
-        self.assertNotIn("could not start Tesseract", warning)
-
-    @patch("pabasa_app.views._extract_text_from_image", return_value={"text": "", "layout": [], "debug": {"ocr_status": "path_error", "tesseract_available": True, "tesseract_error": "exit status 127"}})
-    def test_extract_endpoint_reports_tesseract_path_error_separately(self, mock_extract_text_from_image):
-        image_file = SimpleUploadedFile("scan.png", b"not-a-real-image", content_type="image/png")
-
-        response = self.client.post(reverse("extract_reading_material_file"), {"file": image_file}, format="multipart")
-
-        self.assertEqual(response.status_code, 200)
-        warning = response.json().get("warning_message", "")
-        self.assertIn("could not start Tesseract", warning)
-        self.assertIn("exit status 127", warning)
 
     def test_fallback_material_items_preserve_paragraph_blocks(self):
         text = "First line\nSecond line\n\nThird line"
