@@ -79,7 +79,7 @@
                 <div class="border rounded-3 p-3 bg-light">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <label class="form-label fw-bold mb-0" for="practice-items-input">Items</label>
-                        <span class="small text-secondary" id="practice-items-helper">Enter one item per chip for easy/medium or one sentence per line for hard.</span>
+                        <span class="small text-secondary" id="practice-items-helper">Choose a difficulty to see item guidance.</span>
                     </div>
                     <div id="practice-items-container">
                         <input class="form-control" id="practice-items-input" type="text" placeholder="Type and press Enter or comma" autocomplete="off">
@@ -118,6 +118,15 @@
     const maxItemsPerContent = 5;
     function isColorModeSelected() {
         return mode.value === 'color';
+    }
+    function getDifficultyGuidance(value) {
+        if (value === 'medium') {
+            return 'Enter one complete sentence per item.';
+        }
+        if (value === 'hard') {
+            return 'Enter one complete paragraph per item.';
+        }
+        return 'Enter one simple word per item.';
     }
     const levelHelp = document.getElementById('level-availability-help');
     const occupiedLevelsMap = JSON.parse(document.getElementById('occupied-levels-map').textContent);
@@ -182,24 +191,19 @@
     function renderForDifficulty() {
         const selected = difficulty.value;
         updateLevelOptions();
+        helper.textContent = selected ? getDifficultyGuidance(selected) : 'Choose a difficulty to see item guidance.';
         if (selected === 'hard') {
             container.classList.add('d-none');
             itemsTextarea.classList.remove('d-none');
             itemsTextarea.value = hiddenField.value || '';
-            helper.textContent = isColorModeSelected()
-                ? `Enter up to ${maxItemsPerContent} sentences.`
-                : 'Enter one sentence per line.';
+            helper.textContent = 'Enter one complete paragraph per item.';
         } else {
             container.classList.remove('d-none');
             itemsTextarea.classList.add('d-none');
             itemsTextarea.value = '';
             helper.textContent = selected === 'medium'
-                ? (isColorModeSelected()
-                    ? `Each chip represents one word with up to three syllables. Limit: ${maxItemsPerContent} items.`
-                    : 'Each chip represents one word with up to three syllables.')
-                : (isColorModeSelected()
-                    ? `Each chip represents one one-syllable word. Limit: ${maxItemsPerContent} items.`
-                    : 'Each chip represents one one-syllable word.');
+                ? 'Enter one complete sentence per item.'
+                : 'Enter one simple word per item.';
             renderTags();
         }
     }

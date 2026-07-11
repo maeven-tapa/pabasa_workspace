@@ -524,6 +524,11 @@
         outline: 3px solid #fef3c7;
         outline-offset: 3px;
     }
+    a.level-play-btn.is-locked,
+    a.level-play-btn.is-unavailable {
+        pointer-events: none;
+        cursor: not-allowed;
+    }
 </style>
 {% endblock %}
 
@@ -566,13 +571,13 @@
             <p>Your next challenge is {{ game_progression_summary.next_label }}.</p>
         </div>
         {% for section in game_progression.sections %}
-            <div class="progression-difficulty-group mb-3">
+            <div class="progression-difficulty-group mb-3" data-difficulty-unlocked="{% if section.unlocked %}true{% else %}false{% endif %}">
                 <div class="difficulty-header">
                     <div>
                         <h4 class="mb-1">{{ section.difficulty_label }}</h4>
                         <p class="mb-0" style="color: var(--dash-muted); font-size: 0.9rem;">{{ section.locked_reason|default:"Ready when you are." }}</p>
                     </div>
-                    <span class="difficulty-badge">{% if section.unlocked %}Unlocked{% else %}Locked{% endif %}</span>
+                    <span class="difficulty-badge" data-difficulty-status>{% if section.unlocked %}Unlocked{% else %}Locked{% endif %}</span>
                 </div>
                 <div class="level-grid">
                     {% for level in section.levels %}
@@ -588,7 +593,7 @@
                             </div>
                             <div class="small text-muted">{{ level.difficulty_label }}</div>
                             <div class="small text-muted">{% if level.state == 'completed' %}Stars: {{ level.stars_earned }}{% elif level.state == 'locked' %}{{ level.locked_reason }}{% elif level.state == 'content_unavailable' %}No practice content uploaded for this level yet.{% else %}Ready to play{% endif %}</div>
-                            <a class="level-play-btn {% if level.state == 'locked' %}is-locked{% elif level.state == 'content_unavailable' %}is-unavailable{% elif level.state == 'completed' %}is-completed{% endif %}" href="{% if level.material_exists %}{{ level.play_url }}?id={{ level.material_id }}&game={{ selected_game_mode }}&difficulty={{ level.difficulty }}&level={{ level.level }}{% else %}#{% endif %}">
+                            <a class="level-play-btn {% if level.state == 'locked' %}is-locked{% elif level.state == 'content_unavailable' %}is-unavailable{% elif level.state == 'completed' %}is-completed{% endif %}" href="{% if level.state == 'unlocked' or level.state == 'completed' %}{% if level.material_exists %}{{ level.play_url }}?id={{ level.material_id }}&game={{ selected_game_mode }}&difficulty={{ level.difficulty }}&level={{ level.level }}{% else %}#{% endif %}{% else %}#{% endif %}" {% if level.state == 'locked' or level.state == 'content_unavailable' %}aria-disabled="true" tabindex="-1"{% endif %}>
                                 {% if level.state == 'completed' %}<i class="bi bi-arrow-repeat"></i>{% elif level.state == 'unlocked' %}<i class="bi bi-play-fill"></i>{% elif level.state == 'content_unavailable' %}<i class="bi bi-slash-circle"></i>{% else %}<i class="bi bi-lock-fill"></i>{% endif %}
                                 {{ level.button_label }}
                             </a>
@@ -763,6 +768,8 @@
                     button.classList.toggle('is-completed', completed);
                     button.classList.toggle('is-unavailable', unavailable);
                     button.classList.toggle('is-locked', !unavailable && !unlocked && !completed);
+                    button.toggleAttribute('aria-disabled', !unavailable && !unlocked && !completed);
+                    button.tabIndex = (!unavailable && !unlocked && !completed) ? -1 : 0;
                     button.innerHTML = completed
                         ? '<i class="bi bi-arrow-repeat"></i> Replay'
                         : unavailable
@@ -776,30 +783,26 @@
             document.querySelectorAll('.progression-difficulty-group').forEach((group) => {
                 const difficultyBadge = group.querySelector('.difficulty-badge');
                 const levelStatusEls = Array.from(group.querySelectorAll('.level-status'));
-                const states = levelStatusEls.map((el) => {
-                    if (el.classList.contains('is-completed')) return 'completed';
-                    if (el.classList.contains('is-unlocked')) return 'ongoing';
-                    if (el.classList.contains('is-locked')) return 'locked';
-                    if (el.classList.contains('is-unavailable')) return 'unavailable';
-                    return 'locked';
-                });
-                const hasCompleted = states.includes('completed');
-                const hasOngoing = states.includes('ongoing');
-                const hasUnlocked = levelStatusEls.some((el) => el.classList.contains('is-unlocked'));
-                const allLocked = states.every((state) => state === 'locked' || state === 'unavailable');
+                const completedCount = levelStatusEls.filter((el) => el.classList.contains('is-completed')).length;
+                const unlockedCount = levelStatusEls.filter((el) => el.classList.contains('is-unlocked')).length;
+                const availableCount = levelStatusEls.filter((el) => !el.classList.contains('is-unavailable')).length;
+                const hasContent = availableCount > 0;
+                const hasStarted = completedCount > 0 || unlockedCount > 0;
+                const fullyCompleted = hasContent && completedCount >= 5 && unlockedCount === 0;
+                const difficultyUnlocked = group.getAttribute('data-difficulty-unlocked') === 'true';
 
                 let label = 'Locked';
                 let className = 'is-locked';
-                if (hasCompleted && !hasOngoing) {
-                    label = 'Finished!';
+                if (!hasContent || !difficultyUnlocked) {
+                    label = 'Locked';
+                    className = 'is-locked';
+                } else if (fullyCompleted) {
+                    label = 'Finished';
                     className = 'is-completed';
-                } else if (hasOngoing) {
+                } else if (hasStarted) {
                     label = 'On-going';
                     className = 'is-ongoing';
-                } else if (hasUnlocked) {
-                    label = 'Unlocked';
-                    className = 'is-unlocked';
-                } else if (!allLocked) {
+                } else {
                     label = 'Unlocked';
                     className = 'is-unlocked';
                 }

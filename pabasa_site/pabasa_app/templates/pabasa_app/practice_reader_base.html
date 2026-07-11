@@ -403,12 +403,35 @@
         }
 
         .scrolls-card-text {
-            font-size: clamp(1.6rem, 4.2vw, 2.55rem);
+            color: #24231f;
             font-weight: 900;
             letter-spacing: 0.02em;
             line-height: 1.12;
             margin: 0;
             max-width: min(100%, 34rem);
+            text-wrap: balance;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        .practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
+            font-size: clamp(4.4rem, 11vw, 7.4rem);
+            letter-spacing: 0.05em;
+            line-height: 1.08;
+            max-width: min(100%, 42rem);
+        }
+
+        .practice-scrolls-shell .scrolls-card.practice-sentence .scrolls-card-text {
+            font-size: clamp(1.2rem, 3.2vw, 2.35rem);
+            line-height: 1.1;
+            max-width: min(100%, 36rem);
+        }
+
+        .practice-scrolls-shell .scrolls-card.practice-paragraph .scrolls-card-text {
+            font-size: clamp(1.22rem, 2.25vw, 1.64rem);
+            line-height: 1.22;
+            max-width: min(100%, 28rem);
+            text-align: justify;
         }
 
         .scrolls-card-note {
@@ -751,9 +774,19 @@
                 padding: clamp(0.9rem, 1.6vw, 1.8rem);
             }
 
-            .scrolls-card-text {
-                font-size: clamp(2.8rem, 4.9vw, 6rem);
-                max-width: min(100%, 62rem);
+            .practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
+                font-size: clamp(3.6rem, 9vw, 6rem);
+                max-width: min(100%, 32rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-sentence .scrolls-card-text {
+                font-size: clamp(1.05rem, 3vw, 1.95rem);
+                max-width: min(100%, 30rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-paragraph .scrolls-card-text {
+                font-size: clamp(1.12rem, 2.05vw, 1.52rem);
+                max-width: min(100%, 24rem);
             }
 
             .scrolls-card-note {
@@ -893,8 +926,16 @@
                 padding: 0.9rem 0.8rem 0.95rem;
             }
 
-            .scrolls-card-text {
-                font-size: clamp(1.2rem, 5vw, 1.7rem);
+            .practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
+                font-size: clamp(3rem, 8vw, 5rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-sentence .scrolls-card-text {
+                font-size: clamp(0.95rem, 2.8vw, 1.65rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-paragraph .scrolls-card-text {
+                font-size: clamp(1.04rem, 1.9vw, 1.4rem);
             }
 
             .scrolls-record-btn {
@@ -1124,6 +1165,12 @@
             text-transform: uppercase;
         }
 
+        .practice-title .practice-journey-subtitle {
+            letter-spacing: 0.02em;
+            margin-top: 0.2rem;
+            text-transform: none;
+        }
+
         .practice-title h1 {
             font-size: clamp(1.35rem, 3vw, 2.3rem);
             font-weight: 900;
@@ -1190,6 +1237,13 @@
             position: relative;
         }
 
+        .coach-image {
+            display: block;
+            height: 100%;
+            object-fit: cover;
+            width: 100%;
+        }
+
         .coach-animation-wrapper {
             position: relative;
             width: 100%;
@@ -1235,8 +1289,95 @@
         }
 
         .mini-steps {
+            display: none;
+            gap: 0.55rem;
+        }
+
+        .coach-card {
+            background: #fffdf7;
+            border: 1px solid rgba(31, 111, 139, 0.14);
+            border-radius: 18px;
+            box-shadow: 0 10px 22px rgba(31, 111, 139, 0.08);
             display: grid;
             gap: 0.55rem;
+            padding: 0.75rem;
+        }
+
+        .coach-card--mission {
+            background: linear-gradient(180deg, #f8fbff 0%, #eef8fb 100%);
+        }
+
+        .coach-card-title {
+            align-items: center;
+            color: var(--sky-deep);
+            display: inline-flex;
+            font-size: 0.82rem;
+            font-weight: 900;
+            gap: 0.45rem;
+            letter-spacing: 0.02em;
+            margin: 0;
+        }
+
+        .coach-card-title i {
+            color: #f5b81f;
+            font-size: 1rem;
+        }
+
+        .coach-mission-list,
+        .coach-shortcuts-list {
+            display: grid;
+            gap: 0.4rem;
+            margin: 0;
+            padding: 0;
+        }
+
+        .coach-mission-item,
+        .coach-shortcut {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.82);
+            border-radius: 12px;
+            color: var(--muted);
+            display: grid;
+            gap: 0.55rem;
+            grid-template-columns: auto 1fr;
+            padding: 0.55rem 0.65rem;
+        }
+
+        .coach-mission-item strong,
+        .coach-shortcut kbd {
+            align-items: center;
+            background: #fff;
+            border: 1px solid rgba(31, 111, 139, 0.16);
+            border-bottom-width: 3px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(31, 111, 139, 0.08);
+            color: var(--sky-deep);
+            display: inline-flex;
+            font-size: 0.8rem;
+            font-weight: 900;
+            justify-content: center;
+            min-height: 28px;
+            min-width: 34px;
+            padding: 0 0.45rem;
+        }
+
+        .coach-mission-item span,
+        .coach-shortcut span {
+            font-size: 0.88rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .coach-fact {
+            color: var(--ink);
+            font-size: 0.96rem;
+            font-weight: 800;
+            line-height: 1.45;
+            margin: 0;
+        }
+
+        .coach-fact strong {
+            color: var(--sky-deep);
         }
 
         .mini-step {
@@ -1260,6 +1401,10 @@
             height: 32px;
             place-items: center;
             width: 32px;
+        }
+
+        .coach-mission {
+            display: grid;
         }
 
         .play-card {
@@ -1361,23 +1506,39 @@
         }
 
         .practice-word .practice-text {
-            font-size: clamp(2.8rem, 8vw, 5.4rem);
+            font-size: clamp(4.4rem, 11vw, 7.4rem);
             letter-spacing: 0.05em;
         }
 
         .practice-sentence .practice-text {
-            font-size: clamp(1.9rem, 5vw, 3.4rem);
+            font-size: clamp(1.2rem, 3.2vw, 2.35rem);
         }
 
         .practice-paragraph .practice-text {
             background: #fffdf7;
             border: 1px solid rgba(27, 26, 23, 0.08);
             border-radius: 24px;
-            box-shadow: inset 0 0 0 8px rgba(247, 200, 106, 0.2);
-            font-size: clamp(1.1rem, 2.1vw, 1.6rem);
-            line-height: 1.55;
-            padding: clamp(1rem, 2.5vw, 2rem);
+            font-size: clamp(0.56rem, 1vw, 0.74rem);
+            line-height: 1.18;
+            padding: clamp(0.52rem, 1.06vw, 0.8rem);
             text-align: left;
+        }
+
+        .practice-shell .practice-paragraph .practice-text {
+            font-size: clamp(0.56rem, 1vw, 0.74rem) !important;
+            line-height: 1.18 !important;
+            padding: clamp(0.52rem, 1.06vw, 0.8rem) !important;
+        }
+
+        .practice-color .practice-sentence .practice-text {
+            font-size: clamp(1.05rem, 2.8vw, 1.95rem);
+        }
+
+        .practice-color .practice-paragraph .practice-text {
+            font-size: clamp(0.56rem, 1vw, 0.74rem) !important;
+            line-height: 1.18 !important;
+            padding: clamp(0.52rem, 1.06vw, 0.8rem) !important;
+            text-align: justify;
         }
 
         .practice-shell.practice-color {
@@ -1556,39 +1717,43 @@
         .color-dialogue {
             align-items: center;
             background: #fffdf7;
-            border: 3px solid rgba(31, 111, 139, 0.18);
+            border: 1px solid rgba(31, 111, 139, 0.14);
             border-radius: 26px;
-            box-shadow: 0 16px 32px rgba(31, 111, 139, 0.1), inset 0 0 0 6px rgba(247, 200, 106, 0.16);
             display: grid;
-            min-height: clamp(112px, 15vh, 158px);
-            padding: clamp(0.85rem, 1.8vw, 1.25rem) clamp(1rem, 2.1vw, 1.5rem);
+            min-height: clamp(92px, 13vh, 132px);
+            padding: clamp(0.62rem, 1.4vw, 0.92rem) clamp(0.75rem, 1.6vw, 1.05rem);
             position: relative;
-            width: clamp(170px, 25vw, 360px);
+            width: clamp(150px, 22vw, 300px);
         }
 
         .color-dialogue::before {
-            background: #fffdf7;
-            border-bottom: 3px solid rgba(31, 111, 139, 0.18);
-            border-left: 3px solid rgba(31, 111, 139, 0.18);
+            background: transparent;
+            border-bottom: 1px solid rgba(31, 111, 139, 0.14);
+            border-left: 1px solid rgba(31, 111, 139, 0.14);
             content: "";
-            height: 26px;
-            left: -13px;
+            height: 18px;
+            left: -9px;
             position: absolute;
             top: 52%;
             transform: rotate(45deg) translateY(-50%);
-            width: 26px;
+            width: 18px;
         }
 
         .color-dialogue .practice-text {
             color: #1b1a17;
             display: block;
-            font-size: clamp(1.35rem, 3vw, 2.25rem);
+            font-size: clamp(1.25rem, 2.7vw, 1.75rem);
             letter-spacing: 0;
-            line-height: 1.18;
+            line-height: 1.08;
             margin: 0;
             max-width: 100%;
             position: relative;
             z-index: 1;
+        }
+
+        .practice-color[data-practice-difficulty="hard"] .color-dialogue .practice-text {
+            font-size: clamp(0.72rem, 1.25vw, 0.96rem) !important;
+            line-height: 1.14 !important;
         }
 
         .color-scene-background,
@@ -1774,12 +1939,25 @@
             }
 
             .color-guide-panel {
-                max-width: min(100%, 540px);
-                width: min(100%, 540px);
+                align-items: center;
+                gap: 0.28rem;
+                grid-template-columns: 1fr;
+                max-width: min(100%, 500px);
+                justify-items: center;
+                width: min(100%, 500px);
             }
 
             .color-dialogue {
-                width: min(100%, 300px);
+                order: 1;
+                transform: translateY(0.3rem);
+                width: min(100%, 280px);
+            }
+
+            .color-guide-mascot {
+                order: 2;
+                align-self: start;
+                transform: translateY(-0.9rem) !important;
+                margin-top: 0;
             }
 
             .color-scene-object[data-color-object="entrance"] {
@@ -2416,7 +2594,10 @@
             }
 
             .practice-color .play-card {
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr) auto;
                 min-height: clamp(560px, 84vh, 760px);
+                overflow: hidden;
                 padding: 0.7rem 0.7rem 0.95rem;
             }
 
@@ -2433,32 +2614,33 @@
             }
 
             .practice-color .practice-stage {
+                align-items: stretch;
                 min-height: clamp(250px, 46vh, 360px);
+                overflow: hidden;
                 padding: 0.3rem 0 0.9rem;
             }
 
             .practice-color .practice-action-shell {
                 gap: 0.55rem;
-                inset: auto 0.55rem 0.6rem;
+                inset: auto;
                 justify-items: stretch;
+                position: relative;
+                width: 100%;
             }
 
             .practice-color .practice-feedback {
-                border-radius: 999px;
+                border-radius: 18px;
                 box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
-                display: inline-flex;
+                display: flex;
                 font-size: 0.82rem;
                 justify-content: center;
-                left: 50%;
-                margin: 0 auto;
-                max-width: min(100%, 390px);
+                margin: 0;
+                max-width: 100%;
                 min-height: 36px;
-                padding: 0.5rem 1rem;
-                position: absolute;
-                right: auto;
-                top: -2.6rem;
-                transform: translateX(-50%);
-                width: calc(100% - 0.8rem);
+                padding: 0.5rem 0.85rem;
+                position: static;
+                transform: none;
+                width: 100%;
             }
 
             .practice-color .practice-controls {
@@ -2466,7 +2648,7 @@
                 gap: 0.55rem;
                 grid-template-columns: repeat(3, minmax(0, 1fr));
                 margin: 0 auto;
-                max-width: min(100%, 420px);
+                max-width: min(100%, 460px);
                 width: 100%;
             }
 
@@ -2479,36 +2661,44 @@
             }
 
             .color-guide-panel {
-                gap: 0.6rem;
+                align-items: center;
+                gap: 0.22rem;
                 grid-template-columns: 1fr;
                 justify-items: center;
-                max-width: min(100%, 320px);
-                padding: 0.2rem 0 0.35rem;
+                max-width: min(100%, 300px);
+                padding: 0.05rem 0 0.15rem;
                 width: 100%;
             }
 
             .color-guide-mascot {
-                height: clamp(86px, 19vw, 110px);
-                max-height: clamp(86px, 19vw, 110px);
-                max-width: min(100%, 118px);
-                min-height: clamp(86px, 19vw, 110px);
-                min-width: min(100%, 118px);
-                width: min(100%, 118px);
+                order: 2;
+                align-self: start;
+                height: clamp(80px, 18vw, 104px);
+                max-height: clamp(80px, 18vw, 104px);
+                max-width: min(100%, 112px);
+                min-height: clamp(80px, 18vw, 104px);
+                min-width: min(100%, 112px);
+                margin-top: 0;
+                transform: translateY(-1.1rem) !important;
+                width: min(100%, 112px);
             }
 
             .color-dialogue {
+                order: 1;
                 border-radius: 20px;
-                min-height: 84px;
-                padding: 0.7rem 0.8rem;
-                width: min(100%, 230px);
+                min-height: 80px;
+                padding: 0.58rem 0.72rem;
+                transform: translateY(0.4rem);
+                width: min(100%, 220px);
             }
 
             .color-dialogue::before {
-                bottom: -10px;
-                height: 20px;
+                bottom: -7px;
+                height: 16px;
                 left: 50%;
                 top: auto;
                 transform: translateX(-50%) rotate(45deg);
+                width: 16px;
             }
 
             .color-dialogue .practice-text {
@@ -3067,7 +3257,7 @@
         .hunt-guide-copy { background: #fff; border: 1px solid #dbe6e4; border-radius: 13px; color: #527078; font-size: .78rem; font-weight: 700; margin-top: .65rem; max-width: 190px; padding: .55rem .7rem; text-align: center; }
         .hunt-word-area { align-items: center; background: linear-gradient(145deg,#fff,#fbfdfd); border: 2px solid color-mix(in srgb, var(--hunt) 28%, #e2e8f0); border-radius: 20px; display: flex; justify-content: center; min-height: clamp(210px,28vw,340px); padding: clamp(1.5rem,5vw,3.2rem); position: relative; z-index: 1; }
         .hunt-word-area::before { color: rgba(183,121,31,.18); content: "\F52A"; font-family: bootstrap-icons; font-size: 2rem; position: absolute; right: 1rem; top: .8rem; }
-        .hunt-word-area .practice-text { color: #213b4a; font-size: clamp(2.25rem,6vw,4.8rem); font-weight: 900; line-height: 1.2; margin: 0; overflow-wrap: anywhere; text-align: center; }
+        .hunt-word-area .practice-text { color: #213b4a; font-size: clamp(0.32rem,0.56vw,0.46rem); font-weight: 900; line-height: 1.04; margin: 0; overflow-wrap: anywhere; text-align: center; }
         .hunt-actions { background: #fbfdfd; border-top: 1px solid #e3eceb; padding: 1rem 1.15rem 1.15rem; }
         .hunt-actions .practice-feedback { color: #526d75; font-weight: 700; margin: 0 0 .8rem; text-align: center; }
         .hunt-actions .practice-controls { justify-content: center; }
@@ -3379,7 +3569,7 @@
             }
 
             .hunt-word-area .practice-text {
-                font-size: 5.8rem;
+                font-size: clamp(0.32rem,0.56vw,0.46rem);
             }
         }
 
@@ -3670,7 +3860,7 @@
             }
 
             .scrolls-card-text {
-                font-size: 1.65rem;
+                font-size: 0.52rem;
             }
 
             .scrolls-progress-meta,
@@ -3724,15 +3914,23 @@
             }
 
             .practice-color .practice-controls {
-                gap: 0.5rem;
-                grid-template-columns: 1fr;
+                gap: 0.45rem;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
                 max-width: 100%;
                 width: 100%;
             }
 
             .practice-color .practice-controls button {
-                min-height: 48px;
+                min-height: 46px;
+                min-width: 0;
+                padding-inline: 0.35rem;
                 width: 100%;
+            }
+
+            .practice-color .practice-controls .skip-btn,
+            .practice-color .practice-controls .record-btn,
+            .practice-color .practice-controls .next-btn {
+                font-size: 0.86rem;
             }
 
             .color-guide-panel {
@@ -3746,13 +3944,17 @@
             }
 
             .color-dialogue {
-                min-height: 72px;
-                padding: 0.55rem 0.7rem;
-                width: min(100%, 220px);
+                min-height: 54px;
+                padding: 0.34rem 0.46rem;
+                width: min(100%, 178px);
             }
 
             .color-dialogue .practice-text {
                 font-size: 1.25rem;
+            }
+
+            .practice-color[data-practice-difficulty="hard"] .color-dialogue .practice-text {
+                font-size: 0.58rem !important;
             }
 
             .practice-hunt-shell {
@@ -3970,7 +4172,7 @@
             }
 
             .hunt-word-area .practice-text {
-                font-size: 2rem;
+                font-size: clamp(0.32rem,0.56vw,0.46rem);
             }
 
             .hunt-actions {
@@ -4059,7 +4261,7 @@
             .practice-hunt-shell .hunt-card::before { inset: 34px 16px 22px; }
             .hunt-map-path { inset: 50px 4% 72px; }
             .practice-hunt-shell .hunt-word-area { min-height: 175px; padding: 1rem; width: 84%; }
-            .practice-hunt-shell .hunt-word-area .practice-text { font-size: clamp(2rem,10vw,3.2rem); }
+            .practice-hunt-shell .hunt-word-area .practice-text { font-size: clamp(0.3rem,0.52vw,0.42rem); line-height: 1.04; }
             .practice-hunt-shell .hunt-actions { width: 94%; }
             .hunt-map-dot:nth-of-type(2) { left: 16%; }
             .hunt-map-dot:nth-of-type(3) { left: 36%; }
@@ -4107,7 +4309,7 @@
             });
         })();
     </script>
-    <main class="practice-shell{% if request.GET.game == 'free' %} practice-scrolls-shell{% elif request.GET.game == 'hunt' %} practice-hunt-shell{% else %} {% block mode_class %}{% endblock %}{% endif %}" data-practice-mode="{% block data_mode %}word{% endblock %}"{% if request.GET.game == 'free' %} data-free-mode="true"{% elif request.GET.game == 'hunt' %} data-hunt-mode="true" data-hunt-difficulty="{{ request.GET.difficulty|default:'easy' }}"{% endif %}>
+    <main class="practice-shell{% if request.GET.game == 'free' %} practice-scrolls-shell{% elif request.GET.game == 'hunt' %} practice-hunt-shell{% else %} {% block mode_class %}{% endblock %}{% endif %}" data-practice-mode="{% block data_mode %}word{% endblock %}" data-practice-difficulty="{{ request.GET.difficulty|default:'easy' }}" {% if request.GET.game == 'free' %} data-free-mode="true"{% elif request.GET.game == 'hunt' %} data-hunt-mode="true" data-hunt-difficulty="{{ request.GET.difficulty|default:'easy' }}"{% endif %}>
         <button class="reading-help-btn" id="practiceHelpBtn" type="button" aria-haspopup="dialog"><i class="bi bi-question-circle-fill"></i> Help</button>
         <div class="reading-help-overlay" id="practiceHelpOverlay" role="dialog" aria-modal="true" aria-labelledby="practiceHelpTitle" hidden>
             <section class="reading-help-card">
@@ -4248,8 +4450,13 @@
         <header class="practice-top">
             <a class="back-link" href="{% url 'practice' %}">Back</a>
             <div class="practice-title">
-                <p>{% block eyebrow %}Practice mode{% endblock %}</p>
-                <h1>{% block heading %}Word Adventure{% endblock %}</h1>
+                {% if request.GET.game == 'color' %}
+                    <h1>🌈 Build the Picture</h1>
+                    <div class="practice-journey-subtitle">{{ request.GET.difficulty|default:"easy"|title }} • Level {{ request.GET.level|default:"level_1"|cut:"level_" }}</div>
+                {% else %}
+                    <p>{% block eyebrow %}Practice mode{% endblock %}</p>
+                    <h1>{% block heading %}Word Adventure{% endblock %}</h1>
+                {% endif %}
             </div>
             <div class="star-counter"><span>*</span><span id="starCount">0 stars</span></div>
         </header>
@@ -4259,20 +4466,20 @@
                 <summary><span><i class="bi bi-info-circle"></i>Reading support</span></summary>
                 <aside class="coach-panel">
                     <div class="coach-badge">
-                        <div class="coach-animation-wrapper">
-                            <video id="coachAnimationPlayerActive" class="coach-animation-player visible" muted playsinline webkit-playsinline autoplay preload="metadata" aria-hidden="true"></video>
-                            <video id="coachAnimationPlayerBuffer" class="coach-animation-player buffer" muted playsinline webkit-playsinline autoplay preload="metadata" aria-hidden="true"></video>
+                        <img class="coach-image" src="{% static 'pabasa_app/images/reading10.jpg' %}" alt="A friendly reading coach illustration">
+                    </div>
+                    <div class="coach-card">
+                        <h2 class="coach-card-title"><i class="bi bi-lightbulb-fill" aria-hidden="true"></i> Did You Know?</h2>
+                        <p class="coach-fact" id="coachFactText">Reading every day helps your brain grow stronger.</p>
+                    </div>
+                    <div class="coach-card coach-card--mission" aria-label="Today's mission">
+                        <h2 class="coach-card-title"><i class="bi bi-bullseye" aria-hidden="true"></i> Today's Mission</h2>
+                        <div class="coach-mission-list">
+                            <div class="coach-mission-item"><strong>&#128214;</strong><span>Read the word</span></div>
+                            <div class="coach-mission-item"><strong>&#127912;</strong><span>Build the picture</span></div>
+                            <div class="coach-mission-item"><strong>&#11088;</strong><span>Earn stars</span></div>
                         </div>
                     </div>
-                    <div>
-                        <h2>Big voice, little words.</h2>
-                        <p>Read each word carefully.</p>
-                    </div>
-                    <div class="mini-steps">
-                    <div class="mini-step"><strong>👀</strong><span>Look first.</span></div>
-                    <div class="mini-step"><strong>🎤</strong><span>Read aloud.</span></div>
-                    <div class="mini-step"><strong>➡️</strong><span>Tap Next.</span></div>
-                </div>
             </aside>
             </details>
 
@@ -4282,7 +4489,7 @@
                     <div class="color-complete-burst" id="colorCompleteBurst"><span>* * *</span>Scene Complete!</div>
                 </div>
                 <div class="play-status">
-                    <span class="round-pill" id="practiceCounter">{% block counter %}Word 1/5{% endblock %}</span>
+                    <span class="round-pill" id="practiceCounter">{% if request.GET.game == 'color' %}{% if request.GET.difficulty == 'medium' %}Sentence 1/5{% elif request.GET.difficulty == 'hard' %}Paragraph 1/5{% else %}Word 1/5{% endif %}{% else %}{% block counter %}Word 1/5{% endblock %}{% endif %}</span>
                     <div class="practice-progress" aria-hidden="true"><span id="practiceProgress"></span></div>
                 </div>
 
@@ -4405,6 +4612,20 @@
             document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && overlay && !overlay.hidden) hide(); });
         })();
     </script>
+    <script>
+        (() => {
+            const facts = [
+                'Reading every day helps your brain grow stronger.',
+                'Reading can teach you new words.',
+                'It is okay to make mistakes while learning.',
+                'Reading aloud helps you become a better reader.',
+                'Every page you read helps you practice more.',
+            ];
+            const fact = facts[Math.floor(Math.random() * facts.length)];
+            const el = document.getElementById('coachFactText');
+            if (el) el.textContent = fact;
+        })();
+    </script>
     {% csrf_token %}
     {% if mascot_animation_frames.idle %}
         {% for frame in mascot_animation_frames.idle %}
@@ -4454,3 +4675,5 @@
     <script src="{% static 'pabasa_app/js/practice_reader.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>
+
+

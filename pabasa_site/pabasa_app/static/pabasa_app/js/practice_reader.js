@@ -930,6 +930,20 @@
         return Math.max(0, countWords(items[index]));
     }
 
+    function shouldCountCompletedItemsInsteadOfWords() {
+        return selectedDifficulty === "medium" || selectedDifficulty === "hard";
+    }
+
+    function applyHardTextSizing() {
+        if (selectedDifficulty !== "hard" || !practiceText) return;
+        const isHuntHard = isHuntMode;
+        const fontSize = isHuntHard ? "1.15rem" : "0.58rem";
+        const lineHeight = isHuntHard ? "1.2" : "1.12";
+        practiceText.style.setProperty("font-size", fontSize, "important");
+        practiceText.style.setProperty("line-height", lineHeight, "important");
+        practiceText.style.setProperty("padding", isHuntHard ? "0.24rem 0.34rem" : "0.52rem 0.8rem", "important");
+    }
+
     function setCurrentItemOutcome(status) {
         if (currentIndex < 0 || currentIndex >= items.length) return;
         itemOutcomes[currentIndex] = status;
@@ -950,21 +964,29 @@
     }
 
     function getCompletionMetrics() {
-        const totalItems = items.reduce((total, item) => total + countWords(item), 0);
+        const totalItems = items.length;
         const readItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "read" ? 1 : 0), 0);
         const skippedItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "skipped" ? 1 : 0), 0);
-        const totalReadWordsRaw = itemOutcomes.reduce((total, outcome, index) => {
-            return outcome === "read" ? total + getItemWordCount(index) : total;
-        }, 0);
-        const totalSkippedWordsRaw = itemOutcomes.reduce((total, outcome, index) => {
-            return outcome === "skipped" ? total + getItemWordCount(index) : total;
-        }, 0);
+        const totalReadWordsRaw = shouldCountCompletedItemsInsteadOfWords()
+            ? readItemCount
+            : itemOutcomes.reduce((total, outcome, index) => {
+                return outcome === "read" ? total + getItemWordCount(index) : total;
+            }, 0);
+        const totalSkippedWordsRaw = shouldCountCompletedItemsInsteadOfWords()
+            ? skippedItemCount
+            : itemOutcomes.reduce((total, outcome, index) => {
+                return outcome === "skipped" ? total + getItemWordCount(index) : total;
+            }, 0);
         const totalReadWords = isFreeMode
             ? Math.max(readItemCount, freeModeReadSteps)
-            : (totalReadWordsRaw > 0 ? totalReadWordsRaw : readItemCount);
+            : (shouldCountCompletedItemsInsteadOfWords()
+                ? (readItemCount > 0 ? readItemCount : totalReadWordsRaw)
+                : (totalReadWordsRaw > 0 ? totalReadWordsRaw : readItemCount));
         const totalSkippedWords = isFreeMode
             ? Math.max(skippedItemCount, freeModeSkipSteps)
-            : (totalSkippedWordsRaw > 0 ? totalSkippedWordsRaw : skippedItemCount);
+            : (shouldCountCompletedItemsInsteadOfWords()
+                ? (skippedItemCount > 0 ? skippedItemCount : totalSkippedWordsRaw)
+                : (totalSkippedWordsRaw > 0 ? totalSkippedWordsRaw : skippedItemCount));
         const totalAttempts = correctResponses + incorrectResponses;
         const accuracy = totalAttempts > 0 ? Math.round((correctResponses / totalAttempts) * 100) : 0;
         const score = totalAttempts > 0 ? accuracy : 0;
@@ -1025,6 +1047,7 @@
         }
 
         practiceText.textContent = items[currentIndex];
+        applyHardTextSizing();
         updateColorModeReadingText();
         updateColorModeControls();
         const label = mode.charAt(0).toUpperCase() + mode.slice(1);
@@ -1042,8 +1065,13 @@
 
     function renderFreeMode() {
         if (!scrollsTrack) return;
+        const freeModeTextClass = selectedDifficulty === "hard"
+            ? "practice-paragraph"
+            : selectedDifficulty === "medium"
+                ? "practice-sentence"
+                : "practice-word";
         if (!items.length) {
-            scrollsTrack.innerHTML = '<div class="scrolls-card"><p class="scrolls-card-text">No reading cards are available right now.</p></div>';
+            scrollsTrack.innerHTML = `<div class="scrolls-card ${freeModeTextClass}"><p class="scrolls-card-text">No reading cards are available right now.</p></div>`;
             return;
         }
 
@@ -1054,7 +1082,7 @@
         const cardMarkup = items.map((item, index) => {
             const isComplete = completedCards.has(index);
             return `
-                <section class="scrolls-card${isComplete ? ' is-complete' : ''}" data-index="${index}">
+                <section class="scrolls-card ${freeModeTextClass}${isComplete ? ' is-complete' : ''}" data-index="${index}">
                     <h2 class="scrolls-card-text">${escapeHtml(item)}</h2>
                     <p class="scrolls-hint">Swipe up for the next challenge</p>
                 </section>`;

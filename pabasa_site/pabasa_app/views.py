@@ -49,7 +49,7 @@ try:
 except Exception:
     pass
 
-from .forms import AdminPracticeMaterialForm, parse_practice_items
+from .forms import AdminPracticeMaterialForm, difficulty_to_item_type, parse_practice_items
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal_account
 from django.db import transaction
 import re
@@ -3282,7 +3282,13 @@ def _admin_practice_status(material):
 def _practice_material_items(material):
     if not material:
         return []
-    return parse_practice_items(material.content_text, material.item_type)
+    expected_type = difficulty_to_item_type(getattr(material, 'difficulty_level', '') or getattr(material, 'content_json', {}).get('difficulty', '') if isinstance(getattr(material, 'content_json', None), dict) else '')
+    item_type = (getattr(material, 'item_type', '') or expected_type or 'word').strip().lower()
+    content_json = getattr(material, 'content_json', None) or {}
+    stored_items = content_json.get('items')
+    if isinstance(stored_items, list) and stored_items:
+        return [str(item).strip() for item in stored_items if str(item).strip()]
+    return parse_practice_items(material.content_text, item_type)
 
 def _practice_config_label(value, choices):
     if not value:
@@ -3396,7 +3402,7 @@ def _practice_game_progression(mode, student_user=None):
         elif difficulty == 'hard':
             previous_difficulty = 'medium'
 
-        if is_free_mode and previous_difficulty:
+        if previous_difficulty:
             previous_slots = [
                 {
                     'difficulty': previous_difficulty,
@@ -3433,7 +3439,7 @@ def _practice_game_progression(mode, student_user=None):
                 elif difficulty != 'easy' and difficulty_unlocked and level_key == 'level_1' and material_exists:
                     unlocked = True
             else:
-                unlocked = material_exists
+                unlocked = material_exists and difficulty_unlocked and previous_completed
 
             if not material_exists:
                 state = 'content_unavailable'
@@ -3476,9 +3482,9 @@ def _practice_game_progression(mode, student_user=None):
         section_payloads.append({
             'difficulty': difficulty,
             'difficulty_label': _practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
-            'unlocked': True if not is_free_mode else (difficulty == 'easy' or difficulty_unlocked),
+            'unlocked': difficulty_unlocked,
             'levels': level_payloads,
-            'locked_reason': 'Complete all previous difficulty levels to unlock this section.' if is_free_mode and difficulty != 'easy' and not difficulty_unlocked else '',
+            'locked_reason': 'Complete all previous difficulty levels to unlock this section.' if difficulty != 'easy' and not difficulty_unlocked else '',
         })
 
         if next_challenge is None:
@@ -3506,8 +3512,8 @@ def _practice_game_progression(mode, student_user=None):
 def _practice_row_summary(material):
     content_json = getattr(material, 'content_json', None) or {}
     selected_difficulty = getattr(material, 'difficulty_level', '') or content_json.get('difficulty', '')
-    item_type = 'sentence' if selected_difficulty == 'hard' else 'word'
-    items = parse_practice_items(material.content_text, item_type)
+    item_type = difficulty_to_item_type(selected_difficulty)
+    items = _practice_material_items(material)
     item_count = len(items)
     summary_text = f"{item_count} {item_type}{'s' if item_count != 1 else ''}"
     status_label = 'Archived' if not material.is_active else (material.get_status_display() or material.status)
@@ -3663,16 +3669,21 @@ def _admin_practice_template_context(request, material=None, page_title='Practic
 def _save_admin_practice_material(form, material=None, request=None):
     """Save admin practice material directly to Material table (canonical storage)."""
     cleaned = form.cleaned_data
+    practice_items = form.practice_items()
+    content_text = cleaned.get('content_text', '')
+    if practice_items:
+        content_text = '\n\n'.join(practice_items) if cleaned['difficulty_level'] == 'hard' else '\n'.join(practice_items)
     material_obj = material if material and isinstance(material, Material) else Material()
     material_obj.title = f"{cleaned['mode'].title()} {cleaned['difficulty_level'].title()} {cleaned['level'].replace('_', ' ').title()}"
-    material_obj.item_type = 'sentence' if cleaned['difficulty_level'] == 'hard' else 'word'
+    material_obj.item_type = difficulty_to_item_type(cleaned['difficulty_level'])
     material_obj.prompt_text = ''
-    material_obj.content_text = cleaned.get('content_text', '')
+    material_obj.content_text = content_text
     material_obj.content_json = {
         'mode': cleaned['mode'],
         'difficulty': cleaned['difficulty_level'],
         'level': cleaned['level'],
         'language': cleaned.get('language', ''),
+        'items': practice_items,
     }
     material_obj.type = 'practice'
     material_obj.status = cleaned['status']
@@ -4043,6 +4054,19 @@ def _student_practice_context(request, mode=None):
     return context
 
 
+def _practice_difficulty_is_accessible(mode, difficulty, student_user=None):
+    normalized_mode = (mode or '').strip().lower()
+    normalized_difficulty = (difficulty or '').strip().lower()
+    if normalized_difficulty == 'easy':
+        return True
+    progression = _practice_game_progression(normalized_mode, student_user)
+    for section in progression.get('sections', []):
+        if str(section.get('difficulty', '')).strip().lower() != normalized_difficulty:
+            continue
+        return str(section.get('unlocked')) == 'True' or bool(section.get('unlocked'))
+    return False
+
+
 def _build_live_assessment_action_url(material, session_id, start_at, countdown_seconds=10):
     if not material:
         return ''
@@ -4340,16 +4364,31 @@ def start_live_assessment(request):
 @never_cache
 @login_required(role='student')
 def practice_word_page(request):
+    student_user = User.objects.filter(id=request.session.get('user_id')).first()
+    game_mode = (request.GET.get('game') or 'free').strip().lower()
+    difficulty = (request.GET.get('difficulty') or 'easy').strip().lower()
+    if not _practice_difficulty_is_accessible(game_mode, difficulty, student_user):
+        return redirect('practice_game_progression', mode=game_mode)
     return render(request, 'pabasa_app/practice_word_page.html', _student_practice_context(request, 'word'))
 
 @never_cache
 @login_required(role='student')
 def practice_sentence_page(request):
+    student_user = User.objects.filter(id=request.session.get('user_id')).first()
+    game_mode = (request.GET.get('game') or 'free').strip().lower()
+    difficulty = (request.GET.get('difficulty') or 'medium').strip().lower()
+    if not _practice_difficulty_is_accessible(game_mode, difficulty, student_user):
+        return redirect('practice_game_progression', mode=game_mode)
     return render(request, 'pabasa_app/practice_sentence_page.html', _student_practice_context(request, 'sentence'))
 
 @never_cache
 @login_required(role='student')
 def practice_para_page(request):
+    student_user = User.objects.filter(id=request.session.get('user_id')).first()
+    game_mode = (request.GET.get('game') or 'free').strip().lower()
+    difficulty = (request.GET.get('difficulty') or 'hard').strip().lower()
+    if not _practice_difficulty_is_accessible(game_mode, difficulty, student_user):
+        return redirect('practice_game_progression', mode=game_mode)
     return render(request, 'pabasa_app/practice_para_page.html', _student_practice_context(request, 'paragraph'))
 
 # REPLACE the entire course_teacher_view function:

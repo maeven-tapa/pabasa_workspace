@@ -117,11 +117,11 @@
                     <h3 class="h6 fw-bold mb-1">Items *</h3>
                     <p class="text-secondary small mb-0">Add the content for this game challenge.</p>
                 </div>
-                <div class="small text-secondary" id="difficulty-helper">Choose a difficulty to start adding items.</div>
+                <div class="small text-secondary" id="difficulty-helper">Choose a difficulty to see item guidance.</div>
             </div>
             <div id="items-input-card">
                 <input class="form-control" id="practice-items-input" type="text" placeholder="Type a one-syllable word..." autocomplete="off" disabled>
-                <div class="mt-2 text-secondary small" id="items-helper-text">Each item should be a one-syllable word.</div>
+                <div class="mt-2 text-secondary small" id="items-helper-text">Enter one simple word per item.</div>
                 <div class="mt-2 alert alert-info py-2 px-3 mb-0 small" id="color-mode-limit-note" style="display: none;">
                     <i class="bi bi-info-circle me-1"></i>Color Mode allows only up to 5 items for each difficulty and level.
                 </div>
@@ -166,6 +166,15 @@
     const maxItemsPerContent = 5;
     function isColorModeSelected() {
         return modeSelect.value === 'color';
+    }
+    function getDifficultyGuidance(value) {
+        if (value === 'medium') {
+            return 'Enter one complete sentence per item.';
+        }
+        if (value === 'hard') {
+            return 'Enter one complete paragraph per item.';
+        }
+        return 'Enter one simple word per item.';
     }
     const helperLabel = document.getElementById('difficulty-helper');
     const summaryMode = document.getElementById('summary-mode');
@@ -332,31 +341,26 @@
         const selected = difficulty.value;
         const itemsDisabled = !modeSelect.value || !difficulty.value || !level.value || !status.value;
         updateLevelOptions();
+        helperLabel.textContent = selected ? getDifficultyGuidance(selected) : 'Choose a difficulty to see item guidance.';
         if (selected === 'hard') {
             itemsInput.parentElement.classList.add('d-none');
             itemsTextarea.classList.remove('d-none');
             itemsTextarea.value = hiddenField.value || '';
             helperLabel.textContent = 'Hard difficulty';
-            helperText.textContent = isColorModeSelected()
-                ? `Each line represents one sentence. Limit: ${maxItemsPerContent} sentences.`
-                : 'Each line represents one sentence.';
-            itemsInput.placeholder = 'Enter one sentence per line...';
+            helperText.textContent = 'Enter one complete paragraph per item.';
+            itemsInput.placeholder = 'Type a paragraph...';
         } else {
             itemsInput.parentElement.classList.remove('d-none');
             itemsTextarea.classList.add('d-none');
             itemsTextarea.value = '';
             if (selected === 'medium') {
                 helperLabel.textContent = 'Medium difficulty';
-                helperText.textContent = isColorModeSelected()
-                    ? `Each item should contain up to three syllables. Limit: ${maxItemsPerContent} items.`
-                    : 'Each item should contain up to three syllables.';
-                itemsInput.placeholder = 'Type a word...';
+                helperText.textContent = 'Enter one complete sentence per item.';
+                itemsInput.placeholder = 'Type a sentence...';
             } else {
                 helperLabel.textContent = 'Easy difficulty';
-                helperText.textContent = isColorModeSelected()
-                    ? `Each item should be a one-syllable word. Limit: ${maxItemsPerContent} items.`
-                    : 'Each item should be a one-syllable word.';
-                itemsInput.placeholder = 'Type a one-syllable word...';
+                helperText.textContent = 'Enter one simple word per item.';
+                itemsInput.placeholder = 'Type a word...';
             }
         }
         setDisabledState(itemsInput, itemsDisabled);

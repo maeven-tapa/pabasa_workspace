@@ -3,10 +3,12 @@
     if (!shell) { console.warn("PABASA: .practice-shell not found"); return; }
 
     const mode = shell.dataset.practiceMode;
+    const practiceDifficulty = String(shell.dataset.practiceDifficulty || "easy").trim().toLowerCase();
     const practiceText = document.getElementById("practiceText");
     const practiceCounter = document.getElementById("practiceCounter");
     const practiceProgress = document.getElementById("practiceProgress");
     const practiceFeedback = document.getElementById("practiceFeedback");
+    const colorPracticeText = document.getElementById("colorPracticeText");
     const listenBtn = document.getElementById("listenBtn");
     const skipBtn = document.getElementById("skipBtn");
     const recordBtn = document.getElementById("recordBtn");
@@ -44,15 +46,88 @@
         } catch (e) { return {}; }
     }
 
+    function normalizeReadingType(material, currentMode) {
+        const rawType = String(material?.type || material?.item_type || currentMode || 'word').trim().toLowerCase();
+        if (rawType === 'story') return 'paragraph';
+        if (rawType === 'sent') return 'sentence';
+        if (rawType === 'para') return 'paragraph';
+        if (rawType === 'word' || rawType === 'sentence' || rawType === 'paragraph') return rawType;
+        return currentMode === 'story' ? 'paragraph' : (currentMode || 'word');
+    }
+
+    function getCounterLabel(difficulty) {
+        if (difficulty === 'medium') return 'Sentence';
+        if (difficulty === 'hard') return 'Paragraph';
+        return 'Word';
+    }
+
     function parseItems(material, currentMode) {
-        if (Array.isArray(material.items) && material.items.length > 0) return material.items;
-        if (material.content && typeof material.content === 'string') {
-            if (currentMode === 'paragraph' || currentMode === 'story' || currentMode === 'sentence') {
-                return material.content.split(/\n/).map(i => i.trim()).filter(Boolean);
+        const readingType = normalizeReadingType(material, currentMode);
+        if (Array.isArray(material.items) && material.items.length > 0) {
+            return material.items.map(item => String(item).trim()).filter(Boolean);
+        }
+        if (typeof material.content === 'string' && material.content.trim()) {
+            const content = material.content.trim();
+            if (readingType === 'word') {
+                return content.split(/[,\n]+/).map(i => i.trim()).filter(Boolean);
             }
-            return material.content.split(/[,\n]/).map(i => i.trim()).filter(Boolean);
+            if (readingType === 'sentence') {
+                return [content.replace(/\s+/g, ' ').trim()];
+            }
+            if (readingType === 'paragraph') {
+                return [content.replace(/\n{2,}/g, '\n\n').trim()];
+            }
         }
         return [];
+    }
+
+    function fitPracticeText(content) {
+        if (!practiceText || !content) return;
+        const text = String(content).trim();
+        const length = text.length;
+        let fontSize = 1;
+        if (mode === 'paragraph') {
+            if (length > 220) fontSize = 0.38;
+            else if (length > 180) fontSize = 0.44;
+            else if (length > 120) fontSize = 0.52;
+            else if (length > 80) fontSize = 0.6;
+            else fontSize = 0.68;
+        } else if (mode === 'sentence') {
+            if (length > 80) fontSize = 0.62;
+            else if (length > 60) fontSize = 0.7;
+            else if (length > 40) fontSize = 0.8;
+            else fontSize = 0.9;
+        } else {
+            if (length > 14) fontSize = 2.0;
+            else if (length > 10) fontSize = 2.35;
+            else fontSize = 4.5;
+        }
+        practiceText.style.fontSize = `clamp(${fontSize * 0.86}rem, ${fontSize}rem, ${fontSize * 1.06}rem)`;
+        practiceText.style.lineHeight = mode === 'paragraph' ? '1.18' : (mode === 'sentence' ? '1.08' : '1.12');
+        practiceText.style.wordBreak = 'break-word';
+        practiceText.style.overflowWrap = 'anywhere';
+    }
+
+    function fitColorGuideText(content) {
+        if (!colorPracticeText || !content || mode !== 'color') return;
+        const text = String(content).trim();
+        const length = text.length;
+        let fontSize = 1;
+        if (practiceDifficulty === 'hard') {
+            if (length > 220) fontSize = 0.44;
+            else if (length > 160) fontSize = 0.5;
+            else fontSize = 0.58;
+        } else if (practiceDifficulty === 'medium') {
+            if (length > 80) fontSize = 0.92;
+            else if (length > 50) fontSize = 1.02;
+            else fontSize = 1.12;
+        } else {
+            if (length > 14) fontSize = 2.35;
+            else if (length > 10) fontSize = 2.75;
+            else fontSize = 3.2;
+        }
+        colorPracticeText.style.fontSize = `clamp(${fontSize * 0.86}rem, ${fontSize}rem, ${fontSize * 1.1}rem)`;
+        colorPracticeText.style.lineHeight = practiceDifficulty === 'hard' ? '1.08' : (practiceDifficulty === 'medium' ? '1.06' : '1.12');
     }
 
     function loadItems() {
@@ -116,7 +191,9 @@
         }
 
         practiceText.textContent = items[currentIndex];
-        const label = mode.charAt(0).toUpperCase() + mode.slice(1);
+        fitPracticeText(items[currentIndex]);
+        fitColorGuideText(items[currentIndex]);
+        const label = mode === 'color' ? getCounterLabel(practiceDifficulty) : (mode.charAt(0).toUpperCase() + mode.slice(1));
         practiceCounter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
         practiceProgress.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
         practiceFeedback.textContent = "Ready when you are.";
