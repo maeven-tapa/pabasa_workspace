@@ -209,7 +209,11 @@
             const response = await fetch("/api/reading/transcribe/", {
                 method: "POST",
                 credentials: "same-origin",
-                headers: { "X-CSRFToken": practiceCsrfToken() },
+                headers: {
+                    "Accept": "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": practiceCsrfToken(),
+                },
                 body: formData,
             });
             const responseText = await response.text();
@@ -1621,10 +1625,26 @@
 
         return fetch('/record-assessment-completion/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': token,
+            },
             body: JSON.stringify(completionPayload)
         })
-            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(async response => {
+                const responseText = await response.text();
+                let data = {};
+                try {
+                    data = responseText ? JSON.parse(responseText) : {};
+                } catch (error) {
+                    data = { error: /<!doctype|<html[\s>]/i.test(responseText || "")
+                        ? `Server returned an HTML page (HTTP ${response.status}).`
+                        : 'Server returned an invalid response.' };
+                }
+                return { ok: response.ok, data };
+            })
             .then(({ ok, data }) => {
                 if (!ok || !data.success) {
                     completionSubmitted = false;

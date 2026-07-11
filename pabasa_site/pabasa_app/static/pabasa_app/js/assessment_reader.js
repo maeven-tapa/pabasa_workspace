@@ -619,11 +619,24 @@
             try {
                 const response = await fetch("/api/reading/transcribe/", {
                     method: "POST",
-                    headers: { "X-CSRFToken": getCsrfToken() },
+                    headers: {
+                        "Accept": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRFToken": getCsrfToken(),
+                    },
                     credentials: "same-origin",
                     body: formData,
                 });
-                const data = await response.json();
+                const responseText = await response.text();
+                let data = null;
+                try {
+                    data = responseText ? JSON.parse(responseText) : {};
+                } catch (parseError) {
+                    const isHtml = /<!doctype|<html[\s>]/i.test(responseText || "");
+                    throw new Error(isHtml
+                        ? `The speech service returned a server page instead of data (HTTP ${response.status}).`
+                        : "The speech service returned an invalid response.");
+                }
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || "Speech check failed.");
                 }
