@@ -82,7 +82,7 @@
                         <span class="small text-secondary" id="practice-items-helper">Choose a difficulty to see item guidance.</span>
                     </div>
                     <div id="practice-items-container">
-                        <input class="form-control" id="practice-items-input" type="text" placeholder="Type and press Enter or comma" autocomplete="off">
+                        <input class="form-control" id="practice-items-input" type="text" placeholder="Type and press Enter" autocomplete="off">
                         <div class="mt-2" id="practice-items-tags"></div>
                     </div>
                     <textarea class="form-control d-none" id="practice-items-textarea" rows="8" placeholder="Write one sentence per line"></textarea>
@@ -121,7 +121,7 @@
     }
     function getDifficultyGuidance(value) {
         if (value === 'medium') {
-            return 'Enter one complete sentence per item.';
+            return 'Enter one complete sentence per line. Commas stay inside the sentence.';
         }
         if (value === 'hard') {
             return 'Enter one complete paragraph per item.';
@@ -133,7 +133,7 @@
 
     function parseExistingItems(value) {
         if (!value) return [];
-        return value.split(/\n|,/).map(item => item.trim()).filter(Boolean);
+        return value.split(/\n+/).map(item => item.trim()).filter(Boolean);
     }
 
     function syncHiddenField() {
@@ -202,7 +202,7 @@
             itemsTextarea.classList.add('d-none');
             itemsTextarea.value = '';
             helper.textContent = selected === 'medium'
-                ? 'Enter one complete sentence per item.'
+                ? 'Enter one complete sentence per line. Commas stay inside the sentence.'
                 : 'Enter one simple word per item.';
             renderTags();
         }
@@ -226,13 +226,13 @@
 
     if (itemsInput) {
         itemsInput.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter' || event.key === ',') {
+            if (event.key === 'Enter') {
                 event.preventDefault();
                 const value = itemsInput.value.trim();
                 if (!value) {
                     return;
                 }
-                const normalized = value.replace(/,$/, '');
+                const normalized = value;
                 const existingValues = Array.from(itemsTags.querySelectorAll('[data-value]')).map(tag => tag.getAttribute('data-value'));
                 if (isColorModeSelected() && existingValues.length >= maxItemsPerContent) {
                     helper.textContent = `You can add up to ${maxItemsPerContent} items for this difficulty and level.`;
