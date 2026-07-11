@@ -65,6 +65,8 @@ For an existing App Platform component pinned to the Python buildpack, the root
 `Aptfile` installs Tesseract plus the English and Filipino models without changing
 the component or database configuration. Push the `Aptfile`, then use **Force Rebuild
 and Deploy** and confirm the build logs detect the Aptfile buildpack.
+The `Procfile` also exposes DigitalOcean's Apt-layer executable and trained-data
+paths to the running Gunicorn process.
 
 **Droplet:** If Pabasa runs directly on Ubuntu instead of in Docker, install the
 engine with `sudo apt update && sudo apt install tesseract-ocr tesseract-ocr-eng

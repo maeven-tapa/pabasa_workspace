@@ -1,1 +1,1 @@
-web: gunicorn pabasa_site.wsgi:application --chdir pabasa_site
+web: env PATH="/layers/digitalocean_apt/apt/usr/bin:$PATH" TESSERACT_CMD="/layers/digitalocean_apt/apt/usr/bin/tesseract" OCR_TESSDATA_DIR="/layers/digitalocean_apt/apt/usr/share/tesseract-ocr/4.00/tessdata" gunicorn pabasa_site.wsgi:application --chdir pabasa_site
