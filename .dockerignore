@@ -1,0 +1,10 @@
+.git
+.gitignore
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/debug_ocr/
+*.sqlite3
+.env
+.venv/
+venv/
