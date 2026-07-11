@@ -167,7 +167,7 @@ DEFAULT_FROM_EMAIL = 'pabasa.tupc@gmail.com'
 GOOGLE_STT_API_KEY = 'AIzaSyD1NqLTpMSzmkAdFX6UpcuJ-y4bT9mrXbk'
 GOOGLE_CLOUD_PROJECT_ID = 'direct-outlet-499701-p6'
 GOOGLE_STT_LOCATION = 'us'
-GOOGLE_STT_MODEL = 'chirp_3'
+GOOGLE_STT_MODEL = 'latest_short'
 GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'
 
 # When a CSRF failure occurs, prefer a JSON response for AJAX requests so frontend can handle it.
