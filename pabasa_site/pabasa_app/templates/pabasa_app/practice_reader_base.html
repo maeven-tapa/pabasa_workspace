@@ -4330,6 +4330,58 @@
             min-height: calc(100dvh - 1rem);
         }
 
+        /* Match the assessment reader's animated microphone feedback in every mode. */
+        .practice-shell button.is-listening,
+        .practice-shell.is-recording button#recordBtn,
+        .practice-shell.is-recording button.scrolls-record-btn {
+            background: linear-gradient(135deg, #1f6f8b, #7a8b5f, #f7c86a, #b95f44) !important;
+            background-size: 260% 260% !important;
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.58) inset,
+                0 16px 34px rgba(31, 111, 139, 0.26),
+                0 0 42px rgba(66, 133, 244, 0.3) !important;
+            color: #fff !important;
+            isolation: isolate;
+            overflow: visible;
+            position: relative;
+            animation: practiceListeningButton 1.05s ease-in-out infinite !important;
+        }
+
+        .practice-shell button.is-listening::after,
+        .practice-shell.is-recording button#recordBtn::after,
+        .practice-shell.is-recording button.scrolls-record-btn::after {
+            animation: practiceListeningGlow 1.05s ease-in-out infinite;
+            background: linear-gradient(90deg, rgba(66, 133, 244, 0.5), rgba(52, 168, 83, 0.38), rgba(251, 188, 5, 0.42), rgba(234, 67, 53, 0.4));
+            border-radius: inherit;
+            content: "";
+            filter: blur(13px);
+            inset: -8px;
+            pointer-events: none;
+            position: absolute;
+            z-index: -1;
+        }
+
+        @keyframes practiceListeningButton {
+            0%, 100% { background-position: 0% 50%; transform: scale(1); }
+            45% { background-position: 100% 50%; transform: scale(1.045); }
+        }
+
+        @keyframes practiceListeningGlow {
+            0%, 100% { opacity: 0.22; transform: scale(0.96); }
+            45% { opacity: 0.92; transform: scale(1.14); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .practice-shell button.is-listening,
+            .practice-shell.is-recording button#recordBtn,
+            .practice-shell.is-recording button.scrolls-record-btn,
+            .practice-shell button.is-listening::after,
+            .practice-shell.is-recording button#recordBtn::after,
+            .practice-shell.is-recording button.scrolls-record-btn::after {
+                animation: none !important;
+            }
+        }
+
         @media (max-width: 575.98px) {
             .practice-scrolls-shell .scrolls-phone-device,
             .practice-scrolls-shell .scrolls-phone-shell,
@@ -4736,4 +4788,3 @@
     <script src="{% static 'pabasa_app/js/practice_reader.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>
-

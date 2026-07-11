@@ -168,6 +168,7 @@
         }
         speechActiveButton = null;
         speechOriginalButtonHtml = "";
+        shell.classList.remove("is-recording");
     }
 
     function releaseSpeechStream() {
@@ -211,7 +212,19 @@
                 headers: { "X-CSRFToken": practiceCsrfToken() },
                 body: formData,
             });
-            const data = await response.json();
+            const responseText = await response.text();
+            let data = null;
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch (parseError) {
+                const isHtml = /<!doctype|<html[\s>]/i.test(responseText || "");
+                if (response.status === 401 || response.status === 403 || response.redirected) {
+                    throw new Error("Your session or security token expired. Refresh the page and try again.");
+                }
+                throw new Error(isHtml
+                    ? `The speech service returned a server page instead of data (HTTP ${response.status}).`
+                    : "The speech service returned an invalid response.");
+            }
             if (!response.ok || !data.success) throw new Error(data.error || "Speech recognition failed.");
 
             const transcript = String(data.transcript || "").trim();
@@ -240,6 +253,7 @@
 
     function stopPracticeSpeechRecording() {
         if (!speechRecorder || speechRecorder.state === "inactive") return;
+        shell.classList.remove("is-recording");
         if (speechActiveButton) {
             speechActiveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Processing';
         }
@@ -263,6 +277,7 @@
             speechActiveButton = button;
             speechOriginalButtonHtml = button.innerHTML;
             button.classList.add("is-listening");
+            shell.classList.add("is-recording");
             button.innerHTML = '<i class="bi bi-stop-circle-fill me-1"></i> Stop & check';
             speechFeedback("Listening… Read the text aloud, then press Stop & check.", true);
 
