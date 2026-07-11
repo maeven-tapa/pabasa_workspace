@@ -4281,6 +4281,67 @@
         .reading-help-step strong, .reading-help-step span { display:block; }
         .reading-help-step span { color:#64777a; font-size:.8rem; margin-top:.1rem; }
         @media (max-width:700px) { .reading-help-btn { font-size:0; padding:.55rem; right:.6rem; top:.6rem; } .reading-help-btn i { font-size:1rem; } }
+        /* Color Mode uses the full reading canvas without the coaching sidebar. */
+        .practice-shell.practice-color .practice-instructions {
+            display: none !important;
+        }
+
+        .practice-shell.practice-color .practice-board {
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        /* Free Mode keeps the reader UI but removes the decorative phone frame. */
+        .practice-scrolls-shell .scrolls-phone-device {
+            aspect-ratio: auto !important;
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            gap: 0 !important;
+            max-height: none !important;
+            max-width: 1100px !important;
+            min-height: calc(100dvh - 1rem) !important;
+            padding: 0 !important;
+            width: min(100%, 1100px) !important;
+        }
+
+        .practice-scrolls-shell .scrolls-phone-device::before,
+        .practice-scrolls-shell .scrolls-phone-device::after,
+        .practice-scrolls-shell .scrolls-phone-notch,
+        .practice-scrolls-shell .scrolls-status-bar,
+        .practice-scrolls-shell .scrolls-bottom-nav {
+            display: none !important;
+        }
+
+        .practice-scrolls-shell .scrolls-phone-shell {
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            min-height: calc(100dvh - 1rem);
+            padding: 0 !important;
+            width: 100%;
+        }
+
+        .practice-scrolls-shell .scrolls-screen {
+            border: 1px solid rgba(31, 111, 139, 0.14) !important;
+            border-radius: 22px !important;
+            box-shadow: 0 18px 46px rgba(15, 23, 42, 0.1) !important;
+            min-height: calc(100dvh - 1rem);
+        }
+
+        @media (max-width: 575.98px) {
+            .practice-scrolls-shell .scrolls-phone-device,
+            .practice-scrolls-shell .scrolls-phone-shell,
+            .practice-scrolls-shell .scrolls-screen {
+                min-height: 100dvh !important;
+            }
+
+            .practice-scrolls-shell .scrolls-screen {
+                border: 0 !important;
+                border-radius: 0 !important;
+            }
+        }
     </style>
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
@@ -4675,5 +4736,4 @@
     <script src="{% static 'pabasa_app/js/practice_reader.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>
-
 
