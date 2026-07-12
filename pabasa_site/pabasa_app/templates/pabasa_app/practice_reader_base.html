@@ -1196,6 +1196,50 @@
             font-size: 1.2rem;
         }
 
+        .practice-color .star-counter.is-twinkling {
+            animation: colorStarCounterTwinkle 0.85s ease-in-out;
+            background: linear-gradient(135deg, #1b1a17, #5b4300, #1b1a17);
+            box-shadow: 0 0 0 3px rgba(255, 214, 57, 0.2), 0 0 30px rgba(255, 214, 57, 0.72);
+        }
+
+        .practice-color .star-counter.is-twinkling span:first-child {
+            animation: colorStarSpin 0.85s ease-in-out;
+            display: inline-block;
+        }
+
+        .practice-color #colorPracticeText.is-correct {
+            animation: colorCorrectWord 0.85s ease-in-out;
+            color: #15803d !important;
+            text-shadow: 0 0 18px rgba(34, 197, 94, 0.32);
+        }
+
+        @keyframes colorStarCounterTwinkle {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.14) rotate(-2deg); }
+            55% { transform: scale(1.08) rotate(2deg); }
+        }
+
+        @keyframes colorStarSpin {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.5); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        @keyframes colorCorrectWord {
+            0% { opacity: 1; transform: scale(1); }
+            35% { opacity: 1; transform: scale(1.12); }
+            70% { opacity: 0.82; transform: scale(1.04); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .practice-color .star-counter.is-twinkling,
+            .practice-color .star-counter.is-twinkling span:first-child,
+            .practice-color #colorPracticeText.is-correct {
+                animation: none !important;
+            }
+        }
+
         .practice-board {
             display: grid;
             grid-template-columns: minmax(300px, 0.35fr) minmax(0, 1fr);
@@ -4331,9 +4375,8 @@
         }
 
         /* Match the assessment reader's animated microphone feedback in every mode. */
-        .practice-shell button.is-listening,
-        .practice-shell.is-recording button#recordBtn,
-        .practice-shell.is-recording button.scrolls-record-btn {
+        .practice-shell.is-hearing button#recordBtn,
+        .practice-shell.is-hearing button.scrolls-record-btn {
             background: linear-gradient(135deg, #1f6f8b, #7a8b5f, #f7c86a, #b95f44) !important;
             background-size: 260% 260% !important;
             box-shadow:
@@ -4347,9 +4390,8 @@
             animation: practiceListeningButton 1.05s ease-in-out infinite !important;
         }
 
-        .practice-shell button.is-listening::after,
-        .practice-shell.is-recording button#recordBtn::after,
-        .practice-shell.is-recording button.scrolls-record-btn::after {
+        .practice-shell.is-hearing button#recordBtn::after,
+        .practice-shell.is-hearing button.scrolls-record-btn::after {
             animation: practiceListeningGlow 1.05s ease-in-out infinite;
             background: linear-gradient(90deg, rgba(66, 133, 244, 0.5), rgba(52, 168, 83, 0.38), rgba(251, 188, 5, 0.42), rgba(234, 67, 53, 0.4));
             border-radius: inherit;
@@ -4372,12 +4414,10 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .practice-shell button.is-listening,
-            .practice-shell.is-recording button#recordBtn,
-            .practice-shell.is-recording button.scrolls-record-btn,
-            .practice-shell button.is-listening::after,
-            .practice-shell.is-recording button#recordBtn::after,
-            .practice-shell.is-recording button.scrolls-record-btn::after {
+            .practice-shell.is-hearing button#recordBtn,
+            .practice-shell.is-hearing button.scrolls-record-btn,
+            .practice-shell.is-hearing button#recordBtn::after,
+            .practice-shell.is-hearing button.scrolls-record-btn::after {
                 animation: none !important;
             }
         }

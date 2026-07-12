@@ -698,6 +698,80 @@ h1, h2, h3, h4 {
 .section-container-3 { background: #FFFFFF; }
 .section-container-4 { background: rgba(245, 248, 251, 0.82); }
 
+/* Animated home-section atmosphere: varied, coordinated PABASA blue themes. */
+.section-container {
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+}
+
+.section-container > * {
+    position: relative;
+    z-index: 1;
+}
+
+.section-container-2 {
+    background:
+        radial-gradient(circle at 12% 24%, rgba(46, 168, 229, 0.2), transparent 34%),
+        radial-gradient(circle at 88% 76%, rgba(103, 232, 249, 0.18), transparent 38%),
+        linear-gradient(145deg, #e9f7ff 0%, #f3fbff 52%, #e8f5fb 100%);
+}
+
+.section-container-3 {
+    background:
+        radial-gradient(circle at 82% 18%, rgba(113, 96, 216, 0.16), transparent 34%),
+        radial-gradient(circle at 14% 84%, rgba(46, 168, 229, 0.18), transparent 40%),
+        linear-gradient(145deg, #eef3ff 0%, #e8f7ff 54%, #f3f1ff 100%);
+}
+
+.section-container-gallery {
+    background:
+        radial-gradient(circle at 18% 16%, rgba(255, 214, 57, 0.2), transparent 32%),
+        radial-gradient(circle at 86% 82%, rgba(46, 168, 229, 0.2), transparent 40%),
+        linear-gradient(145deg, #e4f4fb 0%, #eefaff 48%, #fff9df 100%);
+}
+
+.section-container-4 {
+    background:
+        radial-gradient(circle at 10% 78%, rgba(84, 194, 240, 0.2), transparent 38%),
+        radial-gradient(circle at 92% 20%, rgba(154, 77, 204, 0.13), transparent 35%),
+        linear-gradient(145deg, #eaf8ff 0%, #edf3ff 52%, #f6edff 100%);
+}
+
+.section-container::before {
+    animation: sectionLearningPattern 38s linear infinite;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280' viewBox='0 0 420 280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.55'%3E%3Cpath d='M44 48h30v38H44zM49 55h20M49 63h20M49 71h14'/%3E%3Cpath d='M325 176l6 12 13 2-10 9 3 13-12-6-12 6 3-13-10-9 13-2z'/%3E%3Cpath d='M214 42l18 6-11 32-18-6zM214 42l9-8 9 14'/%3E%3Cpath d='M76 207c12-8 25-8 37 0v29c-12-8-25-8-37 0zM113 207c12-8 25-8 37 0v29c-12-8-25-8-37 0z'/%3E%3C/g%3E%3Cg fill='%23F5B800' opacity='.55'%3E%3Cpath d='M365 55l4 8 9 1-7 6 2 9-8-4-8 4 2-9-7-6 9-1z'/%3E%3Ccircle cx='250' cy='224' r='4'/%3E%3Ccircle cx='66' cy='142' r='3'/%3E%3C/g%3E%3Ctext x='155' y='154' fill='%232EA8E5' opacity='.48' font-family='Arial,sans-serif' font-size='20' font-weight='700' letter-spacing='3'%3EABC%3C/text%3E%3Ctext x='348' y='142' fill='%2310466E' opacity='.4' font-family='Arial,sans-serif' font-size='16' font-weight='700'%3E123%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+    content: "";
+    inset: -280px -420px;
+    opacity: 0.2;
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+}
+
+.section-container-3::before,
+.section-container-4::before {
+    animation-direction: reverse;
+    animation-duration: 46s;
+}
+
+.section-container-gallery::before {
+    animation-duration: 32s;
+    opacity: 0.16;
+}
+
+@keyframes sectionLearningPattern {
+    from { background-position: 0 0; transform: translate3d(0, 0, 0); }
+    to { background-position: 420px 280px; transform: translate3d(20px, -12px, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .section-container::before {
+        animation: none;
+    }
+}
+
 .section-wrapper {
     max-width: 1180px;
     margin: 0 auto;

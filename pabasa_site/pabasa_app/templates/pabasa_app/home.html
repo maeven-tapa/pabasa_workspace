@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-learning-pattern">
+<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-animated-sections">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -204,7 +204,7 @@
     </div>
 </section>
 
-<section class="fade-in-section section-container">
+<section class="fade-in-section section-container section-container-gallery">
     <div class="text-center">
         <h2 class="turning-pages-title">#TurningPagesTogether</h2>
         <p class="turning-pages-subtitle">Reading Forward with PABASA</p>

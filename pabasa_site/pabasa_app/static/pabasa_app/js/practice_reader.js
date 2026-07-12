@@ -18,6 +18,7 @@
     const practiceProgress = document.getElementById("practiceProgress");
     const practiceFeedback = document.getElementById("practiceFeedback");
     const starCount = document.getElementById("starCount");
+    const starCounter = document.querySelector(".star-counter");
     const skipBtn = document.getElementById("skipBtn");
     const recordBtn = document.getElementById("recordBtn");
     const nextBtn = document.getElementById("practiceNextBtn");
@@ -82,6 +83,10 @@
     let speechActiveButton = null;
     let speechOriginalButtonHtml = "";
     let speechRequestActive = false;
+    let speechAudioContext = null;
+    let speechAnalyser = null;
+    let speechMeterFrame = null;
+    let speechNoiseFloor = 0.012;
     const speechBypassButtons = new WeakSet();
     const huntFlightBird = document.getElementById("huntFlightBird");
     const huntProgressLabel = document.getElementById("huntProgressLabel");
@@ -168,15 +173,61 @@
         }
         speechActiveButton = null;
         speechOriginalButtonHtml = "";
-        shell.classList.remove("is-recording");
+        shell.classList.remove("is-recording", "is-hearing");
     }
 
     function releaseSpeechStream() {
         if (speechStopTimer) window.clearTimeout(speechStopTimer);
         speechStopTimer = null;
+        if (speechMeterFrame) window.cancelAnimationFrame(speechMeterFrame);
+        speechMeterFrame = null;
+        speechAnalyser = null;
+        if (speechAudioContext) speechAudioContext.close().catch(() => {});
+        speechAudioContext = null;
+        shell.classList.remove("is-recording", "is-hearing");
         speechStream?.getTracks?.().forEach(track => track.stop());
         speechStream = null;
         speechRecorder = null;
+    }
+
+    function startPracticeAudioMeter(stream) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass || !stream) return;
+        try {
+            speechAudioContext = new AudioContextClass();
+            if (speechAudioContext.state === "suspended") speechAudioContext.resume().catch(() => {});
+            const source = speechAudioContext.createMediaStreamSource(stream);
+            speechAnalyser = speechAudioContext.createAnalyser();
+            speechAnalyser.fftSize = 1024;
+            speechAnalyser.smoothingTimeConstant = 0.72;
+            source.connect(speechAnalyser);
+            const samples = new Uint8Array(speechAnalyser.fftSize);
+            const meterStartedAt = Date.now();
+
+            const readLevel = () => {
+                if (!speechAnalyser || !speechRecorder || speechRecorder.state !== "recording") {
+                    shell.classList.remove("is-hearing");
+                    return;
+                }
+                speechAnalyser.getByteTimeDomainData(samples);
+                let sum = 0;
+                for (const sample of samples) {
+                    const normalized = (sample - 128) / 128;
+                    sum += normalized * normalized;
+                }
+                const rms = Math.sqrt(sum / samples.length);
+                const calibrating = Date.now() - meterStartedAt < 500;
+                if (calibrating) {
+                    speechNoiseFloor = Math.max(0.006, (speechNoiseFloor * 0.82) + (rms * 0.18));
+                }
+                const voiceThreshold = Math.max(0.018, speechNoiseFloor * 2.8);
+                shell.classList.toggle("is-hearing", !calibrating && rms >= voiceThreshold);
+                speechMeterFrame = window.requestAnimationFrame(readLevel);
+            };
+            speechMeterFrame = window.requestAnimationFrame(readLevel);
+        } catch (error) {
+            console.warn("PABASA [Practice]: Audio level meter unavailable", error);
+        }
     }
 
     function completeRecognizedPracticeItem(button) {
@@ -188,6 +239,37 @@
             speechBypassButtons.add(button);
             button.click();
         }
+        if (isColorMode) animateColorSpeechSuccess();
+    }
+
+    function animateColorSpeechSuccess() {
+        if (!isColorMode) return;
+        if (colorSpeechAdvanceTimer) window.clearTimeout(colorSpeechAdvanceTimer);
+        if (colorFinalRevealTimer) window.clearTimeout(colorFinalRevealTimer);
+        colorFinalRevealTimer = null;
+        starCounter?.classList.remove("is-twinkling");
+        colorPracticeText?.classList.remove("is-correct");
+        void starCounter?.offsetWidth;
+        starCounter?.classList.add("is-twinkling");
+        colorPracticeText?.classList.add("is-correct");
+
+        colorSpeechAdvanceTimer = window.setTimeout(() => {
+            colorSpeechAdvanceTimer = null;
+            starCounter?.classList.remove("is-twinkling");
+            colorPracticeText?.classList.remove("is-correct");
+            if (currentIndex < items.length - 1) {
+                currentIndex += 1;
+                practiceFeedback.textContent = "Great reading! The next item is ready.";
+                practiceFeedback.classList.remove("is-warning");
+                practiceFeedback.classList.add("is-success");
+                setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
+                playCoachAnimation("next");
+                render();
+                return;
+            }
+            if (colorModeCompletionReady) completeColorModeLevel();
+            else showCompletion();
+        }, 850);
     }
 
     async function submitPracticeSpeech(blob, targetText, button) {
@@ -257,7 +339,7 @@
 
     function stopPracticeSpeechRecording() {
         if (!speechRecorder || speechRecorder.state === "inactive") return;
-        shell.classList.remove("is-recording");
+        shell.classList.remove("is-recording", "is-hearing");
         if (speechActiveButton) {
             speechActiveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Processing';
         }
@@ -301,6 +383,7 @@
                 submitPracticeSpeech(blob, targetText, button);
             }, { once: true });
             speechRecorder.start();
+            startPracticeAudioMeter(speechStream);
             speechStopTimer = window.setTimeout(stopPracticeSpeechRecording, 8000);
         } catch (error) {
             console.warn("PABASA [Practice]: Microphone unavailable", error);
@@ -332,6 +415,7 @@
     let colorStarsCommitted = false;
     let colorFinalRevealTimer = null;
     let colorFinalRevealHold = null;
+    let colorSpeechAdvanceTimer = null;
     let huntLevelTransitionInProgress = false;
     let huntAdvanceInProgress = false;
     let mascotAnimationState = "idle";
@@ -1755,6 +1839,10 @@
         colorModeCompletionReady = false;
         colorNewStarsToCommit = null;
         colorStarsCommitted = false;
+        if (colorSpeechAdvanceTimer) window.clearTimeout(colorSpeechAdvanceTimer);
+        colorSpeechAdvanceTimer = null;
+        starCounter?.classList.remove("is-twinkling");
+        colorPracticeText?.classList.remove("is-correct");
         huntLevelTransitionInProgress = false;
         huntAdvanceInProgress = false;
         huntCheckpointToast?.setAttribute("hidden", "");
