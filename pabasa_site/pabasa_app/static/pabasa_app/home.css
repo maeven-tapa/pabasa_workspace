@@ -559,6 +559,63 @@ h1, h2, h3, h4 {
     to { transform: rotate(360deg); }
 }
 
+/* Hero artwork replaces the former dashboard preview. */
+.hero-image-showcase {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+    min-height: 390px;
+    padding: 1rem;
+}
+
+.hero-image-glow {
+    position: absolute;
+    z-index: -1;
+    inset: 10% 5%;
+    border-radius: 42% 58% 55% 45% / 48% 43% 57% 52%;
+    background: radial-gradient(circle at 35% 35%, rgba(72, 194, 244, 0.78), transparent 48%),
+                radial-gradient(circle at 70% 65%, rgba(255, 210, 61, 0.5), transparent 52%),
+                rgba(24, 130, 190, 0.22);
+    filter: blur(25px);
+    opacity: 0.82;
+    animation: heroImageGlow 4.8s ease-in-out infinite;
+}
+
+.hero-main-image {
+    display: block;
+    width: min(100%, 520px);
+    max-height: 405px;
+    object-fit: contain;
+    filter: drop-shadow(0 20px 24px rgba(12, 67, 105, 0.2));
+    animation: heroImageFloat 5.5s ease-in-out infinite;
+}
+
+@keyframes heroImageGlow {
+    0%, 100% { opacity: 0.68; transform: scale(0.94) rotate(-2deg); }
+    50% { opacity: 1; transform: scale(1.06) rotate(2deg); }
+}
+
+@keyframes heroImageFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-image-glow,
+    .hero-main-image { animation: none; }
+}
+
+@media (max-width: 992px) {
+    .hero-image-showcase { min-height: 330px; }
+    .hero-main-image { max-height: 350px; }
+}
+
+@media (max-width: 480px) {
+    .hero-image-showcase { min-height: 260px; padding: 0.25rem; }
+    .hero-main-image { max-height: 290px; }
+}
+
 @media (max-width: 992px) {
     .browser-body {
         grid-template-columns: 1fr;
