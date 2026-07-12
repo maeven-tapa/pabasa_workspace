@@ -3414,13 +3414,13 @@ section.pb-md-5 h2::after {
     width: min(100%, 470px);
     height: clamp(280px, 36vw, 390px);
     object-fit: cover;
-    border-radius: 42% 58% 46% 54% / 56% 42% 58% 44%;
+    border-radius: 0;
     box-shadow: 0 25px 55px rgba(12, 73, 113, 0.18);
     transform: rotate(-1.5deg);
 }
 
 .audience-row--reverse .audience-row__visual img {
-    border-radius: 55% 45% 58% 42% / 43% 58% 42% 57%;
+    border-radius: 0;
     transform: rotate(1.5deg);
 }
 
