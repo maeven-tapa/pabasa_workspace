@@ -879,8 +879,10 @@
             .scrolls-phone-header {
                 align-items: center;
                 border-radius: 14px;
-                flex-wrap: wrap;
+                display: grid;
                 gap: 0.24rem 0.35rem;
+                grid-template-columns: auto minmax(0, 1fr);
+                grid-template-rows: auto auto;
                 padding: 0.34rem 0.44rem;
             }
 
@@ -890,11 +892,18 @@
                 min-width: 32px;
             }
 
+            .scrolls-phone-header > .back-link {
+                grid-column: 1;
+                grid-row: 1 / span 2;
+                align-self: center;
+            }
+
             .scrolls-header-copy {
-                flex: 1 1 8rem;
-                order: 0;
-                text-align: left;
-                width: auto;
+                grid-column: 2;
+                grid-row: 1;
+                justify-self: center;
+                text-align: center;
+                width: 100%;
             }
 
             .scrolls-header-copy h1 {
@@ -905,14 +914,14 @@
             .scrolls-status-pill {
                 align-self: center;
                 font-size: 0.64rem;
-                margin-left: 0;
-                order: 0;
                 padding: 0.24rem 0.4rem;
             }
 
             .scrolls-header-meta {
                 gap: 0.2rem;
-                justify-content: flex-start;
+                grid-column: 2;
+                grid-row: 2;
+                justify-content: center;
                 margin-top: 0.12rem;
             }
 
