@@ -141,7 +141,11 @@
         if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
         huntRecognitionRestartTimer = window.setTimeout(() => {
             huntRecognitionRestartTimer = null;
-            if (!huntListeningDesired || huntAdvanceInProgress || index !== currentIndex || huntResults[index] || speechRequestActive || speechRecorder) return;
+            if (!huntListeningDesired || huntAdvanceInProgress || index !== currentIndex || huntResults[index]) return;
+            if (speechRequestActive || speechRecorder) {
+                scheduleHuntRecognition(index, 200);
+                return;
+            }
             if (huntRawMicInput) huntRawMicInput.textContent = "Waiting for speech...";
             startPracticeSpeechRecording(recordBtn);
         }, delay);
@@ -2317,9 +2321,15 @@
             huntRetryTimer = null;
             if (huntAutoAdvanceTimer) window.clearTimeout(huntAutoAdvanceTimer);
             huntAutoAdvanceTimer = null;
-            if (speechRecorder?.state === "recording") stopPracticeSpeechRecording();
-            releaseSpeechStream();
-            restoreSpeechButton();
+            // Skip only closes the chunk for the old word. It must not turn off
+            // Hunt's continuous listening toggle; capture resumes on the new word.
+            if (speechRecorder?.state === "recording") {
+                huntDiscardCurrentAudio = true;
+                stopPracticeSpeechRecording();
+            } else {
+                releaseSpeechStream();
+                restoreSpeechButton();
+            }
             updateHuntToggleButton();
             if (!huntResults[currentIndex]) finalizeHuntSpeechResult(currentIndex, "", items[currentIndex], 0);
             nextBtn.disabled = true;
