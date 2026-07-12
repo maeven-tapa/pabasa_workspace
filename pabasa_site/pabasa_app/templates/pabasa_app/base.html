@@ -1137,8 +1137,6 @@
 
         /* Footer: navy from logo */
         .site-footer {
-            --footer-curve-width: clamp(22rem, 46vw, 48rem);
-            --footer-curve-height: clamp(11rem, 22vw, 18rem);
             margin-top: 3rem;
             background: #10466e !important;
             border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -1165,29 +1163,105 @@
 
         .footer-divider {
             position: absolute;
-            top: calc(var(--footer-curve-height) / -2);
-            left: 50%;
-            width: var(--footer-curve-width);
-            height: var(--footer-curve-height);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10rem;
             background: transparent;
-            transform: translateX(-50%);
             z-index: 2;
             pointer-events: none;
         }
 
-        .footer-divider::before {
-            content: "";
+        .footer-divider-wave {
             position: absolute;
             inset: 0;
-            border-radius: 50%;
-            background: #fff;
-            clip-path: inset(50% 0 0 0);
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .footer-float {
+            position: absolute;
+            z-index: 1;
+            display: grid;
+            place-items: center;
+            color: #10466e;
+            filter: drop-shadow(0 7px 8px rgba(8, 37, 58, 0.14));
+        }
+
+        .footer-float--book {
+            top: -3.2rem;
+            left: calc(50% - 15.5rem);
+            color: #54c2f0;
+            font-size: 3.4rem;
+            transform: rotate(-12deg);
+        }
+
+        .footer-float--pencil {
+            top: -4.35rem;
+            left: calc(50% - 7.8rem);
+            color: #ffd639;
+            font-size: 3.2rem;
+            transform: rotate(28deg);
+        }
+
+        .footer-float--letters {
+            top: -3.65rem;
+            right: calc(50% - 8.2rem);
+            grid-template-columns: repeat(2, 1.75rem);
+            gap: 0.25rem;
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 900;
+            transform: rotate(-8deg);
+        }
+
+        .footer-float--letters span {
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 0.55rem;
+            display: grid;
+            place-items: center;
+            background: #ff7fa6;
+            box-shadow: inset 0 -3px 0 rgba(16, 70, 110, 0.15);
+        }
+
+        .footer-float--letters span + span {
+            background: #54c2f0;
+        }
+
+        .footer-float--star {
+            top: -4.6rem;
+            right: calc(50% - 16rem);
+            color: #ffd639;
+            font-size: 2.2rem;
+            transform: rotate(13deg);
+        }
+
+        .footer-float--dot {
+            top: 0.75rem;
+            left: calc(50% - 18rem);
+            width: 0.8rem;
+            height: 0.8rem;
+            border-radius: 0.25rem;
+            background: #9eea4f;
+            transform: rotate(22deg);
+        }
+
+        .footer-float--dot-right {
+            top: -0.2rem;
+            right: calc(50% - 18.5rem);
+            left: auto;
+            width: 1rem;
+            height: 1rem;
+            background: #ff7fa6;
         }
 
         .footer-divider img {
             position: absolute;
+            z-index: 2;
+            top: -5rem;
             left: 50%;
-            bottom: -0.75rem;
             width: clamp(11rem, 18vw, 15rem);
             height: clamp(13rem, 20vw, 17rem);
             object-fit: contain;
@@ -1197,10 +1271,42 @@
         }
 
         @media (max-width: 600px) {
+            .footer-divider {
+                height: 8.5rem;
+            }
+
             .footer-divider img {
-                bottom: -0.5rem;
+                top: -4.3rem;
                 width: 10.5rem;
                 height: 12.25rem;
+            }
+
+            .footer-float--book {
+                top: -2.65rem;
+                left: calc(50% - 10.5rem);
+                font-size: 2.5rem;
+            }
+
+            .footer-float--pencil {
+                top: -3.2rem;
+                left: calc(50% - 5.5rem);
+                font-size: 2.35rem;
+            }
+
+            .footer-float--letters {
+                top: -2.8rem;
+                right: calc(50% - 6rem);
+                transform: rotate(-8deg) scale(0.82);
+            }
+
+            .footer-float--star {
+                top: -3.35rem;
+                right: calc(50% - 10.5rem);
+                font-size: 1.75rem;
+            }
+
+            .footer-float--dot {
+                display: none;
             }
         }
 
@@ -1301,7 +1407,7 @@
 
             .footer-shell {
                 max-width: none;
-                padding: 9rem 0.75rem 1.25rem;
+                padding: 10rem 0.75rem 1.25rem;
             }
 
             .footer-panel--brand {
@@ -1517,6 +1623,15 @@
     {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' %}
     <footer class="site-footer mt-auto" id="site-footer">
         <div class="footer-divider" aria-hidden="true">
+            <svg class="footer-divider-wave" viewBox="0 0 1440 160" preserveAspectRatio="none" focusable="false">
+                <path fill="#ffffff" d="M0 0 H90 C115 0 115 18 140 18 C165 18 165 0 190 0 H330 C365 0 355 32 395 35 H445 C482 35 477 66 518 70 C555 73 552 101 610 121 C680 146 760 146 830 121 C888 101 885 73 922 70 C963 66 958 35 995 35 H1045 C1085 32 1075 0 1110 0 H1250 C1275 0 1275 18 1300 18 C1325 18 1325 0 1350 0 H1440 V0 H0 Z"/>
+            </svg>
+            <span class="footer-float footer-float--book"><i class="bi bi-book-half"></i></span>
+            <span class="footer-float footer-float--pencil"><i class="bi bi-pencil-fill"></i></span>
+            <span class="footer-float footer-float--letters"><span>A</span><span>B</span></span>
+            <span class="footer-float footer-float--star"><i class="bi bi-star-fill"></i></span>
+            <span class="footer-float footer-float--dot"></span>
+            <span class="footer-float footer-float--dot footer-float--dot-right"></span>
             <img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="">
         </div>
         <div class="container footer-shell">
