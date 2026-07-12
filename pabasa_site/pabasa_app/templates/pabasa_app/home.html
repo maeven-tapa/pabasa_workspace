@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-page-flip-width-fix">
+<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-one-way-page-flip">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -252,10 +252,11 @@
         const renderTurningPages = () => {
             pages.forEach((page, pageIndex) => {
                 const offset = (pageIndex - currentPage + pages.length) % pages.length;
+                if (offset === 0) page.classList.remove('is-turned');
                 page.style.setProperty('--page-offset', Math.min(offset, 6));
                 page.style.setProperty('--page-depth', pages.length - offset);
                 page.classList.toggle('is-active', offset === 0);
-                page.classList.toggle('is-stacked', offset > 0);
+                page.classList.toggle('is-stacked', offset > 0 && !page.classList.contains('is-turned'));
                 page.setAttribute('aria-hidden', offset === 0 ? 'false' : 'true');
             });
             if (turningPagesCurrent) turningPagesCurrent.textContent = String(currentPage + 1);
@@ -263,9 +264,14 @@
 
         const goToPage = (direction) => {
             const leavingPage = pages[currentPage];
+            const nextPageIndex = (currentPage + direction + pages.length) % pages.length;
+            if (direction < 0) pages[nextPageIndex].classList.remove('is-turned');
             leavingPage.classList.add(direction > 0 ? 'is-turning-forward' : 'is-turning-back');
-            window.setTimeout(() => leavingPage.classList.remove('is-turning-forward', 'is-turning-back'), reduceMotion ? 0 : 720);
-            currentPage = (currentPage + direction + pages.length) % pages.length;
+            window.setTimeout(() => {
+                leavingPage.classList.remove('is-turning-forward', 'is-turning-back');
+                if (direction > 0) leavingPage.classList.add('is-turned');
+            }, reduceMotion ? 0 : 720);
+            currentPage = nextPageIndex;
             window.requestAnimationFrame(renderTurningPages);
         };
 

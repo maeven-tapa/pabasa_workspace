@@ -3683,6 +3683,14 @@ section.pb-md-5 h2::after {
     transform: translate3d(48%, 4px, 70px) rotateY(112deg);
 }
 
+.section-container-gallery .turning-pages-image.is-turned {
+    z-index: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate3d(-48%, 4px, -80px) rotateY(-112deg);
+    transition: none;
+}
+
 .section-container-gallery .turning-pages-image img {
     width: 100%;
     height: 100%;
