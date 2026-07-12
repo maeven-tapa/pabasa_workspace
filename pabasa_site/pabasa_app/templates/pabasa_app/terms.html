@@ -1,0 +1,142 @@
+{% extends "pabasa_app/base.html" %}
+{% load static %}
+
+{% block page_title %}Terms of Use{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'pabasa_app/public_support.css' %}?v=20260713">
+{% endblock %}
+
+{% block content %}
+<div class="support-page support-page--terms">
+    <section class="support-hero support-hero--terms" aria-labelledby="terms-title">
+        <div class="support-hero__copy">
+            <span class="support-eyebrow"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> PABASA policies</span>
+            <h1 id="terms-title">Terms of Use</h1>
+            <p>These terms explain the responsibilities that help keep PABASA safe, useful, and respectful for learners, teachers, and schools.</p>
+            <div class="terms-effective"><span>Effective</span> July 13, 2026</div>
+        </div>
+        <div class="support-hero__document" aria-hidden="true">
+            <i class="bi bi-file-earmark-check"></i>
+            <span class="document-spark document-spark--one">★</span>
+            <span class="document-spark document-spark--two">✓</span>
+        </div>
+    </section>
+
+    <div class="terms-layout">
+        <aside class="terms-contents">
+            <span>On this page</span>
+            <nav aria-label="Terms sections">
+                <a href="#terms-acceptance">1. Acceptance</a>
+                <a href="#terms-eligibility">2. Accounts and eligibility</a>
+                <a href="#terms-use">3. Acceptable use</a>
+                <a href="#terms-content">4. Content and materials</a>
+                <a href="#terms-data">5. Information and privacy</a>
+                <a href="#terms-education">6. Educational use</a>
+                <a href="#terms-availability">7. Service availability</a>
+                <a href="#terms-ownership">8. Ownership</a>
+                <a href="#terms-suspension">9. Account action</a>
+                <a href="#terms-changes">10. Changes</a>
+                <a href="#terms-contact">11. Contact</a>
+            </nav>
+        </aside>
+
+        <article class="terms-document">
+            <div class="terms-introduction">
+                <p>Please read these Terms of Use before accessing PABASA. By creating an account, joining a class, or otherwise using the platform, you agree to follow these terms. If you do not agree, do not use the platform.</p>
+                <p>Schools, teachers, parents, or guardians who authorize a learner’s use should review these terms with the learner in age-appropriate language.</p>
+            </div>
+
+            <section id="terms-acceptance">
+                <span class="terms-number">01</span>
+                <h2>Acceptance of these terms</h2>
+                <p>These terms apply to PABASA’s public pages, accounts, classroom tools, reading activities, assessments, reports, and related services. Using any part of PABASA means that you accept these terms and any policies referenced on the platform.</p>
+            </section>
+
+            <section id="terms-eligibility">
+                <span class="terms-number">02</span>
+                <h2>Accounts and eligibility</h2>
+                <ul>
+                    <li>Provide accurate information when registering and keep it reasonably current.</li>
+                    <li>Use the account role that correctly describes you, such as student or teacher.</li>
+                    <li>Keep passwords and one-time verification codes private.</li>
+                    <li>Students should use PABASA only with authorization from their school, teacher, parent, or guardian, as appropriate.</li>
+                    <li>You are responsible for activity performed through your account unless you promptly report unauthorized access.</li>
+                </ul>
+            </section>
+
+            <section id="terms-use">
+                <span class="terms-number">03</span>
+                <h2>Acceptable use</h2>
+                <p>Use PABASA only for legitimate educational and classroom purposes. You must not:</p>
+                <ul>
+                    <li>Harass another person, impersonate someone, or provide deliberately false information.</li>
+                    <li>Attempt to access another user’s account, class, records, or restricted administrative areas.</li>
+                    <li>Upload malicious files, interfere with the service, bypass security controls, or test vulnerabilities without written authorization.</li>
+                    <li>Use automated tools to scrape, overload, or reproduce substantial parts of the platform.</li>
+                    <li>Submit unlawful, harmful, discriminatory, or inappropriate classroom content.</li>
+                </ul>
+            </section>
+
+            <section id="terms-content">
+                <span class="terms-number">04</span>
+                <h2>Content and reading materials</h2>
+                <p>Teachers and authorized users may add or select reading materials for classroom activities. You remain responsible for ensuring that material you provide is accurate, age-appropriate, and permitted for your use. Do not upload content that violates another person’s copyright, privacy, or other rights.</p>
+                <p>You give PABASA permission to process submitted material only as needed to provide, secure, maintain, and improve the requested platform functions.</p>
+            </section>
+
+            <section id="terms-data">
+                <span class="terms-number">05</span>
+                <h2>Information and privacy</h2>
+                <p>PABASA processes account, class, activity, and reading-session information to operate its educational features. Users should provide only information that is necessary for those functions and should not place passwords, private family information, or unrelated sensitive data in free-text fields or uploaded materials.</p>
+                <p>Schools and educators are responsible for obtaining any permissions required for learner participation and for handling exported or copied records appropriately.</p>
+            </section>
+
+            <section id="terms-education">
+                <span class="terms-number">06</span>
+                <h2>Educational use and professional judgment</h2>
+                <p>PABASA is an educational support tool. Automated reading signals, summaries, and suggestions may contain errors and should not be treated as the sole basis for grades, placement, diagnosis, discipline, or other high-impact decisions. Teachers and authorized school personnel should review results in context and apply their professional judgment.</p>
+            </section>
+
+            <section id="terms-availability">
+                <span class="terms-number">07</span>
+                <h2>Service availability</h2>
+                <p>We aim to keep PABASA reliable, but we do not guarantee uninterrupted or error-free access. Features may be maintained, updated, limited, or temporarily unavailable. Keep appropriate backups of materials or records that your school needs outside the platform.</p>
+            </section>
+
+            <section id="terms-ownership">
+                <span class="terms-number">08</span>
+                <h2>Platform ownership</h2>
+                <p>PABASA’s software, visual design, branding, and original platform materials are owned by or licensed to the PABASA project team. These terms permit you to use the service; they do not transfer ownership of the platform or allow you to copy, sell, sublicense, or commercially exploit it.</p>
+            </section>
+
+            <section id="terms-suspension">
+                <span class="terms-number">09</span>
+                <h2>Suspension or termination</h2>
+                <p>Access may be limited, suspended, or removed when reasonably necessary to protect learners, other users, schools, platform security, or legal rights; to investigate misuse; or to address a serious or repeated violation of these terms. Where appropriate, users may contact the team to ask about an account action.</p>
+            </section>
+
+            <section id="terms-changes">
+                <span class="terms-number">10</span>
+                <h2>Changes to PABASA or these terms</h2>
+                <p>We may update the platform and these terms as the project develops. The effective date at the top of this page will change when the terms are revised. Continued use after an update means that you accept the revised terms.</p>
+            </section>
+
+            <section id="terms-contact">
+                <span class="terms-number">11</span>
+                <h2>Questions and contact</h2>
+                <p>For questions about these terms or about your use of PABASA, contact the PABASA Research Team:</p>
+                <div class="terms-contact-lines">
+                    <a href="mailto:pabasa.tupc@gmail.com"><i class="bi bi-envelope" aria-hidden="true"></i> pabasa.tupc@gmail.com</a>
+                    <a href="tel:+639063979666"><i class="bi bi-telephone" aria-hidden="true"></i> 0906 397 9666</a>
+                </div>
+            </section>
+
+            <div class="terms-note">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <p>These terms describe PABASA’s intended operating rules. Schools deploying the platform should review them alongside their own policies and obtain appropriate legal or administrative guidance.</p>
+            </div>
+        </article>
+    </div>
+</div>
+{% endblock %}

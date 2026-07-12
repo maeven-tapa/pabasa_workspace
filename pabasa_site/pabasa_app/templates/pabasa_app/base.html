@@ -1344,6 +1344,56 @@
             }
         }
 
+        .editorial-footer {
+            margin-top: 2rem;
+            padding: 1.7rem 1rem;
+            border-top: 1px solid #e6e9ec;
+            border-bottom: 1px solid #eef0f2;
+            background: #fff;
+        }
+
+        .editorial-footer__links {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: clamp(1rem, 2.1vw, 1.85rem);
+        }
+
+        .editorial-footer__links a {
+            color: #a8adb2;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.045em;
+            line-height: 1.4;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition: color 0.18s ease;
+        }
+
+        .editorial-footer__links a:hover,
+        .editorial-footer__links a:focus-visible {
+            color: #2ea8e5;
+        }
+
+        .editorial-footer__links a:first-child {
+            color: #10466e;
+        }
+
+        @media (max-width: 600px) {
+            .editorial-footer {
+                padding-block: 1.4rem;
+            }
+
+            .editorial-footer__links {
+                gap: 0.75rem 1.1rem;
+            }
+
+            .editorial-footer__links a {
+                font-size: 0.64rem;
+            }
+        }
+
         .footer-panel--brand {
             min-width: 0;
         }
@@ -1562,6 +1612,125 @@
             }
         }
 
+        /* Editorial section navigation for long-form public pages. */
+        .contextual-nav-wrap {
+            border-bottom: 1px solid #e3e9ee !important;
+            background: #fff;
+        }
+
+        .contextual-nav-wrap .modern-nav-shell {
+            min-height: 3.9rem;
+            overflow: visible;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(16, 70, 110, 0.07);
+        }
+
+        .contextual-nav-wrap .modern-nav-links {
+            gap: clamp(1.1rem, 2.4vw, 2.3rem);
+        }
+
+        .contextual-nav-wrap .modern-nav-content .context-nav-link,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:not(.active) {
+            min-height: 3.9rem;
+            padding: 0.2rem 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: #89939e !important;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.11em;
+            line-height: 1.2;
+            text-transform: uppercase;
+            transform: none !important;
+            animation: none !important;
+        }
+
+        .contextual-nav-wrap .modern-nav-content .context-nav-link::after {
+            content: "" !important;
+            display: block !important;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            width: 100%;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+            background: #2ea8e5;
+            opacity: 0;
+            transform: scaleX(0) !important;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:hover,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:focus-visible,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active {
+            color: #10466e !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:hover::after,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:focus-visible::after,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active::after {
+            opacity: 1;
+            transform: scaleX(1) !important;
+        }
+
+        .contextual-nav-wrap .modern-nav-actions {
+            border-color: rgba(16, 70, 110, 0.1);
+            background: rgba(16, 70, 110, 0.04);
+            box-shadow: none;
+        }
+
+        .info-hero[id],
+        .info-section[id],
+        .about-hero-section[id],
+        .about-articles-section[id],
+        .about-principles-section[id],
+        .about-journey-section[id],
+        .about-team-section[id] {
+            scroll-margin-top: 5.25rem;
+        }
+
+        @media (max-width: 991.98px) {
+            .contextual-nav-wrap .modern-nav-area {
+                padding-right: 0.75rem;
+            }
+
+            .contextual-nav-wrap .navbar-collapse {
+                border-top: 1px solid #e7edf1;
+                background: #fff;
+            }
+
+            .contextual-nav-wrap .modern-nav-links {
+                align-items: stretch;
+                gap: 0;
+            }
+
+            .contextual-nav-wrap .modern-nav-content .context-nav-link,
+            .contextual-nav-wrap .modern-nav-content .context-nav-link:not(.active) {
+                min-height: 2.8rem;
+                justify-content: flex-start;
+                padding: 0.7rem 1rem !important;
+            }
+
+            .contextual-nav-wrap .modern-nav-content .context-nav-link::after {
+                top: 0.45rem;
+                right: auto;
+                bottom: 0.45rem;
+                width: 3px;
+                height: auto;
+                border-radius: 0 3px 3px 0;
+                transform: scaleY(0) !important;
+            }
+
+            .contextual-nav-wrap .modern-nav-content .context-nav-link:hover::after,
+            .contextual-nav-wrap .modern-nav-content .context-nav-link:focus-visible::after,
+            .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active::after {
+                transform: scaleY(1) !important;
+            }
+        }
+
         /* ── end cute pass ── */
     </style>
     {% block extra_head %}{% endblock %}
@@ -1572,7 +1741,7 @@
             <div class="public-page-loader__spinner"></div>
         </div>
     </div>
-    <header class="modern-nav-wrap sticky-top">
+    <header class="modern-nav-wrap sticky-top{% if request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' %} contextual-nav-wrap{% endif %}">
         <nav class="navbar navbar-expand-lg">
             <div class="w-100">
                 <div class="modern-nav-shell">
@@ -1624,12 +1793,26 @@
                             <div class="modern-nav-content">
                                 {% with current_view=request.resolver_match.url_name %}
                                 <ul class="modern-nav-links navbar-nav">
+                                    {% if current_view == 'pabasa_info' %}
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link is-section-active" href="#platform-overview" data-section="platform-overview" aria-current="location">Overview</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#platform-purpose" data-section="platform-purpose">Purpose</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#platform-tools" data-section="platform-tools">What You Can Do</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#platform-audience" data-section="platform-audience">Audience</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#platform-process" data-section="platform-process">How It Works</a></li>
+                                    {% elif current_view == 'about' %}
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link is-section-active" href="#about-overview" data-section="about-overview" aria-current="location">Overview</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#project-origin" data-section="project-origin">Origin</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#design-principles" data-section="design-principles">Principles</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#project-journey" data-section="project-journey">Journey</a></li>
+                                    <li class="nav-item"><a class="nav-link nav-link-modern context-nav-link" href="#development-team" data-section="development-team">Team</a></li>
+                                    {% else %}
                                     <li class="nav-item">
                                         <a class="nav-link nav-link-modern{% if current_view == 'pabasa_info' %} active{% endif %}"{% if current_view == 'pabasa_info' %} aria-current="page" style="color:#10466E !important;"{% endif %} href="{% url 'pabasa_info' %}">What is PABASA</a>
                                     </li>
                                     <li class="nav-item">
                                         <a class="nav-link nav-link-modern{% if current_view == 'about' %} active{% endif %}"{% if current_view == 'about' %} aria-current="page" style="color:#10466E !important;"{% endif %} href="{% url 'about' %}">About Us</a>
                                     </li>
+                                    {% endif %}
                                 </ul>
                                 {% endwith %}
                                 <div class="modern-nav-actions">
@@ -1655,6 +1838,22 @@
         </div>
     </main>
     {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' %}
+    {% with current_view=request.resolver_match.url_name %}
+    {% if current_view == 'pabasa_info' or current_view == 'about' %}
+    <footer class="editorial-footer">
+        <nav class="editorial-footer__links" aria-label="Footer navigation">
+            <a href="{% url 'home' %}">PABASA</a>
+            {% if current_view == 'pabasa_info' %}
+            <a href="{% url 'about' %}">About</a>
+            {% else %}
+            <a href="{% url 'pabasa_info' %}">What is PABASA</a>
+            {% endif %}
+            <a href="{% url 'faq' %}">Help</a>
+            <a href="{% url 'terms' %}">Terms</a>
+            <a href="{% url 'privacy' %}">Privacy</a>
+        </nav>
+    </footer>
+    {% else %}
     <footer class="site-footer mt-auto" id="site-footer">
         <div class="footer-divider" aria-hidden="true">
             <svg class="footer-divider-wave" viewBox="0 0 1440 160" preserveAspectRatio="none" focusable="false">
@@ -1709,6 +1908,9 @@
                         <li><a href="{% url 'home' %}">Home</a></li>
                         <li><a href="{% url 'about' %}">About</a></li>
                         <li><a href="{% url 'pabasa_info' %}">Features</a></li>
+                        <li><a href="{% url 'faq' %}">FAQs</a></li>
+                        <li><a href="{% url 'terms' %}">Terms</a></li>
+                        <li><a href="{% url 'privacy' %}">Privacy</a></li>
                     </ul>
                 </div>
                 <div class="footer-panel">
@@ -1726,6 +1928,8 @@
             </div>
         </div>
     </footer>
+    {% endif %}
+    {% endwith %}
     {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
@@ -1808,6 +2012,55 @@
 
             updateActiveNav();
             window.addEventListener('popstate', updateActiveNav);
+
+            // Long-form pages replace the global links with section navigation.
+            const contextNavLinks = Array.from(document.querySelectorAll('.context-nav-link[data-section]'));
+            if (contextNavLinks.length) {
+                const contextSections = contextNavLinks
+                    .map((link) => document.getElementById(link.dataset.section))
+                    .filter(Boolean);
+                let contextNavTicking = false;
+
+                const setContextNavActive = (sectionId) => {
+                    contextNavLinks.forEach((link) => {
+                        const isActive = link.dataset.section === sectionId;
+                        link.classList.toggle('is-section-active', isActive);
+                        if (isActive) {
+                            link.setAttribute('aria-current', 'location');
+                        } else {
+                            link.removeAttribute('aria-current');
+                        }
+                    });
+                };
+
+                const updateContextNav = () => {
+                    const headerOffset = (document.querySelector('.modern-nav-wrap')?.offsetHeight || 64) + 24;
+                    let currentSection = contextSections[0];
+
+                    contextSections.forEach((section) => {
+                        if (section.getBoundingClientRect().top <= headerOffset) {
+                            currentSection = section;
+                        }
+                    });
+
+                    const atPageEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+                    if (atPageEnd) currentSection = contextSections[contextSections.length - 1];
+                    if (currentSection) setContextNavActive(currentSection.id);
+                    contextNavTicking = false;
+                };
+
+                window.addEventListener('scroll', () => {
+                    if (contextNavTicking) return;
+                    contextNavTicking = true;
+                    window.requestAnimationFrame(updateContextNav);
+                }, { passive: true });
+
+                contextNavLinks.forEach((link) => {
+                    link.addEventListener('click', () => setContextNavActive(link.dataset.section));
+                });
+
+                updateContextNav();
+            }
         })();
     </script>
 </body>

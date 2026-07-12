@@ -2308,6 +2308,15 @@ def pabasa_info(request):
 def about(request):
     return render(request, 'pabasa_app/about.html')
 
+def faq(request):
+    return render(request, 'pabasa_app/faq.html')
+
+def terms(request):
+    return render(request, 'pabasa_app/terms.html')
+
+def privacy(request):
+    return render(request, 'pabasa_app/privacy.html')
+
 def teacher_signup(request):
     return render(request, 'pabasa_app/teacher_signup.html')
 

@@ -1,0 +1,171 @@
+{% extends "pabasa_app/base.html" %}
+{% load static %}
+
+{% block page_title %}Frequently Asked Questions{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'pabasa_app/public_support.css' %}?v=20260713">
+{% endblock %}
+
+{% block content %}
+<div class="support-page support-page--faq">
+    <header class="support-hero">
+        <div class="support-hero__copy">
+            <span class="support-kicker">PABASA Help Center</span>
+            <h1>Frequently asked questions</h1>
+            <p>Quick answers about accounts, reading activities, progress, and getting help with PABASA.</p>
+        </div>
+        <div class="support-hero__visual" aria-hidden="true">
+            <span class="support-orbit support-orbit--one">A</span>
+            <span class="support-orbit support-orbit--two">?</span>
+            <span class="support-orbit support-orbit--three"><i class="bi bi-book-half"></i></span>
+            <img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="">
+        </div>
+    </header>
+
+    <nav class="support-jump-nav" aria-label="FAQ categories">
+        <a href="#faq-getting-started">Getting started</a>
+        <a href="#faq-reading">Reading activities</a>
+        <a href="#faq-accounts">Accounts and support</a>
+    </nav>
+
+    <div class="faq-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <label class="visually-hidden" for="faqSearch">Search frequently asked questions</label>
+        <input id="faqSearch" type="search" placeholder="Search questions and answers" autocomplete="off">
+        <p id="faqSearchStatus" role="status" aria-live="polite"></p>
+    </div>
+
+    <div class="faq-layout">
+        <aside class="faq-intro">
+            <span class="support-section-number">01—03</span>
+            <h2>Find the answer by topic.</h2>
+            <p>Open any question to see its answer. Use search to narrow the list across all topics.</p>
+        </aside>
+
+        <div class="faq-sections">
+        <section class="faq-section" id="faq-getting-started" aria-labelledby="faq-getting-started-title">
+            <header class="faq-section__header">
+                <span>01</span>
+                <div>
+                    <h2 id="faq-getting-started-title">Getting started</h2>
+                    <p>Learn what PABASA is and how classrooms begin using it.</p>
+                </div>
+            </header>
+            <div class="faq-list">
+                <details class="faq-item">
+                    <summary>What is PABASA?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>PABASA is a digital reading platform that helps learners practice reading aloud and helps teachers organize activities, review performance, and plan appropriate follow-up.</p><a href="{% url 'pabasa_info' %}">Explore how PABASA works <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                </details>
+                <details class="faq-item">
+                    <summary>Who can create an account?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>Teachers and students can create accounts through their respective registration options. Select the role that matches how you will use PABASA.</p><a href="{% url 'signup' %}">Choose an account type <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                </details>
+                <details class="faq-item">
+                    <summary>How does a student join a class?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>A teacher creates a class and shares its class code. The student signs in, enters that code, and joins the class associated with it. Ask the teacher to confirm the code if it is not accepted.</p></div>
+                </details>
+                <details class="faq-item">
+                    <summary>What can teachers manage in PABASA?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>Teachers can organize classes, manage learners and reading materials, assign activities, conduct or assist assessments, and review results that support classroom follow-up.</p></div>
+                </details>
+            </div>
+        </section>
+
+        <section class="faq-section" id="faq-reading" aria-labelledby="faq-reading-title">
+            <header class="faq-section__header">
+                <span>02</span>
+                <div>
+                    <h2 id="faq-reading-title">Reading activities</h2>
+                    <p>Understand assessments, practice modes, language choices, and microphone access.</p>
+                </div>
+            </header>
+            <div class="faq-list">
+                <details class="faq-item">
+                    <summary>How does an oral reading activity work?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>The learner opens an assigned word, sentence, or paragraph activity and reads the displayed text aloud. PABASA uses the reading session to produce results that the teacher can review alongside their own professional judgment.</p></div>
+                </details>
+                <details class="faq-item">
+                    <summary>Why does PABASA need microphone access?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>Microphone access is needed only for features that listen to oral reading. Allow access when the browser asks, use a quiet space, and speak clearly toward the device. You can manage microphone permission in your browser settings.</p></div>
+                </details>
+                <details class="faq-item">
+                    <summary>Does PABASA support Filipino and English?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>Yes. Reading materials and activities may be prepared in Filipino or English, depending on what the teacher assigns and what is available in the learner’s class.</p></div>
+                </details>
+                <details class="faq-item">
+                    <summary>What is the difference between practice and assessment?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>Practice is designed for repeated skill-building with supportive prompts. Assessment is a more structured reading check whose results can be reviewed by the teacher. Teachers decide how results should inform instruction.</p></div>
+                </details>
+            </div>
+        </section>
+
+        <section class="faq-section" id="faq-accounts" aria-labelledby="faq-accounts-title">
+            <header class="faq-section__header">
+                <span>03</span>
+                <div>
+                    <h2 id="faq-accounts-title">Accounts and support</h2>
+                    <p>Resolve sign-in, password, browser, and contact questions.</p>
+                </div>
+            </header>
+            <div class="faq-list">
+                <details class="faq-item">
+                    <summary>I forgot my password. What should I do?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>Open the password recovery page, enter the email address connected to your account, and follow the verification steps. Never share a one-time password with another person.</p><a href="{% url 'forgot_password' %}">Reset your password <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                </details>
+                <details class="faq-item">
+                    <summary>Can I use PABASA on a phone or tablet?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>PABASA is designed to adapt to modern phones, tablets, laptops, and desktop browsers. For oral reading, use a device with a working microphone and a current browser version.</p></div>
+                </details>
+                <details class="faq-item">
+                    <summary>Why am I not receiving a verification message?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>Confirm that the email address is correct, check spam or junk folders, wait a few minutes, and then use the resend option. Contact the PABASA team if repeated attempts do not arrive.</p></div>
+                </details>
+                <details class="faq-item">
+                    <summary>How can I contact the PABASA team?<i class="bi bi-plus-lg" aria-hidden="true"></i></summary>
+                    <div class="faq-answer"><p>Email <a href="mailto:pabasa.tupc@gmail.com">pabasa.tupc@gmail.com</a> or call <a href="tel:+639063979666">0906 397 9666</a>. Include a short description of the issue, but never send your password or one-time verification code.</p></div>
+                </details>
+            </div>
+        </section>
+        </div>
+    </div>
+
+    <aside class="support-contact-card">
+        <div>
+            <span>Still need help?</span>
+            <h2>Talk to the PABASA team.</h2>
+            <p>Tell us what happened and which device or browser you were using.</p>
+        </div>
+        <a href="mailto:pabasa.tupc@gmail.com" class="support-contact-button">Email support <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+    </aside>
+</div>
+
+<script>
+    (() => {
+        const searchInput = document.getElementById('faqSearch');
+        const faqItems = Array.from(document.querySelectorAll('.faq-item'));
+        const faqSections = Array.from(document.querySelectorAll('.faq-section'));
+        const status = document.getElementById('faqSearchStatus');
+        if (!searchInput || !status) return;
+
+        const filterFaqs = () => {
+            const query = searchInput.value.trim().toLocaleLowerCase();
+            let matches = 0;
+
+            faqItems.forEach((item) => {
+                const isMatch = !query || item.textContent.toLocaleLowerCase().includes(query);
+                item.hidden = !isMatch;
+                if (isMatch) matches += 1;
+            });
+
+            faqSections.forEach((section) => {
+                section.hidden = !section.querySelector('.faq-item:not([hidden])');
+            });
+
+            status.textContent = query ? `${matches} ${matches === 1 ? 'answer' : 'answers'} found.` : '';
+        };
+
+        searchInput.addEventListener('input', filterFaqs);
+    })();
+</script>
+{% endblock %}
