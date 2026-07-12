@@ -1614,15 +1614,15 @@
 
         /* Editorial section navigation for long-form public pages. */
         .contextual-nav-wrap {
-            border-bottom: 1px solid #e3e9ee !important;
-            background: #fff;
+            border-bottom: 2px solid rgba(255, 214, 57, 0.35) !important;
+            background: #10466e;
         }
 
         .contextual-nav-wrap .modern-nav-shell {
             min-height: 3.9rem;
             overflow: visible;
-            background: #fff;
-            box-shadow: 0 2px 12px rgba(16, 70, 110, 0.07);
+            background: linear-gradient(135deg, rgba(52, 126, 171, 0.98) 0%, rgba(27, 74, 112, 0.98) 54%, rgba(16, 70, 110, 0.98) 100%);
+            box-shadow: 0 10px 28px rgba(16, 70, 110, 0.14);
         }
 
         .contextual-nav-wrap .modern-nav-links {
@@ -1636,7 +1636,7 @@
             border-radius: 0 !important;
             background: transparent !important;
             box-shadow: none !important;
-            color: #89939e !important;
+            color: rgba(255, 255, 255, 0.72) !important;
             font-size: 0.68rem;
             font-weight: 800;
             letter-spacing: 0.11em;
@@ -1655,7 +1655,7 @@
             width: 100%;
             height: 3px;
             border-radius: 3px 3px 0 0;
-            background: #2ea8e5;
+            background: #ffd639;
             opacity: 0;
             transform: scaleX(0) !important;
             transition: opacity 0.18s ease, transform 0.18s ease;
@@ -1664,7 +1664,7 @@
         .contextual-nav-wrap .modern-nav-content .context-nav-link:hover,
         .contextual-nav-wrap .modern-nav-content .context-nav-link:focus-visible,
         .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active {
-            color: #10466e !important;
+            color: #fff4b8 !important;
             background: transparent !important;
             box-shadow: none !important;
         }
@@ -1674,12 +1674,6 @@
         .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active::after {
             opacity: 1;
             transform: scaleX(1) !important;
-        }
-
-        .contextual-nav-wrap .modern-nav-actions {
-            border-color: rgba(16, 70, 110, 0.1);
-            background: rgba(16, 70, 110, 0.04);
-            box-shadow: none;
         }
 
         .info-hero[id],
@@ -1698,8 +1692,8 @@
             }
 
             .contextual-nav-wrap .navbar-collapse {
-                border-top: 1px solid #e7edf1;
-                background: #fff;
+                border-top: 1px solid rgba(255, 255, 255, 0.14);
+                background: #10466e;
             }
 
             .contextual-nav-wrap .modern-nav-links {
@@ -1815,6 +1809,7 @@
                                     {% endif %}
                                 </ul>
                                 {% endwith %}
+                                {% if request.resolver_match.url_name != 'pabasa_info' and request.resolver_match.url_name != 'about' %}
                                 <div class="modern-nav-actions">
                                     <a class="nav-link header-inline-link" href="{% url 'auth' %}">My Account</a>
                                     {% if request.resolver_match.url_name != 'home' %}
@@ -1825,6 +1820,7 @@
                                     {% endif %}
                                     {% endif %}
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -1839,14 +1835,17 @@
     </main>
     {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' %}
     {% with current_view=request.resolver_match.url_name %}
-    {% if current_view == 'pabasa_info' or current_view == 'about' %}
+    {% if current_view == 'pabasa_info' or current_view == 'about' or current_view == 'faq' or current_view == 'terms' or current_view == 'privacy' %}
     <footer class="editorial-footer">
         <nav class="editorial-footer__links" aria-label="Footer navigation">
             <a href="{% url 'home' %}">PABASA</a>
             {% if current_view == 'pabasa_info' %}
             <a href="{% url 'about' %}">About</a>
+            {% elif current_view == 'about' %}
+            <a href="{% url 'pabasa_info' %}">What is PABASA</a>
             {% else %}
             <a href="{% url 'pabasa_info' %}">What is PABASA</a>
+            <a href="{% url 'about' %}">About</a>
             {% endif %}
             <a href="{% url 'faq' %}">Help</a>
             <a href="{% url 'terms' %}">Terms</a>
