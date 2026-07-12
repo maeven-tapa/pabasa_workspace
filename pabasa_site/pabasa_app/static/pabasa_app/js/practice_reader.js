@@ -34,6 +34,7 @@
     const scrollsProgressPill = document.getElementById("scrollsProgressPill");
     const scrollsStatusPill = document.getElementById("scrollsStatusPill");
     const scrollRecordBtn = document.getElementById("scrollRecordBtn");
+    const scrollSkipBtn = document.getElementById("scrollSkipBtn");
     let scrollCurrentIndex = 0;
     let scrollTouchStartY = 0;
     let scrollTouchEndY = 0;
@@ -396,6 +397,7 @@
     document.addEventListener("click", event => {
         const button = event.target.closest("button#recordBtn, button.scrolls-record-btn");
         if (!button || !shell.contains(button)) return;
+        if (button === scrollSkipBtn) return;
         if (speechBypassButtons.has(button)) {
             speechBypassButtons.delete(button);
             return;
@@ -626,8 +628,8 @@
         } else {
             skipBtn.classList.remove("d-none");
             recordBtn.classList.remove("d-none");
-            nextBtn.textContent = "Next";
-            nextBtn.disabled = false;
+            nextBtn.textContent = "Finish";
+            nextBtn.disabled = currentIndex !== items.length - 1;
         }
     }
 
@@ -1339,10 +1341,16 @@
         updateHuntVisuals();
         updateCompletionSummary();
         if (nextBtn) {
-            nextBtn.textContent = currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next";
-            nextBtn.disabled = isHuntMode && viewMode !== 'view'
-                ? !itemOutcomes[currentIndex] || huntAdvanceInProgress
-                : false;
+            nextBtn.textContent = isColorMode ? "Finish" : (currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next");
+            if (isColorMode && colorModeCompletionReady && currentIndex === items.length - 1) {
+                nextBtn.disabled = false;
+            } else if (isColorMode) {
+                nextBtn.disabled = currentIndex !== items.length - 1;
+            } else if (isHuntMode && viewMode !== 'view') {
+                nextBtn.disabled = !itemOutcomes[currentIndex] || huntAdvanceInProgress;
+            } else {
+                nextBtn.disabled = false;
+            }
         }
     }
 
@@ -1404,7 +1412,6 @@
         const currentLevelContext = getLevelProgressContext();
         const levelEntry = ensureLevelProgressEntry(getPracticeProgressState(), currentLevelContext.mode, currentLevelContext.difficulty, currentLevelContext.level);
         const completedCards = Array.isArray(levelEntry.completed_cards) ? levelEntry.completed_cards.length : 0;
-        const currentCardIsComplete = Array.isArray(levelEntry.completed_cards) && levelEntry.completed_cards.includes(current);
         const isFinalCard = current === items.length - 1;
 
         if (scrollsProgressBarFill) scrollsProgressBarFill.style.width = `${progressPercent}%`;
@@ -1423,7 +1430,7 @@
         if (scrollsDots) {
             scrollsDots.innerHTML = items.map((_, index) => `<span class="${index === current ? 'is-active' : ''}"></span>`).join('');
         }
-        setFreeModeReadButton(currentCardIsComplete);
+        setFreeModeReadButton(false);
     }
 
     function lockFreeModeGesture() {
@@ -1621,6 +1628,30 @@
         return true;
     }
 
+    function handleFreeModeSkipAttempt() {
+        if (!items.length) return false;
+        if (!lockFreeModeGesture()) return false;
+        const skippedWordCount = getItemWordCount(scrollCurrentIndex) || 1;
+        freeModeSkipSteps += skippedWordCount;
+        recordFreeModeSkip(scrollCurrentIndex);
+        persistFreeModeCardProgress(scrollCurrentIndex);
+        setCurrentItemOutcome("skipped");
+        if (scrollsFeedback) {
+            scrollsFeedback.textContent = 'Skipped. Moving to the next card.';
+        }
+        if (scrollsStatusPill) {
+            scrollsStatusPill.textContent = 'Skipped';
+        }
+        setFreeModeReadButton(false);
+        if (scrollCurrentIndex >= items.length - 1) {
+            completeFreeModeLevel();
+            return true;
+        }
+        goToFreeModeCard(scrollCurrentIndex + 1, { countAsSkip: true });
+        hideLevelCompleteOverlay();
+        return true;
+    }
+
     function attachFreeModeInteractions() {
         if (!isFreeMode || !scrollsTrack) return;
         scrollsTrack.addEventListener('touchstart', (event) => {
@@ -1649,12 +1680,17 @@
         }, { passive: false });
         scrollsTrack.addEventListener('click', (event) => {
             const card = event.target.closest('.scrolls-record-btn');
-            if (!card) return;
+            if (!card || card === scrollSkipBtn) return;
             handleFreeModeReadAttempt();
         });
         if (scrollRecordBtn) {
             scrollRecordBtn.addEventListener('click', () => {
                 handleFreeModeReadAttempt();
+            });
+        }
+        if (scrollSkipBtn) {
+            scrollSkipBtn.addEventListener('click', () => {
+                handleFreeModeSkipAttempt();
             });
         }
     }
@@ -1866,6 +1902,15 @@
         setMascotState("skip", { loop: false, holdIdle: true, duration: 150, force: true });
         playCoachAnimation('skip');
         updateCompletionSummary();
+        if (isColorMode && currentIndex < items.length - 1) {
+            currentIndex += 1;
+            practiceFeedback.textContent = "New item ready. Take your time.";
+            practiceFeedback.classList.remove("is-success", "is-warning");
+            setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
+            playCoachAnimation('next');
+            render();
+            return;
+        }
         render();
     });
 
@@ -1934,21 +1979,13 @@
 
     nextBtn?.addEventListener("click", function () {
         if (isColorMode) {
+            if (currentIndex !== items.length - 1) return;
+            setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
             if (colorModeCompletionReady) {
-                setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
                 completeColorModeLevel();
-                return;
+            } else {
+                showCompletion();
             }
-            if (currentIndex < items.length - 1) {
-                currentIndex += 1;
-                practiceFeedback.textContent = "New item ready. Take your time.";
-                practiceFeedback.classList.remove("is-success", "is-warning");
-                setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
-                playCoachAnimation('next');
-                render();
-                return;
-            }
-            showCompletion();
             return;
         }
 

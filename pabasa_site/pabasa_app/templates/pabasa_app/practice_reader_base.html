@@ -567,6 +567,27 @@
             background: linear-gradient(135deg, #16a34a, #15803d);
         }
 
+        .scrolls-skip-btn {
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid rgba(100, 116, 139, 0.28);
+            border-radius: 999px;
+            color: #475569;
+            display: inline-flex;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: clamp(0.82rem, 1.3vw, 0.92rem);
+            font-weight: 800;
+            gap: 0.4rem;
+            min-height: clamp(2.1rem, 3.8vw, 2.5rem);
+            padding: clamp(0.5rem, 1vw, 0.65rem) clamp(0.8rem, 1.4vw, 0.95rem);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .scrolls-skip-btn:hover {
+            background: #eef2f7;
+            transform: translateY(-1px);
+        }
+
         .scrolls-hint {
             color: var(--muted);
             font-size: 0.74rem;
@@ -2252,6 +2273,18 @@
             transform: translateY(-1px);
         }
 
+        .practice-controls button:disabled {
+            cursor: not-allowed;
+            filter: grayscale(0.72) saturate(0.35) brightness(0.92);
+            opacity: 0.45;
+            transform: none;
+        }
+
+        .practice-controls button:disabled:hover {
+            filter: grayscale(0.72) saturate(0.35) brightness(0.92);
+            transform: none;
+        }
+
         .skip-btn {
             background: #fff;
             border: 1px solid var(--line) !important;
@@ -2271,6 +2304,12 @@
         .next-btn {
             background: var(--leaf);
             color: #fff;
+        }
+
+        .practice-color .next-btn:disabled {
+            background: #9ca3af;
+            color: rgba(255, 255, 255, 0.92);
+            box-shadow: none;
         }
 
         .practice-feedback {
@@ -5055,6 +5094,7 @@
                     <div class="scrolls-dots" id="scrollsDots" aria-label="Reading progress"></div>
                     <p class="scrolls-feedback" id="scrollsFeedback">Tap the mic to record your reading.</p>
                     <div class="scrolls-card-actions">
+                        <button class="scrolls-skip-btn" id="scrollSkipBtn" type="button">Skip</button>
                         <button class="scrolls-record-btn" id="scrollRecordBtn" type="button"><i class="bi bi-mic-fill"></i> Read aloud</button>
                     </div>
                 </div>
@@ -5223,7 +5263,7 @@
                     <div class="practice-controls">
                         <button class="skip-btn" id="skipBtn" type="button">Skip</button>
                         <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Read</button>
-                        <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
+                        <button class="next-btn" id="practiceNextBtn" type="button" {% if request.GET.game == 'color' %}disabled{% endif %}>{% if request.GET.game == 'color' %}Finish{% else %}Next{% endif %}</button>
                     </div>
                 </div>
             </article>
