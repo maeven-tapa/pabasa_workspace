@@ -2025,3 +2025,85 @@ section.pb-md-5 h2::after {
     font-size: clamp(0.86rem, 0.9vw, 0.94rem) !important;
     font-weight: 600 !important;
 }
+
+/* Distinct About-page refinement: playful research notebook. */
+body { overflow-x: hidden; }
+.py-4.fade-in-section:first-of-type .modern-hero {
+    position: relative; overflow: hidden; padding: clamp(1.5rem, 4vw, 3.5rem) !important;
+    border-radius: clamp(1.25rem, 3vw, 2rem) !important;
+    background: linear-gradient(105deg, rgba(255,255,255,.98) 0 58%, rgba(234,247,253,.95) 58%) !important;
+    box-shadow: 0 1.4rem 3.8rem rgba(16,70,110,.13) !important;
+}
+.py-4.fade-in-section:first-of-type .modern-hero::before {
+    content:""; position:absolute; inset:0; pointer-events:none; opacity:.2;
+    background: repeating-linear-gradient(0deg,transparent 0 2rem,rgba(46,168,229,.2) 2rem calc(2rem + 1px));
+}
+.py-4.fade-in-section:first-of-type .modern-hero > * { position:relative; }
+.py-4.fade-in-section:first-of-type h1 { max-width:14ch; font-family:var(--font-display) !important; font-size:clamp(2.2rem,5vw,4.2rem) !important; font-weight:900; line-height:1.04; }
+.pip-research-note { display:flex; width:fit-content; gap:.4rem; margin:.75rem 0 1rem; padding:.55rem .85rem; border:1px dashed rgba(16,70,110,.28); border-radius:.35rem 1rem 1rem; background:var(--pabasa-yellow-soft); color:var(--pabasa-blue-deep); font-family:var(--font-display); font-size:.82rem; font-weight:800; transform:rotate(-1deg); }
+.pip-research-note span { color:var(--pabasa-yellow-deep); }
+#project-origin { padding-top:clamp(3rem,6vw,5rem) !important; }
+#project-origin::before { content:"RESEARCH NOTES  •  CLASSROOM STORIES  •  READING PROGRESS"; display:block; overflow:hidden; margin-bottom:1.4rem; color:rgba(16,70,110,.3); font-family:var(--font-display); font-size:.8rem; font-weight:900; letter-spacing:.16em; white-space:nowrap; }
+.insight-card-image { border-radius:1.35rem !important; box-shadow:0 .8rem 2rem rgba(16,70,110,.1) !important; }
+.insight-card-image:nth-child(2) { transform:translateY(1.15rem); }
+.insight-card-image .card-image-wrapper { aspect-ratio:16/10; min-height:0 !important; }
+.insight-card-image .card-image-wrapper img { height:100% !important; object-fit:cover; }
+.article-modal { border-radius:1.25rem .35rem 1.25rem 1.25rem !important; }
+.article-content { background-image:repeating-linear-gradient(0deg,transparent 0 2rem,rgba(46,168,229,.055) 2rem calc(2rem + 1px)); }
+@media(max-width:992px){.insight-card-image:nth-child(2){transform:none}.py-4.fade-in-section:first-of-type .modern-hero{background:linear-gradient(160deg,#fff,var(--pabasa-blue-light)) !important}}
+@media(max-width:576px){.py-4.fade-in-section:first-of-type .modern-hero{padding:1.25rem !important}.pip-research-note{transform:none}#project-origin::before{letter-spacing:.08em}}
+
+/* Full-page scrapbook system. Articles remain complete and interactive. */
+.about-hero-section,
+.about-articles-section,
+.about-principles-section,
+.about-journey-section,
+.about-team-section {
+    position: relative;
+    isolation: isolate;
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    padding-inline: max(1rem, calc((100vw - 74rem) / 2)) !important;
+    overflow: hidden;
+}
+
+.about-hero-section { padding-block: clamp(3rem, 7vw, 6rem) !important; background: linear-gradient(145deg,#fff9df,#eefaff 50%,#f5f1ff); }
+.about-articles-section { background: linear-gradient(145deg,#eaf8ff,#fff 52%,#fff9df); }
+.about-principles-section { padding-block: clamp(4rem,7vw,6rem) !important; background: linear-gradient(145deg,#f4f0ff,#edf8ff); }
+.about-journey-section { padding-block: clamp(4rem,7vw,6rem) !important; background: linear-gradient(145deg,#fffaf0,#eefaff); }
+.about-team-section { padding-block: clamp(4rem,7vw,6rem) !important; background: linear-gradient(145deg,#eaf8ff,#f8f2ff 55%,#fff9df); }
+
+.about-articles-section::after,
+.about-principles-section::after,
+.about-journey-section::after,
+.about-team-section::after {
+    content:""; position:absolute; inset:-17rem -26rem; z-index:-1; opacity:.16; pointer-events:none;
+    background-repeat:repeat; animation:aboutScrapbookDrift 40s linear infinite;
+}
+.about-articles-section::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' opacity='.55'%3E%3Cpath d='M45 45h72v90H45zM56 60h50M56 73h50M56 86h36M300 48h55v70h-55zM310 62h35M310 76h28M75 220l22-28 18 14 24-38M290 215h78'/%3E%3C/g%3E%3Ctext x='165' y='145' fill='%232EA8E5' opacity='.55' font-family='Arial' font-size='18' font-weight='700'%3ERESEARCH%3C/text%3E%3C/svg%3E"); }
+.about-principles-section::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' opacity='.5'%3E%3Cpath d='M60 48l8 16 18 3-13 12 3 18-16-8-16 8 3-18-13-12 18-3zM300 48h68v55h-68zM312 65h44M312 79h31M65 205h85M138 194l12 11-12 11'/%3E%3C/g%3E%3Ctext x='170' y='150' fill='%237160D8' opacity='.5' font-family='Arial' font-size='18' font-weight='700'%3EWHY%3C/text%3E%3C/svg%3E"); animation-direction:reverse; }
+.about-journey-section::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' opacity='.5'%3E%3Ccircle cx='65' cy='65' r='25'/%3E%3Cpath d='M54 65l8 8 16-19M115 65h65M168 54l12 11-12 11M260 65h65M313 54l12 11-12 11M80 215h260'/%3E%3C/g%3E%3Ctext x='150' y='155' fill='%232EA8E5' opacity='.5' font-family='Arial' font-size='18' font-weight='700'%3EOUR JOURNEY%3C/text%3E%3C/svg%3E"); }
+.about-team-section::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' opacity='.5'%3E%3Ccircle cx='55' cy='55' r='11'/%3E%3Ccircle cx='90' cy='55' r='11'/%3E%3Cpath d='M34 94c3-20 42-20 45 0M69 94c3-20 42-20 45 0M300 45h68v52h-68zM312 61h44M312 75h31'/%3E%3C/g%3E%3Ctext x='148' y='153' fill='%232EA8E5' opacity='.52' font-family='Arial' font-size='18' font-weight='700'%3ETEAM PABASA%3C/text%3E%3C/svg%3E"); animation-direction:reverse; }
+@keyframes aboutScrapbookDrift { from{background-position:0 0;transform:translate3d(0,0,0)} to{background-position:420px 280px;transform:translate3d(20px,-12px,0)} }
+
+.hero-stamps { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1.35rem; }
+.hero-stamps span { padding:.38rem .65rem; border:2px solid currentColor; border-radius:.35rem; color:var(--pabasa-blue); font-family:var(--font-display); font-size:.7rem; font-weight:900; letter-spacing:.12em; transform:rotate(-3deg); }
+.hero-stamps span:nth-child(2){color:#9a4dcc;transform:rotate(2deg)}.hero-stamps span:nth-child(3){color:#b77900;transform:rotate(-1deg)}
+
+.about-section-header { max-width:48rem; margin-bottom:2.5rem; }
+.about-section-header h2,
+.principles-board-intro h2,
+.project-context-header h2,
+.development-team-section h2 { font-size:clamp(2rem,4vw,3rem) !important; line-height:1.08; }
+.principles-board { border:0 !important; background:rgba(255,255,255,.82) !important; backdrop-filter:blur(8px); box-shadow:0 1.2rem 3rem rgba(16,70,110,.1) !important; }
+.principle-item { border-radius:1rem !important; background:#fff !important; box-shadow:0 .5rem 1.2rem rgba(16,70,110,.07); }
+.timeline-step { border-radius:1.1rem !important; background:rgba(255,255,255,.9) !important; box-shadow:0 .6rem 1.5rem rgba(16,70,110,.08); }
+.timeline-index { border-radius:.4rem 1rem 1rem !important; transform:rotate(-4deg); }
+.project-support { border-radius:1.5rem .4rem 1.5rem 1.5rem !important; }
+.team-member-card { border-radius:1.35rem !important; box-shadow:0 .8rem 2rem rgba(16,70,110,.12) !important; }
+
+@media(max-width:768px){
+    .about-hero-section,.about-articles-section,.about-principles-section,.about-journey-section,.about-team-section{padding-inline:1rem !important}
+    .hero-stamps{justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){.about-articles-section::after,.about-principles-section::after,.about-journey-section::after,.about-team-section::after{animation:none}}
