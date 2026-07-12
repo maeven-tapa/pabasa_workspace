@@ -225,7 +225,7 @@ def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints,
     )
 
 
-def synthesize_read_aloud_audio(text, api_key, language_code="en-US"):
+def synthesize_read_aloud_audio(text, api_key, language_code="en-US", speaking_rate=0.95, prosody_rate="92%"):
     clean_text = " ".join(str(text or "").split())
     if not clean_text:
         raise RuntimeError("Text is required for read aloud.")
@@ -234,7 +234,7 @@ def synthesize_read_aloud_audio(text, api_key, language_code="en-US"):
     voice_name = "en-US-Chirp3-HD-Vindemiatrix"
     teaching_ssml = (
         '<speak>'
-        '<prosody rate="92%" pitch="+0st" volume="medium">'
+        f'<prosody rate="{prosody_rate}" pitch="+0st" volume="medium">'
         f'{html.escape(clean_text)}'
         '</prosody>'
         '</speak>'
@@ -248,7 +248,7 @@ def synthesize_read_aloud_audio(text, api_key, language_code="en-US"):
         },
         "audioConfig": {
             "audioEncoding": "MP3",
-            "speakingRate": 0.95,
+            "speakingRate": speaking_rate,
             "pitch": 0,
             "volumeGainDb": 0,
         },

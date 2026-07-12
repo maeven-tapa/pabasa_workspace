@@ -21,6 +21,7 @@
     const starCounter = document.querySelector(".star-counter");
     const skipBtn = document.getElementById("skipBtn");
     const recordBtn = document.getElementById("recordBtn");
+    const huntReadAloudBtn = document.getElementById("huntReadAloudBtn");
     const nextBtn = document.getElementById("practiceNextBtn");
     const isFreeMode = shell.getAttribute("data-free-mode") === "true";
     const scrollsTrack = document.getElementById("scrollsTrack");
@@ -50,12 +51,19 @@
     const completePronunciation = document.getElementById("completePronunciation");
     const pronunciationMetricCard = document.getElementById("pronunciationMetricCard");
     const completeReadingTime = document.getElementById("completeReadingTime");
+    const completeHuntPoints = document.getElementById("completeHuntPoints");
+    const completeHuntStars = document.getElementById("completeHuntStars");
+    const completeTotalStarsEarned = document.getElementById("completeTotalStarsEarned");
+    const completeAvailableStars = document.getElementById("completeAvailableStars");
     const feedbackIcon = document.getElementById("feedbackIcon");
     const resultsSummaryText = document.getElementById("resultsSummaryText");
     const practiceAgainBtn = document.getElementById("practiceAgainBtn");
     const practiceNextLevelBtn = document.getElementById("practiceNextLevelBtn");
     const nextLevelAvailabilityMessage = document.getElementById("nextLevelAvailabilityMessage");
     let completionSubmitted = false;
+    let huntAwardSubmitted = false;
+    let huntAwardPromise = null;
+    let huntServerStarTotals = null;
     const practiceSessionCountStorageKey = "pabasa_practice_sessions_completed";
 
     const PERFORMANCE_FEEDBACK_RULES = Object.freeze([
@@ -89,17 +97,64 @@
     let speechMeterFrame = null;
     let speechNoiseFloor = 0.012;
     const speechBypassButtons = new WeakSet();
+    const HUNT_MAX_POINTS = 10;
+    let huntResults = [];
+    let huntPoints = 0;
     const huntFlightBird = document.getElementById("huntFlightBird");
     const huntProgressLabel = document.getElementById("huntProgressLabel");
     const huntDifficultyLabel = document.getElementById("huntDifficultyLabel");
     const huntLevelLabel = document.getElementById("huntLevelLabel");
     const huntReadingStatus = document.getElementById("huntReadingStatus");
+    const huntPointsDisplay = document.getElementById("huntPointsDisplay");
     const huntGuideMessage = document.getElementById("huntGuideMessage");
     const huntMapPath = document.getElementById("huntMapPath");
     const huntCheckpoint = document.getElementById("huntCheckpoint");
     const huntCheckpointToast = document.getElementById("huntCheckpointToast");
     const huntWordArea = document.querySelector(".practice-hunt-shell .hunt-word-area");
     const huntWordPosition = document.getElementById("huntWordPosition");
+    const huntSpeechPanel = document.getElementById("huntSpeechPanel");
+    const huntSpeechStatus = document.getElementById("huntSpeechStatus");
+    const huntSpeechTranscript = document.getElementById("huntSpeechTranscript");
+    const huntRawMicInput = document.getElementById("huntRawMicInput");
+    let huntTranscriptItemIndex = -1;
+    let huntAutoAdvanceTimer = null;
+    let huntRetryTimer = null;
+    let huntListeningDesired = false;
+    let huntRecognitionRestartTimer = null;
+    let huntDiscardCurrentAudio = false;
+    let huntReadAloudActive = false;
+
+    function updateHuntToggleButton() {
+        if (!isHuntMode || !recordBtn) return;
+        recordBtn.disabled = false;
+        recordBtn.classList.toggle("is-listening", huntListeningDesired);
+        recordBtn.innerHTML = huntListeningDesired
+            ? '<i class="bi bi-stop-circle-fill me-1"></i> Stop'
+            : '<i class="bi bi-mic-fill me-1"></i> Start Reading';
+    }
+
+    function scheduleHuntRecognition(index = currentIndex, delay = 180) {
+        if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
+        huntRecognitionRestartTimer = window.setTimeout(() => {
+            huntRecognitionRestartTimer = null;
+            if (!huntListeningDesired || huntAdvanceInProgress || index !== currentIndex || huntResults[index] || speechRequestActive || speechRecorder) return;
+            if (huntRawMicInput) huntRawMicInput.textContent = "Waiting for speech...";
+            startPracticeSpeechRecording(recordBtn);
+        }, delay);
+    }
+
+    function stopHuntRecognitionByUser() {
+        huntListeningDesired = false;
+        if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
+        huntRecognitionRestartTimer = null;
+        if (huntRetryTimer) window.clearTimeout(huntRetryTimer);
+        huntRetryTimer = null;
+        if (speechRecorder?.state === "recording") stopPracticeSpeechRecording();
+        releaseSpeechStream();
+        restoreSpeechButton();
+        updateHuntToggleButton();
+        setHuntSpeechPanel("Speech check stopped", "Google Speech results will appear here while you read.");
+    }
     const colorModeStage = document.getElementById("colorModeStage");
     const colorPracticeText = document.getElementById("colorPracticeText");
     const colorScene = document.getElementById("colorScene");
@@ -243,6 +298,63 @@
         if (isColorMode) animateColorSpeechSuccess();
     }
 
+    function normalizeHuntSpeech(value) {
+        return String(value || "").toLowerCase().normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    }
+
+    function setHuntSpeechPanel(status, transcript, listening = false) {
+        if (!isHuntMode) return;
+        huntSpeechPanel?.classList.toggle("is-listening", listening);
+        if (huntSpeechStatus) huntSpeechStatus.textContent = status;
+        if (huntSpeechTranscript) huntSpeechTranscript.textContent = transcript || "Google Speech results will appear here while you read.";
+    }
+
+    function resetHuntSpeechPanel() {
+        setHuntSpeechPanel("Ready to start reading", "Google Speech results will appear here while you read.");
+        if (huntRawMicInput) huntRawMicInput.textContent = "Waiting for speech...";
+    }
+
+    function classifyHuntSpeech(transcript, target, confidence) {
+        const exactMatch = normalizeHuntSpeech(transcript) === normalizeHuntSpeech(target);
+        const parsed = Number(confidence);
+        const usable = Number.isFinite(parsed) && parsed >= 0 && parsed <= 1;
+        if (!usable) return exactMatch ? { tier: "Excellent", points: 2, message: "Amazing! You said it clearly!" } : { tier: "Weak", points: 0, message: "Good try! Listen, then try the next word." };
+        if (exactMatch && parsed >= .8) return { tier: "Excellent", points: 2, message: "Amazing! You said it clearly!" };
+        if (exactMatch && parsed >= .5) return { tier: "Mixed", points: 1, message: "Nice work! You are getting closer!" };
+        return { tier: "Weak", points: 0, message: "Good try! Listen, then try the next word." };
+    }
+
+    function finalizeHuntSpeechResult(index, transcript, target, confidence) {
+        if (!isHuntMode || huntResults[index]) return null;
+        const result = classifyHuntSpeech(transcript, target, confidence);
+        huntResults[index] = result;
+        huntPoints += result.points;
+        if (huntPointsDisplay) huntPointsDisplay.textContent = `Points: ${huntPoints}/${HUNT_MAX_POINTS}`;
+        itemOutcomes[index] = result.points > 0 ? "read" : "skipped";
+        correctResponses = huntResults.filter(item => item?.points > 0).length;
+        incorrectResponses = huntResults.filter(item => item?.points === 0).length;
+        practiceFeedback.textContent = `${result.tier} — +${result.points} point${result.points === 1 ? "" : "s"}. ${result.message}`;
+        practiceFeedback.classList.toggle("is-success", result.points > 0);
+        practiceFeedback.classList.toggle("is-warning", result.points === 0);
+        huntFlightBird?.classList.remove("hunt-swoop-large", "hunt-flap-small");
+        void huntFlightBird?.offsetWidth;
+        if (result.tier === "Excellent") huntFlightBird?.classList.add("hunt-swoop-large");
+        if (result.tier === "Mixed") huntFlightBird?.classList.add("hunt-flap-small");
+        setHuntSpeechPanel("Final Google Speech result", `Final: ${normalizeHuntSpeech(transcript) || "No speech recognized"}`);
+        if (huntRawMicInput) huntRawMicInput.textContent = transcript || "No speech recognized";
+        updateHuntVisuals();
+        updateCompletionSummary();
+        render();
+        if (result.points > 0) {
+            huntAutoAdvanceTimer = window.setTimeout(() => {
+                huntAutoAdvanceTimer = null;
+                if (currentIndex === index && huntResults[index] === result) nextBtn?.click();
+            }, 900);
+        }
+        return result;
+    }
+
     function animateColorSpeechSuccess() {
         if (!isColorMode) return;
         if (colorSpeechAdvanceTimer) window.clearTimeout(colorSpeechAdvanceTimer);
@@ -274,6 +386,8 @@
     }
 
     async function submitPracticeSpeech(blob, targetText, button) {
+        const speechItemIndex = currentIndex;
+        let retryHuntRecognition = false;
         speechRequestActive = true;
         if (button) {
             button.disabled = true;
@@ -315,7 +429,19 @@
             if (!response.ok || !data.success) throw new Error(data.error || "Speech recognition failed.");
 
             const transcript = String(data.transcript || "").trim();
-            if (data.complete) {
+            if (isHuntMode) {
+                if (speechItemIndex !== currentIndex || huntAdvanceInProgress || huntResults[speechItemIndex]) return;
+                const isCorrect = normalizeHuntSpeech(transcript) === normalizeHuntSpeech(targetText);
+                if (isCorrect) {
+                    finalizeHuntSpeechResult(speechItemIndex, transcript, targetText, data.confidence);
+                } else {
+                    setHuntSpeechPanel("Try again", `Final: ${normalizeHuntSpeech(transcript) || "No speech recognized"}`);
+                    if (huntRawMicInput) huntRawMicInput.textContent = transcript || "No speech recognized";
+                    speechFeedback("Try again — keep reading the same word.", false);
+                    retryHuntRecognition = true;
+                }
+                restoreSpeechButton();
+            } else if (data.complete) {
                 speechFeedback(transcript ? `Great reading! Heard: “${transcript}”` : "Great reading!", true);
                 restoreSpeechButton();
                 completeRecognizedPracticeItem(button);
@@ -335,6 +461,14 @@
         } finally {
             speechRequestActive = false;
             releaseSpeechStream();
+            if (isHuntMode) {
+                restoreSpeechButton();
+                updateHuntToggleButton();
+            }
+            if (isHuntMode && huntListeningDesired && speechItemIndex === currentIndex && !huntAdvanceInProgress && !huntResults[speechItemIndex]) {
+                if (retryHuntRecognition) setHuntSpeechPanel("Try again", "Google Speech is listening for the same word.", true);
+                scheduleHuntRecognition(speechItemIndex, retryHuntRecognition ? 350 : 120);
+            }
         }
     }
 
@@ -365,8 +499,16 @@
             speechOriginalButtonHtml = button.innerHTML;
             button.classList.add("is-listening");
             shell.classList.add("is-recording");
-            button.innerHTML = '<i class="bi bi-stop-circle-fill me-1"></i> Stop & check';
-            speechFeedback("Listening… Read the text aloud, then press Stop & check.", true);
+            button.innerHTML = isHuntMode
+                ? '<i class="bi bi-stop-circle-fill me-1"></i> Stop'
+                : '<i class="bi bi-stop-circle-fill me-1"></i> Stop & check';
+            speechFeedback(isHuntMode
+                ? "Listening… Read the word aloud."
+                : "Listening… Read the text aloud, then press Stop & check.", true);
+            if (isHuntMode) {
+                setHuntSpeechPanel("Listening with Google Speech...", "Interim: listening for your word...", true);
+                if (huntRawMicInput) huntRawMicInput.textContent = "Waiting for speech...";
+            }
 
             speechRecorder = new MediaRecorder(speechStream, mimeType ? { mimeType } : undefined);
             speechRecorder.addEventListener("dataavailable", event => {
@@ -375,22 +517,39 @@
             speechRecorder.addEventListener("stop", () => {
                 const blob = new Blob(speechChunks, { type: speechRecorder?.mimeType || mimeType || "audio/webm" });
                 speechChunks = [];
+                if (isHuntMode && huntDiscardCurrentAudio) {
+                    huntDiscardCurrentAudio = false;
+                    restoreSpeechButton();
+                    releaseSpeechStream();
+                    updateHuntToggleButton();
+                    return;
+                }
                 if (!blob.size) {
                     speechFeedback("No audio was captured. Please try again.", false);
                     restoreSpeechButton();
                     releaseSpeechStream();
+                    if (isHuntMode) {
+                        updateHuntToggleButton();
+                        if (huntListeningDesired) scheduleHuntRecognition(currentIndex, 350);
+                    }
                     return;
                 }
                 submitPracticeSpeech(blob, targetText, button);
             }, { once: true });
             speechRecorder.start();
             startPracticeAudioMeter(speechStream);
-            speechStopTimer = window.setTimeout(stopPracticeSpeechRecording, 8000);
+            // Hunt uses short Google Speech chunks and immediately starts another
+            // chunk while its single Start/Stop toggle remains active.
+            speechStopTimer = window.setTimeout(stopPracticeSpeechRecording, isHuntMode ? 2600 : 8000);
         } catch (error) {
             console.warn("PABASA [Practice]: Microphone unavailable", error);
             speechFeedback("Microphone access is required for speech checking.", false);
             restoreSpeechButton();
             releaseSpeechStream();
+            if (isHuntMode) {
+                updateHuntToggleButton();
+                if (huntListeningDesired) scheduleHuntRecognition(currentIndex, 700);
+            }
         }
     }
 
@@ -404,12 +563,66 @@
         }
         event.preventDefault();
         event.stopImmediatePropagation();
+        if (isHuntMode && button === recordBtn) {
+            if (huntListeningDesired) {
+                stopHuntRecognitionByUser();
+            } else {
+                huntListeningDesired = true;
+                updateHuntToggleButton();
+                setHuntSpeechPanel("Listening with Google Speech...", "Google Speech results will appear here while you read.", true);
+                scheduleHuntRecognition(currentIndex, 0);
+            }
+            return;
+        }
         if (speechRecorder && speechRecorder.state === "recording") {
             stopPracticeSpeechRecording();
             return;
         }
         startPracticeSpeechRecording(button);
     }, true);
+
+    huntReadAloudBtn?.addEventListener("click", async () => {
+        if (!isHuntMode || huntReadAloudActive || !items[currentIndex]) return;
+        huntReadAloudActive = true;
+        huntReadAloudBtn.disabled = true;
+        const resumeListening = huntListeningDesired;
+        if (speechRecorder?.state === "recording") {
+            huntDiscardCurrentAudio = true;
+            stopPracticeSpeechRecording();
+        } else {
+            releaseSpeechStream();
+        }
+        if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
+        huntRecognitionRestartTimer = null;
+        try {
+            const formData = new FormData();
+            formData.append("target_text", items[currentIndex]);
+            formData.append("mode", mode);
+            formData.append("tts_profile", "hunt");
+            formData.append("language", getActiveMaterialMeta?.()?.language || document.documentElement.lang || "");
+            const response = await fetch("/api/reading/read-aloud/", {
+                method: "POST", credentials: "same-origin",
+                headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": practiceCsrfToken() },
+                body: formData,
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success || !data.audio_content) throw new Error(data.error || "Read aloud is unavailable.");
+            setHuntSpeechPanel("Listen carefully", `Hear how to say: ${items[currentIndex]}`);
+            const audio = new Audio(`data:${data.mime_type || "audio/mpeg"};base64,${data.audio_content}`);
+            await new Promise((resolve, reject) => {
+                audio.addEventListener("ended", resolve, { once: true });
+                audio.addEventListener("error", () => reject(new Error("The pronunciation audio could not play.")), { once: true });
+                audio.play().catch(reject);
+            });
+        } catch (error) {
+            speechFeedback(error.message || "Read aloud is unavailable. Please try again.", false);
+        } finally {
+            huntReadAloudActive = false;
+            huntReadAloudBtn.disabled = false;
+            resetHuntSpeechPanel();
+            if (resumeListening && huntListeningDesired && !huntResults[currentIndex]) scheduleHuntRecognition(currentIndex, 180);
+        }
+    });
     let colorRevealedCount = 0;
     let colorModeCompletionReady = false;
     let colorCompletionTimer = null;
@@ -579,7 +792,7 @@
 
         const total = Math.max(items.length, 1);
         const position = Math.min(currentIndex + 1, total);
-        const percentage = Math.round((position / total) * 100);
+        const percentage = Math.round((huntPoints / HUNT_MAX_POINTS) * 100);
         const feedbackText = practiceFeedback?.textContent || "Ready when you are.";
 
         const dots = document.querySelectorAll("[data-hunt-dot]");
@@ -590,9 +803,11 @@
         const activeDot = dots[currentIndex];
         if (huntFlightBird && activeDot && huntFlightBird.parentElement !== activeDot) {
             activeDot.appendChild(huntFlightBird);
+            huntFlightBird.style.removeProperty("offset-distance");
         }
         if (huntMapPath) {
-            huntMapPath.setAttribute("aria-valuenow", String(position));
+            huntMapPath.setAttribute("aria-valuenow", String(huntPoints));
+            huntMapPath.setAttribute("aria-valuemax", String(HUNT_MAX_POINTS));
         }
         if (huntCheckpoint) huntCheckpoint.classList.toggle("is-earned", currentIndex >= 3);
         if (huntProgressLabel) huntProgressLabel.textContent = `${formatHuntLabel(mode, "word")} ${position} of ${total}`;
@@ -906,6 +1121,7 @@
     function completeHuntModeLevel() {
         if (!isHuntMode || huntLevelTransitionInProgress) return false;
         huntLevelTransitionInProgress = true;
+        if (huntListeningDesired) stopHuntRecognitionByUser();
 
         const levelContext = getLevelProgressContext();
         const progressState = getPracticeProgressState();
@@ -1231,6 +1447,11 @@
 
     function setCurrentItemOutcome(status) {
         if (currentIndex < 0 || currentIndex >= items.length) return;
+        if (isHuntMode) {
+            if (huntResults[currentIndex]) return;
+            if (status === "skipped") finalizeHuntSpeechResult(currentIndex, "", items[currentIndex], 0);
+            return;
+        }
         itemOutcomes[currentIndex] = status;
 
         correctResponses = itemOutcomes.filter((outcome) => outcome === "read").length;
@@ -1276,7 +1497,14 @@
         const accuracy = totalAttempts > 0 ? Math.round((correctResponses / totalAttempts) * 100) : 0;
         const score = totalAttempts > 0 ? accuracy : 0;
         const readingTimeSeconds = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 1000));
-        const earnedStars = correctResponses * 10;
+        const earnedStars = isHuntMode ? (huntPoints >= 8 ? 3 : huntPoints >= 5 ? 2 : 1) : correctResponses * 10;
+
+        if (isHuntMode) {
+            const percentage = Math.round((huntPoints / HUNT_MAX_POINTS) * 100);
+            return { totalItems, totalReadWords, totalSkippedWords, correctResponses, incorrectResponses,
+                accuracy: percentage, score: percentage, readingTimeSeconds, earnedStars,
+                huntPoints, huntPercentage: percentage };
+        }
 
         return {
             totalItems,
@@ -1320,9 +1548,12 @@
             pronunciationMetricCard.classList.toggle("is-hidden", !hasPronunciationScore);
         }
         if (completeReadingTime) completeReadingTime.textContent = formatReadingTime(metrics.readingTimeSeconds);
+        if (isHuntMode && completeHuntPoints) completeHuntPoints.textContent = `${metrics.huntPoints}/10`;
+        if (isHuntMode && completeHuntStars) completeHuntStars.textContent = `${metrics.earnedStars} star${metrics.earnedStars === 1 ? "" : "s"}`;
         if (feedbackIcon) feedbackIcon.textContent = feedback.icon;
         if (resultsSummaryText) resultsSummaryText.textContent = feedback.description;
-        if (starCount) starCount.textContent = `${metrics.earnedStars} stars`;
+        if (starCount && !isHuntMode) starCount.textContent = `${metrics.earnedStars} star${metrics.earnedStars === 1 ? "" : "s"}`;
+        updateHuntServerStarDisplays();
     }
 
     function render() {
@@ -1332,6 +1563,10 @@
         }
 
         practiceText.textContent = items[currentIndex];
+        if (isHuntMode && huntTranscriptItemIndex !== currentIndex) {
+            huntTranscriptItemIndex = currentIndex;
+            resetHuntSpeechPanel();
+        }
         applyHardTextSizing();
         updateColorModeReadingText();
         updateColorModeControls();
@@ -1347,7 +1582,7 @@
             } else if (isColorMode) {
                 nextBtn.disabled = currentIndex !== items.length - 1;
             } else if (isHuntMode && viewMode !== 'view') {
-                nextBtn.disabled = !itemOutcomes[currentIndex] || huntAdvanceInProgress;
+                nextBtn.disabled = huntAdvanceInProgress;
             } else {
                 nextBtn.disabled = false;
             }
@@ -1727,7 +1962,8 @@
             material_id: materialId,
             activity_type: 'practice',
             game_mode: selectedGameMode,
-            stars_earned: metrics.earnedStars,
+            // Hunt wallet credit is handled by its dedicated atomic endpoint.
+            stars_earned: isHuntMode ? 0 : metrics.earnedStars,
             items_completed: items.length,
             total_practice_items: metrics.totalItems,
             total_read_words: metrics.totalReadWords,
@@ -1772,13 +2008,56 @@
                     return false;
                 }
                 markMaterialSeen(data.material_id || materialId);
-                return true;
+                return isHuntMode ? submitHuntStarAward(metrics).then(() => true) : true;
             })
             .catch(e => {
                 completionSubmitted = false;
                 console.warn("PABASA: Practice completion API error", e);
                 return false;
             });
+    }
+
+    function submitHuntStarAward(metrics = getCompletionMetrics()) {
+        if (!isHuntMode || viewMode === 'view' || !materialId) return Promise.resolve(false);
+        if (huntAwardSubmitted) return huntAwardPromise || Promise.resolve(true);
+        huntAwardSubmitted = true;
+        huntAwardPromise = fetch('/api/practice/hunt/award-stars/', {
+            method: 'POST', credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json', 'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': practiceCsrfToken(),
+            },
+            body: JSON.stringify({
+                student_id: Number(window.PABASA_USER_ID || 0), level_id: materialId,
+                total_points: metrics.huntPoints, percentage: metrics.huntPercentage,
+                earned_stars: metrics.earnedStars,
+            }),
+        }).then(async response => {
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.error || 'Hunt stars could not be saved.');
+            huntServerStarTotals = data;
+            updateHuntServerStarDisplays();
+            window.dispatchEvent(new CustomEvent('pabasa:stars-updated', { detail: data }));
+            return data;
+        }).catch(error => {
+            huntAwardSubmitted = false;
+            huntAwardPromise = null;
+            console.warn('PABASA: Hunt star award failed', error);
+            return false;
+        });
+        return huntAwardPromise;
+    }
+
+    function updateHuntServerStarDisplays() {
+        if (!isHuntMode || !huntServerStarTotals) return;
+        const data = huntServerStarTotals;
+        if (completeHuntStars) completeHuntStars.textContent = `${data.earned_stars} star${data.earned_stars === 1 ? '' : 's'}`;
+        if (completeTotalStarsEarned) completeTotalStarsEarned.textContent = data.total_stars_earned;
+        if (completeAvailableStars) completeAvailableStars.textContent = data.available_stars;
+        if (starCount) {
+            starCount.textContent = `Available Stars: ${data.available_stars}`;
+            starCount.closest('.hunt-stars')?.setAttribute('aria-label', `Available stars: ${data.available_stars}`);
+        }
     }
 
     function trackPracticeSessionCompletion() {
@@ -1807,7 +2086,7 @@
         // Persist stars to total progress
         const parsedCurrentTotal = Number.parseInt(localStorage.getItem("pabasa_total_stars") || "0", 10);
         const currentTotal = Math.max(0, Number.isFinite(parsedCurrentTotal) ? parsedCurrentTotal : 0);
-        let newlyEarnedStars = Math.max(0, Number(metrics.earnedStars) || 0);
+        let newlyEarnedStars = isHuntMode ? 0 : Math.max(0, Number(metrics.earnedStars) || 0);
         if (isColorMode) {
             if (colorNewStarsToCommit === null) {
                 const levelContext = getLevelProgressContext();
@@ -1868,8 +2147,22 @@
         correctResponses = 0;
         incorrectResponses = 0;
         itemOutcomes = Array(items.length).fill(null);
+        huntResults = [];
+        huntPoints = 0;
+        if (huntPointsDisplay) huntPointsDisplay.textContent = `Points: 0/${HUNT_MAX_POINTS}`;
+        huntTranscriptItemIndex = -1;
+        if (huntAutoAdvanceTimer) window.clearTimeout(huntAutoAdvanceTimer);
+        huntAutoAdvanceTimer = null;
+        if (huntRetryTimer) window.clearTimeout(huntRetryTimer);
+        huntRetryTimer = null;
+        huntListeningDesired = false;
+        if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
+        huntRecognitionRestartTimer = null;
         sessionStartedAt = Date.now();
         completionSubmitted = false;
+        huntAwardSubmitted = false;
+        huntAwardPromise = null;
+        huntServerStarTotals = null;
         freeModeReadSteps = 0;
         freeModeSkipSteps = 0;
         colorModeCompletionReady = false;
@@ -1990,8 +2283,17 @@
         }
 
         if (isHuntMode) {
-            if (!itemOutcomes[currentIndex] || huntAdvanceInProgress) return;
+            if (huntAdvanceInProgress) return;
             huntAdvanceInProgress = true;
+            if (huntRetryTimer) window.clearTimeout(huntRetryTimer);
+            huntRetryTimer = null;
+            if (huntAutoAdvanceTimer) window.clearTimeout(huntAutoAdvanceTimer);
+            huntAutoAdvanceTimer = null;
+            if (speechRecorder?.state === "recording") stopPracticeSpeechRecording();
+            releaseSpeechStream();
+            restoreSpeechButton();
+            updateHuntToggleButton();
+            if (!huntResults[currentIndex]) finalizeHuntSpeechResult(currentIndex, "", items[currentIndex], 0);
             nextBtn.disabled = true;
             huntWordArea?.classList.add("is-closing");
             window.setTimeout(() => {
@@ -2013,6 +2315,7 @@
                 huntWordArea?.classList.remove("is-closing");
                 huntAdvanceInProgress = false;
                 render();
+                if (huntListeningDesired) scheduleHuntRecognition(currentIndex, 120);
             }, 220);
             return;
         }

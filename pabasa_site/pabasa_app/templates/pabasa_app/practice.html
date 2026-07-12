@@ -803,6 +803,7 @@
 <script>
     (() => {
         const practiceMaterials = JSON.parse(document.getElementById("practiceMaterialsData")?.textContent || "[]");
+        const authoritativeTotalStars = Number("{{ authoritative_total_stars_earned|default:0 }}") || 0;
         const gameModes = [
             {
                 key: "free",
@@ -891,6 +892,7 @@
                 aggregateLevelsCompleted += Number(summary?.completed_levels || 0) || 0;
                 aggregateStars += Number(summary?.stars_earned || 0) || 0;
             });
+            aggregateStars = Math.max(aggregateStars, authoritativeTotalStars);
             const starsEarned = aggregateStars || completedGames * 2 + (completedGames > 0 ? 1 : 0);
             const lockedMessage = completedGames > 0 ? "Great job!" : "Keep practicing!";
 
@@ -957,7 +959,6 @@
                     </ul>
                     <div class="small fw-bold text-dark">Progress: ${completedLevels} / ${totalLevels} Levels Completed</div>
                     <div class="small text-muted">Current progress: ${escapeHtml(nextLabel)}</div>
-                    <div class="small text-warning fw-bold">⭐ ${starsEarned} Stars</div>
                     <div class="card-footer">
                         <span class="state-label">${escapeHtml(stateText)}</span>
                         ${isModeOpen ? actionMarkup : lockMarkup}

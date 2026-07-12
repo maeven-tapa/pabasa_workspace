@@ -101,6 +101,52 @@
     body.dark-theme .status-pill.unlocked { background: #123625; color: #86efac; }
     body.dark-theme .status-pill.equipped { background: #172554; color: #93c5fd; }
     body.dark-theme .theme-action.unlock { background: #475569; }
+    /* Exact clean Forest shop skin; enabled only by the equipped Forest theme. */
+    body.dashboard-body[data-student-theme="forest"] { background:#fbfcf7 !important; }
+    body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar {
+        background:linear-gradient(180deg,#124e3b 0%,#07503b 48%,#073d30 100%) !important;
+        border-right:1px solid rgba(206,232,188,.18); box-shadow:6px 0 24px rgba(18,66,49,.12);
+    }
+    body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar::after {
+        background:radial-gradient(ellipse at 15% 92%,rgba(100,158,82,.26),transparent 25%),radial-gradient(ellipse at 92% 12%,rgba(154,192,108,.17),transparent 18%);
+        content:""; inset:0; pointer-events:none; position:absolute;
+    }
+    body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar .dash-link { color:#f6fff6; position:relative; z-index:1; }
+    body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar .dash-link.active,
+    body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar .dash-link:hover { background:rgba(151,197,126,.34); border-color:rgba(205,232,185,.2); color:#fff; }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-shell { gap:1.15rem; max-width:1400px; }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero {
+        background:linear-gradient(135deg,rgba(255,255,255,.99),rgba(252,253,248,.98));
+        border:1px solid #e0e9dc; border-radius:28px; box-shadow:0 10px 28px rgba(55,91,61,.08);
+        grid-template-columns:minmax(0,1.25fr) minmax(350px,.75fr); min-height:330px; padding:clamp(2rem,4vw,3.4rem);
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero::before {
+        background:radial-gradient(ellipse at 77% 32%,#73a65b 0 8px,transparent 9px),radial-gradient(ellipse at 81% 27%,#a5ca8e 0 5px,transparent 6px),radial-gradient(circle at 92% 18%,#ffd45b 0 4px,transparent 5px);
+        content:""; inset:0; opacity:.65; pointer-events:none; position:absolute;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero::after {
+        background:linear-gradient(145deg,transparent 0 46%,#6b9a50 47% 66%,transparent 67%) 0 0/34px 40px,radial-gradient(ellipse at center,#7da862 0 42%,transparent 44%) 0 20px/38px 24px;
+        border-radius:50% 50% 0 0; bottom:-4px; height:82px; opacity:.75; right:18px; top:auto; width:130px;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-eyebrow { color:#70a75a; font-size:.78rem; position:relative; z-index:2; }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero h2 { color:#114c36; font-family:'Baloo 2','Nunito',sans-serif; font-size:clamp(2.35rem,4.5vw,3.65rem); line-height:1.02; max-width:620px; position:relative; text-shadow:none; z-index:2; }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero p { color:#264f3e; font-size:1rem; font-weight:600; max-width:650px; position:relative; text-shadow:none; z-index:2; }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero > .d-flex { align-items:center; display:grid !important; gap:1.25rem !important; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    body.dashboard-body[data-student-theme="forest"] .star-wallet { background:linear-gradient(145deg,#f8fbf2,#f0f6e9); border:1px solid #c4d9b6; border-radius:22px; box-shadow:none; color:#174c37; min-width:0; padding:1.15rem 1.25rem; }
+    body.dashboard-body[data-student-theme="forest"] .star-wallet i { color:#70a75a; }
+    body.dashboard-body[data-student-theme="forest"] .appearance-note { background:linear-gradient(90deg,#f3f8eb,#f9fbf4); border:1px solid #c9dcb8; border-radius:20px; color:#35583e; min-height:78px; overflow:hidden; padding:1.1rem 1.35rem; position:relative; }
+    body.dashboard-body[data-student-theme="forest"] .appearance-note::after { background:linear-gradient(135deg,transparent 50%,#86aa70 51%) 0 100%/60px 60px repeat-x; bottom:0; content:""; height:55px; opacity:.6; position:absolute; right:0; width:210px; }
+    body.dashboard-body[data-student-theme="forest"] .appearance-note i { color:#6d9f55; }
+    body.dashboard-body[data-student-theme="forest"] .theme-grid { gap:1.25rem; grid-template-columns:repeat(3,minmax(0,1fr)); }
+    body.dashboard-body[data-student-theme="forest"] .theme-card { border:1px solid #e0e8dc; border-radius:17px; box-shadow:0 9px 22px rgba(48,79,52,.08); gap:.7rem; padding:.7rem; }
+    body.dashboard-body[data-student-theme="forest"] .theme-preview { border-radius:12px; height:220px; }
+    body.dashboard-body[data-student-theme="forest"] .theme-card[data-theme-card="forest"] { background:#fff; border:2px solid #4f9149; box-shadow:0 0 0 3px rgba(110,168,86,.1),0 12px 26px rgba(54,99,50,.14); transform:none; }
+    body.dashboard-body[data-student-theme="forest"] .theme-card[data-theme-card="forest"] .theme-preview { box-shadow:none; }
+    body.dashboard-body[data-student-theme="forest"] .theme-detail-chip { background:#f7f9f4; border-color:#e1e9dc; color:#345741; }
+    body.dashboard-body[data-student-theme="forest"] .theme-detail-chip i { color:#4f8550; }
+    body.dashboard-body[data-student-theme="forest"] .theme-action { background:#07553f; }
+    body.dashboard-body[data-student-theme="forest"] .theme-action:hover { background:#0c684d; }
+    body.dashboard-body[data-student-theme="forest"] .theme-card[data-theme-card="forest"] .theme-action:disabled { background:#a8adb5; color:#fff; }
     @media (min-width: 1500px) { .theme-shop-shell { max-width: 1520px; } .theme-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
     @media (max-width: 1100px) { .theme-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
     @media (max-width: 700px) {
@@ -118,6 +164,18 @@
         .theme-preview-sample { min-height:80px; }
     }
     @media (max-width: 420px) { .theme-card-footer { align-items: stretch; flex-direction: column; } .theme-action { width: 100%; } }
+    @media (max-width:1100px) {
+        body.dashboard-body[data-student-theme="forest"] .theme-shop-hero { grid-template-columns:1fr; }
+        body.dashboard-body[data-student-theme="forest"] .theme-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        body.dashboard-body[data-student-theme="forest"] .theme-shop-hero > .d-flex { max-width:620px; width:100%; }
+    }
+    @media (max-width:700px) {
+        body.dashboard-body[data-student-theme="forest"] .theme-shop-hero { min-height:0; padding:1.4rem; }
+        body.dashboard-body[data-student-theme="forest"] .theme-shop-hero > .d-flex { grid-template-columns:1fr; }
+        body.dashboard-body[data-student-theme="forest"] .theme-grid { grid-template-columns:1fr; }
+        body.dashboard-body[data-student-theme="forest"] .theme-preview { height:190px; }
+        body.dashboard-body[data-student-theme="forest"] .appearance-note::after { opacity:.25; }
+    }
 </style>
 {% endblock %}
 
@@ -152,7 +210,7 @@
 
     <section class="theme-grid" aria-label="Available visual themes">
         {% for theme in shop_themes %}
-        <article class="theme-card">
+        <article class="theme-card" data-theme-card="{{ theme.slug }}">
             <div class="theme-preview {{ theme.slug }}" aria-label="{{ theme.name }} theme preview">
                 {% with preview_path="pabasa_app/images/theme-previews/theme-"|add:theme.slug|add:".svg" %}
                 <picture class="theme-preview-art" aria-hidden="true">
