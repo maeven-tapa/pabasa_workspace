@@ -52,6 +52,7 @@
     const pronunciationMetricCard = document.getElementById("pronunciationMetricCard");
     const completeReadingTime = document.getElementById("completeReadingTime");
     const completeHuntPoints = document.getElementById("completeHuntPoints");
+    const completeHuntPercentage = document.getElementById("completeHuntPercentage");
     const completeHuntStars = document.getElementById("completeHuntStars");
     const completeTotalStarsEarned = document.getElementById("completeTotalStarsEarned");
     const completeAvailableStars = document.getElementById("completeAvailableStars");
@@ -100,6 +101,9 @@
     const HUNT_MAX_POINTS = 10;
     let huntResults = [];
     let huntPoints = 0;
+    let huntAttemptId = (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+    const huntAwardRequests = new Map();
+    let huntLevelStars = 0;
     const huntFlightBird = document.getElementById("huntFlightBird");
     const huntProgressLabel = document.getElementById("huntProgressLabel");
     const huntDifficultyLabel = document.getElementById("huntDifficultyLabel");
@@ -325,6 +329,27 @@
         return { tier: "Weak", points: 0, message: "Good try! Listen, then try the next word." };
     }
 
+    function postHuntAward(payload) {
+        const key = payload.award_type === "word" ? `word:${payload.word_index}` : "completion";
+        if (huntAwardRequests.has(key)) return huntAwardRequests.get(key);
+        const request = fetch('/api/practice/hunt/award-stars/', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': practiceCsrfToken() },
+            body: JSON.stringify({ student_id: Number(window.PABASA_USER_ID || 0), level_id: materialId,
+                attempt_id: huntAttemptId, ...payload }),
+        }).then(async response => {
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.error || 'Hunt stars could not be saved.');
+            huntServerStarTotals = data;
+            huntLevelStars = Number(data.attempt_stars || 0);
+            updateHuntServerStarDisplays();
+            return data;
+        }).catch(error => { huntAwardRequests.delete(key); throw error; });
+        huntAwardRequests.set(key, request);
+        return request;
+    }
+
     function finalizeHuntSpeechResult(index, transcript, target, confidence) {
         if (!isHuntMode || huntResults[index]) return null;
         const result = classifyHuntSpeech(transcript, target, confidence);
@@ -334,7 +359,7 @@
         itemOutcomes[index] = result.points > 0 ? "read" : "skipped";
         correctResponses = huntResults.filter(item => item?.points > 0).length;
         incorrectResponses = huntResults.filter(item => item?.points === 0).length;
-        practiceFeedback.textContent = `${result.tier} — +${result.points} point${result.points === 1 ? "" : "s"}. ${result.message}`;
+        practiceFeedback.textContent = `${result.tier} — ${result.points} star${result.points === 1 ? "" : "s"} awarded. ${result.message}`;
         practiceFeedback.classList.toggle("is-success", result.points > 0);
         practiceFeedback.classList.toggle("is-warning", result.points === 0);
         huntFlightBird?.classList.remove("hunt-swoop-large", "hunt-flap-small");
@@ -346,6 +371,8 @@
         updateHuntVisuals();
         updateCompletionSummary();
         render();
+        if (viewMode !== 'view') postHuntAward({ award_type: 'word', word_index: index, transcript, confidence })
+            .catch(error => { practiceFeedback.textContent = `Could not save these stars yet: ${error.message}`; });
         if (result.points > 0) {
             huntAutoAdvanceTimer = window.setTimeout(() => {
                 huntAutoAdvanceTimer = null;
@@ -432,7 +459,8 @@
             if (isHuntMode) {
                 if (speechItemIndex !== currentIndex || huntAdvanceInProgress || huntResults[speechItemIndex]) return;
                 const isCorrect = normalizeHuntSpeech(transcript) === normalizeHuntSpeech(targetText);
-                if (isCorrect) {
+                const candidate = classifyHuntSpeech(transcript, targetText, data.confidence);
+                if (isCorrect && candidate.points > 0) {
                     finalizeHuntSpeechResult(speechItemIndex, transcript, targetText, data.confidence);
                 } else {
                     setHuntSpeechPanel("Try again", `Final: ${normalizeHuntSpeech(transcript) || "No speech recognized"}`);
@@ -1549,6 +1577,7 @@
         }
         if (completeReadingTime) completeReadingTime.textContent = formatReadingTime(metrics.readingTimeSeconds);
         if (isHuntMode && completeHuntPoints) completeHuntPoints.textContent = `${metrics.huntPoints}/10`;
+        if (isHuntMode && completeHuntPercentage) completeHuntPercentage.textContent = `${metrics.huntPercentage}%`;
         if (isHuntMode && completeHuntStars) completeHuntStars.textContent = `${metrics.earnedStars} star${metrics.earnedStars === 1 ? "" : "s"}`;
         if (feedbackIcon) feedbackIcon.textContent = feedback.icon;
         if (resultsSummaryText) resultsSummaryText.textContent = feedback.description;
@@ -2021,22 +2050,9 @@
         if (!isHuntMode || viewMode === 'view' || !materialId) return Promise.resolve(false);
         if (huntAwardSubmitted) return huntAwardPromise || Promise.resolve(true);
         huntAwardSubmitted = true;
-        huntAwardPromise = fetch('/api/practice/hunt/award-stars/', {
-            method: 'POST', credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json', 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': practiceCsrfToken(),
-            },
-            body: JSON.stringify({
-                student_id: Number(window.PABASA_USER_ID || 0), level_id: materialId,
-                total_points: metrics.huntPoints, percentage: metrics.huntPercentage,
-                earned_stars: metrics.earnedStars,
-            }),
-        }).then(async response => {
-            const data = await response.json();
-            if (!response.ok || !data.success) throw new Error(data.error || 'Hunt stars could not be saved.');
-            huntServerStarTotals = data;
-            updateHuntServerStarDisplays();
+        huntAwardPromise = Promise.all([...huntAwardRequests.values()]).then(() => postHuntAward({
+            award_type: 'completion', total_points: metrics.huntPoints, percentage: metrics.huntPercentage,
+        })).then(data => {
             window.dispatchEvent(new CustomEvent('pabasa:stars-updated', { detail: data }));
             return data;
         }).catch(error => {
@@ -2054,9 +2070,17 @@
         if (completeHuntStars) completeHuntStars.textContent = `${data.earned_stars} star${data.earned_stars === 1 ? '' : 's'}`;
         if (completeTotalStarsEarned) completeTotalStarsEarned.textContent = data.total_stars_earned;
         if (completeAvailableStars) completeAvailableStars.textContent = data.available_stars;
+        const levelStars = document.getElementById('completeHuntLevelStars');
+        if (levelStars) levelStars.textContent = huntLevelStars;
         if (starCount) {
-            starCount.textContent = `Available Stars: ${data.available_stars}`;
-            starCount.closest('.hunt-stars')?.setAttribute('aria-label', `Available stars: ${data.available_stars}`);
+            starCount.textContent = `Stars Collected: ${huntLevelStars}`;
+            starCount.closest('.hunt-stars')?.setAttribute('aria-label', `Stars collected: ${huntLevelStars}`);
+        }
+        if (data.award_type === 'completion') {
+            localStorage.setItem('pabasa_total_stars', String(data.total_stars_earned));
+            window.dispatchEvent(new CustomEvent('pabasa:total-stars-updated', {
+                detail: { total_stars_earned: data.total_stars_earned }
+            }));
         }
     }
 
@@ -2149,6 +2173,10 @@
         itemOutcomes = Array(items.length).fill(null);
         huntResults = [];
         huntPoints = 0;
+        huntAttemptId = (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+        huntAwardRequests.clear();
+        huntLevelStars = 0;
+        if (starCount && isHuntMode) starCount.textContent = "Stars Collected: 0";
         if (huntPointsDisplay) huntPointsDisplay.textContent = `Points: 0/${HUNT_MAX_POINTS}`;
         huntTranscriptItemIndex = -1;
         if (huntAutoAdvanceTimer) window.clearTimeout(huntAutoAdvanceTimer);

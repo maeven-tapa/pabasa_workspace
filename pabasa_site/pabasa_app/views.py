@@ -44,7 +44,7 @@ from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course
+from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, HuntStarAward
 from .reading_material_utils import format_assigned_week_display, parse_assigned_week
 from .reading_stt import (
     analyze_reading,
@@ -53,6 +53,7 @@ from .reading_stt import (
     synthesize_read_aloud_audio,
     transcribe_audio_bytes_with_model,
 )
+from .hunt_scoring import classify_speech
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -3999,13 +4000,10 @@ def award_hunt_mode_stars(request):
             return JsonResponse({'success': False, 'error': 'Student identity does not match the authenticated session.'}, status=403)
 
         _prefix, material_id = _parse_prefixed_id(data.get('level_id'))
-        total_points = max(0, min(10, int(data.get('total_points') or 0)))
-        percentage = max(0, min(100, int(data.get('percentage') or 0)))
-        new_stars = max(1, min(3, int(data.get('earned_stars') or 1)))
-        expected_stars = 3 if total_points >= 8 else 2 if total_points >= 5 else 1
-        expected_percentage = round((total_points / 10) * 100)
-        if new_stars != expected_stars or percentage != expected_percentage:
-            return JsonResponse({'success': False, 'error': 'Invalid Hunt score payload.'}, status=400)
+        attempt_id = str(data.get('attempt_id') or '').strip()
+        award_type = str(data.get('award_type') or '').strip().lower()
+        if not attempt_id or len(attempt_id) > 64 or award_type not in {'word', 'completion'}:
+            return JsonResponse({'success': False, 'error': 'Invalid Hunt award request.'}, status=400)
 
         with transaction.atomic():
             student = User.objects.select_for_update().get(pk=session_student_id, role='student')
@@ -4014,40 +4012,54 @@ def award_hunt_mode_stars(request):
             if str(content_json.get('mode') or '').lower() != 'hunt':
                 return JsonResponse({'success': False, 'error': 'The selected level is not Hunt Mode.'}, status=400)
 
-            completions = dict(content_json.get('student_completions') or {})
-            key = str(student.id)
-            completion = dict(completions.get(key) or {})
-            previous_best = max(0, min(3, int(completion.get('stars_earned') or 0)))
-            best_stars = max(previous_best, new_stars)
-            star_delta = max(0, new_stars - previous_best)
-            if new_stars > previous_best:
-                completion.update({
-                    'student_id': student.id, 'status': 'completed',
-                    'stars_earned': best_stars, 'hunt_points': total_points,
-                    'score': percentage, 'accuracy': percentage,
-                    'completed_at': timezone.now().isoformat(),
-                })
-                completions[key] = completion
-                content_json['student_completions'] = completions
-                material.content_json = content_json
-                material.save(update_fields=['content_json', 'updated_at'])
+            if award_type == 'word':
+                word_index = int(data.get('word_index'))
+                material_items = _practice_material_items(material)[:5]
+                if word_index not in range(len(material_items)):
+                    raise ValueError
+                confidence = data.get('confidence')
+                confidence = float(confidence) if confidence is not None else None
+                tier, star_delta = classify_speech(data.get('transcript'), material_items[word_index], confidence)
+                award_key = f'word:{word_index}'
+            else:
+                word_index = None
+                tier = 'Completion'
+                total_points = max(0, min(10, int(data.get('total_points'))))
+                percentage = round(total_points / 10 * 100)
+                if int(data.get('percentage')) != percentage:
+                    raise ValueError
+                saved_points = sum(HuntStarAward.objects.filter(
+                    student=student, material=material, attempt_id=attempt_id,
+                    award_key__startswith='word:',
+                ).values_list('stars', flat=True))
+                if saved_points != total_points:
+                    return JsonResponse({'success': False, 'error': 'Hunt word points do not match saved awards.'}, status=409)
+                star_delta = 3 if percentage >= 80 else 2 if percentage >= 50 else 1
+                award_key = 'completion'
 
-            if star_delta:
-                student.available_stars = max(0, int(student.available_stars or 0)) + star_delta
-                student.theme_stars_credited = max(0, int(student.theme_stars_credited or 0)) + star_delta
+            award, created = HuntStarAward.objects.get_or_create(
+                student=student, material=material, attempt_id=attempt_id, award_key=award_key,
+                defaults={'word_index': word_index, 'tier': tier, 'stars': star_delta},
+            )
+            duplicate = not created
+            if duplicate and (award.stars != star_delta or award.tier != tier):
+                return JsonResponse({'success': False, 'error': 'Duplicate Hunt award conflicts with the saved result.'}, status=409)
+            applied_delta = star_delta if created else 0
+            if applied_delta:
+                student.available_stars = int(student.available_stars or 0) + applied_delta
+                student.theme_stars_credited = int(student.theme_stars_credited or 0) + applied_delta
                 student.save(update_fields=['available_stars', 'theme_stars_credited', 'updated_at'])
-
-            total_stars_earned = _student_theme_lifetime_stars(student)
-            if student.theme_stars_credited < total_stars_earned:
-                # The Hunt delta has already been deposited above; record the
-                # authoritative lifetime amount so theme-shop sync cannot add it twice.
-                student.theme_stars_credited = total_stars_earned
-                student.save(update_fields=['theme_stars_credited', 'updated_at'])
+            total_stars_earned = int(student.theme_stars_credited or 0)
+            attempt_stars = sum(HuntStarAward.objects.filter(
+                student=student, material=material, attempt_id=attempt_id,
+            ).values_list('stars', flat=True))
 
         return JsonResponse({
-            'success': True, 'earned_stars': new_stars, 'star_delta': star_delta,
+            'success': True, 'award_type': award_type, 'earned_stars': star_delta,
+            'star_delta': applied_delta, 'duplicate': duplicate,
             'total_stars_earned': total_stars_earned,
-            'available_stars': student.available_stars, 'best_stars': best_stars,
+            'available_stars': student.available_stars,
+            'attempt_stars': attempt_stars,
         })
     except (TypeError, ValueError, Material.DoesNotExist, User.DoesNotExist):
         return JsonResponse({'success': False, 'error': 'Invalid Hunt level or score data.'}, status=400)
@@ -4618,7 +4630,10 @@ def _student_theme_lifetime_stars(student_user):
     )
     preference = student_user.preference if isinstance(student_user.preference, dict) else {}
     stored_total = max(0, int(preference.get('total_stars_earned', 0) or 0))
-    return max(progression_total, stored_total)
+    # Hunt awards are deposited immediately and therefore may be newer than
+    # the per-material progression snapshot shown on the Practice page.
+    credited_total = max(0, int(student_user.theme_stars_credited or 0))
+    return max(progression_total, stored_total, credited_total)
 
 
 def _sync_student_theme_wallet(student_user):

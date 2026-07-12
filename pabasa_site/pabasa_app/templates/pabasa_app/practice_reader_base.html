@@ -5041,6 +5041,83 @@
                 border-radius: 0 !important;
             }
         }
+
+        /* Final Hunt polish: balanced reader card and a fully visible action dock. */
+        .practice-hunt-shell .hunt-main {
+            inset: 46px 0 104px;
+        }
+
+        .practice-hunt-shell .hunt-word-area {
+            background: rgba(255, 254, 244, 0.97);
+            border: 3px solid #765127;
+            box-shadow: 0 18px 42px rgba(73, 45, 17, 0.24);
+            padding: clamp(.85rem, 1.8vh, 1.15rem) clamp(1.15rem, 2.4vw, 1.75rem);
+            width: min(60%, 640px);
+        }
+
+        .practice-hunt-shell .hunt-actions {
+            background: rgba(255, 255, 255, 0.97);
+            border: 1px solid rgba(38, 98, 94, 0.2);
+            border-radius: 16px;
+            bottom: 14px;
+            box-shadow: 0 12px 30px rgba(31, 70, 67, 0.2);
+            padding: .55rem;
+            width: min(620px, calc(100% - 2rem));
+        }
+
+        .practice-hunt-shell .hunt-actions .practice-feedback {
+            background: #f3f8f7;
+            border: 1px solid #d9e7e5;
+            border-radius: 10px;
+            color: #315b5c;
+            font-size: .76rem;
+            font-weight: 800;
+            margin-bottom: .45rem;
+            min-height: 34px;
+            padding: .48rem .65rem;
+        }
+
+        .practice-hunt-shell .hunt-actions .practice-controls {
+            display: grid;
+            gap: .5rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .practice-hunt-shell .hunt-actions .practice-controls button {
+            border-radius: 10px;
+            font-size: .76rem;
+            font-weight: 900;
+            min-height: 40px;
+            padding: .5rem .65rem;
+        }
+
+        .practice-hunt-shell #practiceNextBtn {
+            background: #fff7df;
+            border: 1px solid #dfba61;
+            color: #765127;
+        }
+
+        .practice-hunt-shell #practiceNextBtn:hover {
+            background: #f9e7ad;
+        }
+
+        .practice-shell.is-complete #practiceHelpBtn,
+        .practice-shell.is-complete #practiceHelpBtnMobile,
+        .practice-shell.is-complete #practiceHelpOverlay {
+            display: none !important;
+        }
+
+        @media (max-width: 700px) {
+            .practice-hunt-shell .hunt-main { inset: 40px 0 112px; }
+            .practice-hunt-shell .hunt-word-area { width: 90%; }
+            .practice-hunt-shell .hunt-actions { bottom: 8px; width: calc(100% - 1rem); }
+            .practice-hunt-shell .hunt-actions .practice-controls { gap: .3rem; }
+            .practice-hunt-shell .hunt-actions .practice-controls button {
+                font-size: .65rem;
+                min-height: 38px;
+                padding-inline: .25rem;
+            }
+        }
     </style>
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
@@ -5158,7 +5235,7 @@
                     <p>Treasure Voyage</p>
                     <h1>Hunt Mode Reading</h1>
                 </div>
-                <div class="hunt-stars" title="Your saved stars available to spend"><i class="bi bi-star-fill"></i><span id="starCount">Available Stars: {{ student_available_stars|default:0 }}</span></div>
+                <div class="hunt-stars" title="Stars collected during this Hunt attempt" aria-label="Stars collected: 0"><i class="bi bi-star-fill"></i><span id="starCount">Stars Collected: 0</span></div>
             </header>
 
             <article class="hunt-card">
@@ -5208,10 +5285,9 @@
                 <div class="hunt-actions">
                     <p class="practice-feedback" id="practiceFeedback">Ready when you are.</p>
                     <div class="practice-controls">
-                        <button class="skip-btn" id="skipBtn" type="button">Skip</button>
                         <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Start Reading</button>
                         <button class="record-btn" id="huntReadAloudBtn" type="button"><i class="bi bi-volume-up-fill me-1"></i> Read Aloud</button>
-                        <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
+                        <button class="next-btn" id="practiceNextBtn" type="button">Skip</button>
                     </div>
                 </div>
             </article>
@@ -5333,8 +5409,10 @@
                 <h3 class="practice-breakdown-title">Score Breakdown</h3>
                 <div class="practice-metrics-grid" aria-label="Performance metrics">
                     {% if request.GET.game == 'hunt' %}
-                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-gem"></i></div><div class="practice-metric-body"><strong id="completeHuntPoints">0/10</strong><span>Total Points</span></div></div>
-                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-star-fill"></i></div><div class="practice-metric-body"><strong id="completeHuntStars">1 star</strong><span>Stars for Attempt</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-gem"></i></div><div class="practice-metric-body"><strong id="completeHuntPoints">0/10</strong><span>Word Points</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-percent"></i></div><div class="practice-metric-body"><strong id="completeHuntPercentage">0%</strong><span>Percentage</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-star-fill"></i></div><div class="practice-metric-body"><strong id="completeHuntStars">1 star</strong><span>Completion Bonus</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-trophy"></i></div><div class="practice-metric-body"><strong id="completeHuntLevelStars">0</strong><span>Stars Earned This Level</span></div></div>
                     <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-stars"></i></div><div class="practice-metric-body"><strong id="completeTotalStarsEarned">0</strong><span>Total Stars Earned</span></div></div>
                     <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-wallet2"></i></div><div class="practice-metric-body"><strong id="completeAvailableStars">0</strong><span>Available Stars</span></div></div>
                     {% endif %}

@@ -88,6 +88,27 @@ class User(models.Model):
         return True
 
 
+class HuntStarAward(models.Model):
+    """Immutable, idempotent star deposits made only by Hunt Mode."""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="hunt_star_awards")
+    material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="hunt_star_awards")
+    attempt_id = models.CharField(max_length=64)
+    award_key = models.CharField(max_length=32)  # word:<index> or completion
+    word_index = models.PositiveSmallIntegerField(null=True, blank=True)
+    tier = models.CharField(max_length=16, blank=True)
+    stars = models.PositiveSmallIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "hunt_star_awards"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "material", "attempt_id", "award_key"],
+                name="unique_hunt_attempt_award",
+            )
+        ]
+
+
 class Section(models.Model):
     class_code = models.CharField(max_length=20, unique=True)
     class_name = models.CharField(max_length=150)
