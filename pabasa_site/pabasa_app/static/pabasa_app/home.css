@@ -3574,3 +3574,151 @@ section.pb-md-5 h2::after {
         height: min(42vh, 310px);
     }
 }
+
+/* 3D Turning Pages carousel, based on the supplied page-flip reference. */
+.section-container-gallery .turning-pages-container {
+    max-width: 1120px !important;
+    margin: 0 auto !important;
+    padding: clamp(1rem, 3vw, 2rem) clamp(3.25rem, 7vw, 6rem) !important;
+}
+
+.turning-pages-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: clamp(360px, 48vw, 560px);
+    perspective: 1600px;
+    perspective-origin: 50% 45%;
+}
+
+.turning-pages-count {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    z-index: 30;
+    transform: translateX(-50%);
+    color: var(--pabasa-blue-deep);
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.section-container-gallery .turning-pages-slider {
+    position: relative;
+    display: block !important;
+    width: min(100%, 780px) !important;
+    height: clamp(300px, 41vw, 470px);
+    max-width: 780px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform-style: preserve-3d;
+}
+
+.section-container-gallery .turning-pages-grid {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: none !important;
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    transform-style: preserve-3d;
+}
+
+.section-container-gallery .turning-pages-image {
+    --page-offset: 0;
+    --page-depth: 1;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    overflow: hidden;
+    border: 8px solid rgba(255, 255, 255, 0.96);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(16, 70, 110, 0.22);
+    opacity: calc(1 - (var(--page-offset) * 0.08));
+    z-index: var(--page-depth);
+    transform-origin: 3% 50%;
+    transform: translate3d(calc(var(--page-offset) * 19px), calc(var(--page-offset) * 2px), calc(var(--page-offset) * -55px)) rotateY(calc(var(--page-offset) * -1.4deg));
+    transition: transform 760ms cubic-bezier(.2, .72, .18, 1), opacity 520ms ease, box-shadow 520ms ease;
+    backface-visibility: hidden;
+    will-change: transform;
+}
+
+.section-container-gallery .turning-pages-image::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 12%;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(7, 48, 79, 0.2), transparent);
+    opacity: 0.65;
+}
+
+.section-container-gallery .turning-pages-image.is-active {
+    opacity: 1;
+    box-shadow: 0 30px 75px rgba(16, 70, 110, 0.28);
+    transform: translate3d(0, 0, 0) rotateY(0deg);
+}
+
+.section-container-gallery .turning-pages-image.is-turning-forward {
+    z-index: 40;
+    opacity: 0;
+    transform: translate3d(-48%, 4px, 70px) rotateY(-112deg);
+}
+
+.section-container-gallery .turning-pages-image.is-turning-back {
+    z-index: 40;
+    opacity: 0;
+    transform-origin: 97% 50%;
+    transform: translate3d(48%, 4px, 70px) rotateY(112deg);
+}
+
+.section-container-gallery .turning-pages-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    transform: none !important;
+}
+
+.section-container-gallery .turning-pages-arrow {
+    position: absolute !important;
+    top: 50% !important;
+    z-index: 50 !important;
+    display: inline-grid !important;
+    place-items: center;
+    transform: translateY(-50%) !important;
+}
+
+.section-container-gallery #sliderLeftBtn { left: -3.5rem !important; }
+.section-container-gallery #sliderRightBtn { right: -3.5rem !important; }
+
+@media (max-width: 767px) {
+    .section-container-gallery .turning-pages-container {
+        padding: 1rem 2.75rem !important;
+    }
+    .turning-pages-stage { min-height: clamp(290px, 88vw, 410px); }
+    .section-container-gallery .turning-pages-slider {
+        height: clamp(240px, 68vw, 340px);
+    }
+    .section-container-gallery .turning-pages-image {
+        border-width: 5px;
+        border-radius: 13px;
+        transform: translate3d(calc(var(--page-offset) * 8px), calc(var(--page-offset) * 2px), calc(var(--page-offset) * -32px)) rotateY(calc(var(--page-offset) * -1deg));
+    }
+    .section-container-gallery #sliderLeftBtn { left: -2.5rem !important; }
+    .section-container-gallery #sliderRightBtn { right: -2.5rem !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .section-container-gallery .turning-pages-image {
+        transition-duration: 0.01ms;
+    }
+}

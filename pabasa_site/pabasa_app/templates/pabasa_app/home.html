@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-viewport-hero">
+<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-page-flip">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -151,13 +151,14 @@
         <h2 class="turning-pages-title">#TurningPagesTogether</h2>
         <p class="turning-pages-subtitle">Reading Forward with PABASA</p>
     </div>
-    <div class="turning-pages-container" style="max-width:none;">
-        <div style="position:relative; width:100%; display:flex; align-items:center;">
-            <button class="turning-pages-arrow" id="sliderLeftBtn" aria-label="Scroll left" style="position:absolute; left:0; top:50%; transform:translateY(-50%); z-index:2;">
+    <div class="turning-pages-container">
+        <div class="turning-pages-stage">
+            <div class="turning-pages-count" aria-live="polite"><span id="turningPagesCurrent">1</span> / 11 pages</div>
+            <button class="turning-pages-arrow" id="sliderLeftBtn" aria-label="Previous page">
                 <span>&#8249;</span>
             </button>
-            <div class="turning-pages-slider" style="border-radius:0; box-shadow:none; background:transparent; padding:0; max-width:none; width:100%; display:flex;">
-                <div class="turning-pages-grid" id="turningPagesGrid" style="transition: transform 0.5s cubic-bezier(.4,1.3,.5,1); will-change: transform;">
+            <div class="turning-pages-slider">
+                <div class="turning-pages-grid" id="turningPagesGrid">
                     <div class="turning-pages-image">
                         <img src="{% static 'pabasa_app/images/reading1.png' %}" alt="Students reading">
                     </div>
@@ -193,7 +194,7 @@
                     </div>
                 </div>
             </div>
-            <button class="turning-pages-arrow" id="sliderRightBtn" aria-label="Scroll right" style="position:absolute; right:0; top:50%; transform:translateY(-50%); z-index:2;">
+            <button class="turning-pages-arrow" id="sliderRightBtn" aria-label="Next page">
                 <span>&#8250;</span>
             </button>
         </div>
@@ -236,19 +237,57 @@
         }, 500);
     });
 
-    // Turning Pages horizontal scroll arrows
+    // Turning Pages 3D page-flip carousel.
     const sliderGrid = document.getElementById('turningPagesGrid');
     const sliderLeftBtn = document.getElementById('sliderLeftBtn');
     const sliderRightBtn = document.getElementById('sliderRightBtn');
-    const scrollAmount = 320;
+    const turningPagesCurrent = document.getElementById('turningPagesCurrent');
 
     if (sliderLeftBtn && sliderRightBtn && sliderGrid) {
-        sliderLeftBtn.addEventListener('click', () => {
-            sliderGrid.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-        });
-        sliderRightBtn.addEventListener('click', () => {
-            sliderGrid.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-        });
+        const pages = Array.from(sliderGrid.querySelectorAll('.turning-pages-image'));
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        let currentPage = 0;
+        let autoplayTimer = null;
+
+        const renderTurningPages = () => {
+            pages.forEach((page, pageIndex) => {
+                const offset = (pageIndex - currentPage + pages.length) % pages.length;
+                page.style.setProperty('--page-offset', Math.min(offset, 6));
+                page.style.setProperty('--page-depth', pages.length - offset);
+                page.classList.toggle('is-active', offset === 0);
+                page.classList.toggle('is-stacked', offset > 0);
+                page.setAttribute('aria-hidden', offset === 0 ? 'false' : 'true');
+            });
+            if (turningPagesCurrent) turningPagesCurrent.textContent = String(currentPage + 1);
+        };
+
+        const goToPage = (direction) => {
+            const leavingPage = pages[currentPage];
+            leavingPage.classList.add(direction > 0 ? 'is-turning-forward' : 'is-turning-back');
+            window.setTimeout(() => leavingPage.classList.remove('is-turning-forward', 'is-turning-back'), reduceMotion ? 0 : 720);
+            currentPage = (currentPage + direction + pages.length) % pages.length;
+            window.requestAnimationFrame(renderTurningPages);
+        };
+
+        const stopAutoplay = () => {
+            if (autoplayTimer) window.clearInterval(autoplayTimer);
+            autoplayTimer = null;
+        };
+
+        const startAutoplay = () => {
+            stopAutoplay();
+            if (!reduceMotion) autoplayTimer = window.setInterval(() => goToPage(1), 3000);
+        };
+
+        sliderLeftBtn.addEventListener('click', () => { goToPage(-1); startAutoplay(); });
+        sliderRightBtn.addEventListener('click', () => { goToPage(1); startAutoplay(); });
+        sliderGrid.addEventListener('mouseenter', stopAutoplay);
+        sliderGrid.addEventListener('mouseleave', startAutoplay);
+        sliderGrid.addEventListener('focusin', stopAutoplay);
+        sliderGrid.addEventListener('focusout', startAutoplay);
+
+        renderTurningPages();
+        startAutoplay();
     }
 
     // Platform Tools mascot frame animation.
