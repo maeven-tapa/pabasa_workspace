@@ -761,6 +761,23 @@ h1, h2, h3, h4 {
     opacity: 0.16;
 }
 
+/* Section-specific icon stories. */
+.section-container-2::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280' viewBox='0 0 420 280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.5'%3E%3Ccircle cx='55' cy='55' r='10'/%3E%3Cpath d='M35 88c3-17 37-17 40 0M48 88v22M62 88v22'/%3E%3Cpath d='M300 42h62v48h-62zM310 52h10v10h-10zM327 52h10v10h-10zM344 52h10v10h-10zM327 72h10v18'/%3E%3Cpath d='M82 205c13-9 27-9 40 0v31c-13-9-27-9-40 0zM122 205c13-9 27-9 40 0v31c-13-9-27-9-40 0z'/%3E%3Cpath d='M292 194h62M302 184v20M344 184v20M323 171v33'/%3E%3C/g%3E%3Cg fill='%23F5B800' opacity='.6'%3E%3Ccircle cx='205' cy='62' r='5'/%3E%3Cpath d='M374 210l4 8 9 1-7 6 2 9-8-4-8 4 2-9-7-6 9-1z'/%3E%3C/g%3E%3Ctext x='185' y='165' fill='%232EA8E5' opacity='.48' font-family='Arial,sans-serif' font-size='16' font-weight='700'%3ETOGETHER%3C/text%3E%3C/svg%3E");
+}
+
+.section-container-3::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280' viewBox='0 0 420 280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.5'%3E%3Crect x='42' y='40' width='28' height='50' rx='14'/%3E%3Cpath d='M34 67c0 29 44 29 44 0M56 96v18M42 114h28'/%3E%3Cpath d='M286 48h72v55h-72zM298 88V72M315 88V61M332 88V53M349 88V67'/%3E%3Cpath d='M62 203h74M72 191l18-20 17 12 21-28'/%3E%3Cpath d='M292 194h62M323 164v60M300 178h46'/%3E%3C/g%3E%3Ctext x='183' y='148' fill='%232EA8E5' opacity='.55' font-family='Arial,sans-serif' font-size='28' font-weight='700'%3EAa%3C/text%3E%3Ctext x='173' y='181' fill='%237160D8' opacity='.48' font-family='Arial,sans-serif' font-size='18' font-weight='700'%3EREPORT%3C/text%3E%3Cg fill='%23F5B800' opacity='.6'%3E%3Ccircle cx='218' cy='60' r='5'/%3E%3Ccircle cx='370' cy='222' r='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.section-container-gallery::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280' viewBox='0 0 420 280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.48'%3E%3Crect x='38' y='45' width='70' height='48' rx='7'/%3E%3Ccircle cx='73' cy='69' r='12'/%3E%3Cpath d='M54 45l7-10h24l7 10'/%3E%3Cpath d='M292 48c15-10 31-10 46 0v36c-15-10-31-10-46 0zM338 48c15-10 31-10 46 0v36c-15-10-31-10-46 0z'/%3E%3Cpath d='M65 210h82M137 201l10 9-10 9'/%3E%3Cpath d='M290 200h76v38h-76zM301 211l15 13 13-10 24 18'/%3E%3C/g%3E%3Cg fill='%23F5B800' opacity='.68'%3E%3Cpath d='M205 55l5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2z'/%3E%3Ccircle cx='216' cy='217' r='5'/%3E%3C/g%3E%3Ctext x='175' y='157' fill='%232EA8E5' opacity='.5' font-family='Arial,sans-serif' font-size='18' font-weight='700'%3ESTORIES%3C/text%3E%3C/svg%3E");
+}
+
+.section-container-4::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280' viewBox='0 0 420 280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.48'%3E%3Cpath d='M38 45h82v52H78l-18 16 5-16H38z'/%3E%3Cpath d='M299 46h72v50h-72zM311 64h48M311 77h35'/%3E%3Ccircle cx='72' cy='211' r='12'/%3E%3Ccircle cx='102' cy='211' r='12'/%3E%3Cpath d='M48 244c3-22 45-22 48 0M78 244c3-22 45-22 48 0'/%3E%3Cpath d='M292 204h74M300 191l12 13 18-26 28 26'/%3E%3C/g%3E%3Cg fill='%23F5B800' opacity='.62'%3E%3Cpath d='M205 52l4 8 9 1-7 6 2 9-8-4-8 4 2-9-7-6 9-1z'/%3E%3C/g%3E%3Cpath d='M205 183c-22-14-42 15 0 42 42-27 22-56 0-42z' fill='%239A4DCC' opacity='.38'/%3E%3Ctext x='171' y='143' fill='%232EA8E5' opacity='.5' font-family='Arial,sans-serif' font-size='17' font-weight='700'%3EPROGRESS%3C/text%3E%3C/svg%3E");
+}
+
 @keyframes sectionLearningPattern {
     from { background-position: 0 0; transform: translate3d(0, 0, 0); }
     to { background-position: 420px 280px; transform: translate3d(20px, -12px, 0); }
