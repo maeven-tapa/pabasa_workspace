@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-hero-image">
+<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-audience-story">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -47,63 +47,48 @@
 
 <section class="fade-in-section section-container section-container-2">
     <div class="section-wrapper">
-    <div class="support-map">
-        <aside class="support-context support-context--gallery" aria-label="A stacked collage showing teachers, students, and schools connected through reading support">
-            <div class="support-visual support-visual--stacked">
-                <div class="support-visual__tag">Built for reading growth</div>
-                <div class="support-visual__stack">
-                    <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Teachers supporting reading growth">
-                    <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="A student engaging with reading practice">
-                    <img src="{% static 'pabasa_app/images/ses.jpg' %}" alt="A school community focused on literacy support">
+        <div class="audience-story">
+            <header class="audience-story__heading">
+                <div class="section-kicker">Designed for everyone</div>
+                <h2>One reading space, built around every learner.</h2>
+            </header>
+
+            <article class="audience-row">
+                <div class="audience-row__visual">
+                    <span class="audience-row__orb" aria-hidden="true"></span>
+                    <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Teachers guiding learners through reading practice">
                 </div>
-            </div>
-        </aside>
-        <div class="support-editorial">
-            <div class="support-heading">
-                <div class="section-kicker">Who It Supports</div>
-                <h2>Designed for every learner. Built for every classroom.</h2>
-                <p class="section-intro">PABASA connects classroom reading practice, teacher review, and school-level progress visibility in a single flow.</p>
-            </div>
-            <div class="support-lanes">
-                <article class="support-lane">
-                    <div class="support-lane-index">01</div>
-                    <div>
-                        <h3>Teachers</h3>
-                        <p>Run oral reading checks and turn results into practical next steps.</p>
-                        <div class="support-lane-details">
-                            <span>Set reading levels</span>
-                            <span>Review fluency</span>
-                            <span>Monitor learner needs</span>
-                        </div>
-                    </div>
-                </article>
-                <article class="support-lane">
-                    <div class="support-lane-index">02</div>
-                    <div>
-                        <h3>Students</h3>
-                        <p>Practice reading aloud through clear prompts and supportive feedback.</p>
-                        <div class="support-lane-details">
-                            <span>Read matched tasks</span>
-                            <span>Build confidence</span>
-                            <span>Practice calmly</span>
-                        </div>
-                    </div>
-                </article>
-                <article class="support-lane">
-                    <div class="support-lane-index">03</div>
-                    <div>
-                        <h3>Schools</h3>
-                        <p>Use a more consistent structure for reading assessment across classrooms.</p>
-                        <div class="support-lane-details">
-                            <span>Track classroom progress</span>
-                            <span>Use shared assessment steps</span>
-                            <span>Plan literacy support</span>
-                        </div>
-                    </div>
-                </article>
-            </div>
+                <div class="audience-row__copy">
+                    <span class="audience-row__number">01</span>
+                    <h3>Made for teachers</h3>
+                    <p>Run oral reading checks, review fluency, and turn each result into a clear next step.</p>
+                </div>
+            </article>
+
+            <article class="audience-row audience-row--reverse">
+                <div class="audience-row__visual">
+                    <span class="audience-row__orb" aria-hidden="true"></span>
+                    <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="A student building reading confidence">
+                </div>
+                <div class="audience-row__copy">
+                    <span class="audience-row__number">02</span>
+                    <h3>Motivating for students</h3>
+                    <p>Practice aloud with friendly prompts, matched activities, and feedback that builds confidence.</p>
+                </div>
+            </article>
+
+            <article class="audience-row">
+                <div class="audience-row__visual">
+                    <span class="audience-row__orb" aria-hidden="true"></span>
+                    <img src="{% static 'pabasa_app/images/ses.jpg' %}" alt="A school community supporting literacy growth">
+                </div>
+                <div class="audience-row__copy">
+                    <span class="audience-row__number">03</span>
+                    <h3>Connected for schools</h3>
+                    <p>See classroom progress clearly and create a consistent approach to literacy support across the school.</p>
+                </div>
+            </article>
         </div>
-    </div>
     </div>
 </section>
 
