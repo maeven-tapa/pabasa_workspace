@@ -1092,15 +1092,15 @@
 
         .practice-top {
             display: grid;
-            grid-template-columns: auto minmax(0, 1fr);
+            grid-template-columns: auto minmax(0, 1fr) auto;
             grid-template-rows: auto auto;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.25rem 0.4rem;
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 248, 230, 0.96));
             border: 1px solid rgba(180, 119, 31, 0.16);
             border-radius: 20px;
             box-shadow: 0 14px 28px rgba(27, 26, 23, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            padding: 0.62rem 0.85rem;
+            padding: 0.26rem 0.72rem;
             position: relative;
             overflow: hidden;
         }
@@ -1197,18 +1197,20 @@
             grid-column: 1;
             grid-row: 1 / span 2;
             align-self: center;
+            justify-self: start;
         }
 
         .practice-title {
             align-items: center;
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 0.08rem;
             justify-content: center;
             min-width: 0;
             text-align: center;
             grid-column: 2;
             grid-row: 1;
+            justify-self: center;
             position: relative;
             z-index: 1;
         }
@@ -1217,11 +1219,12 @@
             align-items: center;
             display: flex;
             flex-wrap: wrap;
-            gap: 0.5rem;
-            grid-column: 2;
-            grid-row: 2;
-            justify-content: center;
+            gap: 0.22rem;
+            grid-column: 3;
+            grid-row: 1;
+            justify-content: flex-end;
             min-width: 0;
+            justify-self: end;
             position: relative;
             z-index: 1;
         }
@@ -1233,16 +1236,16 @@
             border-radius: 12px;
             box-shadow: 0 8px 16px rgba(255, 140, 66, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.35);
             display: inline-flex;
-            height: 2rem;
+            height: 1.35rem;
             justify-content: center;
             margin: 0;
-            width: 2rem;
+            width: 1.35rem;
         }
 
         .practice-title .practice-title-icon svg {
             display: block;
-            height: 1.1rem;
-            width: 1.1rem;
+            height: 0.78rem;
+            width: 0.78rem;
         }
 
         .practice-title p {
@@ -1261,13 +1264,13 @@
             border-radius: 999px;
             color: #166534;
             display: inline-flex;
-            font-size: 0.72rem;
+            font-size: 0.64rem;
             font-weight: 800;
-            gap: 0.2rem;
+            gap: 0.14rem;
             justify-content: center;
             line-height: 1;
             margin-top: 0;
-            padding: 0.24rem 0.5rem;
+            padding: 0.15rem 0.38rem;
             letter-spacing: 0.02em;
             text-transform: none;
         }
@@ -1275,10 +1278,10 @@
         .practice-title h1 {
             color: #2b1b0f;
             font-family: "Baloo 2", "Nunito", sans-serif;
-            font-size: clamp(1.4rem, 3.5vw, 2.25rem);
+            font-size: clamp(1.12rem, 2.8vw, 1.7rem);
             font-weight: 800;
             letter-spacing: 0.01em;
-            line-height: 0.95;
+            line-height: 0.92;
             margin: 0;
         }
 
@@ -1328,6 +1331,10 @@
 
         .practice-help-pill i {
             color: #475569;
+        }
+
+        .practice-color-hud {
+            display: none;
         }
 
         .practice-color .star-counter.is-twinkling {
@@ -3463,81 +3470,346 @@
         }
 
         @media (max-width: 480px) {
+            .practice-color .practice-top {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+                gap: 0.45rem;
+                padding: 0.7rem 0.9rem 0.8rem;
+            }
+
+            .practice-color .practice-top > .back-link,
+            .practice-color .practice-meta-row {
+                display: none;
+            }
+
+            .practice-color-hud {
+                display: grid;
+                gap: 0.72rem;
+                position: relative;
+                z-index: 1;
+            }
+
+            .practice-color-hud-top {
+                align-items: center;
+                display: flex;
+                justify-content: space-between;
+                gap: 0.75rem;
+                min-width: 0;
+            }
+
+            .practice-color-actions {
+                align-items: center;
+                display: flex;
+                gap: 0.5rem;
+                justify-content: flex-end;
+                min-width: 0;
+            }
+
+            .practice-color-back {
+                align-items: center;
+                background: rgba(255, 255, 255, 0.78);
+                border: 1px solid rgba(148, 163, 184, 0.24);
+                border-radius: 14px;
+                color: #334155;
+                display: inline-flex;
+                gap: 0.35rem;
+                min-height: 44px;
+                padding: 0.35rem 0.7rem;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+
+            .practice-color-back i {
+                font-size: 1rem;
+            }
+
+            .practice-color-utilities {
+                align-items: center;
+                display: flex;
+                gap: 0.4rem;
+            }
+
+            .practice-color-stars,
+            .practice-color-help {
+                align-items: center;
+                display: inline-flex;
+                justify-content: center;
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            .practice-color-stars {
+                background: rgba(247, 200, 106, 0.2);
+                border: 1px solid rgba(180, 119, 31, 0.18);
+                border-radius: 12px;
+                color: #7c4a03;
+                gap: 0.25rem;
+                padding: 0.35rem 0.55rem;
+            }
+
+            .practice-color-stars span {
+                font-size: 0.98rem;
+                font-weight: 900;
+                line-height: 1;
+            }
+
+            .practice-color-help {
+                background: rgba(255,255,255,0.82);
+                border: 1px solid rgba(148, 163, 184, 0.24);
+                border-radius: 12px;
+                color: #475569;
+                padding: 0.35rem;
+            }
+
+            .practice-color-help i {
+                font-size: 1rem;
+            }
+
+            .practice-color-heading {
+                align-items: center;
+                display: grid;
+                gap: 0.28rem;
+                justify-items: center;
+                text-align: center;
+            }
+
+            .practice-color-heading h1 {
+                color: #2b1b0f;
+                font-size: clamp(1.25rem, 5.5vw, 1.38rem);
+                font-weight: 800;
+                line-height: 1.04;
+                margin: 0;
+                text-wrap: balance;
+            }
+
+            .practice-color-difficulty {
+                align-items: center;
+                background: rgba(220, 252, 231, 0.95);
+                border: 1px solid rgba(134, 239, 172, 0.85);
+                border-radius: 999px;
+                color: #166534;
+                display: inline-flex;
+                font-size: 0.74rem;
+                font-weight: 700;
+                gap: 0.22rem;
+                letter-spacing: 0.02em;
+                padding: 0.2rem 0.55rem;
+            }
+
             .practice-top {
-                grid-template-columns: minmax(0, 1fr) auto auto;
+                grid-template-columns: auto minmax(0, 1fr) auto;
+                grid-template-rows: auto auto;
                 grid-template-areas:
-                    "back help stars"
+                    "back . meta"
                     "title title title";
-                gap: 0.75rem 0.45rem;
-                margin: 0 0.85rem;
-                padding: 0.5rem 0.7rem 0.6rem;
+                gap: 0.18rem 0.32rem;
+                margin: 0 0.75rem;
+                padding: 0.28rem 0.7rem 0.34rem;
             }
 
             .back-link {
                 grid-area: back;
                 justify-self: start;
-                min-height: 40px;
-                padding: 0.3rem 0.66rem;
+                min-height: 44px;
+                min-width: 44px;
+                padding: 0.34rem 0.7rem;
             }
 
             .practice-help-pill {
                 grid-area: help;
                 justify-self: end;
-                min-height: 40px;
-                padding: 0.3rem 0.62rem;
+                min-height: 44px;
+                min-width: 44px;
+                padding: 0.3rem 0.68rem;
+            }
+
+            .practice-meta-row {
+                grid-area: meta;
+                justify-self: end;
+                justify-content: flex-end;
+                flex-wrap: nowrap;
+                gap: 0.35rem;
+                width: max-content;
             }
 
             .practice-title {
                 grid-area: title;
                 flex-wrap: wrap;
-                gap: 0.18rem 0.3rem;
+                gap: 0.08rem 0.18rem;
                 justify-self: center;
                 max-width: 100%;
-                margin-top: 0.1rem;
+                margin-top: 0;
             }
 
             .practice-title .practice-title-icon {
-                height: 1.9rem;
-                width: 1.9rem;
+                height: 1.42rem;
+                width: 1.42rem;
             }
 
             .practice-title h1 {
-                font-size: clamp(1.2rem, 5.8vw, 1.55rem);
+                font-size: clamp(1.12rem, 5vw, 1.42rem);
                 line-height: 1;
             }
 
             .practice-title .practice-journey-subtitle {
-                font-size: 0.64rem;
+                font-size: 0.54rem;
+                font-weight: 700;
+                letter-spacing: 0.04em;
                 max-width: 100%;
-                padding: 0.2rem 0.42rem;
+                padding: 0.14rem 0.38rem;
                 width: fit-content;
             }
 
             .star-counter {
                 grid-area: stars;
                 justify-self: end;
-                min-height: 40px;
-                padding: 0.28rem 0.58rem;
+                min-height: 44px;
+                min-width: 44px;
+                padding: 0.3rem 0.58rem;
                 width: auto;
             }
         }
 
         @media (max-width: 360px) {
+            .practice-color .practice-top {
+                gap: 0.1rem 0.16rem;
+                margin: 0 0.55rem;
+                padding: 0.22rem 0.48rem 0.25rem;
+            }
+
+            .practice-color .practice-title h1 {
+                font-size: 1.08rem;
+            }
+
+            .practice-color .practice-help-pill,
+            .practice-color .star-counter,
+            .practice-color .back-link {
+                min-height: 44px;
+                padding-inline: 0.45rem;
+            }
+
             .practice-top {
-                gap: 0.6rem 0.35rem;
-                margin: 0 0.7rem;
-                padding: 0.45rem 0.5rem 0.55rem;
+                gap: 0.12rem 0.18rem;
+                margin: 0 0.6rem;
+                padding: 0.24rem 0.52rem 0.28rem;
             }
 
             .practice-title h1 {
-                font-size: 1.2rem;
+                font-size: 1.1rem;
             }
 
             .back-link,
             .practice-help-pill,
             .star-counter {
-                min-height: 38px;
-                padding-inline: 0.6rem;
+                min-height: 44px;
+                padding-inline: 0.5rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .practice-color .practice-top > .back-link,
+            .practice-color .practice-title > .practice-title-icon,
+            .practice-color .practice-title > h1,
+            .practice-color .practice-title > .practice-journey-subtitle,
+            .practice-color .practice-meta-row > .practice-help-pill,
+            .practice-color .practice-meta-row > .star-counter {
+                display: none;
+            }
+
+            .practice-color .practice-title {
+                display: block;
+            }
+
+            .practice-color .practice-color-hud {
+                display: grid;
+                gap: 0.8rem;
+                grid-column: 1 / -1;
+                margin-inline: auto;
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .practice-color .practice-color-hud-top {
+                align-items: center;
+                display: flex;
+                gap: 0.5rem;
+                justify-content: space-between;
+            }
+
+            .practice-color .practice-color-back,
+            .practice-color .practice-color-stars,
+            .practice-color .practice-color-help {
+                align-items: center;
+                display: inline-flex;
+                justify-content: center;
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            .practice-color .practice-color-back {
+                background: rgba(255,255,255,0.82);
+                border: 1px solid rgba(148, 163, 184, 0.24);
+                border-radius: 14px;
+                color: #334155;
+                gap: 0.32rem;
+                padding: 0.35rem 0.7rem;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+
+            .practice-color .practice-color-actions {
+                align-items: center;
+                display: flex;
+                gap: 0.4rem;
+                margin-left: auto;
+            }
+
+            .practice-color .practice-color-stars {
+                background: rgba(247, 200, 106, 0.22);
+                border: 1px solid rgba(180, 119, 31, 0.18);
+                border-radius: 12px;
+                color: #7c4a03;
+                gap: 0.24rem;
+                padding: 0.35rem 0.55rem;
+            }
+
+            .practice-color .practice-color-stars span {
+                font-size: 0.98rem;
+                font-weight: 900;
+            }
+
+            .practice-color .practice-color-help {
+                background: rgba(255,255,255,0.84);
+                border: 1px solid rgba(148, 163, 184, 0.24);
+                border-radius: 12px;
+                color: #475569;
+                padding: 0.35rem;
+            }
+
+            .practice-color .practice-color-heading {
+                align-items: center;
+                display: grid;
+                gap: 0.3rem;
+                justify-items: center;
+                text-align: center;
+            }
+
+            .practice-color .practice-color-heading h1 {
+                color: #2b1b0f;
+                font-size: 21px;
+                font-weight: 800;
+                line-height: 1.05;
+                margin: 0;
+            }
+
+            .practice-color .practice-color-difficulty {
+                background: rgba(220, 252, 231, 0.95);
+                border: 1px solid rgba(134, 239, 172, 0.85);
+                border-radius: 999px;
+                color: #166534;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.02em;
+                padding: 0.22rem 0.55rem;
             }
         }
         body.dark-theme .practice-hunt-shell { background: linear-gradient(180deg,#0b1825,#111d24); }
@@ -4843,6 +5115,19 @@
                     </div>
                     <h1>Build the Picture</h1>
                     <div class="practice-journey-subtitle"><span>{{ request.GET.difficulty|default:"easy"|title }}</span><span>•</span><span>Level {{ request.GET.level|default:"level_1"|cut:"level_" }}</span></div>
+                    <div class="practice-color-hud" aria-hidden="true">
+                        <div class="practice-color-hud-top">
+                            <a class="practice-color-back" href="{% url 'practice' %}" aria-label="Back to practice"><i class="bi bi-arrow-left" aria-hidden="true"></i><span>Back</span></a>
+                            <div class="practice-color-actions">
+                                <div class="practice-color-stars" aria-label="Stars earned"><i class="bi bi-star-fill" aria-hidden="true"></i><span id="mobileStarCount">0</span></div>
+                                <button class="practice-color-help" id="practiceHelpBtnMobile" type="button" aria-haspopup="dialog" aria-label="Help"><i class="bi bi-question-circle" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div class="practice-color-heading">
+                            <h1>Build the Picture</h1>
+                            <div class="practice-color-difficulty"><span>{{ request.GET.difficulty|default:"easy"|title }}</span><span aria-hidden="true">•</span><span>Level {{ request.GET.level|default:"level_1"|cut:"level_" }}</span></div>
+                        </div>
+                    </div>
                 {% else %}
                     <p>{% block eyebrow %}Practice mode{% endblock %}</p>
                     <h1>{% block heading %}Word Adventure{% endblock %}</h1>
@@ -4998,10 +5283,13 @@
         window.PABASA_COLOR_MODE_ASSET_BASE = "{% static 'pabasa_app/color_mode/' %}";
         (() => {
             const button = document.getElementById('practiceHelpBtn');
+            const mobileButton = document.getElementById('practiceHelpBtnMobile');
             const overlay = document.getElementById('practiceHelpOverlay');
             const close = document.getElementById('practiceHelpClose');
-            const hide = () => { overlay.hidden = true; button.focus(); };
-            button?.addEventListener('click', () => { overlay.hidden = false; close?.focus(); });
+            const hide = () => { overlay.hidden = true; button?.focus(); };
+            const open = () => { overlay.hidden = false; close?.focus(); };
+            button?.addEventListener('click', open);
+            mobileButton?.addEventListener('click', open);
             close?.addEventListener('click', hide);
             overlay?.addEventListener('click', (event) => { if (event.target === overlay) hide(); });
             document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && overlay && !overlay.hidden) hide(); });

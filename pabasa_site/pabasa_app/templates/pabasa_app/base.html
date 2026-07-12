@@ -1200,18 +1200,11 @@
                                 <div class="modern-nav-actions">
                                     <a class="nav-link header-inline-link" href="{% url 'auth' %}">My Account</a>
                                     {% if request.resolver_match.url_name != 'home' %}
-                                    <div class="header-divider" aria-hidden="true"></div>
-                                    <div class="header-icon-group">
-                                        <a class="header-icon-btn" href="{% url 'home' %}#key-features" aria-label="Settings" title="Settings">
-                                            <i class="bi bi-gear"></i>
-                                        </a>
-                                        <a class="header-avatar" href="{% url 'about' %}#development-team" aria-label="Development team">🦜</a>
-                                        {% if user.is_authenticated %}
-                                        <a class="header-icon-btn header-logout-link" href="{% url 'logout' %}" aria-label="Logout" title="Logout">
-                                            <i class="bi bi-box-arrow-right"></i>
-                                        </a>
-                                        {% endif %}
-                                    </div>
+                                    {% if user.is_authenticated %}
+                                    <a class="header-icon-btn header-logout-link" href="{% url 'logout' %}" aria-label="Logout" title="Logout">
+                                        <i class="bi bi-box-arrow-right"></i>
+                                    </a>
+                                    {% endif %}
                                     {% endif %}
                                 </div>
                             </div>
