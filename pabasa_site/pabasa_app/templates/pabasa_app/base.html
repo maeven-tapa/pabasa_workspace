@@ -1137,9 +1137,12 @@
 
         /* Footer: navy from logo */
         .site-footer {
+            --footer-curve-width: clamp(22rem, 46vw, 48rem);
+            --footer-curve-height: clamp(11rem, 22vw, 18rem);
             margin-top: 3rem;
             background: #10466e !important;
             border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+            overflow: visible;
         }
 
         .site-footer::before,
@@ -1149,7 +1152,7 @@
         }
 
         .footer-shell {
-            padding-top: 8.25rem;
+            padding-top: 11rem;
             padding-bottom: 1.5rem;
         }
 
@@ -1162,23 +1165,31 @@
 
         .footer-divider {
             position: absolute;
-            top: -1px;
+            top: calc(var(--footer-curve-height) / -2);
             left: 50%;
-            width: min(17rem, 72vw);
-            height: 7.25rem;
-            border-radius: 0 0 50% 50%;
-            background: #f5fbfd;
+            width: var(--footer-curve-width);
+            height: var(--footer-curve-height);
+            background: transparent;
             transform: translateX(-50%);
             z-index: 2;
             pointer-events: none;
         }
 
+        .footer-divider::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: #fff;
+            clip-path: inset(50% 0 0 0);
+        }
+
         .footer-divider img {
             position: absolute;
             left: 50%;
-            bottom: -1.2rem;
-            width: 11rem;
-            height: 12.5rem;
+            bottom: -0.75rem;
+            width: clamp(11rem, 18vw, 15rem);
+            height: clamp(13rem, 20vw, 17rem);
             object-fit: contain;
             object-position: center bottom;
             transform: translateX(-50%);
@@ -1187,9 +1198,9 @@
 
         @media (max-width: 600px) {
             .footer-divider img {
-                bottom: -0.9rem;
-                width: 9.75rem;
-                height: 11rem;
+                bottom: -0.5rem;
+                width: 10.5rem;
+                height: 12.25rem;
             }
         }
 
@@ -1290,7 +1301,7 @@
 
             .footer-shell {
                 max-width: none;
-                padding: 7.5rem 0.75rem 1.25rem;
+                padding: 9rem 0.75rem 1.25rem;
             }
 
             .footer-panel--brand {
@@ -1504,7 +1515,7 @@
         </div>
     </main>
     {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' %}
-    <footer class="site-footer mt-auto">
+    <footer class="site-footer mt-auto" id="site-footer">
         <div class="footer-divider" aria-hidden="true">
             <img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="">
         </div>
