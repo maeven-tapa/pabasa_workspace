@@ -38,6 +38,10 @@
         const micSampleRecordBtn = document.getElementById("micSampleRecordBtn");
         const micSamplePlayBtn = document.getElementById("micSamplePlayBtn");
         const micTestStatus = document.getElementById("micTestStatus");
+        const micDeviceDropdown = document.getElementById("micDeviceDropdown");
+        const micDeviceTrigger = document.getElementById("micDeviceTrigger");
+        const micDeviceMenu = document.getElementById("micDeviceMenu");
+        const micDeviceValue = document.getElementById("micDeviceValue");
         const micDeviceSelect = document.getElementById("micDeviceSelect");
         const rawMicInput = document.getElementById("rawMicInput");
 
@@ -116,6 +120,111 @@
         const speechChunkMs = 2400;
         const speechLevelThreshold = 0.014;
         const speechNoiseMultiplier = 3.2;
+        let micDeviceOptionButtons = [];
+
+        function setMicDropdownOpen(isOpen) {
+            if (!micDeviceDropdown || !micDeviceTrigger) return;
+            micDeviceDropdown.classList.toggle("is-open", Boolean(isOpen));
+            micDeviceTrigger.setAttribute("aria-expanded", Boolean(isOpen));
+        }
+
+        function getMicDeviceLabel(option) {
+            if (!option) return "Default microphone";
+            if (!option.value) return "Default microphone";
+            return option.textContent?.trim() || option.label || "Microphone";
+        }
+
+        function syncMicDropdownSelection() {
+            if (!micDeviceSelect || !micDeviceValue || !micDeviceMenu) return;
+            const selectedValue = micDeviceSelect.value || "";
+            const options = Array.from(micDeviceSelect.options || []);
+            const selectedOption = options.find(option => option.value === selectedValue) || options[0] || null;
+            micDeviceValue.textContent = getMicDeviceLabel(selectedOption);
+
+            micDeviceOptionButtons.forEach(button => {
+                const isSelected = button.dataset.deviceId === selectedValue;
+                button.classList.toggle("is-selected", isSelected);
+                button.setAttribute("aria-selected", isSelected ? "true" : "false");
+            });
+        }
+
+        function renderMicDeviceDropdown() {
+            if (!micDeviceSelect || !micDeviceMenu) return;
+            micDeviceMenu.replaceChildren();
+            micDeviceOptionButtons = [];
+            Array.from(micDeviceSelect.options || []).forEach((option, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "mic-device-option";
+                button.setAttribute("role", "option");
+                button.dataset.deviceId = option.value || "";
+                button.dataset.index = String(index);
+                button.setAttribute("aria-selected", option.selected ? "true" : "false");
+                const textWrap = document.createElement("span");
+                textWrap.className = "mic-device-option-text";
+                const title = document.createElement("span");
+                title.className = "mic-device-option-title";
+                title.textContent = option.value ? (option.textContent || option.label || "Microphone") : "Default microphone";
+                const subtitle = document.createElement("span");
+                subtitle.className = "mic-device-option-subtitle";
+                subtitle.textContent = option.value ? "Connected audio input" : "Use the browser default input";
+                textWrap.append(title, subtitle);
+                const check = document.createElement("i");
+                check.className = "bi bi-check2 mic-device-check";
+                check.setAttribute("aria-hidden", "true");
+                button.append(textWrap, check);
+                button.addEventListener("click", () => {
+                    micDeviceSelect.value = option.value || "";
+                    micDeviceSelect.dispatchEvent(new Event("change", { bubbles: true }));
+                    setMicDropdownOpen(false);
+                });
+                button.addEventListener("keydown", (event) => {
+                    if (event.key === "ArrowDown") {
+                        event.preventDefault();
+                        focusMicOptionByOffset(button, 1);
+                    } else if (event.key === "ArrowUp") {
+                        event.preventDefault();
+                        focusMicOptionByOffset(button, -1);
+                    } else if (event.key === "Home") {
+                        event.preventDefault();
+                        micDeviceOptionButtons[0]?.focus();
+                    } else if (event.key === "End") {
+                        event.preventDefault();
+                        micDeviceOptionButtons[micDeviceOptionButtons.length - 1]?.focus();
+                    } else if (event.key === "Escape") {
+                        event.preventDefault();
+                        setMicDropdownOpen(false);
+                        micDeviceTrigger?.focus();
+                    } else if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        button.click();
+                    }
+                });
+                micDeviceMenu.appendChild(button);
+                micDeviceOptionButtons.push(button);
+            });
+            syncMicDropdownSelection();
+        }
+
+        function toggleMicDropdown(forceOpen) {
+            if (!micDeviceDropdown) return;
+            const nextOpen = typeof forceOpen === "boolean"
+                ? forceOpen
+                : !micDeviceDropdown.classList.contains("is-open");
+            setMicDropdownOpen(nextOpen);
+            if (nextOpen) {
+                syncMicDropdownSelection();
+                const active = micDeviceOptionButtons.find(button => button.classList.contains("is-selected")) || micDeviceOptionButtons[0];
+                active?.focus();
+            }
+        }
+
+        function focusMicOptionByOffset(currentButton, offset) {
+            if (!micDeviceOptionButtons.length) return;
+            const currentIndex = Math.max(0, micDeviceOptionButtons.indexOf(currentButton));
+            const nextIndex = (currentIndex + offset + micDeviceOptionButtons.length) % micDeviceOptionButtons.length;
+            micDeviceOptionButtons[nextIndex]?.focus();
+        }
 
         function getCsrfToken() {
             const cookieToken = document.cookie.split('; ')
@@ -1190,12 +1299,22 @@
         if (btnTestMic) {
             btnTestMic.addEventListener("click", openMicTestDialog);
         }
+        micDeviceTrigger?.addEventListener("click", () => toggleMicDropdown());
+        micDeviceTrigger?.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggleMicDropdown(true);
+            } else if (event.key === "Escape") {
+                setMicDropdownOpen(false);
+            }
+        });
         micDeviceSelect?.addEventListener("change", () => {
             selectedMicDeviceId = micDeviceSelect.value || "";
             localStorage.setItem("pabasaSelectedMicDeviceId", selectedMicDeviceId);
             revokeMicSampleUrl();
             micSamplePlayBtn?.setAttribute("disabled", "disabled");
             setMicTestStatus("Microphone selected. Record a sample to check it.");
+            syncMicDropdownSelection();
             if (micTestWasRecording && isRecording && !isMuted) {
                 stopSpeechRecognition();
             }
@@ -1206,6 +1325,12 @@
         });
         micSampleRecordBtn?.addEventListener("click", runMicPlaybackTest);
         micSamplePlayBtn?.addEventListener("click", playMicSample);
+        document.addEventListener("click", (event) => {
+            if (!micDeviceDropdown?.contains(event.target)) setMicDropdownOpen(false);
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") setMicDropdownOpen(false);
+        });
 
         function openMicTestDialog() {
             if (!micTestOverlay) {
@@ -1245,6 +1370,7 @@
                     localStorage.removeItem("pabasaSelectedMicDeviceId");
                     micDeviceSelect.value = "";
                 }
+                renderMicDeviceDropdown();
             } catch (error) {
                 console.warn("PABASA: Could not load microphones", error);
                 setMicTestStatus("Could not load microphone list. Check browser permission.");

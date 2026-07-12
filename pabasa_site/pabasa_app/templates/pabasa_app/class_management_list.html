@@ -44,6 +44,21 @@
         grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
     }
     @media (max-width: 576px) { .dash-page-head { flex-direction: column; align-items: flex-start !important; gap: 1rem; } }
+
+    .dash-page-head h2 {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.25rem;
+        font-weight: 900;
+        line-height: 1.15;
+        letter-spacing: 0;
+    }
+
+    .dash-page-head p,
+    .dash-page-head .text-muted {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        line-height: 1.45;
+    }
+
     .manage-entry-card {
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         border: 1px solid rgba(15, 23, 42, 0.1);

@@ -99,10 +99,12 @@
     }
 
     .page-head-title h1 {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         margin: 0;
-        font-size: 1.18rem;
-        line-height: 1.2;
-        font-weight: 800;
+        font-size: 1.3rem;
+        line-height: 1.15;
+        font-weight: 900;
+        letter-spacing: 0;
         color: var(--text-high);
     }
 
@@ -158,19 +160,23 @@
     }
 
     .class-switcher-label {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         display: block;
         font-size: 0.68rem;
         font-weight: 800;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
         text-transform: uppercase;
         color: var(--text-muted);
     }
 
     .class-switcher-value {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         display: block;
-        font-size: 0.9rem;
-        font-weight: 800;
+        font-size: 0.98rem;
+        font-weight: 900;
         color: var(--text-high);
+        line-height: 1.2;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -248,7 +254,6 @@
 
     .class-switcher-option.is-selected {
         background: var(--primary-soft);
-        font-weight: 800;
     }
 
     .class-switcher-option.is-selected::before {
@@ -259,19 +264,22 @@
         min-width: 0;
         display: grid;
         gap: 0.12rem;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
     }
 
     .class-switcher-option-title {
-        font-size: 0.96rem;
-        font-weight: 800;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.98rem;
+        font-weight: 900;
+        letter-spacing: 0.01em;
         color: inherit;
-        line-height: 1.2;
+        line-height: 1.25;
     }
 
     .class-switcher-option-subtitle {
-        font-size: 0.82rem;
+        font-size: 0.84rem;
         color: var(--text-muted);
-        line-height: 1.2;
+        line-height: 1.45;
     }
 
     .class-switcher-option.is-selected .class-switcher-option-subtitle {
@@ -287,6 +295,10 @@
 
     .class-switcher-option.is-selected .class-switcher-check {
         color: var(--primary);
+    }
+
+    .class-switcher-trigger .class-switcher-value {
+        letter-spacing: 0.02em;
     }
 
     .page-body {
@@ -313,18 +325,44 @@
         flex-wrap: wrap;
     }
 
+    .card > .card-header:first-child {
+        background: #fff;
+    }
+
+    .card > .card-header .section-heading h2,
+    .card > .card-header .card-title {
+        background: transparent;
+    }
+
     .card-title {
         margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
         color: var(--text-high);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.06rem;
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.2;
+    }
+
+    .card-title i {
+        display: none;
     }
 
     .card-subtitle {
         margin: 0.28rem 0 0;
         color: var(--text-medium);
-        font-size: 0.9rem;
-        line-height: 1.45;
+        font-size: 0.88rem;
+        line-height: 1.5;
+    }
+
+    .section-heading h2 {
+        color: var(--text-high);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.06rem;
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.2;
+        margin: 0;
     }
 
     .card-actions {
@@ -399,6 +437,12 @@
     textarea {
         min-height: 104px;
         resize: vertical;
+    }
+
+    #classDescription {
+        min-height: 104px;
+        resize: none;
+        overflow-y: auto;
     }
 
     .col-span-8 {
@@ -812,7 +856,7 @@
                 <button type="button" class="class-switcher-trigger" id="classSwitcherTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="classSwitcherMenu">
                     <span class="class-switcher-trigger-text">
                         <span class="class-switcher-label">Viewing Class</span>
-                        <span class="class-switcher-value" id="classSwitcherValue">{{ section.class_name|default:section.class_code }}</span>
+                        <span class="class-switcher-value" id="classSwitcherValue">{{ section.class_code|default:section.class_name }}</span>
                     </span>
                     <i class="bi bi-chevron-down" aria-hidden="true"></i>
                 </button>
@@ -827,8 +871,8 @@
                         data-class-name="{{ s.class_name|escape }}"
                     >
                         <span class="class-switcher-option-text">
-                            <span class="class-switcher-option-title">Chapter {{ forloop.counter }}</span>
-                            <span class="class-switcher-option-subtitle">{{ s.class_code }} · {{ s.class_name }}</span>
+                            <span class="class-switcher-option-title">{{ s.class_code }}</span>
+                            <span class="class-switcher-option-subtitle">{{ s.class_name }}</span>
                         </span>
                         <i class="bi bi-check2 class-switcher-check" aria-hidden="true"></i>
                     </button>
@@ -842,7 +886,7 @@
         <section class="card">
             <div class="card-header">
                 <div class="section-heading">
-                    <p class="card-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Class Information</p>
+                    <p class="card-title">Class Information</p>
                     <p class="card-subtitle">Keep the classroom title and description concise for easy scanning.</p>
                 </div>
                 <div class="card-actions">
@@ -1047,7 +1091,7 @@ document.addEventListener('DOMContentLoaded', function () {
         option.addEventListener('click', function () {
             const classCode = this.dataset.classCode;
             const className = this.dataset.className || classCode;
-            valueEl.textContent = className;
+            valueEl.textContent = classCode;
             window.location.href = '?code=' + encodeURIComponent(classCode);
         });
     });

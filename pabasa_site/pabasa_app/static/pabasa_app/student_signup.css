@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Quattrocento+Sans:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap");
 
 :root {
     color-scheme: light;
@@ -21,9 +21,14 @@
 body {
     margin: 0;
     min-height: 100vh;
-    font-family: "Sora", "Segoe UI", sans-serif;
+    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    line-height: 1.5;
     color: var(--ink);
     background: radial-gradient(circle at top left, #ffffff 0%, var(--bg) 45%, #edf2f4 100%);
+}
+
+h1, h2, h3, h4, h5, h6, .logo, .button-primary, .button-secondary, .button-ghost, .nav-links, .form-field span {
+    font-family: "Nunito", "Segoe UI", sans-serif;
 }
 
 body::before {

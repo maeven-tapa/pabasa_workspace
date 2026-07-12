@@ -3,20 +3,60 @@
 
 {% block extra_head %}
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap');
-
     .progression-shell { display: grid; gap: 1rem; }
     .progression-card { background: linear-gradient(145deg, rgba(255,255,255,0.94), rgba(248,251,255,0.92)); border: 1px solid rgba(31,111,139,0.14); border-radius: 28px; box-shadow: 0 8px 16px rgba(31,111,139,0.06), 0 20px 40px rgba(31,111,139,0.1), inset 0 1px 0 rgba(255,255,255,0.6); padding: 1.2rem 1.25rem; backdrop-filter: blur(8px); }
     .progression-hero { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr); align-items: center; position: relative; }
     .progression-hero::before { content: ""; position: absolute; inset: -1px; background: linear-gradient(135deg, rgba(31,111,139,0.05), rgba(31,111,139,0.02)); border-radius: 28px; z-index: -1; opacity: 0.5; }
+    .progression-hero .dash-pill,
+    .progression-hero h2,
+    .progression-hero p,
+    .progression-hero .progression-hero-status,
+    .progression-hero .tutorial-launch-btn,
+    .progression-difficulty-group h4,
+    .progression-difficulty-group p,
+    .level-card,
+    .level-card strong,
+    .level-card .small,
+    .level-status,
+    .level-play-btn,
+    .difficulty-badge,
+    .back-link {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+    }
+    .progression-hero .dash-pill {
+        font-size: 0.75rem;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+    .progression-hero h2 {
+        color: var(--dash-text);
+        font-size: clamp(1.55rem, 2.8vw, 2.05rem);
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        line-height: 1.08;
+        margin: 0 0 0.4rem;
+    }
+    .progression-hero > div > p {
+        color: var(--dash-muted) !important;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.55;
+        max-width: 62ch;
+    }
+    .progression-hero .mt-3.small.fw-bold {
+        font-size: 0.86rem;
+        font-weight: 900 !important;
+        letter-spacing: 0.01em;
+    }
     .progression-stat-grid { display: grid; gap: 0.8rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .progression-stat { background: linear-gradient(135deg, rgba(31,111,139,0.08), rgba(255,255,255,0.98)); border: 1.5px solid rgba(31,111,139,0.14); border-radius: 20px; padding: 1rem 1.05rem; box-shadow: 0 4px 12px rgba(31,111,139,0.06), inset 0 1px 0 rgba(255,255,255,0.5); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
     .progression-stat::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.4), transparent); opacity: 0; transition: opacity 0.3s ease; }
     .progression-stat:hover { background: linear-gradient(135deg, rgba(31,111,139,0.12), rgba(255,255,255,0.99)); border-color: rgba(31,111,139,0.24); box-shadow: 0 6px 16px rgba(31,111,139,0.1), inset 0 1px 0 rgba(255,255,255,0.5); transform: translateY(-2px); }
     .progression-stat:hover::before { opacity: 1; }
-    .progression-stat strong { display: block; font-size: 1.35rem; font-weight: 900; color: var(--dash-text); letter-spacing: 0.02em; }
-    .progression-stat span { color: var(--dash-muted); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-    .progression-hero-status { color: #0f766e; font-size: 0.95rem; font-weight: 700; }
+    .progression-stat strong { display: block; font-size: 1.25rem; font-weight: 900; color: var(--dash-text); letter-spacing: -0.01em; line-height: 1.1; }
+    .progression-stat span { color: var(--dash-muted); font-size: 0.74rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.07em; }
+    .progression-hero-status { color: #0f766e; font-size: 0.88rem; font-weight: 800; line-height: 1.45; }
     .progression-difficulty-group { display: grid; gap: 0.8rem; }
     .difficulty-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
     .difficulty-header .difficulty-badge {
@@ -24,7 +64,7 @@
         border: 1px solid rgba(31,111,139,0.2);
         border-radius: 999px;
         color: var(--dash-primary);
-        font-size: clamp(0.86rem, 1.1vw, 1rem);
+        font-size: 0.84rem;
         font-weight: 900;
         line-height: 1;
         min-height: 2.35rem;
@@ -56,6 +96,72 @@
     .back-link:hover i { transform: translateX(-2px); }
     .tutorial-launch-btn { align-items: center; background: linear-gradient(135deg, rgba(31,111,139,0.12), rgba(31,111,139,0.06)); border: 1.5px solid rgba(31,111,139,0.22); border-radius: 999px; color: var(--dash-primary); display: inline-flex; font-size: 0.84rem; font-weight: 800; gap: 0.35rem; justify-content: center; min-height: 40px; padding: 0.55rem 0.9rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(31,111,139,0.08); }
     .tutorial-launch-btn:hover { background: linear-gradient(135deg, rgba(31,111,139,0.18), rgba(31,111,139,0.12)); border-color: rgba(31,111,139,0.32); box-shadow: 0 4px 14px rgba(31,111,139,0.16); transform: translateY(-1px); color: var(--dash-primary); }
+    .progression-hero .dash-pill,
+    .progression-hero h2,
+    .progression-hero p,
+    .progression-hero .progression-hero-status,
+    .progression-hero .tutorial-launch-btn,
+    .progression-difficulty-group h4,
+    .progression-difficulty-group p,
+    .level-card,
+    .level-card strong,
+    .level-card .small,
+    .level-status,
+    .level-play-btn,
+    .difficulty-badge,
+    .back-link {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+    }
+    .progression-hero .dash-pill { font-size: 0.75rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+    .progression-hero h2 { color: var(--dash-text); font-size: clamp(1.55rem, 2.8vw, 2.05rem); font-weight: 900; letter-spacing: -0.03em; line-height: 1.08; margin: 0 0 0.4rem; }
+    .progression-hero > div > p { color: var(--dash-muted) !important; font-size: 0.95rem; font-weight: 700; line-height: 1.55; max-width: 62ch; }
+    .progression-hero .mt-3.small.fw-bold {
+        background: linear-gradient(135deg, rgba(31,111,139,0.08), rgba(31,111,139,0.03));
+        border: 1px solid rgba(31,111,139,0.14);
+        border-radius: 16px;
+        color: var(--dash-primary) !important;
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        font-size: 0.92rem;
+        font-weight: 900 !important;
+        letter-spacing: 0.01em;
+        line-height: 1.35;
+        margin-top: 0.85rem !important;
+        padding: 0.6rem 0.8rem;
+    }
+    #progressionCurrentChallenge {
+        font-size: 1rem;
+        font-weight: 900;
+        letter-spacing: 0;
+    }
+    .progression-stat strong { font-size: 1.25rem; letter-spacing: -0.01em; line-height: 1.1; }
+    .progression-stat span { font-size: 0.74rem; font-weight: 900; letter-spacing: 0.07em; }
+    .progression-hero-status { font-size: 0.88rem; font-weight: 800; line-height: 1.45; }
+    .difficulty-header .difficulty-badge { font-size: 0.84rem; }
+    .difficulty-label {
+        color: var(--dash-text);
+        font-size: 1.15rem;
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        line-height: 1.15;
+        margin: 0 0 0.18rem;
+    }
+    .difficulty-note {
+        color: var(--dash-muted);
+        font-size: 0.92rem;
+        font-weight: 700;
+        line-height: 1.45;
+        margin: 0;
+    }
+    .level-card { gap: 0.55rem; }
+    .level-card .level-title-row { align-items: flex-start; }
+    .level-card strong { display: block; font-size: 1rem; font-weight: 900; line-height: 1.18; letter-spacing: -0.01em; color: var(--dash-text); }
+    .level-card .small.text-muted { font-size: 0.82rem; line-height: 1.45; }
+    .level-status { font-size: 0.76rem; font-weight: 900; letter-spacing: 0.05em; line-height: 1.1; text-transform: uppercase; }
+    .level-play-btn { font-size: 0.8rem; font-weight: 900; letter-spacing: 0.02em; }
+    .back-link { font-size: 0.9rem; font-weight: 900; }
+    .tutorial-launch-btn { font-family: "Nunito", "Segoe UI", sans-serif; font-size: 0.8rem; font-weight: 900; letter-spacing: 0.03em; }
     .tutorial-overlay { align-items: center; background: rgba(2,6,23,0.64); backdrop-filter: blur(4px); display: none; inset: 0; justify-content: center; padding: 1rem; position: fixed; z-index: 1200; }
     .tutorial-overlay.is-open { display: flex; animation: overlayFadeIn 0.35s ease; }
     .tutorial-card-shell {
@@ -200,10 +306,10 @@
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        font-family: 'Baloo 2', 'Trebuchet MS', 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
-        font-size: clamp(1.9rem, 4.5vw, 2.65rem);
-        font-weight: 800;
-        letter-spacing: 0.03em;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: clamp(1.7rem, 3.8vw, 2.35rem);
+        font-weight: 900;
+        letter-spacing: -0.02em;
         line-height: 1.05;
         margin: 0;
         text-align: left;
@@ -211,11 +317,11 @@
     }
     .tutorial-subtitle {
         color: rgba(255,253,244,0.95);
-        font-family: 'Baloo 2', 'Trebuchet MS', 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
-        font-size: 0.98rem;
-        font-weight: 650;
-        letter-spacing: 0.02em;
-        line-height: 1.5;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        line-height: 1.45;
         margin: 0;
         opacity: 0.9;
     }
@@ -264,11 +370,11 @@
     }
     .tutorial-card p {
         color: #2f3f56;
-        font-family: 'Trebuchet MS', 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif;
-        font-size: clamp(1.2rem, 2.8vw, 1.4rem);
-        font-weight: 700;
-        letter-spacing: 0.01em;
-        line-height: 1.75;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: clamp(1rem, 2.2vw, 1.18rem);
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 1.65;
         margin: 0;
     }
     .tutorial-nav-row { align-items: center; display: flex; justify-content: space-between; margin: 0.4rem 1.2rem 1.1rem; padding: 0.8rem; background: rgba(31,111,139,0.04); border-radius: 16px; }
@@ -538,7 +644,7 @@
             <span class="dash-pill mb-2"><i class="bi bi-map"></i> {{ game_mode_title }}</span>
             <h2 class="mb-2">{{ game_mode_title }} Adventure</h2>
             <p id="progressionHeroIntro" class="mb-0" style="color: var(--dash-muted);">Follow the map, unlock each level, and collect stars as you grow into a stronger reader.</p>
-            <div class="mt-3 small fw-bold" style="color: var(--dash-primary);">Current challenge: <span id="progressionCurrentChallenge">{{ game_progression_summary.current_difficulty }} {{ game_progression_summary.current_level }}</span></div>
+            <div class="mt-3 small fw-bold" style="color: var(--dash-primary);">Current challenge: <span id="progressionCurrentChallenge">{{ game_progression_summary.current_challenge_label|default:game_progression_summary.next_label|default:"Easy Level 1" }}</span></div>
             <div id="progressionHeroStatus" class="progression-hero-status mt-2">Live progress is updating as you play.</div>
             <button type="button" class="tutorial-launch-btn mt-3" id="openTutorialButton"><i class="bi bi-question-circle"></i> How to Play</button>
         </div>
@@ -567,8 +673,8 @@
             <div class="progression-difficulty-group mb-3" data-difficulty-unlocked="{% if section.unlocked %}true{% else %}false{% endif %}">
                 <div class="difficulty-header">
                     <div>
-                        <h4 class="mb-1">{{ section.difficulty_label }}</h4>
-                        <p class="mb-0" style="color: var(--dash-muted); font-size: 0.9rem;">{{ section.locked_reason|default:"Ready when you are." }}</p>
+                        <h4 class="difficulty-label">{{ section.difficulty_label }}</h4>
+                        <p class="difficulty-note">{{ section.locked_reason|default:"Ready when you are." }}</p>
                     </div>
                     <span class="difficulty-badge" data-difficulty-status>{% if section.unlocked %}Unlocked{% else %}Locked{% endif %}</span>
                 </div>
@@ -584,8 +690,8 @@
                                     {% if level.state == 'completed' %}Finished!{% elif level.state == 'unlocked' %}Unlocked{% elif level.state == 'content_unavailable' %}Content unavailable{% else %}Locked{% endif %}
                                 </span>
                             </div>
-                            <div class="small text-muted">{{ level.difficulty_label }}</div>
-                            <div class="small text-muted">{% if level.state == 'completed' %}Stars: {{ level.stars_earned }}{% elif level.state == 'locked' %}{{ level.locked_reason }}{% elif level.state == 'content_unavailable' %}No practice content uploaded for this level yet.{% else %}Ready to play{% endif %}</div>
+                            <div class="small text-muted difficulty-note">{{ level.difficulty_label }}</div>
+                            <div class="small text-muted difficulty-note">{% if level.state == 'completed' %}Stars: {{ level.stars_earned }}{% elif level.state == 'locked' %}{{ level.locked_reason }}{% elif level.state == 'content_unavailable' %}No practice content uploaded for this level yet.{% else %}Ready to play{% endif %}</div>
                             <a class="level-play-btn {% if level.state == 'locked' %}is-locked{% elif level.state == 'content_unavailable' %}is-unavailable{% elif level.state == 'completed' %}is-completed{% endif %}" href="{% if level.state == 'unlocked' or level.state == 'completed' %}{% if level.material_exists %}{{ level.play_url }}?id={{ level.material_id }}&game={{ selected_game_mode }}&difficulty={{ level.difficulty }}&level={{ level.level }}{% else %}#{% endif %}{% else %}#{% endif %}" {% if level.state == 'locked' or level.state == 'content_unavailable' %}aria-disabled="true" tabindex="-1"{% endif %}>
                                 {% if level.state == 'completed' %}<i class="bi bi-arrow-repeat"></i>{% elif level.state == 'unlocked' %}<i class="bi bi-play-fill"></i>{% elif level.state == 'content_unavailable' %}<i class="bi bi-slash-circle"></i>{% else %}<i class="bi bi-lock-fill"></i>{% endif %}
                                 {{ level.button_label }}

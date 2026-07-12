@@ -3483,6 +3483,12 @@ def _practice_game_progression(mode, student_user=None):
                 next_challenge = candidate
 
     total_levels = len(level_keys) * len(difficulty_keys)
+    if total_levels and total_completed >= total_levels:
+        current_challenge_label = 'All Challenges Completed 🎉'
+    elif next_challenge:
+        current_challenge_label = f"{next_challenge['difficulty_label']} • {next_challenge['level_label']}"
+    else:
+        current_challenge_label = 'Easy • Level 1'
     return {
         'mode': normalized_mode,
         'mode_title': _practice_progression_mode_title(normalized_mode),
@@ -3494,6 +3500,7 @@ def _practice_game_progression(mode, student_user=None):
             'stars_earned': total_stars,
             'current_difficulty': next_challenge['difficulty_label'] if next_challenge else 'Easy',
             'current_level': next_challenge['level_label'] if next_challenge else 'Level 1',
+            'current_challenge_label': current_challenge_label,
             'next_label': f"{next_challenge['difficulty_label']} {next_challenge['level_label']}" if next_challenge else 'Easy Level 1',
         },
     }
@@ -5479,8 +5486,16 @@ def class_management_view(request):
     if not section:
         return redirect('dashboard_teacher')
 
-    # Fetch all active classes for the switcher dropdown
-    all_sections = Section.objects.filter(teacher=teacher_user, is_active=True).order_by('class_name')
+    # Fetch all active classes for the switcher dropdown and dedupe by class code
+    all_sections_qs = Section.objects.filter(teacher=teacher_user, is_active=True).order_by('class_name', 'class_code')
+    all_sections = []
+    seen_class_codes = set()
+    for item in all_sections_qs:
+        class_code_key = (item.class_code or '').strip().upper()
+        if not class_code_key or class_code_key in seen_class_codes:
+            continue
+        seen_class_codes.add(class_code_key)
+        all_sections.append(item)
 
     # Get students enrolled in this section and enrich from User model
     enrolled_entries = section.get_enrolled_students(active_only=True)

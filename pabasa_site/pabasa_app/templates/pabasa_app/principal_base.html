@@ -40,6 +40,8 @@
                 linear-gradient(135deg, #eef8ff 0%, #f6fbff 42%, var(--principal-primary-soft) 100%);
             color: var(--principal-text);
             font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            line-height: 1.5;
+            letter-spacing: 0;
         }
 
         h1, h2, h3, .btn, .principal-nav-link {
@@ -356,11 +358,29 @@
         }
 
         .admin-topbar-title h1 {
+            font-family: "Nunito", "Segoe UI", sans-serif;
             font-size: 1.1rem;
+            font-weight: 900;
             line-height: 1.2;
             margin: 0;
             overflow-wrap: anywhere;
             word-break: break-word;
+        }
+
+        .principal-topbar-title {
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 1.1rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .admin-topbar-title p,
+        .admin-topbar-title .small {
+            font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+            line-height: 1.35;
         }
 
         .admin-topbar-title p {
@@ -469,9 +489,12 @@
         }
 
         .placeholder-table th {
+            font-family: "Nunito", "Segoe UI", sans-serif;
             color: var(--principal-muted);
             font-size: 0.78rem;
+            font-weight: 800;
             text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
         .btn {
@@ -517,8 +540,13 @@
             background: rgba(255, 255, 255, 0.12);
             border: 1px solid rgba(255, 255, 255, 0.16);
             border-radius: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-size: 0.96rem;
             color: #fff;
             font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1.1;
+            text-transform: none;
             min-height: 48px;
             padding: 0.8rem 0.95rem;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -536,6 +564,7 @@
             border-radius: 24px;
             overflow: hidden;
             box-shadow: 0 24px 60px rgba(16, 70, 110, 0.18);
+            font-family: 'Quattrocento Sans', serif;
         }
 
         .principal-logout-modal .modal-body {
@@ -557,20 +586,33 @@
 
         .principal-logout-title {
             color: var(--principal-primary-deep);
-            font-size: 1.15rem;
-            font-weight: 800;
+            font-family: 'Nunito', sans-serif !important;
+            font-size: 1.28rem;
+            font-weight: 900;
+            letter-spacing: 0;
+            line-height: 1.2;
             margin-bottom: 0.4rem;
         }
 
         .principal-logout-copy {
             color: var(--principal-muted);
+            font-family: 'Quattrocento Sans', serif !important;
+            font-size: 1rem;
+            font-weight: 400;
+            letter-spacing: 0;
+            line-height: 1.55;
             margin: 0 auto;
             max-width: 320px;
         }
 
         .principal-logout-actions .btn {
             border-radius: 999px;
+            font-family: 'Nunito', sans-serif !important;
+            font-size: 1rem;
             font-weight: 700;
+            letter-spacing: 0;
+            line-height: 1.1;
+            text-transform: none;
             min-width: 120px;
             padding: 0.7rem 1rem;
         }
@@ -748,7 +790,7 @@
                 </button>
                 <div class="admin-topbar-title">
                     <p class="small text-secondary text-uppercase fw-bold mb-1">PRINCIPAL MODULE</p>
-                    <h1 class="h3 fw-bold mb-0">{{ page_title }}</h1>
+                    <h1 class="principal-topbar-title">{{ page_title }}</h1>
                 </div>
             </div>
             <div class="admin-topbar-actions">

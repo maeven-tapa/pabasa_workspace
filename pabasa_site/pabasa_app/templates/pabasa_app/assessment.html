@@ -88,17 +88,19 @@
     }
 
     .assessment-stage h2 {
-        font-size: clamp(1rem, 1.6vw, 1.4rem);
-        font-weight: 700;
-        line-height: 1;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: clamp(1.1rem, 1.85vw, 1.55rem);
+        font-weight: 900;
+        line-height: 1.15;
         margin: 0 0 calc(0.75rem * var(--dash-ui-scale, 1));
         max-width: 720px;
     }
 
     .assessment-stage p {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         color: var(--dash-ink-soft);
-        font-size: calc(0.85rem * var(--dash-ui-scale, 1));
-        line-height: 1.6;
+        font-size: calc(0.92rem * var(--dash-ui-scale, 1));
+        line-height: 1.55;
         margin: 0;
         max-width: 660px;
     }
@@ -161,6 +163,7 @@
     }
 
     .ticket-label {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         color: var(--dash-muted);
         font-size: 0.74rem;
         font-weight: 700;
@@ -223,13 +226,16 @@
     }
 
     .subject-info h3 {
-        font-size: calc(1.25rem * var(--dash-ui-scale, 1));
-        font-weight: 800;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: calc(1.35rem * var(--dash-ui-scale, 1));
+        font-weight: 900;
+        line-height: 1.15;
         margin: 0;
         color: var(--dash-text);
     }
 
     .subject-code {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         font-size: calc(0.75rem * var(--dash-ui-scale, 1));
         font-weight: 800;
         color: var(--dash-primary);
@@ -285,6 +291,7 @@
     }
 
     .assessment-time-score-badge {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         align-items: center;
         background: rgba(31, 111, 139, 0.14);
         border: 1px solid rgba(31, 111, 139, 0.2);
@@ -332,20 +339,22 @@
     }
 
     .type-info strong {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         display: -webkit-box;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
-        font-size: 0.95rem;
-        font-weight: 800;
-        line-height: 1.2;
+        font-size: 1rem;
+        font-weight: 900;
+        line-height: 1.15;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
     .type-info span {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         color: var(--dash-muted);
-        font-size: 0.78rem;
-        line-height: 1.2;
+        font-size: 0.86rem;
+        line-height: 1.35;
     }
 
     .assessment-grid {
@@ -364,6 +373,7 @@
     }
 
     .assessment-week-chip {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         align-self: flex-start;
         background: rgba(31, 111, 139, 0.14);
         border: 1px solid rgba(31, 111, 139, 0.2);
@@ -377,6 +387,7 @@
     }
 
     .assessment-empty-state {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         background: white;
         border: 1px dashed rgba(27, 26, 23, 0.14);
         border-radius: 20px;
@@ -424,6 +435,17 @@
             min-height: 122px;
         }
     }
+
+    .dash-pill {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.82rem;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+
+    .dash-pill i {
+        display: none;
+    }
 </style>
 {% endblock %}
 
@@ -435,7 +457,7 @@
 <section class="assessment-dock">
     <div class="assessment-stage">
         <div>
-            <span class="dash-pill mb-3"><i class="bi bi-journal-check"></i> Main reading check</span>
+            <span class="dash-pill mb-3">Main reading check</span>
             <h2>Choose the reading route your teacher assigned.</h2>
             <p>Each route opens a focused assessment screen. Start only when your room is quiet and your microphone is ready.</p>
         </div>

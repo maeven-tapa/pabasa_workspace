@@ -14,6 +14,14 @@
             margin-left: 0 !important;
         }
     }
+
+    .dashboard-topbar h1 {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.25rem;
+        font-weight: 900;
+        line-height: 1.2;
+        letter-spacing: 0;
+    }
     
     .students-overview {
         display: grid;
@@ -71,6 +79,7 @@
 
     .student-stat span {
         color: var(--dash-muted);
+        font-family: "Nunito", "Segoe UI", sans-serif;
         display: block;
         font-size: 0.84rem;
         font-weight: 800;
@@ -81,8 +90,10 @@
     }
 
     .student-stat strong {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         display: block;
         font-size: 2.45rem;
+        font-weight: 900;
         line-height: 1;
         position: relative;
         z-index: 1;
@@ -91,6 +102,7 @@
 
     .student-stat small {
         color: var(--dash-muted);
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         display: block;
         font-size: 0.78rem;
         font-weight: 600;
@@ -126,6 +138,24 @@
         align-content: start;
     }
 
+    .students-section-title {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.12rem;
+        font-weight: 900;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        color: var(--dash-primary-deep);
+        margin: 0 0 0.3rem 0;
+    }
+
+    .students-section-subtitle {
+        color: var(--dash-muted);
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        line-height: 1.55;
+        margin: 0;
+    }
+
     .chart-container {
         position: relative;
         height: 250px;
@@ -157,8 +187,10 @@
     }
 
     .secondary-metric strong {
+        font-family: "Nunito", "Segoe UI", sans-serif;
         display: block;
         font-size: 1.65rem;
+        font-weight: 900;
         line-height: 1;
         margin-bottom: 0.3rem;
         color: var(--dash-primary-deep);
@@ -166,6 +198,7 @@
 
     .secondary-metric span {
         color: var(--dash-muted);
+        font-family: "Nunito", "Segoe UI", sans-serif;
         display: block;
         font-size: 0.82rem;
         font-weight: 700;
@@ -203,12 +236,27 @@
         box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
     }
 
+    .student-name-line strong {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1rem;
+        font-weight: 900;
+        line-height: 1.2;
+        color: var(--text-high);
+    }
+
+    .student-card-row .text-secondary {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
     .student-avatar {
         align-items: center;
         background: var(--dash-primary-soft);
         border-radius: 14px;
         color: var(--dash-primary-deep);
         display: inline-flex;
+        font-family: "Nunito", "Segoe UI", sans-serif;
         font-weight: 800;
         height: 46px;
         justify-content: center;
@@ -244,6 +292,7 @@
 
     .student-meta-box span {
         color: var(--dash-muted);
+        font-family: "Nunito", "Segoe UI", sans-serif;
         display: block;
         font-size: 0.68rem;
         font-weight: 800;
@@ -253,8 +302,10 @@
     }
 
     .student-meta-box strong {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         display: block;
-        font-size: 0.84rem;
+        font-size: 0.88rem;
+        line-height: 1.45;
         overflow-wrap: anywhere;
     }
 
@@ -385,6 +436,230 @@
         display: block;
     }
 
+    .student-directory-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .student-directory-header h2,
+    .student-directory-header .h6 {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.1rem;
+        font-weight: 900;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+        color: var(--dash-primary-deep);
+        margin: 0 0 0.25rem 0;
+    }
+
+    .student-directory-header .text-secondary {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        line-height: 1.45;
+    }
+
+    .student-directory-controls .form-control,
+    .student-directory-controls .form-select {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        line-height: 1.45;
+        min-height: 40px;
+    }
+
+    .student-directory-controls {
+        margin-left: auto;
+        justify-content: flex-end;
+        align-items: center;
+        flex: 1 1 auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.6rem !important;
+    }
+
+    .student-directory-controls .student-search-wrap,
+    .student-directory-controls .student-filter-wrap {
+        width: auto;
+        flex: 0 1 220px;
+    }
+
+    .student-directory-controls .form-control#studentSearchInput {
+        width: 100%;
+    }
+
+    .student-filter-wrap {
+        position: relative;
+        min-width: 0;
+    }
+
+    .student-filter-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+        border-radius: 999px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.97);
+        color: var(--text-high);
+        padding: 0.5rem 0.8rem 0.5rem 0.85rem;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        cursor: pointer;
+        text-align: left;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+        min-height: 40px;
+    }
+
+    .student-filter-trigger:hover,
+    .student-filter-trigger:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+        border-color: rgba(22, 95, 143, 0.24);
+        outline: none;
+    }
+
+    .student-filter-trigger-text {
+        min-width: 0;
+        display: grid;
+        gap: 0.02rem;
+    }
+
+    .student-filter-label {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        line-height: 1.2;
+        text-transform: uppercase;
+        color: var(--text-muted);
+    }
+
+    .student-filter-value {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        display: block;
+        font-size: 0.98rem;
+        font-weight: 900;
+        color: var(--text-high);
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .student-filter-trigger i {
+        flex: 0 0 auto;
+        color: var(--text-medium);
+        font-size: 0.86rem;
+        transition: transform 0.18s ease;
+    }
+
+    .student-filter-wrap.is-open .student-filter-trigger i {
+        transform: rotate(180deg);
+    }
+
+    .student-filter-menu {
+        position: absolute;
+        top: calc(100% + 0.55rem);
+        right: 0;
+        z-index: 50;
+        width: min(100vw - 1.6rem, 320px);
+        padding: 0.45rem;
+        border-radius: 18px;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 20px 44px rgba(15, 23, 42, 0.16);
+        backdrop-filter: blur(14px) saturate(135%);
+        -webkit-backdrop-filter: blur(14px) saturate(135%);
+        display: none;
+        overflow: hidden;
+    }
+
+    .student-filter-wrap.is-open .student-filter-menu {
+        display: grid;
+        gap: 0.25rem;
+    }
+
+    .student-filter-option {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        background: transparent;
+        padding: 0.82rem 0.9rem 0.82rem 1rem;
+        color: var(--text-high);
+        text-align: left;
+        transition: background-color 0.16s ease, transform 0.16s ease, color 0.16s ease;
+    }
+
+    .student-filter-option::before {
+        content: "";
+        position: absolute;
+        left: 0.45rem;
+        top: 0.45rem;
+        bottom: 0.45rem;
+        width: 3px;
+        border-radius: 999px;
+        background: transparent;
+        transition: background-color 0.16s ease;
+    }
+
+    .student-filter-option:hover {
+        background: rgba(22, 95, 143, 0.06);
+        transform: translateX(1px);
+    }
+
+    .student-filter-option:hover::before {
+        background: rgba(22, 95, 143, 0.26);
+    }
+
+    .student-filter-option.is-selected {
+        background: rgba(22, 95, 143, 0.08);
+    }
+
+    .student-filter-option.is-selected::before {
+        background: rgba(22, 95, 143, 0.45);
+    }
+
+    .student-filter-option-text {
+        min-width: 0;
+        display: grid;
+        gap: 0.12rem;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    }
+
+    .student-filter-option-title {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.98rem;
+        font-weight: 900;
+        letter-spacing: 0.01em;
+        line-height: 1.25;
+    }
+
+    .student-filter-option-subtitle {
+        font-size: 0.84rem;
+        color: var(--text-muted);
+        line-height: 1.45;
+    }
+
+    .student-filter-check {
+        flex: 0 0 auto;
+        font-size: 1rem;
+        color: transparent;
+        transition: color 0.16s ease;
+    }
+
+    .student-filter-option.is-selected .student-filter-check {
+        color: var(--primary);
+    }
+
     @media (max-width: 1100px) {
         .students-overview {
             grid-template-columns: 1fr;
@@ -422,6 +697,17 @@
         .students-overview-metrics,
         .students-secondary-metrics {
             grid-template-columns: 1fr;
+        }
+
+        .student-directory-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .student-directory-controls .student-search-wrap,
+        .student-directory-controls .student-filter-wrap {
+            width: 100%;
+            flex: 1 1 auto;
         }
 
         .student-row-actions {
@@ -593,8 +879,8 @@
         </div>
         <article class="students-chart-panel">
             <div>
-                <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.35rem 0;">Reading Level Distribution</h3>
-                <p style="color: var(--dash-muted); font-size: 0.88rem; margin: 0;">Proficiency levels across cohort</p>
+                <h3 class="students-section-title">Reading Level Distribution</h3>
+                <p class="students-section-subtitle">Proficiency levels across cohort</p>
             </div>
             <div class="chart-container">
                 <canvas id="readingLevelChart"></canvas>
@@ -604,15 +890,15 @@
 
     <article class="students-panel" style="padding: 1.25rem;">
         <div style="margin-bottom: 1rem;">
-            <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.35rem 0;">Reading Level Distribution</h3>
-            <p style="color: var(--dash-muted); font-size: 0.9rem; margin: 0;">Breakdown of students across proficiency levels with recommended support strategies.</p>
+            <h3 class="students-section-title">Reading Level Distribution</h3>
+            <p class="students-section-subtitle">Breakdown of students across proficiency levels with recommended support strategies.</p>
         </div>
         <div style="display: grid; gap: 1rem;">
             <div style="display: grid; gap: 0.35rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
                     <div style="flex: 1;">
-                        <span class="small fw-bold">Low Emerging Readers</span>
-                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Needs immediate word-level support</p>
+                        <span class="small fw-bold" style="font-family: 'Nunito', 'Segoe UI', sans-serif; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase;">Low Emerging Readers</span>
+                        <p style="font-family: 'Quattrocento Sans', 'Segoe UI', sans-serif; font-size: 0.86rem; color: var(--dash-muted); line-height: 1.45; margin: 0.2rem 0 0 0;">Needs immediate word-level support</p>
                     </div>
                     <span class="small text-secondary fw-bold" id="distLowCount">0 (0%)</span>
                 </div>
@@ -623,8 +909,8 @@
             <div style="display: grid; gap: 0.35rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
                     <div style="flex: 1;">
-                        <span class="small fw-bold">High Emerging Readers</span>
-                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Ready for guided sentence work</p>
+                        <span class="small fw-bold" style="font-family: 'Nunito', 'Segoe UI', sans-serif; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase;">High Emerging Readers</span>
+                        <p style="font-family: 'Quattrocento Sans', 'Segoe UI', sans-serif; font-size: 0.86rem; color: var(--dash-muted); line-height: 1.45; margin: 0.2rem 0 0 0;">Ready for guided sentence work</p>
                     </div>
                     <span class="small text-secondary fw-bold" id="distHighCount">0 (0%)</span>
                 </div>
@@ -635,8 +921,8 @@
             <div style="display: grid; gap: 0.35rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
                     <div style="flex: 1;">
-                        <span class="small fw-bold">Developing Readers</span>
-                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Building accuracy and pacing</p>
+                        <span class="small fw-bold" style="font-family: 'Nunito', 'Segoe UI', sans-serif; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase;">Developing Readers</span>
+                        <p style="font-family: 'Quattrocento Sans', 'Segoe UI', sans-serif; font-size: 0.86rem; color: var(--dash-muted); line-height: 1.45; margin: 0.2rem 0 0 0;">Building accuracy and pacing</p>
                     </div>
                     <span class="small text-secondary fw-bold" id="distDevCount">0 (0%)</span>
                 </div>
@@ -647,8 +933,8 @@
             <div style="display: grid; gap: 0.35rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
                     <div style="flex: 1;">
-                        <span class="small fw-bold">Transitioning Readers</span>
-                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Moving toward grade-level fluency</p>
+                        <span class="small fw-bold" style="font-family: 'Nunito', 'Segoe UI', sans-serif; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase;">Transitioning Readers</span>
+                        <p style="font-family: 'Quattrocento Sans', 'Segoe UI', sans-serif; font-size: 0.86rem; color: var(--dash-muted); line-height: 1.45; margin: 0.2rem 0 0 0;">Moving toward grade-level fluency</p>
                     </div>
                     <span class="small text-secondary fw-bold" id="distTransCount">0 (0%)</span>
                 </div>
@@ -659,8 +945,8 @@
             <div style="display: grid; gap: 0.35rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
                     <div style="flex: 1;">
-                        <span class="small fw-bold">Readers at Grade Level</span>
-                        <p style="font-size: 0.78rem; color: var(--dash-muted); margin: 0.2rem 0 0 0;">Ready for enrichment passages</p>
+                        <span class="small fw-bold" style="font-family: 'Nunito', 'Segoe UI', sans-serif; font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase;">Readers at Grade Level</span>
+                        <p style="font-family: 'Quattrocento Sans', 'Segoe UI', sans-serif; font-size: 0.86rem; color: var(--dash-muted); line-height: 1.45; margin: 0.2rem 0 0 0;">Ready for enrichment passages</p>
                     </div>
                     <span class="small text-secondary fw-bold" id="distGradeCount">0 (0%)</span>
                 </div>
@@ -673,22 +959,75 @@
 
     <div class="students-layout">
         <article class="students-panel">
-            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
+            <div class="student-directory-header">
                 <div>
                     <h2 class="h6 mb-1">Student Directory</h2>
                     <p class="small text-secondary mb-0"><span id="studentResultCount">0</span> students shown by class, reading level, and recent activity.</p>
                 </div>
-                <div class="d-flex gap-2 flex-wrap">
-                    <input class="form-control form-control-sm" id="studentSearchInput" type="search" placeholder="Search student" aria-label="Search student">
-                    <select class="form-select form-select-sm" id="readingLevelFilter" aria-label="Filter reading level">
-                        <option selected>All levels</option>
-                        <option>Low Emerging Readers</option>
-                        <option>High Emerging Readers</option>
-                        <option>Developing Readers</option>
-                        <option>Transitioning Readers</option>
-                        <option>Readers at Grade Level</option>
-                        <option>Pending</option>
-                    </select>
+                <div class="d-flex gap-2 flex-wrap student-directory-controls">
+                    <div class="student-search-wrap">
+                        <input class="form-control form-control-sm" id="studentSearchInput" type="search" placeholder="Search student" aria-label="Search student">
+                    </div>
+                    <div class="student-filter-wrap" id="readingLevelFilterWrap">
+                        <button type="button" class="student-filter-trigger" id="readingLevelFilterTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="readingLevelFilterMenu">
+                            <span class="student-filter-trigger-text">
+                                <span class="student-filter-label">Reading Level</span>
+                                <span class="student-filter-value" id="readingLevelFilterValue">All levels</span>
+                            </span>
+                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <div class="student-filter-menu" id="readingLevelFilterMenu" role="listbox" aria-label="Filter reading level">
+                            <button type="button" class="student-filter-option is-selected" role="option" aria-selected="true" data-level="All levels">
+                                <span class="student-filter-option-text">
+                                    <span class="student-filter-option-title">All levels</span>
+                                    <span class="student-filter-option-subtitle">Show every student</span>
+                                </span>
+                                <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Low Emerging Readers">
+                                <span class="student-filter-option-text">
+                                    <span class="student-filter-option-title">Low Emerging Readers</span>
+                                    <span class="student-filter-option-subtitle">Needs immediate support</span>
+                                </span>
+                                <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="High Emerging Readers">
+                                <span class="student-filter-option-text">
+                                    <span class="student-filter-option-title">High Emerging Readers</span>
+                                    <span class="student-filter-option-subtitle">Ready for guided work</span>
+                                </span>
+                                <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Developing Readers">
+                                <span class="student-filter-option-text">
+                                    <span class="student-filter-option-title">Developing Readers</span>
+                                    <span class="student-filter-option-subtitle">Building accuracy and pacing</span>
+                                </span>
+                                <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Transitioning Readers">
+                                <span class="student-filter-option-text">
+                                    <span class="student-filter-option-title">Transitioning Readers</span>
+                                    <span class="student-filter-option-subtitle">Moving toward grade level</span>
+                                </span>
+                                <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Readers at Grade Level">
+                                <span class="student-filter-option-text">
+                                    <span class="student-filter-option-title">Readers at Grade Level</span>
+                                    <span class="student-filter-option-subtitle">Ready for enrichment</span>
+                                </span>
+                                <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" class="student-filter-option" role="option" aria-selected="false" data-level="Pending">
+                                <span class="student-filter-option-text">
+                                    <span class="student-filter-option-title">Pending</span>
+                                    <span class="student-filter-option-subtitle">Awaiting assessment</span>
+                                </span>
+                                <i class="bi bi-check2 student-filter-check" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1083,11 +1422,12 @@ function renderStudentDirectory(sourceStudents) {
     const emptyState = document.getElementById('studentEmptyState');
     const countEl = document.getElementById('studentResultCount');
     const searchInput = document.getElementById('studentSearchInput');
-    const levelFilter = document.getElementById('readingLevelFilter');
+    const levelFilterValue = document.getElementById('readingLevelFilterValue');
+    const levelFilterWrap = document.getElementById('readingLevelFilterWrap');
     if (!directory || !emptyState) return;
 
     const query = String(searchInput?.value || '').trim().toLowerCase();
-    const selectedLevel = String(levelFilter?.value || 'All levels').trim();
+    const selectedLevel = String(levelFilterValue?.textContent || 'All levels').trim();
     const allStudents = (Array.isArray(sourceStudents) ? sourceStudents : getStudentDirectoryRows())
         .filter(student => String(student.name || '').trim() && String(student.name || '').trim() !== 'Jay Park')
         .map(student => ({
@@ -1147,17 +1487,63 @@ function renderStudentDirectory(sourceStudents) {
 
 function bindStudentDirectoryFilters() {
     const searchInput = document.getElementById('studentSearchInput');
-    const levelFilter = document.getElementById('readingLevelFilter');
+    const levelFilterWrap = document.getElementById('readingLevelFilterWrap');
+    const levelFilterTrigger = document.getElementById('readingLevelFilterTrigger');
+    const levelFilterMenu = document.getElementById('readingLevelFilterMenu');
+    const levelFilterValue = document.getElementById('readingLevelFilterValue');
+    const levelOptions = Array.from(document.querySelectorAll('.student-filter-option'));
     if (searchInput && !searchInput.dataset.autoFilterBound) {
         searchInput.dataset.autoFilterBound = 'true';
         searchInput.addEventListener('input', function () {
             renderStudentDirectory();
         });
     }
-    if (levelFilter && !levelFilter.dataset.autoFilterBound) {
-        levelFilter.dataset.autoFilterBound = 'true';
-        levelFilter.addEventListener('change', function () {
+    if (levelFilterWrap && levelFilterTrigger && levelFilterMenu && levelFilterValue && !levelFilterWrap.dataset.autoFilterBound) {
+        levelFilterWrap.dataset.autoFilterBound = 'true';
+
+        function closeMenu() {
+            levelFilterWrap.classList.remove('is-open');
+            levelFilterTrigger.setAttribute('aria-expanded', 'false');
+        }
+
+        function setLevel(level) {
+            levelFilterValue.textContent = level;
+            levelOptions.forEach(option => {
+                const isSelected = option.dataset.level === level;
+                option.classList.toggle('is-selected', isSelected);
+                option.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
             renderStudentDirectory();
+        }
+
+        levelFilterTrigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const isOpen = levelFilterWrap.classList.contains('is-open');
+            if (isOpen) {
+                closeMenu();
+            } else {
+                levelFilterWrap.classList.add('is-open');
+                levelFilterTrigger.setAttribute('aria-expanded', 'true');
+            }
+        });
+
+        levelOptions.forEach(option => {
+            option.addEventListener('click', function () {
+                setLevel(this.dataset.level || 'All levels');
+                closeMenu();
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!levelFilterWrap.contains(e.target)) {
+                closeMenu();
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeMenu();
+            }
         });
     }
 }

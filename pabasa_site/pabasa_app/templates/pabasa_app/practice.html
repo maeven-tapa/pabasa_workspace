@@ -142,16 +142,34 @@
         align-items: center;
     }
 
+    .challenge-tag {
+        color: var(--dash-primary);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.75rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        line-height: 1.2;
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+    }
+
     .challenge-copy strong {
         color: var(--dash-text);
         display: block;
-        font-size: 1.05rem;
-        margin-bottom: 0.35rem;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.2rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        margin-bottom: 0.4rem;
     }
 
     .challenge-copy p {
         color: var(--dash-muted);
-        font-size: 0.92rem;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.5;
         margin: 0;
     }
 
@@ -166,7 +184,8 @@
     .challenge-badge .badge-number {
         color: var(--dash-primary);
         display: block;
-        font-size: 1.65rem;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.45rem;
         font-weight: 900;
         line-height: 1;
         margin-bottom: 0.4rem;
@@ -174,15 +193,19 @@
 
     .challenge-badge .badge-label {
         color: var(--dash-text);
-        font-size: 0.95rem;
-        font-weight: 700;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.82rem;
+        font-weight: 900;
+        letter-spacing: 0.05em;
+        line-height: 1.2;
+        text-transform: uppercase;
     }
 
     .challenge-bar {
         background: rgba(31, 111, 139, 0.12);
         border-radius: 999px;
-        height: 10px;
-        margin-top: 0.75rem;
+        height: 12px;
+        margin-top: 0.85rem;
         overflow: hidden;
     }
 
@@ -192,6 +215,16 @@
         display: block;
         height: 100%;
         width: 0;
+    }
+
+    @media (max-width: 991.98px) {
+        .challenge-panel {
+            grid-template-columns: 1fr;
+        }
+
+        .challenge-badge {
+            text-align: left;
+        }
     }
 
     .game-grid {
@@ -375,6 +408,21 @@
         gap: 1rem;
     }
 
+    .achievement-panel .section-heading h3 {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.35rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        line-height: 1.12;
+    }
+
+    .achievement-panel .section-heading p {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+        line-height: 1.5;
+    }
+
     .achievement-grid {
         display: grid;
         gap: 0.8rem;
@@ -386,6 +434,7 @@
         border: 1px solid rgba(21, 94, 117, 0.14);
         border-radius: 20px;
         padding: 0.85rem;
+        text-align: center;
     }
 
     .achievement-item .achievement-icon {
@@ -397,14 +446,21 @@
     .achievement-item strong {
         color: var(--dash-text);
         display: block;
-        font-size: 1rem;
-        margin-bottom: 0.2rem;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.05rem;
+        font-weight: 900;
+        letter-spacing: -0.01em;
+        line-height: 1.18;
+        margin-bottom: 0.25rem;
     }
 
     .achievement-item span {
         color: var(--dash-muted);
         display: block;
-        font-size: 0.8rem;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.84rem;
+        font-weight: 700;
+        line-height: 1.45;
     }
 
     .achievement-stats {
@@ -678,7 +734,7 @@
 <section class="practice-board">
     <section class="hub-section challenge-panel">
         <div class="challenge-copy">
-            <span class="dash-pill mb-2"><i class="bi bi-trophy"></i> Challenge board</span>
+            <div class="challenge-tag">Challenge board</div>
             <strong id="challengeCount">1 Practice Set Unlocked</strong>
             <p>Choose a game and practice reading through exciting challenges!</p>
         </div>
