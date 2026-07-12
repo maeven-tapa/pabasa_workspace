@@ -809,7 +809,7 @@
         .lc-yellow { color: #FFD639; }
 
         .modern-brand-panel .pabasa-logo-letters {
-            margin-left: -0.15rem;
+            margin-left: -0.68rem;
             margin-top: 0.1rem;
         }
 
@@ -831,6 +831,24 @@
         .nav-link-modern:hover {
             color: #54C2F0 !important;
             background-color: rgba(84, 194, 240, 0.12) !important;
+        }
+
+        .nav-link-modern.active,
+        .nav-link-modern.active:hover,
+        .nav-link-modern.active:focus-visible {
+            color: #10466E !important;
+            background: #FFD639 !important;
+            border-radius: 0.5rem;
+            box-shadow: 0 5px 0 rgba(16, 70, 110, 0.22);
+            padding-left: 0.8rem;
+            padding-right: 0.8rem;
+            transform: none;
+        }
+
+        .nav-link-modern.active::after,
+        .nav-link-modern.active:hover::after,
+        .nav-link-modern.active:focus-visible::after {
+            display: none;
         }
 
         /* My Account button: cute yellow pill */
@@ -1127,6 +1145,80 @@
             background: linear-gradient(180deg, #f0f8ff 0%, #eaf4f8 55%, #f5fbfd 100%) !important;
         }
 
+        /* Selected public page: filled yellow tab, never an underline. */
+        .modern-nav-wrap .modern-nav-content .nav-link-modern.active {
+            color: #10466E !important;
+            background-color: #FFD639 !important;
+            border-radius: 0.5rem !important;
+            box-shadow: 0 5px 0 rgba(16, 70, 110, 0.22) !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            transform: none !important;
+        }
+
+        .modern-nav-wrap .modern-nav-content .nav-link-modern.active::after {
+            content: none !important;
+            display: none !important;
+        }
+
+        /* Square My Account button with alternating PABASA yellow/blue twinkle. */
+        .modern-nav-wrap .modern-nav-actions .header-inline-link {
+            min-height: 2.5rem;
+            padding: 0.5rem 0.9rem !important;
+            border: 2px solid #54C2F0 !important;
+            border-radius: 0.5rem !important;
+            background: #FFD639 !important;
+            color: #10466E !important;
+            box-shadow: 0 0 0 0 rgba(255, 214, 57, 0), 0 0 0 0 rgba(84, 194, 240, 0);
+            font-weight: 800;
+            opacity: 1;
+            animation: accountButtonTwinkle 2.4s ease-in-out infinite;
+        }
+
+        .modern-nav-wrap .modern-nav-actions .header-inline-link::after {
+            content: "✦";
+            position: absolute;
+            top: -0.55rem;
+            right: -0.42rem;
+            left: auto;
+            bottom: auto;
+            width: auto;
+            height: auto;
+            background: transparent;
+            color: #FFD639;
+            font-size: 0.85rem;
+            line-height: 1;
+            transform: scale(0.55) rotate(0deg);
+            opacity: 0.35;
+            animation: accountSparkle 2.4s ease-in-out infinite;
+        }
+
+        .modern-nav-wrap .modern-nav-actions .header-inline-link:hover,
+        .modern-nav-wrap .modern-nav-actions .header-inline-link:focus-visible {
+            background: #F5B800 !important;
+            border-color: #7DD3FC !important;
+            color: #0B3654 !important;
+            opacity: 1;
+            transform: translateY(-1px);
+        }
+
+        @keyframes accountButtonTwinkle {
+            0%, 100% { box-shadow: 0 3px 0 rgba(16, 70, 110, 0.3), 0 0 8px rgba(255, 214, 57, 0.18); }
+            50% { box-shadow: 0 3px 0 rgba(16, 70, 110, 0.3), 0 0 18px rgba(84, 194, 240, 0.8), 0 0 28px rgba(255, 214, 57, 0.55); }
+        }
+
+        @keyframes accountSparkle {
+            0%, 100% { opacity: 0.3; transform: scale(0.55) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1.2) rotate(90deg); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .modern-nav-wrap .modern-nav-actions .header-inline-link,
+            .modern-nav-wrap .modern-nav-actions .header-inline-link::after {
+                animation: none;
+            }
+        }
+
         /* ── end cute pass ── */
     </style>
     {% block extra_head %}{% endblock %}
@@ -1190,10 +1282,10 @@
                                 {% with current_view=request.resolver_match.url_name %}
                                 <ul class="modern-nav-links navbar-nav">
                                     <li class="nav-item">
-                                        <a class="nav-link nav-link-modern{% if current_view == 'pabasa_info' %} active{% endif %}"{% if current_view == 'pabasa_info' %} aria-current="page"{% endif %} href="{% url 'pabasa_info' %}">What is PABASA</a>
+                                        <a class="nav-link nav-link-modern{% if current_view == 'pabasa_info' %} active{% endif %}"{% if current_view == 'pabasa_info' %} aria-current="page" style="color:#10466E !important;"{% endif %} href="{% url 'pabasa_info' %}">What is PABASA</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link nav-link-modern{% if current_view == 'about' %} active{% endif %}"{% if current_view == 'about' %} aria-current="page"{% endif %} href="{% url 'about' %}">About Us</a>
+                                        <a class="nav-link nav-link-modern{% if current_view == 'about' %} active{% endif %}"{% if current_view == 'about' %} aria-current="page" style="color:#10466E !important;"{% endif %} href="{% url 'about' %}">About Us</a>
                                     </li>
                                 </ul>
                                 {% endwith %}
