@@ -1599,6 +1599,58 @@ h1, h2, h3, h4 {
     }
 }
 
+/* Keep the public header links aligned with the home page styling */
+.modern-nav-wrap .nav-link-modern {
+    color: #FFFFFF !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-size: clamp(0.94rem, 1vw, 1rem) !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 0.25rem !important;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none !important;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.modern-nav-wrap .nav-link-modern::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -0.45rem;
+    width: min(100%, 8.75rem);
+    height: 2px;
+    border-radius: 999px;
+    background: rgba(255, 214, 57, 0.92);
+    transform: translateX(-50%) scaleX(0);
+    transform-origin: center;
+    transition: transform 0.25s ease;
+}
+
+.modern-nav-wrap .nav-link-modern:hover,
+.modern-nav-wrap .nav-link-modern:focus-visible,
+.modern-nav-wrap .nav-link-modern.active {
+    color: #FFF4B8 !important;
+}
+
+.modern-nav-wrap .nav-link-modern:hover,
+.modern-nav-wrap .nav-link-modern:focus-visible {
+    transform: translateY(-1px);
+}
+
+.modern-nav-wrap .nav-link-modern:hover::after,
+.modern-nav-wrap .nav-link-modern:focus-visible::after,
+.modern-nav-wrap .nav-link-modern.active::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+.modern-nav-wrap .header-inline-link {
+    color: #FFFFFF !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-size: clamp(0.86rem, 0.9vw, 0.94rem) !important;
+    font-weight: 600 !important;
+}
+
 /* ============================================================
    ADDITIONAL RESPONSIVE FIXES FOR PABASA INFO PAGE
    Keep desktop styling unchanged; add tablet/phone safe rules.
