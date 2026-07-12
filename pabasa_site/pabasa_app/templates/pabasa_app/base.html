@@ -951,6 +951,7 @@
             place-items: center;
             font-family: 'Baloo 2', 'Nunito', cursive;
             font-weight: 800;
+            text-decoration: none;
             color: #0f3b52;
             background: linear-gradient(135deg, #FFD639 0%, #54C2F0 100%);
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
@@ -1148,27 +1149,78 @@
         }
 
         .footer-shell {
-            padding-top: 3.5rem;
+            padding-top: 8.25rem;
             padding-bottom: 1.5rem;
         }
 
         .footer-grid {
-            grid-template-columns: minmax(16rem, 1.8fr) repeat(2, minmax(9rem, 0.8fr));
+            grid-template-columns: repeat(2, minmax(9rem, 1fr));
             gap: clamp(2rem, 5vw, 4.5rem);
+            max-width: 34rem;
+            margin: 2.5rem auto 0;
         }
 
-        .footer-panel--brand {
-            min-width: 0;
+        .footer-divider {
+            position: absolute;
+            top: -1px;
+            left: 50%;
+            width: min(17rem, 72vw);
+            height: 7.25rem;
+            border-radius: 0 0 50% 50%;
+            background: #f5fbfd;
+            transform: translateX(-50%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .footer-divider img {
+            position: absolute;
+            left: 50%;
+            bottom: -0.5rem;
+            width: 7.75rem;
+            height: 8.75rem;
+            object-fit: contain;
+            object-position: center bottom;
+            transform: translateX(-50%);
+            filter: drop-shadow(0 10px 12px rgba(8, 37, 58, 0.16));
+        }
+
+        .footer-brand-header {
+            max-width: 31rem;
+            margin: 0 auto;
+            text-align: center;
         }
 
         .footer-brand {
-            display: block;
-            margin-bottom: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.1rem;
+            margin-bottom: 0.8rem;
             font-family: 'Baloo 2', 'Nunito', cursive;
-            font-size: 1.25rem;
-            line-height: 1.2;
             font-weight: 800;
-            letter-spacing: 0.01em;
+        }
+
+        .footer-brand img {
+            width: 2.15rem;
+            height: 2.15rem;
+            object-fit: contain;
+        }
+
+        .footer-brand-letters {
+            display: inline-flex;
+            align-items: center;
+            font-size: 1.35rem;
+            line-height: 1;
+            letter-spacing: -0.08em;
+            text-shadow: 0 2px 0 rgba(3, 31, 51, 0.35);
+        }
+
+        .footer-brand-letters .lc-yellow { color: #ffd639; }
+        .footer-brand-letters .lc-blue { color: #54c2f0; }
+
+        .footer-panel {
+            text-align: center;
         }
 
         .footer-copy {
@@ -1220,11 +1272,7 @@
 
         @media (max-width: 900px) {
             .footer-grid {
-                grid-template-columns: 1.5fr repeat(2, 1fr);
-            }
-
-            .footer-panel--brand {
-                grid-column: 1 / -1;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
@@ -1236,11 +1284,7 @@
 
             .footer-shell {
                 max-width: none;
-                padding: 2.75rem 0.75rem 1.25rem;
-            }
-
-            .footer-panel--brand {
-                grid-column: 1 / -1;
+                padding: 7.5rem 0.75rem 1.25rem;
             }
 
             .footer-cta-group {
@@ -1451,12 +1495,24 @@
     </main>
     {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' %}
     <footer class="site-footer mt-auto">
+        <div class="footer-divider" aria-hidden="true">
+            <img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="">
+        </div>
         <div class="container footer-shell">
+            <div class="footer-brand-header">
+                <a class="footer-brand" href="{% url 'home' %}" aria-label="PABASA home">
+                    <img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="">
+                    <span class="footer-brand-letters" aria-hidden="true">
+                        <span class="lc-yellow">A</span>
+                        <span class="lc-blue">B</span>
+                        <span class="lc-yellow">A</span>
+                        <span class="lc-blue">S</span>
+                        <span class="lc-yellow">A</span>
+                    </span>
+                </a>
+                <p class="footer-copy">Helping Grade 2 learners become confident readers through thoughtful practice, clear assessment, and teacher-led support.</p>
+            </div>
             <div class="footer-grid">
-                <div class="footer-panel footer-panel--brand">
-                    <div class="footer-brand">PABASA</div>
-                    <p class="footer-copy">Helping Grade 2 learners become confident readers through thoughtful practice, clear assessment, and teacher-led support.</p>
-                </div>
                 <div class="footer-panel">
                     <div class="footer-title">Explore</div>
                     <ul class="footer-link-list">
