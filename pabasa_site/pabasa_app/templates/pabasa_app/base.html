@@ -1154,10 +1154,10 @@
         }
 
         .footer-grid {
-            grid-template-columns: repeat(2, minmax(9rem, 1fr));
+            grid-template-columns: minmax(16rem, 1.8fr) repeat(2, minmax(9rem, 0.8fr));
             gap: clamp(2rem, 5vw, 4.5rem);
-            max-width: 34rem;
-            margin: 2.5rem auto 0;
+            max-width: none;
+            margin: 0;
         }
 
         .footer-divider {
@@ -1176,19 +1176,25 @@
         .footer-divider img {
             position: absolute;
             left: 50%;
-            bottom: -0.5rem;
-            width: 7.75rem;
-            height: 8.75rem;
+            bottom: -1.2rem;
+            width: 11rem;
+            height: 12.5rem;
             object-fit: contain;
             object-position: center bottom;
             transform: translateX(-50%);
             filter: drop-shadow(0 10px 12px rgba(8, 37, 58, 0.16));
         }
 
-        .footer-brand-header {
-            max-width: 31rem;
-            margin: 0 auto;
-            text-align: center;
+        @media (max-width: 600px) {
+            .footer-divider img {
+                bottom: -0.9rem;
+                width: 9.75rem;
+                height: 11rem;
+            }
+        }
+
+        .footer-panel--brand {
+            min-width: 0;
         }
 
         .footer-brand {
@@ -1220,7 +1226,7 @@
         .footer-brand-letters .lc-blue { color: #54c2f0; }
 
         .footer-panel {
-            text-align: center;
+            text-align: left;
         }
 
         .footer-copy {
@@ -1272,7 +1278,7 @@
 
         @media (max-width: 900px) {
             .footer-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: 1.5fr repeat(2, 1fr);
             }
         }
 
@@ -1285,6 +1291,10 @@
             .footer-shell {
                 max-width: none;
                 padding: 7.5rem 0.75rem 1.25rem;
+            }
+
+            .footer-panel--brand {
+                grid-column: 1 / -1;
             }
 
             .footer-cta-group {
@@ -1499,20 +1509,20 @@
             <img src="{% static 'pabasa_app/images/footer-mascot.png' %}" alt="">
         </div>
         <div class="container footer-shell">
-            <div class="footer-brand-header">
-                <a class="footer-brand" href="{% url 'home' %}" aria-label="PABASA home">
-                    <img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="">
-                    <span class="footer-brand-letters" aria-hidden="true">
-                        <span class="lc-yellow">A</span>
-                        <span class="lc-blue">B</span>
-                        <span class="lc-yellow">A</span>
-                        <span class="lc-blue">S</span>
-                        <span class="lc-yellow">A</span>
-                    </span>
-                </a>
-                <p class="footer-copy">Helping Grade 2 learners become confident readers through thoughtful practice, clear assessment, and teacher-led support.</p>
-            </div>
             <div class="footer-grid">
+                <div class="footer-panel footer-panel--brand">
+                    <a class="footer-brand" href="{% url 'home' %}" aria-label="PABASA home">
+                        <img src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="">
+                        <span class="footer-brand-letters" aria-hidden="true">
+                            <span class="lc-yellow">A</span>
+                            <span class="lc-blue">B</span>
+                            <span class="lc-yellow">A</span>
+                            <span class="lc-blue">S</span>
+                            <span class="lc-yellow">A</span>
+                        </span>
+                    </a>
+                    <p class="footer-copy">Helping Grade 2 learners become confident readers through thoughtful practice, clear assessment, and teacher-led support.</p>
+                </div>
                 <div class="footer-panel">
                     <div class="footer-title">Explore</div>
                     <ul class="footer-link-list">
