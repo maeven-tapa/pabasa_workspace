@@ -3577,6 +3577,8 @@ section.pb-md-5 h2::after {
 
 /* 3D Turning Pages carousel, based on the supplied page-flip reference. */
 .section-container-gallery .turning-pages-container {
+    display: block !important;
+    width: 100% !important;
     max-width: 1120px !important;
     margin: 0 auto !important;
     padding: clamp(1rem, 3vw, 2rem) clamp(3.25rem, 7vw, 6rem) !important;
@@ -3589,6 +3591,7 @@ section.pb-md-5 h2::after {
     min-height: clamp(360px, 48vw, 560px);
     perspective: 1600px;
     perspective-origin: 50% 45%;
+    width: 100%;
 }
 
 .turning-pages-count {
@@ -3608,7 +3611,7 @@ section.pb-md-5 h2::after {
 .section-container-gallery .turning-pages-slider {
     position: relative;
     display: block !important;
-    width: min(100%, 780px) !important;
+    width: 100% !important;
     height: clamp(300px, 41vw, 470px);
     max-width: 780px !important;
     overflow: visible !important;
