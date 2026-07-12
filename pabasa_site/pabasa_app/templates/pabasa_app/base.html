@@ -1612,8 +1612,48 @@
             }
         }
 
+        /* My Account uses a centered brand-only header and true viewport centering. */
+        .auth-nav-wrap .modern-nav-shell {
+            position: relative;
+            justify-content: center;
+        }
+
+        .auth-nav-wrap .modern-brand-panel {
+            margin-inline: auto;
+        }
+
+        .auth-nav-wrap .modern-nav-area {
+            display: none !important;
+        }
+
+        body.auth-layout > main.flex-grow-1 {
+            width: 100%;
+            min-height: calc(100svh - clamp(52px, 3.8vw, 60px));
+            padding-block: 0 !important;
+            display: grid;
+            place-items: center;
+        }
+
+        body.auth-layout > main.flex-grow-1 > .container {
+            width: 100%;
+            padding-block: clamp(1.25rem, 4vh, 2.5rem);
+        }
+
+        body.auth-layout .account-stage {
+            width: 100%;
+            min-height: 0;
+            padding: 0;
+        }
+
         /* Editorial section navigation for long-form public pages. */
         .contextual-nav-wrap {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 1080 !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            transform: none !important;
             border-bottom: 2px solid rgba(255, 214, 57, 0.35) !important;
             background: #10466e;
         }
@@ -1632,7 +1672,7 @@
         .contextual-nav-wrap .modern-nav-content .context-nav-link,
         .contextual-nav-wrap .modern-nav-content .context-nav-link:not(.active) {
             min-height: 3.9rem;
-            padding: 0.2rem 0 !important;
+            padding: 0.2rem 0.65rem !important;
             border-radius: 0 !important;
             background: transparent !important;
             box-shadow: none !important;
@@ -1643,7 +1683,7 @@
             line-height: 1.2;
             text-transform: uppercase;
             transform: none !important;
-            animation: none !important;
+            animation: none;
         }
 
         .contextual-nav-wrap .modern-nav-content .context-nav-link::after {
@@ -1661,19 +1701,34 @@
             transition: opacity 0.18s ease, transform 0.18s ease;
         }
 
-        .contextual-nav-wrap .modern-nav-content .context-nav-link:hover,
-        .contextual-nav-wrap .modern-nav-content .context-nav-link:focus-visible,
         .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active {
             color: #fff4b8 !important;
             background: transparent !important;
             box-shadow: none !important;
+            animation: none !important;
         }
 
-        .contextual-nav-wrap .modern-nav-content .context-nav-link:hover::after,
-        .contextual-nav-wrap .modern-nav-content .context-nav-link:focus-visible::after,
         .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active::after {
             opacity: 1;
             transform: scaleX(1) !important;
+        }
+
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:hover,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:focus-visible,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active:hover,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link.is-section-active:focus-visible {
+            border-radius: 0.5rem !important;
+            background: #ffd639 !important;
+            color: #10466e !important;
+            box-shadow: 0 3px 0 rgba(16, 70, 110, 0.24), 0 0 12px rgba(255, 214, 57, 0.48) !important;
+            transform: translateY(-1px) !important;
+            animation: navLinkBreathing 1.8s ease-in-out infinite !important;
+        }
+
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:hover::after,
+        .contextual-nav-wrap .modern-nav-content .context-nav-link:focus-visible::after {
+            opacity: 0;
+            transform: scaleX(0) !important;
         }
 
         .info-hero[id],
@@ -1729,13 +1784,13 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100{% if request.resolver_match.url_name == 'auth' %} auth-layout{% endif %}">
     <div class="public-page-loader" id="publicPageLoader" aria-hidden="true" role="status" aria-label="Loading page">
         <div class="public-page-loader__content">
             <div class="public-page-loader__spinner"></div>
         </div>
     </div>
-    <header class="modern-nav-wrap sticky-top{% if request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' %} contextual-nav-wrap{% endif %}">
+    <header class="modern-nav-wrap sticky-top{% if request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' %} contextual-nav-wrap{% endif %}{% if request.resolver_match.url_name == 'auth' %} auth-nav-wrap{% endif %}">
         <nav class="navbar navbar-expand-lg">
             <div class="w-100">
                 <div class="modern-nav-shell">
