@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-audience-story">
+<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-viewport-hero">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -56,7 +56,7 @@
             <article class="audience-row">
                 <div class="audience-row__visual">
                     <span class="audience-row__orb" aria-hidden="true"></span>
-                    <img src="{% static 'pabasa_app/images/teachers.jpg' %}" alt="Teachers guiding learners through reading practice">
+                    <img src="{% static 'pabasa_app/images/hero3.png' %}" alt="Teachers guiding learners through reading practice">
                 </div>
                 <div class="audience-row__copy">
                     <span class="audience-row__number">01</span>
@@ -68,7 +68,7 @@
             <article class="audience-row audience-row--reverse">
                 <div class="audience-row__visual">
                     <span class="audience-row__orb" aria-hidden="true"></span>
-                    <img src="{% static 'pabasa_app/images/school-boy.jpg' %}" alt="A student building reading confidence">
+                    <img src="{% static 'pabasa_app/images/hero2.png' %}" alt="A student building reading confidence">
                 </div>
                 <div class="audience-row__copy">
                     <span class="audience-row__number">02</span>
@@ -80,7 +80,7 @@
             <article class="audience-row">
                 <div class="audience-row__visual">
                     <span class="audience-row__orb" aria-hidden="true"></span>
-                    <img src="{% static 'pabasa_app/images/ses.jpg' %}" alt="A school community supporting literacy growth">
+                    <img src="{% static 'pabasa_app/images/hero4.png' %}" alt="A school community supporting literacy growth">
                 </div>
                 <div class="audience-row__copy">
                     <span class="audience-row__number">03</span>
@@ -200,97 +200,6 @@
                 <span>&#8250;</span>
             </button>
         </div>
-    </div>
-</section>
-
-<section class="fade-in-section section-container section-container-4">
-    <div class="section-wrapper">
-    <div class="row g-4 align-items-stretch">
-        <div class="col-lg-8">
-            <div class="testimonial-panel h-100">
-                <div class="card-body p-0">
-                    <div id="homeHighlightsCarousel" class="carousel slide" data-bs-ride="carousel">
-                        <div class="carousel-indicators mb-2">
-                            <button type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-                            <button type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
-                            <button type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
-                        </div>
-                        <div class="carousel-inner">
-                            <div class="carousel-item active">
-                                <div class="testimonial-slide">
-                                    <p class="testimonial-label">Built for learners, trusted by educators</p>
-                                    <div class="carousel-testimonial">
-                                        <div class="carousel-testimonial-image">
-                                            <img src="{% static 'pabasa_app/images/teacher 1.jpg' %}" alt="Teacher 1">
-                                        </div>
-                                        <div class="carousel-testimonial-content">
-                                            <p class="carousel-testimonial-quote">"PABASA has completely changed how I assess my students' reading. What used to take me hours now takes minutes, and I get much more detailed insights into each student's strengths and areas to work on."</p>
-                                            <p class="carousel-testimonial-name">- Ma. Teresa Ramos</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="carousel-item">
-                                <div class="testimonial-slide">
-                                    <p class="testimonial-label">Built for learners, trusted by educators</p>
-                                    <div class="carousel-testimonial">
-                                        <div class="carousel-testimonial-image">
-                                            <img src="{% static 'pabasa_app/images/teacher 2.jpg' %}" alt="Teacher 2">
-                                        </div>
-                                        <div class="carousel-testimonial-content">
-                                            <p class="carousel-testimonial-quote">"My students feel less anxious about reading assessments now. The platform gives them instant feedback in a supportive way, which has boosted their confidence and engagement significantly."</p>
-                                            <p class="carousel-testimonial-name">- Juan Crisostomo</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="carousel-item">
-                                <div class="testimonial-slide">
-                                    <p class="testimonial-label">Built for learners, trusted by educators</p>
-                                    <div class="carousel-testimonial">
-                                        <div class="carousel-testimonial-image">
-                                            <img src="{% static 'pabasa_app/images/teacher 3.jpg' %}" alt="Teacher 3">
-                                        </div>
-                                        <div class="carousel-testimonial-content">
-                                            <p class="carousel-testimonial-quote">"The reports are so actionable. I can see exactly which students need intervention and share progress with parents in a way they can easily understand. It's made conferences so much more productive."</p>
-                                            <p class="carousel-testimonial-name">- Angelo Mercado</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="carousel-control-prev" type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                            <span class="visually-hidden">Previous</span>
-                        </button>
-                        <button class="carousel-control-next" type="button" data-bs-target="#homeHighlightsCarousel" data-bs-slide="next">
-                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                            <span class="visually-hidden">Next</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="start-panel card border-0 h-100">
-                <div class="card-body p-4 d-flex flex-column">
-                    <span class="start-panel-kicker">Start Reading Checks</span>
-                    <h3>Ready to run your first session?</h3>
-                    <p>Set up a class, invite learners, and begin a reading assessment in minutes.</p>
-                    <ul class="start-checklist">
-                        <li>Free for classroom use</li>
-                        <li>Available whenever learners are ready</li>
-                        <li>Simple setup for teachers and students</li>
-                    </ul>
-                    <div class="d-grid gap-2">
-                        <a class="btn btn-primary" href="{% url 'auth' %}">Open My Account</a>
-                        <a class="btn btn-outline-primary" href="{% url 'pabasa_info' %}">Learn More</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     </div>
 </section>
 
