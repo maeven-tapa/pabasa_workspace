@@ -1212,9 +1212,33 @@
             50% { opacity: 1; transform: scale(1.2) rotate(90deg); }
         }
 
+        /* Inactive nav hover: square yellow tab with a soft breathing glow. */
+        .modern-nav-wrap .modern-nav-content .nav-link-modern:not(.active):hover,
+        .modern-nav-wrap .modern-nav-content .nav-link-modern:not(.active):focus-visible {
+            color: #10466E !important;
+            background-color: #FFD639 !important;
+            border-radius: 0.5rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            transform: translateY(-1px);
+            animation: navLinkBreathing 1.8s ease-in-out infinite;
+        }
+
+        .modern-nav-wrap .modern-nav-content .nav-link-modern:not(.active):hover::after,
+        .modern-nav-wrap .modern-nav-content .nav-link-modern:not(.active):focus-visible::after {
+            content: none !important;
+            display: none !important;
+        }
+
+        @keyframes navLinkBreathing {
+            0%, 100% { box-shadow: 0 3px 0 rgba(16, 70, 110, 0.24), 0 0 6px rgba(255, 214, 57, 0.2); }
+            50% { box-shadow: 0 3px 0 rgba(16, 70, 110, 0.24), 0 0 18px rgba(255, 214, 57, 0.78), 0 0 25px rgba(84, 194, 240, 0.35); }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .modern-nav-wrap .modern-nav-actions .header-inline-link,
-            .modern-nav-wrap .modern-nav-actions .header-inline-link::after {
+            .modern-nav-wrap .modern-nav-actions .header-inline-link::after,
+            .modern-nav-wrap .modern-nav-content .nav-link-modern {
                 animation: none;
             }
         }
