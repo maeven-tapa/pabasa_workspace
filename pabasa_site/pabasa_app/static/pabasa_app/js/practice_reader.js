@@ -1400,7 +1400,7 @@
         const activeMaterial = getActiveMaterialMeta();
         const difficultyLabelText = normalizeMaterialValue(activeMaterial?.difficulty_label || activeMaterial?.difficulty || selectedDifficulty || 'Easy');
         const levelLabelText = normalizeMaterialValue(activeMaterial?.level_label || activeMaterial?.level || 'Level 2');
-        const titleText = normalizeMaterialValue(activeMaterial?.title || 'PABASA Scrolls');
+        const titleText = 'Pabasa Scrolls';
         const currentLevelContext = getLevelProgressContext();
         const levelEntry = ensureLevelProgressEntry(getPracticeProgressState(), currentLevelContext.mode, currentLevelContext.difficulty, currentLevelContext.level);
         const completedCards = Array.isArray(levelEntry.completed_cards) ? levelEntry.completed_cards.length : 0;

@@ -82,6 +82,47 @@
         body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .dashboard-sidebar {
             background: linear-gradient(145deg, color-mix(in srgb, var(--dash-primary-deep) 88%, #0f172a), var(--dash-primary-deep));
         }
+        body.teacher-dashboard-body {
+            background:
+                radial-gradient(circle at top left, rgba(46, 168, 229, 0.12), transparent 30%),
+                linear-gradient(135deg, #f0f8ff 0%, #f8fcff 45%, #eaf7fd 100%);
+        }
+        body.teacher-dashboard-body::before {
+            background-image:
+                linear-gradient(rgba(16, 70, 110, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(16, 70, 110, 0.025) 1px, transparent 1px);
+        }
+        body.teacher-dashboard-body .dashboard-sidebar {
+            backdrop-filter: blur(18px) saturate(150%);
+            background: linear-gradient(145deg, #135679 0%, #0f4c5c 55%, #0b3552 100%);
+        }
+        body.teacher-dashboard-body .dashboard-main .dashboard-topbar {
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(10px) saturate(125%);
+            -webkit-backdrop-filter: blur(10px) saturate(125%);
+            border-color: rgba(16, 70, 110, 0.12) !important;
+            box-shadow: 0 16px 40px rgba(15, 78, 100, 0.14);
+        }
+        body.teacher-dashboard-body .dashboard-main .offcanvas .offcanvas-header,
+        body.teacher-dashboard-body .dashboard-main .offcanvas .offcanvas-body {
+            background: rgba(255, 255, 255, 0.98);
+        }
+        body.teacher-dashboard-body .dashboard-main .profile-pane-card,
+        body.teacher-dashboard-body .dashboard-main .notif-pane-item,
+        body.teacher-dashboard-body .dashboard-main .notif-pane-empty,
+        body.teacher-dashboard-body .dashboard-main .teacher-panel,
+        body.teacher-dashboard-body .dashboard-main .teacher-hero,
+        body.teacher-dashboard-body .dashboard-main .create-class-card,
+        body.teacher-dashboard-body .dashboard-main .teacher-stat-card,
+        body.teacher-dashboard-body .dashboard-main .class-card,
+        body.teacher-dashboard-body .dashboard-main .class-banner,
+        body.teacher-dashboard-body .dashboard-main .mini-metric,
+        body.teacher-dashboard-body .dashboard-main .student-card,
+        body.teacher-dashboard-body .dashboard-main .post-card,
+        body.teacher-dashboard-body .dashboard-main .modal-content {
+            background: rgba(255, 255, 255, 0.96);
+            border-color: rgba(16, 70, 110, 0.12) !important;
+        }
         body.dark-theme.dashboard-body[data-student-theme] {
             background-color: #0f172a !important;
             background-image: radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--dash-primary) 16%, transparent), transparent 32%), linear-gradient(180deg,#0f172a,#111827) !important;
@@ -569,12 +610,12 @@
         }
 
         .dashboard-topbar {
-            background: rgba(255, 255, 255, 0.72) !important;
-            backdrop-filter: blur(18px) saturate(140%);
-            -webkit-backdrop-filter: blur(18px) saturate(140%);
-            border: 1px solid rgba(255, 255, 255, 0.72);
+            background: rgba(255, 255, 255, 0.96) !important;
+            backdrop-filter: blur(10px) saturate(125%);
+            -webkit-backdrop-filter: blur(10px) saturate(125%);
+            border: 1px solid rgba(255, 255, 255, 0.94);
             border-radius: var(--dash-topbar-radius);
-            box-shadow: 0 16px 36px rgba(21, 94, 117, 0.08);
+            box-shadow: 0 16px 36px rgba(21, 94, 117, 0.12);
             margin: 0;
             padding: var(--dash-topbar-pad-y) var(--dash-topbar-pad-x);
             width: 100%;
@@ -2296,7 +2337,7 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="dashboard-body dashboard-preloading" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
+<body class="dashboard-body dashboard-preloading{% if nav_role == 'teacher' %} teacher-dashboard-body{% endif %}" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
     <div class="dashboard-page-loader" id="dashboardPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
         <div class="dashboard-page-loader__content">
             <img class="dashboard-page-loader__logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">

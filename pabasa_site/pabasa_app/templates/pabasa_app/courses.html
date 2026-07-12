@@ -12,9 +12,9 @@
         --dash-ink: #16212b;
         --dash-ink-soft: #58676f;
         --dash-muted: #6b7280;
-        --surface-glass: rgba(255,255,255,0.74);
-        --surface-glass-strong: rgba(255,255,255,0.9);
-        --surface-glass-border: rgba(255,255,255,0.72);
+        --surface-glass: rgba(255,255,255,0.94);
+        --surface-glass-strong: rgba(255,255,255,0.98);
+        --surface-glass-border: rgba(255,255,255,0.92);
         --surface-solid: #ffffff;
         --surface-solid-strong: #fcfeff;
         --radius-xl: 24px;
@@ -35,11 +35,6 @@
         }
     }
     
-    body:not(.dark-theme) {
-        background: url("{% static 'pabasa_app/images/teacher_bg.jpg' %}") no-repeat center center fixed !important;
-        background-size: cover !important;
-    }
-
     body.dark-theme {
         background: #0f172a !important;
         background-image: none !important;
@@ -53,9 +48,9 @@
 
     .class-card-full {
         background: var(--surface-glass) !important;
-        backdrop-filter: blur(16px) saturate(140%);
-        -webkit-backdrop-filter: blur(16px) saturate(140%);
-        border: 1px solid rgba(255,255,255,0.72) !important;
+        backdrop-filter: blur(12px) saturate(130%);
+        -webkit-backdrop-filter: blur(12px) saturate(130%);
+        border: 1px solid rgba(255,255,255,0.92) !important;
         border-radius: var(--radius-xl);
         box-shadow: var(--dash-shadow);
         cursor: pointer;
@@ -127,10 +122,10 @@
 
     .class-stat {
         background: var(--surface-solid);
-        border: 1px solid rgba(27, 26, 23, 0.08);
+        border: 1px solid rgba(27, 26, 23, 0.1);
         border-radius: var(--radius-sm);
         padding: 0.7rem;
-        box-shadow: 0 8px 20px rgba(15,78,100,0.04);
+        box-shadow: 0 8px 20px rgba(15,78,100,0.06);
     }
 
     .class-stat strong {
@@ -165,8 +160,8 @@
 
     .course-dashboard-card {
         background: var(--surface-glass) !important;
-        backdrop-filter: blur(18px) saturate(140%);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        backdrop-filter: blur(12px) saturate(130%);
+        -webkit-backdrop-filter: blur(12px) saturate(130%);
         border: 1px solid var(--surface-glass-border) !important;
         border-radius: var(--radius-xl);
         box-shadow: var(--dash-shadow);
@@ -203,8 +198,8 @@
 
     .course-card-delete-btn {
         align-items: center;
-        background: rgba(220, 38, 38, 0.08);
-        border: 1px solid rgba(220, 38, 38, 0.14);
+        background: rgba(220, 38, 38, 0.12);
+        border: 1px solid rgba(220, 38, 38, 0.18);
         border-radius: 999px;
         color: #b91c1c;
         display: inline-flex;
@@ -215,7 +210,7 @@
     }
 
     .course-card-delete-btn:hover {
-        background: rgba(220, 38, 38, 0.14);
+        background: rgba(220, 38, 38, 0.18);
         transform: translateY(-1px);
     }
 
@@ -234,15 +229,15 @@
 
     .course-code-pill {
         background: var(--dash-primary-soft);
-        border: 1px solid rgba(31, 111, 139, 0.14);
+        border: 1px solid rgba(31, 111, 139, 0.18);
         color: var(--dash-primary-deep);
         letter-spacing: 0.06em;
         text-transform: uppercase;
     }
 
     .course-status-pill {
-        background: rgba(22, 163, 74, 0.1);
-        border: 1px solid rgba(22, 163, 74, 0.16);
+        background: rgba(22, 163, 74, 0.14);
+        border: 1px solid rgba(22, 163, 74, 0.2);
         color: #15803d;
         gap: 0.35rem;
     }
@@ -271,7 +266,7 @@
     }
 
     .course-card-divider {
-        background: rgba(31, 111, 139, 0.12);
+        background: rgba(31, 111, 139, 0.16);
         height: 1px;
         width: 100%;
     }
@@ -336,9 +331,9 @@
     .course-card-action.btn-outline-secondary,
     .course-card-action.btn-secondary {
         background: var(--surface-solid);
-        border: 1px solid rgba(31,111,139,0.12);
+        border: 1px solid rgba(31,111,139,0.14);
         color: var(--dash-primary-deep);
-        box-shadow: 0 8px 20px rgba(15,78,100,0.06);
+        box-shadow: 0 8px 20px rgba(15,78,100,0.08);
     }
 
     .course-card-action:hover {
@@ -348,7 +343,7 @@
 
     /* Modern course card footer action (clean SaaS style) */
     .course-card-footer {
-        border-top: 1px solid rgba(27, 26, 23, 0.06);
+        border-top: 1px solid rgba(27, 26, 23, 0.08);
         padding: 0.9rem 1rem;
         display: flex;
         align-items: center;
@@ -386,7 +381,7 @@
     }
 
     .course-card-footer:hover {
-        background: rgba(31, 111, 139, 0.03);
+        background: rgba(31, 111, 139, 0.05);
     }
 
     .course-card-footer:hover .ccf-arrow {
@@ -731,6 +726,140 @@
         max-height: 100%;
         min-height: 0;
         overflow: hidden;
+    }
+
+    .course-sidebar {
+        background: linear-gradient(180deg, rgba(46, 168, 229, 0.08), rgba(240, 248, 255, 0.96));
+        border-right: 1px solid rgba(31, 111, 139, 0.12);
+        color: var(--dash-ink);
+        padding: 1rem;
+    }
+
+    .course-sidebar strong {
+        display: block;
+        font-size: 1rem;
+        font-weight: 900;
+        margin-bottom: 0.35rem;
+    }
+
+    .course-sidebar p {
+        color: var(--dash-muted);
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    #createCourseModal .form-label {
+        color: var(--dash-ink);
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.4rem;
+        text-transform: uppercase;
+    }
+
+    #createCourseModal .form-control {
+        border-color: rgba(31, 111, 139, 0.16);
+        border-radius: 12px;
+        min-height: 46px;
+    }
+
+    #createCourseModal textarea.form-control {
+        min-height: 112px;
+    }
+
+    .course-sections-list {
+        max-height: 200px;
+        overflow: auto;
+    }
+
+    .course-sections-list .form-check {
+        align-items: center;
+        border-radius: 14px;
+        display: flex;
+        gap: 0.75rem;
+        margin: 0 0 0.45rem;
+        padding: 0.8rem 0.9rem;
+        transition: background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+    }
+
+    .course-sections-list .form-check:hover {
+        background: rgba(46, 168, 229, 0.06);
+        box-shadow: 0 8px 18px rgba(31, 111, 139, 0.06);
+        transform: translateX(1px);
+    }
+
+    .course-sections-list .form-check-input {
+        border-radius: 0.42rem;
+        border: 1.5px solid rgba(31, 111, 139, 0.28);
+        flex: 0 0 auto;
+        margin: 0;
+        accent-color: var(--dash-primary);
+    }
+
+    .course-sections-list .form-check-input:checked {
+        background-color: var(--dash-primary);
+        border-color: var(--dash-primary);
+    }
+
+    .course-sections-list .form-check-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(31, 111, 139, 0.14);
+    }
+
+    .course-sections-list .form-check-label {
+        color: var(--dash-ink);
+        cursor: pointer;
+        font-weight: 700;
+        line-height: 1.35;
+        margin: 0;
+    }
+
+    .course-sections-list .form-check-input:checked + .form-check-label {
+        font-weight: 800;
+    }
+
+    .course-sections-list .form-check:has(.form-check-input:checked) {
+        background: rgba(46, 168, 229, 0.1);
+        box-shadow: 0 8px 18px rgba(31, 111, 139, 0.08);
+    }
+
+    #createCourseModal .modal-footer .btn-secondary {
+        background: #eef2f7;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        color: #334155;
+    }
+
+    #createCourseModal .modal-footer .btn-secondary:hover {
+        background: #e2e8f0;
+        border-color: rgba(100, 116, 139, 0.4);
+        color: #0f172a;
+    }
+
+    #deleteConfirmModal .text-muted {
+        color: #475569 !important;
+    }
+
+    #deleteConfirmModal .modal-footer .btn.btn-secondary {
+        background: #eef2f7;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+        color: #334155;
+    }
+
+    #deleteConfirmModal .modal-footer .btn.btn-secondary:hover {
+        background: #e2e8f0;
+        border-color: rgba(100, 116, 139, 0.4);
+        color: #0f172a;
+    }
+
+    #createCourseModal .modal-footer .btn-secondary {
+        background: #eef2f7;
+        border: 1px solid rgba(100, 116, 139, 0.28);
+        color: #334155;
+    }
+
+    #createCourseModal .modal-footer .btn-secondary:hover {
+        background: #e2e8f0;
+        border-color: rgba(100, 116, 139, 0.38);
+        color: #0f172a;
     }
 
     .course-modal-header {
@@ -5405,12 +5534,12 @@
     text-align: center;
     width: min(100%, 420px);
 }
-@media (max-width: 575.98px) {
-    #addCourseStudentModal .modal-dialog {
-        margin: 0.5rem auto;
-        max-width: calc(100% - 1rem);
+    @media (max-width: 575.98px) {
+        #addCourseStudentModal .modal-dialog {
+            margin: 0.5rem auto;
+            max-width: calc(100% - 1rem);
+        }
     }
-}
 </style>
 <!-- Modal: Add Students to Course -->
 <div class="modal fade" id="addCourseStudentModal" tabindex="-1" aria-labelledby="addCourseStudentModalLabel" aria-hidden="true">
@@ -7735,7 +7864,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const course = findCourseById(courseId);
         const title = course?.title || 'this course';
         showDeleteConfirmModal(
-            `<p>Delete <strong>${escapeHtml(title)}</strong>?</p><p class="text-danger small mt-2"><i class="bi bi-exclamation-triangle me-2"></i>This action will archive linked materials and assessments and remove the course from your dashboard.</p>`,
+            `<p>Delete <strong>${escapeHtml(title)}</strong>?</p><p class="text-secondary small mt-2"><i class="bi bi-exclamation-triangle text-danger me-2"></i>This action will archive linked materials and assessments and remove the course from your dashboard.</p>`,
             async () => {
                 await deleteCourse(courseId);
             },
@@ -10545,7 +10674,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         classToDeleteCode = classCode;
         const deleteConfirmText = document.getElementById('deleteConfirmText');
         
-        deleteConfirmText.innerHTML = `<p>Are you sure you want to delete <strong>${className}</strong>?</p><p class="text-danger small mt-2"><i class="bi bi-exclamation-triangle me-2"></i>This action cannot be undone. All class data will be removed.</p>`;
+        deleteConfirmText.innerHTML = `<p>Are you sure you want to delete <strong>${className}</strong>?</p><p class="text-secondary small mt-2"><i class="bi bi-exclamation-triangle text-danger me-2"></i>This action cannot be undone. All class data will be removed.</p>`;
         
         const modalEl = document.getElementById('deleteConfirmModal');
         if (typeof showStackedModal === 'function') {
