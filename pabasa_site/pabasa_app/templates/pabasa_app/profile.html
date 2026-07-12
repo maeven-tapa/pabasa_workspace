@@ -10,23 +10,6 @@
         }
     }
 
-    body.dashboard-body {
-        background:
-            radial-gradient(circle at 10% 20%, rgba(31, 182, 255, 0.06), transparent 40%),
-            radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.08), transparent 40%),
-            linear-gradient(rgba(248, 250, 252, 0.45), rgba(248, 250, 252, 0.35)),
-            url("{% static 'pabasa_app/images/student_bg.jpg' %}") center / cover fixed no-repeat !important;
-    }
-
-    /* Dark mode background */
-    body.dark-theme.dashboard-body {
-        background:
-            radial-gradient(circle at 10% 20%, rgba(31, 182, 255, 0.04), transparent 40%),
-            radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.05), transparent 40%),
-            linear-gradient(rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.85)),
-            url("{% static 'pabasa_app/images/student_bg.jpg' %}") center / cover fixed no-repeat !important;
-    }
-
     /* Dark mode glassmorphism overrides */
     body.dark-theme .profile-summary,
     body.dark-theme .profile-section-card {
@@ -63,12 +46,12 @@
         position: relative;
         overflow: hidden;
         width: 100%;
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid rgba(255, 255, 255, 0.72);
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 24px;
-        backdrop-filter: blur(18px) saturate(140%);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
-        box-shadow: 0 18px 36px rgba(16, 70, 110, 0.12);
+        backdrop-filter: blur(10px) saturate(130%);
+        -webkit-backdrop-filter: blur(10px) saturate(130%);
+        box-shadow: 0 18px 36px rgba(16, 70, 110, 0.14);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -239,8 +222,8 @@
     .profile-details-mini > div {
         align-items: center;
         background:
-            linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(234, 247, 253, 0.75));
-        border: 1px solid rgba(16, 70, 110, 0.08);
+            linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(234, 247, 253, 0.9));
+        border: 1px solid rgba(16, 70, 110, 0.1);
         border-radius: 13px;
         box-shadow:
             0 5px 12px rgba(16, 70, 110, 0.045),
@@ -255,7 +238,7 @@
     .profile-detail-icon {
         align-items: center;
         background: linear-gradient(145deg, #ffffff, #dff2fa);
-        border: 1px solid rgba(46, 168, 229, 0.16);
+        border: 1px solid rgba(46, 168, 229, 0.2);
         border-radius: 9px;
         box-shadow:
             0 4px 8px rgba(46, 168, 229, 0.1),
@@ -296,8 +279,8 @@
 
     .profile-status-badge {
         display: inline-block;
-        background: linear-gradient(135deg, rgba(46, 168, 229, 0.1), rgba(16, 70, 110, 0.05));
-        border: 1px solid rgba(46, 168, 229, 0.2);
+        background: linear-gradient(135deg, rgba(46, 168, 229, 0.14), rgba(16, 70, 110, 0.08));
+        border: 1px solid rgba(46, 168, 229, 0.24);
         border-radius: 999px;
         padding: 0.35rem 0.7rem;
         font-size: 0.74rem;
@@ -385,7 +368,7 @@
         border-radius: 12px;
         font-size: 0.93rem;
         min-height: 44px;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.95);
         transition: all 0.2s ease;
     }
 
@@ -413,12 +396,12 @@
     }
 
     .profile-section-card {
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid rgba(255, 255, 255, 0.72);
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 24px;
-        backdrop-filter: blur(18px) saturate(140%);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
-        box-shadow: 0 14px 30px rgba(21, 94, 117, 0.06);
+        backdrop-filter: blur(10px) saturate(130%);
+        -webkit-backdrop-filter: blur(10px) saturate(130%);
+        box-shadow: 0 14px 30px rgba(21, 94, 117, 0.08);
         padding: 1.4rem;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
@@ -443,7 +426,7 @@
 
     .profile-section-card:hover {
         border-color: rgba(31, 111, 139, 0.16);
-        box-shadow: 0 12px 32px rgba(31, 111, 139, 0.12);
+        box-shadow: 0 12px 32px rgba(31, 111, 139, 0.14);
         transform: translateY(-2px);
     }
 
@@ -510,17 +493,17 @@
     }
 
     .profile-stat-box {
-        background: rgba(255, 255, 255, 0.78);
-        border: 1px solid rgba(255, 255, 255, 0.72);
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 14px;
         padding: 1rem 0.5rem;
         text-align: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
-        box-shadow: 0 8px 18px rgba(31, 111, 139, 0.06);
-        backdrop-filter: blur(16px) saturate(140%);
-        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        box-shadow: 0 8px 18px rgba(31, 111, 139, 0.08);
+        backdrop-filter: blur(10px) saturate(130%);
+        -webkit-backdrop-filter: blur(10px) saturate(130%);
     }
 
     /* Prevent grid items from overflowing their cells */
@@ -607,9 +590,9 @@
 
     .profile-stat-box:hover {
         border-color: rgba(31, 111, 139, 0.2);
-        background: linear-gradient(135deg, rgba(46, 168, 229, 0.1), rgba(16, 70, 110, 0.06));
+        background: linear-gradient(135deg, rgba(46, 168, 229, 0.14), rgba(16, 70, 110, 0.08));
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.1);
+        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.12);
     }
 
     .profile-stat-box:hover::before {
@@ -656,7 +639,7 @@
     }
 
     .danger-zone-wrapper {
-        border-top: 1px solid rgba(255, 255, 255, 0.72);
+        border-top: 1px solid rgba(255, 255, 255, 0.9);
         margin-top: 0;
         padding-top: 1.25rem;
     }
