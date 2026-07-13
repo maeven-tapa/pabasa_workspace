@@ -782,6 +782,7 @@ h1, h2, h3, h4 {
 }
 
 .section-container-gallery {
+    padding-bottom: clamp(10rem, 12vw, 12rem);
     background:
         radial-gradient(circle at 18% 16%, rgba(255, 214, 57, 0.2), transparent 32%),
         radial-gradient(circle at 86% 82%, rgba(46, 168, 229, 0.2), transparent 40%),
@@ -819,6 +820,12 @@ h1, h2, h3, h4 {
     opacity: 0.16;
     backface-visibility: hidden;
     will-change: transform;
+}
+
+@media (max-width: 600px) {
+    .section-container-gallery {
+        padding-bottom: 10rem !important;
+    }
 }
 
 @keyframes sectionLearningPatternComposited {
