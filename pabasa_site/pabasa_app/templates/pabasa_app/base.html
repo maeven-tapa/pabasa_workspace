@@ -1642,7 +1642,7 @@
             }
         }
 
-        /* My Account uses a centered brand-only header and true viewport centering. */
+        /* Account entry pages use a centered brand-only header and viewport layout. */
         .auth-nav-wrap .modern-nav-shell {
             position: relative;
             justify-content: center;
@@ -1819,13 +1819,13 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100{% if request.resolver_match.url_name == 'auth' or request.resolver_match.url_name == 'signup' or request.resolver_match.url_name == 'teacher_signup' or request.resolver_match.url_name == 'student_signup' %} auth-layout{% endif %}">
+<body class="d-flex flex-column min-vh-100{% if request.resolver_match.url_name == 'auth' or request.resolver_match.url_name == 'signup' or request.resolver_match.url_name == 'teacher_signup' or request.resolver_match.url_name == 'student_signup' or request.resolver_match.url_name == 'forgot_password' or request.resolver_match.url_name == 'request_password_reset' or request.resolver_match.url_name == 'forgot_password_otp' or request.resolver_match.url_name == 'verify_forgot_password_otp' or request.resolver_match.url_name == 'forgot_password_reset' or request.resolver_match.url_name == 'reset_password' %} auth-layout{% endif %}">
     <div class="public-page-loader" id="publicPageLoader" aria-hidden="true" role="status" aria-label="Loading page">
         <div class="public-page-loader__content">
             <div class="public-page-loader__spinner"></div>
         </div>
     </div>
-    <header class="modern-nav-wrap sticky-top{% if request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' %} contextual-nav-wrap{% endif %}{% if request.resolver_match.url_name == 'auth' or request.resolver_match.url_name == 'signup' or request.resolver_match.url_name == 'teacher_signup' or request.resolver_match.url_name == 'student_signup' %} auth-nav-wrap{% endif %}">
+    <header class="modern-nav-wrap sticky-top{% if request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' %} contextual-nav-wrap{% endif %}{% if request.resolver_match.url_name == 'auth' or request.resolver_match.url_name == 'signup' or request.resolver_match.url_name == 'teacher_signup' or request.resolver_match.url_name == 'student_signup' or request.resolver_match.url_name == 'forgot_password' or request.resolver_match.url_name == 'request_password_reset' or request.resolver_match.url_name == 'forgot_password_otp' or request.resolver_match.url_name == 'verify_forgot_password_otp' or request.resolver_match.url_name == 'forgot_password_reset' or request.resolver_match.url_name == 'reset_password' %} auth-nav-wrap{% endif %}">
         <nav class="navbar navbar-expand-lg">
             <div class="w-100">
                 <div class="modern-nav-shell">
@@ -1923,7 +1923,7 @@
             {% block content %}{% endblock %}
         </div>
     </main>
-    {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' %}
+    {% if request.resolver_match.url_name != 'auth' and request.resolver_match.url_name != 'login_user' and request.resolver_match.url_name != 'signup' and request.resolver_match.url_name != 'teacher_signup' and request.resolver_match.url_name != 'student_signup' and request.resolver_match.url_name != 'forgot_password' and request.resolver_match.url_name != 'request_password_reset' and request.resolver_match.url_name != 'forgot_password_otp' and request.resolver_match.url_name != 'verify_forgot_password_otp' and request.resolver_match.url_name != 'forgot_password_reset' and request.resolver_match.url_name != 'reset_password' %}
     {% with current_view=request.resolver_match.url_name %}
     {% if current_view == 'pabasa_info' or current_view == 'about' or current_view == 'faq' or current_view == 'terms' or current_view == 'privacy' %}
     <footer class="editorial-footer">
