@@ -2072,7 +2072,7 @@ body { overflow-x: hidden; }
 .about-articles-section,
 .about-principles-section,
 .about-journey-section {
-    --about-cloud-height: clamp(3rem, 5vw, 4.5rem);
+    --about-cloud-height: clamp(4rem, 6vw, 5.5rem);
 }
 
 .about-hero-section {
@@ -2120,8 +2120,8 @@ body { overflow-x: hidden; }
     pointer-events: none;
     animation: none;
     background:
-        radial-gradient(ellipse 3.5rem 2.25rem at 3.25rem 100%, var(--about-next-section-color) 98%, transparent 100%) 0 0 / 6.5rem 100% repeat-x,
-        radial-gradient(ellipse 2.6rem 1.75rem at 2.2rem 100%, var(--about-next-section-color) 98%, transparent 100%) 3.1rem 0.35rem / 5.2rem 100% repeat-x,
+        radial-gradient(ellipse 4.25rem 2.8rem at 3.6rem 70%, var(--about-next-section-color) 98%, transparent 100%) 0 0 / 8rem 100% repeat-x,
+        radial-gradient(ellipse 3rem 2.1rem at 2.35rem 72%, var(--about-next-section-color) 98%, transparent 100%) 4rem 0.35rem / 6rem 100% repeat-x,
         linear-gradient(to bottom, transparent 64%, var(--about-next-section-color) 65%);
 }
 
@@ -2151,6 +2151,11 @@ html,
 body {
     background: #fff !important;
     background-attachment: scroll !important;
+}
+
+/* The About sections own the full canvas; remove Bootstrap's page-frame seam. */
+body > main.flex-grow-1.py-4 {
+    padding-block: 0 !important;
 }
 
 body::before,
