@@ -2072,11 +2072,12 @@ body { overflow-x: hidden; }
 .about-articles-section,
 .about-principles-section,
 .about-journey-section {
-    --about-cloud-height: clamp(4rem, 6vw, 5.5rem);
+    --about-cloud-height: clamp(12rem, 22vw, 21rem);
 }
 
 .about-hero-section {
     --about-next-section-color: #fff;
+    --about-cloud-shadow-color: #3D606F;
     padding-top: clamp(3rem, 7vw, 6rem) !important;
     padding-bottom: calc(clamp(3rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
     background: var(--about-section-blue) !important;
@@ -2084,12 +2085,14 @@ body { overflow-x: hidden; }
 
 .about-articles-section {
     --about-next-section-color: var(--about-section-blue);
+    --about-cloud-shadow-color: #AFC9D5;
     padding-bottom: calc(clamp(3rem, 6vw, 5rem) + var(--about-cloud-height)) !important;
     background: #fff !important;
 }
 
 .about-principles-section {
     --about-next-section-color: #fff;
+    --about-cloud-shadow-color: #3D606F;
     padding-top: clamp(4rem, 7vw, 6rem) !important;
     padding-bottom: calc(clamp(4rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
     background: var(--about-section-blue) !important;
@@ -2097,6 +2100,7 @@ body { overflow-x: hidden; }
 
 .about-journey-section {
     --about-next-section-color: var(--about-section-blue);
+    --about-cloud-shadow-color: #AFC9D5;
     padding-top: clamp(4rem, 7vw, 6rem) !important;
     padding-bottom: calc(clamp(4rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
     background: #fff !important;
@@ -2120,9 +2124,20 @@ body { overflow-x: hidden; }
     pointer-events: none;
     animation: none;
     background:
-        radial-gradient(ellipse 4.25rem 2.8rem at 3.6rem 70%, var(--about-next-section-color) 98%, transparent 100%) 0 0 / 8rem 100% repeat-x,
-        radial-gradient(ellipse 3rem 2.1rem at 2.35rem 72%, var(--about-next-section-color) 98%, transparent 100%) 4rem 0.35rem / 6rem 100% repeat-x,
-        linear-gradient(to bottom, transparent 64%, var(--about-next-section-color) 65%);
+        radial-gradient(ellipse 16% 110% at -5% 110%, var(--about-next-section-color) 99%, transparent 100%),
+        radial-gradient(ellipse 13% 69% at 9% 112%, var(--about-next-section-color) 99%, transparent 100%),
+        radial-gradient(ellipse 12% 50% at 29% 118%, var(--about-next-section-color) 99%, transparent 100%),
+        radial-gradient(ellipse 14% 57% at 49% 118%, var(--about-next-section-color) 99%, transparent 100%),
+        radial-gradient(ellipse 9% 38% at 62% 118%, var(--about-next-section-color) 99%, transparent 100%),
+        radial-gradient(ellipse 19% 72% at 84% 112%, var(--about-next-section-color) 99%, transparent 100%),
+        radial-gradient(ellipse 15% 95% at 105% 108%, var(--about-next-section-color) 99%, transparent 100%),
+        linear-gradient(to bottom, transparent 96%, var(--about-next-section-color) 96%),
+        radial-gradient(ellipse 25% 51% at 30% 100%, var(--about-cloud-shadow-color) 99%, transparent 100%),
+        radial-gradient(ellipse 18% 45% at 64% 101%, var(--about-cloud-shadow-color) 99%, transparent 100%),
+        radial-gradient(ellipse 26% 70% at 88% 101%, var(--about-cloud-shadow-color) 99%, transparent 100%),
+        radial-gradient(ellipse 16% 80% at 108% 98%, var(--about-cloud-shadow-color) 99%, transparent 100%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
 }
 
 .hero-stamps { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1.35rem; }
@@ -2143,6 +2158,16 @@ body { overflow-x: hidden; }
 
 @media(max-width:768px){
     .about-hero-section,.about-articles-section,.about-principles-section,.about-journey-section,.about-team-section{padding-inline:1rem !important}
+    .about-hero-section,.about-articles-section,.about-principles-section,.about-journey-section{--about-cloud-height:clamp(6.5rem,26vw,8rem)}
+    .about-hero-section::after,.about-articles-section::after,.about-principles-section::after,.about-journey-section::after{
+        background:
+            radial-gradient(ellipse 40% 66% at 0 100%,var(--about-next-section-color) 99%,transparent 100%),
+            radial-gradient(ellipse 38% 60% at 50% 100%,var(--about-next-section-color) 99%,transparent 100%),
+            radial-gradient(ellipse 40% 66% at 100% 100%,var(--about-next-section-color) 99%,transparent 100%),
+            linear-gradient(to bottom,transparent 94%,var(--about-next-section-color) 94%),
+            radial-gradient(ellipse 46% 58% at 25% 86%,var(--about-cloud-shadow-color) 99%,transparent 100%),
+            radial-gradient(ellipse 46% 58% at 75% 86%,var(--about-cloud-shadow-color) 99%,transparent 100%);
+    }
     .hero-stamps{justify-content:center}
 }
 
@@ -2156,6 +2181,17 @@ body {
 /* The About sections own the full canvas; remove Bootstrap's page-frame seam. */
 body > main.flex-grow-1.py-4 {
     padding-block: 0 !important;
+}
+
+/* Keep every solid section canvas present throughout scrolling. */
+.about-hero-section.fade-in-section,
+.about-articles-section.fade-in-section,
+.about-principles-section.fade-in-section,
+.about-journey-section.fade-in-section,
+.about-team-section.fade-in-section {
+    opacity: 1;
+    transform: none;
+    transition: none;
 }
 
 body::before,
