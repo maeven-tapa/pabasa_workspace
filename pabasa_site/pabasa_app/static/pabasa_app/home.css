@@ -782,7 +782,7 @@ h1, h2, h3, h4 {
 }
 
 .section-container-gallery {
-    padding-bottom: clamp(10rem, 12vw, 12rem);
+    padding-bottom: clamp(13rem, 15vw, 15rem);
     background:
         radial-gradient(circle at 18% 16%, rgba(255, 214, 57, 0.2), transparent 32%),
         radial-gradient(circle at 86% 82%, rgba(46, 168, 229, 0.2), transparent 40%),
@@ -824,7 +824,7 @@ h1, h2, h3, h4 {
 
 @media (max-width: 600px) {
     .section-container-gallery {
-        padding-bottom: 10rem !important;
+        padding-bottom: 12rem !important;
     }
 }
 
