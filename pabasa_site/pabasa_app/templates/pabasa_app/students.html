@@ -219,6 +219,7 @@
         gap: 0.75rem;
         max-height: 680px;
         overflow-y: auto;
+        padding-left: 8px;
         padding-right: 8px;
     }
 
@@ -608,10 +609,10 @@
     }
 
     .student-filter-label {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         display: block;
         font-size: 0.68rem;
-        font-weight: 800;
+        font-weight: 400;
         letter-spacing: 0.06em;
         line-height: 1.2;
         text-transform: uppercase;
@@ -619,12 +620,12 @@
     }
 
     .student-filter-value {
-        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
         display: block;
-        font-size: 0.98rem;
-        font-weight: 900;
+        font-size: 0.95rem;
+        font-weight: 400;
         color: var(--text-high);
-        line-height: 1.2;
+        line-height: 1.45;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -716,11 +717,11 @@
     }
 
     .student-filter-option-title {
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 0.98rem;
-        font-weight: 900;
-        letter-spacing: 0.01em;
-        line-height: 1.25;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 400;
+        letter-spacing: 0;
+        line-height: 1.45;
     }
 
     .student-filter-option-subtitle {
@@ -780,6 +781,52 @@
         .student-name-line .badge {
             justify-self: start;
         }
+
+        .student-directory-header {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 0.85rem;
+            justify-content: flex-start;
+        }
+
+        .student-directory-header > div:first-child {
+            flex: 0 0 auto;
+        }
+
+        .student-directory-controls {
+            align-items: stretch;
+            flex: 0 0 auto;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            gap: 0.75rem !important;
+            margin-left: 0;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .student-directory-controls .student-search-wrap,
+        .student-directory-controls .student-filter-wrap {
+            flex: 0 0 auto;
+            max-width: none;
+            width: 100%;
+        }
+
+        .student-directory-controls .student-search-wrap {
+            display: block;
+            position: relative;
+        }
+
+        .student-directory-controls .student-search-wrap::before {
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .student-filter-menu {
+            left: 0;
+            right: 0;
+            width: 100%;
+        }
     }
 
     @media (max-width: 640px) {
@@ -791,27 +838,6 @@
         .students-overview-metrics,
         .students-secondary-metrics {
             grid-template-columns: 1fr;
-        }
-
-        .student-directory-controls .student-search-wrap,
-        .student-directory-controls .student-filter-wrap {
-            width: 100%;
-            flex: 1 1 auto;
-            max-width: none;
-        }
-
-        .student-directory-header {
-            align-items: stretch;
-            flex-direction: column;
-        }
-
-        .student-directory-controls {
-            margin-left: 0;
-            flex-direction: column;
-            align-items: stretch;
-            flex-wrap: wrap;
-            min-width: 0;
-            width: 100%;
         }
 
         .student-row-actions {
