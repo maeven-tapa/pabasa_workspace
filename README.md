@@ -34,43 +34,44 @@ It provides automated feedback and performance reports, enabling data-driven dec
 - Course Title: Technical Research
 - Institution: TUP Cavite
 
-## 🧰 OCR deployment note
-Image uploads use Tesseract through `pytesseract`. The native Tesseract executable must
-also be installed on every development and production machine; installing Python
-dependencies alone is not enough. Install the English (`eng`) and Filipino (`fil`)
-trained-data files.
+## 🧰 Technology Stack
 
-Optional environment variables:
+P.A.B.A.S.A uses a server-rendered Django architecture enhanced with responsive
+frontend components, browser media features, and cloud speech processing.
 
-- `TESSERACT_CMD`: full executable path when `tesseract` is not on `PATH`
-- `OCR_TESSDATA_DIR`: trained-data directory when it is outside the system path
-- `OCR_LANGUAGES`: language combination, default `eng+fil`
-- `OCR_TIMEOUT_SECONDS`: per-image-candidate timeout, default `15`
+### Backend
+- **Python 3.13** and **Django 6.0.3** handle routing, authentication, forms,
+  application logic, and database access through the Django ORM.
+- **Gunicorn** runs the Django WSGI application in production.
+- **WhiteNoise** serves collected CSS, JavaScript, images, and other static assets.
 
-On Debian/Ubuntu, install `tesseract-ocr`, `tesseract-ocr-eng`, and
-`tesseract-ocr-fil`. For container deployments, install these system packages in the
-container image.
+### Frontend
+- **Django templates**, **HTML5**, **CSS3**, and **vanilla JavaScript** build the
+  server-rendered and interactive user interface.
+- **Bootstrap 5.3.3** and **Bootstrap Icons** provide responsive layouts and reusable
+  interface components.
+- **Chart.js** displays dashboard analytics, while **PDF.js** provides in-browser PDF
+  previews.
+- The browser **MediaRecorder** and **Web Audio APIs** capture learners' reading audio.
 
-### DigitalOcean deployment
+### Database
+- **SQLite 3** stores users, classes, learning materials, assessments, attempts, and
+  progress data through Django models and migrations.
 
-**App Platform:** Pabasa includes a root `Dockerfile` that installs the native OCR
-engine and both language models. App Platform detects a root Dockerfile automatically.
-Redeploy the component after pushing it, and remove any custom Run Command so the
-Dockerfile `CMD` is used. No `TESSERACT_CMD` value is needed because the executable
-is on `PATH`. If you use an `ondigitalocean.app` hostname, add that hostname to the
-`ALLOWED_HOSTS` environment variable and its full HTTPS URL to
-`CSRF_TRUSTED_ORIGINS`.
+### Speech and Document Processing
+- **Google Cloud Speech-to-Text** transcribes reading activities for automated
+  assessment, while Google Cloud text-to-speech services support read-aloud audio.
+- **Tesseract OCR**, **pytesseract**, and **Pillow** extract and prepare text from
+  uploaded images.
+- **pypdf** extracts text from PDF learning materials, and **ReportLab** generates PDF
+  reports.
 
-For an existing App Platform component pinned to the Python buildpack, the root
-`Aptfile` installs Tesseract plus the English and Filipino models without changing
-the component or database configuration. Push the `Aptfile`, then use **Force Rebuild
-and Deploy** and confirm the build logs detect the Aptfile buildpack.
-The `Procfile` also exposes DigitalOcean's Apt-layer executable and trained-data
-paths to the running Gunicorn process.
-
-**Droplet:** If Pabasa runs directly on Ubuntu instead of in Docker, install the
-engine with `sudo apt update && sudo apt install tesseract-ocr tesseract-ocr-eng
-tesseract-ocr-fil`, then restart Gunicorn or the Pabasa systemd service.
+### Deployment
+- **Docker** packages the application with Python and its native system dependencies.
+- **Gunicorn** serves the application, Django migrations run during container startup,
+  and **WhiteNoise** handles production static files.
+- The repository's `Dockerfile`, `Procfile`, and `Aptfile` support DigitalOcean and
+  compatible Linux deployment environments.
 
 ## 📬 Contact
 For any inquiries about this repository, please contact any of the team members listed above.
