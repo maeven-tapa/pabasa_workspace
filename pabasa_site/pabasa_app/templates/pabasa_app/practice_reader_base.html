@@ -31,6 +31,12 @@
         body[data-student-theme="zoo"] { --sky: #6b8e23; --sky-deep: #3f6212; --sky-soft: #f0f6df; --sun: #f5cc65; }
         body[data-student-theme="library"] { --sky: #9a4dcc; --sky-deep: #6b21a8; --sky-soft: #f7eafd; --sun: #f0abfc; }
         body.practice-free-mode {
+            align-items: center;
+            background:
+                radial-gradient(circle at top, rgba(255,255,255,0.55), transparent 34%),
+                linear-gradient(180deg, #dce6ec 0%, #cfdce4 100%);
+            display: flex;
+            justify-content: center;
             height: 100dvh;
             overflow: hidden;
             font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
@@ -41,6 +47,7 @@
         .practice-scrolls-shell {
             align-items: center;
             display: flex;
+            flex: 1 1 auto;
             justify-items: center;
             justify-content: center;
             margin: 0 auto;
@@ -53,9 +60,10 @@
         .scrolls-desktop-stage {
             align-items: center;
             display: flex;
+            flex: 1 1 auto;
             justify-content: center;
             margin-inline: auto;
-            min-height: 100dvh;
+            min-height: 100%;
             width: min(100%, 1560px);
         }
 
@@ -699,6 +707,22 @@
         }
 
         @media (min-width: 1024px) {
+            body.practice-free-mode {
+                min-height: 100dvh;
+            }
+
+            .practice-shell.practice-scrolls-shell {
+                align-items: center;
+                display: flex;
+                gap: 0;
+                justify-content: center;
+                margin: 0;
+                max-width: none;
+                min-height: 100dvh;
+                padding: clamp(0.5rem, 1vh, 1rem) clamp(0.9rem, 2vw, 1.8rem);
+                width: 100vw;
+            }
+
             .practice-scrolls-shell {
                 align-items: center;
                 justify-content: center;
@@ -707,6 +731,9 @@
             }
 
             .scrolls-desktop-stage {
+                align-items: center;
+                flex: 1 1 auto;
+                min-height: 100%;
                 margin-inline: auto;
                 width: min(100%, 1520px);
             }
@@ -904,10 +931,6 @@
         }
 
         @media (min-width: 768px) and (max-width: 1023px) {
-            .practice-scrolls-shell {
-                padding-inline: 1rem;
-            }
-
             .scrolls-phone-device {
                 max-width: min(100%, 38rem);
                 width: min(100%, 38rem);
@@ -924,17 +947,25 @@
         }
 
         @media (max-width: 767px) {
+            body.practice-free-mode {
+                background: transparent;
+            }
+
             .practice-scrolls-shell {
+                align-items: center;
+                box-sizing: border-box;
                 justify-items: center;
                 min-height: 100dvh;
-                padding: 0.35rem 0.35rem 0.45rem;
+                padding: 0.35rem 0.35rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
             }
 
             .scrolls-phone-device {
                 aspect-ratio: 9 / 19.5;
+                box-sizing: border-box;
                 gap: 0;
-                max-height: min(100dvh - 0.7rem, 56rem);
-                min-height: min(100dvh - 0.7rem, 56rem);
+                height: min(calc(100dvh - 0.35rem - 0.45rem - env(safe-area-inset-bottom, 0px)), 56rem);
+                max-height: min(calc(100dvh - 0.35rem - 0.45rem - env(safe-area-inset-bottom, 0px)), 56rem);
+                min-height: 0;
                 padding-bottom: 0;
                 width: min(100%, 100%);
             }
@@ -1005,9 +1036,12 @@
             }
 
             .scrolls-screen {
+                display: grid;
+                grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
                 flex: 1 1 auto;
+                gap: 0.5rem;
                 min-height: 0;
-                padding: 0.65rem;
+                padding: 0.58rem 0.58rem calc(0.58rem + env(safe-area-inset-bottom, 0px));
             }
 
             .scrolls-bottom-nav {
@@ -1017,7 +1051,9 @@
             }
 
             .scrolls-card {
-                padding: 0.9rem 0.8rem 0.95rem;
+                gap: 0.6rem;
+                min-height: 100%;
+                padding: 0.72rem 0.72rem 0.78rem;
             }
 
             .practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
@@ -1035,6 +1071,29 @@
             .scrolls-record-btn {
                 justify-content: center;
                 width: 100%;
+            }
+
+            .scrolls-progress {
+                gap: 0.28rem;
+            }
+
+            .scrolls-progress-meta,
+            .scrolls-feedback,
+            .scrolls-card-note,
+            .scrolls-hint {
+                font-size: 0.72rem;
+                line-height: 1.25;
+            }
+
+            .scrolls-feedback {
+                padding-top: 0;
+            }
+
+            .scrolls-card-actions {
+                flex-shrink: 0;
+                gap: 0.6rem;
+                margin-top: 0;
+                padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
             }
         }
 
@@ -4985,44 +5044,109 @@
             grid-template-columns: minmax(0, 1fr) !important;
         }
 
-        /* Free Mode keeps the reader UI but removes the decorative phone frame. */
-        .practice-scrolls-shell .scrolls-phone-device {
-            aspect-ratio: auto !important;
-            background: transparent !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            gap: 0 !important;
-            max-height: none !important;
-            max-width: 1100px !important;
-            min-height: calc(100dvh - 1rem) !important;
-            padding: 0 !important;
-            width: min(100%, 1100px) !important;
-        }
+        /* Free Mode uses a landscape tablet frame on desktop and tablet while mobile stays fullscreen. */
+        @media (min-width: 768px) {
+            .practice-scrolls-shell {
+                align-items: center;
+                justify-content: center;
+                min-height: 100dvh;
+                padding: clamp(0.9rem, 2.2vw, 1.8rem);
+            }
 
-        .practice-scrolls-shell .scrolls-phone-device::before,
-        .practice-scrolls-shell .scrolls-phone-device::after,
-        .practice-scrolls-shell .scrolls-phone-notch,
-        .practice-scrolls-shell .scrolls-status-bar,
-        .practice-scrolls-shell .scrolls-bottom-nav {
-            display: none !important;
-        }
+            .practice-scrolls-shell .scrolls-desktop-stage {
+                align-items: center;
+                display: flex;
+                justify-content: center;
+                min-height: 100%;
+                width: min(100%, 1500px);
+            }
 
-        .practice-scrolls-shell .scrolls-phone-shell {
-            background: transparent !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            min-height: calc(100dvh - 1rem);
-            padding: 0 !important;
-            width: 100%;
-        }
+            .practice-scrolls-shell .scrolls-phone-device {
+                align-self: center !important;
+                aspect-ratio: 16 / 10 !important;
+                background:
+                    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 16%),
+                    linear-gradient(145deg, #35383d 0%, #121417 45%, #050607 100%) !important;
+                border: 1px solid rgba(255,255,255,0.09) !important;
+                border-radius: clamp(28px, 2.8vw, 40px) !important;
+                box-shadow:
+                    0 30px 80px rgba(7, 15, 24, 0.28),
+                    0 10px 28px rgba(7, 15, 24, 0.12),
+                    inset 0 1px 0 rgba(255,255,255,0.12),
+                    inset 0 -16px 24px rgba(0,0,0,0.28) !important;
+                gap: clamp(0.45rem, 0.8vw, 0.7rem) !important;
+                max-height: min(88dvh, 930px) !important;
+                max-width: min(92vw, 1400px) !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+                padding: clamp(0.75rem, 1.2vw, 1rem) !important;
+                width: min(92vw, 1400px) !important;
+            }
 
-        .practice-scrolls-shell .scrolls-screen {
-            border: 1px solid rgba(31, 111, 139, 0.14) !important;
-            border-radius: 22px !important;
-            box-shadow: 0 18px 46px rgba(15, 23, 42, 0.1) !important;
-            min-height: calc(100dvh - 1rem);
+            .practice-scrolls-shell .scrolls-phone-device::before,
+            .practice-scrolls-shell .scrolls-phone-device::after,
+            .practice-scrolls-shell .scrolls-phone-notch,
+            .practice-scrolls-shell .scrolls-bottom-nav {
+                display: none !important;
+            }
+
+            .practice-scrolls-shell .scrolls-phone-shell {
+                background: #0a0c0f !important;
+                border: 1px solid rgba(255,255,255,0.08) !important;
+                border-radius: clamp(22px, 2.2vw, 32px) !important;
+                box-shadow:
+                    inset 0 0 0 1px rgba(255,255,255,0.04),
+                    inset 0 0 0 2px rgba(0,0,0,0.16) !important;
+                min-height: 0;
+                padding: clamp(0.45rem, 0.7vw, 0.7rem) !important;
+                width: 100%;
+            }
+
+            .practice-scrolls-shell .scrolls-screen {
+                border: 0 !important;
+                border-radius: clamp(18px, 1.8vw, 26px) !important;
+                box-shadow:
+                    inset 0 1px 0 rgba(255,255,255,0.78),
+                    inset 0 0 0 1px rgba(31, 111, 139, 0.08) !important;
+                display: grid;
+                grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+                min-height: 0;
+            }
+
+            .practice-scrolls-shell .scrolls-status-bar {
+                align-items: center;
+                color: #0f172a;
+                display: flex !important;
+                font-family: "Nunito", "Segoe UI", sans-serif;
+                font-size: clamp(0.8rem, 0.95vw, 0.96rem);
+                font-weight: 800;
+                justify-content: space-between;
+                letter-spacing: 0.01em;
+                padding: 0.08rem 0.2rem 0.15rem;
+                position: relative;
+                z-index: 2;
+            }
+
+            .practice-scrolls-shell .scrolls-status-bar .scrolls-status-icons {
+                gap: 0.34rem;
+            }
+
+            .practice-scrolls-shell .scrolls-status-bar .scrolls-signal span,
+            .practice-scrolls-shell .scrolls-status-bar .scrolls-wifi,
+            .practice-scrolls-shell .scrolls-status-bar .scrolls-battery,
+            .practice-scrolls-shell .scrolls-status-bar .scrolls-battery::after {
+                background: #0f172a;
+            }
+
+            .practice-scrolls-shell .scrolls-status-bar .scrolls-wifi {
+                border-bottom-color: #0f172a;
+            }
+
+            .practice-scrolls-shell .scrolls-status-bar .scrolls-battery {
+                border-color: #0f172a;
+                height: 9px;
+                width: 18px;
+            }
         }
 
         /* Match the assessment reader's animated microphone feedback in every mode. */
@@ -5077,12 +5201,55 @@
             .practice-scrolls-shell .scrolls-phone-device,
             .practice-scrolls-shell .scrolls-phone-shell,
             .practice-scrolls-shell .scrolls-screen {
-                min-height: 100dvh !important;
+                min-height: 0 !important;
+            }
+
+            .practice-scrolls-shell .scrolls-phone-device {
+                height: calc(100dvh - 0.35rem - 0.35rem - env(safe-area-inset-bottom, 0px)) !important;
+                max-height: calc(100dvh - 0.35rem - 0.35rem - env(safe-area-inset-bottom, 0px)) !important;
             }
 
             .practice-scrolls-shell .scrolls-screen {
                 border: 0 !important;
                 border-radius: 0 !important;
+                display: grid !important;
+                gap: 0.42rem;
+                grid-template-rows: auto auto minmax(0, 1fr) auto auto auto !important;
+                padding: 0.5rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell .scrolls-phone-header {
+                gap: 0.18rem 0.3rem;
+                padding: 0.28rem 0.38rem;
+            }
+
+            .practice-scrolls-shell .scrolls-header-meta {
+                gap: 0.16rem;
+                margin-top: 0.08rem;
+            }
+
+            .practice-scrolls-shell .scrolls-feed {
+                flex: 1 1 auto;
+                height: 100%;
+                min-height: 0;
+            }
+
+            .practice-scrolls-shell .scrolls-track {
+                height: 100%;
+            }
+
+            .practice-scrolls-shell .scrolls-card {
+                gap: 0.48rem;
+                min-height: 100%;
+                padding: 0.55rem 0.55rem 0.62rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card-note,
+            .practice-scrolls-shell .scrolls-hint,
+            .practice-scrolls-shell .scrolls-progress-meta,
+            .practice-scrolls-shell .scrolls-feedback {
+                font-size: 0.68rem;
+                line-height: 1.2;
             }
 
             .practice-scrolls-shell .scrolls-card-actions {
@@ -5093,8 +5260,9 @@
                 gap: clamp(0.55rem, 3vw, 0.85rem);
                 justify-content: center;
                 margin-inline: auto;
+                margin-top: 0;
                 max-width: 28rem;
-                padding-inline: clamp(0.75rem, 4vw, 1.1rem);
+                padding: 0 clamp(0.65rem, 4vw, 1rem) env(safe-area-inset-bottom, 0px);
                 width: 100%;
             }
 
@@ -5103,13 +5271,13 @@
                 align-self: stretch;
                 border-radius: 999px;
                 flex: 1 1 0;
-                font-size: 0.88rem;
+                font-size: 0.82rem;
                 font-weight: 800;
                 justify-content: center;
                 line-height: 1.15;
-                min-height: 48px;
+                min-height: 44px;
                 min-width: 0;
-                padding: 0.72rem clamp(0.65rem, 3vw, 1rem);
+                padding: 0.62rem clamp(0.55rem, 3vw, 0.9rem);
                 white-space: nowrap;
             }
 
