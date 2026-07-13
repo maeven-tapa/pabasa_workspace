@@ -1819,13 +1819,13 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100{% if request.resolver_match.url_name == 'auth' %} auth-layout{% endif %}">
+<body class="d-flex flex-column min-vh-100{% if request.resolver_match.url_name == 'auth' or request.resolver_match.url_name == 'signup' or request.resolver_match.url_name == 'teacher_signup' or request.resolver_match.url_name == 'student_signup' %} auth-layout{% endif %}">
     <div class="public-page-loader" id="publicPageLoader" aria-hidden="true" role="status" aria-label="Loading page">
         <div class="public-page-loader__content">
             <div class="public-page-loader__spinner"></div>
         </div>
     </div>
-    <header class="modern-nav-wrap sticky-top{% if request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' %} contextual-nav-wrap{% endif %}{% if request.resolver_match.url_name == 'auth' %} auth-nav-wrap{% endif %}">
+    <header class="modern-nav-wrap sticky-top{% if request.resolver_match.url_name == 'pabasa_info' or request.resolver_match.url_name == 'about' %} contextual-nav-wrap{% endif %}{% if request.resolver_match.url_name == 'auth' or request.resolver_match.url_name == 'signup' or request.resolver_match.url_name == 'teacher_signup' or request.resolver_match.url_name == 'student_signup' %} auth-nav-wrap{% endif %}">
         <nav class="navbar navbar-expand-lg">
             <div class="w-100">
                 <div class="modern-nav-shell">
