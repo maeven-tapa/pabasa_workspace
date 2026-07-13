@@ -31,6 +31,12 @@
         padding: clamp(1.5rem, 4vw, 2.25rem) !important;
     }
 
+    .account-card__intro {
+        display: grid;
+        justify-items: center;
+        text-align: center;
+    }
+
     .account-card h1,
     .account-card h2 {
         color: #0f2f45;
@@ -159,11 +165,13 @@
     <div class="col-12 col-md-9 col-lg-5 mx-auto">
         <article class="account-card card">
             <div class="card-body p-4">
-                <span class="modern-chip mb-2">Access Portal</span>
-                <h1 class="h4 mb-2">Welcome back</h1>
-                <p class="text-secondary">
-                    Log in to continue or <a href="{% url 'signup' %}">create an account</a>.
-                </p>
+                <div class="account-card__intro">
+                    <span class="modern-chip mb-2">Access Portal</span>
+                    <h1 class="h4 mb-2">Welcome back</h1>
+                    <p class="text-secondary">
+                        Log in to continue or <a href="{% url 'signup' %}">create an account</a>.
+                    </p>
+                </div>
                 <form id="loginForm" method="post" class="d-grid gap-3">
                     {% csrf_token %}
                     <div>
