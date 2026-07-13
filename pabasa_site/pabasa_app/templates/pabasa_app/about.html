@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/about.css' %}?v=20260713-clouds">
+<link rel="stylesheet" href="{% static 'pabasa_app/about.css' %}?v=20260713-team-bios">
 {% endblock %}
 
 {% block content %}
@@ -333,7 +333,6 @@
                 <h2 class="h4 mb-1">Development Team</h2>
                 <p class="text-secondary mb-0">BET-CPET 2026 - the researchers and developers working behind PABASA to support reading and learning.</p>
             </div>
-        </div>
 
     <div class="team-container">
     <article class="team-member-card" data-member="basco" data-number="01">
@@ -343,6 +342,7 @@
             <div class="team-member-overlay-text">
                 <h3 class="team-member-name">Leonardo Basco III</h3>
                 <p class="team-member-role-hover">Research Analyst</p>
+                <button type="button" class="team-member-read-bio" data-team-bio="basco" aria-controls="modal-basco" aria-haspopup="dialog">Read bio <span aria-hidden="true">&rarr;</span></button>
             </div>
         </div>
         <div class="team-member-overlay">
@@ -366,11 +366,11 @@
     </article>
 
     <!-- Modal for Basco -->
-    <div class="team-member-modal-overlay" id="modal-basco">
-        <div class="team-member-modal-content">
-            <button class="team-member-modal-close" onclick="closeModal('basco')">&times;</button>
+    <div class="team-member-modal-overlay" id="modal-basco" aria-hidden="true">
+        <div class="team-member-modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-basco-title">
+            <button type="button" class="team-member-modal-close" data-team-modal-close aria-label="Close Leonardo Basco biography">&times;</button>
             <img src="{% static 'pabasa_app/images/basco.png' %}" alt="Leonardo Basco III" class="team-member-modal-image">
-            <h3 class="team-member-modal-title">Leonardo Basco III</h3>
+            <h3 class="team-member-modal-title" id="modal-basco-title">Leonardo Basco III</h3>
             <p class="team-member-modal-role">Research Analyst</p>
             <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1rem;">Leads reading analytics and learning outcome interpretation across pilot groups.</p>
             <div class="team-member-modal-message">
@@ -390,6 +390,7 @@
             <div class="team-member-overlay-text">
                 <h3 class="team-member-name">Lady Caroline Dorongon</h3>
                 <p class="team-member-role-hover">Learning Experience Researcher</p>
+                <button type="button" class="team-member-read-bio" data-team-bio="dorongon" aria-controls="modal-dorongon" aria-haspopup="dialog">Read bio <span aria-hidden="true">&rarr;</span></button>
             </div>
         </div>
         <div class="team-member-overlay">
@@ -413,11 +414,11 @@
     </article>
 
     <!-- Modal for Dorongon -->
-    <div class="team-member-modal-overlay" id="modal-dorongon">
-        <div class="team-member-modal-content">
-            <button class="team-member-modal-close" onclick="closeModal('dorongon')">&times;</button>
+    <div class="team-member-modal-overlay" id="modal-dorongon" aria-hidden="true">
+        <div class="team-member-modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-dorongon-title">
+            <button type="button" class="team-member-modal-close" data-team-modal-close aria-label="Close Lady Caroline Dorongon biography">&times;</button>
             <img src="{% static 'pabasa_app/images/dorongon.jpg' %}" alt="Lady Caroline Dorongon" class="team-member-modal-image">
-            <h3 class="team-member-modal-title">Lady Caroline Dorongon</h3>
+            <h3 class="team-member-modal-title" id="modal-dorongon-title">Lady Caroline Dorongon</h3>
             <p class="team-member-modal-role">Learning Experience Researcher</p>
             <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1rem;">Focuses on learner engagement, classroom flow, and teacher usability feedback.</p>
             <div class="team-member-modal-message">
@@ -437,6 +438,7 @@
             <div class="team-member-overlay-text">
                 <h3 class="team-member-name">Amiel John Padasay</h3>
                 <p class="team-member-role-hover">Speech Assessment Researcher</p>
+                <button type="button" class="team-member-read-bio" data-team-bio="padasay" aria-controls="modal-padasay" aria-haspopup="dialog">Read bio <span aria-hidden="true">&rarr;</span></button>
             </div>
         </div>
         <div class="team-member-overlay">
@@ -460,11 +462,11 @@
     </article>
 
     <!-- Modal for Padasay -->
-    <div class="team-member-modal-overlay" id="modal-padasay">
-        <div class="team-member-modal-content">
-            <button class="team-member-modal-close" onclick="closeModal('padasay')">&times;</button>
+    <div class="team-member-modal-overlay" id="modal-padasay" aria-hidden="true">
+        <div class="team-member-modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-padasay-title">
+            <button type="button" class="team-member-modal-close" data-team-modal-close aria-label="Close Amiel John Padasay biography">&times;</button>
             <img src="{% static 'pabasa_app/images/padasay.jpg' %}" alt="Amiel John Padasay" class="team-member-modal-image">
-            <h3 class="team-member-modal-title">Amiel John Padasay</h3>
+            <h3 class="team-member-modal-title" id="modal-padasay-title">Amiel John Padasay</h3>
             <p class="team-member-modal-role">Speech Assessment Researcher</p>
             <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1rem;">Develops quality checks and evaluation patterns for speech-related reading tasks.</p>
             <div class="team-member-modal-message">
@@ -484,6 +486,7 @@
             <div class="team-member-overlay-text">
                 <h3 class="team-member-name">Dona Palacios</h3>
                 <p class="team-member-role-hover">Literacy Content Strategist</p>
+                <button type="button" class="team-member-read-bio" data-team-bio="palacios" aria-controls="modal-palacios" aria-haspopup="dialog">Read bio <span aria-hidden="true">&rarr;</span></button>
             </div>
         </div>
         <div class="team-member-overlay">
@@ -507,11 +510,11 @@
     </article>
 
     <!-- Modal for Palacios -->
-    <div class="team-member-modal-overlay" id="modal-palacios">
-        <div class="team-member-modal-content">
-            <button class="team-member-modal-close" onclick="closeModal('palacios')">&times;</button>
+    <div class="team-member-modal-overlay" id="modal-palacios" aria-hidden="true">
+        <div class="team-member-modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-palacios-title">
+            <button type="button" class="team-member-modal-close" data-team-modal-close aria-label="Close Dona Palacios biography">&times;</button>
             <img src="{% static 'pabasa_app/images/palacios.jpg' %}" alt="Dona Palacios" class="team-member-modal-image">
-            <h3 class="team-member-modal-title">Dona Palacios</h3>
+            <h3 class="team-member-modal-title" id="modal-palacios-title">Dona Palacios</h3>
             <p class="team-member-modal-role">Literacy Content Strategist</p>
             <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1rem;">Designs structured literacy progression and content sequencing for learners.</p>
             <div class="team-member-modal-message">
@@ -531,6 +534,7 @@
             <div class="team-member-overlay-text">
                 <h3 class="team-member-name">Reyna Marie Santos</h3>
                 <p class="team-member-role-hover">Feedback Systems Researcher</p>
+                <button type="button" class="team-member-read-bio" data-team-bio="santos" aria-controls="modal-santos" aria-haspopup="dialog">Read bio <span aria-hidden="true">&rarr;</span></button>
             </div>
         </div>
         <div class="team-member-overlay">
@@ -554,11 +558,11 @@
     </article>
 
     <!-- Modal for Santos -->
-    <div class="team-member-modal-overlay" id="modal-santos">
-        <div class="team-member-modal-content">
-            <button class="team-member-modal-close" onclick="closeModal('santos')">&times;</button>
+    <div class="team-member-modal-overlay" id="modal-santos" aria-hidden="true">
+        <div class="team-member-modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-santos-title">
+            <button type="button" class="team-member-modal-close" data-team-modal-close aria-label="Close Reyna Marie Santos biography">&times;</button>
             <img src="{% static 'pabasa_app/images/santos.jpg' %}" alt="Reyna Marie Santos" class="team-member-modal-image">
-            <h3 class="team-member-modal-title">Reyna Marie Santos</h3>
+            <h3 class="team-member-modal-title" id="modal-santos-title">Reyna Marie Santos</h3>
             <p class="team-member-modal-role">Feedback Systems Researcher</p>
             <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1rem;">Improves feedback clarity and support cues to keep learners motivated.</p>
             <div class="team-member-modal-message">
@@ -578,6 +582,7 @@
             <div class="team-member-overlay-text">
                 <h3 class="team-member-name">Maeven Tapa</h3>
                 <p class="team-member-role-hover">Assessment Experience Researcher</p>
+                <button type="button" class="team-member-read-bio" data-team-bio="tapa" aria-controls="modal-tapa" aria-haspopup="dialog">Read bio <span aria-hidden="true">&rarr;</span></button>
             </div>
         </div>
         <div class="team-member-overlay">
@@ -601,11 +606,11 @@
     </article>
 
     <!-- Modal for Tapa -->
-    <div class="team-member-modal-overlay" id="modal-tapa">
-        <div class="team-member-modal-content">
-            <button class="team-member-modal-close" onclick="closeModal('tapa')">&times;</button>
+    <div class="team-member-modal-overlay" id="modal-tapa" aria-hidden="true">
+        <div class="team-member-modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-tapa-title">
+            <button type="button" class="team-member-modal-close" data-team-modal-close aria-label="Close Maeven Tapa biography">&times;</button>
             <img src="{% static 'pabasa_app/images/tapa.jpg' %}" alt="Maeven Tapa" class="team-member-modal-image">
-            <h3 class="team-member-modal-title">Maeven Tapa</h3>
+            <h3 class="team-member-modal-title" id="modal-tapa-title">Maeven Tapa</h3>
             <p class="team-member-modal-role">Assessment Experience Researcher</p>
             <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1rem;">Shapes student-centered assessment usability and cross-role interaction flow.</p>
             <div class="team-member-modal-message">
@@ -661,99 +666,91 @@
         });
     });
 
+    // ── Team biography dialogs ──
+    const teamBioModals = document.querySelectorAll('.team-member-modal-overlay');
+    const teamBioOpenButtons = document.querySelectorAll('[data-team-bio]');
+    let activeTeamBioModal = null;
+    let activeTeamBioTrigger = null;
+
+    function openTeamBio(memberId, trigger) {
+        const modal = document.getElementById('modal-' + memberId);
+        if (!modal) return;
+
+        closeTeamBio(false);
+        activeTeamBioModal = modal;
+        activeTeamBioTrigger = trigger || document.querySelector('[data-team-bio="' + memberId + '"]');
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('team-bio-open');
+
+        const closeButton = modal.querySelector('[data-team-modal-close]');
+        if (closeButton) setTimeout(() => closeButton.focus({ preventScroll: true }), 60);
+    }
+
+    function closeTeamBio(restoreFocus = true) {
+        if (!activeTeamBioModal) return;
+
+        activeTeamBioModal.classList.remove('active');
+        activeTeamBioModal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('team-bio-open');
+
+        const trigger = activeTeamBioTrigger;
+        activeTeamBioModal = null;
+        activeTeamBioTrigger = null;
+        if (restoreFocus && trigger) trigger.focus();
+    }
+
+    teamBioOpenButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openTeamBio(this.dataset.teamBio, this);
+        });
+    });
+
+    teamBioModals.forEach(modal => {
+        const closeButton = modal.querySelector('[data-team-modal-close]');
+        if (closeButton) closeButton.addEventListener('click', () => closeTeamBio());
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeTeamBio();
+        });
+    });
+
     document.querySelectorAll('[data-palacios-link]').forEach(link => {
         link.addEventListener('click', function(e) {
             const target = document.getElementById('development-team-palacios');
             if (!target) return;
             e.preventDefault();
             closeArticleModal();
-            setTimeout(() => {
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                activateCard(target);
-                history.replaceState(null, '', '#development-team-palacios');
-            }, 120);
+            history.replaceState(null, '', '#development-team-palacios');
+            setTimeout(() => openTeamBio('palacios', target.querySelector('[data-team-bio="palacios"]')), 120);
         });
     });
-
-    // ── Hover-to-show overlay — gap-proof version ──
-    let hideTimer = null;
-    let currentCard = null;
-
-    function activateCard(card) {
-        if (currentCard === card) return; // already showing this one
-        clearTimeout(hideTimer);
-        deactivateAllCards();
-        currentCard = card;
-        card.classList.add('active');
-        const overlay = card.querySelector('.team-member-overlay');
-        if (overlay) overlay.classList.add('active');
-    }
-
-    function scheduleDeactivate() {
-        clearTimeout(hideTimer);
-        // Long delay = user can move mouse across the gap between cards
-        hideTimer = setTimeout(() => {
-            deactivateAllCards();
-            currentCard = null;
-        }, 300);
-    }
-
-    function deactivateAllCards() {
-        document.querySelectorAll('.team-member-card').forEach(c => {
-            c.classList.remove('active');
-            const ov = c.querySelector('.team-member-overlay');
-            if (ov) ov.classList.remove('active');
-        });
-    }
-
-    document.querySelectorAll('.team-member-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            activateCard(this);
-        });
-        card.addEventListener('mouseleave', function() {
-            scheduleDeactivate();
-        });
-        card.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (currentCard === this) {
-                deactivateAllCards();
-                currentCard = null;
-            } else {
-                activateCard(this);
-            }
-        });
-    });
-
-    // Overlay itself also cancels the hide timer so moving into it keeps it open
-    document.querySelectorAll('.team-member-overlay').forEach(overlay => {
-        overlay.addEventListener('mouseenter', function() {
-            clearTimeout(hideTimer);
-        });
-        overlay.addEventListener('mouseleave', function() {
-            scheduleDeactivate();
-        });
-    });
-
-    // Also: hovering ANY card cancels pending hide from another card
-    // (already handled by activateCard calling clearTimeout first)
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            closeArticleModal();
-            deactivateAllCards();
-            currentCard = null;
+            if (activeTeamBioModal) {
+                closeTeamBio();
+            } else {
+                closeArticleModal();
+            }
+            return;
         }
-    });
 
-    function closeModal(memberId) {
-        const modal = document.getElementById('modal-' + memberId);
-        if (modal) modal.classList.remove('active');
-    }
-
-    document.querySelectorAll('.team-member-modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', function(e) {
-            if (e.target === this) this.classList.remove('active');
-        });
+        if (e.key === 'Tab' && activeTeamBioModal) {
+            const focusable = Array.from(activeTeamBioModal.querySelectorAll('button, a[href]'))
+                .filter(element => !element.hasAttribute('disabled'));
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
     });
 
     // ── Fade-in on scroll ──

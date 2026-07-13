@@ -10,6 +10,7 @@
 
     /* Core palette */
     --pabasa-blue-deep:   #10466E;
+    --about-section-blue: #0F3A4C;
     --pabasa-blue:        #2EA8E5;
     --pabasa-blue-mid:    #3AAEEA;
     --pabasa-blue-light:  #EAF7FD;
@@ -2078,11 +2079,11 @@ body { overflow-x: hidden; }
     --about-next-section-color: #fff;
     padding-top: clamp(3rem, 7vw, 6rem) !important;
     padding-bottom: calc(clamp(3rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
-    background: var(--pabasa-blue-light) !important;
+    background: var(--about-section-blue) !important;
 }
 
 .about-articles-section {
-    --about-next-section-color: var(--pabasa-blue-light);
+    --about-next-section-color: var(--about-section-blue);
     padding-bottom: calc(clamp(3rem, 6vw, 5rem) + var(--about-cloud-height)) !important;
     background: #fff !important;
 }
@@ -2091,11 +2092,11 @@ body { overflow-x: hidden; }
     --about-next-section-color: #fff;
     padding-top: clamp(4rem, 7vw, 6rem) !important;
     padding-bottom: calc(clamp(4rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
-    background: var(--pabasa-blue-light) !important;
+    background: var(--about-section-blue) !important;
 }
 
 .about-journey-section {
-    --about-next-section-color: var(--pabasa-blue-light);
+    --about-next-section-color: var(--about-section-blue);
     padding-top: clamp(4rem, 7vw, 6rem) !important;
     padding-bottom: calc(clamp(4rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
     background: #fff !important;
@@ -2103,7 +2104,7 @@ body { overflow-x: hidden; }
 
 .about-team-section {
     padding-block: clamp(4rem, 7vw, 6rem) !important;
-    background: var(--pabasa-blue-light) !important;
+    background: var(--about-section-blue) !important;
 }
 
 .about-hero-section::after,
@@ -2156,4 +2157,334 @@ body::before,
 body::after {
     content: none !important;
     display: none !important;
+}
+
+/* Development team: portrait cards with explicit biography dialogs. */
+.about-team-section .about-section-header h2 {
+    color: #fff !important;
+}
+
+.about-team-section .about-section-header p {
+    color: rgba(255, 255, 255, 0.76) !important;
+}
+
+.development-team-section .team-container {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: clamp(1rem, 2.5vw, 1.5rem) !important;
+    width: 100% !important;
+    max-width: 64rem !important;
+    margin-inline: auto !important;
+    padding: 1.25rem 0 0 !important;
+}
+
+.development-team-section .team-member-card {
+    width: 100% !important;
+    max-width: none !important;
+    height: clamp(20rem, 30vw, 24rem) !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    cursor: default;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 1.4rem !important;
+    background: #0b2d3b !important;
+    box-shadow: 0 1.15rem 2.6rem rgba(4, 24, 32, 0.28) !important;
+}
+
+.development-team-section .team-member-card:hover {
+    transform: translateY(-0.3rem);
+    box-shadow: 0 1.5rem 3.2rem rgba(4, 24, 32, 0.36) !important;
+}
+
+.development-team-section .team-member-card > img {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    object-fit: cover !important;
+    object-position: center top;
+    border-radius: inherit !important;
+}
+
+.development-team-section .team-member-card:hover > img {
+    filter: brightness(0.9);
+    transform: scale(1.025);
+}
+
+.development-team-section .team-member-initial-overlay {
+    position: absolute !important;
+    inset: auto 0 0 !important;
+    width: 100% !important;
+    padding: 5.5rem 1.25rem 1.25rem !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    border-radius: 0 0 1.35rem 1.35rem !important;
+    background: linear-gradient(to top, rgba(5, 29, 40, 0.98), rgba(8, 42, 56, 0.78), transparent) !important;
+}
+
+.development-team-section .team-member-initial-overlay .team-member-overlay-text {
+    gap: 0.3rem;
+}
+
+.development-team-section .team-member-name {
+    color: #fff !important;
+    font-size: 1.05rem;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
+}
+
+.development-team-section .team-member-role-hover {
+    color: #9edff5 !important;
+    font-size: 0.72rem;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+}
+
+.team-member-read-bio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.35rem;
+    margin-top: 0.6rem;
+    padding: 0.48rem 0.82rem;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--about-section-blue);
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.035em;
+    box-shadow: 0 0.45rem 1rem rgba(4, 24, 32, 0.2);
+    transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.team-member-read-bio:hover,
+.team-member-read-bio:focus-visible {
+    background: var(--pabasa-yellow);
+    color: #123b4b;
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.development-team-section .team-member-overlay,
+.development-team-section .team-member-overlay-backdrop {
+    display: none !important;
+}
+
+body.team-bio-open {
+    overflow: hidden !important;
+}
+
+.team-member-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1rem, 3vw, 2.5rem);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(8, 43, 56, 0.88) !important;
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.team-member-modal-overlay.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.team-member-modal-content {
+    display: grid;
+    grid-template-columns: minmax(15rem, 0.82fr) minmax(0, 1.65fr);
+    grid-template-areas:
+        "image message"
+        "title message"
+        "role message"
+        "summary message";
+    grid-template-rows: auto auto auto 1fr;
+    gap: 0.65rem clamp(2rem, 4vw, 3.5rem);
+    width: min(72rem, 100%) !important;
+    max-width: 72rem !important;
+    height: auto !important;
+    max-height: calc(100svh - 2rem) !important;
+    padding: clamp(2rem, 4vw, 3.25rem) !important;
+    overflow: auto;
+    position: relative;
+    border: 0 !important;
+    border-radius: clamp(1.75rem, 4vw, 3rem) !important;
+    background: #fff !important;
+    box-shadow: 0 2rem 5rem rgba(2, 20, 28, 0.38) !important;
+    transform: translateY(0.85rem) scale(0.985);
+    transition: transform 0.22s ease;
+}
+
+.team-member-modal-overlay.active .team-member-modal-content {
+    transform: translateY(0) scale(1);
+}
+
+.team-member-modal-image {
+    grid-area: image;
+    width: 100% !important;
+    height: clamp(17rem, 31vw, 25rem) !important;
+    margin: 0 0 1rem !important;
+    display: block;
+    object-fit: cover;
+    object-position: center top;
+    border: 0 !important;
+    border-radius: 1.25rem !important;
+    box-shadow: none !important;
+}
+
+.team-member-modal-title {
+    grid-area: title;
+    margin: 0 !important;
+    color: #092f40 !important;
+    text-align: left !important;
+    font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+    line-height: 1.12;
+}
+
+.team-member-modal-role {
+    grid-area: role;
+    margin: 0 !important;
+    color: #00a8a8 !important;
+    text-align: left !important;
+    font-size: 0.93rem;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.team-member-modal-content > p:not(.team-member-modal-role) {
+    grid-area: summary;
+    margin: 0 !important;
+    color: #477087 !important;
+    font-size: 0.9rem !important;
+    line-height: 1.55;
+}
+
+.team-member-modal-message {
+    grid-area: message;
+    align-self: start;
+    margin: 0;
+    padding: 0.15rem 2.5rem 0 0;
+    color: #477087;
+    font-size: clamp(0.95rem, 1.35vw, 1.08rem);
+    line-height: 1.62;
+    text-align: left;
+}
+
+.team-member-modal-message p {
+    margin-top: 0;
+}
+
+.team-member-modal-message hr {
+    margin: 1.35rem 0 !important;
+    border-color: rgba(15, 58, 76, 0.12) !important;
+}
+
+.team-member-modal-message a {
+    color: #008f98 !important;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.team-member-modal-close {
+    position: absolute;
+    z-index: 2;
+    top: 1.35rem !important;
+    right: 1.5rem !important;
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 50%;
+    background: transparent !important;
+    color: #0f5268 !important;
+    font-size: 2rem !important;
+    line-height: 1;
+    box-shadow: none !important;
+}
+
+.team-member-modal-close:hover,
+.team-member-modal-close:focus-visible {
+    background: #e8f6fa !important;
+    color: #082f40 !important;
+    transform: none;
+    outline: 3px solid rgba(46, 168, 229, 0.22);
+}
+
+@media (max-width: 900px) {
+    .development-team-section .team-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        max-width: 44rem !important;
+    }
+
+    .team-member-modal-content {
+        grid-template-columns: minmax(13rem, 0.75fr) minmax(0, 1.35fr);
+        gap: 0.6rem 2rem;
+    }
+
+    .team-member-modal-message {
+        padding-right: 1.5rem;
+    }
+}
+
+@media (max-width: 680px) {
+    .development-team-section .team-container {
+        grid-template-columns: 1fr !important;
+        width: min(100%, 24rem) !important;
+    }
+
+    .development-team-section .team-member-card {
+        height: 24rem !important;
+    }
+
+    .team-member-modal-overlay {
+        align-items: flex-start;
+        padding: 0.75rem;
+        overflow-y: auto;
+    }
+
+    .team-member-modal-content {
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "image"
+            "title"
+            "role"
+            "summary"
+            "message" !important;
+        grid-template-rows: auto !important;
+        gap: 0.6rem !important;
+        width: 100% !important;
+        max-width: 32rem !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 1.25rem !important;
+        border-radius: 1.5rem !important;
+    }
+
+    .team-member-modal-image {
+        height: 19rem !important;
+        margin-bottom: 0.65rem !important;
+    }
+
+    .team-member-modal-message {
+        padding: 1rem 0 0;
+    }
+
+    .team-member-modal-close {
+        top: 1.2rem !important;
+        right: 1.2rem !important;
+        background: rgba(255, 255, 255, 0.94) !important;
+        box-shadow: 0 0.35rem 1rem rgba(5, 29, 40, 0.18) !important;
+    }
 }
