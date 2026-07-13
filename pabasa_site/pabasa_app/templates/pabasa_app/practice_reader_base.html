@@ -474,6 +474,26 @@
             margin-top: 0.1rem;
         }
 
+        .scrolls-card-actions .scrolls-skip-btn,
+        .scrolls-card-actions .scrolls-record-btn,
+        .practice-controls .skip-btn,
+        .practice-controls .record-btn,
+        .practice-controls .next-btn {
+            align-items: center;
+            display: inline-flex;
+            justify-content: center;
+            transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+        }
+
+        .scrolls-card-actions .scrolls-skip-btn.is-keyboard-pressed,
+        .scrolls-card-actions .scrolls-record-btn.is-keyboard-pressed,
+        .practice-controls .skip-btn.is-keyboard-pressed,
+        .practice-controls .record-btn.is-keyboard-pressed,
+        .practice-controls .next-btn.is-keyboard-pressed {
+            filter: brightness(0.94);
+            transform: scale(0.98);
+        }
+
         .scrolls-card.is-complete {
             border-color: rgba(16, 185, 129, 0.24);
             box-shadow: 0 16px 34px rgba(16, 185, 129, 0.14);
@@ -1874,6 +1894,7 @@
             max-width: min(100%, 360px);
             min-height: auto;
             padding: 0.55rem 0.85rem;
+            color: var(--dash-text);
             width: fit-content;
         }
 
@@ -5268,7 +5289,7 @@
                     <p class="scrolls-feedback" id="scrollsFeedback">Tap the mic to record your reading.</p>
                     <div class="scrolls-card-actions">
                         <button class="scrolls-skip-btn" id="scrollSkipBtn" type="button">Skip</button>
-                        <button class="scrolls-record-btn" id="scrollRecordBtn" type="button"><i class="bi bi-mic-fill"></i> Read aloud</button>
+                        <button class="scrolls-record-btn" id="scrollRecordBtn" type="button"><i class="bi bi-mic-fill" aria-hidden="true"></i> Read Aloud</button>
                     </div>
                 </div>
             </section>
@@ -5338,7 +5359,7 @@
                 </section>
 
                 <div class="hunt-actions">
-                    <p class="practice-feedback" id="practiceFeedback">Ready when you are.</p>
+                    <p class="practice-feedback" id="practiceFeedback">Begin reading.</p>
                     <div class="practice-controls">
                         <button class="record-btn" id="huntReadAloudBtn" type="button"><i class="bi bi-volume-up-fill me-1"></i> Read Aloud</button>
                         <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Start Reading</button>
@@ -5437,7 +5458,7 @@
                 </section>
 
                 <div class="practice-action-shell">
-                    <p class="practice-feedback" id="practiceFeedback">Ready when you are.</p>
+                    <p class="practice-feedback" id="practiceFeedback">Begin reading.</p>
 
                     <div class="practice-controls">
                         <button class="skip-btn" id="skipBtn" type="button">Skip</button>

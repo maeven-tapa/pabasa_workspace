@@ -10,6 +10,7 @@
     let incorrectResponses = 0;
     let itemOutcomes = [];
     let sessionStartedAt = Date.now();
+    let practiceSessionStarted = false;
     let freeModeReadSteps = 0;
     let freeModeSkipSteps = 0;
 
@@ -17,6 +18,10 @@
     const practiceCounter = document.getElementById("practiceCounter");
     const practiceProgress = document.getElementById("practiceProgress");
     const practiceFeedback = document.getElementById("practiceFeedback");
+    if (practiceFeedback) {
+        practiceFeedback.textContent = "Begin reading.";
+        practiceFeedback.classList.remove("is-success", "is-warning");
+    }
     const starCount = document.getElementById("starCount");
     const starCounter = document.querySelector(".star-counter");
     const skipBtn = document.getElementById("skipBtn");
@@ -137,6 +142,21 @@
             : '<i class="bi bi-mic-fill me-1"></i> Start Reading';
     }
 
+    function isEditableTarget(target) {
+        if (!target || !(target instanceof Element)) return false;
+        return Boolean(target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]'));
+    }
+
+    function pulseButtonPress(button, duration = 120) {
+        if (!button) return;
+        button.classList.remove("is-keyboard-pressed");
+        void button.offsetWidth;
+        button.classList.add("is-keyboard-pressed");
+        window.setTimeout(() => {
+            button.classList.remove("is-keyboard-pressed");
+        }, duration);
+    }
+
     function scheduleHuntRecognition(index = currentIndex, delay = 180) {
         if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
         huntRecognitionRestartTimer = window.setTimeout(() => {
@@ -163,6 +183,7 @@
         updateHuntToggleButton();
         setHuntSpeechPanel("Speech check stopped", "Google Speech results will appear here while you read.");
     }
+
     const colorModeStage = document.getElementById("colorModeStage");
     const colorPracticeText = document.getElementById("colorPracticeText");
     const colorScene = document.getElementById("colorScene");
@@ -533,10 +554,10 @@
             shell.classList.add("is-recording");
             button.innerHTML = isHuntMode
                 ? '<i class="bi bi-stop-circle-fill me-1"></i> Stop'
-                : '<i class="bi bi-stop-circle-fill me-1"></i> Stop & check';
+                : '<i class="bi bi-stop-circle-fill me-1"></i> Stop & Check';
             speechFeedback(isHuntMode
                 ? "Listening… Read the word aloud."
-                : "Listening… Read the text aloud, then press Stop & check.", true);
+                : "Listening… Read the text aloud, then press Stop & Check.", true);
             if (isHuntMode) {
                 setHuntSpeechPanel("Listening with Google Speech...", "Interim: listening for your word...", true);
                 if (huntRawMicInput) huntRawMicInput.textContent = "Waiting for speech...";
@@ -611,6 +632,30 @@
             return;
         }
         startPracticeSpeechRecording(button);
+    }, true);
+
+    document.addEventListener("keydown", (event) => {
+        if (!isFreeMode) return;
+        if (event.repeat) return;
+        if (isEditableTarget(event.target)) return;
+
+        const key = event.key;
+        if (key !== " " && key !== "Spacebar" && key !== "Escape") return;
+        const primaryButton = scrollRecordBtn;
+        const skipButton = scrollSkipBtn;
+        if (!primaryButton || !skipButton) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (key === "Escape") {
+            pulseButtonPress(skipButton);
+            skipButton.click();
+            return;
+        }
+
+        pulseButtonPress(primaryButton);
+        primaryButton.click();
     }, true);
 
     huntReadAloudBtn?.addEventListener("click", async () => {
@@ -825,7 +870,7 @@
         const total = Math.max(items.length, 1);
         const position = Math.min(currentIndex + 1, total);
         const percentage = Math.round((huntPoints / HUNT_MAX_POINTS) * 100);
-        const feedbackText = practiceFeedback?.textContent || "Ready when you are.";
+        const feedbackText = practiceFeedback?.textContent || "Begin reading.";
 
         const dots = document.querySelectorAll("[data-hunt-dot]");
         dots.forEach((dot, index) => {
@@ -926,51 +971,21 @@
         colorPracticeText.textContent = items[currentIndex] || "No materials available.";
     }
 
-    function advanceColorModeFromKeyboard(options = {}) {
-        if (!items.length) return false;
-        const { countAsSkip = false, countAsRead = false } = options;
-
-        if (countAsSkip) {
-            setCurrentItemOutcome("skipped");
-        } else if (countAsRead) {
-            setCurrentItemOutcome("read");
-            revealNextColorObject();
-            if (colorFinalRevealTimer) {
-                window.clearTimeout(colorFinalRevealTimer);
-                colorFinalRevealTimer = null;
+    function clickColorModeFinishWhenReady() {
+        if (!nextBtn) return;
+        const tryClickFinish = () => {
+            if (!nextBtn.disabled) {
+                pulseButtonPress(nextBtn);
+                nextBtn.click();
+                return;
             }
-            if (colorFinalRevealHold) {
-                window.clearTimeout(colorFinalRevealHold);
-                colorFinalRevealHold = null;
-            }
-        }
+            window.requestAnimationFrame(tryClickFinish);
+        };
+        window.requestAnimationFrame(tryClickFinish);
+    }
 
-        if (currentIndex < items.length - 1) {
-            currentIndex += 1;
-            practiceFeedback.textContent = "New item ready. Take your time.";
-            practiceFeedback.classList.remove("is-success", "is-warning");
-            playCoachAnimation('next');
-            render();
-            return true;
-        }
-
-        if (isColorMode && colorModeCompletionReady) {
-            colorFinalRevealHold = window.setTimeout(() => {
-                colorFinalRevealHold = null;
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        colorFinalRevealTimer = window.setTimeout(() => {
-                            colorFinalRevealTimer = null;
-                            completeColorModeLevel();
-                        }, 900);
-                    });
-                });
-            }, 0);
-            return true;
-        }
-
-        showCompletion();
-        return true;
+    function clickFreeModeFinishWhenReady() {
+        clickColorModeFinishWhenReady();
     }
 
     function handleColorModeKeyboard(event) {
@@ -978,28 +993,63 @@
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return false;
 
+        const isLastItem = currentIndex >= items.length - 1;
+        const shouldUseFinishButton = Boolean(
+            nextBtn &&
+            !nextBtn.disabled &&
+            isLastItem &&
+            colorModeCompletionReady &&
+            skipBtn?.classList.contains("d-none") &&
+            recordBtn?.classList.contains("d-none")
+        );
+        const currentActionButton = shouldUseFinishButton ? nextBtn : recordBtn;
+
         if (event.key === 'ArrowUp') {
             event.preventDefault();
-            advanceColorModeFromKeyboard({ countAsRead: true });
+            if (currentActionButton) {
+                pulseButtonPress(currentActionButton);
+                currentActionButton.click();
+            }
             return true;
         }
 
         if (event.key === 'ArrowDown') {
             event.preventDefault();
-            advanceColorModeFromKeyboard({ countAsSkip: true });
+            if (skipBtn && !skipBtn.classList.contains("d-none")) {
+                pulseButtonPress(skipBtn);
+                skipBtn.click();
+                if (isLastItem) {
+                    clickColorModeFinishWhenReady();
+                }
+            } else if (nextBtn && !nextBtn.disabled) {
+                pulseButtonPress(nextBtn);
+                nextBtn.click();
+            }
             return true;
         }
 
         const isSpace = event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
         if (isSpace) {
             event.preventDefault();
-            advanceColorModeFromKeyboard({ countAsRead: true });
+            if (currentActionButton) {
+                pulseButtonPress(currentActionButton);
+                currentActionButton.click();
+            }
             return true;
         }
 
         if (event.key === 'Escape') {
             event.preventDefault();
-            advanceColorModeFromKeyboard({ countAsSkip: true });
+            if (skipBtn && !skipBtn.classList.contains("d-none")) {
+                pulseButtonPress(skipBtn);
+                skipBtn.click();
+                if (isLastItem) {
+                    clickColorModeFinishWhenReady();
+                }
+            } else if (nextBtn && !nextBtn.disabled) {
+                pulseButtonPress(nextBtn);
+                nextBtn.click();
+            }
             return true;
         }
 
@@ -1425,6 +1475,8 @@
             currentIndex = 0;
             itemOutcomes = Array(items.length).fill(null);
             setupColorModeScene();
+            practiceSessionStarted = false;
+            resetPracticeFeedbackMessage();
             if (isFreeMode) {
                 toggleFreeModeBodyLock(true);
                 renderFreeMode();
@@ -1441,6 +1493,8 @@
         items = [];
         itemOutcomes = [];
         setupColorModeScene();
+        practiceSessionStarted = false;
+        resetPracticeFeedbackMessage();
         if (practiceText) practiceText.textContent = "No materials available.";
         updateColorModeReadingText();
         if (practiceCounter) practiceCounter.textContent = "No items";
@@ -1589,6 +1643,23 @@
         updateHuntServerStarDisplays();
     }
 
+    function resetPracticeFeedbackMessage() {
+        if (practiceFeedback) {
+            practiceFeedback.textContent = "Begin reading.";
+            practiceFeedback.classList.remove("is-success", "is-warning");
+        }
+    }
+
+    function markPracticeSessionStarted() {
+        practiceSessionStarted = true;
+    }
+
+    function ensurePracticeFeedbackIdleMessage() {
+        if (!practiceFeedback || practiceSessionStarted) return;
+        practiceFeedback.textContent = "Begin reading.";
+        practiceFeedback.classList.remove("is-success", "is-warning");
+    }
+
     function render() {
         if (currentIndex >= items.length) {
             showCompletion();
@@ -1603,6 +1674,7 @@
         applyHardTextSizing();
         updateColorModeReadingText();
         updateColorModeControls();
+        ensurePracticeFeedbackIdleMessage();
         const label = mode.charAt(0).toUpperCase() + mode.slice(1);
         practiceCounter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
         practiceProgress.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
@@ -1655,9 +1727,6 @@
     function setFreeModeReadButton(isComplete) {
         if (!scrollRecordBtn) return;
         scrollRecordBtn.classList.toggle('is-read', isComplete);
-        scrollRecordBtn.innerHTML = isComplete
-            ? '<i class="bi bi-check-circle-fill"></i> Completed'
-            : '<i class="bi bi-mic-fill"></i> Read aloud';
     }
 
     function escapeHtml(value) {
@@ -1781,55 +1850,59 @@
         }
     }
 
-    function advanceFreeModeFromKeyboard(options = {}) {
-        if (!items.length) return false;
-        const { countAsSkip = false, countAsRead = false } = options;
-
-        if (countAsSkip) {
-            freeModeSkipSteps += 1;
-            setCurrentItemOutcome("skipped");
-        } else if (countAsRead) {
-            freeModeReadSteps += 1;
-            setCurrentItemOutcome("read");
-        }
-
-        if (scrollCurrentIndex >= items.length - 1) {
-            persistFreeModeCardProgress(scrollCurrentIndex);
-            completeFreeModeLevel();
-            return true;
-        }
-
-        goToFreeModeCard(scrollCurrentIndex + 1, { countAsSkip });
-        return true;
-    }
-
     function handleFreeModeKeyboard(event) {
         if (!isFreeMode || !items.length) return false;
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return false;
+        if (event.repeat) return false;
 
         if (event.key === 'ArrowUp') {
             event.preventDefault();
-            advanceFreeModeFromKeyboard({ countAsRead: true });
+            const primaryButton = scrollRecordBtn;
+            if (primaryButton) {
+                pulseButtonPress(primaryButton);
+                primaryButton.click();
+            }
             return true;
         }
 
         if (event.key === 'ArrowDown') {
             event.preventDefault();
-            advanceFreeModeFromKeyboard({ countAsSkip: true });
+            if (scrollSkipBtn) {
+                pulseButtonPress(scrollSkipBtn);
+                scrollSkipBtn.click();
+                if (scrollCurrentIndex >= items.length - 1) {
+                    clickFreeModeFinishWhenReady();
+                }
+            } else if (nextBtn && !nextBtn.disabled) {
+                pulseButtonPress(nextBtn);
+                nextBtn.click();
+            }
             return true;
         }
 
         const isSpace = event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
         if (isSpace) {
             event.preventDefault();
-            advanceFreeModeFromKeyboard({ countAsRead: true });
+            if (scrollRecordBtn) {
+                pulseButtonPress(scrollRecordBtn);
+                scrollRecordBtn.click();
+            }
             return true;
         }
 
         if (event.key === 'Escape') {
             event.preventDefault();
-            advanceFreeModeFromKeyboard({ countAsSkip: true });
+            if (scrollSkipBtn) {
+                pulseButtonPress(scrollSkipBtn);
+                scrollSkipBtn.click();
+                if (scrollCurrentIndex >= items.length - 1) {
+                    clickFreeModeFinishWhenReady();
+                }
+            } else if (nextBtn && !nextBtn.disabled) {
+                pulseButtonPress(nextBtn);
+                nextBtn.click();
+            }
             return true;
         }
 
@@ -2213,13 +2286,14 @@
         if (recordBtn) recordBtn.disabled = false;
         if (skipBtn) skipBtn.disabled = false;
         setupColorModeScene();
-        practiceFeedback.textContent = "Ready when you are.";
-        practiceFeedback.classList.remove("is-success", "is-warning");
+        practiceSessionStarted = false;
+        resetPracticeFeedbackMessage();
         updateCompletionSummary();
         render();
     }
 
     skipBtn?.addEventListener("click", function () {
+        markPracticeSessionStarted();
         setCurrentItemOutcome("skipped");
         practiceFeedback.textContent = "Skipped. That item will count as a chance to improve next time.";
         practiceFeedback.classList.remove("is-success");
@@ -2262,6 +2336,7 @@
     });
 
     recordBtn?.addEventListener("click", function () {
+        markPracticeSessionStarted();
         const wasAlreadyRead = itemOutcomes[currentIndex] === "read";
         setCurrentItemOutcome("read");
         const revealedObject = wasAlreadyRead ? false : revealNextColorObject();
@@ -2303,6 +2378,7 @@
     });
 
     nextBtn?.addEventListener("click", function () {
+        markPracticeSessionStarted();
         if (isColorMode) {
             if (currentIndex !== items.length - 1) return;
             setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
