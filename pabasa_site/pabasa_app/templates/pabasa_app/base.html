@@ -1137,8 +1137,11 @@
 
         /* Footer: navy from logo */
         .site-footer {
+            --footer-wave-height: 10rem;
+            position: relative;
+            isolation: isolate;
             margin-top: 0 !important;
-            background: #10466e !important;
+            background: transparent !important;
             border-top: 0 !important;
             overflow: visible;
         }
@@ -1147,13 +1150,32 @@
             padding-bottom: 0 !important;
         }
 
+        body:has(.section-container-gallery) .site-footer {
+            margin-top: calc(0px - var(--footer-wave-height)) !important;
+        }
+
         .site-footer::before,
         .site-footer::after,
         .footer-decor {
             display: none;
         }
 
+        .site-footer::after {
+            content: "";
+            position: absolute;
+            z-index: 0;
+            top: calc(var(--footer-wave-height) - 1px);
+            right: 0;
+            bottom: 0;
+            left: 0;
+            display: block;
+            background: #10466e;
+            pointer-events: none;
+        }
+
         .footer-shell {
+            position: relative;
+            z-index: 3;
             padding-top: 11rem;
             padding-bottom: 1.5rem;
         }
@@ -1170,7 +1192,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 10rem;
+            height: var(--footer-wave-height);
             background: transparent;
             z-index: 2;
             pointer-events: none;
@@ -1298,8 +1320,8 @@
         }
 
         @media (max-width: 600px) {
-            .footer-divider {
-                height: 8.5rem;
+            .site-footer {
+                --footer-wave-height: 8.5rem;
             }
 
             .footer-divider img {
@@ -1916,27 +1938,7 @@
     <footer class="site-footer mt-auto" id="site-footer">
         <div class="footer-divider" aria-hidden="true">
             <svg class="footer-divider-wave" viewBox="0 0 1440 160" preserveAspectRatio="none" focusable="false">
-                <defs>
-                    <linearGradient id="footerValleyGradient" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stop-color="#e4f4fb"/>
-                        <stop offset="50%" stop-color="#eefaff"/>
-                        <stop offset="100%" stop-color="#fff9df"/>
-                    </linearGradient>
-                    <pattern id="footerLearningPattern" width="280" height="160" patternUnits="userSpaceOnUse">
-                        <g fill="none" stroke="#10466e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.075">
-                            <path d="M24 34c12-8 24-8 36 0v28c-12-8-24-8-36 0zM60 34c12-8 24-8 36 0v28c-12-8-24-8-36 0z"/>
-                            <rect x="190" y="92" width="54" height="36" rx="6"/>
-                            <circle cx="217" cy="110" r="9"/>
-                            <path d="M202 92l7-8h17l7 8"/>
-                        </g>
-                        <g fill="#f5b800" opacity="0.11">
-                            <path d="M147 31l4 8 9 1-7 6 2 9-8-4-8 4 2-9-7-6 9-1z"/>
-                            <circle cx="132" cy="127" r="4"/>
-                        </g>
-                    </pattern>
-                </defs>
-                <path fill="url(#footerValleyGradient)" d="M0 0 H90 C115 0 115 18 140 18 C165 18 165 0 190 0 H330 C365 0 355 32 395 35 H445 C482 35 477 66 518 70 C555 73 552 101 610 121 C680 146 760 146 830 121 C888 101 885 73 922 70 C963 66 958 35 995 35 H1045 C1085 32 1075 0 1110 0 H1250 C1275 0 1275 18 1300 18 C1325 18 1325 0 1350 0 H1440 V0 H0 Z"/>
-                <path fill="url(#footerLearningPattern)" d="M0 0 H90 C115 0 115 18 140 18 C165 18 165 0 190 0 H330 C365 0 355 32 395 35 H445 C482 35 477 66 518 70 C555 73 552 101 610 121 C680 146 760 146 830 121 C888 101 885 73 922 70 C963 66 958 35 995 35 H1045 C1085 32 1075 0 1110 0 H1250 C1275 0 1275 18 1300 18 C1325 18 1325 0 1350 0 H1440 V0 H0 Z"/>
+                <path fill="#10466e" d="M0 0 H90 C115 0 115 18 140 18 C165 18 165 0 190 0 H330 C365 0 355 32 395 35 H445 C482 35 477 66 518 70 C555 73 552 101 610 121 C680 146 760 146 830 121 C888 101 885 73 922 70 C963 66 958 35 995 35 H1045 C1085 32 1075 0 1110 0 H1250 C1275 0 1275 18 1300 18 C1325 18 1325 0 1350 0 H1440 V160 H0 Z"/>
             </svg>
             <span class="footer-float footer-float--book"><i class="bi bi-book-half"></i></span>
             <span class="footer-float footer-float--pencil"><i class="bi bi-pencil-fill"></i></span>
