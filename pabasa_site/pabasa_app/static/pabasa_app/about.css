@@ -2067,24 +2067,62 @@ body { overflow-x: hidden; }
     overflow: hidden;
 }
 
-.about-hero-section { padding-block: clamp(3rem, 7vw, 6rem) !important; background: linear-gradient(145deg,#fff9df,#eefaff 50%,#f5f1ff); }
-.about-articles-section { background: linear-gradient(145deg,#eaf8ff,#fff 52%,#fff9df); }
-.about-principles-section { padding-block: clamp(4rem,7vw,6rem) !important; background: linear-gradient(145deg,#f4f0ff,#edf8ff); }
-.about-journey-section { padding-block: clamp(4rem,7vw,6rem) !important; background: linear-gradient(145deg,#fffaf0,#eefaff); }
-.about-team-section { padding-block: clamp(4rem,7vw,6rem) !important; background: linear-gradient(145deg,#eaf8ff,#f8f2ff 55%,#fff9df); }
+.about-hero-section,
+.about-articles-section,
+.about-principles-section,
+.about-journey-section {
+    --about-cloud-height: clamp(3rem, 5vw, 4.5rem);
+}
 
+.about-hero-section {
+    --about-next-section-color: #fff;
+    padding-top: clamp(3rem, 7vw, 6rem) !important;
+    padding-bottom: calc(clamp(3rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
+    background: var(--pabasa-blue-light) !important;
+}
+
+.about-articles-section {
+    --about-next-section-color: var(--pabasa-blue-light);
+    padding-bottom: calc(clamp(3rem, 6vw, 5rem) + var(--about-cloud-height)) !important;
+    background: #fff !important;
+}
+
+.about-principles-section {
+    --about-next-section-color: #fff;
+    padding-top: clamp(4rem, 7vw, 6rem) !important;
+    padding-bottom: calc(clamp(4rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
+    background: var(--pabasa-blue-light) !important;
+}
+
+.about-journey-section {
+    --about-next-section-color: var(--pabasa-blue-light);
+    padding-top: clamp(4rem, 7vw, 6rem) !important;
+    padding-bottom: calc(clamp(4rem, 7vw, 6rem) + var(--about-cloud-height)) !important;
+    background: #fff !important;
+}
+
+.about-team-section {
+    padding-block: clamp(4rem, 7vw, 6rem) !important;
+    background: var(--pabasa-blue-light) !important;
+}
+
+.about-hero-section::after,
 .about-articles-section::after,
 .about-principles-section::after,
-.about-journey-section::after,
-.about-team-section::after {
-    content:""; position:absolute; inset:-17rem -26rem; z-index:-1; opacity:.16; pointer-events:none;
-    background-repeat:repeat; animation:aboutScrapbookDrift 40s linear infinite;
+.about-journey-section::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    inset: auto 0 0;
+    height: var(--about-cloud-height);
+    opacity: 1;
+    pointer-events: none;
+    animation: none;
+    background:
+        radial-gradient(ellipse 3.5rem 2.25rem at 3.25rem 100%, var(--about-next-section-color) 98%, transparent 100%) 0 0 / 6.5rem 100% repeat-x,
+        radial-gradient(ellipse 2.6rem 1.75rem at 2.2rem 100%, var(--about-next-section-color) 98%, transparent 100%) 3.1rem 0.35rem / 5.2rem 100% repeat-x,
+        linear-gradient(to bottom, transparent 64%, var(--about-next-section-color) 65%);
 }
-.about-articles-section::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' opacity='.55'%3E%3Cpath d='M45 45h72v90H45zM56 60h50M56 73h50M56 86h36M300 48h55v70h-55zM310 62h35M310 76h28M75 220l22-28 18 14 24-38M290 215h78'/%3E%3C/g%3E%3Ctext x='165' y='145' fill='%232EA8E5' opacity='.55' font-family='Arial' font-size='18' font-weight='700'%3ERESEARCH%3C/text%3E%3C/svg%3E"); }
-.about-principles-section::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' opacity='.5'%3E%3Cpath d='M60 48l8 16 18 3-13 12 3 18-16-8-16 8 3-18-13-12 18-3zM300 48h68v55h-68zM312 65h44M312 79h31M65 205h85M138 194l12 11-12 11'/%3E%3C/g%3E%3Ctext x='170' y='150' fill='%237160D8' opacity='.5' font-family='Arial' font-size='18' font-weight='700'%3EWHY%3C/text%3E%3C/svg%3E"); animation-direction:reverse; }
-.about-journey-section::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' opacity='.5'%3E%3Ccircle cx='65' cy='65' r='25'/%3E%3Cpath d='M54 65l8 8 16-19M115 65h65M168 54l12 11-12 11M260 65h65M313 54l12 11-12 11M80 215h260'/%3E%3C/g%3E%3Ctext x='150' y='155' fill='%232EA8E5' opacity='.5' font-family='Arial' font-size='18' font-weight='700'%3EOUR JOURNEY%3C/text%3E%3C/svg%3E"); }
-.about-team-section::after { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='280'%3E%3Cg fill='none' stroke='%2310466E' stroke-width='2' opacity='.5'%3E%3Ccircle cx='55' cy='55' r='11'/%3E%3Ccircle cx='90' cy='55' r='11'/%3E%3Cpath d='M34 94c3-20 42-20 45 0M69 94c3-20 42-20 45 0M300 45h68v52h-68zM312 61h44M312 75h31'/%3E%3C/g%3E%3Ctext x='148' y='153' fill='%232EA8E5' opacity='.52' font-family='Arial' font-size='18' font-weight='700'%3ETEAM PABASA%3C/text%3E%3C/svg%3E"); animation-direction:reverse; }
-@keyframes aboutScrapbookDrift { from{background-position:0 0;transform:translate3d(0,0,0)} to{background-position:420px 280px;transform:translate3d(20px,-12px,0)} }
 
 .hero-stamps { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1.35rem; }
 .hero-stamps span { padding:.38rem .65rem; border:2px solid currentColor; border-radius:.35rem; color:var(--pabasa-blue); font-family:var(--font-display); font-size:.7rem; font-weight:900; letter-spacing:.12em; transform:rotate(-3deg); }
@@ -2106,4 +2144,16 @@ body { overflow-x: hidden; }
     .about-hero-section,.about-articles-section,.about-principles-section,.about-journey-section,.about-team-section{padding-inline:1rem !important}
     .hero-stamps{justify-content:center}
 }
-@media(prefers-reduced-motion:reduce){.about-articles-section::after,.about-principles-section::after,.about-journey-section::after,.about-team-section::after{animation:none}}
+
+/* Keep the page canvas quiet so only the solid section rhythm is visible. */
+html,
+body {
+    background: #fff !important;
+    background-attachment: scroll !important;
+}
+
+body::before,
+body::after {
+    content: none !important;
+    display: none !important;
+}
