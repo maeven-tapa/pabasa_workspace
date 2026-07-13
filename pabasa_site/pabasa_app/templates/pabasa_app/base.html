@@ -1187,8 +1187,8 @@
         }
 
         .footer-grid {
-            grid-template-columns: minmax(16rem, 1.8fr) repeat(2, minmax(9rem, 0.8fr));
-            gap: clamp(2rem, 5vw, 4.5rem);
+            grid-template-columns: minmax(16rem, 1.55fr) minmax(17rem, 1fr) minmax(9rem, 0.7fr);
+            gap: clamp(2rem, 4vw, 4rem);
             max-width: none;
             margin: 0;
         }
@@ -1460,6 +1460,18 @@
             text-align: left;
         }
 
+        .footer-panel--explore {
+            padding-right: clamp(1.5rem, 2.8vw, 2.75rem);
+            border-right: 1px solid rgba(255, 255, 255, 0.16);
+        }
+
+        .footer-link-columns {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: clamp(1.5rem, 2.8vw, 2.75rem);
+            align-items: start;
+        }
+
         .footer-copy {
             max-width: 24rem;
             margin: 0;
@@ -1510,6 +1522,16 @@
         @media (max-width: 900px) {
             .footer-grid {
                 grid-template-columns: 1.5fr repeat(2, 1fr);
+            }
+
+            .footer-panel--explore {
+                padding-right: 0;
+                border-right: 0;
+            }
+
+            .footer-link-columns {
+                grid-template-columns: 1fr;
+                gap: 0.6rem;
             }
         }
 
@@ -1971,16 +1993,20 @@
                     </a>
                     <p class="footer-copy">Helping Grade 2 learners become confident readers through thoughtful practice, clear assessment, and teacher-led support.</p>
                 </div>
-                <div class="footer-panel">
+                <div class="footer-panel footer-panel--explore">
                     <div class="footer-title">Explore</div>
-                    <ul class="footer-link-list">
-                        <li><a href="{% url 'home' %}">Home</a></li>
-                        <li><a href="{% url 'about' %}">About</a></li>
-                        <li><a href="{% url 'pabasa_info' %}">Features</a></li>
-                        <li><a href="{% url 'faq' %}">FAQs</a></li>
-                        <li><a href="{% url 'terms' %}">Terms</a></li>
-                        <li><a href="{% url 'privacy' %}">Privacy</a></li>
-                    </ul>
+                    <div class="footer-link-columns">
+                        <ul class="footer-link-list">
+                            <li><a href="{% url 'home' %}">Home</a></li>
+                            <li><a href="{% url 'about' %}">About</a></li>
+                            <li><a href="{% url 'pabasa_info' %}">Features</a></li>
+                        </ul>
+                        <ul class="footer-link-list">
+                            <li><a href="{% url 'faq' %}">FAQs</a></li>
+                            <li><a href="{% url 'terms' %}">Terms</a></li>
+                            <li><a href="{% url 'privacy' %}">Privacy</a></li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="footer-panel">
                     <div class="footer-title">Connect</div>
