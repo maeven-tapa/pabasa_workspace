@@ -844,10 +844,33 @@
                 font-size: clamp(0.92rem, 1.05vw, 1.1rem);
             }
 
-            .scrolls-record-btn {
+            .practice-scrolls-shell .scrolls-card-actions {
+                align-items: center;
+                flex-wrap: nowrap;
+                gap: clamp(0.75rem, 1vw, 1rem);
+                justify-content: center;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-skip-btn,
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                border-radius: 999px;
+                flex: 0 0 auto;
                 font-size: clamp(0.95rem, 1.05vw, 1.15rem);
+                font-weight: 800;
+                justify-content: center;
+                line-height: 1.15;
                 min-height: clamp(2.9rem, 3.2vw, 3.7rem);
+                min-width: 0;
                 padding: clamp(0.65rem, 0.85vw, 0.9rem) clamp(1rem, 1.3vw, 1.5rem);
+                white-space: nowrap;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-skip-btn {
+                width: clamp(8.25rem, 10vw, 10rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                width: clamp(10.75rem, 13vw, 13.5rem);
             }
 
             .scrolls-progress-bar {
@@ -4998,6 +5021,38 @@
             .practice-scrolls-shell .scrolls-screen {
                 border: 0 !important;
                 border-radius: 0 !important;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions {
+                align-items: center;
+                display: flex;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                gap: clamp(0.55rem, 3vw, 0.85rem);
+                justify-content: center;
+                margin-inline: auto;
+                max-width: 28rem;
+                padding-inline: clamp(0.75rem, 4vw, 1.1rem);
+                width: 100%;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-skip-btn,
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                align-self: stretch;
+                border-radius: 999px;
+                flex: 1 1 0;
+                font-size: 0.88rem;
+                font-weight: 800;
+                justify-content: center;
+                line-height: 1.15;
+                min-height: 48px;
+                min-width: 0;
+                padding: 0.72rem clamp(0.65rem, 3vw, 1rem);
+                white-space: nowrap;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                flex-grow: 1.35;
             }
         }
     </style>

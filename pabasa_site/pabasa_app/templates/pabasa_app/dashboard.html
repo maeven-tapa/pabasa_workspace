@@ -422,17 +422,11 @@
         display: grid;
         grid-template-columns: 1fr;
         gap: 1rem;
-        max-height: min(700px, calc(100vh - 260px));
+        max-height: none;
         min-height: 0;
-        overflow-y: scroll;
-        overflow-x: hidden;
-        scrollbar-gutter: stable both-edges;
+        overflow: visible;
         padding-bottom: 0.5rem;
-        padding-right: 0.4rem;
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(31, 182, 255, 0.35) rgba(226, 232, 240, 0.25);
+        padding-right: 0;
     }
 
     .my-classes-section .class-list > .class-card {
@@ -441,38 +435,6 @@
         min-width: auto;
         height: auto;
         overflow: visible;
-    }
-
-    .my-classes-section .class-list::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .my-classes-section .class-list::-webkit-scrollbar-track {
-        background: rgba(226, 232, 240, 0.3);
-        border-radius: 999px;
-    }
-
-    .my-classes-section .class-list::-webkit-scrollbar-thumb {
-        background: rgba(31, 182, 255, 0.4);
-        border-radius: 999px;
-        border: 2px solid rgba(226, 232, 240, 0.3);
-    }
-
-    .my-classes-section .class-list::-webkit-scrollbar-thumb:hover {
-        background: rgba(31, 182, 255, 0.6);
-    }
-
-    body.dark-theme .my-classes-section .class-list::-webkit-scrollbar-track {
-        background: rgba(30, 41, 59, 0.3);
-    }
-
-    body.dark-theme .my-classes-section .class-list::-webkit-scrollbar-thumb {
-        background: rgba(56, 189, 248, 0.3);
-        border-color: rgba(30, 41, 59, 0.3);
-    }
-
-    body.dark-theme .my-classes-section .class-list::-webkit-scrollbar-thumb:hover {
-        background: rgba(56, 189, 248, 0.5);
     }
 
     .student-dashboard.has-class.class-list-ready .class-list {
@@ -1400,7 +1362,7 @@
         }
 
         .my-classes-section .class-list {
-            max-height: 500px;
+            max-height: none;
             grid-template-columns: 1fr;
         }
 

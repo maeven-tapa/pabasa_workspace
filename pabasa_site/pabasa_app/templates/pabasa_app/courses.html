@@ -1722,6 +1722,201 @@
         line-height: 1.45;
     }
 
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #materialType,
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #materialTitle,
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #itemInput {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.96rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        line-height: 1.45;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #materialTitle::placeholder,
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #itemInput::placeholder {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-weight: 400;
+        opacity: 0.72;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-dropdown {
+        min-width: 0;
+        position: relative;
+        width: 100%;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-dropdown.is-open {
+        z-index: 1085;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-trigger {
+        align-items: center;
+        background: rgba(255, 255, 255, 0.98) !important;
+        border: 1px solid rgba(31, 111, 139, 0.18) !important;
+        border-radius: 18px;
+        box-shadow: 0 10px 24px rgba(31, 111, 139, 0.08);
+        color: var(--dash-text);
+        cursor: pointer;
+        display: flex;
+        gap: 0.85rem;
+        justify-content: space-between;
+        min-height: 44px;
+        padding: 0.72rem 0.9rem;
+        text-align: left;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+        width: 100%;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-trigger:hover,
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-trigger:focus-visible,
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-dropdown.is-open .custom-device-trigger {
+        border-color: rgba(31, 111, 139, 0.34) !important;
+        box-shadow: 0 14px 28px rgba(31, 111, 139, 0.12);
+        outline: none;
+        transform: translateY(-1px);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-trigger-text {
+        display: grid;
+        min-width: 0;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-value {
+        color: var(--dash-text);
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.96rem;
+        font-weight: 700;
+        line-height: 1.25;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-trigger i {
+        color: var(--dash-muted);
+        flex: 0 0 auto;
+        font-size: 0.86rem;
+        transition: transform 0.18s ease;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-dropdown.is-open .custom-device-trigger i {
+        transform: rotate(180deg);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-menu {
+        backdrop-filter: blur(14px) saturate(135%);
+        -webkit-backdrop-filter: blur(14px) saturate(135%);
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        border-radius: 18px;
+        box-shadow: 0 20px 44px rgba(31, 111, 139, 0.16);
+        display: none;
+        left: 0;
+        max-height: min(320px, 45vh);
+        overflow: hidden;
+        overflow-y: auto;
+        padding: 0.45rem;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 0.55rem);
+        z-index: 1090;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-dropdown.is-open .custom-device-menu {
+        display: grid;
+        gap: 0.25rem;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        border-radius: 14px;
+        color: var(--dash-text);
+        display: flex;
+        gap: 0.85rem;
+        justify-content: space-between;
+        padding: 0.82rem 0.9rem 0.82rem 1rem;
+        position: relative;
+        text-align: left;
+        transition: background-color 0.16s ease, transform 0.16s ease;
+        width: 100%;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option::before {
+        background: transparent;
+        border-radius: 999px;
+        bottom: 0.45rem;
+        content: "";
+        left: 0.45rem;
+        position: absolute;
+        top: 0.45rem;
+        transition: background-color 0.16s ease;
+        width: 3px;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option:hover,
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option:focus-visible {
+        background: rgba(31, 111, 139, 0.06);
+        outline: none;
+        transform: translateX(1px);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option:hover::before,
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option:focus-visible::before {
+        background: rgba(31, 111, 139, 0.24);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option.is-selected {
+        background: rgba(31, 111, 139, 0.1);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option.is-selected::before {
+        background: rgba(31, 111, 139, 0.42);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option-text {
+        display: block;
+        min-width: 0;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option-title {
+        color: inherit;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        font-weight: 700;
+        line-height: 1.25;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-check {
+        color: transparent;
+        flex: 0 0 auto;
+        font-size: 1rem;
+        transition: color 0.16s ease;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-option.is-selected .custom-device-check {
+        color: var(--dash-primary);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .custom-device-dropdown > select.custom-device-select[data-course-material-dropdown] {
+        appearance: none !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        height: 1px !important;
+        inset: 0 !important;
+        margin: 0 !important;
+        min-height: 0 !important;
+        opacity: 0 !important;
+        padding: 0 !important;
+        pointer-events: none !important;
+        position: absolute !important;
+        width: 1px !important;
+    }
+
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .upload-material-panel .btn,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .modal-footer .btn-link,
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .modal-footer .btn-primary,
@@ -5857,6 +6052,21 @@
     font-size: 0.95rem;
     line-height: 1.45;
 }
+#addMaterialModal #materialType,
+#addMaterialModal #materialTitle,
+#addMaterialModal #itemInput {
+    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-size: 0.96rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.45;
+}
+#addMaterialModal #materialTitle::placeholder,
+#addMaterialModal #itemInput::placeholder {
+    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-weight: 400;
+    opacity: 0.72;
+}
 #addMaterialModal .input-group .btn { border-radius: 0 12px 12px 0; }
 #addMaterialModal .upload-material-panel { border: 1px dashed rgba(31,111,139,0.28); border-radius: 14px; background: rgba(31,111,139,0.05); padding: 0.85rem; }
 #addMaterialModal .upload-material-panel .btn {
@@ -5892,6 +6102,179 @@
     box-shadow: 0 8px 22px rgba(31,111,139,0.06);
 }
 #addMaterialModal #itemChipsContainer .btn-close { width: 18px; height:18px; opacity:0.6; filter: none; }
+#addMaterialModal .custom-device-dropdown {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+#addMaterialModal .custom-device-dropdown.is-open {
+    z-index: 1085;
+}
+#addMaterialModal .custom-device-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    min-height: 44px;
+    border-radius: 18px;
+    border: 1px solid rgba(31, 111, 139, 0.18);
+    background: rgba(255, 255, 255, 0.98);
+    color: var(--dash-text);
+    padding: 0.72rem 0.9rem;
+    box-shadow: 0 10px 24px rgba(31, 111, 139, 0.08);
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+#addMaterialModal .custom-device-trigger:hover,
+#addMaterialModal .custom-device-trigger:focus-visible,
+#addMaterialModal .custom-device-dropdown.is-open .custom-device-trigger {
+    transform: translateY(-1px);
+    border-color: rgba(31, 111, 139, 0.34);
+    box-shadow: 0 14px 28px rgba(31, 111, 139, 0.12);
+    outline: none;
+}
+#addMaterialModal .custom-device-trigger:disabled {
+    cursor: not-allowed;
+    opacity: 0.66;
+    transform: none;
+}
+#addMaterialModal .custom-device-trigger-text {
+    min-width: 0;
+    display: grid;
+}
+#addMaterialModal .custom-device-value {
+    color: var(--dash-text);
+    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-size: 0.96rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#addMaterialModal .custom-device-trigger i {
+    flex: 0 0 auto;
+    color: var(--dash-muted);
+    font-size: 0.86rem;
+    transition: transform 0.18s ease;
+}
+#addMaterialModal .custom-device-dropdown.is-open .custom-device-trigger i {
+    transform: rotate(180deg);
+}
+#addMaterialModal .custom-device-select {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+#addMaterialModal .custom-device-menu {
+    position: absolute;
+    top: calc(100% + 0.55rem);
+    left: 0;
+    right: 0;
+    z-index: 1090;
+    padding: 0.45rem;
+    border-radius: 18px;
+    border: 1px solid rgba(31, 111, 139, 0.12);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 44px rgba(31, 111, 139, 0.16);
+    backdrop-filter: blur(14px) saturate(135%);
+    -webkit-backdrop-filter: blur(14px) saturate(135%);
+    display: none;
+    max-height: min(320px, 45vh);
+    overflow: hidden;
+    overflow-y: auto;
+}
+#addMaterialModal .custom-device-dropdown.is-open .custom-device-menu {
+    display: grid;
+    gap: 0.25rem;
+}
+#addMaterialModal .custom-device-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    width: 100%;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    padding: 0.82rem 0.9rem 0.82rem 1rem;
+    color: var(--dash-text);
+    text-align: left;
+    transition: background-color 0.16s ease, transform 0.16s ease;
+}
+#addMaterialModal .custom-device-option::before {
+    content: "";
+    position: absolute;
+    left: 0.45rem;
+    top: 0.45rem;
+    bottom: 0.45rem;
+    width: 3px;
+    border-radius: 999px;
+    background: transparent;
+    transition: background-color 0.16s ease;
+}
+#addMaterialModal .custom-device-option:hover,
+#addMaterialModal .custom-device-option:focus-visible {
+    background: rgba(31, 111, 139, 0.06);
+    transform: translateX(1px);
+    outline: none;
+}
+#addMaterialModal .custom-device-option:hover::before,
+#addMaterialModal .custom-device-option:focus-visible::before {
+    background: rgba(31, 111, 139, 0.24);
+}
+#addMaterialModal .custom-device-option.is-selected {
+    background: rgba(31, 111, 139, 0.1);
+}
+#addMaterialModal .custom-device-option.is-selected::before {
+    background: rgba(31, 111, 139, 0.42);
+}
+#addMaterialModal .custom-device-option:disabled {
+    color: var(--dash-muted);
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+}
+#addMaterialModal .custom-device-option-text {
+    min-width: 0;
+    display: block;
+}
+#addMaterialModal .custom-device-option-title {
+    color: inherit;
+    font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#addMaterialModal .custom-device-option-subtitle {
+    display: none;
+}
+#addMaterialModal .custom-device-option.is-selected .custom-device-option-subtitle {
+    color: var(--dash-text);
+}
+#addMaterialModal .custom-device-check {
+    flex: 0 0 auto;
+    font-size: 1rem;
+    color: transparent;
+    transition: color 0.16s ease;
+}
+#addMaterialModal .custom-device-option.is-selected .custom-device-check {
+    color: var(--dash-primary);
+}
+#addMaterialModal .teacher-field:has(.custom-device-dropdown),
+#addMaterialModal .modal-body,
+#addMaterialModal .modal-content {
+    overflow: visible;
+}
 #addMaterialModal .modal-footer { padding: 1rem 1.5rem; border-top: none; background: transparent; }
 #addMaterialModal .modal-footer .btn-link {
     color: #6b7280;
@@ -6608,6 +6991,22 @@ body.dark-theme #materialUploadSelectModal .form-select {
     color: #f1f5f9 !important;
 }
 
+#addMaterialModal .custom-device-dropdown > select.custom-device-select[data-course-material-dropdown],
+body.dark-theme #addMaterialModal .custom-device-dropdown > select.custom-device-select[data-course-material-dropdown] {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    appearance: none !important;
+    box-shadow: none !important;
+}
+
 body.dark-theme #addMaterialModal .teacher-field .form-label,
 body.dark-theme #addMaterialModal .form-label,
 body.dark-theme #addMaterialModal .text-dark,
@@ -6819,30 +7218,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                             <div class="teacher-field">
                                 <label class="form-label fw-bold small text-dark mb-1" for="materialLanguage">Language</label>
-                                <div class="position-relative">
-                                    <select id="materialLanguage" class="form-select border-light shadow-sm" style="appearance: none; padding-right: 2.5rem; min-height: 44px;">
-                                        <option value="English" selected>English</option>
-                                        <option value="Filipino">Filipino</option>
-                                    </select>
-                                    <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-3 text-muted pointer-events-none" style="font-size: 0.8rem;"></i>
-                                </div>
+                                <select id="materialLanguage" class="form-select border-light shadow-sm" data-course-material-dropdown>
+                                    <option value="English" selected>English</option>
+                                    <option value="Filipino">Filipino</option>
+                                </select>
                             </div>
 
                             <div class="teacher-field">
                                 <label class="form-label fw-bold small text-dark mb-1" for="publicationStatus">Status</label>
-                                <div class="position-relative">
-                                    <select id="publicationStatus" class="form-select border-light shadow-sm" style="appearance: none; padding-right: 2.5rem; min-height: 44px;">
-                                        <option value="published" selected>Published</option>
-                                        <option value="draft">Draft</option>
-                                        <option value="scheduled">Custom Schedule</option>
-                                    </select>
-                                    <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-3 text-muted pointer-events-none" style="font-size: 0.8rem;"></i>
-                                </div>
+                                <select id="publicationStatus" class="form-select border-light shadow-sm" data-course-material-dropdown>
+                                    <option value="published" selected>Published</option>
+                                    <option value="draft">Draft</option>
+                                    <option value="scheduled">Custom Schedule</option>
+                                </select>
                             </div>
 
                             <div class="teacher-field">
                                 <label class="form-label fw-bold small text-dark mb-1" for="assignedWeek">Assigned Week</label>
-                                <select id="assignedWeek" class="form-select border-light shadow-sm" style="min-height: 44px;">
+                                <select id="assignedWeek" class="form-select border-light shadow-sm" data-course-material-dropdown>
                                     <option value="">Unassigned</option>
                                 </select>
                             </div>
@@ -11712,6 +12105,217 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const otherMaterialTableBody = document.getElementById('otherMaterialTableBody');
         const otherMaterialCardGrid = document.getElementById('otherMaterialCardGrid');
         const personalMaterialSections = Array.from(document.querySelectorAll('.personal-material-section'));
+        const materialCustomDropdowns = new WeakMap();
+        const openMaterialDropdowns = new Set();
+
+        function setCourseMaterialDropdownOpen(state, isOpen) {
+            if (!state || (isOpen && state.trigger.disabled)) return;
+            state.wrapper.classList.toggle('is-open', Boolean(isOpen));
+            state.trigger.setAttribute('aria-expanded', Boolean(isOpen));
+            if (isOpen) {
+                openMaterialDropdowns.forEach(function(openState) {
+                    if (openState !== state) setCourseMaterialDropdownOpen(openState, false);
+                });
+                openMaterialDropdowns.add(state);
+            } else {
+                openMaterialDropdowns.delete(state);
+            }
+        }
+
+        function getCourseMaterialSelectedOption(select) {
+            return Array.from(select.options || []).find(function(option) {
+                return option.value === select.value;
+            }) || select.options[select.selectedIndex] || select.options[0] || null;
+        }
+
+        function syncCourseMaterialDropdown(select) {
+            const state = materialCustomDropdowns.get(select);
+            if (!state) return;
+            const selectedOption = getCourseMaterialSelectedOption(select);
+            const label = selectedOption ? (selectedOption.textContent || selectedOption.label || 'Select option').trim() : 'Select option';
+            state.value.textContent = label;
+            state.value.title = label;
+            state.trigger.disabled = select.disabled;
+            state.wrapper.classList.toggle('is-disabled', select.disabled);
+            state.options.forEach(function(button) {
+                const isSelected = button.dataset.value === select.value;
+                button.classList.toggle('is-selected', isSelected);
+                button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+            if (select.disabled) setCourseMaterialDropdownOpen(state, false);
+        }
+
+        function rebuildCourseMaterialDropdownOptions(state) {
+            state.menu.replaceChildren();
+            state.options = Array.from(state.select.options || []).map(function(option, index) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'custom-device-option';
+                button.setAttribute('role', 'option');
+                button.dataset.value = option.value || '';
+                button.dataset.index = String(index);
+                button.disabled = option.disabled || option.hidden;
+
+                const textWrap = document.createElement('span');
+                textWrap.className = 'custom-device-option-text';
+                const title = document.createElement('span');
+                title.className = 'custom-device-option-title';
+                title.textContent = (option.textContent || option.label || 'Select option').trim();
+                title.title = title.textContent;
+                const check = document.createElement('i');
+                check.className = 'bi bi-check2 custom-device-check';
+                check.setAttribute('aria-hidden', 'true');
+
+                textWrap.appendChild(title);
+                button.append(textWrap, check);
+                state.menu.appendChild(button);
+                return button;
+            });
+            syncCourseMaterialDropdown(state.select);
+        }
+
+        function focusCourseMaterialOption(options, currentButton, offset) {
+            const enabled = options.filter(function(option) { return !option.disabled; });
+            if (!enabled.length) return;
+            const currentIndex = Math.max(0, enabled.indexOf(currentButton));
+            enabled[(currentIndex + offset + enabled.length) % enabled.length]?.focus();
+        }
+
+        function initCourseMaterialDropdowns() {
+            document.querySelectorAll('#addMaterialModal select[data-course-material-dropdown]').forEach(function(select) {
+                if (!select || materialCustomDropdowns.has(select)) {
+                    syncCourseMaterialDropdown(select);
+                    return;
+                }
+
+                const staleWrapper = select.closest('.custom-device-dropdown');
+                if (staleWrapper && staleWrapper.dataset.courseMaterialEnhanced === 'true') {
+                    staleWrapper.querySelectorAll('.custom-device-trigger, .custom-device-menu').forEach(function(node) {
+                        node.remove();
+                    });
+                }
+
+                const wrapper = staleWrapper || document.createElement('div');
+                wrapper.className = 'custom-device-dropdown';
+                wrapper.dataset.courseMaterialEnhanced = 'true';
+
+                if (!staleWrapper) {
+                    select.parentNode.insertBefore(wrapper, select);
+                    wrapper.appendChild(select);
+                }
+
+                const trigger = document.createElement('button');
+                trigger.type = 'button';
+                trigger.className = 'custom-device-trigger';
+                trigger.setAttribute('aria-haspopup', 'listbox');
+                trigger.setAttribute('aria-expanded', 'false');
+                trigger.setAttribute('aria-label', select.labels?.[0]?.textContent?.trim() || select.getAttribute('aria-label') || 'Select option');
+
+                const textWrap = document.createElement('span');
+                textWrap.className = 'custom-device-trigger-text';
+                const value = document.createElement('span');
+                value.className = 'custom-device-value';
+                const icon = document.createElement('i');
+                icon.className = 'bi bi-chevron-down';
+                icon.setAttribute('aria-hidden', 'true');
+                textWrap.appendChild(value);
+                trigger.append(textWrap, icon);
+
+                const menu = document.createElement('div');
+                menu.className = 'custom-device-menu';
+                menu.setAttribute('role', 'listbox');
+                menu.setAttribute('aria-label', trigger.getAttribute('aria-label'));
+
+                wrapper.insertBefore(trigger, select);
+                wrapper.appendChild(menu);
+                select.classList.add('custom-device-select');
+                select.setAttribute('tabindex', '-1');
+
+                const state = { wrapper, select, trigger, value, menu, options: [] };
+                materialCustomDropdowns.set(select, state);
+                rebuildCourseMaterialDropdownOptions(state);
+
+                trigger.addEventListener('click', function() {
+                    setCourseMaterialDropdownOpen(state, !wrapper.classList.contains('is-open'));
+                    if (wrapper.classList.contains('is-open')) {
+                        state.options.find(function(option) { return option.classList.contains('is-selected') && !option.disabled; })?.focus()
+                            || state.options.find(function(option) { return !option.disabled; })?.focus();
+                    }
+                });
+
+                trigger.addEventListener('keydown', function(event) {
+                    if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setCourseMaterialDropdownOpen(state, true);
+                        state.options.find(function(option) { return option.classList.contains('is-selected') && !option.disabled; })?.focus()
+                            || state.options.find(function(option) { return !option.disabled; })?.focus();
+                    } else if (event.key === 'Escape') {
+                        setCourseMaterialDropdownOpen(state, false);
+                    }
+                });
+
+                menu.addEventListener('click', function(event) {
+                    const button = event.target.closest('.custom-device-option');
+                    if (!button || button.disabled || select.disabled) return;
+                    select.value = button.dataset.value || '';
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    syncCourseMaterialDropdown(select);
+                    setCourseMaterialDropdownOpen(state, false);
+                    trigger.focus();
+                });
+
+                menu.addEventListener('keydown', function(event) {
+                    const current = document.activeElement?.closest?.('.custom-device-option');
+                    if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        focusCourseMaterialOption(state.options, current, 1);
+                    } else if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        focusCourseMaterialOption(state.options, current, -1);
+                    } else if (event.key === 'Home') {
+                        event.preventDefault();
+                        state.options.find(function(option) { return !option.disabled; })?.focus();
+                    } else if (event.key === 'End') {
+                        event.preventDefault();
+                        state.options.slice().reverse().find(function(option) { return !option.disabled; })?.focus();
+                    } else if (event.key === 'Escape') {
+                        setCourseMaterialDropdownOpen(state, false);
+                        trigger.focus();
+                    } else if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        current?.click();
+                    }
+                });
+
+                select.addEventListener('change', function() {
+                    syncCourseMaterialDropdown(select);
+                });
+
+                new MutationObserver(function() {
+                    rebuildCourseMaterialDropdownOptions(state);
+                }).observe(select, {
+                    attributes: true,
+                    attributeFilter: ['disabled', 'class'],
+                    childList: true,
+                    subtree: true,
+                    characterData: true
+                });
+            });
+        }
+
+        function syncCourseMaterialDropdowns() {
+            [materialLanguageSelect, publicationStatusSelect, document.getElementById('assignedWeek')].forEach(function(select) {
+                if (select) syncCourseMaterialDropdown(select);
+            });
+        }
+
+        document.addEventListener('click', function(event) {
+            openMaterialDropdowns.forEach(function(state) {
+                if (!state.wrapper.contains(event.target)) setCourseMaterialDropdownOpen(state, false);
+            });
+        });
+
+        initCourseMaterialDropdowns();
 
         function prefixedRecordKind(id) {
             const match = String(id || '').match(/^([a-z]+)-/i);
@@ -11809,15 +12413,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             if (optionValues.includes(selection)) {
                 materialLanguageSelect.value = selection;
+                syncCourseMaterialDropdown(materialLanguageSelect);
                 return;
             }
 
             if (selection === 'Filipino' && optionValues.includes('Filipino')) {
                 materialLanguageSelect.value = 'Filipino';
+                syncCourseMaterialDropdown(materialLanguageSelect);
                 return;
             }
 
             materialLanguageSelect.value = optionValues.includes('English') ? 'English' : (optionValues[0] || 'English');
+            syncCourseMaterialDropdown(materialLanguageSelect);
         }
 
         function countPeriodSeparatedSentences(value) {
@@ -11930,6 +12537,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (scheduleDateTimeInput) scheduleDateTimeInput.value = '';
             if (materialLanguageSelect) materialLanguageSelect.value = 'English';
             buildAssignedWeekOptions('assignedWeek', null);
+            syncCourseMaterialDropdowns();
             window._pendingSharedMaterialOrigin = false;
             window._pendingSharedMaterialSourceId = null;
 
@@ -12209,6 +12817,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             if (publicationStatusSelect) {
                 publicationStatusSelect.value = (material.status || 'published').toString().toLowerCase();
+                syncCourseMaterialDropdown(publicationStatusSelect);
             }
             if (materialLanguageSelect) {
                 applyMaterialLanguageSelection(material);
@@ -12561,6 +13170,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 // Prefill type/status/assigned week/schedule
                 try { materialTypeSelect.value = material.type || material.usage || material.usage_type || 'practice'; } catch (e) { /* ignore */ }
                 try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
+                if (publicationStatusSelect) syncCourseMaterialDropdown(publicationStatusSelect);
                 if (materialLanguageSelect) applyMaterialLanguageSelection(material);
                 buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || null);
                 if ((material.status || '').toString().toLowerCase() === 'scheduled' && material.schedule) {
@@ -12970,6 +13580,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             const normalized = (selectedValue === null || selectedValue === undefined || selectedValue === '') ? '' : String(selectedValue);
             select.value = normalized;
+            syncCourseMaterialDropdown(select);
         }
 
         function formatAssignedWeek(week) {
@@ -12997,6 +13608,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         buildAssignedWeekOptions('assignedWeek');
         buildAssignedWeekOptions('editAssignedWeek');
+        syncCourseMaterialDropdowns();
 
         // ===== READINGS TAB HANDLERS =====
         // New function to render all materials in a single list
@@ -13216,6 +13828,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         // Type / status / assigned week / schedule
                         try { materialTypeSelect.value = material.type || 'practice'; } catch (e) { /* ignore */ }
                         try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
+                        if (publicationStatusSelect) syncCourseMaterialDropdown(publicationStatusSelect);
                         if (materialLanguageSelect) applyMaterialLanguageSelection(material);
                         buildAssignedWeekOptions('assignedWeek', material.assigned_week);
 

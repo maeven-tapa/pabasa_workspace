@@ -467,9 +467,10 @@
 
     .section-heading h2 {
         margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
+        font-size: 1.06rem;
+        font-weight: 900;
         color: var(--text-high);
+        line-height: 1.2;
     }
 
     .student-count {
@@ -650,6 +651,189 @@
         border-radius: 12px;
         border: 1px solid rgba(15, 23, 42, 0.12);
         background: rgba(243, 244, 246, 0.95);
+    }
+
+    #addStudentModal .modal-content,
+    #addStudentModal .modal-body {
+        overflow: visible;
+    }
+
+    .custom-device-dropdown {
+        position: relative;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .custom-device-dropdown.is-open {
+        z-index: 1085;
+    }
+
+    .custom-device-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+        min-height: 46px;
+        border-radius: 18px;
+        border: 1px solid rgba(31, 111, 139, 0.18);
+        background: rgba(255, 255, 255, 0.98);
+        color: var(--text-high);
+        padding: 0.72rem 0.9rem;
+        box-shadow: 0 10px 24px rgba(31, 111, 139, 0.08);
+        cursor: pointer;
+        text-align: left;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+
+    .custom-device-trigger:hover,
+    .custom-device-trigger:focus-visible,
+    .custom-device-dropdown.is-open .custom-device-trigger {
+        transform: translateY(-1px);
+        border-color: rgba(31, 111, 139, 0.34);
+        box-shadow: 0 14px 28px rgba(31, 111, 139, 0.12);
+        outline: none;
+    }
+
+    .custom-device-trigger-text {
+        min-width: 0;
+        display: grid;
+    }
+
+    .custom-device-value {
+        color: var(--text-high);
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.96rem;
+        font-weight: 700;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .custom-device-trigger i {
+        flex: 0 0 auto;
+        color: var(--text-muted);
+        font-size: 0.86rem;
+        transition: transform 0.18s ease;
+    }
+
+    .custom-device-dropdown.is-open .custom-device-trigger i {
+        transform: rotate(180deg);
+    }
+
+    .custom-device-select {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 1px !important;
+        height: 1px !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        appearance: none !important;
+        box-shadow: none !important;
+    }
+
+    .custom-device-menu {
+        position: absolute;
+        top: calc(100% + 0.55rem);
+        left: 0;
+        right: 0;
+        z-index: 1090;
+        display: none;
+        gap: 0.25rem;
+        max-height: min(320px, 45vh);
+        overflow: hidden;
+        overflow-y: auto;
+        padding: 0.45rem;
+        border-radius: 18px;
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 20px 44px rgba(31, 111, 139, 0.16);
+        backdrop-filter: blur(14px) saturate(135%);
+        -webkit-backdrop-filter: blur(14px) saturate(135%);
+    }
+
+    .custom-device-dropdown.is-open .custom-device-menu {
+        display: grid;
+    }
+
+    .custom-device-option {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        background: transparent;
+        padding: 0.82rem 0.9rem 0.82rem 1rem;
+        color: var(--text-high);
+        text-align: left;
+        transition: background-color 0.16s ease, transform 0.16s ease;
+    }
+
+    .custom-device-option::before {
+        content: "";
+        position: absolute;
+        left: 0.45rem;
+        top: 0.45rem;
+        bottom: 0.45rem;
+        width: 3px;
+        border-radius: 999px;
+        background: transparent;
+        transition: background-color 0.16s ease;
+    }
+
+    .custom-device-option:hover,
+    .custom-device-option:focus-visible {
+        background: rgba(31, 111, 139, 0.06);
+        transform: translateX(1px);
+        outline: none;
+    }
+
+    .custom-device-option:hover::before,
+    .custom-device-option:focus-visible::before {
+        background: rgba(31, 111, 139, 0.24);
+    }
+
+    .custom-device-option.is-selected {
+        background: rgba(31, 111, 139, 0.1);
+    }
+
+    .custom-device-option.is-selected::before {
+        background: rgba(31, 111, 139, 0.42);
+    }
+
+    .custom-device-option-text {
+        min-width: 0;
+        display: block;
+    }
+
+    .custom-device-option-title {
+        color: inherit;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        font-weight: 700;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .custom-device-check {
+        flex: 0 0 auto;
+        font-size: 1rem;
+        color: transparent;
+        transition: color 0.16s ease;
+    }
+
+    .custom-device-option.is-selected .custom-device-check {
+        color: var(--primary);
     }
 
     .student-search-row {
@@ -995,10 +1179,10 @@
                     </div>
                     <div>
                         <select id="studentFilter" class="form-select fw-bold">
-                            <option value="all">Filter: All Fields</option>
-                            <option value="name">Filter: Name</option>
-                            <option value="pabasa_id">Filter: PABASA ID</option>
-                            <option value="grade">Filter: Grade</option>
+                            <option value="all">All Fields</option>
+                            <option value="name">Name</option>
+                            <option value="pabasa_id">PABASA ID</option>
+                            <option value="grade">Grade</option>
                         </select>
                     </div>
                 </div>
@@ -1107,6 +1291,157 @@ document.addEventListener('DOMContentLoaded', function () {
             closeMenu();
         }
     });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const select = document.getElementById('studentFilter');
+    if (!select || select.dataset.customDropdownReady === 'true') return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-device-dropdown';
+    wrapper.dataset.customSelectFor = 'studentFilter';
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'custom-device-trigger';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-label', 'Filter students');
+
+    const triggerText = document.createElement('span');
+    triggerText.className = 'custom-device-trigger-text';
+    const triggerValue = document.createElement('span');
+    triggerValue.className = 'custom-device-value';
+    triggerText.appendChild(triggerValue);
+
+    const chevron = document.createElement('i');
+    chevron.className = 'bi bi-chevron-down';
+    chevron.setAttribute('aria-hidden', 'true');
+    trigger.append(triggerText, chevron);
+
+    const menu = document.createElement('div');
+    menu.className = 'custom-device-menu';
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('aria-label', 'Filter students');
+
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.append(trigger, select, menu);
+    select.classList.add('custom-device-select');
+    select.setAttribute('tabindex', '-1');
+    select.dataset.customDropdownReady = 'true';
+
+    let optionButtons = [];
+
+    function selectedOption() {
+        return Array.from(select.options).find(option => option.value === select.value) || select.options[0];
+    }
+
+    function setOpen(isOpen) {
+        wrapper.classList.toggle('is-open', Boolean(isOpen));
+        trigger.setAttribute('aria-expanded', Boolean(isOpen));
+    }
+
+    function syncDropdown() {
+        const selected = selectedOption();
+        triggerValue.textContent = selected ? selected.textContent.trim() : 'All Fields';
+        optionButtons.forEach(button => {
+            const isSelected = button.dataset.value === select.value;
+            button.classList.toggle('is-selected', isSelected);
+            button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        });
+    }
+
+    function rebuildOptions() {
+        menu.replaceChildren();
+        optionButtons = Array.from(select.options).map(option => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'custom-device-option';
+            button.setAttribute('role', 'option');
+            button.dataset.value = option.value;
+
+            const text = document.createElement('span');
+            text.className = 'custom-device-option-text';
+            const title = document.createElement('span');
+            title.className = 'custom-device-option-title';
+            title.textContent = option.textContent.trim();
+            text.appendChild(title);
+
+            const check = document.createElement('i');
+            check.className = 'bi bi-check2 custom-device-check';
+            check.setAttribute('aria-hidden', 'true');
+
+            button.append(text, check);
+            menu.appendChild(button);
+            return button;
+        });
+        syncDropdown();
+    }
+
+    function focusOptionByOffset(currentButton, offset) {
+        if (!optionButtons.length) return;
+        const currentIndex = Math.max(0, optionButtons.indexOf(currentButton));
+        const nextIndex = (currentIndex + offset + optionButtons.length) % optionButtons.length;
+        optionButtons[nextIndex]?.focus();
+    }
+
+    trigger.addEventListener('click', function () {
+        setOpen(!wrapper.classList.contains('is-open'));
+        if (wrapper.classList.contains('is-open')) {
+            optionButtons.find(button => button.classList.contains('is-selected'))?.focus() || optionButtons[0]?.focus();
+        }
+    });
+
+    trigger.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+            event.preventDefault();
+            setOpen(true);
+            optionButtons.find(button => button.classList.contains('is-selected'))?.focus() || optionButtons[0]?.focus();
+        } else if (event.key === 'Escape') {
+            setOpen(false);
+        }
+    });
+
+    menu.addEventListener('click', function (event) {
+        const button = event.target.closest('.custom-device-option');
+        if (!button) return;
+        select.value = button.dataset.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        syncDropdown();
+        setOpen(false);
+        trigger.focus();
+    });
+
+    menu.addEventListener('keydown', function (event) {
+        const current = document.activeElement?.closest?.('.custom-device-option');
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            focusOptionByOffset(current, 1);
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            focusOptionByOffset(current, -1);
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            optionButtons[0]?.focus();
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            optionButtons[optionButtons.length - 1]?.focus();
+        } else if (event.key === 'Escape') {
+            setOpen(false);
+            trigger.focus();
+        } else if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            current?.click();
+        }
+    });
+
+    document.addEventListener('click', function (event) {
+        if (!wrapper.contains(event.target)) setOpen(false);
+    });
+
+    select.addEventListener('change', syncDropdown);
+    rebuildOptions();
 });
 </script>
 <script src="{% static 'pabasa_app/js/class_management.js' %}?v=class-student-loading-20260624"></script>

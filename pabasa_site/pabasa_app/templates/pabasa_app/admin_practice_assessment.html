@@ -22,9 +22,26 @@
         backdrop-filter: blur(2px);
         -webkit-backdrop-filter: blur(2px);
     }
+
+    .practice-content-header h2 {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: clamp(1.25rem, 1.6vw, 1.45rem);
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.2;
+    }
+
+    .practice-content-header p {
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.95rem;
+        font-weight: 400;
+        letter-spacing: 0;
+        line-height: 1.45;
+        max-width: 680px;
+    }
 </style>
 <div class="admin-panel">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+    <div class="practice-content-header d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
         <div>
             <h2 class="h4 fw-bold mb-1">Practice Content</h2>
             <p class="text-secondary mb-0">Manage game configurations for Practice Mode by mode, difficulty, and level.</p>
@@ -70,6 +87,15 @@
             min-width: 190px;
         }
 
+        .practice-filter-row--primary .practice-filter-control {
+            flex: 1 1 0;
+        }
+
+        .practice-filter-row--secondary .practice-filter-control {
+            flex: 0 1 260px;
+            max-width: 280px;
+        }
+
         .practice-filter-actions {
             display: flex;
             flex-wrap: wrap;
@@ -79,19 +105,12 @@
             margin-left: auto;
         }
 
+        .practice-filter-row--secondary .practice-filter-actions {
+            align-self: flex-end;
+        }
+
         .practice-filter-actions .btn {
             min-width: 120px;
-        }
-
-        .practice-filter-sort {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .practice-filter-sort label {
-            margin-bottom: 0.45rem;
         }
 
         @media (max-width: 767.98px) {
@@ -102,15 +121,11 @@
 
             .practice-filter-control {
                 flex: 1 1 100%;
+                max-width: none;
             }
 
-            .practice-filter-sort {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .practice-filter-sort .form-select {
-                width: 100%;
+            .practice-filter-row--secondary .practice-filter-control {
+                flex-basis: 100%;
             }
         }
     </style>
@@ -126,7 +141,7 @@
             </div>
         </div>
 
-        <div class="practice-filter-row">
+        <div class="practice-filter-row practice-filter-row--primary">
             <div class="practice-filter-control">
                 <label class="form-label small fw-bold text-secondary" for="modeFilter">Mode</label>
                 <select class="form-select" id="modeFilter" name="mode">
@@ -151,6 +166,9 @@
                     {% endfor %}
                 </select>
             </div>
+        </div>
+
+        <div class="practice-filter-row practice-filter-row--secondary">
             <div class="practice-filter-control">
                 <label class="form-label small fw-bold text-secondary" for="statusFilter">Status</label>
                 <select class="form-select" id="statusFilter" name="status">
@@ -159,20 +177,19 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="practice-filter-control">
+                <label class="form-label small fw-bold text-secondary" for="sortFilter">Sort by</label>
+                <select class="form-select" id="sortFilter" name="sort">
+                    {% for value, label in sort_options %}
+                    <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div class="practice-filter-actions">
                 <a class="btn btn-outline-secondary admin-filter-clear-btn" href="{% url 'admin_practice_assessment' %}">
                     <i class="bi bi-x-lg me-1"></i>Clear
                 </a>
             </div>
-        </div>
-
-        <div class="practice-filter-row practice-filter-sort">
-            <label class="form-label small fw-bold text-secondary" for="sortFilter">Sort by</label>
-            <select class="form-select" id="sortFilter" name="sort" style="max-width: 280px; min-width: 220px;">
-                {% for value, label in sort_options %}
-                <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
         </div>
     </form>
 

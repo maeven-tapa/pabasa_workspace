@@ -223,16 +223,16 @@
     }
 
     .student-card-row {
-        align-items: start;
+        align-items: center;
         background: rgba(255, 255, 255, 0.94) !important;
         backdrop-filter: blur(12px) saturate(130%);
         -webkit-backdrop-filter: blur(12px) saturate(130%);
         border: 1px solid rgba(255, 255, 255, 0.92) !important;
         border-radius: 18px;
         display: grid;
-        gap: 0.8rem;
+        gap: 0.95rem;
         grid-template-columns: auto minmax(0, 1fr);
-        padding: 0.85rem;
+        padding: 0.95rem;
         box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
     }
 
@@ -265,29 +265,47 @@
 
     .student-row-main {
         display: grid;
-        gap: 0.65rem;
+        gap: 0.6rem;
         min-width: 0;
     }
 
     .student-name-line {
-        align-items: center;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.55rem;
-        justify-content: space-between;
+        align-items: start;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .student-name-line .badge {
+        flex: 0 1 auto;
+        max-width: 100%;
+        justify-self: end;
+        margin-top: 0.05rem;
+        text-align: left;
+        white-space: normal;
+    }
+
+    .student-identity {
+        display: grid;
+        gap: 0.18rem;
+        min-width: 0;
     }
 
     .student-meta {
         display: grid;
-        gap: 0.5rem;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.55rem;
+        grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(120px, 1fr));
+        align-items: stretch;
     }
 
     .student-meta-box {
         background: rgba(255, 255, 255, 0.94);
         border: 1px solid rgba(27, 26, 23, 0.1);
         border-radius: 12px;
-        padding: 0.55rem;
+        display: grid;
+        align-content: center;
+        min-height: 58px;
+        padding: 0.5rem 0.6rem;
     }
 
     .student-meta-box span {
@@ -441,8 +459,13 @@
         justify-content: space-between;
         align-items: center;
         gap: 1rem;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         margin-bottom: 1rem;
+    }
+
+    .student-directory-header > div:first-child {
+        flex: 1 1 auto;
+        min-width: 0;
     }
 
     .student-directory-header h2,
@@ -471,23 +494,80 @@
     }
 
     .student-directory-controls {
+        display: flex;
         margin-left: auto;
         justify-content: flex-end;
         align-items: center;
-        flex: 1 1 auto;
+        flex: 0 1 520px;
         flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.6rem !important;
+        flex-wrap: nowrap;
+        gap: 1rem !important;
+        min-width: min(100%, 460px);
     }
 
     .student-directory-controls .student-search-wrap,
     .student-directory-controls .student-filter-wrap {
         width: auto;
-        flex: 0 1 220px;
+    }
+
+    .student-directory-controls .student-search-wrap {
+        flex: 1 1 56%;
+        max-width: none;
+        position: relative;
+    }
+
+    .student-directory-controls .student-filter-wrap {
+        flex: 0 1 44%;
+        max-width: none;
     }
 
     .student-directory-controls .form-control#studentSearchInput {
         width: 100%;
+        min-height: 40px;
+        border-radius: 999px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.97);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        color: var(--text-high);
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        line-height: 1.45;
+        padding: 0.5rem 0.95rem 0.5rem 2.35rem;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+    }
+
+    .student-directory-controls .form-control#studentSearchInput::placeholder {
+        color: var(--text-muted);
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        opacity: 0.82;
+    }
+
+    .student-directory-controls .student-search-wrap::before {
+        content: "\F52A";
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        z-index: 1;
+        transform: translateY(-50%);
+        color: var(--text-medium);
+        font-family: "bootstrap-icons";
+        font-size: 0.92rem;
+        line-height: 1;
+        pointer-events: none;
+        transition: color 0.16s ease;
+    }
+
+    .student-directory-controls .student-search-wrap:focus-within::before {
+        color: var(--primary);
+    }
+
+    .student-directory-controls .form-control#studentSearchInput:hover,
+    .student-directory-controls .form-control#studentSearchInput:focus {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+        border-color: rgba(22, 95, 143, 0.24);
+        background: rgba(255, 255, 255, 0.98);
+        outline: none;
     }
 
     .student-filter-wrap {
@@ -687,11 +767,25 @@
         .students-secondary-metrics {
             grid-template-columns: 1fr;
         }
+
+        .student-row-main {
+            grid-template-columns: 1fr;
+            gap: 0.55rem;
+        }
+
+        .student-name-line {
+            grid-template-columns: 1fr;
+        }
+
+        .student-name-line .badge {
+            justify-self: start;
+        }
     }
 
     @media (max-width: 640px) {
         .students-overview,
         .student-card-row,
+        .student-row-main,
         .teacher-action-btn,
         .student-meta,
         .students-overview-metrics,
@@ -699,15 +793,25 @@
             grid-template-columns: 1fr;
         }
 
-        .student-directory-controls {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
         .student-directory-controls .student-search-wrap,
         .student-directory-controls .student-filter-wrap {
             width: 100%;
             flex: 1 1 auto;
+            max-width: none;
+        }
+
+        .student-directory-header {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .student-directory-controls {
+            margin-left: 0;
+            flex-direction: column;
+            align-items: stretch;
+            flex-wrap: wrap;
+            min-width: 0;
+            width: 100%;
         }
 
         .student-row-actions {
@@ -964,7 +1068,7 @@
                     <h2 class="h6 mb-1">Student Directory</h2>
                     <p class="small text-secondary mb-0"><span id="studentResultCount">0</span> students shown by class, reading level, and recent activity.</p>
                 </div>
-                <div class="d-flex gap-2 flex-wrap student-directory-controls">
+                <div class="student-directory-controls">
                     <div class="student-search-wrap">
                         <input class="form-control form-control-sm" id="studentSearchInput" type="search" placeholder="Search student" aria-label="Search student">
                     </div>
@@ -1468,10 +1572,12 @@ function renderStudentDirectory(sourceStudents) {
                 <div class="student-avatar" aria-hidden="true">${escapeStudentDirectoryHtml(getStudentInitials(name))}</div>
                 <div class="student-row-main">
                     <div class="student-name-line">
-                        <strong>${escapeStudentDirectoryHtml(name)}</strong>
+                        <div class="student-identity">
+                            <strong>${escapeStudentDirectoryHtml(name)}</strong>
+                            <div class="small text-secondary">${escapeStudentDirectoryHtml(student.email || student.pabasa_id || student.custom_id || '')}</div>
+                        </div>
                         <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">${escapeStudentDirectoryHtml(student.level)}</span>
                     </div>
-                    <div class="small text-secondary">${escapeStudentDirectoryHtml(student.email || student.pabasa_id || student.custom_id || '')}</div>
                     <div class="student-meta">
                         <div class="student-meta-box"><span>Class</span><strong>${escapeStudentDirectoryHtml(className)}</strong></div>
                         <div class="student-meta-box"><span>Accuracy</span><strong>${escapeStudentDirectoryHtml(accuracy)}</strong></div>

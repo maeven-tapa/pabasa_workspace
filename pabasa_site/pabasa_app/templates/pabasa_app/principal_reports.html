@@ -71,33 +71,6 @@
         padding: 0.58rem 0.85rem;
     }
 
-    .reports-form-control {
-        border-radius: 12px;
-        border: 1px solid rgba(16, 70, 110, 0.16);
-        box-shadow: inset 0 1px 2px rgba(16, 70, 110, 0.04);
-    }
-
-    select.reports-form-control {
-        background-color: rgba(255,255,255,0.95);
-        background-image:
-            linear-gradient(45deg, transparent 50%, #10466E 50%),
-            linear-gradient(135deg, #10466E 50%, transparent 50%),
-            linear-gradient(to right, rgba(16, 70, 110, 0.12), rgba(16, 70, 110, 0.12));
-        background-position:
-            calc(100% - 1.15rem) 50%,
-            calc(100% - 0.85rem) 50%,
-            calc(100% - 2.35rem) 50%;
-        background-size: 0.32rem 0.32rem, 0.32rem 0.32rem, 1px 1.45rem;
-        background-repeat: no-repeat;
-        padding-right: 2.85rem;
-        cursor: pointer;
-    }
-
-    select.reports-form-control:disabled {
-        background-color: rgba(235, 241, 246, 0.95);
-        cursor: not-allowed;
-    }
-
     .reports-panel {
         border: 1px solid rgba(16, 70, 110, 0.12);
         border-radius: 20px;
@@ -154,6 +127,215 @@
     .reports-hero h4 {
         font-weight: 900;
     }
+
+    .reports-filter-grid {
+        row-gap: 1rem;
+    }
+
+    .reports-filter-panel {
+        overflow: visible;
+        z-index: 5 !important;
+    }
+
+    .reports-filter-panel:has(.custom-device-dropdown.is-open),
+    .reports-filter-panel.is-dropdown-active {
+        z-index: 120 !important;
+    }
+
+    .custom-device-dropdown {
+        position: relative;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .custom-device-dropdown.is-open {
+        z-index: 130;
+    }
+
+    .custom-device-dropdown.is-disabled {
+        opacity: 0.62;
+    }
+
+    .custom-device-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+        border-radius: 18px;
+        border: 1px solid rgba(31, 111, 139, 0.18);
+        background: rgba(255, 255, 255, 0.98);
+        color: var(--dash-text, #0F2D45);
+        padding: 0.72rem 0.9rem;
+        box-shadow: 0 10px 24px rgba(31, 111, 139, 0.08);
+        cursor: pointer;
+        text-align: left;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+
+    .custom-device-trigger:hover,
+    .custom-device-trigger:focus-visible,
+    .custom-device-dropdown.is-open .custom-device-trigger {
+        transform: translateY(-1px);
+        border-color: rgba(31, 111, 139, 0.34);
+        box-shadow: 0 14px 28px rgba(31, 111, 139, 0.12);
+        outline: none;
+    }
+
+    .custom-device-trigger:disabled {
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: 0 8px 18px rgba(31, 111, 139, 0.05);
+    }
+
+    .custom-device-trigger-text {
+        min-width: 0;
+        display: grid;
+    }
+
+    .custom-device-value {
+        color: var(--dash-text, #0F2D45);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.96rem;
+        font-weight: 900;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .custom-device-trigger i {
+        flex: 0 0 auto;
+        color: var(--dash-muted, #4A6680);
+        font-size: 0.86rem;
+        transition: transform 0.18s ease;
+    }
+
+    .custom-device-dropdown.is-open .custom-device-trigger i {
+        transform: rotate(180deg);
+    }
+
+    .custom-device-select {
+        position: absolute;
+        inset: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .custom-device-menu {
+        position: absolute;
+        top: calc(100% + 0.55rem);
+        left: 0;
+        right: 0;
+        z-index: 140;
+        padding: 0.45rem;
+        border-radius: 18px;
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 20px 44px rgba(31, 111, 139, 0.16);
+        backdrop-filter: blur(14px) saturate(135%);
+        -webkit-backdrop-filter: blur(14px) saturate(135%);
+        display: none;
+        overflow: hidden;
+        max-height: min(320px, 45vh);
+        overflow-y: auto;
+    }
+
+    .custom-device-dropdown.is-open .custom-device-menu {
+        display: grid;
+        gap: 0.25rem;
+    }
+
+    .custom-device-option {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        background: transparent;
+        padding: 0.82rem 0.9rem 0.82rem 1rem;
+        color: var(--dash-text, #0F2D45);
+        text-align: left;
+        transition: background-color 0.16s ease, transform 0.16s ease;
+    }
+
+    .custom-device-option::before {
+        content: "";
+        position: absolute;
+        left: 0.45rem;
+        top: 0.45rem;
+        bottom: 0.45rem;
+        width: 3px;
+        border-radius: 999px;
+        background: transparent;
+        transition: background-color 0.16s ease;
+    }
+
+    .custom-device-option:hover,
+    .custom-device-option:focus-visible {
+        background: rgba(31, 111, 139, 0.06);
+        transform: translateX(1px);
+        outline: none;
+    }
+
+    .custom-device-option:hover::before,
+    .custom-device-option:focus-visible::before {
+        background: rgba(31, 111, 139, 0.24);
+    }
+
+    .custom-device-option.is-selected {
+        background: rgba(31, 111, 139, 0.1);
+    }
+
+    .custom-device-option.is-selected::before {
+        background: rgba(31, 111, 139, 0.42);
+    }
+
+    .custom-device-option-text {
+        min-width: 0;
+        display: grid;
+        gap: 0.12rem;
+    }
+
+    .custom-device-option-title {
+        color: inherit;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.92rem;
+        font-weight: 900;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .custom-device-option-subtitle {
+        color: var(--dash-muted, #4A6680);
+        font-size: 0.8rem;
+        line-height: 1.35;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .custom-device-option.is-selected .custom-device-option-subtitle {
+        color: var(--dash-text, #0F2D45);
+    }
+
+    .custom-device-check {
+        flex: 0 0 auto;
+        font-size: 1rem;
+        color: transparent;
+        transition: color 0.16s ease;
+    }
+
+    .custom-device-option.is-selected .custom-device-check {
+        color: var(--dash-primary, #2EA8E5);
+    }
 </style>
 <div class="principal-content">
     <div class="principal-panel mb-4 reports-hero">
@@ -170,26 +352,71 @@
     </div>
 
     <h5 class="reports-section-title mb-3">Choose a report</h5>
-    <div class="principal-panel mb-4 reports-panel">
+    <div class="principal-panel mb-4 reports-panel reports-filter-panel" id="reportsFilterPanel">
         <p class="reports-subtle-text mb-3">Start with one report type. Use the grade filter when you want a focused view for a specific level.</p>
         <form method="get" id="reportsForm">
-            <div class="row mb-3">
+            <div class="row mb-3 reports-filter-grid">
                 <div class="col-md-6">
                     <label for="reportType" class="form-label">Report Type</label>
-                    <select class="form-select reports-form-control" id="reportType" name="report_type">
-                        {% for rt in report_types %}
-                        <option value="{{ rt.value }}" {% if selected_report_type == rt.value %}selected{% endif %}>{{ rt.label }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="custom-device-dropdown" id="reportTypeDropdown" data-custom-report-dropdown>
+                        <button type="button" class="custom-device-trigger" id="reportTypeTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="reportTypeMenu">
+                            <span class="custom-device-trigger-text">
+                                <span class="custom-device-value" id="reportTypeValue">{{ selected_report_label }}</span>
+                            </span>
+                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <select class="custom-device-select" id="reportType" name="report_type" tabindex="-1" aria-hidden="true">
+                            {% for rt in report_types %}
+                            <option value="{{ rt.value }}" {% if selected_report_type == rt.value %}selected{% endif %}>{{ rt.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="custom-device-menu" id="reportTypeMenu" role="listbox" aria-label="Report type">
+                            {% for rt in report_types %}
+                            <button type="button" class="custom-device-option" role="option" aria-selected="{% if selected_report_type == rt.value %}true{% else %}false{% endif %}" data-device-id="{{ rt.value }}" data-index="{{ forloop.counter0 }}">
+                                <span class="custom-device-option-text">
+                                    <span class="custom-device-option-title">{{ rt.label }}</span>
+                                    <span class="custom-device-option-subtitle">Use this report view</span>
+                                </span>
+                                <i class="bi bi-check2 custom-device-check" aria-hidden="true"></i>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <label for="gradeLevel" class="form-label">Grade Level (Optional)</label>
-                    <select class="form-select reports-form-control" id="gradeLevel" name="grade_level" {% if selected_report_type != 'grade' %}disabled{% endif %}>
-                        <option value="">All Grades</option>
-                        {% for row in grade_rows %}
-                        <option value="{{ row.grade }}" {% if selected_grade == row.grade %}selected{% endif %}>{{ row.grade }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="custom-device-dropdown{% if selected_report_type != 'grade' %} is-disabled{% endif %}" id="gradeLevelDropdown" data-custom-report-dropdown>
+                        <button type="button" class="custom-device-trigger" id="gradeLevelTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="gradeLevelMenu" {% if selected_report_type != 'grade' %}disabled{% endif %}>
+                            <span class="custom-device-trigger-text">
+                                <span class="custom-device-value" id="gradeLevelValue">{% if selected_grade %}{{ selected_grade }}{% else %}All Grades{% endif %}</span>
+                            </span>
+                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        <select class="custom-device-select" id="gradeLevel" name="grade_level" tabindex="-1" aria-hidden="true" {% if selected_report_type != 'grade' %}disabled{% endif %}>
+                            <option value="">All Grades</option>
+                            {% for row in grade_rows %}
+                            <option value="{{ row.grade }}" {% if selected_grade == row.grade %}selected{% endif %}>{{ row.grade }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="custom-device-menu" id="gradeLevelMenu" role="listbox" aria-label="Grade level">
+                            <button type="button" class="custom-device-option" role="option" aria-selected="{% if not selected_grade %}true{% else %}false{% endif %}" data-device-id="" data-index="0">
+                                <span class="custom-device-option-text">
+                                    <span class="custom-device-option-title">All Grades</span>
+                                    <span class="custom-device-option-subtitle">Include every grade level</span>
+                                </span>
+                                <i class="bi bi-check2 custom-device-check" aria-hidden="true"></i>
+                            </button>
+                            {% for row in grade_rows %}
+                            <button type="button" class="custom-device-option" role="option" aria-selected="{% if selected_grade == row.grade %}true{% else %}false{% endif %}" data-device-id="{{ row.grade }}" data-index="{{ forloop.counter }}">
+                                <span class="custom-device-option-text">
+                                    <span class="custom-device-option-title">{{ row.grade }}</span>
+                                    <span class="custom-device-option-subtitle">Filter this grade level</span>
+                                </span>
+                                <i class="bi bi-check2 custom-device-check" aria-hidden="true"></i>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="d-flex gap-2 flex-wrap">
@@ -240,18 +467,137 @@
         const reportTypeSelect = document.getElementById('reportType');
         const gradeLevelSelect = document.getElementById('gradeLevel');
         const reportsForm = document.getElementById('reportsForm');
+        const reportDropdown = document.getElementById('reportTypeDropdown');
+        const reportTrigger = document.getElementById('reportTypeTrigger');
+        const reportMenu = document.getElementById('reportTypeMenu');
+        const reportValue = document.getElementById('reportTypeValue');
+        const gradeDropdown = document.getElementById('gradeLevelDropdown');
+        const gradeTrigger = document.getElementById('gradeLevelTrigger');
+        const gradeMenu = document.getElementById('gradeLevelMenu');
+        const gradeValue = document.getElementById('gradeLevelValue');
+        const filterPanel = document.getElementById('reportsFilterPanel');
 
-        if (!reportTypeSelect || !gradeLevelSelect || !reportsForm) {
+        if (!reportTypeSelect || !gradeLevelSelect || !reportsForm || !reportDropdown || !gradeDropdown) {
             return;
         }
+
+        const reportDropdowns = [];
+
+        const setDropdownOpen = (dropdown, trigger, isOpen) => {
+            if (!dropdown || !trigger || trigger.disabled) return;
+            dropdown.classList.toggle('is-open', Boolean(isOpen));
+            trigger.setAttribute('aria-expanded', Boolean(isOpen));
+            filterPanel?.classList.toggle(
+                'is-dropdown-active',
+                reportDropdowns.some(item => item.dropdown?.classList.contains('is-open'))
+            );
+        };
+
+        const syncDropdownSelection = (selectEl, valueEl, buttons, emptyLabel) => {
+            if (!selectEl || !valueEl) return;
+            const selectedValue = selectEl.value || '';
+            const options = Array.from(selectEl.options || []);
+            const selectedOption = options.find(option => option.value === selectedValue) || options[0] || null;
+            valueEl.textContent = selectedOption ? (selectedOption.textContent || selectedOption.label || emptyLabel) : emptyLabel;
+            valueEl.title = valueEl.textContent || emptyLabel;
+            buttons.forEach((button) => {
+                const isSelected = (button.dataset.deviceId || '') === selectedValue;
+                button.classList.toggle('is-selected', isSelected);
+                button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+        };
+
+        const focusOptionByOffset = (buttons, currentButton, offset) => {
+            if (!buttons.length) return;
+            const currentIndex = Math.max(0, buttons.indexOf(currentButton));
+            const nextIndex = (currentIndex + offset + buttons.length) % buttons.length;
+            buttons[nextIndex]?.focus();
+        };
+
+        const initReportDropdown = ({ dropdown, trigger, menu, select, value, emptyLabel }) => {
+            const buttons = Array.from(menu?.querySelectorAll('.custom-device-option') || []);
+            reportDropdowns.push({ dropdown, trigger });
+            syncDropdownSelection(select, value, buttons, emptyLabel);
+
+            trigger?.addEventListener('click', () => {
+                reportDropdowns.forEach((item) => {
+                    if (item.dropdown !== dropdown) setDropdownOpen(item.dropdown, item.trigger, false);
+                });
+                setDropdownOpen(dropdown, trigger, !dropdown?.classList.contains('is-open'));
+            });
+
+            trigger?.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setDropdownOpen(dropdown, trigger, true);
+                    buttons.find(button => button.classList.contains('is-selected'))?.focus() || buttons[0]?.focus();
+                } else if (event.key === 'Escape') {
+                    setDropdownOpen(dropdown, trigger, false);
+                }
+            });
+
+            menu?.addEventListener('click', (event) => {
+                const button = event.target.closest('.custom-device-option');
+                if (!button || select.disabled) return;
+                select.value = button.dataset.deviceId || '';
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                setDropdownOpen(dropdown, trigger, false);
+            });
+
+            menu?.addEventListener('keydown', (event) => {
+                const current = document.activeElement?.closest?.('.custom-device-option');
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    focusOptionByOffset(buttons, current, 1);
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    focusOptionByOffset(buttons, current, -1);
+                } else if (event.key === 'Home') {
+                    event.preventDefault();
+                    buttons[0]?.focus();
+                } else if (event.key === 'End') {
+                    event.preventDefault();
+                    buttons[buttons.length - 1]?.focus();
+                } else if (event.key === 'Escape') {
+                    setDropdownOpen(dropdown, trigger, false);
+                    trigger?.focus();
+                } else if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    current?.click();
+                }
+            });
+
+            return () => syncDropdownSelection(select, value, buttons, emptyLabel);
+        };
+
+        const syncReportDropdown = initReportDropdown({
+            dropdown: reportDropdown,
+            trigger: reportTrigger,
+            menu: reportMenu,
+            select: reportTypeSelect,
+            value: reportValue,
+            emptyLabel: 'Choose report'
+        });
+
+        const syncGradeDropdown = initReportDropdown({
+            dropdown: gradeDropdown,
+            trigger: gradeTrigger,
+            menu: gradeMenu,
+            select: gradeLevelSelect,
+            value: gradeValue,
+            emptyLabel: 'All Grades'
+        });
 
         const syncGradeFilter = () => {
             const isGradeReport = reportTypeSelect.value === 'grade';
             gradeLevelSelect.disabled = !isGradeReport;
-            gradeLevelSelect.classList.toggle('opacity-50', !isGradeReport);
+            gradeTrigger.disabled = !isGradeReport;
+            gradeDropdown.classList.toggle('is-disabled', !isGradeReport);
             if (!isGradeReport) {
                 gradeLevelSelect.value = '';
+                setDropdownOpen(gradeDropdown, gradeTrigger, false);
             }
+            syncGradeDropdown();
         };
 
         const submitReportFilters = () => {
@@ -259,8 +605,15 @@
             reportsForm.submit();
         };
 
+        document.addEventListener('click', (event) => {
+            reportDropdowns.forEach(({ dropdown, trigger }) => {
+                if (!dropdown?.contains(event.target)) setDropdownOpen(dropdown, trigger, false);
+            });
+        });
+
         reportTypeSelect.addEventListener('change', submitReportFilters);
         gradeLevelSelect.addEventListener('change', submitReportFilters);
+        syncReportDropdown();
         syncGradeFilter();
     });
 </script>
