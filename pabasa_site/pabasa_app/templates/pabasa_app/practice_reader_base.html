@@ -4825,6 +4825,18 @@
         .hunt-map-dot.is-complete { background: #2f8b68; border-color: #fff8df; font-size: 0; }
         .hunt-map-dot.is-complete::after { color: white; content: "\2713"; font-size: .8rem; font-weight: 900; }
         .hunt-map-bird { background: white; border: 2px solid #9e3f28; border-radius: 50%; box-shadow: 0 4px 10px rgba(74,40,16,.24); height: 42px; object-fit: contain; pointer-events: none; position: absolute; transform: translateY(-32px); transition: .25s ease; width: 42px; }
+        .practice-hunt-shell .hunt-map-bird { offset-path: path("M 10 150 C 120 20 220 180 330 85 S 540 25 700 80"); offset-rotate: 0deg; z-index: 6; }
+        .hunt-map-bird.hunt-swoop-large { animation: huntSwoopLarge .7s ease; }
+        .hunt-map-bird.hunt-flap-small { animation: huntFlapSmall .45s ease; }
+        @keyframes huntSwoopLarge { 50% { scale: 1.45; rotate: -18deg; } }
+        @keyframes huntFlapSmall { 50% { scale: 1.12; translate: 0 -8px; } }
+        .hunt-speech-panel { background: #fffdf8; border: 1px solid #cfe1e4; border-radius: 14px; margin-top: .8rem; padding: .7rem; width: min(100%,620px); }
+        .hunt-speech-panel.is-listening { border-color: #39a969; box-shadow: 0 0 0 3px rgba(57,169,105,.12); }
+        .hunt-speech-status { color: #17617a; display: block; font-size: .78rem; font-weight: 900; text-align: center; }
+        .hunt-speech-transcript { color: #5e6665; display: block; font-size: .72rem; margin: .28rem 0 .55rem; text-align: center; }
+        .hunt-raw-mic { background: #f1f6f4; border: 1px solid #d4e1dd; border-radius: 10px; padding: .5rem .65rem; text-align: left; }
+        .hunt-raw-mic strong { color: #17617a; display: block; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; }
+        .hunt-raw-mic code { color: #263332; display: block; font-family: inherit; font-size: .72rem; font-weight: 800; margin-top: .2rem; white-space: pre-wrap; }
         .hunt-checkpoint { background: #fff7d8; border: 2px solid #966d38; border-radius: 10px; color: #a84a32; font-size: 1.25rem; height: 38px; width: 44px; }
         .hunt-checkpoint.is-earned { background: #ffe36e; transform: rotate(-3deg) scale(1.08); }
         .hunt-destination { color: #a52f27; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 3rem; font-weight: 900; line-height: 1; text-shadow: 0 2px #fff3cc; }
@@ -4899,6 +4911,35 @@
             .hunt-map-dot:nth-of-type(2) { left: 16%; }
             .hunt-map-dot:nth-of-type(3) { left: 36%; }
             .hunt-map-dot:nth-of-type(5) { left: 57%; }
+        }
+        /* Compact Hunt layout: preserve the map while keeping the word dominant. */
+        .practice-hunt-shell .hunt-reader { height: min(700px, calc(100dvh - 1.3rem)); }
+        .practice-hunt-shell .hunt-card { min-height: 560px; }
+        .practice-hunt-shell .hunt-main { inset: 38px 0 58px; }
+        .practice-hunt-shell .hunt-word-area { border-radius: 14px; height: auto; min-height: 0; padding: clamp(.65rem,1.4vh,.9rem) clamp(1rem,2vw,1.35rem); width: min(62%,640px); }
+        .practice-hunt-shell .hunt-word-area .practice-text { font-size: clamp(2.35rem,5vw,4rem); line-height: 1; margin: .2rem 0; }
+        .practice-hunt-shell .hunt-word-position { margin-bottom: .35rem; }
+        .practice-hunt-shell .hunt-word-instruction { margin-top: .35rem; }
+        .practice-hunt-shell .hunt-speech-panel { border-radius: 11px; margin-top: .55rem; padding: .48rem .55rem; }
+        .practice-hunt-shell .hunt-speech-transcript { margin: .18rem 0 .35rem; }
+        .practice-hunt-shell .hunt-raw-mic { border-radius: 8px; padding: .36rem .5rem; }
+        .practice-hunt-shell .hunt-actions { padding: .35rem .5rem .42rem; width: min(650px,92%); }
+        .practice-hunt-shell .hunt-actions .practice-feedback { border-radius: 8px; line-height: 1.2; margin-bottom: .28rem; padding: .38rem .5rem; }
+        .practice-hunt-shell .hunt-actions .practice-controls { display: grid; gap: .35rem; grid-template-columns: .72fr 1.12fr 1fr .72fr; width: 100%; }
+        .practice-hunt-shell .hunt-actions .practice-controls button { font-size: clamp(.62rem,1.1vw,.78rem); min-height: 34px; min-width: 0; padding: .35rem .3rem; white-space: nowrap; width: 100%; }
+        .practice-hunt-shell .hunt-map-dot { overflow: visible; }
+        .practice-hunt-shell .hunt-map-bird { height: 42px; left: 50%; offset-path: none; top: 50%; transform: translate(-50%,-50%); width: 42px; }
+        @media (max-width: 700px) {
+            .practice-hunt-shell .hunt-reader { height: calc(100dvh - 1rem); }
+            .practice-hunt-shell .hunt-card { min-height: 500px; }
+            .practice-hunt-shell .hunt-main { inset: 36px 0 56px; }
+            .practice-hunt-shell .hunt-word-area { height: auto; padding: .55rem .7rem; width: 88%; }
+            .practice-hunt-shell .hunt-word-area .practice-text { font-size: clamp(2rem,10vw,3rem); }
+            .practice-hunt-shell .hunt-speech-status { font-size: .68rem; }
+            .practice-hunt-shell .hunt-speech-transcript, .practice-hunt-shell .hunt-raw-mic code { font-size: .63rem; }
+            .practice-hunt-shell .hunt-actions { width: 97%; }
+            .practice-hunt-shell .hunt-actions .practice-controls { gap: .22rem; grid-template-columns: .65fr 1.2fr 1fr .65fr; }
+            .practice-hunt-shell .hunt-actions .practice-controls button { font-size: clamp(.52rem,2.4vw,.66rem); padding-inline: .15rem; }
         }
         .reading-help-btn { align-items:center; background:#fff; border:1px solid #cbdedc; border-radius:999px; box-shadow:0 5px 16px rgba(28,67,68,.14); color:#126d68; display:inline-flex; font-size:.78rem; font-weight:900; gap:.4rem; padding:.55rem .8rem; position:fixed; right:1rem; top:1rem; z-index:100; }
         .reading-help-btn:hover { background:#eaf8f6; transform:translateY(-1px); }
@@ -5055,6 +5096,83 @@
                 flex-grow: 1.35;
             }
         }
+
+        /* Final Hunt polish: balanced reader card and a fully visible action dock. */
+        .practice-hunt-shell .hunt-main {
+            inset: 46px 0 104px;
+        }
+
+        .practice-hunt-shell .hunt-word-area {
+            background: rgba(255, 254, 244, 0.97);
+            border: 3px solid #765127;
+            box-shadow: 0 18px 42px rgba(73, 45, 17, 0.24);
+            padding: clamp(.85rem, 1.8vh, 1.15rem) clamp(1.15rem, 2.4vw, 1.75rem);
+            width: min(60%, 640px);
+        }
+
+        .practice-hunt-shell .hunt-actions {
+            background: rgba(255, 255, 255, 0.97);
+            border: 1px solid rgba(38, 98, 94, 0.2);
+            border-radius: 16px;
+            bottom: 14px;
+            box-shadow: 0 12px 30px rgba(31, 70, 67, 0.2);
+            padding: .55rem;
+            width: min(620px, calc(100% - 2rem));
+        }
+
+        .practice-hunt-shell .hunt-actions .practice-feedback {
+            background: #f3f8f7;
+            border: 1px solid #d9e7e5;
+            border-radius: 10px;
+            color: #315b5c;
+            font-size: .76rem;
+            font-weight: 800;
+            margin-bottom: .45rem;
+            min-height: 34px;
+            padding: .48rem .65rem;
+        }
+
+        .practice-hunt-shell .hunt-actions .practice-controls {
+            display: grid;
+            gap: .5rem;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .practice-hunt-shell .hunt-actions .practice-controls button {
+            border-radius: 10px;
+            font-size: .76rem;
+            font-weight: 900;
+            min-height: 40px;
+            padding: .5rem .65rem;
+        }
+
+        .practice-hunt-shell #practiceNextBtn {
+            background: #fff7df;
+            border: 1px solid #dfba61;
+            color: #765127;
+        }
+
+        .practice-hunt-shell #practiceNextBtn:hover {
+            background: #f9e7ad;
+        }
+
+        .practice-shell.is-complete #practiceHelpBtn,
+        .practice-shell.is-complete #practiceHelpBtnMobile,
+        .practice-shell.is-complete #practiceHelpOverlay {
+            display: none !important;
+        }
+
+        @media (max-width: 700px) {
+            .practice-hunt-shell .hunt-main { inset: 40px 0 112px; }
+            .practice-hunt-shell .hunt-word-area { width: 90%; }
+            .practice-hunt-shell .hunt-actions { bottom: 8px; width: calc(100% - 1rem); }
+            .practice-hunt-shell .hunt-actions .practice-controls { gap: .3rem; }
+            .practice-hunt-shell .hunt-actions .practice-controls button {
+                font-size: .65rem;
+                min-height: 38px;
+                padding-inline: .25rem;
+            }
+        }
     </style>
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
@@ -5172,7 +5290,7 @@
                     <p>Treasure Voyage</p>
                     <h1>Hunt Mode Reading</h1>
                 </div>
-                <div class="hunt-stars"><i class="bi bi-star-fill"></i><span id="starCount">0 stars</span></div>
+                <div class="hunt-stars" title="Stars collected during this Hunt attempt" aria-label="Stars collected: 0"><i class="bi bi-star-fill"></i><span id="starCount">Stars Collected: 0</span></div>
             </header>
 
             <article class="hunt-card">
@@ -5195,6 +5313,7 @@
 
                 <div class="hunt-meta-row">
                     <span class="hunt-count" id="practiceCounter">Word 1/1</span>
+                    <span class="hunt-count hunt-points" id="huntPointsDisplay">Points: 0/10</span>
                     <span class="hunt-difficulty" id="huntDifficultyLabel">{{ request.GET.difficulty|default:'easy' }}</span>
                     <span class="hunt-level" id="huntLevelLabel">{{ request.GET.level|default:'level_1' }}</span>
                     <span class="hunt-status"><span class="hunt-status-dot"></span><span id="huntReadingStatus">Ready to read</span></span>
@@ -5210,15 +5329,20 @@
                         <span class="hunt-word-position" id="huntWordPosition">Word 1 of 5</span>
                         <h2 class="practice-text" id="practiceText">Ready?</h2>
                         <p class="hunt-word-instruction">Look at the word, then read it aloud.</p>
+                        <div class="hunt-speech-panel" id="huntSpeechPanel" aria-live="polite">
+                            <strong class="hunt-speech-status" id="huntSpeechStatus">Ready to start reading</strong>
+                            <span class="hunt-speech-transcript" id="huntSpeechTranscript">Google Speech results will appear here while you read.</span>
+                            <div class="hunt-raw-mic"><strong>Raw mic input</strong><code id="huntRawMicInput">Waiting for speech...</code></div>
+                        </div>
                     </div>
                 </section>
 
                 <div class="hunt-actions">
                     <p class="practice-feedback" id="practiceFeedback">Ready when you are.</p>
                     <div class="practice-controls">
-                        <button class="skip-btn" id="skipBtn" type="button">Skip</button>
-                        <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Read</button>
-                        <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
+                        <button class="record-btn" id="huntReadAloudBtn" type="button"><i class="bi bi-volume-up-fill me-1"></i> Read Aloud</button>
+                        <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Start Reading</button>
+                        <button class="next-btn" id="practiceNextBtn" type="button">Skip</button>
                     </div>
                 </div>
             </article>
@@ -5339,6 +5463,14 @@
                 </div>
                 <h3 class="practice-breakdown-title">Score Breakdown</h3>
                 <div class="practice-metrics-grid" aria-label="Performance metrics">
+                    {% if request.GET.game == 'hunt' %}
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-gem"></i></div><div class="practice-metric-body"><strong id="completeHuntPoints">0/10</strong><span>Word Points</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-percent"></i></div><div class="practice-metric-body"><strong id="completeHuntPercentage">0%</strong><span>Percentage</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-star-fill"></i></div><div class="practice-metric-body"><strong id="completeHuntStars">1 star</strong><span>Completion Bonus</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-trophy"></i></div><div class="practice-metric-body"><strong id="completeHuntLevelStars">0</strong><span>Stars Earned This Level</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-stars"></i></div><div class="practice-metric-body"><strong id="completeTotalStarsEarned">0</strong><span>Total Stars Earned</span></div></div>
+                    <div class="practice-metric-card"><div class="practice-metric-icon"><i class="bi bi-wallet2"></i></div><div class="practice-metric-body"><strong id="completeAvailableStars">0</strong><span>Available Stars</span></div></div>
+                    {% endif %}
                     <div class="practice-metric-card">
                         <div class="practice-metric-icon"><i class="bi bi-book" aria-hidden="true"></i></div>
                         <div class="practice-metric-body">
@@ -5400,6 +5532,7 @@
 
     <script>
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
+        window.PABASA_USER_ID = "{{ request.session.user_id|default:'' }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
         window.PABASA_COACH_VIDEO_BASE = "{% static 'pabasa_app/videos/' %}";
         window.PABASA_COLOR_MODE_ASSET_BASE = "{% static 'pabasa_app/color_mode/' %}";

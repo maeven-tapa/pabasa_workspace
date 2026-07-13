@@ -2,16 +2,18 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/about.css' %}">
+<link rel="stylesheet" href="{% static 'pabasa_app/about.css' %}?v=20260713-editorial">
 {% endblock %}
 
 {% block content %}
 
 
-<section class="py-4 fade-in-section">
+<section class="about-hero-section py-4 fade-in-section" id="about-overview">
     <div class="modern-hero row g-4 align-items-stretch">
         <div class="col-lg-7">
             <span class="modern-chip mb-3" style="display: inline-block;">About PABASA</span>
+            <span class="pip-research-note">Pip's research notebook <span aria-hidden="true">★</span></span>
+            <div class="hero-stamps" aria-hidden="true"><span>READ</span><span>LEARN</span><span>GROW</span></div>
                     <h1 class="h2 mb-3">A research-built reading platform shaped by classroom needs.</h1>
                     <p class="text-secondary mb-3" style="text-align: justify;">PABASA began as a research effort focused on one practical problem: helping reading assessment become easier to run, easier to review, and more useful for classroom decisions.</p>
             <p class="mb-0" style="text-align: justify;">This page highlights the project context, design principles, development path, and the people responsible for turning the idea into a working web application.</p>
@@ -24,7 +26,7 @@
     </div>
 </section>
 
-<section id="project-origin" class="pb-4 pb-md-5 fade-in-section">
+<section id="project-origin" class="about-articles-section pb-4 pb-md-5 fade-in-section">
     <div class="about-section-header">
         <span class="modern-chip mb-3">Project Origin</span>
         <h2 class="h4">Why PABASA Was Built</h2>
@@ -223,7 +225,7 @@
     </article>
 </div>
 
-<section class="pb-4 pb-md-5 fade-in-section">
+<section class="about-principles-section pb-4 pb-md-5 fade-in-section" id="design-principles">
     <div class="principles-board">
         <aside class="principles-board-intro">
             <span>Build Principles</span>
@@ -265,7 +267,7 @@
     </div>
 </section>
 
-<section class="pb-4 pb-md-5 fade-in-section">
+<section class="about-journey-section pb-4 pb-md-5 fade-in-section" id="project-journey">
     <div class="about-section-header">
         <span class="modern-chip mb-3">Project Context</span>
         <h2 class="h4">From Research to Deployment</h2>
@@ -325,7 +327,7 @@
     </div>
 </section>
 
-<section id="development-team" class="development-team-section pb-4 fade-in-section">
+<section id="development-team" class="about-team-section development-team-section pb-4 fade-in-section">
             <div class="about-section-header">
                 <span class="modern-chip mb-3">Project Team</span>
                 <h2 class="h4 mb-1">Development Team</h2>

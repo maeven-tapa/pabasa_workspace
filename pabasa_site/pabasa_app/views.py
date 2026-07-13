@@ -44,7 +44,7 @@ from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course
+from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, HuntStarAward
 from .reading_material_utils import format_assigned_week_display, parse_assigned_week
 from .reading_stt import (
     analyze_reading,
@@ -53,6 +53,7 @@ from .reading_stt import (
     synthesize_read_aloud_audio,
     transcribe_audio_bytes_with_model,
 )
+from .hunt_scoring import classify_speech
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -2307,6 +2308,15 @@ def pabasa_info(request):
 def about(request):
     return render(request, 'pabasa_app/about.html')
 
+def faq(request):
+    return render(request, 'pabasa_app/faq.html')
+
+def terms(request):
+    return render(request, 'pabasa_app/terms.html')
+
+def privacy(request):
+    return render(request, 'pabasa_app/privacy.html')
+
 def teacher_signup(request):
     return render(request, 'pabasa_app/teacher_signup.html')
 
@@ -3902,6 +3912,7 @@ def reading_read_aloud_api(request):
     target_text = (request.POST.get('target_text') or '').strip()
     mode = (request.POST.get('mode') or '').strip().lower()
     language = (request.POST.get('language') or '').strip()
+    tts_profile = (request.POST.get('tts_profile') or '').strip().lower()
     language_code = language_code_for(language, mode)
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
 
@@ -3911,7 +3922,10 @@ def reading_read_aloud_api(request):
         return JsonResponse({'success': False, 'error': 'Google Text-to-Speech is not configured.'}, status=503)
 
     try:
-        audio_content = synthesize_read_aloud_audio(target_text, api_key, language_code)
+        # Hunt uses the same clear female Assessment voice at a slower teaching
+        # pace so young readers can hear each sound. Assessment keeps its defaults.
+        tts_options = {'speaking_rate': 0.80, 'prosody_rate': '82%'} if tts_profile == 'hunt' else {}
+        audio_content = synthesize_read_aloud_audio(target_text, api_key, language_code, **tts_options)
         return JsonResponse({
             'success': True,
             'audio_content': audio_content,
@@ -3957,7 +3971,7 @@ def _record_material_practice_completion(material, student_user, attempt_payload
     except (TypeError, ValueError):
         existing_stars = 0
     game_mode = str(content_json.get('mode') or attempt_payload.get('game_mode') or '').strip().lower()
-    saved_stars = max(existing_stars, incoming_stars) if game_mode == 'color' else incoming_stars
+    saved_stars = max(existing_stars, incoming_stars) if game_mode in {'color', 'hunt'} else incoming_stars
     completion = {
         'student_id': student_user.id,
         'status': 'completed',
@@ -3981,6 +3995,83 @@ def _record_material_practice_completion(material, student_user, attempt_payload
     material.content_json = content_json
     material.save(update_fields=['content_json', 'updated_at'])
     return completion
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='student')
+def award_hunt_mode_stars(request):
+    try:
+        data = json.loads(request.body or '{}')
+        session_student_id = int(request.session.get('user_id') or 0)
+        posted_student_id = int(data.get('student_id') or 0)
+        if not session_student_id or posted_student_id != session_student_id:
+            return JsonResponse({'success': False, 'error': 'Student identity does not match the authenticated session.'}, status=403)
+
+        _prefix, material_id = _parse_prefixed_id(data.get('level_id'))
+        attempt_id = str(data.get('attempt_id') or '').strip()
+        award_type = str(data.get('award_type') or '').strip().lower()
+        if not attempt_id or len(attempt_id) > 64 or award_type not in {'word', 'completion'}:
+            return JsonResponse({'success': False, 'error': 'Invalid Hunt award request.'}, status=400)
+
+        with transaction.atomic():
+            student = User.objects.select_for_update().get(pk=session_student_id, role='student')
+            material = Material.objects.select_for_update().get(pk=material_id, type='practice')
+            content_json = dict(material.content_json or {})
+            if str(content_json.get('mode') or '').lower() != 'hunt':
+                return JsonResponse({'success': False, 'error': 'The selected level is not Hunt Mode.'}, status=400)
+
+            if award_type == 'word':
+                word_index = int(data.get('word_index'))
+                material_items = _practice_material_items(material)[:5]
+                if word_index not in range(len(material_items)):
+                    raise ValueError
+                confidence = data.get('confidence')
+                confidence = float(confidence) if confidence is not None else None
+                tier, star_delta = classify_speech(data.get('transcript'), material_items[word_index], confidence)
+                award_key = f'word:{word_index}'
+            else:
+                word_index = None
+                tier = 'Completion'
+                total_points = max(0, min(10, int(data.get('total_points'))))
+                percentage = round(total_points / 10 * 100)
+                if int(data.get('percentage')) != percentage:
+                    raise ValueError
+                saved_points = sum(HuntStarAward.objects.filter(
+                    student=student, material=material, attempt_id=attempt_id,
+                    award_key__startswith='word:',
+                ).values_list('stars', flat=True))
+                if saved_points != total_points:
+                    return JsonResponse({'success': False, 'error': 'Hunt word points do not match saved awards.'}, status=409)
+                star_delta = 3 if percentage >= 80 else 2 if percentage >= 50 else 1
+                award_key = 'completion'
+
+            award, created = HuntStarAward.objects.get_or_create(
+                student=student, material=material, attempt_id=attempt_id, award_key=award_key,
+                defaults={'word_index': word_index, 'tier': tier, 'stars': star_delta},
+            )
+            duplicate = not created
+            if duplicate and (award.stars != star_delta or award.tier != tier):
+                return JsonResponse({'success': False, 'error': 'Duplicate Hunt award conflicts with the saved result.'}, status=409)
+            applied_delta = star_delta if created else 0
+            if applied_delta:
+                student.available_stars = int(student.available_stars or 0) + applied_delta
+                student.theme_stars_credited = int(student.theme_stars_credited or 0) + applied_delta
+                student.save(update_fields=['available_stars', 'theme_stars_credited', 'updated_at'])
+            total_stars_earned = int(student.theme_stars_credited or 0)
+            attempt_stars = sum(HuntStarAward.objects.filter(
+                student=student, material=material, attempt_id=attempt_id,
+            ).values_list('stars', flat=True))
+
+        return JsonResponse({
+            'success': True, 'award_type': award_type, 'earned_stars': star_delta,
+            'star_delta': applied_delta, 'duplicate': duplicate,
+            'total_stars_earned': total_stars_earned,
+            'available_stars': student.available_stars,
+            'attempt_stars': attempt_stars,
+        })
+    except (TypeError, ValueError, Material.DoesNotExist, User.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Invalid Hunt level or score data.'}, status=400)
 
 def _serialize_student_practice_material(material, student_user=None):
     completion = _material_practice_completion(material, student_user)
@@ -4041,6 +4132,7 @@ def _student_practice_context(request, mode=None):
         'practice_difficulties': AdminPracticeMaterialForm.DIFFICULTY_CHOICES,
         'selected_practice_mode': mode or '',
         'selected_practice_difficulty': request.GET.get('difficulty', '').strip().lower(),
+        'student_available_stars': max(0, int(student_user.available_stars or 0)) if student_user else 0,
         'mascot_animation_frames': mascot_animation_frames,
         'mascot_animation_first_frame': (
             mascot_animation_frames['idle'][0]
@@ -4523,6 +4615,7 @@ def practice(request):
         mode: _practice_game_progression(mode, student_user)['summary']
         for mode in ['free', 'color', 'hunt']
     }
+    context['authoritative_total_stars_earned'] = _student_theme_lifetime_stars(student_user)
     return render(request, 'pabasa_app/practice.html', context)
 
 
@@ -4540,10 +4633,16 @@ STUDENT_THEME_CATALOG = {
 def _student_theme_lifetime_stars(student_user):
     if not student_user:
         return 0
-    return sum(
+    progression_total = sum(
         max(0, int(_practice_game_progression(mode, student_user)['summary'].get('stars_earned') or 0))
         for mode in ['free', 'color', 'hunt']
     )
+    preference = student_user.preference if isinstance(student_user.preference, dict) else {}
+    stored_total = max(0, int(preference.get('total_stars_earned', 0) or 0))
+    # Hunt awards are deposited immediately and therefore may be newer than
+    # the per-material progression snapshot shown on the Practice page.
+    credited_total = max(0, int(student_user.theme_stars_credited or 0))
+    return max(progression_total, stored_total, credited_total)
 
 
 def _sync_student_theme_wallet(student_user):

@@ -19,6 +19,7 @@ from reportlab.pdfgen import canvas
 from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
 from .reading_stt import analyze_reading
+from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info
 from .weekly_digest import send_weekly_digest
@@ -43,6 +44,52 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["matched"], 0)
         self.assertEqual(result["correct_word_count"], 0)
         self.assertFalse(result["complete"])
+
+
+class HuntScoringRuleTests(TestCase):
+    def test_normalization_and_missing_confidence_fallback(self):
+        self.assertEqual(normalize_speech(" C\u00c1t! "), "cat")
+        self.assertEqual(classify_speech("Cat!", "cat"), ("Excellent", 2))
+        self.assertEqual(classify_speech("dog", "cat"), ("Weak", 0))
+
+    def test_confidence_thresholds(self):
+        self.assertEqual(classify_speech("cat", "cat", .80), ("Excellent", 2))
+        self.assertEqual(classify_speech("cat", "cat", .79), ("Mixed", 1))
+        self.assertEqual(classify_speech("cat", "cat", .50), ("Mixed", 1))
+        self.assertEqual(classify_speech("cat", "cat", .49), ("Weak", 0))
+        self.assertEqual(classify_speech("dog", "cat", .99), ("Weak", 0))
+
+    def test_star_thresholds_never_award_zero(self):
+        self.assertEqual([stars_for_points(p) for p in (0, 4, 5, 7, 8, 10)], [1, 1, 2, 2, 3, 3])
+
+    def test_frontend_has_duplicate_guard_and_non_scoring_checkpoint(self):
+        source = (Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "practice_reader.js").read_text(encoding="utf-8")
+        template = (Path(__file__).resolve().parent / "templates" / "pabasa_app" / "practice_reader_base.html").read_text(encoding="utf-8")
+        self.assertIn("if (!isHuntMode || huntResults[index]) return null", source)
+        self.assertIn("if (currentIndex === 3 && huntCheckpointToast)", source)
+        self.assertIn("if (result.points > 0)", source)
+        self.assertIn("speechItemIndex !== currentIndex || huntAdvanceInProgress", source)
+        self.assertIn("Try again — keep reading the same word.", source)
+        self.assertIn("if (!huntResults[currentIndex]) finalizeHuntSpeechResult", source)
+        self.assertIn("updateHuntToggleButton()", source)
+        self.assertIn("isHuntMode ? 2600 : 8000", source)
+        self.assertIn("huntListeningDesired", source)
+        self.assertIn("scheduleHuntRecognition(currentIndex, 120)", source)
+        self.assertIn("stopHuntRecognitionByUser()", source)
+        self.assertIn("Google Speech results will appear here while you read.", template)
+        self.assertIn("Raw mic input", template)
+        self.assertIn("Waiting for speech...", template)
+        self.assertIn('id="huntReadAloudBtn"', template)
+        self.assertIn('/api/reading/read-aloud/', source)
+        self.assertIn('formData.append("tts_profile", "hunt")', source)
+        self.assertIn("activeDot.appendChild(huntFlightBird)", source)
+        self.assertIn("grid-template-columns: .72fr 1.12fr 1fr .72fr", template)
+        self.assertIn("transform: translate(-50%,-50%)", template)
+        self.assertIn("/api/practice/hunt/award-stars/", source)
+        self.assertIn("if (huntAwardSubmitted)", source)
+        self.assertIn('id="huntPointsDisplay">Points: 0/10', template)
+        self.assertIn('Available Stars: {{ student_available_stars|default:0 }}', template)
+        self.assertIn('starCount.textContent = `Available Stars: ${data.available_stars}`', source)
 
     def test_similar_wrong_word_does_not_match_when_first_sound_differs(self):
         result = analyze_reading("house", 0, "mouse")
@@ -1952,6 +1999,56 @@ class PracticeReaderMaterialTests(TestCase):
         material.refresh_from_db()
         completion = material.content_json["student_completions"][str(self.student.id)]
         self.assertEqual(completion["stars_earned"], 50)
+
+    def _hunt_material(self, level="level_1"):
+        return Material.objects.create(
+            title=f"Hunt {level}", item_type="word", content_text="one\ntwo\nthree\nfour\nfive",
+            content_json={"mode": "hunt", "difficulty": "easy", "level": level},
+            type="practice", status="published", difficulty_level="easy", is_active=True,
+        )
+
+    def _award_hunt(self, material, points):
+        stars = 3 if points >= 8 else 2 if points >= 5 else 1
+        return self.client.post(reverse("award_hunt_mode_stars"), data=json.dumps({
+            "student_id": self.student.id, "level_id": f"practice-{material.id}",
+            "total_points": points, "percentage": points * 10, "earned_stars": stars,
+        }), content_type="application/json")
+
+    def test_hunt_star_first_completion(self):
+        payload = self._award_hunt(self._hunt_material(), 5).json()
+        self.assertEqual((payload["earned_stars"], payload["star_delta"], payload["best_stars"]), (2, 2, 2))
+        self.assertEqual((payload["total_stars_earned"], payload["available_stars"]), (2, 2))
+
+    def test_hunt_star_improved_replay(self):
+        material = self._hunt_material()
+        self._award_hunt(material, 5)
+        payload = self._award_hunt(material, 8).json()
+        self.assertEqual((payload["star_delta"], payload["best_stars"], payload["available_stars"]), (1, 3, 3))
+
+    def test_hunt_star_equal_replay(self):
+        material = self._hunt_material()
+        self._award_hunt(material, 5)
+        payload = self._award_hunt(material, 7).json()
+        self.assertEqual((payload["star_delta"], payload["best_stars"], payload["available_stars"]), (0, 2, 2))
+
+    def test_hunt_star_lower_replay(self):
+        material = self._hunt_material()
+        self._award_hunt(material, 8)
+        payload = self._award_hunt(material, 2).json()
+        self.assertEqual((payload["star_delta"], payload["best_stars"], payload["available_stars"]), (0, 3, 3))
+
+    def test_hunt_stars_are_independent_per_level(self):
+        first = self._hunt_material("level_1")
+        second = self._hunt_material("level_2")
+        self._award_hunt(first, 5)
+        payload = self._award_hunt(second, 8).json()
+        self.assertEqual((payload["star_delta"], payload["total_stars_earned"], payload["available_stars"]), (3, 5, 5))
+
+    def test_hunt_star_endpoint_requires_authenticated_student(self):
+        material = self._hunt_material()
+        self.client.logout()
+        response = self._award_hunt(material, 5)
+        self.assertIn(response.status_code, {302, 401, 403})
 
     def test_practice_results_route_redirects_to_shared_practice_flow(self):
         material = Material.objects.create(

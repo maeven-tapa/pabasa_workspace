@@ -814,8 +814,16 @@ h1, h2, h3, h4 {
 }
 
 .section-container-gallery::before {
+    animation-name: sectionLearningPatternComposited;
     animation-duration: 32s;
     opacity: 0.16;
+    backface-visibility: hidden;
+    will-change: transform;
+}
+
+@keyframes sectionLearningPatternComposited {
+    from { transform: translate3d(-420px, -280px, 0); }
+    to { transform: translate3d(0, 0, 0); }
 }
 
 /* Section-specific icon stories. */
