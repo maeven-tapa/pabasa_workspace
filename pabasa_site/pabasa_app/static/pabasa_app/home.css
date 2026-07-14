@@ -3874,3 +3874,119 @@ section.pb-md-5 h2::after {
         font-size: 1.7rem !important;
     }
 }
+/* ============================================================
+   PRACTICE MODES SNEAK PEEK
+   ============================================================ */
+.practice-sneak-peek {
+    position: relative;
+    margin: 0 calc(-50vw + 50%);
+    padding: clamp(3.5rem, 6vw, 7rem) clamp(1rem, 4vw, 4rem);
+    width: 100vw;
+    background-color: #fffefb;
+    overflow: hidden;
+}
+
+.practice-sneak-peek::before {
+    position: absolute;
+    inset: 0;
+    content: "";
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='210' viewBox='0 0 320 210'%3E%3Cg fill='none' stroke='%232ea8e5' stroke-width='2' opacity='.11'%3E%3Cpath d='M24 43l4 8 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z'/%3E%3Cpath d='M176 45q13-7 26 1v20q-13-7-26-1zm26 1q13-8 26-1v20q-13-7-26 1z'/%3E%3Cpath d='M273 143h20v27h-20zM277 148h12M277 153h12M277 158h9'/%3E%3C/g%3E%3Cg fill='%2310466e' font-family='Arial,sans-serif' font-weight='700' opacity='.06'%3E%3Ctext x='69' y='24' font-size='17'%3EABC%3C/text%3E%3Ctext x='82' y='171' font-size='15'%3E123%3C/text%3E%3C/g%3E%3Cg fill='%23ffd639' opacity='.14'%3E%3Ccircle cx='134' cy='68' r='3'/%3E%3Cpath d='M39 147l2 5 5 2-5 2-2 5-2-5-5-2 5-2z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: clamp(220px, 21vw, 340px) auto;
+    animation: practice-doodles-drift 28s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes practice-doodles-drift {
+    from { background-position: 0 0; }
+    to { background-position: clamp(220px, 21vw, 340px) 210px; }
+}
+
+.practice-sneak-peek__content {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 112rem);
+    margin-inline: auto;
+}
+
+.practice-sneak-peek__heading {
+    position: relative;
+    max-width: 76rem;
+    margin: 0 auto clamp(1.75rem, 3vw, 2.75rem);
+    padding-inline: clamp(0.25rem, 2vw, 1.5rem);
+    text-align: center;
+}
+
+.practice-sneak-peek__heading::before {
+    position: absolute;
+    z-index: -1;
+    inset: -1.5rem -3rem;
+    content: "";
+    background: radial-gradient(ellipse, rgba(255, 254, 251, 0.96) 25%, rgba(255, 254, 251, 0) 72%);
+    pointer-events: none;
+}
+
+.practice-sneak-peek__heading h2 {
+    margin: 0;
+    color: var(--pabasa-blue-deep);
+    font-family: 'Baloo 2', 'Nunito', cursive;
+    font-size: clamp(2rem, 3.75vw, 4.35rem);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    text-shadow: 0 3px 10px rgba(16, 70, 110, 0.08);
+}
+
+.practice-sneak-peek__heading h2 span {
+    color: #f5b800;
+    white-space: nowrap;
+}
+
+.practice-sneak-peek__heading p {
+    margin: clamp(0.55rem, 1vw, 0.85rem) 0 0;
+    color: var(--pabasa-blue);
+    font-family: 'Baloo 2', 'Nunito', cursive;
+    font-size: clamp(0.78rem, 1.55vw, 1.55rem);
+    font-weight: 900;
+    line-height: 1.2;
+    letter-spacing: clamp(0.07em, 0.16vw, 0.13em);
+    text-transform: uppercase;
+}
+
+.practice-sneak-peek__frame {
+    position: relative;
+    width: min(100%, 100rem);
+    aspect-ratio: 16 / 9;
+    margin-inline: auto;
+    border: 0;
+    border-radius: clamp(1rem, 1.8vw, 2rem);
+    background: #eaf8fb;
+    box-shadow: 0 clamp(0.8rem, 1.8vw, 1.6rem) clamp(1.6rem, 4vw, 4rem) rgba(7, 86, 111, 0.2);
+    overflow: hidden;
+}
+
+.practice-sneak-peek__frame video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #eaf8fb;
+}
+
+@media (max-width: 575px) {
+    .practice-sneak-peek {
+        padding-block: clamp(2.5rem, 10vw, 3.25rem);
+    }
+
+    .practice-sneak-peek::before { background-size: 190px auto; }
+    .practice-sneak-peek__heading { margin-bottom: 1.25rem; }
+    .practice-sneak-peek__heading::before { inset: -1rem -0.5rem; }
+    .practice-sneak-peek__heading h2 { font-size: clamp(1.75rem, 8.6vw, 2.4rem); }
+    .practice-sneak-peek__heading h2 span { white-space: normal; }
+    .practice-sneak-peek__heading p { font-size: clamp(0.68rem, 3.25vw, 0.82rem); }
+    .practice-sneak-peek__frame { border-radius: 0.9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .practice-sneak-peek::before { animation: none; }
+}

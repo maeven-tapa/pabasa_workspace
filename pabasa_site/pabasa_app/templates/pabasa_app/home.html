@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260712-small-device-fit">
+<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260715-practice-video-3">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -85,6 +85,30 @@
                     <p>See classroom progress clearly and create a consistent approach to literacy support across the school.</p>
                 </div>
             </article>
+        </div>
+    </div>
+</section>
+
+<section class="fade-in-section practice-sneak-peek" aria-labelledby="practice-sneak-peek-title">
+    <div class="section-wrapper">
+        <div class="practice-sneak-peek__content">
+            <header class="practice-sneak-peek__heading">
+                <h2 id="practice-sneak-peek-title">Choose Your <span>Reading Adventure!</span></h2>
+                <p>Pick a mode and start your next story</p>
+            </header>
+
+            <div class="practice-sneak-peek__frame">
+                <video
+                    autoplay
+                    muted
+                    playsinline
+                    loop
+                    preload="metadata"
+                    aria-label="Preview of the PABASA reading practice modes"
+                >
+                    <source src="{% static 'pabasa_app/videos/GIF_HOMEPAGE.mp4' %}" type="video/mp4">
+                </video>
+            </div>
         </div>
     </div>
 </section>
