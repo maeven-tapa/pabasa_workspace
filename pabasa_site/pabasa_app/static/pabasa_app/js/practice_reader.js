@@ -11,8 +11,6 @@
     let itemOutcomes = [];
     let sessionStartedAt = Date.now();
     let practiceSessionStarted = false;
-    let freeModeReadSteps = 0;
-    let freeModeSkipSteps = 0;
 
     const practiceText = document.getElementById("practiceText");
     const practiceCounter = document.getElementById("practiceCounter");
@@ -41,6 +39,7 @@
     const scrollsStatusPill = document.getElementById("scrollsStatusPill");
     const scrollRecordBtn = document.getElementById("scrollRecordBtn");
     const scrollSkipBtn = document.getElementById("scrollSkipBtn");
+    const scrollsPhoneDevice = document.querySelector(".scrolls-phone-device");
     let scrollCurrentIndex = 0;
     let scrollTouchStartY = 0;
     let scrollTouchEndY = 0;
@@ -155,6 +154,45 @@
         window.setTimeout(() => {
             button.classList.remove("is-keyboard-pressed");
         }, duration);
+    }
+
+    function fitFreeModeWordCardText() {
+        if (!isFreeMode || selectedDifficulty !== "easy" || !scrollsTrack) return;
+        const cards = scrollsTrack.querySelectorAll(".scrolls-card.practice-word");
+        cards.forEach((card) => {
+            const text = card.querySelector(".scrolls-card-text");
+            if (!text) return;
+
+            text.style.fontSize = "";
+            const computedStyles = window.getComputedStyle(text);
+            let fontSize = Number.parseFloat(computedStyles.fontSize) || 16;
+            const minFontSize = 24;
+            const availableWidth = Math.max(0, card.clientWidth - 24);
+            if (!availableWidth) return;
+
+            while (text.scrollWidth > availableWidth && fontSize > minFontSize) {
+                fontSize -= 2;
+                text.style.fontSize = `${fontSize}px`;
+            }
+        });
+    }
+
+    function updateFreeModeMobileLayoutState() {
+        if (!isFreeMode || !shell || !scrollsPhoneDevice) return;
+        const isMobileViewport = window.matchMedia("(max-width: 767px)").matches;
+        shell.classList.remove("scrolls-mobile-centered", "scrolls-mobile-scroll");
+        if (!isMobileViewport) return;
+
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+        const shellStyles = window.getComputedStyle(shell);
+        const shellPaddingTop = parseFloat(shellStyles.paddingTop) || 0;
+        const shellPaddingBottom = parseFloat(shellStyles.paddingBottom) || 0;
+        const availableHeight = Math.max(0, viewportHeight - shellPaddingTop - shellPaddingBottom);
+        const phoneHeight = scrollsPhoneDevice.getBoundingClientRect().height;
+        const fitsViewport = phoneHeight <= availableHeight + 2;
+
+        shell.classList.add(fitsViewport ? "scrolls-mobile-centered" : "scrolls-mobile-scroll");
+        fitFreeModeWordCardText();
     }
 
     function scheduleHuntRecognition(index = currentIndex, delay = 180) {
@@ -1531,6 +1569,30 @@
         practiceText.style.setProperty("padding", isHuntHard ? "0.24rem 0.34rem" : "0.52rem 0.8rem", "important");
     }
 
+    function isCountablePracticeOutcome(outcome) {
+        return outcome === "read" || outcome === "incorrect" || outcome === "skipped";
+    }
+
+    function applyPracticeReadOutcome(index = currentIndex) {
+        if (!Number.isInteger(index) || index < 0 || index >= items.length || isHuntMode) return false;
+        const previousIndex = currentIndex;
+        currentIndex = index;
+        const wasAlreadyRead = itemOutcomes[index] === "read";
+        setCurrentItemOutcome("read");
+        currentIndex = previousIndex;
+        return !wasAlreadyRead;
+    }
+
+    function applyPracticeSkipOutcome(index = currentIndex) {
+        if (!Number.isInteger(index) || index < 0 || index >= items.length || isHuntMode) return false;
+        const previousIndex = currentIndex;
+        currentIndex = index;
+        const changed = itemOutcomes[index] !== "skipped";
+        setCurrentItemOutcome("skipped");
+        currentIndex = previousIndex;
+        return changed;
+    }
+
     function setCurrentItemOutcome(status) {
         if (currentIndex < 0 || currentIndex >= items.length) return;
         if (isHuntMode) {
@@ -1539,67 +1601,111 @@
             return;
         }
         itemOutcomes[currentIndex] = status;
-
-        correctResponses = itemOutcomes.filter((outcome) => outcome === "read").length;
-        incorrectResponses = itemOutcomes.filter((outcome) => outcome === "skipped").length;
-        starsEarned = correctResponses * 10;
     }
 
     function recordFreeModeSkip(currentCardIndex = scrollCurrentIndex) {
         if (!Number.isInteger(currentCardIndex) || currentCardIndex < 0 || currentCardIndex >= items.length) return;
-        if (itemOutcomes[currentCardIndex] !== "skipped") {
-            itemOutcomes[currentCardIndex] = "skipped";
-            incorrectResponses = itemOutcomes.filter((outcome) => outcome === "skipped").length;
-            correctResponses = itemOutcomes.filter((outcome) => outcome === "read").length;
-            starsEarned = correctResponses * 10;
+        applyPracticeSkipOutcome(currentCardIndex);
+    }
+
+    function buildFinalizedPracticeMetrics() {
+        const useItemBasedMetrics = shouldCountCompletedItemsInsteadOfWords();
+        const totalWords = items.reduce((total, _, index) => total + getItemWordCount(index), 0);
+        const totalPracticeItems = items.length;
+        const readItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "read" ? 1 : 0), 0);
+        const incorrectItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "incorrect" ? 1 : 0), 0);
+        const skippedItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "skipped" ? 1 : 0), 0);
+        let correctWordCount = 0;
+        let incorrectWordCount = 0;
+        let skippedWordCount = 0;
+
+        itemOutcomes.forEach((outcome, index) => {
+            const wordCount = getItemWordCount(index);
+            if (outcome === "read") {
+                correctWordCount += wordCount;
+            } else if (outcome === "incorrect") {
+                incorrectWordCount += wordCount;
+            } else if (outcome === "skipped") {
+                skippedWordCount += wordCount;
+            }
+        });
+
+        const resolvedWordCount = correctWordCount + incorrectWordCount + skippedWordCount;
+        if (resolvedWordCount !== totalWords) {
+            let remainingWords = totalWords;
+            correctWordCount = 0;
+            incorrectWordCount = 0;
+            skippedWordCount = 0;
+            itemOutcomes.forEach((outcome, index) => {
+                const wordCount = getItemWordCount(index);
+                if (!isCountablePracticeOutcome(outcome)) return;
+                if (outcome === "read") {
+                    correctWordCount += wordCount;
+                } else if (outcome === "incorrect") {
+                    incorrectWordCount += wordCount;
+                } else if (outcome === "skipped") {
+                    skippedWordCount += wordCount;
+                }
+                remainingWords -= wordCount;
+            });
+            if (remainingWords > 0) {
+                skippedWordCount += remainingWords;
+            }
         }
+
+        const finalResolvedWordCount = correctWordCount + incorrectWordCount + skippedWordCount;
+        const metricCorrectCount = useItemBasedMetrics ? readItemCount : correctWordCount;
+        const metricIncorrectCount = useItemBasedMetrics ? incorrectItemCount : incorrectWordCount;
+        const metricSkippedCount = useItemBasedMetrics ? skippedItemCount : skippedWordCount;
+        const metricTotalUnits = useItemBasedMetrics ? totalPracticeItems : totalWords;
+        const accuracyDenominator = metricCorrectCount + metricIncorrectCount + metricSkippedCount;
+        const accuracy = accuracyDenominator > 0 ? Math.round((metricCorrectCount / accuracyDenominator) * 100) : 0;
+        const scorePercentage = metricTotalUnits > 0 ? Math.round((metricCorrectCount / metricTotalUnits) * 100) : 0;
+
+        return {
+            totalWords,
+            totalPracticeItems,
+            correctWordCount,
+            incorrectWordCount,
+            skippedWordCount,
+            metricCorrectCount,
+            metricIncorrectCount,
+            metricSkippedCount,
+            metricTotalUnits,
+            resolvedWordCount: finalResolvedWordCount,
+            accuracy,
+            score: scorePercentage,
+            scoreDisplay: `${metricCorrectCount}/${metricTotalUnits}${metricTotalUnits > 0 ? ` (${scorePercentage}%)` : ""}`,
+        };
     }
 
     function getCompletionMetrics() {
-        const totalItems = items.length;
-        const readItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "read" ? 1 : 0), 0);
-        const skippedItemCount = itemOutcomes.reduce((total, outcome) => total + (outcome === "skipped" ? 1 : 0), 0);
-        const totalReadWordsRaw = shouldCountCompletedItemsInsteadOfWords()
-            ? readItemCount
-            : itemOutcomes.reduce((total, outcome, index) => {
-                return outcome === "read" ? total + getItemWordCount(index) : total;
-            }, 0);
-        const totalSkippedWordsRaw = shouldCountCompletedItemsInsteadOfWords()
-            ? skippedItemCount
-            : itemOutcomes.reduce((total, outcome, index) => {
-                return outcome === "skipped" ? total + getItemWordCount(index) : total;
-            }, 0);
-        const totalReadWords = isFreeMode
-            ? Math.max(readItemCount, freeModeReadSteps)
-            : (shouldCountCompletedItemsInsteadOfWords()
-                ? (readItemCount > 0 ? readItemCount : totalReadWordsRaw)
-                : (totalReadWordsRaw > 0 ? totalReadWordsRaw : readItemCount));
-        const totalSkippedWords = isFreeMode
-            ? Math.max(skippedItemCount, freeModeSkipSteps)
-            : (shouldCountCompletedItemsInsteadOfWords()
-                ? (skippedItemCount > 0 ? skippedItemCount : totalSkippedWordsRaw)
-                : (totalSkippedWordsRaw > 0 ? totalSkippedWordsRaw : skippedItemCount));
-        const totalAttempts = correctResponses + incorrectResponses;
-        const accuracy = totalAttempts > 0 ? Math.round((correctResponses / totalAttempts) * 100) : 0;
-        const score = totalAttempts > 0 ? accuracy : 0;
         const readingTimeSeconds = Math.max(0, Math.round((Date.now() - sessionStartedAt) / 1000));
-        const earnedStars = isHuntMode ? (huntPoints >= 8 ? 3 : huntPoints >= 5 ? 2 : 1) : correctResponses * 10;
+        const finalized = buildFinalizedPracticeMetrics();
+        const earnedStars = isHuntMode ? (huntPoints >= 8 ? 3 : huntPoints >= 5 ? 2 : 1) : finalized.metricCorrectCount * 10;
 
         if (isHuntMode) {
             const percentage = Math.round((huntPoints / HUNT_MAX_POINTS) * 100);
-            return { totalItems, totalReadWords, totalSkippedWords, correctResponses, incorrectResponses,
-                accuracy: percentage, score: percentage, readingTimeSeconds, earnedStars,
+            return { totalItems: items.length, totalReadWords: huntResults.filter(item => item?.points > 0).length, totalSkippedWords: huntResults.filter(item => item?.points === 0).length, correctResponses, incorrectResponses,
+                accuracy: percentage, score: percentage, scoreDisplay: `${percentage}%`, readingTimeSeconds, earnedStars,
                 huntPoints, huntPercentage: percentage };
         }
 
+        correctResponses = finalized.metricCorrectCount;
+        incorrectResponses = finalized.metricIncorrectCount;
+        starsEarned = earnedStars;
+
         return {
-            totalItems,
-            totalReadWords,
-            totalSkippedWords,
-            correctResponses,
-            incorrectResponses,
-            accuracy,
-            score,
+            totalItems: finalized.totalPracticeItems,
+            totalReadWords: finalized.metricCorrectCount,
+            totalSkippedWords: finalized.metricSkippedCount,
+            totalMetricUnits: finalized.metricTotalUnits,
+            totalWords: finalized.totalWords,
+            correctResponses: finalized.metricCorrectCount,
+            incorrectResponses: finalized.metricIncorrectCount,
+            accuracy: finalized.accuracy,
+            score: finalized.score,
+            scoreDisplay: finalized.scoreDisplay,
             readingTimeSeconds,
             earnedStars,
         };
@@ -1623,8 +1729,11 @@
         const hasPronunciationScore = Number.isFinite(pronunciationScore) && pronunciationScore > 0;
         const feedback = getPerformanceFeedback(metrics.score);
 
-        if (completeScore) completeScore.textContent = `${metrics.score}%`;
+        if (completeScore) completeScore.textContent = metrics.scoreDisplay || `${metrics.score}%`;
         if (completeAccuracy) completeAccuracy.textContent = `${metrics.accuracy}%`;
+        if (metrics.totalReadWords + metrics.incorrectResponses + metrics.totalSkippedWords !== metrics.totalMetricUnits) {
+            console.warn("PABASA [Practice]: Metrics were inconsistent and were recalculated before render.");
+        }
         if (completeTotalPracticeItems) completeTotalPracticeItems.textContent = metrics.totalItems;
         if (completeTotalReadWords) completeTotalReadWords.textContent = metrics.totalReadWords;
         if (completeTotalSkippedWords) completeTotalSkippedWords.textContent = metrics.totalSkippedWords;
@@ -1722,6 +1831,8 @@
         scrollsTrack.innerHTML = cardMarkup;
         scrollsTrack.style.transform = `translateY(-${scrollCurrentIndex * 100}%)`;
         updateFreeModeProgress();
+        fitFreeModeWordCardText();
+        updateFreeModeMobileLayoutState();
     }
 
     function setFreeModeReadButton(isComplete) {
@@ -1945,8 +2056,7 @@
         const currentItem = items[scrollCurrentIndex];
         if (!currentItem) return false;
 
-        freeModeReadSteps += 1;
-        setCurrentItemOutcome("read");
+        applyPracticeReadOutcome(scrollCurrentIndex);
         if (scrollsFeedback) {
             scrollsFeedback.textContent = 'Nice work. Keep going to the next card.';
         }
@@ -1972,11 +2082,8 @@
     function handleFreeModeSkipAttempt() {
         if (!items.length) return false;
         if (!lockFreeModeGesture()) return false;
-        const skippedWordCount = getItemWordCount(scrollCurrentIndex) || 1;
-        freeModeSkipSteps += skippedWordCount;
         recordFreeModeSkip(scrollCurrentIndex);
         persistFreeModeCardProgress(scrollCurrentIndex);
-        setCurrentItemOutcome("skipped");
         if (scrollsFeedback) {
             scrollsFeedback.textContent = 'Skipped. Moving to the next card.';
         }
@@ -2175,6 +2282,7 @@
     }
 
     function showCompletion() {
+        document.body.classList.add("practice-results-open");
         shell.classList.add("is-complete");
         updateCompletionSummary();
         configureNextLevelAction();
@@ -2242,6 +2350,7 @@
     }
 
     function restartPractice() {
+        document.body.classList.remove("practice-results-open");
         shell.classList.remove("is-complete");
         currentIndex = 0;
         starsEarned = 0;
@@ -2268,8 +2377,6 @@
         huntAwardSubmitted = false;
         huntAwardPromise = null;
         huntServerStarTotals = null;
-        freeModeReadSteps = 0;
-        freeModeSkipSteps = 0;
         colorModeCompletionReady = false;
         colorNewStarsToCommit = null;
         colorStarsCommitted = false;
@@ -2294,7 +2401,7 @@
 
     skipBtn?.addEventListener("click", function () {
         markPracticeSessionStarted();
-        setCurrentItemOutcome("skipped");
+        applyPracticeSkipOutcome(currentIndex);
         practiceFeedback.textContent = "Skipped. That item will count as a chance to improve next time.";
         practiceFeedback.classList.remove("is-success");
         practiceFeedback.classList.add("is-warning");
@@ -2337,9 +2444,8 @@
 
     recordBtn?.addEventListener("click", function () {
         markPracticeSessionStarted();
-        const wasAlreadyRead = itemOutcomes[currentIndex] === "read";
-        setCurrentItemOutcome("read");
-        const revealedObject = wasAlreadyRead ? false : revealNextColorObject();
+        const revealedByNewRead = applyPracticeReadOutcome(currentIndex);
+        const revealedObject = revealedByNewRead ? revealNextColorObject() : false;
         if (colorFinalRevealTimer) {
             window.clearTimeout(colorFinalRevealTimer);
             colorFinalRevealTimer = null;
@@ -2508,6 +2614,8 @@
     if (isFreeMode) {
         toggleFreeModeBodyLock(true);
         attachFreeModeInteractions();
+        window.addEventListener("resize", updateFreeModeMobileLayoutState);
+        window.addEventListener("orientationchange", updateFreeModeMobileLayoutState);
     } else {
         toggleFreeModeBodyLock(false);
     }
