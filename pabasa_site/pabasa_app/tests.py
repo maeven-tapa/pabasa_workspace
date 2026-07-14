@@ -2844,6 +2844,20 @@ class AssessmentCompletionNotificationTests(TestCase):
             email="admin9001@example.com",
             password_hash=make_password("admin-password"),
         )
+        self.principal = User.objects.create(
+            custom_id="PRN-9001",
+            role="principal",
+            first_name="Paula",
+            last_name="Principal",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=4,
+            birth_day=4,
+            birth_year=1980,
+            email="principal9001@example.com",
+            password_hash=make_password("principal-password"),
+        )
         self.section = Section.objects.create(
             teacher=self.teacher,
             class_name="Class A",
@@ -2872,6 +2886,18 @@ class AssessmentCompletionNotificationTests(TestCase):
         session = self.client.session
         session["user_id"] = self.teacher.id
         session["user_role"] = self.teacher.role
+        session.save()
+
+    def _login_admin(self):
+        session = self.client.session
+        session["user_id"] = self.admin.id
+        session["user_role"] = self.admin.role
+        session.save()
+
+    def _login_principal(self):
+        session = self.client.session
+        session["user_id"] = self.principal.id
+        session["user_role"] = self.principal.role
         session.save()
 
     def test_assessment_material_creation_leaves_assessments_table_empty_until_completion(self):
@@ -3216,6 +3242,39 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertTrue(data["success"])
         self.assertEqual(len(data["notifications"]), 1)
         self.assertFalse(data["notifications"][0]["is_read"])
+
+    def test_mark_notification_read_endpoint_updates_state(self):
+        notification = Notification.objects.create(
+            recipient=self.teacher,
+            created_by=self.student,
+            title="Unread teacher update",
+            message="A fresh notification for the shared panel.",
+            notification_type="assessment",
+        )
+        self._login_teacher()
+
+        response = self.client.post(
+            reverse("mark_notification_read"),
+            data=json.dumps({"notification_id": notification.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        notification.refresh_from_db()
+        self.assertTrue(notification.is_read)
+
+    def test_notifications_page_uses_shared_mount_for_all_roles(self):
+        for login in (
+            self._login_admin,
+            self._login_teacher,
+            self._login_student,
+            self._login_principal,
+        ):
+            login()
+            response = self.client.get(reverse("notifications"))
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'data-notifications-mount="page"', html=False)
 
     def test_practice_completion_notifies_admin_in_app_only(self):
         material = Material.objects.create(

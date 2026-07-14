@@ -1,0 +1,53 @@
+.notif-nav-btn {
+    align-items: center;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 999px;
+    box-shadow: none !important;
+    display: inline-flex;
+    height: 40px;
+    justify-content: center;
+    min-width: 40px;
+    padding: 0;
+    transition: background-color 0.18s ease, transform 0.18s ease;
+    width: 40px;
+}
+
+.notif-nav-btn:hover,
+.notif-nav-btn:focus-visible {
+    background: rgba(46, 168, 229, 0.08) !important;
+    transform: translateY(-1px);
+}
+
+.notif-nav-btn .bi-bell {
+    color: #10466E;
+    font-size: 1.15rem !important;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.notif-nav-badge {
+    align-items: center;
+    background: linear-gradient(135deg, #FFD639 0%, #F5B800 100%);
+    border: 2px solid #fff;
+    border-radius: 999px;
+    box-shadow: 0 4px 10px rgba(245, 184, 0, 0.2);
+    color: #10466E;
+    display: inline-flex;
+    font-family: "Nunito", "Segoe UI", sans-serif;
+    font-size: 0.67rem;
+    font-weight: 800;
+    height: 18px;
+    justify-content: center;
+    letter-spacing: 0;
+    line-height: 1;
+    min-width: 18px;
+    padding: 0 0.3rem;
+    position: absolute;
+    right: 2px;
+    top: 2px;
+}
+
+.notif-nav-badge.is-hidden {
+    display: none;
+}

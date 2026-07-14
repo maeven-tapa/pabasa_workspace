@@ -11,9 +11,6 @@
         </div>
     </div>
     <div class="d-flex align-items-center gap-3">
-        <button class="btn btn-link text-dark p-0 position-relative dashboard-notif-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#notificationPane" aria-label="View notifications">
-            <i class="bi bi-bell fs-5" style="color: var(--dash-primary-deep);"></i>
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill" id="notifBadge" style="display: none; font-size: 0.6rem; padding: 0.35em 0.5em; background: linear-gradient(135deg, var(--dash-accent) 0%, var(--dash-accent-strong) 100%); color: var(--dash-primary-deep); box-shadow: 0 6px 14px rgba(245, 184, 0, 0.24);">0</span>
-        </button>
+        {% include "pabasa_app/partials/_notification_nav_button.html" with notification_pane_target="notificationPane" %}
     </div>
 </header>

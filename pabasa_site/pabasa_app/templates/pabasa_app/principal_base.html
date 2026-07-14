@@ -11,6 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'pabasa_app/vendor/bootstrap-icons/bootstrap-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'pabasa_app/notification_nav.css' %}">
+    <link rel="stylesheet" href="{% static 'pabasa_app/notifications_shared.css' %}">
     <style>
         :root {
             --principal-primary: #2EA8E5;
@@ -415,34 +417,6 @@
             transform: translateY(-1px);
         }
 
-        .admin-topbar .btn-link .bi-bell {
-            color: var(--principal-primary-deep);
-            font-weight: 600;
-        }
-
-        .admin-notif-badge {
-            align-items: center;
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-            border-radius: 999px;
-            color: #7c2d12;
-            display: inline-flex;
-            font-size: 0.68rem;
-            font-weight: 700;
-            height: 18px;
-            justify-content: center;
-            line-height: 1.1;
-            min-width: 18px;
-            padding: 0 0.3rem;
-            position: absolute;
-            right: 2px;
-            top: 2px;
-            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);
-        }
-
-        .admin-notif-badge.is-hidden {
-            display: none;
-        }
-
         .admin-topbar-user {
             text-align: end;
             line-height: 1.15;
@@ -798,22 +772,11 @@
                     <span class="small text-secondary d-block">Logged in as</span>
                     <strong>{{ principal_id }}</strong>
                 </div>
-                <button class="btn btn-link text-dark p-0 position-relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#principalNotificationPane" aria-label="View notifications">
-                    <i class="bi bi-bell fs-5"></i>
-                    <span class="admin-notif-badge is-hidden" id="notifBadge">0</span>
-                </button>
+                {% include "pabasa_app/partials/_notification_nav_button.html" with notification_pane_target="principalNotificationPane" %}
             </div>
         </header>
 
-        <div class="offcanvas offcanvas-end" tabindex="-1" id="principalNotificationPane" aria-labelledby="principalNotificationPaneLabel">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title" id="principalNotificationPaneLabel">Notifications</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-            <div class="offcanvas-body p-0">
-                <div id="notifContainer" class="p-3"></div>
-            </div>
-        </div>
+        {% include "pabasa_app/partials/_notification_offcanvas.html" with notification_pane_id="principalNotificationPane" notification_pane_label_id="principalNotificationPaneLabel" notification_mount_id="notifContainer" notification_mount_name="pane" show_clear_notifications=True notification_clear_button_id="clearNotificationsBtn" notification_confirm_modal_id="principalClearNotificationsConfirmModal" notification_confirm_modal_label_id="principalClearNotificationsConfirmModalLabel" %}
 
         <section class="principal-content">
             {% block content %}{% endblock %}
@@ -839,6 +802,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
     <script>
         function getCsrfToken() {
             const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -852,56 +816,117 @@
             const badge = document.getElementById('notifBadge');
             if (!container || !badge) return;
 
-            const escapeHtml = (value) => {
-                const div = document.createElement('div');
-                div.textContent = value == null ? '' : String(value);
-                return div.innerHTML;
-            };
-
             const unread = (list || []).filter(item => !item.is_read).length;
             badge.textContent = unread;
             badge.style.display = unread > 0 ? 'inline-block' : 'none';
+            if (window.PabasaNotificationsShared) {
+                window.PabasaNotificationsShared.updateHeaderBadge(document, unread);
+            }
 
             if (!list || !list.length) {
-                container.innerHTML = '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i>No notifications yet</div>';
+                container.innerHTML = window.PabasaNotificationsShared
+                    ? window.PabasaNotificationsShared.renderNotificationEmptyState()
+                    : '<div class="p-5 text-center text-muted small"><i class="bi bi-bell-slash d-block fs-1 mb-3 opacity-25"></i>No notifications yet</div>';
                 return;
             }
 
-            container.innerHTML = list.map(item => {
-                const when = item.created_at ? new Date(item.created_at).toLocaleString() : '';
-                const unreadClass = item.is_read ? '' : 'border-start border-3 border-warning';
-                const title = escapeHtml(item.title || 'Notification');
-                const message = escapeHtml(item.message || '');
-                return `
-                    <div class="mb-3 p-3 rounded bg-white ${unreadClass}" data-notif-id="${item.id}">
-                        <div class="d-flex justify-content-between align-items-start gap-2">
-                            <strong class="small text-dark">${title}</strong>
-                            <button class="btn btn-sm btn-link p-0 text-secondary mark-notif-read" data-notif-id="${item.id}" aria-label="Mark as read"><i class="bi bi-check2-circle"></i></button>
-                        </div>
-                        <p class="small text-muted mb-1">${message}</p>
-                        <div class="small text-secondary">${when}</div>
-                    </div>
-                `;
-            }).join('');
+            container.innerHTML = window.PabasaNotificationsShared
+                ? window.PabasaNotificationsShared.renderNotificationsMarkup(list)
+                : '';
+            bindNotificationInteractions(container);
+        }
 
-            container.querySelectorAll('.mark-notif-read').forEach(btn => {
-                btn.addEventListener('click', async function () {
-                    const notifId = this.getAttribute('data-notif-id');
-                    try {
-                        await fetch('/api/notifications/mark-read/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCsrfToken()
-                            },
-                            body: JSON.stringify({ notification_id: notifId })
-                        });
-                        await updateInAppNotifications();
-                    } catch (error) {
-                        console.warn('Failed to mark notification as read', error);
-                    }
-                });
+        function bindNotificationInteractions(root) {
+            if (!root || root.dataset.notificationsBound === 'true') return;
+
+            root.addEventListener('click', async (event) => {
+                const markReadButton = event.target.closest('[data-mark-read]');
+                if (markReadButton) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    await markPrincipalNotifRead(markReadButton.dataset.notificationId, '', { refreshOnly: true });
+                    return;
+                }
+
+                const card = event.target.closest('[data-notification-card]');
+                if (!card) return;
+                await markPrincipalNotifRead(card.dataset.notificationId, card.dataset.actionUrl || '');
             });
+
+            root.addEventListener('keydown', async (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                const card = event.target.closest('[data-notification-card]');
+                if (!card || event.target.closest('[data-mark-read]')) return;
+                event.preventDefault();
+                await markPrincipalNotifRead(card.dataset.notificationId, card.dataset.actionUrl || '');
+            });
+
+            root.dataset.notificationsBound = 'true';
+        }
+
+        async function markPrincipalNotifRead(id, actionUrl, options) {
+            try {
+                await fetch('/api/notifications/mark-read/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({ notification_id: id })
+                });
+            } catch (error) {
+                console.warn('Failed to mark notification as read', error);
+            } finally {
+                await updateInAppNotifications();
+                if (actionUrl && !(options && options.refreshOnly)) {
+                    window.location.href = actionUrl;
+                }
+            }
+        }
+
+        async function clearPrincipalNotifications() {
+            const clearBtn = document.getElementById('clearNotificationsBtn');
+            const badge = document.getElementById('notifBadge');
+            if (window.PabasaNotificationsShared && !(await window.PabasaNotificationsShared.confirmClearAll('principalClearNotificationsConfirmModal'))) {
+                return;
+            }
+
+            if (clearBtn) {
+                clearBtn.disabled = true;
+                clearBtn.innerHTML = '<i class="bi bi-arrow-repeat" aria-hidden="true"></i><span>Clearing...</span>';
+            }
+
+            try {
+                const response = await fetch('/api/notifications/clear/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.error || 'Unable to clear notifications.');
+                if (badge) badge.style.display = 'none';
+                const container = document.getElementById('notifContainer');
+                if (container && window.PabasaNotificationsShared) {
+                    container.innerHTML = window.PabasaNotificationsShared.renderNotificationEmptyState();
+                }
+                window.dispatchEvent(new Event('pabasa:notifications-updated'));
+            } catch (error) {
+                const container = document.getElementById('notifContainer');
+                if (container && window.PabasaNotificationsShared) {
+                    container.innerHTML = window.PabasaNotificationsShared.renderNotificationErrorState('Could not clear notifications. Please try again.');
+                }
+            } finally {
+                if (clearBtn) {
+                    clearBtn.disabled = false;
+                    clearBtn.innerHTML = '<i class="bi bi-trash3" aria-hidden="true"></i><span>Clear</span>';
+                }
+                await updateInAppNotifications();
+            }
         }
 
         async function updateInAppNotifications() {
@@ -919,7 +944,13 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', updateInAppNotifications);
+        document.addEventListener('DOMContentLoaded', () => {
+            const clearBtn = document.getElementById('clearNotificationsBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', clearPrincipalNotifications);
+            }
+            updateInAppNotifications();
+        });
     </script>
 </body>
 </html>
