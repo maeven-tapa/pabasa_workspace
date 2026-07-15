@@ -776,6 +776,27 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
 
     latest = {}
     latest_dt = None
+
+    def _candidate_is_newer(candidate_dt, raw_completed_at=''):
+        nonlocal latest_dt, latest
+        if candidate_dt and latest_dt:
+            return candidate_dt > latest_dt
+        if candidate_dt and not latest_dt:
+            return True
+        if not latest and raw_completed_at:
+            return True
+        if latest and raw_completed_at and str(raw_completed_at) > str(latest.get('completed_at', '')):
+            return True
+        return False
+
+    def _capture_latest(raw_completed_at, completed_dt, payload):
+        nonlocal latest_dt, latest
+        if not latest or _candidate_is_newer(completed_dt, raw_completed_at):
+            latest_dt = completed_dt or latest_dt
+            latest = {
+                'completed_at': raw_completed_at,
+                **payload,
+            }
     if sections is not None:
         assessments = Assessment.objects.filter(section__in=sections, is_active=True, source_assessment__isnull=True)
         for assessment in assessments:
@@ -792,31 +813,49 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
 
                 raw_completed_at = attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at') or ''
                 completed_dt = _parse_attempt_timestamp(raw_completed_at)
-                is_newer = False
-                if completed_dt and latest_dt:
-                    is_newer = completed_dt > latest_dt
-                elif completed_dt and not latest_dt:
-                    is_newer = True
-                elif not latest and raw_completed_at:
-                    is_newer = True
-                elif latest and raw_completed_at and str(raw_completed_at) > str(latest.get('completed_at', '')):
-                    is_newer = True
+                _capture_latest(raw_completed_at, completed_dt, {
+                    'assessment_title': assessment.title,
+                    'assessment_type': assessment.assessment_type,
+                    'level': attempt.get('crla_classification') or attempt.get('classification'),
+                    'accuracy': attempt.get('accuracy'),
+                    'wpm': attempt.get('wpm'),
+                    'fluency_score': attempt.get('fluency_score'),
+                    'pronunciation_score': attempt.get('pronunciation_score'),
+                    'time_score': attempt.get('time_score'),
+                    'duration_seconds': attempt.get('duration_seconds'),
+                    'total_score': attempt.get('total_score'),
+                })
 
-                if not latest or is_newer:
-                    latest_dt = completed_dt or latest_dt
-                    latest = {
-                        'completed_at': raw_completed_at,
-                        'assessment_title': assessment.title,
-                        'assessment_type': assessment.assessment_type,
-                        'level': attempt.get('crla_classification') or attempt.get('classification'),
-                        'accuracy': attempt.get('accuracy'),
-                        'wpm': attempt.get('wpm'),
-                        'fluency_score': attempt.get('fluency_score'),
-                        'pronunciation_score': attempt.get('pronunciation_score'),
-                        'time_score': attempt.get('time_score'),
-                        'duration_seconds': attempt.get('duration_seconds'),
-                        'total_score': attempt.get('total_score'),
-                    }
+        result_rows = Assessment.objects.filter(
+            section__in=sections,
+            student=student_user,
+            is_active=True,
+            attempt_status='completed',
+            source_assessment__isnull=False,
+        ).select_related('source_assessment')
+        for result in result_rows:
+            raw_completed_at = (
+                result.completed_at.isoformat()
+                if result.completed_at else
+                (result.started_at.isoformat() if result.started_at else '')
+            )
+            completed_dt = result.completed_at or result.started_at
+            _capture_latest(raw_completed_at, completed_dt, {
+                'assessment_title': (
+                    result.source_assessment.title
+                    if result.source_assessment_id and result.source_assessment
+                    else result.title
+                ),
+                'assessment_type': result.assessment_type,
+                'level': result.crla_classification or result.classification,
+                'accuracy': result.accuracy,
+                'wpm': result.wpm,
+                'fluency_score': result.fluency_score,
+                'pronunciation_score': result.pronunciation_score,
+                'time_score': result.time_score,
+                'duration_seconds': result.duration_seconds,
+                'total_score': result.total_score,
+            })
 
     report = {
         'student_name': f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id or 'Student',
@@ -874,10 +913,16 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
 
 
 def _format_reading_report_text(report):
-    def metric(label, value, suffix=''):
+    def _metric_display_value(value, suffix=''):
         if value in (None, ''):
+            return None
+        return f"{value}{suffix}"
+
+    def metric(label, value, suffix=''):
+        display_value = _metric_display_value(value, suffix)
+        if display_value is None:
             return f"{label}: Not yet available"
-        return f"{label}: {value}{suffix}"
+        return f"{label}: {display_value}"
     
     def format_duration(seconds):
         """Format seconds into MM:SS or HH:MM:SS format."""
@@ -927,6 +972,37 @@ def _format_reading_report_text(report):
     if report.get('assessment_title'):
         lines.insert(12, f"Assessment: {report.get('assessment_title')}")
     return "\n".join(lines)
+
+
+def _report_metric_text(value, suffix=''):
+    if value in (None, ''):
+        return 'Not yet available'
+    return f"{value}{suffix}"
+
+
+def _resolve_course_for_assessment_completion(student_user, material=None, assessment=None, teacher_user=None):
+    candidate_qs = Course.objects.filter(is_active=True)
+    if teacher_user:
+        candidate_qs = candidate_qs.filter(teacher=teacher_user)
+
+    course = None
+    if material:
+        course = candidate_qs.filter(materials=material).distinct().first()
+    if not course and assessment:
+        course = candidate_qs.filter(assessments=assessment).distinct().first()
+    if not course and assessment and assessment.source_assessment_id:
+        course = candidate_qs.filter(assessments=assessment.source_assessment).distinct().first()
+    if not course and material and material.section_id:
+        course = candidate_qs.filter(sections=material.section).distinct().first()
+    if not course and assessment and assessment.section_id:
+        course = candidate_qs.filter(sections=assessment.section).distinct().first()
+    if not course:
+        return None
+
+    course_sections = list(course.sections.filter(is_active=True))
+    if course_sections and not any(section.has_student(student_user, active_only=True) for section in course_sections):
+        return None
+    return course
 
 
 def _build_certificate_pdf(student_name='', issued_on=None, school_name='PABASA', teacher_name=''):
@@ -1152,13 +1228,13 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
     elements.append(Paragraph('Reading Overview', section_style))
     metrics = [
         ('Reading Level / CRLA Classification', report.get('reading_level') or 'Not yet available'),
-        ('Accuracy', f"{report.get('accuracy') or 'Not yet available'}%" if report.get('accuracy') not in (None, '') else 'Not yet available'),
-        ('Words Per Minute', f"{report.get('wpm') or 'Not yet available'} WPM" if report.get('wpm') not in (None, '') else 'Not yet available'),
-        ('Fluency Score', f"{report.get('fluency_score') or 'Not yet available'}%" if report.get('fluency_score') not in (None, '') else 'Not yet available'),
-        ('Pronunciation Score', f"{report.get('pronunciation_score') or 'Not yet available'}%" if report.get('pronunciation_score') not in (None, '') else 'Not yet available'),
+        ('Accuracy', _report_metric_text(report.get('accuracy'), '%')),
+        ('Words Per Minute', _report_metric_text(report.get('wpm'), ' WPM')),
+        ('Fluency Score', _report_metric_text(report.get('fluency_score'), '%')),
+        ('Pronunciation Score', _report_metric_text(report.get('pronunciation_score'), '%')),
         ('Time', _format_duration(report.get('duration_seconds'))),
-        ('Time Score', f"{report.get('time_score') or 'Not yet available'}%" if report.get('time_score') not in (None, '') else 'Not yet available'),
-        ('Total Score', f"{report.get('total_score') or 'Not yet available'}%" if report.get('total_score') not in (None, '') else 'Not yet available'),
+        ('Time Score', _report_metric_text(report.get('time_score'), '%')),
+        ('Total Score', _report_metric_text(report.get('total_score'), '%')),
     ]
     elements.append(_make_metrics_table(metrics))
     elements.append(Spacer(1, 0.12 * inch))
@@ -1207,6 +1283,197 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
     doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
     buffer.seek(0)
     return buffer.getvalue()
+
+
+def _send_course_update_to_student(
+    *,
+    course,
+    teacher_user,
+    student,
+    update_type='general',
+    message_template='',
+    assessment_result=None,
+    assessment_title='',
+    scheduled_at_input='',
+    reading_material_input='',
+    record_note=True,
+    note_type_prefix='course_update',
+):
+    course_sections = list(course.sections.filter(is_active=True))
+    if course_sections and not any(section.has_student(student, active_only=True) for section in course_sections):
+        return {'success': False, 'reason': 'not_enrolled', 'student_id': student.id}
+    if not student.email:
+        return {'success': False, 'reason': 'missing_email', 'student_id': student.id}
+
+    student_name = f"{student.first_name} {student.last_name}".strip() or student.custom_id or 'Student'
+    personalized_message = (message_template or '').replace('{name}', student_name)
+    report = _latest_student_reading_report(student, sections=course_sections, course=course)
+    report_text = _format_reading_report_text(report)
+    normalized_update_type = str(update_type or 'general').strip().lower()
+    sender = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
+
+    attachment_name = None
+    attachment_bytes = None
+    attachment_mime = 'application/pdf'
+    report_attachment_included = False
+
+    if normalized_update_type == 'followup':
+        subject = "Student Reading Progress Report - PABASA"
+        report_attachment_included = True
+        attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
+        email_body = (
+            "Dear Parent/Guardian,\n\n"
+            "We hope you are doing well.\n\n"
+            "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+            "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
+            "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
+            "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
+            "Thank you for your continued support and partnership in your child's learning.\n\n"
+            "Sincerely,\n\n"
+            "PABASA Team"
+        )
+        include_attachment = True
+    elif normalized_update_type == 'commendation':
+        subject = "Performance Commendation - PABASA"
+        certificate_date = timezone.localtime(timezone.now(), timezone.get_default_timezone()).strftime('%B %d, %Y')
+        certificate_pdf = _build_certificate_pdf(
+            student_name=student_name,
+            issued_on=certificate_date,
+            school_name='PABASA',
+            teacher_name=f"{teacher_user.first_name} {teacher_user.last_name}".strip() or 'Teacher',
+        )
+        email_body = (
+            f"Dear {student_name},\n\n"
+            "Congratulations on your continued effort and success in reading! "
+            "We are very proud of the progress you have made and the dedication you have shown.\n\n"
+            f"{personalized_message}\n\n"
+            "A certificate is attached for your recognition. "
+            "This Certificate of Achievement celebrates your outstanding reading performance and dedication to learning. "
+            "Please keep it as a reminder of your outstanding reading achievement.\n\n"
+            "Sincerely,\n\n"
+            "PABASA Team"
+        )
+        include_attachment = True
+        attachment_name = f"{student_name.replace(' ', '_')}_certificate_of_achievement.pdf"
+        attachment_bytes = certificate_pdf
+        attachment_mime = 'application/pdf'
+    elif normalized_update_type == 'assessment':
+        subject = "Scheduled Assessment Notice - PABASA"
+        assessment_title = str(assessment_title or 'Reading Assessment').strip() or 'Reading Assessment'
+        scheduled_at = str(scheduled_at_input or 'TBD').strip() or 'TBD'
+        reading_material = str(reading_material_input or 'Not specified').strip() or 'Not specified'
+
+        try:
+            parsed_dt = datetime.fromisoformat(scheduled_at.replace('Z', '+00:00'))
+            if parsed_dt.tzinfo is None:
+                parsed_dt = parsed_dt.replace(tzinfo=timezone.get_current_timezone())
+            scheduled_at_display = timezone.localtime(parsed_dt, timezone.get_default_timezone()).strftime('%B %d, %Y at %I:%M %p')
+        except Exception:
+            scheduled_at_display = scheduled_at
+
+        email_body = (
+            f"Dear {student_name},\n\n"
+            f"This is a reminder that your scheduled reading assessment, {assessment_title}, is coming up.\n\n"
+            f"Scheduled Date and Time: {scheduled_at_display}\n"
+            f"Reading Material: {reading_material}\n\n"
+            f"{personalized_message}\n\n"
+            "Please prepare ahead of time and be ready to do your best.\n\n"
+            "Sincerely,\n\n"
+            "PABASA Team"
+        )
+        include_attachment = False
+    else:
+        subject = "Student Reading Progress Report - PABASA"
+        report_attachment_included = True
+        attachment_name = f"{student_name.replace(' ', '_')}_reading_report.pdf"
+        email_body = (
+            "Dear Parent/Guardian,\n\n"
+            "We hope you are doing well.\n\n"
+            "Attached is the latest Reading Progress Report for your child from the PABASA Reading Assessment System. "
+            "The report contains an overview of your child's recent reading performance, including assessment results, progress, and other relevant information.\n\n"
+            "We encourage you to review the attached report and continue supporting your child's reading development at home.\n\n"
+            "If you have any questions or would like to discuss your child's progress, please feel free to contact the school.\n\n"
+            "Thank you for your continued support and partnership in your child's learning.\n\n"
+            "Sincerely,\n\n"
+            "PABASA Team"
+        )
+        include_attachment = True
+
+    note_text = (
+        f"Course: {course.title} ({course.code})\n"
+        f"Update Type: {update_type}\n"
+        f"Recipient Email: {student.email}\n\n"
+        f"Teacher Comments:\n"
+        f"{personalized_message}\n\n"
+        f"{report_text}"
+    )
+
+    email_message = EmailMultiAlternatives(subject, email_body, sender, [student.email])
+    if include_attachment:
+        try:
+            if normalized_update_type == 'commendation':
+                email_message.attach(attachment_name, attachment_bytes, attachment_mime)
+            else:
+                pdf_bytes = _build_reading_report_pdf(
+                    report,
+                    message=personalized_message,
+                    course=course,
+                    teacher=teacher_user,
+                    recipient_email=student.email,
+                )
+                email_message.attach(attachment_name, pdf_bytes, 'application/pdf')
+        except Exception:
+            logger.exception('Failed to build PDF attachment for course update')
+    email_message.send(fail_silently=False)
+
+    if record_note:
+        Note.objects.create(
+            teacher=teacher_user,
+            student=student,
+            assessment=assessment_result if assessment_result else None,
+            note_text=note_text,
+            note_type=f"{note_type_prefix}:{update_type}"[:50],
+        )
+
+    return {
+        'success': True,
+        'student_id': student.id,
+        'email': student.email,
+        'name': student_name,
+        'report_summary': report.get('summary'),
+        'report_included': report_attachment_included,
+    }
+
+
+def _auto_send_regular_progress_update(student, course, teacher_user, assessment_result):
+    if not student or not course or not teacher_user or not assessment_result:
+        return {'success': False, 'reason': 'missing_context'}
+
+    if Note.objects.filter(
+        teacher=teacher_user,
+        student=student,
+        assessment=assessment_result,
+        note_type='auto_course_update:general',
+    ).exists():
+        return {'success': False, 'reason': 'already_sent'}
+
+    default_message = (
+        "Hello {name},\n\n"
+        "A new Regular Progress report is ready based on your latest completed assessment. "
+        "Please review the attached reading report for your updated performance summary.\n\n"
+        "Thank you,\n"
+        "PABASA Team"
+    )
+    return _send_course_update_to_student(
+        course=course,
+        teacher_user=teacher_user,
+        student=student,
+        update_type='general',
+        message_template=default_message,
+        assessment_result=assessment_result,
+        record_note=True,
+        note_type_prefix='auto_course_update',
+    )
 
 # Authentication functions
 def generate_custom_id(role):
@@ -5261,6 +5528,48 @@ def send_course_update(request):
         if not selected_student_ids:
             return JsonResponse({'success': False, 'error': 'No valid student recipients selected'}, status=400)
 
+        students = User.objects.filter(id__in=selected_student_ids, role='student')
+        students_by_id = {student.id: student for student in students}
+        ordered_students = [students_by_id[sid] for sid in selected_student_ids if sid in students_by_id]
+        sent = []
+        skipped = []
+        scheduled_at_input = str(data.get('scheduled_at') or data.get('scheduledAt') or data.get('scheduled_at_input') or '').strip()
+        reading_material_input = str(data.get('reading_material') or '').strip()
+        assessment_title = str(data.get('assessment_title') or 'Reading Assessment').strip() or 'Reading Assessment'
+
+        for student in ordered_students:
+            result = _send_course_update_to_student(
+                course=course,
+                teacher_user=teacher_user,
+                student=student,
+                update_type=update_type,
+                message_template=message_template,
+                assessment_title=assessment_title,
+                scheduled_at_input=scheduled_at_input,
+                reading_material_input=reading_material_input,
+                record_note=True,
+                note_type_prefix='course_update',
+            )
+            if result.get('success'):
+                sent.append(result)
+            else:
+                skipped.append({'student_id': student.id, 'reason': result.get('reason', 'send_failed')})
+
+        if not sent:
+            return JsonResponse({
+                'success': False,
+                'error': 'No selected recipients could be emailed',
+                'skipped': skipped,
+            }, status=400)
+
+        return JsonResponse({
+            'success': True,
+            'sent_count': len(sent),
+            'sent': sent,
+            'skipped': skipped,
+            'report_included': any(item.get('report_included', False) for item in sent),
+        })
+
         course_sections = list(course.sections.filter(is_active=True))
         students = User.objects.filter(id__in=selected_student_ids, role='student')
         students_by_id = {student.id: student for student in students}
@@ -9016,6 +9325,11 @@ def record_assessment_completion(request):
         if not is_practice:
             already_completed = _student_completed_assessment_before(assessment, material, student_user)
         score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
+        should_notify_assessment = (
+            not is_practice
+            and (is_retake or not already_completed)
+        )
+        completed_result_row = None
 
         # Record attempt server-side (authoritative). We mark attempts as completed
         # because this endpoint is called when the student finishes the reading flow.
@@ -9065,8 +9379,16 @@ def record_assessment_completion(request):
                     material.teacher = teacher_user
                     material.save(update_fields=['teacher', 'updated_at'])
                 material.record_assessment_result(student_user, **attempt_payload)
+                completed_result_row = material.assessment_results.filter(
+                    student=student_user,
+                    attempt_status='completed',
+                ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
             elif assessment:
                 assessment.record_attempt(student_user, **attempt_payload)
+                completed_result_row = assessment.attempt_rows.filter(
+                    student=student_user,
+                    attempt_status='completed',
+                ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
             # Note: standalone Material objects that are not linked to Assessment do not
             # currently have an attempts schema; they are handled by client-side notifications.
             if not is_practice:
@@ -9099,11 +9421,6 @@ def record_assessment_completion(request):
         else:
             title = "Student Completed an Assessment"
             notif_msg = _assessment_completion_message(student_name, title_text, class_name)
-
-        should_notify_assessment = (
-            not is_practice
-            and (is_retake or not already_completed)
-        )
 
         if is_practice:
             _notify_admins(
@@ -9167,6 +9484,22 @@ def record_assessment_completion(request):
                     student_user,
                     send_email=False,
                 )
+                try:
+                    auto_course = _resolve_course_for_assessment_completion(
+                        student_user,
+                        material=material,
+                        assessment=completed_result_row or assessment,
+                        teacher_user=teacher_user,
+                    )
+                    if auto_course and completed_result_row:
+                        _auto_send_regular_progress_update(
+                            student=student_user,
+                            course=auto_course,
+                            teacher_user=teacher_user or auto_course.teacher,
+                            assessment_result=completed_result_row,
+                        )
+                except Exception:
+                    logger.exception('Failed to auto-send regular progress update')
         if assist_teacher_user and not is_practice:
             _create_notification(
                 assist_teacher_user,
