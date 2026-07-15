@@ -1276,6 +1276,10 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
 function normalizeStudentLevel(level) {
+    const helper = window.PABASA_READING_LEVEL;
+    if (helper && helper.normalizeReadingLevelLabel) {
+        return helper.normalizeReadingLevelLabel(level);
+    }
     const text = String(level || '').trim();
     if (!text) return 'Pending';
     const normalized = text.toLowerCase();
@@ -1286,6 +1290,36 @@ function normalizeStudentLevel(level) {
     if (normalized.includes('transition')) return 'Transitioning Readers';
     if (normalized.includes('grade') || normalized.includes('ready')) return 'Readers at Grade Level';
     return 'Pending';
+}
+
+function resolveStudentReadingLevel(student) {
+    const helper = window.PABASA_READING_LEVEL;
+    if (helper && helper.getReadingLevelLabel) {
+        return helper.getReadingLevelLabel(student);
+    }
+    return normalizeStudentLevel(student?.level || student?.reading_level || student?.classification || '');
+}
+
+function getStudentIdentityKeys(student) {
+    const keys = [];
+    const values = [
+        student?.student_id,
+        student?.id,
+        student?.custom_id,
+        student?.pabasa_id,
+        student?.email,
+    ];
+    values.forEach(value => {
+        const text = String(value || '').trim().toLowerCase();
+        if (text) {
+            keys.push(text);
+        }
+    });
+    const name = String(student?.name || '').trim().toLowerCase();
+    if (name) {
+        keys.push(`name:${name}`);
+    }
+    return Array.from(new Set(keys));
 }
 
 function getStoredDashboardMetrics() {
@@ -1318,26 +1352,31 @@ function updateStudentStatistics() {
 
     // Consolidate for unique headcounts and class aggregation in statistics
     const consolidated = [];
+    const studentIndex = new Map();
     students.forEach(s => {
-        const found = consolidated.find(c => {
-            const namesMatch = c.name.toLowerCase().trim() === s.name.toLowerCase().trim();
-            const emailsConflict = c.email && s.email && c.email.toLowerCase().trim() !== s.email.toLowerCase().trim();
-            return namesMatch && !emailsConflict;
-        });
+        const keys = getStudentIdentityKeys(s);
+        const found = keys.map(key => studentIndex.get(key)).find(Boolean);
         if (found) {
             if (s.class && !found.allClasses.includes(s.class)) {
                 found.allClasses.push(s.class);
             }
-        } else {
-            consolidated.push({ ...s, allClasses: s.class ? [s.class] : [] });
+            found.email = found.email || s.email || '';
+            found.pabasa_id = found.pabasa_id || s.pabasa_id || s.custom_id || '';
+            found.custom_id = found.custom_id || s.custom_id || s.pabasa_id || '';
+            keys.forEach(key => studentIndex.set(key, found));
+            return;
         }
+
+        const entry = { ...s, allClasses: s.class ? [s.class] : [] };
+        consolidated.push(entry);
+        keys.forEach(key => studentIndex.set(key, entry));
     });
 
     // Use the exact normalized CRLA classification from the API/local student data.
     // This ensures the distribution and directory remain consistent.
     const normalizedStudents = consolidated.map(student => ({
         ...student,
-        level: normalizeStudentLevel(student.level || student.reading_level || student.classification || '')
+        level: resolveStudentReadingLevel(student)
     }));
 
     const pending = normalizedStudents.filter(s => s.level === 'Pending');
@@ -1655,6 +1694,19 @@ function getReadingLevelExportStyle(level) {
     return { ...baseStyle, ...(styleMap[normalized] || {}) };
 }
 
+function getReadingLevelChipClass(level) {
+    const normalized = normalizeStudentLevel(level);
+    const classMap = {
+        'Low Emerging Readers': 'level-low',
+        'High Emerging Readers': 'level-high',
+        'Developing Readers': 'level-developing',
+        'Transitioning Readers': 'level-transitioning',
+        'Readers at Grade Level': 'level-grade',
+        'Pending': 'level-pending',
+    };
+    return classMap[normalized] || 'level-pending';
+}
+
 function exportVisibleStudentsWorkbook() {
     const rows = Array.isArray(window.filteredStudentDirectoryRows) ? window.filteredStudentDirectoryRows : [];
     if (!rows.length) return;
@@ -1665,13 +1717,13 @@ function exportVisibleStudentsWorkbook() {
 
     const workbook = XLSX.utils.book_new();
     const data = [
-        ['Name', 'Email', 'Class', 'Grade Level', 'Reading Level'],
+        ['Name', 'Email', 'Accuracy', 'WPM', 'Reading Level'],
         ...rows.map(student => [
             student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student',
             student.email || '',
-            toStudentClassList(student).join(', ') || 'No class',
-            formatStudentGradeLevel(student),
-            normalizeStudentLevel(student.level || student.reading_level || student.classification || '')
+            formatStudentMetric(student.accuracy, '%'),
+            formatStudentMetric(student.wpm),
+            resolveStudentReadingLevel(student)
         ])
     ];
     const worksheet = XLSX.utils.aoa_to_sheet(data);
@@ -1679,8 +1731,8 @@ function exportVisibleStudentsWorkbook() {
     worksheet['!cols'] = [
         { wch: 28 },
         { wch: 34 },
-        { wch: 28 },
-        { wch: 18 },
+        { wch: 16 },
+        { wch: 14 },
         { wch: 24 },
     ];
 
@@ -1721,7 +1773,7 @@ function renderStudentDirectory(sourceStudents) {
         .filter(student => String(student.name || '').trim() && String(student.name || '').trim() !== 'Jay Park')
         .map(student => ({
             ...student,
-            level: normalizeStudentLevel(student.level || student.reading_level || student.classification || '')
+            level: resolveStudentReadingLevel(student)
         }))
         .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
 
@@ -1756,6 +1808,12 @@ function renderStudentDirectory(sourceStudents) {
         const className = classList.join(', ') || 'No class';
         const accuracy = formatStudentMetric(student.accuracy, '%');
         const wpm = formatStudentMetric(student.wpm);
+        const levelText = resolveStudentReadingLevel(student);
+        const levelDisclaimer = student.adapted_reading_level_disclaimer || student.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'Based on the finalized Total Score x Level Multiplier threshold mapping.';
+        const levelClass = getReadingLevelChipClass(levelText);
+        const levelBadgeHtml = levelDisclaimer
+            ? `<div class="d-flex flex-column align-items-end gap-1"><span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span><span class="small text-secondary" style="max-width: 240px; text-align: right;">${escapeStudentDirectoryHtml(levelDisclaimer)}</span></div>`
+            : `<span class="badge rounded-pill level-chip ${levelClass}">${escapeStudentDirectoryHtml(levelText)}</span>`;
         return `
             <article class="student-card-row">
                 <div class="student-avatar" aria-hidden="true">${escapeStudentDirectoryHtml(getStudentInitials(name))}</div>
@@ -1765,7 +1823,7 @@ function renderStudentDirectory(sourceStudents) {
                             <strong>${escapeStudentDirectoryHtml(name)}</strong>
                             <div class="small text-secondary">${escapeStudentDirectoryHtml(student.email || student.pabasa_id || student.custom_id || '')}</div>
                         </div>
-                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">${escapeStudentDirectoryHtml(student.level)}</span>
+                        ${levelBadgeHtml}
                     </div>
                     <div class="student-meta">
                         <div class="student-meta-box"><span>Class</span><strong>${escapeStudentDirectoryHtml(className)}</strong></div>
@@ -1883,7 +1941,9 @@ document.addEventListener("DOMContentLoaded", function() {
     bindStudentDirectoryFilters();
     refreshStudentOverview();
     setInterval(refreshStudentOverview, 60000);
-
+    window.addEventListener('pabasa:assessment-completed', function () {
+        refreshStudentOverview();
+    });
 });
 </script>
 

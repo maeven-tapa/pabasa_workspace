@@ -9850,13 +9850,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const latestDuration = student.duration_seconds != null && student.duration_seconds !== '' && Number(student.duration_seconds) > 0
                 ? formatCourseReportDuration(student.duration_seconds)
                 : null;
+            const levelLabel = resolveCourseReadingLevel(student);
+            const levelDisclaimer = student.adapted_reading_level_disclaimer || student.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'Based on the finalized Total Score x Level Multiplier threshold mapping.';
             preview.innerHTML = `
                 <div class="course-report-preview-head">
                     <div>
                         <p class="course-report-preview-title">${escapeHtml(studentName)}</p>
                         <p class="course-report-preview-meta">Latest: ${escapeHtml(latestAssessment)}${assessmentTitle}</p>
                     </div>
-                    <span class="level-chip" style="font-size:0.72rem;">${escapeHtml(student.level || student.reading_level || 'Level pending')}</span>
+                    <div class="d-flex flex-column align-items-end gap-1">
+                        <span class="level-chip" style="font-size:0.72rem;">${escapeHtml(levelLabel)}</span>
+                        ${levelDisclaimer ? `<span class="small text-muted" style="max-width: 220px; text-align: right;">${escapeHtml(levelDisclaimer)}</span>` : ''}
+                    </div>
                 </div>
                 <div class="course-report-metric-grid">
                     <div class="course-report-metric"><span>Accuracy</span><strong>${courseReportMetricValue(student.accuracy, '%')}</strong></div>
@@ -9907,14 +9912,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const accuracyText = s.accuracy !== undefined && s.accuracy !== null && s.accuracy !== '' ? `${escapeHtml(s.accuracy)}%` : 'No accuracy';
                     const wpmText = s.wpm !== undefined && s.wpm !== null && s.wpm !== '' ? `${escapeHtml(s.wpm)} WPM` : 'No WPM';
                     const durationText = s.duration_seconds != null && s.duration_seconds !== '' && Number(s.duration_seconds) > 0 ? formatCourseReportDuration(s.duration_seconds) : 'No time';
-                    const levelText = s.level || s.reading_level || 'Level pending';
+                    const levelText = resolveCourseReadingLevel(s);
+                    const levelDisclaimer = s.adapted_reading_level_disclaimer || s.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'Based on the finalized Total Score x Level Multiplier threshold mapping.';
+                    const levelChipHtml = levelDisclaimer
+                        ? `<div class="d-flex flex-column align-items-end gap-1"><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span><span class="small text-muted" style="max-width: 220px; text-align: right;">${escapeHtml(levelDisclaimer)}</span></div>`
+                        : `<span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span>`;
                     const item = document.createElement('div');
                     item.className = 'list-group-item p-3 border-0 border-bottom course-report-recipient';
                     item.innerHTML = `
                         <div class="course-report-recipient-row">
                             <div class="form-check course-report-recipient-check"><input class="form-check-input student-checkbox" type="checkbox" id="course_upd_student_${index}" value="${escapeHtml(s.id || '')}" ${!emailEnabled || !s.id ? 'disabled' : ''}></div>
                             <div class="course-report-recipient-main"><div class="course-report-recipient-head">
-                                    <strong class="mb-0 course-report-recipient-name">${escapeHtml(studentName)}</strong><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span>
+                                    <strong class="mb-0 course-report-recipient-name">${escapeHtml(studentName)}</strong>${levelChipHtml}
                                 </div><div class="small text-secondary mt-1">${s.email || '<span class="text-danger">No email</span>'} | Accuracy: <span class="fw-bold">${s.accuracy || '—'}%</span> | Speed: <span class="fw-bold">${s.wpm || 0} WPM</span></div>
                                 <div class="course-report-pill-row">
                                     <span class="course-report-pill"><i class="bi bi-bullseye"></i>${accuracyText}</span>
@@ -9949,6 +9958,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const parts = name.split(/\s+/).filter(Boolean);
             if (parts.length >= 2) return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase();
             return (parts[0] || 'S').slice(0, 2).toUpperCase();
+        }
+
+        function resolveCourseReadingLevel(student) {
+            const helper = window.PABASA_READING_LEVEL;
+            if (helper && helper.getReadingLevelLabel) {
+                return helper.getReadingLevelLabel(student);
+            }
+            return String(student?.adapted_reading_level || student?.level || student?.reading_level || 'Level pending').trim() || 'Level pending';
         }
 
         function getStudentStatus(student) {
@@ -14884,7 +14901,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                 const personalizedEmails = recipients.map(s => {
                     const levelScoreMap = { "Low Emerging Readers": 1, "High Emerging Readers": 2, "Developing Readers": 3, "Transitioning Readers": 4, "Readers at Grade Level": 5 };
-                    const clarityScore = levelScoreMap[s.level] || 3;
+                    const levelValue = resolveCourseReadingLevel(s);
+                    const levelDisclaimer = s.adapted_reading_level_disclaimer || s.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'Based on the finalized Total Score x Level Multiplier threshold mapping.';
+                    const clarityScore = levelScoreMap[s.level] || levelScoreMap[s.adapted_reading_level] || 3;
                     const htmlMessage = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 25px; border-radius: 12px; color: #333;">
                         <h1 style="color: #1f6f8b; text-align: center; border-bottom: 2px solid #1f6f8b; padding-bottom: 10px; font-size: 1.5rem;">READING ASSESSMENT REPORT</h1>
@@ -14898,10 +14917,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <p><strong>Accuracy:</strong> ${s.accuracy}%</p>
                         <p><strong>Clarity:</strong> ${clarityScore} / 5</p>
                         <p><strong>Speed:</strong> ${s.wpm} WPM</p>
-                        <p><strong>CRLA Reading Level:</strong> ${s.level}</p>
+                        <p><strong>Adapted Reading Level:</strong> ${levelValue}</p>
+                        <p style="color: #666; font-size: 0.92rem;">${levelDisclaimer}</p>
                         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
                         <h2 style="font-size: 1.1rem; color: #444;">Performance Summary</h2>
-                        <p style="line-height: 1.6;">The student achieved an accuracy score of ${s.accuracy}%, a clarity rating of ${clarityScore}, and a reading speed of ${s.wpm} WPM. Based on the assessment results, the student's reading proficiency was classified as <strong>${s.level}</strong> according to the CRLA Reading Level classification.</p>
+                        <p style="line-height: 1.6;">The student achieved an accuracy score of ${s.accuracy}%, a clarity rating of ${clarityScore}, and a reading speed of ${s.wpm} WPM. Based on the assessment results, the student's reading proficiency was classified as <strong>${levelValue}</strong> using our adapted reading proficiency framework.</p>
                         <h2 style="font-size: 1.1rem; color: #444;">Strengths</h2>
                         <ul><li>Demonstrates consistency in word recognition.</li><li>Strong engagement during oral reading sessions.</li></ul>
                         <h2 style="font-size: 1.1rem; color: #444;">Areas for Improvement</h2>
@@ -14916,7 +14936,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <h2 style="font-size: 1.1rem; color: #444;">Overall Remarks</h2>
                         <p style="background: #f4f7f6; padding: 15px; border-radius: 8px; border-left: 4px solid #1f6f8b;">${rawMessage.replace(/{name}/g, s.name) || "Keep up the consistent practice!"}</p>
                         <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 15px; font-size: 0.9rem; color: #666;">
-                            <p><strong>Assessed Reading Level:</strong> ${s.level}</p>
+                            <p><strong>Assessed Reading Level:</strong> ${levelValue}</p>
+                            <p><strong>Disclaimer:</strong> ${levelDisclaimer}</p>
                             <p><strong>Evaluator:</strong> ${CURRENT_TEACHER_NAME}</p>
                             <p><strong>Date Generated:</strong> ${new Date().toLocaleString()}</p>
                         </div>

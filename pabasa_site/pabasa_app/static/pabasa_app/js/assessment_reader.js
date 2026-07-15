@@ -368,6 +368,23 @@
             return "Low Emerging Readers";
         }
 
+        function getAdaptedReadingLevel(totalScore, assessmentType = mode) {
+            const helper = window.PABASA_READING_LEVEL;
+            if (helper && helper.getReadingLevelFromScore) {
+                return helper.getReadingLevelFromScore(totalScore, assessmentType).adapted_reading_level;
+            }
+            const normalizedType = String(assessmentType || mode || "word").trim().toLowerCase();
+            const multiplier = normalizedType === "sentence" ? 0.95 : normalizedType === "paragraph" ? 1.0 : 0.90;
+            const normalizedScore = Math.max(0, Math.min(100, Number(totalScore) || 0));
+            const levelScore = normalizedScore * multiplier;
+            const normalizedLevelScore = Math.max(0, Math.min(100, levelScore)) / 100;
+            if (normalizedLevelScore >= 0.85) return "Readers at Grade Level";
+            if (normalizedLevelScore >= 0.70) return "Transitioning Readers";
+            if (normalizedLevelScore >= 0.55) return "Developing Readers";
+            if (normalizedLevelScore >= 0.40) return "High Emerging Readers";
+            return "Low Emerging Readers";
+        }
+
         function calculateScores() {
             const targetText = items.join(" ");
             const targetWords = normalizeWords(targetText);
@@ -390,6 +407,7 @@
             const timeScore = Math.round(Math.max(0, Math.min(100, 100 - Math.max(0, timeRatio - 1.15) * 55)) * 100) / 100;
             const totalScore = Math.round(((fluencyScore + accuracy + pronunciationScore + timeScore) / 4) * 100) / 100;
             const crlaClassification = classifyCRLA(totalScore);
+            const adaptedReadingLevel = getAdaptedReadingLevel(totalScore, mode);
             const needsManualReview = !speechRecognitionUsed;
 
             return {
@@ -400,6 +418,9 @@
                 total_score: totalScore,
                 crla_classification: crlaClassification,
                 classification: crlaClassification,
+                adapted_level_score: Math.max(0, Math.min(1, (Math.max(0, Math.min(100, totalScore)) * (mode === "sentence" ? 0.95 : mode === "paragraph" ? 1.0 : 0.90)) / 100)),
+                adapted_reading_level: adaptedReadingLevel,
+                adapted_reading_level_disclaimer: window.PABASA_READING_LEVEL?.DISCLAIMER || "Based on the finalized Total Score x Level Multiplier threshold mapping.",
                 wpm,
                 duration_seconds: durationSeconds,
                 word_count: matchedWords,
@@ -434,6 +455,7 @@
 
         function renderScoreSummary(scores) {
             const summary = document.querySelector(".completion-summary");
+            const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             if (!summary || !scores) return;
             summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
             const tiles = [
@@ -442,7 +464,7 @@
                 [`${Math.round(scores.pronunciation_score)}%`, "pronunciation"],
                 [formatDuration(scores.duration_seconds), "time"],
                 [`${Math.round(scores.total_score)}%`, "total score"],
-                [scores.crla_classification, "CRLA level"],
+                [scores.adapted_reading_level || scores.crla_classification || "Low Emerging", "reading level"],
             ];
             tiles.forEach(([value, label]) => {
                 const tile = document.createElement("div");
@@ -936,6 +958,10 @@
             if (completionLevel) completionLevel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
             latestScores = latestScores || calculateScores();
             renderScoreSummary(latestScores);
+            const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
+            if (disclaimer) {
+                disclaimer.textContent = latestScores?.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Based on the finalized Total Score x Level Multiplier threshold mapping.";
+            }
             
             // Add retake attempt information to the results title
             if (isRetakeMode && materialId) {
@@ -1044,6 +1070,7 @@
                     material_id: materialId,
                     activity_type: 'assessment',
                     class_code: testCode,
+                    assessment_type: mode,
                     scores: {
                         ...(latestScores || {}),
                         duration_seconds: latestScores?.duration_seconds || elapsedSeconds,
@@ -1071,7 +1098,38 @@
                     if (!r.ok || !d.success) {
                         throw new Error(d.error || `Completion save failed (${r.status})`);
                     }
+                    if (!isPractice && d.adapted_reading_level) {
+                        try {
+                            const storedStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
+                            const updatedStudents = Array.isArray(storedStudents) ? storedStudents.map(student => {
+                                const studentId = String(student?.id || student?.student_id || student?.custom_id || '').trim();
+                                const responseStudentId = String(d.student_id || d.custom_id || '').trim();
+                                const matches = studentId && responseStudentId && studentId === responseStudentId;
+                                if (!matches) return student;
+                                return {
+                                    ...student,
+                                    level: d.adapted_reading_level,
+                                    reading_level: d.adapted_reading_level,
+                                    adapted_reading_level: d.adapted_reading_level,
+                                    adapted_reading_level_disclaimer: d.adapted_reading_level_disclaimer,
+                                    reading_level_disclaimer: d.adapted_reading_level_disclaimer,
+                                    total_score: latestScores?.total_score,
+                                    assessment_type: mode,
+                                    completed_at: new Date().toISOString(),
+                                };
+                            }) : [];
+                            localStorage.setItem('pabasa_added_students', JSON.stringify(updatedStudents));
+                        } catch (syncError) {
+                            console.warn('PABASA: Could not sync updated reading level to localStorage', syncError);
+                        }
+                    }
                     console.log("PABASA: Assessment completion recorded.");
+                    window.dispatchEvent(new CustomEvent('pabasa:assessment-completed', {
+                        detail: {
+                            assessmentType: mode,
+                            totalScore: latestScores?.total_score,
+                        }
+                    }));
                     return d;
                 }).catch(e => console.error("PABASA: Completion error", e));
             }

@@ -21,7 +21,7 @@ from .models import Material, User, Section, Assessment, Notification, Course, N
 from .reading_stt import analyze_reading
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_score_payload
 from .weekly_digest import send_weekly_digest
 
 
@@ -44,6 +44,56 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["matched"], 0)
         self.assertEqual(result["correct_word_count"], 0)
         self.assertFalse(result["complete"])
+
+
+class AdaptedReadingLevelTests(TestCase):
+    def test_adapted_reading_level_label_uses_expected_thresholds(self):
+        self.assertEqual(_adapted_reading_level_label(0.90), "Grade Ready / At Grade Level")
+        self.assertEqual(_adapted_reading_level_label(0.76), "Transitioning")
+        self.assertEqual(_adapted_reading_level_label(0.60), "Developing")
+        self.assertEqual(_adapted_reading_level_label(0.45), "High Emerging")
+        self.assertEqual(_adapted_reading_level_label(0.25), "Low Emerging")
+
+    def test_adapted_reading_level_averages_across_assessment_types(self):
+        result = _adapted_reading_level_from_attempts([
+            {"total_score": 80, "assessment_type": "word"},
+            {"total_score": 80, "assessment_type": "sentence"},
+            {"total_score": 80, "assessment_type": "paragraph"},
+        ])
+
+        self.assertEqual(result["adapted_level_score"], 0.76)
+        self.assertEqual(result["adapted_reading_level"], "Transitioning")
+        self.assertEqual(result["adapted_reading_level_disclaimer"], "Based on our own adapted reading proficiency framework, inspired by CRLA.")
+
+    def test_assessment_score_payload_uses_word_multiplier_for_high_emerging_levels(self):
+        result = _assessment_score_payload({
+            "scores": {
+                "fluency_score": 0,
+                "accuracy": 0,
+                "pronunciation_score": 0,
+                "time_score": 0,
+                "total_score": 56,
+            },
+            "assessment_type": "word",
+        })
+
+        self.assertEqual(result["adapted_level_score"], 0.5)
+        self.assertEqual(result["adapted_reading_level"], "High Emerging")
+
+    def test_assessment_score_payload_uses_word_multiplier_for_lower_high_emerging_levels(self):
+        result = _assessment_score_payload({
+            "scores": {
+                "fluency_score": 0,
+                "accuracy": 0,
+                "pronunciation_score": 0,
+                "time_score": 0,
+                "total_score": 47,
+            },
+            "assessment_type": "word",
+        })
+
+        self.assertEqual(result["adapted_level_score"], 0.42)
+        self.assertEqual(result["adapted_reading_level"], "High Emerging")
 
 
 class HuntScoringRuleTests(TestCase):
@@ -3627,6 +3677,46 @@ class TeacherStudentsDirectoryTests(TestCase):
         data = response.json()
         self.assertEqual(data["students"][0]["level"], "Transitioning Readers")
         self.assertTrue(data["students"][0]["has_completed_assessment"])
+
+    def test_teacher_students_api_uses_adapted_level_from_attempt_history(self):
+        word_assessment = Assessment.objects.create(
+            teacher=self.teacher,
+            section=self.section_a,
+            title="Word Reading Check",
+            code="ASM-DIR-002",
+            assessment_type="word",
+            status="published",
+            is_active=True,
+        )
+        word_assessment.record_attempt(
+            self.student,
+            status="completed",
+            completed_at="2026-06-01T09:00:00+00:00",
+            total_score=56,
+        )
+
+        paragraph_assessment = Assessment.objects.create(
+            teacher=self.teacher,
+            section=self.section_a,
+            title="Paragraph Reading Check",
+            code="ASM-DIR-003",
+            assessment_type="paragraph",
+            status="published",
+            is_active=True,
+        )
+        paragraph_assessment.record_attempt(
+            self.student,
+            status="completed",
+            completed_at="2026-06-02T09:00:00+00:00",
+            total_score=80,
+        )
+
+        response = self.client.get(reverse("get_teacher_students_api"))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["students"][0]["adapted_reading_level"], "Developing")
+        self.assertEqual(data["students"][0]["level"], "Transitioning Readers")
 
     def test_teacher_students_api_exposes_latest_completion_duration(self):
         assessment = Assessment.objects.create(

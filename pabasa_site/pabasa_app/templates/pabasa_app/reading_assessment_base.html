@@ -1262,6 +1262,13 @@
             align-items: stretch;
         }
 
+        .completion-disclaimer {
+            color: var(--muted);
+            font-size: 0.84rem;
+            line-height: 1.45;
+            margin: 0.85rem 0 0;
+        }
+
         .summary-tile {
             background: rgba(255, 255, 255, 0.76);
             border: 1px solid rgba(27, 26, 23, 0.08);
@@ -1753,6 +1760,7 @@
                         <span>level</span>
                     </div>
                 </div>
+                <p class="completion-disclaimer" id="completionReadingLevelDisclaimer" aria-live="polite">Based on our own adapted reading proficiency framework, inspired by CRLA.</p>
                 <div class="completion-actions">
                     <button class="completion-secondary" id="reviewBtn" type="button">Start Again</button>
                     <button class="completion-primary" id="finishBtn" type="button">Back to Assessment</button>

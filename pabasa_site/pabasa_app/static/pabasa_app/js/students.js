@@ -21,8 +21,17 @@ function initStudentsPage() {
 
     function getStudentKeys(student) {
         const keys = [];
-        const id = student.pabasa_id || student.custom_id || "";
-        if (id) keys.push(`id:${normalizeKeyPart(id)}`);
+        const ids = [
+            student.student_id,
+            student.id,
+            student.pabasa_id,
+            student.custom_id,
+        ];
+        ids.forEach(id => {
+            if (id !== undefined && id !== null && String(id).trim()) {
+                keys.push(`id:${normalizeKeyPart(id)}`);
+            }
+        });
 
         const email = student.email || "";
         if (email) keys.push(`email:${normalizeKeyPart(email)}`);
