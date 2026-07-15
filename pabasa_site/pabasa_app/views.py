@@ -2805,6 +2805,19 @@ def _check_auth(request):
     return 'user_id' in request.session
 
 
+def _derive_dashboard_greeting_name(first_name='', full_name=''):
+    """Return the display name to use for the student dashboard greeting."""
+    first_name = (first_name or '').strip()
+    if first_name:
+        return first_name
+
+    full_name = (full_name or '').strip()
+    if full_name:
+        return full_name.split()[0]
+
+    return 'Student'
+
+
 # REPLACE the entire _dashboard_context function:
 def _dashboard_context(request, nav_role=None, extra=None):
     user = User.objects.filter(id=request.session.get('user_id')).first()
@@ -2865,6 +2878,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'first_name': first_name,
         'last_name': last_name,
         'user_full_name': full_name,
+        'dashboard_greeting_name': _derive_dashboard_greeting_name(first_name, full_name),
         'email': request.session.get('email', ''),
         'teacher_role': teacher_role,
         'role_display': teacher_role or (nav_role or request.session.get('user_role', 'student')).title(),
@@ -6958,6 +6972,41 @@ def get_teacher_assessments_api(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+def _teacher_can_access_assessment(teacher_user, assessment):
+    if not teacher_user or not assessment:
+        return False
+    if getattr(teacher_user, 'role', None) == 'admin':
+        return True
+    if assessment.teacher_id == teacher_user.id:
+        return True
+    if getattr(assessment.section, 'teacher_id', None) == teacher_user.id:
+        return True
+    for course in assessment.courses.all():
+        if getattr(course, 'teacher_id', None) == teacher_user.id:
+            return True
+    for material in assessment.materials.all():
+        if _teacher_can_access_material(teacher_user, material):
+            return True
+    return False
+
+
+def _teacher_can_access_material(teacher_user, material):
+    if not teacher_user or not material:
+        return False
+    if getattr(teacher_user, 'role', None) == 'admin':
+        return True
+    if getattr(material, 'teacher_id', None) is not None and material.teacher_id == teacher_user.id:
+        return True
+    if getattr(material.section, 'teacher_id', None) == teacher_user.id:
+        return True
+    if any(getattr(section, 'teacher_id', None) == teacher_user.id for section in material.assigned_sections.all()):
+        return True
+    for course in material.courses.all():
+        if getattr(course, 'teacher_id', None) == teacher_user.id:
+            return True
+    return False
+
+
 @require_http_methods(["GET"])
 @login_required(role='teacher')
 def get_teacher_assessment_api(request, assessment_id):
@@ -6972,8 +7021,7 @@ def get_teacher_assessment_api(request, assessment_id):
         if not assessment:
             return JsonResponse({'success': False, 'error': 'Assessment not found'}, status=404)
 
-        # Ownership check: allow if teacher created it or is owner of the linked section
-        if assessment.teacher_id != teacher_user.id and not (getattr(assessment.section, 'teacher_id', None) == teacher_user.id):
+        if not _teacher_can_access_assessment(teacher_user, assessment):
             return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
 
         # materials linked to this assessment
@@ -7101,10 +7149,8 @@ def get_teacher_material_attempts_api(request):
         if not material:
             return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
 
-        # Authorization: allow if teacher owns the material or owns the section
-        if material.teacher_id is not None and material.teacher_id != teacher_user.id and not any(s.teacher_id == teacher_user.id for s in material.assigned_sections.all()):
-            # allow teacher if material belongs to their sections or they are the material owner
-            pass
+        if not _teacher_can_access_material(teacher_user, material):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
 
         attempts_qs = Assessment.objects.filter(material=material).order_by('created_at')
 

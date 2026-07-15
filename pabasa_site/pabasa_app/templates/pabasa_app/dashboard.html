@@ -1577,6 +1577,7 @@
 
 <script>
     window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
+    window.PABASA_DASHBOARD_GREETING_NAME = "{{ dashboard_greeting_name|default:'Student'|escapejs }}";
 </script>
 
 <script>
@@ -1608,20 +1609,12 @@
         const setGreeting = () => {
             const hour = new Date().getHours();
             const timeName = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
-            const email = (window.PABASA_USER_EMAIL || '').split('@')[0] || '';
-            const baseName = email
-                .replace(/[._-]+/g, ' ')
-                .trim()
-                .split(/\s+/)
-                .filter(Boolean)
-                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(' ');
-            const friendlyName = baseName || 'friend';
+            const greetingName = (window.PABASA_DASHBOARD_GREETING_NAME || '').trim() || 'Student';
             const titlePool = ['Super Reader', 'Math Star', 'Bright Spark', 'Learning Hero'];
-            const title = titlePool[(hour + friendlyName.length) % titlePool.length];
+            const title = titlePool[(hour + greetingName.length) % titlePool.length];
             const greetingPrefix = timeName === 'morning' ? 'Good morning' : timeName === 'afternoon' ? 'Good afternoon' : 'Good evening';
             if (greetingEl) {
-                greetingEl.textContent = `${greetingPrefix}, ${friendlyName} 🌞`;
+                greetingEl.textContent = `${greetingPrefix}, ${greetingName} 🌞`;
             }
             if (sparkCard) {
                 sparkCard.textContent = `Today’s Spark ✨ ${title}`;

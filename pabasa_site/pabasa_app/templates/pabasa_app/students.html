@@ -1335,47 +1335,55 @@ function normalizeStudentPayload(students) {
     return Array.isArray(students) ? students.filter(Boolean) : [];
 }
 
+let latestStudentDirectoryStudents = [];
+let latestStudentDirectoryTotal = 0;
+
+function getStudentDirectoryDisplayName(student) {
+    const directName = String(student?.name || student?.full_name || student?.display_name || '').trim();
+    if (directName) {
+        return directName;
+    }
+
+    const firstName = String(student?.first_name || '').trim();
+    const lastName = String(student?.last_name || '').trim();
+    if (firstName || lastName) {
+        return [firstName, lastName].filter(Boolean).join(' ').trim();
+    }
+
+    const fallbackId = [student?.custom_id, student?.pabasa_id, student?.student_id, student?.email]
+        .map(value => String(value || '').trim())
+        .find(Boolean);
+
+    return fallbackId || 'Unnamed Student';
+}
+
+function buildStudentDirectoryProjection(sourceStudents) {
+    const normalizedStudents = normalizeStudentPayload(sourceStudents);
+
+    return normalizedStudents
+        .map(student => ({
+            ...student,
+            name: getStudentDirectoryDisplayName(student),
+            level: resolveStudentReadingLevel(student),
+            allClasses: toStudentClassList(student)
+        }))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+}
+
 function getLatestStudentDirectoryData(sourceStudents) {
-    return normalizeStudentPayload(sourceStudents);
+    if (Array.isArray(sourceStudents)) {
+        latestStudentDirectoryStudents = buildStudentDirectoryProjection(sourceStudents);
+        return latestStudentDirectoryStudents;
+    }
+
+    return latestStudentDirectoryStudents;
 }
 
 // Function to calculate and update statistics from the current authoritative student list
 function updateStudentStatistics(sourceStudents, providedLevelCounts = null, providedTotalStudents = null) {
     let students = getLatestStudentDirectoryData(sourceStudents);
-    const filteredStudents = students.filter(student => student.name !== "Jay Park");
-    students = filteredStudents.length !== students.length ? filteredStudents : students;
-
-    // Consolidate for unique headcounts and class aggregation in statistics
-    const consolidated = [];
-    const studentIndex = new Map();
-    students.forEach(s => {
-        const keys = getStudentIdentityKeys(s);
-        const found = keys.map(key => studentIndex.get(key)).find(Boolean);
-        if (found) {
-            if (s.class && !found.allClasses.includes(s.class)) {
-                found.allClasses.push(s.class);
-            }
-            found.email = found.email || s.email || '';
-            found.pabasa_id = found.pabasa_id || s.pabasa_id || s.custom_id || '';
-            found.custom_id = found.custom_id || s.custom_id || s.pabasa_id || '';
-            keys.forEach(key => studentIndex.set(key, found));
-            return;
-        }
-
-        const entry = { ...s, allClasses: s.class ? [s.class] : [] };
-        consolidated.push(entry);
-        keys.forEach(key => studentIndex.set(key, entry));
-    });
-
-    // Use the exact normalized CRLA classification from the API/local student data.
-    // This ensures the distribution and directory remain consistent.
-    const normalizedStudents = consolidated.map(student => ({
-        ...student,
-        level: resolveStudentReadingLevel(student)
-    }));
-
-    const pending = normalizedStudents.filter(s => s.level === 'Pending');
-    const allStudents = normalizedStudents;
+    const pending = students.filter(s => s.level === 'Pending');
+    const allStudents = students;
 
     // Initialize counts by reading level
     const levelCounts = {
@@ -1755,13 +1763,7 @@ function renderStudentDirectory(sourceStudents) {
 
     const query = String(searchInput?.value || '').trim().toLowerCase();
     const selectedLevel = String(levelFilterValue?.textContent || 'All levels').trim();
-    const allStudents = getLatestStudentDirectoryData(sourceStudents)
-        .filter(student => String(student.name || '').trim() && String(student.name || '').trim() !== 'Jay Park')
-        .map(student => ({
-            ...student,
-            level: resolveStudentReadingLevel(student)
-        }))
-        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
+    const allStudents = getLatestStudentDirectoryData(sourceStudents);
 
     const filtered = allStudents.filter(student => {
         const classNames = toStudentClassList(student).join(' ');
@@ -1785,7 +1787,7 @@ function renderStudentDirectory(sourceStudents) {
     emptyState.classList.toggle('d-none', filtered.length > 0);
     setStudentExportState(filtered);
     if (countEl) {
-        countEl.textContent = filtered.length;
+        countEl.textContent = String(filtered.length);
     }
 
     const cards = filtered.map(student => {
@@ -1930,10 +1932,15 @@ async function refreshStudentOverview() {
     }
     
     const studentsForUi = apiSucceeded ? normalizeStudentPayload(apiStudents) : [];
+    const authoritativeTotal = Number.isFinite(Number(apiTotalStudents))
+        ? Number(apiTotalStudents)
+        : studentsForUi.length;
+    latestStudentDirectoryTotal = authoritativeTotal;
+    latestStudentDirectoryStudents = buildStudentDirectoryProjection(studentsForUi);
 
     // Always update statistics and directory from the freshest data we have.
-    updateStudentStatistics(studentsForUi, apiLevelCounts, apiTotalStudents);
-    renderStudentDirectory(studentsForUi);
+    updateStudentStatistics(latestStudentDirectoryStudents, apiLevelCounts, apiTotalStudents);
+    renderStudentDirectory(latestStudentDirectoryStudents);
 }
 
 // Initialize on page load

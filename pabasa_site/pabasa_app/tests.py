@@ -21,7 +21,7 @@ from .models import Material, User, Section, Assessment, Notification, Course, N
 from .reading_stt import analyze_reading
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_score_payload
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_score_payload, _derive_dashboard_greeting_name
 from .weekly_digest import send_weekly_digest
 
 
@@ -35,6 +35,17 @@ class DashboardAchievementBadgeTests(TestCase):
         self.assertIn("pabasa_practice_progress_v1", content)
         self.assertNotIn("pabasa_practice_sessions_completed", content)
         self.assertNotIn(">= 10", content)
+
+
+class DashboardGreetingNameTests(TestCase):
+    def test_uses_first_name_when_available(self):
+        self.assertEqual(_derive_dashboard_greeting_name(first_name="Jamie", full_name="Jamie Reader"), "Jamie")
+
+    def test_uses_first_word_of_full_name_for_legacy_accounts(self):
+        self.assertEqual(_derive_dashboard_greeting_name(first_name="", full_name="Maria Clara Dela Cruz"), "Maria")
+
+    def test_falls_back_to_student_when_no_name_data_exists(self):
+        self.assertEqual(_derive_dashboard_greeting_name(first_name="", full_name=""), "Student")
 
 
 class ReadingMatcherTests(TestCase):

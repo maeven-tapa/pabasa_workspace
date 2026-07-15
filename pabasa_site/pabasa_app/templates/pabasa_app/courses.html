@@ -7495,7 +7495,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <th>Pronunciation</th>
                                 <th>Time</th>
                                 <th>Total Score</th>
-                                <th>CRLA Level</th>
+                                <th>Reading Level</th>
                                 <th class="text-end">Attempts</th>
                             </tr>
                         </thead>
@@ -9968,6 +9968,32 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return String(student?.adapted_reading_level || student?.level || student?.reading_level || 'Level pending').trim() || 'Level pending';
         }
 
+        function resolveCourseAttemptReadingLevel(attempt, assessmentType) {
+            const helper = window.PABASA_READING_LEVEL;
+            const hasCompletedAttempt = String(attempt?.status || '').toLowerCase() === 'completed' || Boolean(attempt?.completed_at);
+            const totalScore = (() => {
+                const keys = ['total_score', 'score'];
+                for (const key of keys) {
+                    const value = attempt?.[key];
+                    if (value !== undefined && value !== null && value !== '') {
+                        return value;
+                    }
+                }
+                return null;
+            })();
+
+            if (helper && typeof helper.getReadingLevelFromScore === 'function' && hasCompletedAttempt && totalScore !== null && totalScore !== undefined && totalScore !== '') {
+                const computed = helper.getReadingLevelFromScore(totalScore, assessmentType || attempt?.assessment_type || attempt?.assessmentType || attempt?.mode);
+                return computed?.adapted_reading_level || 'Pending';
+            }
+
+            const fallbackLevel = attempt?.adapted_reading_level || attempt?.reading_level || attempt?.level || attempt?.crla_classification || attempt?.classification || '';
+            if (helper && typeof helper.normalizeReadingLevelLabel === 'function' && fallbackLevel) {
+                return helper.normalizeReadingLevelLabel(fallbackLevel) || 'Pending';
+            }
+            return 'Pending';
+        }
+
         function getStudentStatus(student) {
             const accuracy = Number(student?.accuracy);
             const wpm = Number(student?.wpm);
@@ -10918,6 +10944,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     });
                 return filteredAttempts.map((attempt, index) => {
                     const status = normalizeProgressStatus([attempt]);
+                    const assessmentType = detail?.assessment_type || detail?.assessmentType || detail?.mode || attempt?.assessment_type || attempt?.assessmentType || attempt?.mode || null;
+                    const readingLevel = resolveCourseAttemptReadingLevel(attempt, assessmentType);
                     return `
                         <tr>
                             <td><strong>${escapeHtml(task.title)}</strong>${filteredAttempts.length > 1 ? `<div class="small text-muted">Attempt ${index + 1}</div>` : ''}</td>
@@ -10928,7 +10956,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <td>${formatAttemptMetric(latestAttemptValue(attempt, 'pronunciation_score', 'pronunciation'), '%')}</td>
                             <td>${formatAttemptMetric(latestAttemptValue(attempt, 'time_score', 'time'), '%')}</td>
                             <td>${formatAttemptMetric(latestAttemptValue(attempt, 'total_score', 'score'), '%')}</td>
-                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'crla_classification', 'classification'))}</td>
+                            <td>${escapeHtml(readingLevel)}</td>
                             <td class="text-end fw-semibold">${index + 1}</td>
                         </tr>
                     `;
