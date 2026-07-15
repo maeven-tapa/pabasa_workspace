@@ -181,9 +181,9 @@
                             id="pabasaId"
                             type="text"
                             name="custom_id"
-                            placeholder="TCH-1234 or G2-1234"
+                            placeholder="TCH-1234 or G1-1234"
                             maxlength="20"
-                            pattern="^((ADM|TCH|G2|STD)-[A-Z0-9]{1,12}|PRN-[A-Z0-9]{1,12}-[0-9]{3})$"
+                            pattern="^((ADM|TCH|STD|G[1-6])-[A-Z0-9]{1,12}|PRN-[A-Z0-9]{1,12}-[0-9]{3})$"
                             required
                         >
                     </div>
@@ -211,7 +211,7 @@
         const loginBtn = document.getElementById("loginBtn");
         const errorMessage = document.getElementById("errorMessage");
         const loginCard = form.closest(".account-card");
-        const pabasaIdPattern = /^((ADM|TCH|G2|STD)-[A-Z0-9]{1,12}|PRN-[A-Z0-9]{1,12}-[0-9]{3})$/;
+        const pabasaIdPattern = /^((ADM|TCH|STD|G[1-6])-[A-Z0-9]{1,12}|PRN-[A-Z0-9]{1,12}-[0-9]{3})$/;
         const minimumLoadingTime = 500;
 
         const showLoadingScreen = () => {
@@ -263,9 +263,9 @@
                 return digits ? `${prefix}-${digits}` : `${prefix}-`;
             }
 
-            if (prefix === "G2") {
+            if (/^G[1-6]$/.test(prefix)) {
                 const digits = suffix.replace(/\D/g, "").slice(0, 4);
-                return digits ? `G2-${digits}` : "G2-";
+                return digits ? `${prefix}-${digits}` : `${prefix}-`;
             }
 
             return cleaned.replace(/-$/, "").slice(0, 20);
@@ -282,7 +282,7 @@
             event.preventDefault();
             
             if (!pabasaIdPattern.test(pabasaId.value)) {
-                pabasaId.setCustomValidity("PABASA ID must be in the form TCH-1234, G2-1234, or PRN-SES-001.");
+                pabasaId.setCustomValidity("PABASA ID must be in the form TCH-1234, G1-1234, G2-1234, G3-1234, G4-1234, G5-1234, G6-1234, or PRN-SES-001.");
                 pabasaId.reportValidity();
                 return;
             }

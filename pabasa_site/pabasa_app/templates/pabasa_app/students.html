@@ -1322,33 +1322,19 @@ function getStudentIdentityKeys(student) {
     return Array.from(new Set(keys));
 }
 
-function getStoredDashboardMetrics() {
-    try {
-        return JSON.parse(localStorage.getItem('pabasa_dashboard_metrics') || '{}');
-    } catch (e) {
-        return {};
-    }
+function normalizeStudentPayload(students) {
+    return Array.isArray(students) ? students.filter(Boolean) : [];
 }
 
-function persistDashboardMetrics(metrics) {
-    if (!metrics || typeof metrics !== 'object') {
-        return;
-    }
-    try {
-        localStorage.setItem('pabasa_dashboard_metrics', JSON.stringify(metrics));
-    } catch (e) {
-        console.warn('Could not persist dashboard metrics', e);
-    }
+function getLatestStudentDirectoryData(sourceStudents) {
+    return normalizeStudentPayload(sourceStudents);
 }
 
-// Function to calculate and update statistics from localStorage
-function updateStudentStatistics() {
-    let students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
+// Function to calculate and update statistics from the current authoritative student list
+function updateStudentStatistics(sourceStudents, providedLevelCounts = null, providedTotalStudents = null) {
+    let students = getLatestStudentDirectoryData(sourceStudents);
     const filteredStudents = students.filter(student => student.name !== "Jay Park");
-    if (filteredStudents.length !== students.length) {
-        localStorage.setItem("pabasa_added_students", JSON.stringify(filteredStudents));
-        students = filteredStudents;
-    }
+    students = filteredStudents.length !== students.length ? filteredStudents : students;
 
     // Consolidate for unique headcounts and class aggregation in statistics
     const consolidated = [];
@@ -1391,16 +1377,26 @@ function updateStudentStatistics() {
         "Readers at Grade Level": 0
     };
 
-    const totalStudents = allStudents.length;
+    const hasServerCounts = providedLevelCounts && Object.keys(providedLevelCounts).length > 0;
+    if (hasServerCounts) {
+        Object.keys(levelCounts).forEach(key => {
+            levelCounts[key] = Number(providedLevelCounts[key] || 0);
+        });
+    } else {
+        allStudents.forEach(student => {
+            const currentLevel = student.level;
+            if (levelCounts.hasOwnProperty(currentLevel)) {
+                levelCounts[currentLevel]++;
+            }
+        });
+    }
+
+    const totalStudents = Number.isFinite(Number(providedTotalStudents)) ? Number(providedTotalStudents) : allStudents.length;
     let totalWPM = 0;
     let totalAccuracy = 0;
 
     allStudents.forEach(student => {
         const currentLevel = student.level;
-        if (levelCounts.hasOwnProperty(currentLevel)) {
-            levelCounts[currentLevel]++;
-        }
-
         totalWPM += parseInt(student.wpm) || 0;
         totalAccuracy += parseInt(student.accuracy) || 0;
     });
@@ -1445,19 +1441,9 @@ function updateStudentStatistics() {
         }
     });
 
-    const dashboardMetrics = getStoredDashboardMetrics();
-    if (dashboardMetrics && Number.isFinite(dashboardMetrics.active_this_week_count)) {
-        activeThisWeekCount = dashboardMetrics.active_this_week_count;
-    }
-    if (dashboardMetrics && dashboardMetrics.top_performer_name) {
-        topStudentName = dashboardMetrics.top_performer_name;
-    }
-
     const avgWpmVal = totalStudents > 0 ? (totalWPM / totalStudents) : 0;
     const computedImprovementVal = avgWpmVal > 0 ? Math.round((avgWpmVal / 60) * 12) : 0; // Weighted improvement logic
-    const avgImprovementMetric = dashboardMetrics && typeof dashboardMetrics.avg_improvement_30d === 'number'
-        ? dashboardMetrics.avg_improvement_30d
-        : computedImprovementVal;
+    const avgImprovementMetric = computedImprovementVal;
 
     document.getElementById("avgImprovement").textContent = totalStudents > 0 ? `+${avgImprovementMetric}%` : "—";
     document.getElementById("activeThisWeek").textContent = totalStudents > 0 ? activeThisWeekCount : "0";
@@ -1580,15 +1566,6 @@ function escapeStudentDirectoryHtml(value) {
     const div = document.createElement('div');
     div.textContent = value == null ? '' : String(value);
     return div.innerHTML;
-}
-
-function getStudentDirectoryRows() {
-    try {
-        const stored = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-        return Array.isArray(stored) ? stored : [];
-    } catch (e) {
-        return [];
-    }
 }
 
 function getStudentInitials(name) {
@@ -1769,7 +1746,7 @@ function renderStudentDirectory(sourceStudents) {
 
     const query = String(searchInput?.value || '').trim().toLowerCase();
     const selectedLevel = String(levelFilterValue?.textContent || 'All levels').trim();
-    const allStudents = (Array.isArray(sourceStudents) ? sourceStudents : getStudentDirectoryRows())
+    const allStudents = getLatestStudentDirectoryData(sourceStudents)
         .filter(student => String(student.name || '').trim() && String(student.name || '').trim() !== 'Jay Park')
         .map(student => ({
             ...student,
@@ -1906,41 +1883,62 @@ function bindStudentDirectoryFilters() {
     }
 }
 
-// Fetch student data from the server API with localStorage fallback
+// Fetch student data from the server API.
 async function refreshStudentOverview() {
+    let apiStudents = null;
+    let apiLevelCounts = null;
+    let apiTotalStudents = null;
+    let apiSucceeded = false;
     try {
-        const response = await fetch('/dashboard/teacher/students-api/', {
+        const response = await fetch(`/dashboard/teacher/students-api/?ts=${Date.now()}`, {
             method: 'GET',
             credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            cache: 'no-store',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Cache-Control': 'no-cache, no-store, max-age=0',
+                'Pragma': 'no-cache'
+            }
         });
         
         if (response && response.ok) {
             const data = await response.json();
             if (data && data.success) {
                 if (Array.isArray(data.students)) {
-                    // Save to localStorage for offline fallback
-                    localStorage.setItem('pabasa_added_students', JSON.stringify(data.students));
+                    apiStudents = data.students;
+                    apiSucceeded = true;
                 }
-                if (data.dashboard_metrics && typeof data.dashboard_metrics === 'object') {
-                    persistDashboardMetrics(data.dashboard_metrics);
+                if (data && data.level_counts && typeof data.level_counts === 'object') {
+                    apiLevelCounts = data.level_counts;
+                }
+                if (Number.isFinite(Number(data?.total_students))) {
+                    apiTotalStudents = Number(data.total_students);
                 }
             }
         }
     } catch (error) {
-        console.warn('Could not fetch students from API, using localStorage fallback', error);
+        console.warn('Could not fetch students from API', error);
     }
     
-    // Always update statistics (from either API data or localStorage)
-    updateStudentStatistics();
-    renderStudentDirectory();
+    const studentsForUi = apiSucceeded ? normalizeStudentPayload(apiStudents) : [];
+
+    // Always update statistics and directory from the freshest data we have.
+    updateStudentStatistics(studentsForUi, apiLevelCounts, apiTotalStudents);
+    renderStudentDirectory(studentsForUi);
 }
 
 // Initialize on page load
 document.addEventListener("DOMContentLoaded", function() {
     bindStudentDirectoryFilters();
     refreshStudentOverview();
-    setInterval(refreshStudentOverview, 60000);
+    setInterval(refreshStudentOverview, 30000);
+    window.addEventListener("focus", refreshStudentOverview);
+    document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) {
+            refreshStudentOverview();
+        }
+    });
+    window.addEventListener("studentAdded", refreshStudentOverview);
     window.addEventListener('pabasa:assessment-completed', function () {
         refreshStudentOverview();
     });
@@ -1950,28 +1948,40 @@ document.addEventListener("DOMContentLoaded", function() {
 <script>
 // Populate class and student dropdowns/checkboxes dynamically
 document.addEventListener("DOMContentLoaded", function() {
-    // Get classes created from the teacher dashboard, plus any classes already used by students.
-    function getUniqueClasses() {
-        const sampleClassCodes = ["RRG-9154", "AFC-7302", "ESL-5601"];
-        const email = (window.PABASA_USER_EMAIL || '').trim();
-        const scopedKey = email ? `pabasa_teacher_classes_${email}` : 'pabasa_teacher_classes';
-        const teacherClasses = JSON.parse(localStorage.getItem(scopedKey) || "[]");
-        const students = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-        const dashboardClassNames = teacherClasses
-            .filter(classData => !sampleClassCodes.includes(classData.code))
-            .map(classData => classData.name || classData.subject)
-            .filter(Boolean);
-        const studentClassNames = students.map(student => student.class).filter(Boolean);
-
-        return [...new Set([...dashboardClassNames, ...studentClassNames])].sort();
+    async function getUniqueClasses() {
+        try {
+            const response = await fetch(`/dashboard/teacher/classes/?ts=${Date.now()}`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache, no-store, max-age=0',
+                    'Pragma': 'no-cache'
+                }
+            });
+            if (response && response.ok) {
+                const data = await response.json();
+                if (data && data.success && Array.isArray(data.classes)) {
+                    return [...new Set(
+                        data.classes
+                            .map(classData => classData.class_name || classData.name || classData.subject || '')
+                            .filter(Boolean)
+                    )].sort();
+                }
+            }
+        } catch (e) {
+            console.warn('Could not fetch live teacher classes', e);
+        }
+        return [];
     }
-    
+
     // Populate class dropdown in Add Student modal
-    function populateClassDropdown() {
+    async function populateClassDropdown() {
         const classDropdown = document.getElementById("studentClass");
         if (!classDropdown) return;
         
-        const classes = getUniqueClasses();
+        const classes = await getUniqueClasses();
         const existingOptions = classDropdown.querySelectorAll("option:not([value=''])");
         existingOptions.forEach(opt => opt.remove());
         
@@ -1986,20 +1996,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const addStudentModal = document.getElementById("addStudentModal");
     if (addStudentModal) {
-        addStudentModal.addEventListener("show.bs.modal", populateClassDropdown);
+        addStudentModal.addEventListener("show.bs.modal", function () {
+            populateClassDropdown();
+        });
     }
 
     document.addEventListener("populateDropdowns", function () {
         populateClassDropdown();
-    });
-
-    window.addEventListener("storage", function (event) {
-        const _email = (window.PABASA_USER_EMAIL || '').trim();
-        const _scopedKey = _email ? `pabasa_teacher_classes_${_email}` : 'pabasa_teacher_classes';
-        if (event.key === _scopedKey || event.key === "pabasa_added_students") {
-            populateClassDropdown();
-            updateStudentStatistics();
-        }
     });
 
     // Refresh data when Add Student Form is submitted
@@ -2019,7 +2022,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (addStudentForm) {
         addStudentForm.addEventListener("submit", function(e) {
             setTimeout(() => {
-                updateStudentStatistics();
+                refreshStudentOverview();
             }, 100);
         });
     }

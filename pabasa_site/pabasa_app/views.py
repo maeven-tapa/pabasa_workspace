@@ -9736,7 +9736,8 @@ def clear_notifications(request):
 def get_teacher_students_api(request):
     """
     Authority source for all students associated with a teacher.
-    Aggregates students from all active sections owned by the teacher.
+    Aggregates students from the teacher's active sections and enriches them
+    with their latest activity data.
     """
     try:
         user_id = request.session.get('user_id')
@@ -9764,9 +9765,8 @@ def get_teacher_students_api(request):
                 return 'Readers at Grade Level'
             return None
         
-        # Get all active sections for this teacher
+        # Get all active sections for this teacher and merge their enrollments.
         sections = Section.objects.filter(teacher=teacher, is_active=True)
-        
         student_map = {}
         level_counts = {
             'Low Emerging Readers': 0,
@@ -9782,15 +9782,23 @@ def get_teacher_students_api(request):
             enrolled = section.get_enrolled_students(active_only=True)
             for entry in enrolled:
                 raw_sid = entry.get('student_id')
-                if not raw_sid:
-                    continue
+                sid = None
+                if raw_sid not in (None, ''):
+                    try:
+                        sid = int(raw_sid)
+                    except (TypeError, ValueError):
+                        sid = None
 
-                try:
-                    sid = int(raw_sid)
-                except (TypeError, ValueError):
+                if sid is None:
+                    custom_id = str(entry.get('custom_id') or '').strip()
+                    if custom_id:
+                        matched_user = User.objects.filter(role='student', custom_id__iexact=custom_id).first()
+                        if matched_user:
+                            sid = matched_user.id
+
+                if sid is None:
                     logger.warning(
-                        "Skipping enrolled student with invalid student_id %r in section %s",
-                        raw_sid,
+                        "Skipping enrolled student without a resolvable student_id/custom_id in section %s",
                         section.class_code,
                     )
                     continue

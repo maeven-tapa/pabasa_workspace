@@ -1482,7 +1482,7 @@
 </div>
 
 <script>
-// Update reading level statistics from localStorage using percentile formula
+// Update reading level statistics from the authoritative reading-level source
 function updateDashboardStatistics(providedStudents = null, providedLevelCounts = null) {
     const studentsAll = providedStudents || 
         JSON.parse(localStorage.getItem("pabasa_added_students") || "[]")
@@ -1503,52 +1503,32 @@ function updateDashboardStatistics(providedStudents = null, providedLevelCounts 
         "Readers at Grade Level": 0
     };
 
-    function normalizeLevelLabel(value) {
-        const text = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
-        if (!text) return null;
-        if (text.includes('low') && text.includes('emerging')) return 'Low Emerging Readers';
-        if (text.includes('high') && text.includes('emerging')) return 'High Emerging Readers';
-        if (text.includes('develop')) return 'Developing Readers';
-        if (text.includes('transition')) return 'Transitioning Readers';
-        if (text.includes('grade')) return 'Readers at Grade Level';
-        return null;
-    }
-
     const hasServerCounts = providedLevelCounts && Object.keys(providedLevelCounts).length > 0;
     if (hasServerCounts) {
         Object.keys(levelCounts).forEach(key => {
             levelCounts[key] = Number(providedLevelCounts[key] || 0);
         });
     } else {
+        const normalizeLevelLabel = (value) => {
+            if (window.PABASA_READING_LEVEL && typeof window.PABASA_READING_LEVEL.normalizeReadingLevelLabel === 'function') {
+                return window.PABASA_READING_LEVEL.normalizeReadingLevelLabel(value);
+            }
+            const text = String(value || '').trim().toLowerCase().replace(/[_-]+/g, ' ');
+            if (!text) return null;
+            if (text.includes('low') && text.includes('emerging')) return 'Low Emerging Readers';
+            if (text.includes('high') && text.includes('emerging')) return 'High Emerging Readers';
+            if (text.includes('develop')) return 'Developing Readers';
+            if (text.includes('transition')) return 'Transitioning Readers';
+            if (text.includes('grade')) return 'Readers at Grade Level';
+            return null;
+        };
+
         students.forEach(student => {
             const normalized = normalizeLevelLabel(student?.level || student?.reading_level || student?.classification || student?.crla_classification);
             if (normalized && levelCounts.hasOwnProperty(normalized)) {
                 levelCounts[normalized]++;
             }
         });
-
-        // If the backend has no explicit level data, fall back to percentile ranking from accuracy.
-        if (!Object.values(levelCounts).some(count => count > 0)) {
-            const scores = students.map(s => {
-                const a = parseFloat(s.accuracy);
-                return isNaN(a) ? null : a;
-            }).filter(v => v !== null);
-
-            if (scores.length > 0) {
-                const studentsWithScores = students.map(s => ({ s, score: (parseFloat(s.accuracy) || 0) }));
-                studentsWithScores.sort((a, b) => b.score - a.score);
-                const total = studentsWithScores.length || 1;
-                studentsWithScores.forEach((item, idx) => {
-                    const pos = ((total - idx) / total) * 100;
-                    let level = "Readers at Grade Level";
-                    if (pos <= 20) level = "Low Emerging Readers";
-                    else if (pos <= 40) level = "High Emerging Readers";
-                    else if (pos <= 60) level = "Developing Readers";
-                    else if (pos <= 80) level = "Transitioning Readers";
-                    levelCounts[level]++;
-                });
-            }
-        }
     }
 
     // Update dashboard statistics
@@ -1601,7 +1581,16 @@ async function loadPersistedStudents() {
     // Prefer server-backed authoritative student list for preview; fall back to localStorage
     let students = [];
     try {
-        const resp = await fetch('/dashboard/teacher/students-api/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const resp = await fetch(`/dashboard/teacher/students-api/?ts=${Date.now()}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Cache-Control': 'no-cache, no-store, max-age=0',
+                'Pragma': 'no-cache'
+            }
+        });
         if (resp && resp.ok) {
             const data = await resp.json();
             if (data && data.success && Array.isArray(data.students)) {
@@ -1785,7 +1774,16 @@ document.addEventListener("DOMContentLoaded", async function() {
     // Fetch authoritative student list from server and use it for dashboard statistics
     async function fetchAndUpdateStudents() {
         try {
-            const resp = await fetch('/dashboard/teacher/students-api/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const resp = await fetch(`/dashboard/teacher/students-api/?ts=${Date.now()}`, {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache, no-store, max-age=0',
+                    'Pragma': 'no-cache'
+                }
+            });
             if (resp && resp.ok) {
                 const data = await resp.json();
                 if (data && data.success && Array.isArray(data.students)) {
@@ -1827,6 +1825,7 @@ document.addEventListener("DOMContentLoaded", async function() {
     window.addEventListener('studentAdded', function() { fetchAndUpdateStudents(); });
     window.addEventListener('pabasa:teacher-classes-updated', function() { fetchAndUpdateStudents(); });
     window.addEventListener('pabasa:materials-updated', function() { fetchAndUpdateStudents(); });
+    window.addEventListener('pabasa:assessment-completed', function() { fetchAndUpdateStudents(); });
 });
 </script>
 
