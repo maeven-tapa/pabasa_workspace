@@ -9776,6 +9776,7 @@ def get_teacher_students_api(request):
                 if normalized_level is None and not has_score_data:
                     normalized_level = 'Pending'
                 sdata.update({
+                    'grade_level': getattr(user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
                     'level': normalized_level or 'Pending',
                     'accuracy': latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy', '0'),
                     'wpm': latest.get('wpm') if latest.get('wpm') is not None else profile.get('wpm', '0'),

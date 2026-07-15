@@ -30,6 +30,10 @@
         align-items: stretch;
     }
 
+    .students-overview > * {
+        min-width: 0;
+    }
+
     #studentStatsContainer {
         display: flex;
         flex-direction: column;
@@ -136,6 +140,8 @@
         gap: 1rem;
         height: 100%;
         align-content: start;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .students-section-title {
@@ -160,6 +166,11 @@
         position: relative;
         height: 250px;
         width: 100%;
+        min-width: 0;
+    }
+
+    .chart-container canvas {
+        max-width: 100%;
     }
 
     .students-secondary-metrics {
@@ -1158,6 +1169,9 @@
                             </button>
                         </div>
                     </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="exportStudentsBtn" disabled>
+                        <i class="bi bi-filetype-xlsx me-1" aria-hidden="true"></i>Export
+                    </button>
                 </div>
             </div>
 
@@ -1259,6 +1273,7 @@
 
 <!-- Chart.js for reading level distribution pie chart -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
 function normalizeStudentLevel(level) {
     const text = String(level || '').trim();
@@ -1587,6 +1602,110 @@ function formatStudentMetric(value, suffix = '') {
     return `0${suffix}`;
 }
 
+function formatStudentGradeLevel(student) {
+    return String(
+        student?.grade_level ||
+        student?.grade ||
+        student?.student_grade_level ||
+        ''
+    ).trim() || 'N/A';
+}
+
+function setStudentExportState(students) {
+    window.filteredStudentDirectoryRows = Array.isArray(students) ? students.slice() : [];
+    const exportBtn = document.getElementById('exportStudentsBtn');
+    if (exportBtn) {
+        exportBtn.disabled = window.filteredStudentDirectoryRows.length === 0;
+    }
+}
+
+function getReadingLevelExportStyle(level) {
+    const normalized = normalizeStudentLevel(level);
+    const baseStyle = {
+        font: { bold: true, color: { rgb: '111827' } },
+        alignment: { vertical: 'center' },
+        fill: { fgColor: { rgb: 'F3F4F6' } },
+    };
+    const styleMap = {
+        'Low Emerging Readers': {
+            font: { bold: true, color: { rgb: '991B1B' } },
+            fill: { fgColor: { rgb: 'FEE2E2' } },
+        },
+        'High Emerging Readers': {
+            font: { bold: true, color: { rgb: '155E75' } },
+            fill: { fgColor: { rgb: 'D9EEF4' } },
+        },
+        'Developing Readers': {
+            font: { bold: true, color: { rgb: '9A3412' } },
+            fill: { fgColor: { rgb: 'FFEDD5' } },
+        },
+        'Transitioning Readers': {
+            font: { bold: true, color: { rgb: '92400E' } },
+            fill: { fgColor: { rgb: 'FEF3C7' } },
+        },
+        'Readers at Grade Level': {
+            font: { bold: true, color: { rgb: '166534' } },
+            fill: { fgColor: { rgb: 'DCFCE7' } },
+        },
+        'Pending': {
+            font: { bold: true, color: { rgb: '4B5563' } },
+            fill: { fgColor: { rgb: 'F3F4F6' } },
+        }
+    };
+    return { ...baseStyle, ...(styleMap[normalized] || {}) };
+}
+
+function exportVisibleStudentsWorkbook() {
+    const rows = Array.isArray(window.filteredStudentDirectoryRows) ? window.filteredStudentDirectoryRows : [];
+    if (!rows.length) return;
+    if (typeof XLSX === 'undefined' || !XLSX.utils || !XLSX.writeFile) {
+        console.error('PABASA: Excel export library is unavailable.');
+        return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const data = [
+        ['Name', 'Email', 'Class', 'Grade Level', 'Reading Level'],
+        ...rows.map(student => [
+            student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student',
+            student.email || '',
+            toStudentClassList(student).join(', ') || 'No class',
+            formatStudentGradeLevel(student),
+            normalizeStudentLevel(student.level || student.reading_level || student.classification || '')
+        ])
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    worksheet['!cols'] = [
+        { wch: 28 },
+        { wch: 34 },
+        { wch: 28 },
+        { wch: 18 },
+        { wch: 24 },
+    ];
+
+    ['A1', 'B1', 'C1', 'D1', 'E1'].forEach((cellRef) => {
+        if (worksheet[cellRef]) {
+            worksheet[cellRef].s = {
+                font: { bold: true, color: { rgb: 'FFFFFF' } },
+                fill: { fgColor: { rgb: '10466E' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+            };
+        }
+    });
+
+    for (let rowIndex = 2; rowIndex <= data.length; rowIndex += 1) {
+        const levelCellRef = `E${rowIndex}`;
+        if (worksheet[levelCellRef]) {
+            worksheet[levelCellRef].s = getReadingLevelExportStyle(worksheet[levelCellRef].v);
+        }
+    }
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Student Directory');
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `student-directory-${stamp}.xlsx`);
+}
+
 function renderStudentDirectory(sourceStudents) {
     const directory = document.querySelector('.student-directory');
     const emptyState = document.getElementById('studentEmptyState');
@@ -1626,6 +1745,7 @@ function renderStudentDirectory(sourceStudents) {
 
     directory.querySelectorAll('.student-card-row').forEach(card => card.remove());
     emptyState.classList.toggle('d-none', filtered.length > 0);
+    setStudentExportState(filtered);
     if (countEl) {
         countEl.textContent = filtered.length;
     }
@@ -1662,6 +1782,7 @@ function renderStudentDirectory(sourceStudents) {
 
 function bindStudentDirectoryFilters() {
     const searchInput = document.getElementById('studentSearchInput');
+    const exportBtn = document.getElementById('exportStudentsBtn');
     const levelFilterWrap = document.getElementById('readingLevelFilterWrap');
     const levelFilterTrigger = document.getElementById('readingLevelFilterTrigger');
     const levelFilterMenu = document.getElementById('readingLevelFilterMenu');
@@ -1672,6 +1793,10 @@ function bindStudentDirectoryFilters() {
         searchInput.addEventListener('input', function () {
             renderStudentDirectory();
         });
+    }
+    if (exportBtn && !exportBtn.dataset.exportBound) {
+        exportBtn.dataset.exportBound = 'true';
+        exportBtn.addEventListener('click', exportVisibleStudentsWorkbook);
     }
     if (levelFilterWrap && levelFilterTrigger && levelFilterMenu && levelFilterValue && !levelFilterWrap.dataset.autoFilterBound) {
         levelFilterWrap.dataset.autoFilterBound = 'true';
