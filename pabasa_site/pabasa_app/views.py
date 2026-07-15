@@ -816,6 +816,359 @@ def _student_adapted_reading_level_payload(student_user, score_payload=None, ass
     return _adapted_reading_level_from_attempts(attempts)
 
 
+def _canonical_reading_level_label(value):
+    text = str(value or '').strip().lower().replace('_', ' ').replace('-', ' ')
+    if not text:
+        return None
+    if 'pending' in text:
+        return 'Pending'
+    if 'low' in text and 'emerging' in text:
+        return 'Low Emerging Readers'
+    if 'high' in text and 'emerging' in text:
+        return 'High Emerging Readers'
+    if 'develop' in text:
+        return 'Developing Readers'
+    if 'transition' in text:
+        return 'Transitioning Readers'
+    if 'grade' in text or 'ready' in text or text in {'g', 'gr'}:
+        return 'Readers at Grade Level'
+    return None
+
+
+def _format_joined_date(value):
+    if not value:
+        return ''
+    parsed = _parse_attempt_timestamp(value)
+    if parsed and timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_default_timezone())
+    if parsed:
+        return parsed.date().isoformat()
+    text = str(value).strip()
+    return text.split('T')[0] if 'T' in text else text
+
+
+def _aware_datetime_or_none(value):
+    parsed = _parse_attempt_timestamp(value)
+    if parsed and timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_default_timezone())
+    return parsed
+
+
+def _teacher_student_roster_payload(teacher_user, section=None):
+    sections = [section] if section else list(Section.objects.filter(teacher=teacher_user, is_active=True))
+    level_counts = {
+        'Low Emerging Readers': 0,
+        'High Emerging Readers': 0,
+        'Developing Readers': 0,
+        'Transitioning Readers': 0,
+        'Readers at Grade Level': 0,
+    }
+    student_map = {}
+
+    for current_section in sections:
+        for entry in current_section.get_enrolled_students(active_only=True):
+            raw_sid = entry.get('student_id')
+            sid = None
+            if raw_sid not in (None, ''):
+                try:
+                    sid = int(raw_sid)
+                except (TypeError, ValueError):
+                    sid = None
+
+            if sid is None:
+                custom_id = str(entry.get('custom_id') or '').strip()
+                if custom_id:
+                    matched_user = User.objects.filter(role='student', custom_id__iexact=custom_id).first()
+                    if matched_user:
+                        sid = matched_user.id
+
+            if sid is None:
+                logger.warning(
+                    "Skipping enrolled student without a resolvable student_id/custom_id in section %s",
+                    current_section.class_code,
+                )
+                continue
+
+            sid_key = str(sid)
+            joined_at = entry.get('joined_at') or current_section.created_at.isoformat()
+            if sid_key not in student_map:
+                student_map[sid_key] = {
+                    'id': sid,
+                    'name': f"{entry.get('first_name') or ''} {entry.get('last_name') or ''}".strip(),
+                    'email': entry.get('email', ''),
+                    'custom_id': entry.get('custom_id', ''),
+                    'classes': [current_section.class_name],
+                    'class_codes': [current_section.class_code],
+                    'joined_at': joined_at,
+                    'joined_at_display': _format_joined_date(joined_at),
+                }
+            else:
+                student_data = student_map[sid_key]
+                if current_section.class_name not in student_data['classes']:
+                    student_data['classes'].append(current_section.class_name)
+                if current_section.class_code not in student_data['class_codes']:
+                    student_data['class_codes'].append(current_section.class_code)
+                existing_joined = _aware_datetime_or_none(student_data.get('joined_at'))
+                current_joined = _aware_datetime_or_none(joined_at)
+                if current_joined and (not existing_joined or current_joined < existing_joined):
+                    student_data['joined_at'] = joined_at
+                    student_data['joined_at_display'] = _format_joined_date(joined_at)
+
+    user_ids = [sdata['id'] for sdata in student_map.values()]
+    users = User.objects.filter(id__in=user_ids).in_bulk()
+    now = timezone.now()
+    thirty_days_ago = now - timedelta(days=30)
+    seven_days_ago = now - timedelta(days=7)
+    attempt_history = {}
+    latest_scores = {}
+    student_attempts = {}
+    seen_attempt_keys = set()
+
+    if sections:
+        for assessment in Assessment.objects.filter(section__in=sections, is_active=True, source_assessment__isnull=True):
+            assessment_type = str(assessment.assessment_type or '').strip().lower()
+            for attempt in assessment.get_attempts():
+                if not isinstance(attempt, dict) or attempt.get('status') != 'completed':
+                    continue
+                student_id = attempt.get('student_id')
+                sid_key = str(student_id or '').strip()
+                if not sid_key or sid_key not in student_map:
+                    continue
+                attempt_key = (
+                    sid_key,
+                    str(attempt.get('attempt_id') or ''),
+                    str(assessment.id),
+                    str(attempt.get('attempt_number') or ''),
+                )
+                if attempt_key in seen_attempt_keys:
+                    continue
+                seen_attempt_keys.add(attempt_key)
+                completed_dt = _parse_attempt_timestamp(
+                    attempt.get('completed_at') or attempt.get('updated_at') or attempt.get('started_at')
+                ) or now
+                if timezone.is_naive(completed_dt):
+                    completed_dt = timezone.make_aware(completed_dt, timezone.get_default_timezone())
+                score_value = _as_float(attempt.get('total_score'), default=None)
+                if score_value is None:
+                    score_value = _as_float(attempt.get('accuracy'), default=None)
+                if score_value is None:
+                    score_value = _as_float(attempt.get('wpm'), default=None)
+                if score_value is None:
+                    continue
+
+                attempt_payload = {
+                    'total_score': score_value,
+                    'assessment_type': assessment_type,
+                }
+                attempt_history.setdefault(sid_key, []).append({
+                    'completed_at': completed_dt,
+                    'score': score_value,
+                })
+                student_attempts.setdefault(sid_key, []).append(attempt_payload)
+
+                current = latest_scores.get(sid_key)
+                if current and current.get('completed_at_dt') and current['completed_at_dt'] >= completed_dt:
+                    continue
+
+                adapted_payload = _adapted_reading_level_from_attempts([attempt_payload])
+                latest_scores[sid_key] = {
+                    'completed_at_dt': completed_dt,
+                    'completed_at': completed_dt.isoformat(),
+                    'assessment_title': assessment.title,
+                    'assessment_type': assessment.assessment_type,
+                    'accuracy': attempt.get('accuracy'),
+                    'wpm': attempt.get('wpm'),
+                    'fluency_score': attempt.get('fluency_score'),
+                    'pronunciation_score': attempt.get('pronunciation_score'),
+                    'time_score': attempt.get('time_score'),
+                    'duration_seconds': attempt.get('duration_seconds'),
+                    'total_score': attempt.get('total_score', score_value),
+                    'adapted_level_score': adapted_payload.get('adapted_level_score'),
+                    'adapted_reading_level': adapted_payload.get('adapted_reading_level'),
+                    'adapted_reading_level_disclaimer': adapted_payload.get('adapted_reading_level_disclaimer'),
+                }
+
+        child_attempts = Assessment.objects.filter(
+            student_id__in=user_ids,
+            attempt_status='completed',
+            is_active=True,
+            source_assessment__isnull=False,
+        ).filter(
+            Q(source_assessment__teacher=teacher_user)
+            | Q(source_assessment__section__in=sections)
+            | Q(source_assessment__material__section__in=sections)
+            | Q(source_assessment__material__assigned_sections__in=sections)
+            | Q(source_assessment__material__courses__sections__in=sections)
+        ).select_related('source_assessment').distinct()
+
+        for attempt_row in child_attempts:
+            sid_key = str(attempt_row.student_id or '').strip()
+            if not sid_key or sid_key not in student_map:
+                continue
+            source = attempt_row.source_assessment
+            assessment_type = str(
+                getattr(attempt_row, 'assessment_type', '') or
+                getattr(source, 'assessment_type', '') or
+                ''
+            ).strip().lower()
+            attempt_key = (
+                sid_key,
+                str(attempt_row.attempt_id or ''),
+                str(source.id if source else attempt_row.source_assessment_id or ''),
+                str(attempt_row.attempt_number or ''),
+            )
+            if attempt_key in seen_attempt_keys:
+                continue
+            seen_attempt_keys.add(attempt_key)
+
+            completed_dt = attempt_row.completed_at or attempt_row.updated_at or attempt_row.started_at or now
+            if timezone.is_naive(completed_dt):
+                completed_dt = timezone.make_aware(completed_dt, timezone.get_default_timezone())
+            score_value = _as_float(attempt_row.total_score, default=None)
+            if score_value is None:
+                score_value = _as_float(attempt_row.accuracy, default=None)
+            if score_value is None:
+                score_value = _as_float(attempt_row.wpm, default=None)
+            if score_value is None:
+                continue
+
+            attempt_payload = {
+                'total_score': score_value,
+                'assessment_type': assessment_type,
+            }
+            attempt_history.setdefault(sid_key, []).append({
+                'completed_at': completed_dt,
+                'score': score_value,
+            })
+            student_attempts.setdefault(sid_key, []).append(attempt_payload)
+
+            current = latest_scores.get(sid_key)
+            if current and current.get('completed_at_dt') and current['completed_at_dt'] >= completed_dt:
+                continue
+
+            adapted_payload = _adapted_reading_level_from_attempts([attempt_payload])
+            latest_scores[sid_key] = {
+                'completed_at_dt': completed_dt,
+                'completed_at': completed_dt.isoformat(),
+                'assessment_title': getattr(source, 'title', '') or attempt_row.title,
+                'assessment_type': assessment_type,
+                'accuracy': attempt_row.accuracy,
+                'wpm': attempt_row.wpm,
+                'fluency_score': attempt_row.fluency_score,
+                'pronunciation_score': attempt_row.pronunciation_score,
+                'time_score': attempt_row.time_score,
+                'duration_seconds': attempt_row.duration_seconds,
+                'total_score': attempt_row.total_score if attempt_row.total_score is not None else score_value,
+                'adapted_level_score': adapted_payload.get('adapted_level_score'),
+                'adapted_reading_level': adapted_payload.get('adapted_reading_level'),
+                'adapted_reading_level_disclaimer': adapted_payload.get('adapted_reading_level_disclaimer'),
+            }
+
+    results = []
+    for sid_key, sdata in student_map.items():
+        user = users.get(sdata['id'])
+        if not user:
+            continue
+
+        profile = {}
+        if isinstance(user.tags, list):
+            for tag in user.tags:
+                if isinstance(tag, dict) and 'student_profile' in tag and isinstance(tag['student_profile'], dict):
+                    profile = tag['student_profile']
+                    break
+
+        latest = latest_scores.get(sid_key, {})
+        attempts = student_attempts.get(sid_key, [])
+        has_completed_assessment = bool(attempts)
+        adapted_payload = _adapted_reading_level_from_attempts(attempts) if has_completed_assessment else {}
+        reading_level = _canonical_reading_level_label(adapted_payload.get('adapted_reading_level')) if has_completed_assessment else 'Pending'
+        if not reading_level:
+            reading_level = 'Pending'
+        disclaimer = (
+            adapted_payload.get('adapted_reading_level_disclaimer')
+            or latest.get('adapted_reading_level_disclaimer')
+            or ADAPTED_READING_LEVEL_DISCLAIMER
+        )
+
+        history = sorted(attempt_history.get(sid_key, []), key=lambda item: item['completed_at'])
+        recent_history = [
+            item for item in history
+            if item.get('completed_at') and item['completed_at'] >= thirty_days_ago and item.get('score') is not None
+        ]
+        if len(recent_history) >= 2:
+            first_score = recent_history[0]['score']
+            last_score = recent_history[-1]['score']
+            improvement = ((last_score - first_score) / first_score) * 100 if first_score not in (None, 0) else last_score - (first_score or 0)
+        else:
+            improvement = 0
+
+        last_active = history[-1]['completed_at'] if history else None
+        latest_score = latest.get('total_score')
+        if latest_score is None:
+            latest_score = latest.get('accuracy')
+        if latest_score is None:
+            latest_score = latest.get('wpm')
+
+        sdata.update({
+            'name': f"{user.first_name} {user.last_name}".strip() or sdata.get('name', ''),
+            'email': user.email or sdata.get('email', ''),
+            'custom_id': user.custom_id or sdata.get('custom_id', ''),
+            'grade_level': getattr(user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
+            'level': reading_level,
+            'reading_level': reading_level,
+            'adapted_reading_level': reading_level,
+            'adapted_level_score': adapted_payload.get('adapted_level_score') if has_completed_assessment else None,
+            'adapted_reading_level_disclaimer': disclaimer,
+            'reading_level_disclaimer': disclaimer,
+            'accuracy': latest.get('accuracy') if latest.get('accuracy') is not None else profile.get('accuracy', '0'),
+            'wpm': latest.get('wpm') if latest.get('wpm') is not None else profile.get('wpm', '0'),
+            'fluency_score': latest.get('fluency_score', profile.get('fluency_score')),
+            'pronunciation_score': latest.get('pronunciation_score', profile.get('pronunciation_score')),
+            'time_score': latest.get('time_score', profile.get('time_score')),
+            'duration_seconds': latest.get('duration_seconds'),
+            'total_score': latest.get('total_score'),
+            'completed_at': latest.get('completed_at'),
+            'assessment_title': latest.get('assessment_title'),
+            'assessment_type': latest.get('assessment_type'),
+            'has_completed_assessment': has_completed_assessment,
+            'latest_score': latest_score,
+            'last_active_at': last_active.isoformat() if last_active else None,
+            'improvement_30d': round(improvement, 1),
+        })
+
+        if reading_level in level_counts:
+            level_counts[reading_level] += 1
+        results.append(sdata)
+
+    active_this_week = len({
+        sid for sid, attempts in attempt_history.items()
+        if any(item.get('completed_at') and item['completed_at'] >= seven_days_ago for item in attempts)
+    })
+    improvement_values = [float(student.get('improvement_30d') or 0) for student in results]
+    scored_students = []
+    for student in results:
+        score_value = _as_float(student.get('latest_score'), default=None)
+        if score_value is not None:
+            scored_students.append((student, score_value))
+
+    top_student, top_score = (None, None)
+    if scored_students:
+        top_student, top_score = max(scored_students, key=lambda item: item[1])
+
+    dashboard_metrics = {
+        'total_students': len(results),
+        'needs_support_count': level_counts['Low Emerging Readers'] + level_counts['High Emerging Readers'],
+        'grade_level_ready_count': level_counts['Readers at Grade Level'],
+        'avg_improvement_30d': round(sum(improvement_values) / len(improvement_values), 1) if improvement_values else 0,
+        'active_this_week_count': active_this_week,
+        'top_performer_name': top_student['name'] if top_student else '—',
+        'top_performer_score': top_score,
+        'level_counts': level_counts,
+        'average_score': round(sum(score for _, score in scored_students) / len(scored_students), 1) if scored_students else 0,
+    }
+    return results, level_counts, dashboard_metrics
+
+
 def _update_student_reading_profile(student_user, score_payload):
     profile = _get_profile_dict(student_user, 'student_profile')
     if not isinstance(profile, dict):
@@ -6034,26 +6387,15 @@ def class_management_view(request):
         seen_class_codes.add(class_code_key)
         all_sections.append(item)
 
-    # Get students enrolled in this section and enrich from User model
-    enrolled_entries = section.get_enrolled_students(active_only=True)
-    student_ids = [s.get('student_id') for s in enrolled_entries if s.get('student_id')]
-    users_data = User.objects.filter(id__in=student_ids).in_bulk()
-    
+    roster_students, _, _ = _teacher_student_roster_payload(teacher_user, section=section)
     students_table = []
-    for entry in enrolled_entries:
-        user = users_data.get(entry.get('student_id'))
-        if not user: continue
-        
-        # Extract only the date part (YYYY-MM-DD) from the ISO timestamp string
-        joined_raw = entry.get('joined_at', section.created_at.isoformat())
-        joined_date = joined_raw.split('T')[0] if 'T' in joined_raw else joined_raw
-        
+    for student in roster_students:
         students_table.append({
-            'name': f"{user.first_name} {user.last_name}",
-            'pabasa_id': user.custom_id,
-            'email': user.email,
-            'reading_level': user.reading_level or "Developing",
-            'joined_at': joined_date
+            'name': student.get('name', ''),
+            'pabasa_id': student.get('custom_id', ''),
+            'email': student.get('email', ''),
+            'reading_level': student.get('reading_level') or 'Pending',
+            'joined_at': student.get('joined_at_display') or '',
         })
         
     # Fetch all students for the "Add Student" popup
@@ -9742,6 +10084,14 @@ def get_teacher_students_api(request):
     try:
         user_id = request.session.get('user_id')
         teacher = User.objects.get(id=user_id)
+        results, level_counts, dashboard_metrics = _teacher_student_roster_payload(teacher)
+        return JsonResponse({
+            'success': True,
+            'students': results,
+            'level_counts': level_counts,
+            'dashboard_metrics': dashboard_metrics,
+            'total_students': len(results),
+        })
 
         now = timezone.now()
         thirty_days_ago = now - timedelta(days=30)

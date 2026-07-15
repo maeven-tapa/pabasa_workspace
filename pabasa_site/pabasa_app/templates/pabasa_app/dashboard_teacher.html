@@ -1484,9 +1484,9 @@
 <script>
 // Update reading level statistics from the authoritative reading-level source
 function updateDashboardStatistics(providedStudents = null, providedLevelCounts = null) {
-    const studentsAll = providedStudents || 
-        JSON.parse(localStorage.getItem("pabasa_added_students") || "[]")
-            .filter(student => student && student.name && student.name !== "Jay Park");
+    const studentsAll = Array.isArray(providedStudents)
+        ? providedStudents.filter(student => student && student.name && student.name !== "Jay Park")
+        : [];
 
     // Determine currently selected class (if any) and filter students accordingly
     const activeCodeEl = document.getElementById('activeClassCode');
@@ -1578,7 +1578,7 @@ async function loadPersistedStudents() {
     const selectedClassCode = activeClassCodeEl ? (activeClassCodeEl.textContent || '').trim() : '';
     const selectedClassName = activeClassNameEl ? (activeClassNameEl.textContent || '').trim() : '';
     
-    // Prefer server-backed authoritative student list for preview; fall back to localStorage
+    // Use the server-backed authoritative student list for preview.
     let students = [];
     try {
         const resp = await fetch(`/dashboard/teacher/students-api/?ts=${Date.now()}`, {
@@ -1608,17 +1608,8 @@ async function loadPersistedStudents() {
             }
         }
     } catch (e) {
-        console.warn('Failed to fetch dashboard students from server, falling back to localStorage', e);
-    }
-
-    if (!students || students.length === 0) {
-        try {
-            let persisted = JSON.parse(localStorage.getItem("pabasa_added_students") || "[]");
-            const filteredStudents = persisted.filter(student => student && student.name && student.name !== "Jay Park");
-            students = filteredStudents.length !== persisted.length ? filteredStudents : persisted;
-        } catch (e) {
-            students = [];
-        }
+        console.warn('Failed to fetch dashboard students from server', e);
+        students = [];
     }
     
     const noStudentsMsg = document.getElementById("noStudentsMessage");
@@ -1805,8 +1796,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         } catch (e) {
             console.warn('Failed to fetch teacher students for dashboard statistics', e);
         }
-        // Fallback to localStorage-driven statistics
-        updateDashboardStatistics();
+        updateDashboardStatistics([]);
     }
 
     await fetchAndUpdateStudents();

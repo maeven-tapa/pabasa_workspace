@@ -1293,11 +1293,20 @@ function normalizeStudentLevel(level) {
 }
 
 function resolveStudentReadingLevel(student) {
-    const helper = window.PABASA_READING_LEVEL;
-    if (helper && helper.getReadingLevelLabel) {
-        return helper.getReadingLevelLabel(student);
+    if (!student || typeof student !== 'object') return 'Pending';
+    const explicitLevel = normalizeStudentLevel(
+        student.level || student.reading_level || student.adapted_reading_level || student.classification || ''
+    );
+    if (explicitLevel !== 'Pending') return explicitLevel;
+    if (student.has_completed_assessment && student.total_score !== null && student.total_score !== undefined && student.total_score !== '') {
+        const helper = window.PABASA_READING_LEVEL;
+        if (helper && helper.getReadingLevelFromScore) {
+            return normalizeStudentLevel(
+                helper.getReadingLevelFromScore(student.total_score, student.assessment_type || student.assessmentType || student.mode).adapted_reading_level
+            );
+        }
     }
-    return normalizeStudentLevel(student?.level || student?.reading_level || student?.classification || '');
+    return 'Pending';
 }
 
 function getStudentIdentityKeys(student) {
