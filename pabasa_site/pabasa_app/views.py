@@ -1476,17 +1476,26 @@ def _auto_send_regular_progress_update(student, course, teacher_user, assessment
     )
 
 # Authentication functions
-def generate_custom_id(role):
-    """Generate unique custom ID based on role"""
+def _student_grade_prefix(grade_level):
+    """Convert values like 'Grade 6' into the expected PABASA prefix 'G6'."""
+    match = re.search(r'(\d+)', str(grade_level or ''))
+    if match:
+        return f"G{match.group(1)}"
+    return "G2"
+
+
+def generate_custom_id(role, grade_level=None):
+    """Generate unique custom ID based on role and, for students, grade level."""
     if role == 'admin':
         prefix = 'ADM'
+        count = User.objects.filter(role=role).count() + 1
     elif role == 'teacher':
         prefix = 'TCH'
+        count = User.objects.filter(role=role).count() + 1
     else:  # student
-        prefix = 'G2'
-    
-    # Get the count of existing users with this role
-    count = User.objects.filter(role=role).count() + 1
+        prefix = _student_grade_prefix(grade_level)
+        count = User.objects.filter(role='student', custom_id__startswith=f"{prefix}-").count() + 1
+
     return f"{prefix}-{count:04d}"
 
 def generate_otp(length=6):
@@ -2186,7 +2195,7 @@ def verify_student_otp(request):
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
 
-        custom_id = generate_custom_id('student')
+        custom_id = generate_custom_id('student', pending.get('grade_level', ''))
         user = User.objects.create(
             custom_id=custom_id,
             role='student',

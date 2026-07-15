@@ -91,6 +91,89 @@ class HuntScoringRuleTests(TestCase):
         self.assertIn('Available Stars: {{ student_available_stars|default:0 }}', template)
         self.assertIn('starCount.textContent = `Available Stars: ${data.available_stars}`', source)
 
+
+class StudentSignupCustomIdTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def _set_pending_student_signup(self, grade_level, email):
+        session = self.client.session
+        session["pending_student_signup"] = {
+            "first_name": "Jamie",
+            "last_name": "Reader",
+            "email": email,
+            "middle_initial": "",
+            "suffix": "",
+            "sex": "female",
+            "birth_month": 1,
+            "birth_day": 15,
+            "birth_year": 2014,
+            "password_hash": make_password("student-password"),
+            "contact_no": "",
+            "grade_level": grade_level,
+            "section": "",
+            "reading_level": "",
+        }
+        session["pending_student_signup_otp"] = "123456"
+        session["pending_student_signup_otp_created"] = timezone.now().timestamp()
+        session.save()
+
+    @patch("pabasa_site.pabasa_app.views._notify_admins")
+    @patch("pabasa_site.pabasa_app.views.send_student_confirmation_email")
+    def test_verify_student_otp_uses_selected_grade_for_custom_id_prefix(self, mock_email, mock_notify):
+        self._set_pending_student_signup("Grade 6", "grade6@example.com")
+
+        response = self.client.post(reverse("verify_student_otp"), {"otp": "123456"})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["custom_id"], "G6-0001")
+        self.assertEqual(User.objects.get(email="grade6@example.com").custom_id, "G6-0001")
+
+    @patch("pabasa_site.pabasa_app.views._notify_admins")
+    @patch("pabasa_site.pabasa_app.views.send_student_confirmation_email")
+    def test_verify_student_otp_increments_custom_id_per_grade_prefix(self, mock_email, mock_notify):
+        User.objects.create(
+            custom_id="G3-0001",
+            role="student",
+            first_name="Gia",
+            last_name="Three",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=2,
+            birth_day=2,
+            birth_year=2013,
+            email="existing-g3@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 3",
+        )
+        User.objects.create(
+            custom_id="G6-0001",
+            role="student",
+            first_name="Gino",
+            last_name="Six",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=3,
+            birth_day=3,
+            birth_year=2012,
+            email="existing-g6@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 6",
+        )
+
+        self._set_pending_student_signup("Grade 3", "next-g3@example.com")
+        response = self.client.post(reverse("verify_student_otp"), {"otp": "123456"})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["custom_id"], "G3-0002")
+        self.assertEqual(User.objects.get(email="next-g3@example.com").custom_id, "G3-0002")
+
     def test_similar_wrong_word_does_not_match_when_first_sound_differs(self):
         result = analyze_reading("house", 0, "mouse")
 
