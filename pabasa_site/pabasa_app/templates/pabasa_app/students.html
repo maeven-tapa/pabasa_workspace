@@ -1547,6 +1547,46 @@ function getStudentInitials(name) {
         .join('') || 'S';
 }
 
+function toStudentClassList(student) {
+    if (!student || typeof student !== 'object') return [];
+
+    const values = [];
+    const pushValue = (value) => {
+        if (Array.isArray(value)) {
+            value.forEach(pushValue);
+            return;
+        }
+        const text = String(value || '').trim();
+        if (!text) return;
+        text.split(',').map(item => item.trim()).filter(Boolean).forEach(item => {
+            if (!values.some(existing => existing.toLowerCase() === item.toLowerCase())) {
+                values.push(item);
+            }
+        });
+    };
+
+    pushValue(student.classes);
+    pushValue(student.joined_classes);
+    pushValue(student.allClasses);
+    pushValue(student.class);
+    pushValue(student.section);
+
+    return values;
+}
+
+function formatStudentMetric(value, suffix = '') {
+    if (value === null || value === undefined || value === '') {
+        return '0' + suffix;
+    }
+
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+        return `${Math.round(numeric)}${suffix}`;
+    }
+
+    return `0${suffix}`;
+}
+
 function renderStudentDirectory(sourceStudents) {
     const directory = document.querySelector('.student-directory');
     const emptyState = document.getElementById('studentEmptyState');
@@ -1567,11 +1607,13 @@ function renderStudentDirectory(sourceStudents) {
         .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }));
 
     const filtered = allStudents.filter(student => {
+        const classNames = toStudentClassList(student).join(' ');
         const haystack = [
             student.name,
             student.email,
             student.class,
             student.section,
+            classNames,
             student.pabasa_id,
             student.custom_id,
             student.student_id,
@@ -1590,9 +1632,10 @@ function renderStudentDirectory(sourceStudents) {
 
     const cards = filtered.map(student => {
         const name = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student';
-        const className = student.class || student.section || 'No class';
-        const accuracy = Number.isFinite(Number(student.accuracy)) ? `${Math.round(Number(student.accuracy))}%` : 'Pending';
-        const wpm = Number.isFinite(Number(student.wpm)) ? Math.round(Number(student.wpm)) : 'Pending';
+        const classList = toStudentClassList(student);
+        const className = classList.join(', ') || 'No class';
+        const accuracy = formatStudentMetric(student.accuracy, '%');
+        const wpm = formatStudentMetric(student.wpm);
         return `
             <article class="student-card-row">
                 <div class="student-avatar" aria-hidden="true">${escapeStudentDirectoryHtml(getStudentInitials(name))}</div>
@@ -1798,5 +1841,4 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
-<script src="{% static 'pabasa_app/js/students.js' %}"></script>
 {% endblock %}
