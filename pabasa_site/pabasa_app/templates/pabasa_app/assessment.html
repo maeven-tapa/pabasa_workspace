@@ -361,8 +361,28 @@
         align-items: start;
         display: grid;
         gap: 0.75rem;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         width: 100%;
+    }
+
+    .assessment-grid-stack {
+        display: grid;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .assessment-week-column {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        min-width: 0;
+    }
+
+    .assessment-week-cards {
+        display: grid;
+        gap: 0.35rem;
+        grid-auto-rows: 1fr;
+        min-width: 0;
     }
 
     .assessment-card-shell {
@@ -370,6 +390,11 @@
         flex-direction: column;
         gap: 0.35rem;
         min-width: 0;
+    }
+
+    .assessment-card-shell.is-placeholder {
+        pointer-events: none;
+        visibility: hidden;
     }
 
     .assessment-week-chip {
@@ -384,6 +409,11 @@
         letter-spacing: 0.04em;
         padding: 0.2rem 0.6rem;
         text-transform: uppercase;
+    }
+
+    .assessment-week-column .assessment-type-link {
+        height: 100%;
+        min-height: 122px;
     }
 
     .assessment-empty-state {
@@ -415,7 +445,7 @@
         }
 
         .assessment-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         }
 
         .status-ticket {
@@ -846,6 +876,35 @@
                 return label === 'Unassigned' ? 1000 : parseInt(label.replace('Week ', ''), 10);
             }
 
+            function getWeekColumnMinWidth() {
+                if (window.innerWidth <= 767.98) {
+                    return 0;
+                }
+                if (window.innerWidth <= 991.98) {
+                    return 240;
+                }
+                return 280;
+            }
+
+            function getWeekColumnsPerRow(containerWidth) {
+                const minWidth = getWeekColumnMinWidth();
+                if (!minWidth) {
+                    return 1;
+                }
+                const gap = 12;
+                const safeWidth = Math.max(minWidth, Number(containerWidth) || 0);
+                return Math.max(1, Math.floor((safeWidth + gap) / (minWidth + gap)));
+            }
+
+            function chunkWeeksByRow(weeks, containerWidth) {
+                const columnsPerRow = getWeekColumnsPerRow(containerWidth);
+                const rows = [];
+                for (let index = 0; index < weeks.length; index += columnsPerRow) {
+                    rows.push(weeks.slice(index, index + columnsPerRow));
+                }
+                return rows;
+            }
+
             const getRecentClassOrder = () => {
                 try {
                     return JSON.parse(localStorage.getItem('pabasa_recently_accessed_class_codes') || '[]');
@@ -907,14 +966,38 @@
                 const sortedWeeks = Object.keys(groups).sort((a, b) => assignedWeekSortValue(a) - assignedWeekSortValue(b));
 
                 const contentHtml = (() => {
-                    const renderedCards = [];
-
-                    sortedWeeks.forEach((week) => {
+                    const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}" };
+                    const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text' };
+                    const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading' };
+                    const rowWeekGroups = chunkWeeksByRow(sortedWeeks, grid.clientWidth || grid.offsetWidth || window.innerWidth || 0);
+                    const renderedRowGroups = rowWeekGroups.map((weekGroup) => {
+                        const maxRows = weekGroup.reduce((max, week) => Math.max(max, groups[week].length), 0);
+                        const renderedColumns = weekGroup.map((week) => {
                         const weekItems = groups[week];
-                        weekItems.forEach((m, index) => {
-                            const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}" };
-                            const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text' };
-                            const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading' };
+                        const renderedRows = [];
+
+                        for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+                            const m = weekItems[rowIndex];
+                            if (!m) {
+                                renderedRows.push(`
+                                    <div class="assessment-card-shell is-placeholder" aria-hidden="true">
+                                        <a class="assessment-type-link" tabindex="-1">
+                                            <div class="type-meta">
+                                                <span class="type-icon"></span>
+                                                <div class="type-info">
+                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                        <strong>&nbsp;</strong>
+                                                    </div>
+                                                    <span>&nbsp;</span>
+                                                </div>
+                                            </div>
+                                            <i class="bi bi-play-circle-fill text-primary"></i>
+                                        </a>
+                                    </div>
+                                `);
+                                continue;
+                            }
+
                             const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
                             const isDone = isAssessmentCompleted(m, mId);
                             const latestAttemptSummary = m.latest_attempt_summary || {};
@@ -923,9 +1006,8 @@
                                 ? `<span class="assessment-time-score-badge"><i class="bi bi-stopwatch"></i> ${formatAssessmentDuration(completionSeconds)}</span>`
                                 : '';
 
-                            renderedCards.push(`
+                            renderedRows.push(`
                                 <div class="assessment-card-shell">
-                                    ${index === 0 ? `<div class="assessment-week-chip">${escapeHtml(week)}</div>` : ''}
                                     <a href="${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${classData.code}&id=${m.id}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''}" data-class-code="${escapeHtml(classData.code)}">
                                         <div class="type-meta">
                                             <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
@@ -942,10 +1024,22 @@
                                     </a>
                                 </div>
                             `);
+                        }
+
+                            return `
+                                <div class="assessment-week-column">
+                                    <div class="assessment-week-chip">${escapeHtml(week)}</div>
+                                    <div class="assessment-week-cards">
+                                        ${renderedRows.join("")}
+                                    </div>
+                                </div>
+                            `;
                         });
+
+                        return `<div class="assessment-grid">${renderedColumns.join("")}</div>`;
                     });
 
-                    return `<div class="assessment-grid">${renderedCards.join("")}</div>`;
+                    return `<div class="assessment-grid-stack">${renderedRowGroups.join("")}</div>`;
                 })();
 
                 return `
@@ -974,6 +1068,16 @@
                 updateAssessmentHub();
                 updateClassStatus();
             }
+        });
+        let assessmentHubResizeFrame = null;
+        window.addEventListener("resize", () => {
+            if (assessmentHubResizeFrame) {
+                window.cancelAnimationFrame(assessmentHubResizeFrame);
+            }
+            assessmentHubResizeFrame = window.requestAnimationFrame(() => {
+                assessmentHubResizeFrame = null;
+                updateAssessmentHub();
+            });
         });
     })();
 </script>
