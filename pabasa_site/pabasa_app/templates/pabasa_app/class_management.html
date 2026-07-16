@@ -1120,11 +1120,11 @@
                     </thead>
                     <tbody>
                         {% for student in students_table %}
-                        <tr>
+                        <tr data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}">
                             <td><strong>{{ student.name }}</strong></td>
                             <td><span class="pabasa-badge">{{ student.pabasa_id }}</span></td>
                             <td>{{ student.email }}</td>
-                            <td><span class="status-chip">{{ student.reading_level }}</span></td>
+                            <td><span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span></td>
                             <td><small class="text-muted">{{ student.joined_at }}</small></td>
                         </tr>
                         {% empty %}
@@ -1138,13 +1138,13 @@
 
             <div class="student-cards" aria-label="Enrolled students list">
                 {% for student in students_table %}
-                <article class="student-card">
+                <article class="student-card" data-student-key="{{ student.pabasa_id|default_if_none:'' }}" data-student-name="{{ student.name|default_if_none:'' }}">
                     <div class="student-card-top">
                         <div>
                             <h3 class="student-card-name">{{ student.name }}</h3>
                             <div class="student-card-meta">
                                 <span class="student-card-pill">{{ student.pabasa_id }}</span>
-                                <span>{{ student.reading_level }}</span>
+                                <span>{{ student.reading_level|default:'Pending' }}</span>
                             </div>
                         </div>
                         <span class="student-card-pill">Enrolled</span>
@@ -1153,6 +1153,7 @@
                         <span><i class="bi bi-envelope me-1"></i>{{ student.email }}</span>
                     </div>
                     <div class="student-card-actions">
+                        <span class="status-chip reading-level-chip" data-reading-level="{{ student.reading_level|default:'Pending' }}">{{ student.reading_level|default:'Pending' }}</span>
                         <span class="status-chip">Joined {{ student.joined_at }}</span>
                     </div>
                 </article>
@@ -1294,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
     const select = document.getElementById('studentFilter');
     if (!select || select.dataset.customDropdownReady === 'true') return;
 
@@ -1442,6 +1443,76 @@ document.addEventListener('DOMContentLoaded', function () {
 
     select.addEventListener('change', syncDropdown);
     rebuildOptions();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', async function () {
+    const levelClassMap = {
+        'Low Emerging Readers': 'level-low',
+        'High Emerging Readers': 'level-high',
+        'Developing Readers': 'level-developing',
+        'Transitioning Readers': 'level-transitioning',
+        'Readers at Grade Level': 'level-grade',
+        'Pending': 'level-pending'
+    };
+
+    function applyReadingLevelChipState(chip, level) {
+        const normalizedLevel = String(level || 'Pending').trim() || 'Pending';
+        chip.textContent = normalizedLevel;
+        chip.dataset.readingLevel = normalizedLevel;
+        chip.className = `status-chip reading-level-chip ${levelClassMap[normalizedLevel] || 'level-pending'}`;
+    }
+
+    async function refreshClassReadingLevels() {
+        try {
+            const response = await fetch('/dashboard/teacher/students-api/?ts=' + Date.now(), {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache, no-store, max-age=0',
+                    'Pragma': 'no-cache'
+                }
+            });
+            if (!response || !response.ok) return;
+            const data = await response.json();
+            if (!data || !data.success || !Array.isArray(data.students)) return;
+
+            const latestLevels = new Map();
+            data.students.forEach(student => {
+                const keys = [
+                    student?.custom_id,
+                    student?.pabasa_id,
+                    student?.student_id,
+                    student?.id,
+                    student?.name,
+                ];
+                const level = student?.reading_level || student?.level || student?.adapted_reading_level || 'Pending';
+                keys.filter(Boolean).forEach(key => {
+                    latestLevels.set(String(key).trim().toLowerCase(), level);
+                });
+            });
+
+            document.querySelectorAll('.reading-level-chip').forEach(chip => {
+                const row = chip.closest('tr, article');
+                const fallback = String(chip.dataset.readingLevel || 'Pending').trim();
+                const key = row ? String(row.dataset.studentKey || row.dataset.studentName || '').trim().toLowerCase() : '';
+                const level = key ? (latestLevels.get(key) || fallback) : fallback;
+                applyReadingLevelChipState(chip, level || 'Pending');
+            });
+        } catch (error) {
+            console.warn('Could not refresh class reading levels', error);
+        }
+    }
+
+    await refreshClassReadingLevels();
+    window.addEventListener('pabasa:assessment-completed', function () {
+        refreshClassReadingLevels();
+    });
+    window.addEventListener('studentAdded', function () {
+        refreshClassReadingLevels();
+    });
 });
 </script>
 <script src="{% static 'pabasa_app/js/class_management.js' %}?v=class-student-loading-20260624"></script>

@@ -9851,7 +9851,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ? formatCourseReportDuration(student.duration_seconds)
                 : null;
             const levelLabel = resolveCourseReadingLevel(student);
-            const levelDisclaimer = student.adapted_reading_level_disclaimer || student.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'Based on the finalized Total Score x Level Multiplier threshold mapping.';
+            const levelDisclaimer = student.adapted_reading_level_disclaimer || student.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'This assessment result is based on the student\'s reading accuracy, fluency, pronunciation, and pacing during the assessment. The Reading Level and Overall Score reflect the student\'s current reading performance and may help identify strengths and areas for improvement.';
             preview.innerHTML = `
                 <div class="course-report-preview-head">
                     <div>
@@ -9869,7 +9869,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     <div class="course-report-metric"><span>Fluency</span><strong>${courseReportMetricValue(student.fluency_score, '%')}</strong></div>
                     <div class="course-report-metric"><span>Pronunciation</span><strong>${courseReportMetricValue(student.pronunciation_score, '%')}</strong></div>
                     <div class="course-report-metric"><span>Time</span><strong>${courseReportMetricValue(latestDuration)}</strong></div>
-                    <div class="course-report-metric"><span>Total Score</span><strong>${courseReportMetricValue(student.total_score, '%')}</strong></div>
+                    <div class="course-report-metric"><span>Final Score</span><strong>${courseReportMetricValue(student.final_score ?? student.total_score, '%')}</strong></div>
                 </div>
                 <p class="course-report-recommendation"><strong>Suggested home support:</strong> ${escapeHtml(getCourseReportRecommendation(student))}</p>`;
         }
@@ -9913,7 +9913,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const wpmText = s.wpm !== undefined && s.wpm !== null && s.wpm !== '' ? `${escapeHtml(s.wpm)} WPM` : 'No WPM';
                     const durationText = s.duration_seconds != null && s.duration_seconds !== '' && Number(s.duration_seconds) > 0 ? formatCourseReportDuration(s.duration_seconds) : 'No time';
                     const levelText = resolveCourseReadingLevel(s);
-                    const levelDisclaimer = s.adapted_reading_level_disclaimer || s.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'Based on the finalized Total Score x Level Multiplier threshold mapping.';
+                    const levelDisclaimer = s.adapted_reading_level_disclaimer || s.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'This assessment result is based on the student\'s reading accuracy, fluency, pronunciation, and pacing during the assessment. The Reading Level and Overall Score reflect the student\'s current reading performance and may help identify strengths and areas for improvement.';
                     const levelChipHtml = levelDisclaimer
                         ? `<div class="d-flex flex-column align-items-end gap-1"><span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span><span class="small text-muted" style="max-width: 220px; text-align: right;">${escapeHtml(levelDisclaimer)}</span></div>`
                         : `<span class="level-chip" style="font-size: 0.7rem;">${escapeHtml(levelText)}</span>`;
@@ -9972,7 +9972,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const helper = window.PABASA_READING_LEVEL;
             const hasCompletedAttempt = String(attempt?.status || '').toLowerCase() === 'completed' || Boolean(attempt?.completed_at);
             const totalScore = (() => {
-                const keys = ['total_score', 'score'];
+                const keys = ['final_score', 'total_score', 'score'];
                 for (const key of keys) {
                     const value = attempt?.[key];
                     if (value !== undefined && value !== null && value !== '') {
@@ -10955,7 +10955,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <td>${formatAttemptMetric(latestAttemptValue(attempt, 'accuracy', 'accuracy_score', 'reading_accuracy'), '%')}</td>
                             <td>${formatAttemptMetric(latestAttemptValue(attempt, 'pronunciation_score', 'pronunciation'), '%')}</td>
                             <td>${formatAttemptMetric(latestAttemptValue(attempt, 'time_score', 'time'), '%')}</td>
-                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'total_score', 'score'), '%')}</td>
+                            <td>${formatAttemptMetric(latestAttemptValue(attempt, 'final_score', 'total_score', 'score'), '%')}</td>
                             <td>${escapeHtml(readingLevel)}</td>
                             <td class="text-end fw-semibold">${index + 1}</td>
                         </tr>
@@ -14930,7 +14930,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const personalizedEmails = recipients.map(s => {
                     const levelScoreMap = { "Low Emerging Readers": 1, "High Emerging Readers": 2, "Developing Readers": 3, "Transitioning Readers": 4, "Readers at Grade Level": 5 };
                     const levelValue = resolveCourseReadingLevel(s);
-                    const levelDisclaimer = s.adapted_reading_level_disclaimer || s.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'Based on the finalized Total Score x Level Multiplier threshold mapping.';
+                    const levelDisclaimer = s.adapted_reading_level_disclaimer || s.reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || 'This assessment result is based on the student\'s reading accuracy, fluency, pronunciation, and pacing during the assessment. The Reading Level and Overall Score reflect the student\'s current reading performance and may help identify strengths and areas for improvement.';
                     const clarityScore = levelScoreMap[s.level] || levelScoreMap[s.adapted_reading_level] || 3;
                     const htmlMessage = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 25px; border-radius: 12px; color: #333;">

@@ -54,6 +54,21 @@ from .reading_stt import (
     transcribe_audio_bytes_with_model,
 )
 from .hunt_scoring import classify_speech
+from .scoring import (
+    ADAPTED_READING_LEVEL_DISCLAIMER,
+    ADAPTED_READING_LEVEL_MULTIPLIERS,
+    CRLA_CLASSIFICATIONS,
+    OSPS_MULTIPLIERS,
+    adapted_reading_level_from_attempts,
+    adapted_reading_level_label,
+    build_assessment_score_payload,
+    calculate_fluency_score,
+    clamp_score,
+    crla_classification,
+    normalize_adapted_level_score,
+    osps_multiplier,
+    performance_interpretation,
+)
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -554,160 +569,118 @@ def _student_completed_assessment_before(assessment, material, student_user):
         return True
     return False
 
-CRLA_CLASSIFICATIONS = [
-    (95, "Readers at Grade Level"),
-    (85, "Transitioning Readers"),
-    (75, "Developing Readers"),
-    (60, "High Emerging Readers"),
-    (0, "Low Emerging Readers"),
-]
-
-ADAPTED_READING_LEVEL_MULTIPLIERS = {
-    'word': 0.90,
-    'vowel': 0.90,
-    'sentence': 0.95,
-    'paragraph': 1.00,
-}
-
-ADAPTED_READING_LEVEL_DISCLAIMER = "Based on our own adapted reading proficiency framework, inspired by CRLA."
-
-
 def _clamp_score(value, default=0):
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        numeric = default
-    return round(max(0, min(100, numeric)), 2)
+    return clamp_score(value, default=default)
+
+
+def _assessment_fluency_score(ratio, accuracy):
+    return calculate_fluency_score(ratio, accuracy)
 
 
 def _crla_classification(total_score):
-    score = _clamp_score(total_score)
-    for threshold, label in CRLA_CLASSIFICATIONS:
-        if score >= threshold:
-            return label
-    return CRLA_CLASSIFICATIONS[-1][1]
+    return crla_classification(total_score)
+
+
+def _osps_multiplier(assessment_type):
+    return osps_multiplier(assessment_type)
+
+
+def _performance_interpretation(total_score):
+    return performance_interpretation(total_score)
 
 
 def _normalize_adapted_level_score(level_score):
-    try:
-        numeric = float(level_score)
-    except (TypeError, ValueError):
-        numeric = 0
-    if numeric > 1:
-        numeric = numeric / 100.0
-    return round(max(0, min(1, numeric)), 2)
+    return normalize_adapted_level_score(level_score)
 
 
 def _adapted_reading_level_label(level_score):
-    score = _normalize_adapted_level_score(level_score)
-    if score >= 0.85:
-        return "Grade Ready / At Grade Level"
-    if score >= 0.70:
-        return "Transitioning"
-    if score >= 0.55:
-        return "Developing"
-    if score >= 0.40:
-        return "High Emerging"
-    return "Low Emerging"
+    return adapted_reading_level_label(level_score)
+
+
+def _display_reading_level(value=None, score_payload=None):
+    if isinstance(score_payload, dict):
+        total_score = score_payload.get('final_score')
+        if total_score is None:
+            total_score = score_payload.get('total_score')
+        if total_score is not None:
+            return _crla_classification(total_score)
+
+        explicit_level = (
+            score_payload.get('adapted_reading_level')
+            or score_payload.get('reading_level')
+            or score_payload.get('crla_classification')
+            or score_payload.get('classification')
+        )
+        if explicit_level:
+            normalized = _canonical_reading_level_label(explicit_level)
+            if normalized:
+                return normalized
+            return str(explicit_level)
+
+    normalized = _canonical_reading_level_label(value)
+    if normalized:
+        return normalized
+    return str(value) if value not in (None, '') else None
+
+
+def _build_latest_reading_level_payload(latest_payload=None, fallback='Pending'):
+    payload = latest_payload if isinstance(latest_payload, dict) else {}
+    score_value = payload.get('final_score')
+    if score_value is None:
+        score_value = payload.get('total_score')
+    if score_value is None:
+        score_value = payload.get('score')
+    if score_value is None:
+        score_value = payload.get('latest_score')
+
+    if score_value is not None:
+        reading_level = _display_reading_level(
+            None,
+            {
+                'final_score': score_value,
+                'total_score': score_value,
+                'adapted_reading_level': payload.get('adapted_reading_level') or payload.get('reading_level') or payload.get('crla_classification') or payload.get('classification'),
+                'reading_level': payload.get('reading_level') or payload.get('adapted_reading_level') or payload.get('crla_classification') or payload.get('classification'),
+                'crla_classification': payload.get('crla_classification') or payload.get('classification'),
+            },
+        )
+        if reading_level:
+            return {
+                'reading_level': reading_level,
+                'adapted_reading_level': reading_level,
+                'adapted_reading_level_disclaimer': payload.get('adapted_reading_level_disclaimer') or ADAPTED_READING_LEVEL_DISCLAIMER,
+            }
+
+    explicit_level = (
+        payload.get('adapted_reading_level')
+        or payload.get('reading_level')
+        or payload.get('crla_classification')
+        or payload.get('classification')
+        or payload.get('level')
+    )
+    normalized_level = _canonical_reading_level_label(explicit_level)
+    if normalized_level:
+        return {
+            'reading_level': normalized_level,
+            'adapted_reading_level': normalized_level,
+            'adapted_reading_level_disclaimer': payload.get('adapted_reading_level_disclaimer') or ADAPTED_READING_LEVEL_DISCLAIMER,
+        }
+
+    fallback_level = fallback if fallback not in (None, '') else 'Pending'
+    return {
+        'reading_level': fallback_level,
+        'adapted_reading_level': fallback_level,
+        'adapted_reading_level_disclaimer': payload.get('adapted_reading_level_disclaimer') or ADAPTED_READING_LEVEL_DISCLAIMER,
+    }
 
 
 def _adapted_reading_level_from_attempts(attempts):
-    level_scores = []
-    for attempt in attempts or []:
-        if not isinstance(attempt, dict):
-            continue
-        assessment_type = str(attempt.get('assessment_type') or attempt.get('type') or attempt.get('mode') or '').strip().lower()
-        total_score = attempt.get('total_score')
-        if total_score is None:
-            continue
-        multiplier = ADAPTED_READING_LEVEL_MULTIPLIERS.get(assessment_type)
-        if multiplier is None:
-            continue
-        level_scores.append(_normalize_adapted_level_score(total_score) * multiplier)
-
-    if not level_scores:
-        return {
-            'adapted_level_score': None,
-            'adapted_reading_level': 'Low Emerging',
-            'adapted_reading_level_disclaimer': ADAPTED_READING_LEVEL_DISCLAIMER,
-        }
-
-    average_level_score = round(sum(level_scores) / len(level_scores), 2)
-    return {
-        'adapted_level_score': average_level_score,
-        'adapted_reading_level': _adapted_reading_level_label(average_level_score),
-        'adapted_reading_level_disclaimer': ADAPTED_READING_LEVEL_DISCLAIMER,
-    }
+    return adapted_reading_level_from_attempts(attempts)
 
 
 def _assessment_score_payload(data):
     """Normalize assessment scoring values submitted by the reader."""
-    raw = data.get('scores') if isinstance(data.get('scores'), dict) else data
-    fluency = _clamp_score(raw.get('fluency_score', raw.get('fluency')))
-    accuracy = _clamp_score(raw.get('accuracy', raw.get('accuracy_score')))
-    pronunciation = _clamp_score(raw.get('pronunciation_score', raw.get('pronunciation')))
-    time_score = _clamp_score(raw.get('time_score', raw.get('time')))
-    total = raw.get('total_score')
-    if total is None:
-        total = round((fluency + accuracy + pronunciation + time_score) / 4, 2)
-    else:
-        total = _clamp_score(total)
-    classification = raw.get('crla_classification') or raw.get('classification') or _crla_classification(total)
-    assessment_type = str(
-        data.get('assessment_type') or data.get('type') or data.get('mode') or
-        raw.get('assessment_type') or raw.get('type') or raw.get('mode') or
-        ''
-    ).strip().lower()
-    adapted_level_payload = _adapted_reading_level_from_attempts([
-        {
-            'total_score': total,
-            'assessment_type': assessment_type,
-        }
-    ])
-    adapted_reading_level = adapted_level_payload.get('adapted_reading_level')
-    adapted_level_score = adapted_level_payload.get('adapted_level_score')
-    adapted_reading_level_disclaimer = adapted_level_payload.get('adapted_reading_level_disclaimer')
-
-    try:
-        wpm = round(max(0, float(raw.get('wpm', 0))), 2)
-    except (TypeError, ValueError):
-        wpm = 0
-    try:
-        duration_seconds = round(max(0, float(raw.get('duration_seconds', 0))), 2)
-    except (TypeError, ValueError):
-        duration_seconds = 0
-    try:
-        word_count = max(0, int(float(raw.get('word_count', 0))))
-    except (TypeError, ValueError):
-        word_count = 0
-
-    needs_manual_review = bool(raw.get('needs_manual_review', False))
-    remarks = raw.get('remarks') or (
-        "Speech recognition unavailable; review recording manually."
-        if needs_manual_review else
-        f"CRLA classification: {classification}."
-    )
-
-    return {
-        'fluency_score': fluency,
-        'accuracy': accuracy,
-        'pronunciation_score': pronunciation,
-        'time_score': time_score,
-        'total_score': total,
-        'crla_classification': classification,
-        'classification': classification,
-        'wpm': wpm,
-        'duration_seconds': duration_seconds,
-        'word_count': word_count,
-        'transcript': str(raw.get('transcript', ''))[:5000],
-        'speech_recognition_used': bool(raw.get('speech_recognition_used', False)),
-        'needs_manual_review': needs_manual_review,
-        'passed': total >= 75,
-        'remarks': remarks,
-        'adapted_level_score': adapted_level_score,
-        'adapted_reading_level': adapted_reading_level,
-        'adapted_reading_level_disclaimer': adapted_reading_level_disclaimer,
-    }
+    return build_assessment_score_payload(data)
 
 
 def _practice_score_payload(data):
@@ -983,6 +956,8 @@ def _teacher_student_roster_payload(teacher_user, section=None):
                     'time_score': attempt.get('time_score'),
                     'duration_seconds': attempt.get('duration_seconds'),
                     'total_score': attempt.get('total_score', score_value),
+                    'classification': attempt.get('classification') or attempt.get('crla_classification'),
+                    'crla_classification': attempt.get('crla_classification') or attempt.get('classification'),
                     'adapted_level_score': adapted_payload.get('adapted_level_score'),
                     'adapted_reading_level': adapted_payload.get('adapted_reading_level'),
                     'adapted_reading_level_disclaimer': adapted_payload.get('adapted_reading_level_disclaimer'),
@@ -1059,6 +1034,8 @@ def _teacher_student_roster_payload(teacher_user, section=None):
                 'time_score': attempt_row.time_score,
                 'duration_seconds': attempt_row.duration_seconds,
                 'total_score': attempt_row.total_score if attempt_row.total_score is not None else score_value,
+                'classification': attempt_row.classification or attempt_row.crla_classification,
+                'crla_classification': attempt_row.crla_classification or attempt_row.classification,
                 'adapted_level_score': adapted_payload.get('adapted_level_score'),
                 'adapted_reading_level': adapted_payload.get('adapted_reading_level'),
                 'adapted_reading_level_disclaimer': adapted_payload.get('adapted_reading_level_disclaimer'),
@@ -1080,15 +1057,18 @@ def _teacher_student_roster_payload(teacher_user, section=None):
         latest = latest_scores.get(sid_key, {})
         attempts = student_attempts.get(sid_key, [])
         has_completed_assessment = bool(attempts)
-        adapted_payload = _adapted_reading_level_from_attempts(attempts) if has_completed_assessment else {}
-        reading_level = _canonical_reading_level_label(adapted_payload.get('adapted_reading_level')) if has_completed_assessment else 'Pending'
-        if not reading_level:
-            reading_level = 'Pending'
-        disclaimer = (
-            adapted_payload.get('adapted_reading_level_disclaimer')
-            or latest.get('adapted_reading_level_disclaimer')
-            or ADAPTED_READING_LEVEL_DISCLAIMER
-        )
+        latest_reading_level_payload = _build_latest_reading_level_payload({
+            'final_score': latest.get('total_score'),
+            'total_score': latest.get('total_score'),
+            'score': latest.get('total_score'),
+            'reading_level': latest.get('adapted_reading_level'),
+            'adapted_reading_level': latest.get('adapted_reading_level'),
+            'crla_classification': latest.get('crla_classification') or latest.get('classification'),
+            'classification': latest.get('classification') or latest.get('crla_classification'),
+            'adapted_reading_level_disclaimer': latest.get('adapted_reading_level_disclaimer'),
+        }, fallback='Pending' if not has_completed_assessment else None)
+        reading_level = latest_reading_level_payload.get('reading_level') or 'Pending'
+        disclaimer = latest_reading_level_payload.get('adapted_reading_level_disclaimer') or ADAPTED_READING_LEVEL_DISCLAIMER
 
         history = sorted(attempt_history.get(sid_key, []), key=lambda item: item['completed_at'])
         recent_history = [
@@ -1345,18 +1325,32 @@ def _latest_student_reading_report(student_user, sections=None, course=None):
         'pronunciation_score': latest.get('pronunciation_score') if latest.get('pronunciation_score') is not None else profile.get('pronunciation_score'),
         'time_score': latest.get('time_score') if latest.get('time_score') is not None else profile.get('time_score'),
         'duration_seconds': latest.get('duration_seconds') if latest.get('duration_seconds') is not None else profile.get('duration_seconds'),
-        'total_score': latest.get('total_score') if latest.get('total_score') is not None else profile.get('total_score'),
+        'final_score': latest.get('final_score') if latest.get('final_score') is not None else latest.get('total_score') if latest.get('total_score') is not None else profile.get('final_score') if profile.get('final_score') is not None else profile.get('total_score'),
+        'total_score': latest.get('total_score') if latest.get('total_score') is not None else latest.get('final_score') if latest.get('final_score') is not None else profile.get('total_score') if profile.get('total_score') is not None else profile.get('final_score'),
         'completed_at': latest.get('completed_at') or profile.get('last_assessment_at') or '',
         'assessment_title': latest.get('assessment_title') or profile.get('last_assessment_title') or '',
         'assessment_type': latest.get('assessment_type') or '',
         'has_completed_assessment': bool(latest),
     }
 
+    display_reading_level = _display_reading_level(
+        report.get('reading_level'),
+        {
+            'final_score': report.get('final_score') if report.get('final_score') is not None else report.get('total_score'),
+            'total_score': report.get('total_score') if report.get('total_score') is not None else report.get('final_score'),
+            'adapted_reading_level': report.get('adapted_reading_level') or report.get('reading_level'),
+            'reading_level': report.get('reading_level'),
+            'crla_classification': report.get('crla_classification') or report.get('classification'),
+        },
+    )
+    report['reading_level'] = display_reading_level or report.get('reading_level')
+    report['adapted_reading_level'] = display_reading_level or report.get('adapted_reading_level') or report.get('reading_level')
+
     accuracy = _as_float(report.get('accuracy'), default=None)
     wpm = _as_float(report.get('wpm'), default=None)
     fluency = _as_float(report.get('fluency_score'), default=None)
     pronunciation = _as_float(report.get('pronunciation_score'), default=None)
-    total_score = _as_float(report.get('total_score'), default=None)
+    total_score = _as_float(report.get('final_score') if report.get('final_score') is not None else report.get('total_score'), default=None)
 
     if not report['has_completed_assessment'] and not any(value not in (None, '', '0', 0) for value in [
         report.get('accuracy'), report.get('wpm'), report.get('fluency_score'),
@@ -1435,10 +1429,10 @@ def _format_reading_report_text(report):
         metric("Accuracy", report.get('accuracy'), "%"),
         metric("Words Per Minute", report.get('wpm'), " WPM"),
         metric("Fluency Score", report.get('fluency_score'), "%"),
-        metric("Pronunciation Score", report.get('pronunciation_score'), "%"),
-        metric("Time", format_duration(report.get('duration_seconds'))),
+        metric("Reading Time", format_duration(report.get('duration_seconds'))),
         metric("Time Score", report.get('time_score'), "%"),
-        metric("Total Score", report.get('total_score'), "%"),
+        metric("Pronunciation Score", report.get('pronunciation_score'), "%"),
+        metric("Overall Score", report.get('final_score') if report.get('final_score') is not None else report.get('total_score'), "%"),
         f"Latest Completed Assessment: {format_datetime(report.get('completed_at')) if report.get('completed_at') else 'No completed assessment yet'}",
         f"Suggested Home Support: {report.get('recommendation')}",
     ]
@@ -1698,16 +1692,19 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
     elements.append(profile_table)
     elements.append(Spacer(1, 0.12 * inch))
 
+    reading_level_value = _display_reading_level(report.get('reading_level'), report)
+    reading_level_text = reading_level_value or 'Not yet available'
+
     elements.append(Paragraph('Reading Overview', section_style))
     metrics = [
-        ('Reading Level', report.get('reading_level') or 'Not yet available'),
+        ('Reading Level', reading_level_text),
         ('Accuracy', _report_metric_text(report.get('accuracy'), '%')),
         ('Words Per Minute', _report_metric_text(report.get('wpm'), ' WPM')),
         ('Fluency Score', _report_metric_text(report.get('fluency_score'), '%')),
-        ('Pronunciation Score', _report_metric_text(report.get('pronunciation_score'), '%')),
-        ('Time', _format_duration(report.get('duration_seconds'))),
+        ('Reading Time', _format_duration(report.get('duration_seconds'))),
         ('Time Score', _report_metric_text(report.get('time_score'), '%')),
-        ('Total Score', _report_metric_text(report.get('total_score'), '%')),
+        ('Pronunciation Score', _report_metric_text(report.get('pronunciation_score'), '%')),
+        ('Overall Score', _report_metric_text(report.get('final_score') if report.get('final_score') is not None else report.get('total_score'), '%')),
     ]
     elements.append(_make_metrics_table(metrics))
     elements.append(Spacer(1, 0.12 * inch))
@@ -10049,6 +10046,22 @@ def record_assessment_completion(request):
             response_payload.update({
                 'student_id': student_user.id,
                 'custom_id': student_user.custom_id,
+                'accuracy': score_payload.get('accuracy'),
+                'fluency_score': score_payload.get('fluency_score'),
+                'pronunciation_score': score_payload.get('pronunciation_score'),
+                'time_score': score_payload.get('time_score'),
+                'overall_raw_score': score_payload.get('overall_raw_score'),
+                'final_score': score_payload.get('final_score'),
+                'total_score': score_payload.get('total_score'),
+                'osps_multiplier': score_payload.get('osps_multiplier'),
+                'crla_classification': score_payload.get('crla_classification'),
+                'classification': score_payload.get('classification'),
+                'performance_interpretation': score_payload.get('performance_interpretation'),
+                'wpm': score_payload.get('wpm'),
+                'duration_seconds': score_payload.get('duration_seconds'),
+                'word_count': score_payload.get('word_count'),
+                'passed': score_payload.get('passed'),
+                'remarks': score_payload.get('remarks'),
                 'adapted_level_score': score_payload.get('adapted_level_score'),
                 'adapted_reading_level': score_payload.get('adapted_reading_level'),
                 'adapted_reading_level_disclaimer': score_payload.get('adapted_reading_level_disclaimer'),
@@ -10336,6 +10349,11 @@ def get_teacher_students_api(request):
                     ]
                 )
                 display_level = latest.get('level') or profile.get('reading_level') or (user.reading_level if has_score_data else None)
+                score_value = latest.get('total_score') if latest.get('total_score') is not None else latest.get('final_score') if latest.get('final_score') is not None else profile.get('total_score') if profile.get('total_score') is not None else profile.get('final_score') if profile.get('final_score') is not None else None
+                if score_value is not None:
+                    display_level = _display_reading_level(display_level, {'final_score': score_value, 'total_score': score_value, 'adapted_reading_level': display_level, 'reading_level': display_level, 'crla_classification': display_level})
+                else:
+                    display_level = _display_reading_level(display_level, {'adapted_reading_level': display_level, 'reading_level': display_level, 'crla_classification': display_level})
                 normalized_level = _normalize_dashboard_level(display_level)
                 if normalized_level is None and not has_score_data:
                     normalized_level = 'Pending'

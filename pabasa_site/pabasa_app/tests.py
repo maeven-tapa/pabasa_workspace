@@ -21,8 +21,9 @@ from .models import Material, User, Section, Assessment, Notification, Course, N
 from .reading_stt import analyze_reading
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_score_payload, _derive_dashboard_greeting_name
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload
 from .weekly_digest import send_weekly_digest
+from .scoring import build_assessment_score_payload
 
 
 class DashboardAchievementBadgeTests(TestCase):
@@ -48,6 +49,45 @@ class DashboardGreetingNameTests(TestCase):
         self.assertEqual(_derive_dashboard_greeting_name(first_name="", full_name=""), "Student")
 
 
+class AssessmentResultsPageTests(TestCase):
+    def test_completion_page_uses_child_friendly_summary_copy(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "reading_assessment_base.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.", content)
+        self.assertNotIn("This assessment result is based on the student's reading accuracy, fluency, pronunciation, and pacing during the assessment.", content)
+        self.assertNotIn("completionPerformanceInterpretation", content)
+
+    def test_build_reading_report_pdf_omits_performance_interpretation(self):
+        report = {
+            "student_name": "Jane Doe",
+            "student_id": "1001",
+            "grade_level": "Grade 2",
+            "email": "jane@example.com",
+            "joined_classes": ["Class A"],
+            "course_name": "Reading",
+            "course_code": "R1",
+            "reading_level": "Transitioning Readers",
+            "accuracy": 88,
+            "wpm": 68,
+            "fluency_score": 84,
+            "duration_seconds": 120,
+            "time_score": 90,
+            "pronunciation_score": 82,
+            "final_score": 85,
+            "summary": "Strong performance",
+            "recommendation": "Keep practicing",
+            "completed_at": timezone.now().isoformat(),
+        }
+
+        pdf_bytes = _build_reading_report_pdf(report)
+        reader = PdfReader(BytesIO(pdf_bytes))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+        self.assertIn("Reading Level", text)
+        self.assertNotIn("Performance Interpretation", text)
+
+
 class ReadingMatcherTests(TestCase):
     def test_wrong_word_does_not_complete_target(self):
         result = analyze_reading("water", 0, "apple")
@@ -59,11 +99,11 @@ class ReadingMatcherTests(TestCase):
 
 class AdaptedReadingLevelTests(TestCase):
     def test_adapted_reading_level_label_uses_expected_thresholds(self):
-        self.assertEqual(_adapted_reading_level_label(0.90), "Grade Ready / At Grade Level")
-        self.assertEqual(_adapted_reading_level_label(0.76), "Transitioning")
-        self.assertEqual(_adapted_reading_level_label(0.60), "Developing")
-        self.assertEqual(_adapted_reading_level_label(0.45), "High Emerging")
-        self.assertEqual(_adapted_reading_level_label(0.25), "Low Emerging")
+        self.assertEqual(_adapted_reading_level_label(0.90), "Readers at Grade Level")
+        self.assertEqual(_adapted_reading_level_label(0.76), "Transitioning Readers")
+        self.assertEqual(_adapted_reading_level_label(0.60), "Developing Readers")
+        self.assertEqual(_adapted_reading_level_label(0.45), "High Emerging Readers")
+        self.assertEqual(_adapted_reading_level_label(0.25), "Low Emerging Readers")
 
     def test_adapted_reading_level_averages_across_assessment_types(self):
         result = _adapted_reading_level_from_attempts([
@@ -73,8 +113,28 @@ class AdaptedReadingLevelTests(TestCase):
         ])
 
         self.assertEqual(result["adapted_level_score"], 0.76)
-        self.assertEqual(result["adapted_reading_level"], "Transitioning")
-        self.assertEqual(result["adapted_reading_level_disclaimer"], "Based on our own adapted reading proficiency framework, inspired by CRLA.")
+        self.assertEqual(result["adapted_reading_level"], "Transitioning Readers")
+        self.assertEqual(result["adapted_reading_level_disclaimer"], "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.")
+
+    def test_assessment_fluency_score_is_more_forgiving_for_accurate_slow_readers(self):
+        self.assertEqual(_assessment_fluency_score(0.10, 95), 52)
+        self.assertEqual(_assessment_fluency_score(0.20, 95), 60)
+
+    def test_display_reading_level_uses_consistent_classification_labels(self):
+        self.assertEqual(_display_reading_level("Transitioning", None), "Transitioning Readers")
+        self.assertEqual(_display_reading_level(None, {"final_score": 60}), "High Emerging Readers")
+
+    def test_display_reading_level_prefers_score_classification_over_stale_adapted_labels(self):
+        self.assertEqual(
+            _display_reading_level(None, {"final_score": 81, "adapted_reading_level": "Low Emerging Readers"}),
+            "Transitioning Readers",
+        )
+
+    def test_build_latest_reading_level_payload_uses_latest_score_classification(self):
+        payload = _build_latest_reading_level_payload({"total_score": 81, "assessment_type": "word"}, fallback="Low Emerging Readers")
+
+        self.assertEqual(payload["reading_level"], "Transitioning Readers")
+        self.assertEqual(payload["adapted_reading_level"], "Transitioning Readers")
 
     def test_assessment_score_payload_uses_word_multiplier_for_high_emerging_levels(self):
         result = _assessment_score_payload({
@@ -89,7 +149,7 @@ class AdaptedReadingLevelTests(TestCase):
         })
 
         self.assertEqual(result["adapted_level_score"], 0.5)
-        self.assertEqual(result["adapted_reading_level"], "High Emerging")
+        self.assertEqual(result["adapted_reading_level"], "High Emerging Readers")
 
     def test_assessment_score_payload_uses_word_multiplier_for_lower_high_emerging_levels(self):
         result = _assessment_score_payload({
@@ -104,7 +164,133 @@ class AdaptedReadingLevelTests(TestCase):
         })
 
         self.assertEqual(result["adapted_level_score"], 0.42)
-        self.assertEqual(result["adapted_reading_level"], "High Emerging")
+        self.assertEqual(result["adapted_reading_level"], "High Emerging Readers")
+
+    def test_assessment_score_payload_uses_weighted_total_and_interpretation(self):
+        result = _assessment_score_payload({
+            "scores": {
+                "fluency_score": 6,
+                "accuracy": 60,
+                "pronunciation_score": 60,
+                "time_score": 0,
+                "total_score": 31,
+            },
+            "assessment_type": "word",
+        })
+
+        self.assertEqual(result["overall_raw_score"], 49)
+        self.assertEqual(result["final_score"], 44)
+        self.assertEqual(result["total_score"], 44)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["performance_interpretation"], "Needs Support")
+        self.assertEqual(result["adapted_reading_level"], "High Emerging Readers")
+
+    def test_assessment_score_payload_uses_vowel_osps_multiplier_for_classification(self):
+        result = _assessment_score_payload({
+            "scores": {
+                "fluency_score": 84,
+                "accuracy": 84,
+                "pronunciation_score": 84,
+                "time_score": 0,
+                "total_score": 84,
+            },
+            "assessment_type": "vowel",
+        })
+
+        self.assertEqual(result["overall_raw_score"], 80)
+        self.assertEqual(result["final_score"], 68)
+        self.assertEqual(result["crla_classification"], "High Emerging Readers")
+        self.assertEqual(result["adapted_level_score"], 0.68)
+
+
+class CentralizedAssessmentScoringTests(TestCase):
+    def test_build_assessment_score_payload_computes_time_score_from_pace(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "word",
+            "correct_words": 45,
+            "incorrect_words": 5,
+            "skipped_words": 0,
+            "duration_seconds": 60,
+            "target_word_count": 50,
+            "pronunciation_metrics": {"score": 80},
+            "fluency_metrics": {"score": 70},
+        })
+
+        self.assertEqual(payload["time_score"], 100.0)
+        self.assertEqual(payload["overall_raw_score"], 87)
+        self.assertEqual(payload["final_score"], 78)
+
+    def test_build_assessment_score_payload_uses_weighted_formula_for_all_metrics(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "word",
+            "correct_words": 80,
+            "incorrect_words": 20,
+            "skipped_words": 0,
+            "duration_seconds": 60,
+            "target_word_count": 100,
+            "pronunciation_metrics": {"score": 40},
+            "fluency_metrics": {"score": 60},
+            "time_score": 20,
+        })
+
+        self.assertEqual(payload["accuracy"], 80.0)
+        self.assertEqual(payload["fluency_score"], 60.0)
+        self.assertEqual(payload["pronunciation_score"], 40.0)
+        self.assertEqual(payload["time_score"], 20.0)
+        self.assertEqual(payload["overall_raw_score"], 74)
+        self.assertEqual(payload["final_score"], 67)
+
+    def test_build_assessment_score_payload_uses_raw_metrics_for_authoritative_score(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "word",
+            "correct_words": 100,
+            "incorrect_words": 0,
+            "skipped_words": 0,
+            "duration_seconds": 60,
+            "target_word_count": 100,
+            "pronunciation_metrics": {"score": 62.5},
+            "fluency_metrics": {"score": 60},
+        })
+
+        self.assertEqual(payload["accuracy"], 100.0)
+        self.assertEqual(payload["fluency_score"], 60.0)
+        self.assertEqual(payload["pronunciation_score"], 62.5)
+        self.assertEqual(payload["final_score"], 81)
+        self.assertEqual(payload["crla_classification"], "Transitioning Readers")
+
+    def test_build_assessment_score_payload_handles_missing_pronunciation_data(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "paragraph",
+            "correct_words": 12,
+            "incorrect_words": 8,
+            "skipped_words": 0,
+            "duration_seconds": 90,
+            "target_word_count": 20,
+            "fluency_metrics": {"score": 80},
+        })
+
+        self.assertEqual(payload["accuracy"], 60.0)
+        self.assertEqual(payload["pronunciation_score"], 0.0)
+        self.assertEqual(payload["final_score"], 55)
+        self.assertEqual(payload["crla_classification"], "Low Emerging Readers")
+
+    def test_build_assessment_score_payload_uses_zero_fluency_for_skipped_assessment(self):
+        payload = build_assessment_score_payload({
+            "assessment_type": "word",
+            "correct_words": 0,
+            "incorrect_words": 0,
+            "skipped_words": 0,
+            "duration_seconds": 0,
+            "target_word_count": 20,
+            "transcript": "",
+            "speech_recognition_used": False,
+            "needs_manual_review": False,
+        })
+
+        self.assertEqual(payload["fluency_score"], 0.0)
+        self.assertEqual(payload["overall_raw_score"], 0)
+        self.assertEqual(payload["final_score"], 0)
+        self.assertEqual(payload["crla_classification"], "Low Emerging Readers")
 
 
 class HuntScoringRuleTests(TestCase):

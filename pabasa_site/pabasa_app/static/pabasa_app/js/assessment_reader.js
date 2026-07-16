@@ -57,6 +57,7 @@
         const liveLanguage = urlParams.get("language") || "";
         const isReviewMode = viewMode === "view";
         const isRetakeMode = viewMode === "retake";
+        const isPractice = false;
         if (testMeta) testMeta.textContent = `${testTitle} - ${testCode}`;
 
         function isCurrentLiveAssessment() {
@@ -360,12 +361,30 @@
             return 85;
         }
 
+        function getOspsMultiplier(assessmentType) {
+            const normalizedType = String(assessmentType || mode || "word").trim().toLowerCase();
+            if (normalizedType.includes("vowel")) return 0.85;
+            if (normalizedType.includes("sentence")) return 0.95;
+            if (normalizedType.includes("paragraph")) return 1.00;
+            return 0.90;
+        }
+
         function classifyCRLA(totalScore) {
-            if (totalScore >= 95) return "Readers at Grade Level";
-            if (totalScore >= 85) return "Transitioning Readers";
-            if (totalScore >= 75) return "Developing Readers";
-            if (totalScore >= 60) return "High Emerging Readers";
-            return "Low Emerging Readers";
+            return window.PABASA_READING_LEVEL?.getClassificationFromScore
+                ? window.PABASA_READING_LEVEL.getClassificationFromScore(totalScore)
+                : "";
+        }
+
+        function getPerformanceInterpretation(totalScore) {
+            return window.PABASA_READING_LEVEL?.getPerformanceInterpretationFromScore
+                ? window.PABASA_READING_LEVEL.getPerformanceInterpretationFromScore(totalScore)
+                : "Needs Intensive Support";
+        }
+
+        function calculateFluencyScore(ratio, accuracy, isSkipped = false) {
+            return window.PABASA_READING_LEVEL?.getFluencyScore
+                ? window.PABASA_READING_LEVEL.getFluencyScore(ratio, accuracy, isSkipped)
+                : (isSkipped || (Number(ratio) <= 0 && Number(accuracy) <= 0) ? 0 : 35);
         }
 
         function getAdaptedReadingLevel(totalScore, assessmentType = mode) {
@@ -373,16 +392,7 @@
             if (helper && helper.getReadingLevelFromScore) {
                 return helper.getReadingLevelFromScore(totalScore, assessmentType).adapted_reading_level;
             }
-            const normalizedType = String(assessmentType || mode || "word").trim().toLowerCase();
-            const multiplier = normalizedType === "sentence" ? 0.95 : normalizedType === "paragraph" ? 1.0 : 0.90;
-            const normalizedScore = Math.max(0, Math.min(100, Number(totalScore) || 0));
-            const levelScore = normalizedScore * multiplier;
-            const normalizedLevelScore = Math.max(0, Math.min(100, levelScore)) / 100;
-            if (normalizedLevelScore >= 0.85) return "Readers at Grade Level";
-            if (normalizedLevelScore >= 0.70) return "Transitioning Readers";
-            if (normalizedLevelScore >= 0.55) return "Developing Readers";
-            if (normalizedLevelScore >= 0.40) return "High Emerging Readers";
-            return "Low Emerging Readers";
+            return "";
         }
 
         function calculateScores() {
@@ -391,46 +401,35 @@
             const spokenWords = normalizeWords(spokenTranscript);
             const durationSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
             const matchedWords = correctWordsRead();
-            const wpm = Math.round((matchedWords / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100;
-            const targetWpm = targetWpmForMode();
             const speechRecognitionUsed = spokenWords.length > 0;
-
-            const accuracy = targetWords.length && speechRecognitionUsed
-                ? Math.round((matchedWords / targetWords.length) * 10000) / 100
-                : 0;
-            const pronunciationScore = targetWords.length && speechRecognitionUsed
-                ? Math.round((matchedWords / Math.max(spokenWords.length, targetWords.length)) * 10000) / 100
-                : 0;
-            const fluencyScore = Math.round(Math.min(100, (wpm / targetWpm) * 100) * 100) / 100;
-            const expectedSeconds = Math.max(1, (targetWords.length / targetWpm) * 60);
-            const timeRatio = durationSeconds / expectedSeconds;
-            const timeScore = Math.round(Math.max(0, Math.min(100, 100 - Math.max(0, timeRatio - 1.15) * 55)) * 100) / 100;
-            const totalScore = Math.round(((fluencyScore + accuracy + pronunciationScore + timeScore) / 4) * 100) / 100;
-            const crlaClassification = classifyCRLA(totalScore);
-            const adaptedReadingLevel = getAdaptedReadingLevel(totalScore, mode);
+            const targetWordCount = targetWords.length;
             const needsManualReview = !speechRecognitionUsed;
 
             return {
-                fluency_score: fluencyScore,
-                accuracy,
-                pronunciation_score: pronunciationScore,
-                time_score: timeScore,
-                total_score: totalScore,
-                crla_classification: crlaClassification,
-                classification: crlaClassification,
-                adapted_level_score: Math.max(0, Math.min(1, (Math.max(0, Math.min(100, totalScore)) * (mode === "sentence" ? 0.95 : mode === "paragraph" ? 1.0 : 0.90)) / 100)),
-                adapted_reading_level: adaptedReadingLevel,
-                adapted_reading_level_disclaimer: window.PABASA_READING_LEVEL?.DISCLAIMER || "Based on the finalized Total Score x Level Multiplier threshold mapping.",
-                wpm,
+                accuracy: targetWordCount && speechRecognitionUsed ? Math.round((matchedWords / targetWordCount) * 10000) / 100 : 0,
+                pronunciation_score: targetWordCount && speechRecognitionUsed ? Math.round((matchedWords / Math.max(spokenWords.length, targetWordCount)) * 10000) / 100 : 0,
+                wpm: Math.round((matchedWords / Math.max(durationSeconds / 60, 1 / 60)) * 100) / 100,
                 duration_seconds: durationSeconds,
                 word_count: matchedWords,
-                target_word_count: targetWords.length,
+                target_word_count: targetWordCount,
                 transcript: spokenTranscript.trim(),
                 speech_recognition_used: speechRecognitionUsed,
                 needs_manual_review: needsManualReview,
+                correct_words: matchedWords,
+                incorrect_words: Math.max(0, targetWordCount - matchedWords),
+                skipped_words: 0,
+                raw_metrics: {
+                    correct_words: matchedWords,
+                    incorrect_words: Math.max(0, targetWordCount - matchedWords),
+                    skipped_words: 0,
+                    duration_seconds: durationSeconds,
+                    target_word_count: targetWordCount,
+                    pronunciation_metrics: { score: targetWordCount && speechRecognitionUsed ? Math.round((matchedWords / Math.max(spokenWords.length, targetWordCount)) * 10000) / 100 : 0 },
+                    fluency_metrics: { score: null },
+                },
                 remarks: needsManualReview
                     ? "Speech recognition was unavailable or did not capture speech; teacher review is recommended."
-                    : `CRLA classification: ${crlaClassification}.`
+                    : "Assessment scoring will be finalized by the server."
             };
         }
 
@@ -453,18 +452,75 @@
             return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
         }
 
+        function resolveClassificationLabel(scorePayload, fallback = "") {
+            const helper = window.PABASA_READING_LEVEL;
+            const totalScore = scorePayload?.final_score ?? scorePayload?.total_score ?? scorePayload?.overall_raw_score;
+            if (helper?.getClassificationFromScore && totalScore !== undefined && totalScore !== null && totalScore !== "") {
+                return helper.getClassificationFromScore(totalScore);
+            }
+            const explicitLevel = scorePayload?.crla_classification || scorePayload?.adapted_reading_level || scorePayload?.classification || scorePayload?.reading_level;
+            if (explicitLevel) {
+                return helper?.normalizeReadingLevelLabel?.(explicitLevel) || explicitLevel;
+            }
+            return fallback;
+        }
+
+        function normalizeCompletionScores(scores, fallback = {}) {
+            const source = { ...(fallback || {}), ...(scores || {}) };
+            return {
+                ...source,
+                accuracy: source.accuracy ?? fallback.accuracy ?? null,
+                fluency_score: source.fluency_score ?? source.fluency ?? fallback.fluency_score ?? fallback.fluency ?? null,
+                pronunciation_score: source.pronunciation_score ?? source.pronunciation ?? fallback.pronunciation_score ?? fallback.pronunciation ?? null,
+                time_score: source.time_score ?? source.time ?? fallback.time_score ?? fallback.time ?? null,
+                final_score: source.final_score ?? source.total_score ?? source.overall_raw_score ?? fallback.final_score ?? fallback.total_score ?? fallback.overall_raw_score ?? null,
+                total_score: source.total_score ?? source.final_score ?? source.overall_raw_score ?? fallback.total_score ?? fallback.final_score ?? fallback.overall_raw_score ?? null,
+                crla_classification: source.crla_classification ?? source.classification ?? fallback.crla_classification ?? fallback.classification ?? null,
+                classification: source.classification ?? source.crla_classification ?? fallback.classification ?? fallback.crla_classification ?? null,
+                adapted_reading_level: source.adapted_reading_level ?? source.reading_level ?? fallback.adapted_reading_level ?? fallback.reading_level ?? null,
+                adapted_reading_level_disclaimer: source.adapted_reading_level_disclaimer ?? fallback.adapted_reading_level_disclaimer ?? null,
+                word_count: source.word_count ?? source.correct_words ?? fallback.word_count ?? fallback.correct_words ?? null,
+                correct_words: source.correct_words ?? source.word_count ?? fallback.correct_words ?? fallback.word_count ?? null,
+                duration_seconds: source.duration_seconds ?? fallback.duration_seconds ?? null,
+                target_word_count: source.target_word_count ?? fallback.target_word_count ?? null,
+                wpm: source.wpm ?? fallback.wpm ?? null,
+            };
+        }
+
+        function setCompletionActionButtonsProcessing(isProcessing) {
+            [reviewBtn, finishBtn].filter(Boolean).forEach((button) => {
+                button.disabled = Boolean(isProcessing);
+                button.classList.toggle("is-processing", Boolean(isProcessing));
+                button.style.opacity = Boolean(isProcessing) ? "0.65" : "";
+                button.style.cursor = Boolean(isProcessing) ? "wait" : "";
+                button.style.pointerEvents = Boolean(isProcessing) ? "none" : "";
+                button.setAttribute("aria-busy", Boolean(isProcessing) ? "true" : "false");
+            });
+        }
+
         function renderScoreSummary(scores) {
-            const summary = document.querySelector(".completion-summary");
+            const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
-            if (!summary || !scores) return;
+            if (!summary) return;
+            const normalizedScores = normalizeCompletionScores(scores, {});
             summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
+            const readingTypeLabel = String(mode || "word").charAt(0).toUpperCase() + String(mode || "word").slice(1);
+            const wordCount = normalizedScores.word_count != null ? String(Math.round(normalizedScores.word_count)) : "—";
+            const accuracyValue = normalizedScores.accuracy != null ? `${Math.round(normalizedScores.accuracy)}%` : "—";
+            const durationValue = normalizedScores.duration_seconds != null ? formatDuration(normalizedScores.duration_seconds) : "—";
+            const fluencyValue = normalizedScores.fluency_score != null ? `${Math.round(normalizedScores.fluency_score)}%` : "—";
+            const pronunciationValue = normalizedScores.pronunciation_score != null ? `${Math.round(normalizedScores.pronunciation_score)}%` : "—";
+            const finalScoreValue = normalizedScores.final_score != null ? `${Math.round(normalizedScores.final_score)}%` : normalizedScores.total_score != null ? `${Math.round(normalizedScores.total_score)}%` : "—";
+            const classificationValue = resolveClassificationLabel(normalizedScores) || "—";
             const tiles = [
-                [`${Math.round(scores.fluency_score)}%`, "fluency"],
-                [`${Math.round(scores.accuracy)}%`, "accuracy"],
-                [`${Math.round(scores.pronunciation_score)}%`, "pronunciation"],
-                [formatDuration(scores.duration_seconds), "time"],
-                [`${Math.round(scores.total_score)}%`, "total score"],
-                [scores.adapted_reading_level || scores.crla_classification || "Low Emerging", "reading level"],
+                [wordCount, "correct words read"],
+                [readingTypeLabel, "reading type"],
+                [accuracyValue, "accuracy"],
+                [durationValue, "reading time"],
+                [fluencyValue, "fluency"],
+                [pronunciationValue, "pronunciation"],
+                [finalScoreValue, "final score"],
+                [classificationValue, "reading classification"],
             ];
             tiles.forEach(([value, label]) => {
                 const tile = document.createElement("div");
@@ -477,6 +533,9 @@
                 tile.append(strong, span);
                 summary.appendChild(tile);
             });
+            if (disclaimer) {
+                disclaimer.textContent = normalizedScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.";
+            }
         }
 
         function setSpeechStatus(message, detail = "", listening = false) {
@@ -955,13 +1014,17 @@
             shell.classList.add("is-complete");
             closePauseMenu();
             if (completionCount) completionCount.textContent = correctWordsRead();
-            if (completionLevel) completionLevel.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
-            latestScores = latestScores || calculateScores();
-            renderScoreSummary(latestScores);
+            const completionSnapshot = calculateScores();
+            latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
+            const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
-            if (disclaimer) {
-                disclaimer.textContent = latestScores?.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Based on the finalized Total Score x Level Multiplier threshold mapping.";
+            if (summary) {
+                summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
             }
+            if (disclaimer) {
+                disclaimer.textContent = "Finalizing your assessment results...";
+            }
+            if (completionLevel) completionLevel.textContent = resolveClassificationLabel(latestScores, mode.charAt(0).toUpperCase() + mode.slice(1));
             
             // Add retake attempt information to the results title
             if (isRetakeMode && materialId) {
@@ -1065,15 +1128,60 @@
             // Persist completion server-side so the teacher receives an in-app notification.
             const token = getCsrfToken();
             if (materialId && token) {
+                setCompletionActionButtonsProcessing(true);
                 const elapsedSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const completionSnapshot = calculateScores();
+                latestScores = latestScores || completionSnapshot;
+                const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
                 const payload = {
                     material_id: materialId,
                     activity_type: 'assessment',
                     class_code: testCode,
                     assessment_type: mode,
+                    correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
+                    incorrect_words: completionMetrics.incorrect_words ?? 0,
+                    skipped_words: completionMetrics.skipped_words ?? 0,
+                    duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                    target_word_count: completionMetrics.target_word_count ?? 0,
+                    pronunciation_score: completionMetrics.pronunciation_score ?? 0,
+                    fluency_score: completionMetrics.fluency_score ?? null,
+                    time_score: completionMetrics.time_score ?? null,
+                    transcript: completionMetrics.transcript || "",
+                    speech_recognition_used: completionMetrics.speech_recognition_used ?? false,
+                    needs_manual_review: completionMetrics.needs_manual_review ?? false,
+                    wpm: completionMetrics.wpm ?? 0,
+                    accuracy: completionMetrics.accuracy ?? null,
                     scores: {
-                        ...(latestScores || {}),
-                        duration_seconds: latestScores?.duration_seconds || elapsedSeconds,
+                        ...(completionMetrics),
+                        correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
+                        incorrect_words: completionMetrics.incorrect_words ?? 0,
+                        skipped_words: completionMetrics.skipped_words ?? 0,
+                        duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                        target_word_count: completionMetrics.target_word_count ?? 0,
+                        pronunciation_score: completionMetrics.pronunciation_score ?? 0,
+                        fluency_score: completionMetrics.fluency_score ?? null,
+                        time_score: completionMetrics.time_score ?? null,
+                        transcript: completionMetrics.transcript || "",
+                        speech_recognition_used: completionMetrics.speech_recognition_used ?? false,
+                        needs_manual_review: completionMetrics.needs_manual_review ?? false,
+                        wpm: completionMetrics.wpm ?? 0,
+                        accuracy: completionMetrics.accuracy ?? null,
+                    },
+                    raw_metrics: {
+                        correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
+                        incorrect_words: completionMetrics.incorrect_words ?? 0,
+                        skipped_words: completionMetrics.skipped_words ?? 0,
+                        duration_seconds: completionMetrics.duration_seconds || elapsedSeconds,
+                        target_word_count: completionMetrics.target_word_count ?? 0,
+                        pronunciation_metrics: {
+                            score: completionMetrics.pronunciation_score ?? 0,
+                        },
+                        fluency_metrics: {
+                            score: completionMetrics.fluency_score ?? null,
+                        },
+                        transcript: completionMetrics.transcript || "",
+                        speech_recognition_used: completionMetrics.speech_recognition_used ?? false,
+                        needs_manual_review: completionMetrics.needs_manual_review ?? false,
                     },
                 };
                 if (isRetakeMode) {
@@ -1098,6 +1206,30 @@
                     if (!r.ok || !d.success) {
                         throw new Error(d.error || `Completion save failed (${r.status})`);
                     }
+                    if (!isPractice) {
+                        const backendScores = normalizeCompletionScores({
+                            ...(latestScores || {}),
+                            ...(d || {}),
+                        }, completionSnapshot || {});
+                        backendScores.fluency_score = d?.fluency_score ?? d?.fluency ?? backendScores.fluency_score ?? null;
+                        backendScores.final_score = d?.final_score ?? d?.total_score ?? backendScores.final_score ?? backendScores.total_score ?? null;
+                        backendScores.total_score = d?.total_score ?? d?.final_score ?? backendScores.total_score ?? backendScores.final_score ?? null;
+                        backendScores.crla_classification = d?.crla_classification ?? d?.classification ?? backendScores.crla_classification ?? backendScores.classification ?? null;
+                        backendScores.classification = d?.classification ?? d?.crla_classification ?? backendScores.classification ?? backendScores.crla_classification ?? null;
+                        backendScores.adapted_reading_level = d?.adapted_reading_level ?? d?.reading_level ?? backendScores.adapted_reading_level ?? backendScores.reading_level ?? null;
+                        backendScores.adapted_reading_level_disclaimer = d?.adapted_reading_level_disclaimer ?? backendScores.adapted_reading_level_disclaimer ?? null;
+                        latestScores = backendScores;
+                        if (completionCount) completionCount.textContent = latestScores.word_count != null ? String(Math.round(latestScores.word_count)) : "";
+                        if (completionLevel) {
+                            const classificationText = backendScores.crla_classification || backendScores.classification || backendScores.adapted_reading_level || backendScores.reading_level || resolveClassificationLabel(backendScores, mode.charAt(0).toUpperCase() + mode.slice(1));
+                            completionLevel.textContent = classificationText || mode.charAt(0).toUpperCase() + mode.slice(1);
+                        }
+                        renderScoreSummary(latestScores);
+                        const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
+                        if (disclaimer) {
+                            disclaimer.textContent = latestScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.";
+                        }
+                    }
                     if (!isPractice && d.adapted_reading_level) {
                         try {
                             const storedStudents = JSON.parse(localStorage.getItem('pabasa_added_students') || '[]');
@@ -1113,7 +1245,7 @@
                                     adapted_reading_level: d.adapted_reading_level,
                                     adapted_reading_level_disclaimer: d.adapted_reading_level_disclaimer,
                                     reading_level_disclaimer: d.adapted_reading_level_disclaimer,
-                                    total_score: latestScores?.total_score,
+                                    total_score: latestScores?.final_score ?? latestScores?.total_score,
                                     assessment_type: mode,
                                     completed_at: new Date().toISOString(),
                                 };
@@ -1127,11 +1259,13 @@
                     window.dispatchEvent(new CustomEvent('pabasa:assessment-completed', {
                         detail: {
                             assessmentType: mode,
-                            totalScore: latestScores?.total_score,
+                            totalScore: latestScores?.final_score ?? latestScores?.total_score,
                         }
                     }));
                     return d;
-                }).catch(e => console.error("PABASA: Completion error", e));
+                }).catch(e => console.error("PABASA: Completion error", e)).finally(() => {
+                    setCompletionActionButtonsProcessing(false);
+                });
             }
         }
 

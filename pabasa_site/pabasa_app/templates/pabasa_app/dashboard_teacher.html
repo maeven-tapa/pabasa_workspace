@@ -1599,7 +1599,7 @@ async function loadPersistedStudents() {
                     class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
                     classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
                     class_codes: Array.isArray(s.class_codes) ? s.class_codes : [],
-                    level: s.level || '',
+                    level: s.reading_level || s.level || s.adapted_reading_level || '',
                     wpm: s.wpm || '0',
                     accuracy: s.accuracy || '0',
                     email: s.email || ''
@@ -1784,7 +1784,7 @@ document.addEventListener("DOMContentLoaded", async function() {
                         class: Array.isArray(s.classes) ? s.classes.join(', ') : (s.class || ''),
                         classes: Array.isArray(s.classes) ? s.classes : (s.class ? [s.class] : []),
                         class_codes: Array.isArray(s.class_codes) ? s.class_codes : [],
-                        level: s.level || '',
+                        level: s.reading_level || s.level || s.adapted_reading_level || '',
                         accuracy: s.accuracy || '0',
                         wpm: s.wpm || '0',
                         email: s.email || ''

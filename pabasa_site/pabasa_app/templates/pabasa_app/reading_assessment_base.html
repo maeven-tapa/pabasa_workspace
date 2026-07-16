@@ -1269,6 +1269,15 @@
             margin: 0.85rem 0 0;
         }
 
+        .completion-disclaimer.is-encouragement {
+            color: var(--leaf);
+            font-size: 0.95rem;
+            font-weight: 800;
+            margin-inline: auto;
+            max-width: 560px;
+            text-align: center;
+        }
+
         .summary-tile {
             background: rgba(255, 255, 255, 0.76);
             border: 1px solid rgba(27, 26, 23, 0.08);
@@ -1750,17 +1759,8 @@
                 <div class="completion-mark">A</div>
                 <h1>Assessment complete.</h1>
                 <p>You finished the reading set. Your teacher can now review the session and use it for your next practice step.</p>
-                <div class="completion-summary">
-                    <div class="summary-tile">
-                        <strong id="completionCount">10</strong>
-                        <span>correct words read</span>
-                    </div>
-                    <div class="summary-tile">
-                        <strong id="completionLevel">{% block completion_level %}Reading{% endblock %}</strong>
-                        <span>level</span>
-                    </div>
-                </div>
-                <p class="completion-disclaimer" id="completionReadingLevelDisclaimer" aria-live="polite">Based on our own adapted reading proficiency framework, inspired by CRLA.</p>
+                <div class="completion-summary" id="completionSummary"></div>
+                <p class="completion-disclaimer is-encouragement" id="completionReadingLevelDisclaimer" aria-live="polite">Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.</p>
                 <div class="completion-actions">
                     <button class="completion-secondary" id="reviewBtn" type="button">Start Again</button>
                     <button class="completion-primary" id="finishBtn" type="button">Back to Assessment</button>
@@ -1769,6 +1769,7 @@
         </section>
     </main>
 
+    <script src="{% static 'pabasa_app/js/reading_level_utils.js' %}?v={% now 'U' %}"></script>
     <script>
         window.PABASA_USER_NAME = "{{ user_full_name|escapejs }}";
         window.PABASA_USER_ROLE = "{{ nav_role }}";
