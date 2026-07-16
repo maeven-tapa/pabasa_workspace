@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260715-practice-video-3">
+<link rel="stylesheet" href="{% static 'pabasa_app/home.css' %}?v=20260716-home-preview-1">
 {% if reading_animation_frames %}
     {% for frame in reading_animation_frames %}
 <link rel="preload" as="image" href="{% static frame %}">
@@ -93,21 +93,38 @@
     <div class="section-wrapper">
         <div class="practice-sneak-peek__content">
             <header class="practice-sneak-peek__heading">
-                <h2 id="practice-sneak-peek-title">Choose Your <span>Reading Adventure!</span></h2>
-                <p>Pick a mode and start your next story</p>
+                <div class="practice-sneak-peek__eyebrow">
+                    <i class="bi bi-play-circle-fill" aria-hidden="true"></i>
+                    PABASA in action
+                </div>
+                <h2 id="practice-sneak-peek-title">See Every Reading Mode <span>Come Alive.</span></h2>
+                <p>A quick look at practice, assessment, and the playful reading activities learners use inside PABASA.</p>
             </header>
 
-            <div class="practice-sneak-peek__frame">
-                <video
-                    autoplay
-                    muted
-                    playsinline
-                    loop
-                    preload="metadata"
-                    aria-label="Preview of the PABASA reading practice modes"
-                >
-                    <source src="{% static 'pabasa_app/videos/GIF_HOMEPAGE.mp4' %}" type="video/mp4">
-                </video>
+            <div class="practice-sneak-peek__showcase">
+                <div class="practice-sneak-peek__frame">
+                    <div class="practice-sneak-peek__chrome" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <strong>Reading flow preview</strong>
+                    </div>
+                    <video
+                        autoplay
+                        muted
+                        playsinline
+                        loop
+                        preload="metadata"
+                        aria-label="Preview of PABASA practice and assessment modes"
+                    >
+                        <source src="{% static 'pabasa_app/videos/GIF_HOME.mp4' %}" type="video/mp4">
+                    </video>
+                    <div class="practice-sneak-peek__caption" aria-hidden="true">
+                        <span><i class="bi bi-mic-fill"></i> Practice</span>
+                        <span><i class="bi bi-clipboard-check-fill"></i> Assessment</span>
+                        <span><i class="bi bi-stars"></i> Progress</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

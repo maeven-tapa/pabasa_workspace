@@ -678,19 +678,12 @@
         if (isEditableTarget(event.target)) return;
 
         const key = event.key;
-        if (key !== " " && key !== "Spacebar" && key !== "Escape") return;
+        if (key !== " " && key !== "Spacebar") return;
         const primaryButton = scrollRecordBtn;
-        const skipButton = scrollSkipBtn;
-        if (!primaryButton || !skipButton) return;
+        if (!primaryButton) return;
 
         event.preventDefault();
         event.stopPropagation();
-
-        if (key === "Escape") {
-            pulseButtonPress(skipButton);
-            skipButton.click();
-            return;
-        }
 
         pulseButtonPress(primaryButton);
         primaryButton.click();
@@ -1076,7 +1069,7 @@
             return true;
         }
 
-        if (event.key === 'Escape') {
+        if (event.key === 'Enter') {
             event.preventDefault();
             if (skipBtn && !skipBtn.classList.contains("d-none")) {
                 pulseButtonPress(skipBtn);
@@ -1088,6 +1081,20 @@
                 pulseButtonPress(nextBtn);
                 nextBtn.click();
             }
+            return true;
+        }
+
+        if (event.key === 'Backspace') {
+            const backLink = shell.querySelector(".practice-color-back");
+            if (!backLink) return false;
+            event.preventDefault();
+            backLink.click();
+            return true;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            document.getElementById("practiceHelpBtn")?.click();
             return true;
         }
 
@@ -1122,28 +1129,45 @@
         const activeElement = document.activeElement;
         if (isInteractiveElement(activeElement)) return false;
 
-        if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            advanceHuntModeFromKeyboard({ countAsRead: true });
-            return true;
-        }
-
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            advanceHuntModeFromKeyboard({ countAsSkip: true });
-            return true;
-        }
-
         const isSpace = event.key === ' ' || event.key === 'Spacebar' || event.code === 'Space';
         if (isSpace) {
             event.preventDefault();
-            advanceHuntModeFromKeyboard({ countAsRead: true });
+            if (recordBtn && !recordBtn.disabled) {
+                pulseButtonPress(recordBtn);
+                recordBtn.click();
+            }
+            return true;
+        }
+
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            if (nextBtn && !nextBtn.disabled) {
+                pulseButtonPress(nextBtn);
+                nextBtn.click();
+            }
+            return true;
+        }
+
+        if (event.key === 'Backspace') {
+            const backLink = shell.querySelector(".hunt-back");
+            if (!backLink) return false;
+            event.preventDefault();
+            backLink.click();
+            return true;
+        }
+
+        if (event.key === 'Shift') {
+            event.preventDefault();
+            if (huntReadAloudBtn && !huntReadAloudBtn.disabled) {
+                pulseButtonPress(huntReadAloudBtn);
+                huntReadAloudBtn.click();
+            }
             return true;
         }
 
         if (event.key === 'Escape') {
             event.preventDefault();
-            advanceHuntModeFromKeyboard({ countAsSkip: true });
+            document.getElementById("practiceHelpBtn")?.click();
             return true;
         }
 
@@ -2002,7 +2026,7 @@
             return true;
         }
 
-        if (event.key === 'Escape') {
+        if (event.key === 'Enter') {
             event.preventDefault();
             if (scrollSkipBtn) {
                 pulseButtonPress(scrollSkipBtn);
@@ -2014,6 +2038,20 @@
                 pulseButtonPress(nextBtn);
                 nextBtn.click();
             }
+            return true;
+        }
+
+        if (event.key === 'Backspace') {
+            const backLink = shell.querySelector(".scrolls-phone-header .back-link");
+            if (!backLink) return false;
+            event.preventDefault();
+            backLink.click();
+            return true;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            document.getElementById("practiceHelpBtn")?.click();
             return true;
         }
 
