@@ -7286,7 +7286,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 </div>
             </div>
             <div class="modal-footer px-4 pt-0 pb-4 border-0">
-                <button type="button" class="btn btn-outline-secondary px-4 py-2 shadow-sm fw-bold" id="cancelItemEditBtn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary px-4 py-2 shadow-sm fw-bold" id="cancelItemEditBtn">Cancel</button>
                 <button type="button" class="btn btn-primary px-4 py-2 shadow-sm fw-bold" id="saveItemEditBtn">Save Changes</button>
             </div>
         </div>
@@ -12703,6 +12703,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     event.preventDefault();
                     if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
                 }
+            });
+        }
+
+        if (cancelItemEditBtn) {
+            cancelItemEditBtn.addEventListener('click', function() {
+                if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
             });
         }
 
