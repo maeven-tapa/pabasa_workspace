@@ -1690,6 +1690,17 @@
         font-weight: 800;
         letter-spacing: 0.01em;
         padding: 0.45rem 0.65rem;
+        cursor: pointer;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #itemChipsContainer .badge:hover {
+        transform: scale(1.02);
+        box-shadow: 0 10px 18px rgba(15,23,42,0.08);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #itemChipsContainer .badge .btn-close {
+        cursor: pointer;
     }
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .modal-header h4 {
@@ -7258,6 +7269,30 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     </div>
 </div>
 
+<div class="modal fade" id="editMaterialItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header px-4 pt-4 pb-0 border-0">
+                <div>
+                    <h5 class="fw-bold mb-1">Edit Item</h5>
+                    <p class="text-muted small mb-0">Update the selected material item below.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <div class="mb-3">
+                    <label for="editMaterialItemInput" class="form-label small fw-semibold">Item content</label>
+                    <input id="editMaterialItemInput" type="text" class="form-control border-light shadow-sm" placeholder="Update item text" autocomplete="off" style="border-radius: 12px; min-height: 44px;">
+                </div>
+            </div>
+            <div class="modal-footer px-4 pt-0 pb-4 border-0">
+                <button type="button" class="btn btn-outline-secondary px-4 py-2 shadow-sm fw-bold" id="cancelItemEditBtn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4 py-2 shadow-sm fw-bold" id="saveItemEditBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="materialUploadSelectModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
         <div class="modal-content course-modal-content" style="border-radius: 20px;">
@@ -12124,10 +12159,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const itemInput = document.getElementById('itemInput');
         const addItemBtn = document.getElementById('addItemBtn');
         const addedItemsList = document.getElementById('addedItemsList');
+        const editMaterialItemModal = document.getElementById('editMaterialItemModal');
+        const editMaterialItemInput = document.getElementById('editMaterialItemInput');
+        const saveItemEditBtn = document.getElementById('saveItemEditBtn');
+        const cancelItemEditBtn = document.getElementById('cancelItemEditBtn');
         const materialTypeSelect = document.getElementById('materialType');
         const materialLanguageSelect = document.getElementById('materialLanguage');
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const addMaterialValidationError = document.getElementById('amValidationError');
+        let editingItemIndex = null;
+        let editMaterialItemModalInstance = null;
         const scheduleFieldDiv = document.getElementById('scheduleField');
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
@@ -12533,13 +12574,47 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             const paragraphMode = currentItemsAreParagraph;
             chipsContainer.innerHTML = normalizedItems.map((item, index) => `
-                <div class="badge d-flex align-items-${paragraphMode ? 'start' : 'center'} gap-2 p-2 px-3 shadow-sm border ${paragraphMode ? 'w-100 justify-content-between text-start' : ''}"
+                <div class="badge item-chip-badge d-flex align-items-${paragraphMode ? 'start' : 'center'} gap-2 p-2 px-3 shadow-sm border ${paragraphMode ? 'w-100 justify-content-between text-start' : ''}"
+                     data-item-index="${index}"
+                     role="button"
+                     tabindex="0"
+                     aria-label="Edit item"
                      style="background: #fff; color: #1e293b; border-color: #e2e8f0; border-radius: 10px; font-weight: 700; font-size: 0.85rem; border-left: 3px solid var(--dash-primary) !important; white-space: ${paragraphMode ? 'normal' : 'nowrap'};">
                     <span class="${paragraphMode ? '' : 'text-truncate'}" style="${paragraphMode ? 'max-width: calc(100% - 28px); line-height: 1.45;' : 'max-width: 150px;'}">${escapeChipText(item)}</span>
                     <button type="button" class="btn-close" style="font-size: 0.6rem; filter: grayscale(1);" 
-                            onclick="window.removeItemFromAddList(${index})" aria-label="Remove"></button>
+                            onclick="event.stopPropagation(); window.removeItemFromAddList(${index})" aria-label="Remove"></button>
                 </div>
             `).join('');
+        }
+
+        function openEditMaterialItemModal(index) {
+            if (typeof index !== 'number' || !Number.isInteger(index) || index < 0 || index >= currentItemsList.length) return;
+            editingItemIndex = index;
+            if (editMaterialItemInput) editMaterialItemInput.value = currentItemsList[index] || '';
+            editMaterialItemModalInstance = editMaterialItemModalInstance || (editMaterialItemModal ? new bootstrap.Modal(editMaterialItemModal) : null);
+            if (editMaterialItemModalInstance) editMaterialItemModalInstance.show();
+            if (editMaterialItemInput) {
+                window.setTimeout(() => editMaterialItemInput.focus(), 50);
+            }
+        }
+
+        function saveEditedMaterialItem() {
+            if (editingItemIndex === null || editingItemIndex === undefined || editingItemIndex < 0) return;
+            if (!editMaterialItemInput) return;
+            const newValue = editMaterialItemInput.value.trim();
+            if (newValue) {
+                currentItemsList[editingItemIndex] = newValue;
+            } else {
+                currentItemsList.splice(editingItemIndex, 1);
+            }
+            editingItemIndex = null;
+            renderAddedItemsChips();
+            if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
+        }
+
+        function resetEditMaterialItemState() {
+            editingItemIndex = null;
+            if (editMaterialItemInput) editMaterialItemInput.value = '';
         }
 
         function setUploadStatus(message, tone = 'muted') {
@@ -12606,6 +12681,54 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 resetAddMaterialModalState();
             });
         }
+
+        if (editMaterialItemModal) {
+            editMaterialItemModal.addEventListener('hidden.bs.modal', function() {
+                resetEditMaterialItemState();
+            });
+        }
+
+        if (saveItemEditBtn) {
+            saveItemEditBtn.addEventListener('click', function() {
+                saveEditedMaterialItem();
+            });
+        }
+
+        if (editMaterialItemInput) {
+            editMaterialItemInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    saveEditedMaterialItem();
+                } else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
+                }
+            });
+        }
+
+        document.addEventListener('click', function(event) {
+            const chip = event.target.closest('.item-chip-badge');
+            if (chip && chip.dataset && chip.dataset.itemIndex !== undefined) {
+                const itemIndex = Number(chip.dataset.itemIndex);
+                if (!Number.isNaN(itemIndex)) {
+                    openEditMaterialItemModal(itemIndex);
+                }
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' || event.key === 'Escape') {
+                const openModal = document.querySelector('.modal.show');
+                if (!openModal || openModal.id !== 'editMaterialItemModal') return;
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    saveEditedMaterialItem();
+                } else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
+                }
+            }
+        });
 
         function setAddMaterialMode(mode) {
             if (!mode) return;
