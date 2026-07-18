@@ -2816,14 +2816,31 @@
         border: 1px solid rgba(31, 111, 139, 0.16);
         box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
         font-family: inherit;
+        display: flex;
+        flex-direction: column;
     }
 
     .assist-queue-head {
         display: flex;
         justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        color: #0f172a;
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+    }
+
+    .assist-queue-head:hover {
+        opacity: 0.85;
+    }
+
+    .assist-queue-head-content {
+        display: flex;
+        justify-content: space-between;
         align-items: flex-start;
         gap: 1rem;
-        color: #0f172a;
+        flex: 1;
     }
 
     .assist-queue-head span {
@@ -2836,6 +2853,39 @@
     .assist-queue-head .badge {
         background: var(--dash-primary);
         color: #fff;
+    }
+
+    .assist-queue-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: var(--dash-primary);
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: transform 0.3s ease;
+    }
+
+    .assist-queue-panel.collapsed .assist-queue-toggle {
+        transform: rotate(-90deg);
+    }
+
+    .assist-queue-body {
+        display: grid;
+        gap: 0;
+        overflow: hidden;
+        max-height: 500px;
+        transition: max-height 0.3s ease, margin 0.3s ease;
+    }
+
+    .assist-queue-panel.collapsed .assist-queue-body {
+        max-height: 0;
+        overflow: hidden;
+        margin: 0;
     }
 
     .assist-queue-current {
@@ -8910,18 +8960,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <iframe id="assistAssessmentFrame" title="Student assessment"></iframe>
                         </div>
                         <aside id="assistQueuePanel" class="assist-queue-panel d-none" aria-live="polite">
-                            <div class="assist-queue-head">
-                                <div>
-                                    <strong>Assessment Queue</strong>
-                                    <span id="assistQueueProgress">0 of 0 completed</span>
+                            <div class="assist-queue-head" id="assistQueueToggle" role="button" tabindex="0" aria-expanded="true">
+                                <div class="assist-queue-head-content">
+                                    <div>
+                                        <strong>Assessment Queue</strong>
+                                        <span id="assistQueueProgress">0 of 0 completed</span>
+                                    </div>
+                                    <span id="assistQueueCount" class="badge rounded-pill">0</span>
                                 </div>
-                                <span id="assistQueueCount" class="badge rounded-pill">0</span>
+                                <button type="button" class="assist-queue-toggle" id="assistQueueToggleBtn" aria-label="Toggle assessment queue" title="Toggle queue">
+                                    <i class="bi bi-chevron-up"></i>
+                                </button>
                             </div>
-                            <div id="assistQueueCurrent" class="assist-queue-current">No active student</div>
-                            <div id="assistQueueList" class="assist-queue-list"></div>
-                            <button type="button" class="assist-queue-prepare-btn d-none" id="assistPrepareNextBtn">
-                                <i class="bi bi-play-fill"></i> Prepare Next
-                            </button>
+                            <div class="assist-queue-body">
+                                <div id="assistQueueCurrent" class="assist-queue-current">No active student</div>
+                                <div id="assistQueueList" class="assist-queue-list"></div>
+                                <button type="button" class="assist-queue-prepare-btn d-none" id="assistPrepareNextBtn">
+                                    <i class="bi bi-play-fill"></i> Prepare Next
+                                </button>
+                            </div>
                         </aside>
                     `);
                 }
@@ -9013,6 +9070,45 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const hasInProgress = assistQueueState.students.some(s => s.status === 'In Progress');
                 const hasPendingConfirmation = assistQueueState.pendingIndex >= 0;
                 prepareBtn?.classList.toggle('d-none', !assistQueueState.active || !hasWaiting || hasInProgress || hasPendingConfirmation);
+                
+                // Initialize toggle functionality for collapsed state
+                if (assistQueueState.active && !window.__assistQueueToggleInitialized) {
+                    initializeAssistQueueToggle();
+                    window.__assistQueueToggleInitialized = true;
+                }
+            }
+
+            function initializeAssistQueueToggle() {
+                const panel = document.getElementById('assistQueuePanel');
+                const toggle = document.getElementById('assistQueueToggle');
+                const toggleBtn = document.getElementById('assistQueueToggleBtn');
+                
+                if (!panel || !toggle || !toggleBtn) return;
+                
+                // Restore collapsed state from sessionStorage
+                const isCollapsed = sessionStorage.getItem('assistQueueCollapsed') === 'true';
+                if (isCollapsed) {
+                    panel.classList.add('collapsed');
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+                
+                // Toggle collapse/expand
+                function toggleAssistQueue(e) {
+                    if (e && e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+                    if (e && e.preventDefault) e.preventDefault();
+                    
+                    const isCurrentlyCollapsed = panel.classList.toggle('collapsed');
+                    toggle.setAttribute('aria-expanded', !isCurrentlyCollapsed);
+                    sessionStorage.setItem('assistQueueCollapsed', isCurrentlyCollapsed ? 'true' : 'false');
+                }
+                
+                // Add event listeners
+                toggle.addEventListener('click', toggleAssistQueue);
+                toggle.addEventListener('keydown', toggleAssistQueue);
+                toggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleAssistQueue();
+                });
             }
 
             function finishAssistQueueIfDone() {
@@ -9025,6 +9121,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 document.getElementById('assistAssessmentOverlay')?.classList.add('d-none');
                 const frame = document.getElementById('assistAssessmentFrame');
                 if (frame) frame.removeAttribute('src');
+                // Reset toggle state when assessment finishes
+                const panel = document.getElementById('assistQueuePanel');
+                if (panel) {
+                    panel.classList.remove('collapsed');
+                    const toggle = document.getElementById('assistQueueToggle');
+                    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+                }
+                window.__assistQueueToggleInitialized = false;
                 renderAssistQueue();
                 showToast('Assisted assessment queue completed', 'success');
                 return true;
@@ -9118,7 +9222,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 };
                 cancelBtn.onclick = function () {
                     bootstrap.Modal.getInstance(modalEl)?.hide();
+                    // Completely reset the assisted assessment state
+                    assistQueueState.active = false;
+                    assistQueueState.currentIndex = -1;
                     assistQueueState.pendingIndex = -1;
+                    assistQueueState.students = [];
+                    assistQueueState.courseId = null;
+                    assistQueueState.materialId = null;
+                    assistQueueState.courseTitle = '';
+                    assistQueueState.materialTitle = '';
+                    // Hide the overlay and assessment iframe
+                    document.getElementById('assistAssessmentOverlay')?.classList.add('d-none');
+                    const frame = document.getElementById('assistAssessmentFrame');
+                    if (frame) frame.removeAttribute('src');
+                    // Update UI to hide the queue panel
                     renderAssistQueue();
                 };
                 renderAssistQueue();
