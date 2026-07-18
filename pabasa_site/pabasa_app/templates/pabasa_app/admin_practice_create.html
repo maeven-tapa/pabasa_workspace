@@ -146,6 +146,24 @@
     </form>
 </div>
 
+<div class="modal fade" id="practiceModeSwitchConfirmModal" tabindex="-1" aria-labelledby="practiceModeSwitchConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="practiceModeSwitchConfirmModalLabel">Switch Practice Mode?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Changing the practice mode will update the configuration to match the selected mode. Your existing content will be preserved.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-end">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmPracticeModeSwitchBtn">Switch Mode</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{ occupied_levels_map|json_script:"occupied-levels-map" }}
 <script>
 (function () {
@@ -335,6 +353,86 @@
             modeDescription.textContent = 'Choose one of the available game modes before configuring the practice content.';
         }
         updateFormAvailability();
+        updateSummary();
+    }
+
+    const modeSwitchConfirmModalEl = document.getElementById('practiceModeSwitchConfirmModal');
+    let modeSwitchConfirmModal = null;
+    const confirmModeSwitchBtn = document.getElementById('confirmPracticeModeSwitchBtn');
+    let pendingModeSelection = null;
+
+    function ensureModeSwitchModal() {
+        if (!modeSwitchConfirmModal && window.bootstrap && modeSwitchConfirmModalEl) {
+            modeSwitchConfirmModal = new bootstrap.Modal(modeSwitchConfirmModalEl);
+        }
+        return modeSwitchConfirmModal;
+    }
+
+    function getFormState() {
+        const state = {};
+        Array.from(form.elements).forEach(function (element) {
+            if (!element.name || element.disabled || element.type === 'button' || element.type === 'submit' || element.type === 'reset') {
+                return;
+            }
+            if (element.name === modeSelect.name) {
+                return;
+            }
+            if ((element.type === 'checkbox' || element.type === 'radio') && !element.checked) {
+                return;
+            }
+            if (element.name in state) {
+                if (Array.isArray(state[element.name])) {
+                    state[element.name].push(element.value);
+                } else {
+                    state[element.name] = [state[element.name], element.value];
+                }
+            } else {
+                state[element.name] = element.value;
+            }
+        });
+        return state;
+    }
+
+    const initialFormState = JSON.stringify(getFormState());
+
+    function hasUnsavedChanges() {
+        return JSON.stringify(getFormState()) !== initialFormState;
+    }
+
+    function applyModeChange(value) {
+        updateModeSelection(value);
+        updateDifficultyUI();
+        updateSummary();
+        updateFormAvailability();
+    }
+
+    function attemptModeChange(value) {
+        if (value === modeSelect.value) {
+            return;
+        }
+        if (!hasUnsavedChanges()) {
+            applyModeChange(value);
+            return;
+        }
+        pendingModeSelection = value;
+        const modal = ensureModeSwitchModal();
+        if (modal) {
+            modal.show();
+        }
+    }
+
+    if (confirmModeSwitchBtn) {
+        confirmModeSwitchBtn.addEventListener('click', function () {
+            if (!pendingModeSelection) {
+                return;
+            }
+            applyModeChange(pendingModeSelection);
+            pendingModeSelection = null;
+            const modal = ensureModeSwitchModal();
+            if (modal) {
+                modal.hide();
+            }
+        });
     }
 
     function updateDifficultyUI() {
@@ -450,7 +548,7 @@
 
     modeButtons.forEach(function (button) {
         button.addEventListener('click', function () {
-            updateModeSelection(button.getAttribute('data-value'));
+            attemptModeChange(button.getAttribute('data-value'));
         });
     });
 
