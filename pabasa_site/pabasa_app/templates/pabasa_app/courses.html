@@ -1699,6 +1699,11 @@
         box-shadow: 0 10px 18px rgba(15,23,42,0.08);
     }
 
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #itemChipsContainer .badge.selected-item-chip {
+        background: #eff9ff;
+        border-color: #7dd3fc;
+    }
+
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #itemChipsContainer .badge .btn-close {
         cursor: pointer;
     }
@@ -6065,12 +6070,78 @@
 }
 #addMaterialModal #materialType,
 #addMaterialModal #materialTitle,
-#addMaterialModal #itemInput {
+#addMaterialModal #itemInput,
+.course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] #materialType,
+#editMaterialModal #materialType,
+#editMaterialModal #materialTitle,
+#editMaterialModal #itemInput {
     font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
     font-size: 0.96rem;
     font-weight: 700;
     letter-spacing: 0;
     line-height: 1.45;
+}
+.assignment-type-readonly {
+    background: #f5f7fa !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
+    color: #0f172a !important;
+    cursor: default !important;
+    pointer-events: none !important;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
+    background-image: none !important;
+}
+.assignment-type-readonly:disabled {
+    background: #f5f7fa !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
+    color: #0f172a !important;
+    cursor: default !important;
+    opacity: 1 !important;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
+    background-image: none !important;
+}
+.assignment-type-readonly:hover,
+.assignment-type-readonly:focus,
+.assignment-type-readonly:active {
+    background: #f5f7fa !important;
+    border-color: rgba(148, 163, 184, 0.35) !important;
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
+}
+#addMaterialModal .teacher-field > .position-relative > .bi-lock-fill,
+.course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .teacher-field > .position-relative > .bi-lock-fill {
+    color: rgba(71,85,105,0.75) !important;
+}
+.assignment-type-readonly:not(:disabled) {
+    cursor: default !important;
+}
+#editMaterialModal #materialType,
+#editMaterialModal #editMaterialUse {
+    background: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a;
+    cursor: default;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(148,163,184,0.3);
+}
+#editMaterialModal #materialType:disabled,
+#editMaterialModal #editMaterialUse:disabled {
+    background: #e2e8f0 !important;
+    color: #0f172a;
+    cursor: default;
+    opacity: 1;
+    box-shadow: inset 0 0 0 1px rgba(148,163,184,0.3);
+}
+#editMaterialModal #materialType:hover,
+#editMaterialModal #materialType:focus,
+#editMaterialModal #materialType:active,
+#editMaterialModal #editMaterialUse:hover,
+#editMaterialModal #editMaterialUse:focus,
+#editMaterialModal #editMaterialUse:active {
+    border-color: #94a3b8 !important;
+    box-shadow: none !important;
+}
+#editMaterialModal #materialType:not(:disabled),
+#editMaterialModal #editMaterialUse:not(:disabled) {
+    cursor: default;
 }
 #addMaterialModal #materialTitle::placeholder,
 #addMaterialModal #itemInput::placeholder {
@@ -6111,6 +6182,63 @@
     letter-spacing: 0.01em;
     margin:4px;
     box-shadow: 0 8px 22px rgba(31,111,139,0.06);
+    transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+#addMaterialModal #itemChipsContainer .badge.item-chip-badge:hover {
+    background: rgba(56,189,248,0.08);
+    border-color: rgba(56,189,248,0.35);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(31,111,139,0.1);
+    cursor: pointer !important;
+}
+#addMaterialModal #itemChipsContainer .item-chip-edit-icon,
+.course-inline-dialog-host #itemChipsContainer .item-chip-edit-icon {
+    display: none;
+    visibility: hidden;
+    opacity: 0;
+    font-size: 0.9rem;
+    color: rgba(15,23,42,0.68);
+    transform: translateX(-6px) scale(0.98);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+@media (hover: hover) {
+    #addMaterialModal #itemChipsContainer .badge.item-chip-badge:hover .item-chip-edit-icon,
+    .course-inline-dialog-host #itemChipsContainer .badge.item-chip-badge:hover .item-chip-edit-icon,
+    #addMaterialModal #itemChipsContainer .badge.selected-item-chip .item-chip-edit-icon,
+    .course-inline-dialog-host #itemChipsContainer .badge.selected-item-chip .item-chip-edit-icon {
+        display: inline-flex;
+        visibility: visible;
+        opacity: 1;
+        margin-right: 0.35rem;
+        transform: translateX(0) scale(1);
+    }
+
+    #addMaterialModal #itemChipsContainer .badge.item-chip-badge:hover,
+    .course-inline-dialog-host #itemChipsContainer .badge.item-chip-badge:hover {
+        background: rgba(56,189,248,0.08);
+        border-color: rgba(56,189,248,0.35);
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(31,111,139,0.1);
+        cursor: pointer !important;
+    }
+}
+
+/* Always-visible edit icon for the actively selected/edited chip (works on touch devices too) */
+#addMaterialModal #itemChipsContainer .badge.selected-item-chip .item-chip-edit-icon,
+.course-inline-dialog-host #itemChipsContainer .badge.selected-item-chip .item-chip-edit-icon {
+    display: inline-flex;
+    visibility: visible;
+    opacity: 1;
+    margin-right: 0.35rem;
+    transform: translateX(0) scale(1);
+}
+
+#addMaterialModal #itemChipsContainer .badge.selected-item-chip,
+.course-inline-dialog-host #itemChipsContainer .badge.selected-item-chip {
+    background: rgba(56,189,248,0.16);
+    border-color: rgba(56,189,248,0.45);
+    box-shadow: 0 8px 18px rgba(59,130,246,0.06);
 }
 #addMaterialModal #itemChipsContainer .btn-close { width: 18px; height:18px; opacity:0.6; filter: none; }
 #addMaterialModal .custom-device-dropdown {
@@ -7040,6 +7168,12 @@ body.dark-theme #addMaterialModal .badge[style*="background: #fff"] {
     color: #f8fafc !important;
 }
 
+body.dark-theme #addMaterialModal #itemChipsContainer .badge.item-chip-badge:hover {
+    background: rgba(56,189,248,0.12) !important;
+    border-color: rgba(56,189,248,0.35) !important;
+    box-shadow: 0 12px 24px rgba(15,23,42,0.16);
+}
+
 body.dark-theme #addMaterialModal .modal-header > .btn-close,
 body.dark-theme #addCourseStudentModal .modal-header > .btn-close,
 body.dark-theme #materialUploadSelectModal .modal-header > .btn-close,
@@ -7196,7 +7330,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 </div>
                                 <div class="input-group mb-2">
                                     <textarea id="itemInput" class="form-control border-light shadow-sm" placeholder="Add word or phrase..." rows="1" style="border-radius: 12px 0 0 12px; min-height: 44px; resize: vertical;"></textarea>
-                                    <button class="btn btn-primary px-3" type="button" id="addItemBtn">
+                                    <button class="btn btn-primary px-3" type="button" id="addItemBtn" style="border-radius: 0 12px 12px 0; min-height: 44px; width: 52px; display: flex; align-items: center; justify-content: center;">
                                         <i class="bi bi-plus-lg"></i>
                                     </button>
                                 </div>
@@ -7221,11 +7355,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <div class="teacher-field">
                                 <label class="form-label fw-bold small text-dark mb-1" for="materialType">Assignment Type</label>
                                 <div class="position-relative">
-                                    <select id="materialType" class="form-select border-light shadow-sm" style="appearance: none; padding-right: 2.5rem; min-height: 44px;">
+                                    <select id="materialType" class="form-select border-light shadow-sm assignment-type-readonly" style="appearance: none; padding-right: 2.5rem; min-height: 44px;" disabled aria-disabled="true">
                                         <option value="assessment">Assessment Only</option>
                                     </select>
-                                    <i class="bi bi-chevron-down position-absolute top-50 end-0 translate-middle-y me-3 text-muted pointer-events-none" style="font-size: 0.8rem;"></i>
+                                    <i class="bi bi-lock-fill position-absolute top-50 end-0 translate-middle-y me-3 text-muted" style="font-size: 0.88rem; pointer-events: none;"></i>
                                 </div>
+                                <div class="form-text small text-muted">This assignment type is fixed and cannot be changed.</div>
                             </div>
 
                             <div class="teacher-field">
@@ -7273,30 +7408,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <button type="button" class="btn btn-primary px-4 py-2 shadow-sm fw-bold" id="submitMaterial" style="border-radius: 12px; min-height: 48px;">
                     <i class="bi bi-cloud-arrow-up-fill me-2"></i>Save Material
                 </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="editMaterialItemModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
-            <div class="modal-header px-4 pt-4 pb-0 border-0">
-                <div>
-                    <h5 class="fw-bold mb-1">Edit Item</h5>
-                    <p class="text-muted small mb-0">Update the selected material item below.</p>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body px-4 pb-4">
-                <div class="mb-3">
-                    <label for="editMaterialItemInput" class="form-label small fw-semibold">Item content</label>
-                    <input id="editMaterialItemInput" type="text" class="form-control border-light shadow-sm" placeholder="Update item text" autocomplete="off" style="border-radius: 12px; min-height: 44px;">
-                </div>
-            </div>
-            <div class="modal-footer px-4 pt-0 pb-4 border-0">
-                <button type="button" class="btn btn-outline-secondary px-4 py-2 shadow-sm fw-bold" id="cancelItemEditBtn">Cancel</button>
-                <button type="button" class="btn btn-primary px-4 py-2 shadow-sm fw-bold" id="saveItemEditBtn">Save Changes</button>
             </div>
         </div>
     </div>
@@ -12169,17 +12280,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const itemInput = document.getElementById('itemInput');
         const addItemBtn = document.getElementById('addItemBtn');
         const addedItemsList = document.getElementById('addedItemsList');
-        const editMaterialItemModal = document.getElementById('editMaterialItemModal');
-        const editMaterialItemInput = document.getElementById('editMaterialItemInput');
-        const saveItemEditBtn = document.getElementById('saveItemEditBtn');
-        const cancelItemEditBtn = document.getElementById('cancelItemEditBtn');
         const materialTypeSelect = document.getElementById('materialType');
         const materialLanguageSelect = document.getElementById('materialLanguage');
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const randomizeOrderCheckbox = document.getElementById('randomizeOrderToggle');
         const addMaterialValidationError = document.getElementById('amValidationError');
         let editingItemIndex = null;
-        let editMaterialItemModalInstance = null;
         const scheduleFieldDiv = document.getElementById('scheduleField');
         const scheduleDateTimeInput = document.getElementById('scheduleDateTime');
         const submitMaterialBtn = document.getElementById('submitMaterial');
@@ -12438,11 +12544,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     selectEl.classList.add('single-option-select');
                     if (count === 1) selectEl.value = opts[0].value;
                     const parent = selectEl.parentElement || selectEl.parentNode;
-                    if (parent && !parent.querySelector('.material-type-note')) {
-                        const note = document.createElement('div');
-                        note.className = 'form-text small text-muted material-type-note';
-                        note.textContent = (count === 1) ? `${opts[0].text} only` : 'Assessment only';
-                        parent.appendChild(note);
+                    if (parent) {
+                        const existingNote = parent.querySelector('.material-type-note');
+                        if (existingNote) existingNote.remove();
+                        if (selectEl.id !== 'materialType' && !parent.querySelector('.material-type-note')) {
+                            const note = document.createElement('div');
+                            note.className = 'form-text small text-muted material-type-note';
+                            note.textContent = (count === 1) ? `${opts[0].text} only` : 'Assessment only';
+                            parent.appendChild(note);
+                        }
                     }
                 } else {
                     selectEl.disabled = false;
@@ -12589,30 +12699,78 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
 
             const paragraphMode = currentItemsAreParagraph;
-            chipsContainer.innerHTML = normalizedItems.map((item, index) => `
-                <div class="badge item-chip-badge d-flex align-items-${paragraphMode ? 'start' : 'center'} gap-2 p-2 px-3 shadow-sm border ${paragraphMode ? 'w-100 justify-content-between text-start' : ''}"
-                     draggable="true"
-                     data-item-index="${index}"
-                     role="button"
-                     tabindex="0"
-                     aria-label="Edit item"
-                     style="background: #fff; color: #1e293b; border-color: #e2e8f0; border-radius: 10px; font-weight: 700; font-size: 0.85rem; border-left: 3px solid var(--dash-primary) !important; white-space: ${paragraphMode ? 'normal' : 'nowrap'}; cursor: grab;">
-                    <span class="${paragraphMode ? '' : 'text-truncate'}" style="${paragraphMode ? 'max-width: calc(100% - 28px); line-height: 1.45;' : 'max-width: 150px;'}">${escapeChipText(item)}</span>
-                    <button type="button" class="btn-close" style="font-size: 0.6rem; filter: grayscale(1);" 
-                            onclick="event.stopPropagation(); window.removeItemFromAddList(${index})" aria-label="Remove"></button>
-                </div>
-            `).join('');
+            chipsContainer.innerHTML = normalizedItems.map((item, index) => {
+                const selectedClass = (editingItemIndex === index) ? ' selected-item-chip' : '';
+                return `
+                    <div class="badge item-chip-badge${selectedClass} d-flex align-items-${paragraphMode ? 'start' : 'center'} gap-2 p-2 px-3 shadow-sm border ${paragraphMode ? 'w-100 justify-content-between text-start' : ''}"
+                         draggable="true"
+                         data-item-index="${index}"
+                         role="button"
+                         tabindex="0"
+                         aria-label="Edit item"
+                         style="background: #fff; color: #1e293b; border-color: #e2e8f0; border-radius: 10px; font-weight: 700; font-size: 0.85rem; border-left: 3px solid var(--dash-primary) !important; white-space: ${paragraphMode ? 'normal' : 'nowrap'}; cursor: grab;">
+                        <i class="bi bi-pencil item-chip-edit-icon" aria-hidden="true"></i>
+                        <span class="${paragraphMode ? '' : 'text-truncate'}" style="${paragraphMode ? 'max-width: calc(100% - 28px); line-height: 1.45;' : 'max-width: 150px;'}">${escapeChipText(item)}</span>
+                        <button type="button" class="btn-close" style="font-size: 0.6rem; filter: grayscale(1);" 
+                                onclick="event.stopPropagation(); window.removeItemFromAddList(${index})" aria-label="Remove"></button>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function openEditMaterialItemModal(index) {
+        function updateItemInputActionState() {
+            if (!addItemBtn) return;
+            if (editingItemIndex !== null && editingItemIndex !== undefined) {
+                addItemBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+            } else {
+                addItemBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+            }
+        }
+
+        function setMaterialItemEditMode(index) {
             if (typeof index !== 'number' || !Number.isInteger(index) || index < 0 || index >= currentItemsList.length) return;
             editingItemIndex = index;
-            if (editMaterialItemInput) editMaterialItemInput.value = currentItemsList[index] || '';
-            editMaterialItemModalInstance = editMaterialItemModalInstance || (editMaterialItemModal ? new bootstrap.Modal(editMaterialItemModal) : null);
-            if (editMaterialItemModalInstance) editMaterialItemModalInstance.show();
-            if (editMaterialItemInput) {
-                window.setTimeout(() => editMaterialItemInput.focus(), 50);
+            if (itemInput) {
+                itemInput.value = currentItemsList[index] || '';
+                resetDetectedParagraphState(isParagraphInput(itemInput.value));
+                itemInput.placeholder = 'Edit item content...';
+                itemInput.focus();
             }
+            updateItemInputActionState();
+            renderAddedItemsChips();
+        }
+
+        function clearMaterialItemEditMode() {
+            editingItemIndex = null;
+            if (itemInput) {
+                itemInput.value = '';
+                itemInput.placeholder = 'Add word or phrase...';
+                resetDetectedParagraphState(false);
+            }
+            updateItemInputActionState();
+            renderAddedItemsChips();
+        }
+
+        function saveOrAddCurrentItem() {
+            if (editingItemIndex !== null && editingItemIndex !== undefined) {
+                if (!itemInput) return;
+                const newValue = itemInput.value.trim();
+                if (newValue) {
+                    currentItemsList[editingItemIndex] = newValue;
+                } else {
+                    currentItemsList.splice(editingItemIndex, 1);
+                }
+                editingItemIndex = null;
+                if (itemInput) {
+                    itemInput.value = '';
+                    resetDetectedParagraphState(false);
+                }
+                updateItemInputActionState();
+                renderAddedItemsChips();
+                if (itemInput) itemInput.focus();
+                return;
+            }
+            addCurrentInputToItems();
         }
 
         function swapCurrentItemIndices(fromIndex, toIndex) {
@@ -12666,25 +12824,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         }
 
-        function saveEditedMaterialItem() {
-            if (editingItemIndex === null || editingItemIndex === undefined || editingItemIndex < 0) return;
-            if (!editMaterialItemInput) return;
-            const newValue = editMaterialItemInput.value.trim();
-            if (newValue) {
-                currentItemsList[editingItemIndex] = newValue;
-            } else {
-                currentItemsList.splice(editingItemIndex, 1);
-            }
-            editingItemIndex = null;
-            renderAddedItemsChips();
-            if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
-        }
-
-        function resetEditMaterialItemState() {
-            editingItemIndex = null;
-            if (editMaterialItemInput) editMaterialItemInput.value = '';
-        }
-
         function setUploadStatus(message, tone = 'muted') {
             if (!materialUploadStatus) return;
             materialUploadStatus.classList.remove('d-none', 'text-danger', 'text-success', 'text-muted', 'text-warning');
@@ -12708,7 +12847,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             currentItemsList = [];
             resetDetectedParagraphState(false);
-            renderAddedItemsChips();
+            clearMaterialItemEditMode();
             if (materialFileInput) materialFileInput.value = '';
             setUploadStatus('');
 
@@ -12751,12 +12890,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         }
 
-        if (editMaterialItemModal) {
-            editMaterialItemModal.addEventListener('hidden.bs.modal', function() {
-                resetEditMaterialItemState();
-            });
-        }
-
         const itemChipsContainer = getActiveItemChipsContainer();
         if (itemChipsContainer && !itemChipsContainer.dataset.dragBound) {
             itemChipsContainer.dataset.dragBound = 'true';
@@ -12767,50 +12900,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             itemChipsContainer.addEventListener('dragend', handleItemChipDragEnd);
         }
 
-        if (saveItemEditBtn) {
-            saveItemEditBtn.addEventListener('click', function() {
-                saveEditedMaterialItem();
-            });
-        }
-
-        if (editMaterialItemInput) {
-            editMaterialItemInput.addEventListener('keydown', function(event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    saveEditedMaterialItem();
-                } else if (event.key === 'Escape') {
-                    event.preventDefault();
-                    if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
-                }
-            });
-        }
-
-        if (cancelItemEditBtn) {
-            cancelItemEditBtn.addEventListener('click', function() {
-                if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
-            });
-        }
-
         document.addEventListener('click', function(event) {
             const chip = event.target.closest('.item-chip-badge');
             if (chip && chip.dataset && chip.dataset.itemIndex !== undefined) {
                 const itemIndex = Number(chip.dataset.itemIndex);
                 if (!Number.isNaN(itemIndex)) {
-                    openEditMaterialItemModal(itemIndex);
-                }
-            }
-        });
-
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter' || event.key === 'Escape') {
-                const openModal = document.querySelector('.modal.show');
-                if (!openModal || openModal.id !== 'editMaterialItemModal') return;
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    saveEditedMaterialItem();
-                } else if (event.key === 'Escape') {
-                    event.preventDefault();
-                    if (editMaterialItemModalInstance) editMaterialItemModalInstance.hide();
+                    setMaterialItemEditMode(itemIndex);
                 }
             }
         });
@@ -13393,7 +13488,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         window.removeItemFromAddList = function(index) {
+            if (typeof index !== 'number' || !Number.isInteger(index) || index < 0 || index >= currentItemsList.length) return;
             currentItemsList.splice(index, 1);
+            if (editingItemIndex === index) {
+                clearMaterialItemEditMode();
+                return;
+            }
+            if (editingItemIndex !== null && editingItemIndex !== undefined && editingItemIndex > index) {
+                editingItemIndex -= 1;
+            }
             renderAddedItemsChips();
         };
 
@@ -13463,15 +13566,23 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         if (addItemBtn && itemInput) {
             addItemBtn.addEventListener('click', function() {
-                addCurrentInputToItems();
+                saveOrAddCurrentItem();
             });
             itemInput.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && (!isParagraphInput(itemInput.value) || e.ctrlKey || e.metaKey)) {
                     e.preventDefault();
                     addItemBtn.click();
+                } else if (e.key === 'Escape' && editingItemIndex !== null && editingItemIndex !== undefined) {
+                    e.preventDefault();
+                    clearMaterialItemEditMode();
                 }
             });
         }
+        document.addEventListener('click', function(event) {
+            if (editingItemIndex === null || editingItemIndex === undefined) return;
+            if (event.target.closest('#itemInput') || event.target.closest('#addItemBtn') || event.target.closest('.item-chip-badge')) return;
+            clearMaterialItemEditMode();
+        });
 
         function updateUploadSelectionSummary() {
             if (uploadSelectionSummary) {
