@@ -2526,15 +2526,53 @@
 
     #courseDetailModal #btnAddMaterialToCourse,
     #courseDetailModal #materialsPane .course-readings-add-btn {
-        background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-soft)) !important;
-        border: none !important;
-        border-radius: 10px !important;
-        box-shadow: 0 8px 16px rgba(31, 111, 139, 0.16) !important;
+        align-items: center;
+        background: linear-gradient(135deg, var(--dash-primary) 0%, var(--dash-primary-soft) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.26) !important;
+        border-radius: 999px !important;
+        box-shadow: 0 6px 14px rgba(31, 111, 139, 0.16) !important;
         color: #fff !important;
-        font-size: 0.82rem !important;
+        display: inline-flex;
+        font-size: 0.8rem !important;
         font-weight: 700 !important;
-        min-height: 44px !important;
-        padding: 0.45rem 0.9rem !important;
+        gap: 0.45rem;
+        justify-content: center;
+        letter-spacing: 0.01em;
+        line-height: 1;
+        min-height: 38px !important;
+        padding: 0.5rem 0.95rem !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, background 0.2s ease;
+        white-space: nowrap;
+    }
+
+    #courseDetailModal #btnAddMaterialToCourse:hover,
+    #courseDetailModal #materialsPane .course-readings-add-btn:hover {
+        background: linear-gradient(135deg, #2e8aa7 0%, #58b7cf 100%) !important;
+        box-shadow: 0 10px 18px rgba(31, 111, 139, 0.22) !important;
+        filter: brightness(1.02);
+        transform: translateY(-1px);
+    }
+
+    #courseDetailModal #btnAddMaterialToCourse:active,
+    #courseDetailModal #materialsPane .course-readings-add-btn:active {
+        background: linear-gradient(135deg, #286f86 0%, #3f8fa8 100%) !important;
+        box-shadow: 0 4px 10px rgba(31, 111, 139, 0.16) !important;
+        filter: brightness(0.97);
+        transform: translateY(0);
+    }
+
+    #courseDetailModal #btnAddMaterialToCourse i,
+    #courseDetailModal #materialsPane .course-readings-add-btn i {
+        font-size: 0.95rem;
+    }
+
+    @media (max-width: 576px) {
+        #courseDetailModal #btnAddMaterialToCourse,
+        #courseDetailModal #materialsPane .course-readings-add-btn {
+            justify-content: center;
+            padding: 0.55rem 1rem !important;
+            width: 100%;
+        }
     }
 
     #courseDetailModal #materialsPane .section-panel.assigned-section {
@@ -5773,7 +5811,10 @@
                                         <div id="courseMaterialsListView">
                                             <div class="mb-3 course-readings-header">
                                                 <h6 class="reading-section-title mb-0">Student Reading Materials</h6>
-                                                <button class="btn btn-sm btn-outline-primary course-readings-add-btn" id="btnAddMaterialToCourse">Add Material</button>
+                                                <button class="course-readings-add-btn" id="btnAddMaterialToCourse" type="button">
+                                                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                                    <span>Add Material</span>
+                                                </button>
                                             </div>
                                             <div id="courseDetailMaterials" class="mb-3">
                                                 <div id="courseAttachedMaterials" class="attached-materials mb-3"></div>

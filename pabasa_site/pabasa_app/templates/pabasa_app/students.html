@@ -582,6 +582,57 @@
         outline: none;
     }
 
+    .student-directory-controls .student-export-btn {
+        align-items: center;
+        background: rgba(239, 248, 252, 0.95);
+        border: 1px solid rgba(22, 95, 143, 0.18);
+        border-radius: 999px;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        gap: 0.55rem;
+        justify-content: center;
+        line-height: 1;
+        min-height: 40px;
+        padding: 0.5rem 0.95rem;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+        white-space: nowrap;
+    }
+
+    .student-directory-controls .student-export-btn:hover:not(:disabled) {
+        background: rgba(226, 242, 248, 0.98);
+        border-color: rgba(22, 95, 143, 0.28);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.09);
+        color: var(--dash-primary-deep);
+        transform: translateY(-1px);
+    }
+
+    .student-directory-controls .student-export-btn:focus-visible {
+        box-shadow: 0 0 0 0.2rem rgba(22, 95, 143, 0.2), 0 12px 24px rgba(15, 23, 42, 0.09);
+        outline: none;
+    }
+
+    .student-directory-controls .student-export-btn:active:not(:disabled) {
+        background: rgba(214, 235, 243, 0.98);
+        box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+        transform: translateY(0);
+    }
+
+    .student-directory-controls .student-export-btn i {
+        color: var(--dash-primary);
+        font-size: 0.95rem;
+        line-height: 1;
+    }
+
+    .student-directory-controls .student-export-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+        box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+    }
+
     .student-filter-wrap {
         position: relative;
         min-width: 0;
@@ -1169,8 +1220,9 @@
                             </button>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="exportStudentsBtn" disabled>
-                        <i class="bi bi-filetype-xlsx me-1" aria-hidden="true"></i>Export
+                    <button type="button" class="btn btn-sm student-export-btn" id="exportStudentsBtn" disabled>
+                        <i class="bi bi-filetype-xlsx" aria-hidden="true"></i>
+                        <span>Export</span>
                     </button>
                 </div>
             </div>
