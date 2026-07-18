@@ -8,6 +8,7 @@
         let mode = 'word'; 
         if (shell.classList.contains('reader-sentence')) mode = 'sentence';
         if (shell.classList.contains('reader-paragraph')) mode = 'paragraph';
+        if (shell.classList.contains('reader-vowel')) mode = 'vowel';
 
         const readingWord = document.getElementById("readingWord");
         const counter = document.getElementById("counter");

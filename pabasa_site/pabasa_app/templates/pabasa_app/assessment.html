@@ -328,6 +328,7 @@
     .type-word .type-icon { background: #1f6f8b; }
     .type-sentence .type-icon { background: #b95f44; }
     .type-paragraph .type-icon { background: #7a8b5f; }
+    .type-vowel .type-icon { background: #8b5cf6; }
 
     .type-info {
         display: flex;
@@ -618,7 +619,7 @@
         const studentClassesKey = "pabasa_student_joined_classes";
         const readingsStorageKey = "pabasa_class_readings";
         const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
-        const materialTypes = ["word", "sentence", "paragraph"];
+        const materialTypes = ["word", "sentence", "paragraph", "vowel"];
         const selectedClassCode = (new URLSearchParams(window.location.search).get("code") || "").trim().toUpperCase();
 
         const escapeHtml = (value) => {
@@ -966,9 +967,9 @@
                 const sortedWeeks = Object.keys(groups).sort((a, b) => assignedWeekSortValue(a) - assignedWeekSortValue(b));
 
                 const contentHtml = (() => {
-                    const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}" };
-                    const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text' };
-                    const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading' };
+                    const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}", vowel: "{% url 'reading_vowel_page' %}" };
+                    const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text', vowel: 'bi-soundwave' };
+                    const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading', vowel: 'Vowel Reading' };
                     const rowWeekGroups = chunkWeeksByRow(sortedWeeks, grid.clientWidth || grid.offsetWidth || window.innerWidth || 0);
                     const renderedRowGroups = rowWeekGroups.map((weekGroup) => {
                         const maxRows = weekGroup.reduce((max, week) => Math.max(max, groups[week].length), 0);

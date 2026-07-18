@@ -265,6 +265,7 @@ class Section(models.Model):
 class Assessment(models.Model):
     ASSESSMENT_TYPE_CHOICES = [
         ("word", "Word"),
+        ("vowel", "Vowel"),
         ("sentence", "Sentence"),
         ("paragraph", "Paragraph"),
     ]
@@ -839,6 +840,7 @@ class Practice(models.Model):
 class Material(models.Model):
     ITEM_TYPE_CHOICES = [
         ("word", "Word"),
+        ("vowel", "Vowel"),
         ("sentence", "Sentence"),
         ("paragraph", "Paragraph"),
     ]

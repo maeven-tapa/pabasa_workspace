@@ -26,6 +26,56 @@ from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
 
+class ClassMaterialsApiTests(TestCase):
+    def test_get_class_materials_groups_vowel_materials_under_vowel_bucket(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-1001",
+            role="teacher",
+            first_name="Tina",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="teacher1001@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Class A",
+            class_code="CLS-A1001",
+            subject="Reading",
+            is_active=True,
+        )
+        material = Material.objects.create(
+            title="Vowel Drill",
+            item_type="vowel",
+            content_text="a\ne",
+            content_json={"items": ["a", "e"]},
+            type="assessment",
+            status="published",
+            section=section,
+            teacher=teacher,
+            is_active=True,
+        )
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session.save()
+
+        response = self.client.get(reverse("get_class_materials"), {"class_code": section.class_code})
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("vowel", data["materials"])
+        self.assertEqual(len(data["materials"]["vowel"]), 1)
+        self.assertEqual(data["materials"]["vowel"][0]["id"], f"material-{material.id}")
+        self.assertEqual(data["materials"]["vowel"][0]["item_type"], "vowel")
+
+
 class DashboardAchievementBadgeTests(TestCase):
     def test_dashboard_template_contains_practice_star_achievement(self):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "dashboard.html"
@@ -47,6 +97,15 @@ class DashboardGreetingNameTests(TestCase):
 
     def test_falls_back_to_student_when_no_name_data_exists(self):
         self.assertEqual(_derive_dashboard_greeting_name(first_name="", full_name=""), "Student")
+
+
+class AssessmentPageTemplateTests(TestCase):
+    def test_assessment_page_includes_vowel_material_support(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "assessment.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn('const materialTypes = ["word", "sentence", "paragraph", "vowel"];', content)
+        self.assertIn('vowel: "{% url \'reading_vowel_page\' %}"', content)
 
 
 class AssessmentResultsPageTests(TestCase):
@@ -201,6 +260,21 @@ class AdaptedReadingLevelTests(TestCase):
         self.assertEqual(result["final_score"], 68)
         self.assertEqual(result["crla_classification"], "High Emerging Readers")
         self.assertEqual(result["adapted_level_score"], 0.68)
+
+    def test_assessment_score_payload_uses_vowel_multiplier_for_vc_materials(self):
+        result = _assessment_score_payload({
+            "scores": {
+                "fluency_score": 84,
+                "accuracy": 84,
+                "pronunciation_score": 84,
+                "time_score": 0,
+                "total_score": 84,
+            },
+            "assessment_type": "vc",
+        })
+
+        self.assertEqual(result["osps_multiplier"], 0.85)
+        self.assertEqual(result["final_score"], 68)
 
 
 class CentralizedAssessmentScoringTests(TestCase):
@@ -1410,6 +1484,53 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(payload["created_count"], 0)
         self.assertEqual(payload["material_ids"], [existing.id])
         self.assertEqual(Material.objects.filter(source_type="shared", title="Shared reading").count(), 1)
+
+    def test_add_reading_material_saves_vowel_and_vc_items_as_vowel(self):
+        user = User.objects.create(
+            custom_id="TCH-0007",
+            role="teacher",
+            first_name="Vowel",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="vowel@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Vowel reading",
+                "content": "a\nbe\nmi",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "assessment",
+                "class_code": "",
+                "language": "English",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+
+        material = Material.objects.latest("id")
+        self.assertEqual(material.item_type, "vowel")
+        self.assertEqual(material.content_json.get("items"), ["a", "be", "mi"])
 
     def test_add_reading_material_saves_multiple_paragraph_items(self):
         user = User.objects.create(

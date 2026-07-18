@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, Optional
 
 
@@ -29,6 +30,31 @@ ADAPTED_READING_LEVEL_DISCLAIMER = (
     "Great job completing your reading assessment! Your results show your current reading performance. "
     "Keep practicing to improve your reading skills."
 )
+
+
+def normalize_assessment_type(assessment_type: Any) -> str:
+    normalized_type = str(assessment_type or "").strip().lower()
+    if not normalized_type:
+        return ""
+
+    aliases = {
+        "vowel": "vowel",
+        "vowels": "vowel",
+        "vc": "vowel",
+        "cv": "vowel",
+        "vowel-consonant": "vowel",
+        "vowel_consonant": "vowel",
+        "consonant-vowel": "vowel",
+        "consonant_vowel": "vowel",
+        "vowel consonant": "vowel",
+    }
+    if normalized_type in aliases:
+        return aliases[normalized_type]
+    if normalized_type.startswith("vowel"):
+        return "vowel"
+    if normalized_type in {"word", "sentence", "paragraph"}:
+        return normalized_type
+    return normalized_type
 
 
 def clamp_score(value: Any, default: float = 0.0) -> float:
@@ -81,12 +107,12 @@ def crla_classification(total_score: Any) -> str:
 
 
 def osps_multiplier(assessment_type: Any) -> float:
-    normalized_type = str(assessment_type or "").strip().lower()
-    if normalized_type.startswith("vowel"):
+    normalized_type = normalize_assessment_type(assessment_type)
+    if normalized_type == "vowel":
         return OSPS_MULTIPLIERS["vowel"]
-    if normalized_type.startswith("sentence"):
+    if normalized_type == "sentence":
         return OSPS_MULTIPLIERS["sentence"]
-    if normalized_type.startswith("paragraph"):
+    if normalized_type == "paragraph":
         return OSPS_MULTIPLIERS["paragraph"]
     return OSPS_MULTIPLIERS["word"]
 
@@ -132,7 +158,7 @@ def adapted_reading_level_from_attempts(attempts: Optional[list[Dict[str, Any]]]
     for attempt in attempts or []:
         if not isinstance(attempt, dict):
             continue
-        assessment_type = str(attempt.get("assessment_type") or attempt.get("type") or attempt.get("mode") or "").strip().lower()
+        assessment_type = normalize_assessment_type(attempt.get("assessment_type") or attempt.get("type") or attempt.get("mode") or "")
         total_score = attempt.get("overall_raw_score")
         if total_score is None:
             total_score = attempt.get("raw_total_score")
@@ -167,7 +193,7 @@ def calculate_time_score(correct_words: Any, duration_seconds: Any, assessment_t
     if word_count <= 0 or duration <= 0:
         return 0.0
 
-    normalized_type = str(assessment_type or "").strip().lower()
+    normalized_type = normalize_assessment_type(assessment_type)
     target_wpm = {"vowel": 30, "word": 45, "sentence": 65, "paragraph": 85}.get(normalized_type, 45)
     if target_wpm <= 0:
         return 0.0
@@ -180,11 +206,11 @@ def calculate_time_score(correct_words: Any, duration_seconds: Any, assessment_t
 
 def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     raw = data.get("scores") if isinstance(data.get("scores"), dict) else data
-    assessment_type = str(
+    assessment_type = normalize_assessment_type(
         data.get("assessment_type") or data.get("type") or data.get("mode") or
         raw.get("assessment_type") or raw.get("type") or raw.get("mode") or
         ""
-    ).strip().lower()
+    )
 
     raw_metrics = data.get("raw_metrics") if isinstance(data.get("raw_metrics"), dict) else None
     if raw_metrics is None:

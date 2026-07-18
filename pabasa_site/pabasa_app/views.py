@@ -66,6 +66,7 @@ from .scoring import (
     clamp_score,
     crla_classification,
     normalize_adapted_level_score,
+    normalize_assessment_type,
     osps_multiplier,
     performance_interpretation,
 )
@@ -4606,6 +4607,10 @@ def reading_sentence_page(request):
 def reading_para_page(request):
     return render(request, 'pabasa_app/reading_para_page.html', _dashboard_context(request))
 
+@xframe_options_sameorigin
+def reading_vowel_page(request):
+    return render(request, 'pabasa_app/reading_vowel_page.html', _dashboard_context(request))
+
 
 @csrf_protect
 @require_http_methods(["POST"])
@@ -7883,7 +7888,7 @@ def get_class_materials(request):
         combined.sort(key=lambda tup: getattr(tup[1], 'created_at', timezone.now()), reverse=True)
 
         all_materials_flat = []
-        materials = {'word': [], 'sentence': [], 'paragraph': []}
+        materials = {'word': [], 'sentence': [], 'paragraph': [], 'vowel': []}
 
         for kind, obj in combined:
             if kind == 'material':
@@ -8035,8 +8040,13 @@ def get_class_materials(request):
                     'language': '',
                 }
 
-            if item.get('item_type') in materials:
-                materials[item.get('item_type')].append(item)
+            item_type = str(item.get('item_type') or '').strip().lower()
+            if item_type in materials:
+                materials[item_type].append(item)
+            elif item_type in {'words', 'vowels'}:
+                materials['word' if item_type == 'words' else 'vowel'].append(item)
+            else:
+                materials.setdefault(item_type, []).append(item)
             all_materials_flat.append(item)
         
         logger.debug(f"Retrieved materials for class {class_code}: {sum(len(m) for m in materials.values())} total")
@@ -9057,9 +9067,33 @@ def extract_reading_material_file(request):
         })
 
 
+def _looks_like_vowel_material(text):
+    if not text:
+        return False
+
+    stripped = text.strip()
+    if not stripped:
+        return False
+
+    items = []
+    if '\n' in stripped:
+        items = [line.strip() for line in stripped.splitlines() if line.strip()]
+    else:
+        items = re.findall(r"\b[\w']+\b", stripped, flags=re.UNICODE)
+
+    if not items:
+        return False
+
+    vowel_item_pattern = re.compile(r'^[aeiou]$|^[b-df-hj-np-tv-z][aeiou]$', re.IGNORECASE)
+    return all(vowel_item_pattern.match(item) for item in items)
+
+
 def _detect_material_type(text, requested_reading_type=''):
-    normalized_type = (requested_reading_type or '').strip().lower()
-    if normalized_type in {'word', 'sentence', 'paragraph'}:
+    if _looks_like_vowel_material(text):
+        return 'vowel'
+
+    normalized_type = normalize_assessment_type(requested_reading_type)
+    if normalized_type in {'vowel', 'word', 'sentence', 'paragraph'}:
         return normalized_type
 
     if not text:
@@ -9096,7 +9130,7 @@ def _split_material_content(text, rtype, requested_reading_type=''):
     if not cleaned:
         return []
     
-    if rtype == 'word':
+    if rtype in {'word', 'vowel'}:
         # Preserve short phrases extracted from PDFs/images as a single item.
         words = re.findall(r"\b[\w']+\b", text, flags=re.UNICODE)
         if words and len(words) <= 2 and '\n' not in text and not re.search(r'[.!?;,:-]', text):

@@ -1,0 +1,14 @@
+{% extends "pabasa_app/reading_assessment_base.html" %}
+{% load static %}
+
+{% block page_title %}Vowel Reading Assessment{% endblock %}
+{% block mode_class %}reader-vowel{% endblock %}
+{% block level_mark %}V{% endblock %}
+{% block completion_level %}Vowel{% endblock %}
+{% block eyebrow %}Vowel reading assessment{% endblock %}
+{% block counter_text %}Vowel 1/10{% endblock %}
+{% block content_class %}content-vowel{% endblock %}
+{% block watermark %}vowel{% endblock %}
+{% block helper_text %}Look at the vowel pattern, breathe, and read it clearly.{% endblock %}
+{% block initial_text %}Loading materials...{% endblock %}
+{% block script %}<script src="{% static 'pabasa_app/js/assessment_reader.js' %}?v={% now 'U' %}"></script>{% endblock %}

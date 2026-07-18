@@ -10858,7 +10858,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!course) return;
             // Collect section codes
             const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
-            const aggregated = { word: [], sentence: [], paragraph: [] };
+            const aggregated = { word: [], sentence: [], paragraph: [], vowel: [] };
             const stored = JSON.parse(localStorage.getItem('pabasa_class_readings') || '{}');
             for (const code of sectionCodes) {
                 let r = null;
@@ -10870,13 +10870,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (!r) {
                     r = stored[code] || stored[String(code).toUpperCase()] || stored[String(code).toLowerCase()] || {};
                 }
-                ['word','sentence','paragraph'].forEach(t => {
+                ['word','sentence','paragraph','vowel'].forEach(t => {
                     if (Array.isArray(r[t])) aggregated[t] = aggregated[t].concat(r[t]);
                     else if (Array.isArray(r[t+'s'])) aggregated[t] = aggregated[t].concat(r[t+'s']);
                 });
             }
             const seenMaterialIds = new Set();
-            const allMaterials = activeRecords([...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph]).filter(material => {
+            const allMaterials = activeRecords([...aggregated.word, ...aggregated.sentence, ...aggregated.paragraph, ...aggregated.vowel]).filter(material => {
                 const key = String(material.id || `${material.type || ''}-${material.title || ''}-${material.created_at || ''}`);
                 if (seenMaterialIds.has(key)) return false;
                 seenMaterialIds.add(key);
@@ -11148,7 +11148,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             (course?.sections || []).forEach(section => {
                 const code = section.code || section.class_code || '';
                 const readings = classReadings[code] || storedReadings[code] || storedReadings[String(code).toUpperCase()] || storedReadings[String(code).toLowerCase()] || {};
-                ['word', 'sentence', 'paragraph'].forEach(type => {
+                ['word', 'sentence', 'paragraph', 'vowel'].forEach(type => {
                     activeRecords(readings[type] || readings[`${type}s`] || []).forEach(addMaterialTask);
                 });
             });
@@ -11441,7 +11441,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const materials = {
                     word: activeRecords(data.materials.word || []),
                     sentence: activeRecords(data.materials.sentence || []),
-                    paragraph: activeRecords(data.materials.paragraph || [])
+                    paragraph: activeRecords(data.materials.paragraph || []),
+                    vowel: activeRecords(data.materials.vowel || [])
                 };
                 // Fix: Sync local cache variable so View/Edit handlers find the data
                 if (classCode) {
@@ -11480,7 +11481,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         const flatMaterials = [];
         Object.entries(classReadings).forEach(([classCode, readings]) => {
-            ['word', 'sentence', 'paragraph'].forEach(readingType => {
+            ['word', 'sentence', 'paragraph', 'vowel'].forEach(readingType => {
                 (readings[readingType] || []).forEach(reading => {
                     flatMaterials.push({
                         ...reading,
@@ -11555,9 +11556,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function ensureClassReadings(classCode) {
         if (!classReadings[classCode]) {
-            classReadings[classCode] = { word: [], sentence: [], paragraph: [] };
+            classReadings[classCode] = { word: [], sentence: [], paragraph: [], vowel: [] };
         }
-        ['word', 'sentence', 'paragraph'].forEach(readingType => {
+        ['word', 'sentence', 'paragraph', 'vowel'].forEach(readingType => {
             if (!Array.isArray(classReadings[classCode][readingType])) {
                 classReadings[classCode][readingType] = [];
             }
@@ -11714,8 +11715,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     }
 
     function getClassReadingCount(classCode) {
-        const readings = classReadings[classCode] || { word: [], sentence: [], paragraph: [] };
-        return readings.word.length + readings.sentence.length + readings.paragraph.length;
+        const readings = classReadings[classCode] || { word: [], sentence: [], paragraph: [], vowel: [] };
+        return readings.word.length + readings.sentence.length + readings.paragraph.length + readings.vowel.length;
     }
 
     function attachDeleteListeners() {
@@ -14233,7 +14234,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         // Fix: Make global so Open Class logic can see the unified version
         window.loadReadings = async function(classCode) {
-            let readings = { word: [], sentence: [], paragraph: [] };
+            let readings = { word: [], sentence: [], paragraph: [], vowel: [] };
             
                 // First, try to fetch from database API (skip if no classCode provided)
                 const dbMaterials = await fetchMaterialsFromDatabase(classCode);
@@ -14251,7 +14252,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const allMaterials = activeRecords([
                 ...(readings.word || []),
                 ...(readings.sentence || []),
-                ...(readings.paragraph || [])
+                ...(readings.paragraph || []),
+                ...(readings.vowel || [])
             ]);
 
             // Ensure renderAllReadingsList is available (may be defined later)
@@ -14790,7 +14792,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             content_json: savedMaterial.content_json || (savedMaterial.content_json ? savedMaterial.content_json : {})
                                         });
                                         const readings = ensureClassReadings(currentClassCode || '');
-                                        ['word', 'sentence', 'paragraph'].forEach(typeKey => {
+                                        ['word', 'sentence', 'paragraph', 'vowel'].forEach(typeKey => {
                                             const list = readings[typeKey] || [];
                                             const index = list.findIndex(item => String(item.id) === String(editingMaterialId) || String(item.raw_id) === String(editingMaterialId));
                                             if (index >= 0) {

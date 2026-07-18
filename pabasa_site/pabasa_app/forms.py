@@ -7,7 +7,7 @@ from .models import Material
 
 def parse_practice_items(content, item_type):
     content = (content or "").strip()
-    if item_type == "word":
+    if item_type in {"word", "vowel"}:
         return re.findall(r"\b[\w']+\b", content, flags=re.UNICODE)
     if item_type == "sentence":
         lines = [line.strip() for line in content.splitlines() if line.strip()]
