@@ -46,10 +46,48 @@
         try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; }
     }
 
+    function hashString(value) {
+        let hash = 0;
+        const text = String(value || '');
+        for (let i = 0; i < text.length; i += 1) {
+            hash = ((hash << 5) - hash) + text.charCodeAt(i);
+            hash |= 0;
+        }
+        return hash;
+    }
+
+    function stableShuffle(items, seed) {
+        const array = items.slice();
+        let currentIndex = array.length;
+        let random = Math.abs(seed) || 0;
+        while (currentIndex > 1) {
+            random = ((random * 9301) + 49297) % 233280;
+            const index = Math.floor((random / 233280) * currentIndex);
+            currentIndex -= 1;
+            const temp = array[currentIndex];
+            array[currentIndex] = array[index];
+            array[index] = temp;
+        }
+        return array;
+    }
+
     function parseItems(material, currentMode) {
+        const originalItems = Array.isArray(material.items)
+            ? material.items.slice()
+            : (material.content_json && Array.isArray(material.content_json.items))
+                ? material.content_json.items.slice()
+                : [];
+        const normalizedItems = originalItems.map(item => String(item || '').trim()).filter(Boolean);
+        if (material.content_json && material.content_json.randomize_order && normalizedItems.length > 0) {
+            const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
+            const seed = hashString(seedSource);
+            return stableShuffle(normalizedItems, seed);
+        }
+        if (normalizedItems.length > 0) {
+            return normalizedItems;
+        }
         let raw = [];
-        if (Array.isArray(material.items)) raw = material.items;
-        else if (material.content && typeof material.content === 'string') {
+        if (material.content && typeof material.content === 'string') {
             if (currentMode === 'paragraph' || currentMode === 'story' || currentMode === 'sentence') {
                 raw = material.content.split(/\n/).map(i => i.trim());
             }

@@ -9250,6 +9250,8 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'assigned_sections': [section.class_code] if section else [s.class_code for s in material.assigned_sections.all()],
         'assigned_week': material.assigned_week,
         'assigned_week_display': format_assigned_week_display(material.assigned_week),
+        'content_json': content_json,
+        'randomize_order': bool(content_json.get('randomize_order')),
     }
 
 
@@ -9276,6 +9278,8 @@ def add_reading_material(request):
         assigned_week_raw = data.get('assigned_week')
         assigned_week, week_error = parse_assigned_week(assigned_week_raw)
         source_material_id = data.get('source_material_id')
+        randomize_order_raw = data.get('randomize_order')
+        randomize_order = str(randomize_order_raw).strip().lower() in ('1', 'true', 'yes', 'on')
 
         if source_type not in ('personal', 'shared'):
             source_type = 'shared'
@@ -9421,7 +9425,7 @@ def add_reading_material(request):
                 title=material_title,
                 prompt_text=(tokens[0] if tokens else material_title) or material_title,
                 content_text=content,
-                content_json={'items': tokens, 'language': language},
+                content_json={'items': tokens, 'language': language, 'randomize_order': randomize_order},
                 type=usage_type,
                 source_type=source_type,
                 status=status,
@@ -9536,6 +9540,8 @@ def teacher_update_material(request):
         language = Material.normalize_language_value(data.get('language'))
         material.status = data.get('status', material.status)
         material.type = 'assessment'
+        randomize_order_raw = data.get('randomize_order')
+        randomize_order = str(randomize_order_raw).strip().lower() in ('1', 'true', 'yes', 'on') if randomize_order_raw is not None else None
 
         source_type = (data.get('source_type') or material.source_type).strip().lower()
         if source_type in ('personal', 'shared'):
@@ -9575,10 +9581,13 @@ def teacher_update_material(request):
             content_json = dict(material.content_json or {})
             content_json['items'] = _split_material_content(content, material.item_type, requested_reading_type)
             content_json['language'] = language
+            content_json['randomize_order'] = randomize_order if randomize_order is not None else bool(content_json.get('randomize_order'))
             material.content_json = content_json
         else:
             content_json = dict(material.content_json or {})
             content_json['language'] = language
+            if randomize_order is not None:
+                content_json['randomize_order'] = randomize_order
             material.content_json = content_json
             
         # Ensure Assessment linkage reflects the requested usage type.
