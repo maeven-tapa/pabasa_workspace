@@ -155,6 +155,20 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["correct_word_count"], 0)
         self.assertFalse(result["complete"])
 
+    def test_numeric_text_is_not_treated_as_list_marker(self):
+        result = analyze_reading("19", 0, "19")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["matched"], 1)
+
+    def test_numeric_target_and_spoken_number_words_match(self):
+        result = analyze_reading("19", 0, "nineteen")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["matched"], 1)
+
 
 class AdaptedReadingLevelTests(TestCase):
     def test_adapted_reading_level_label_uses_expected_thresholds(self):

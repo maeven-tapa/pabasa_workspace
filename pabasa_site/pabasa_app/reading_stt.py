@@ -39,6 +39,60 @@ VOWEL_SOUND_ALIASES = {
     "u": {"u", "oo", "ew"},
 }
 
+NUMBER_WORDS = {
+    "zero": "0",
+    "one": "1",
+    "two": "2",
+    "three": "3",
+    "four": "4",
+    "five": "5",
+    "six": "6",
+    "seven": "7",
+    "eight": "8",
+    "nine": "9",
+    "ten": "10",
+    "eleven": "11",
+    "twelve": "12",
+    "thirteen": "13",
+    "fourteen": "14",
+    "fifteen": "15",
+    "sixteen": "16",
+    "seventeen": "17",
+    "eighteen": "18",
+    "nineteen": "19",
+    "twenty": "20",
+    "thirty": "30",
+    "forty": "40",
+    "fifty": "50",
+    "sixty": "60",
+    "seventy": "70",
+    "eighty": "80",
+    "ninety": "90",
+}
+
+for tens_word, tens_value in (
+    ("twenty", 20),
+    ("thirty", 30),
+    ("forty", 40),
+    ("fifty", 50),
+    ("sixty", 60),
+    ("seventy", 70),
+    ("eighty", 80),
+    ("ninety", 90),
+):
+    for ones_word, ones_value in (
+        ("one", 1),
+        ("two", 2),
+        ("three", 3),
+        ("four", 4),
+        ("five", 5),
+        ("six", 6),
+        ("seven", 7),
+        ("eight", 8),
+        ("nine", 9),
+    ):
+        NUMBER_WORDS[f"{tens_word}{ones_word}"] = str(tens_value + ones_value)
+
 
 def language_code_for(language="", mode=""):
     value = f"{language} {mode}".lower()
@@ -395,9 +449,28 @@ class ReadingMatcher:
     def words_match(self, spoken_word, target_word):
         if spoken_word == target_word:
             return True
+        if self.number_words_match(spoken_word, target_word):
+            return True
         if self.cv_syllables_sound_match(spoken_word, target_word):
             return True
         return False
+
+    @classmethod
+    def normalize_number_token(cls, word):
+        normalized = cls.normalize_word(word)
+        if normalized.isdigit():
+            return str(int(normalized))
+        return NUMBER_WORDS.get(normalized)
+
+    @classmethod
+    def number_words_match(cls, spoken_word, target_word):
+        spoken_number = cls.normalize_number_token(spoken_word)
+        target_number = cls.normalize_number_token(target_word)
+        return (
+            spoken_number is not None
+            and target_number is not None
+            and spoken_number == target_number
+        )
 
     def word_index_for_syllable(self, syllable_index):
         if syllable_index >= len(self.syllables):
@@ -494,11 +567,11 @@ class ReadingMatcher:
     def is_list_marker(cls, word):
         cleaned = word.strip()
         normalized = cls.normalize_word(cleaned)
-        return bool(
-            re.fullmatch(r"\d+[\.)]?", cleaned)
-            or re.fullmatch(r"\(?\d+[\.)]", cleaned)
-            or re.fullmatch(r"\d+", normalized)
-        )
+        if not normalized:
+            return False
+        if re.fullmatch(r"\(?\d+[\.)]?", cleaned):
+            return not re.fullmatch(r"\d+", cleaned)
+        return False
 
     @classmethod
     def readable_words(cls, text):
