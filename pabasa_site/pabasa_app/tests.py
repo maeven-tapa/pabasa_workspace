@@ -18,7 +18,7 @@ from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note
-from .reading_stt import analyze_reading
+from .reading_stt import ReadingMatcher, analyze_reading
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload
@@ -168,6 +168,17 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["correct_word_count"], 1)
         self.assertTrue(result["complete"])
         self.assertEqual(result["matched"], 1)
+
+    def test_numeric_target_and_spoken_digit_match(self):
+        result = analyze_reading("Nineteen", 0, "19")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertTrue(result["complete"])
+        self.assertTrue(result["matched"] > 0)
+
+    def test_normalize_words_preserves_numeric_tokens_with_punctuation(self):
+        self.assertEqual(ReadingMatcher.normalize_words("19."), ["19"])
+        self.assertEqual(ReadingMatcher.normalize_words("19,"), ["19"])
 
 
 class AdaptedReadingLevelTests(TestCase):

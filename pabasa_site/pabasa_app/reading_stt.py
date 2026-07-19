@@ -578,18 +578,30 @@ class ReadingMatcher:
         words = []
         for part in text.split():
             normalized = cls.normalize_word(part)
-            if not normalized or cls.is_list_marker(part):
+            if not normalized:
+                continue
+            if normalized.isdigit():
+                words.append(part)
+                continue
+            if cls.is_list_marker(part):
                 continue
             words.append(part)
         return words
 
     @classmethod
     def normalize_words(cls, text):
-        return [
-            cls.normalize_word(part)
-            for part in text.split()
-            if cls.normalize_word(part) and not cls.is_list_marker(part)
-        ]
+        normalized_words = []
+        for part in text.split():
+            normalized = cls.normalize_word(part)
+            if not normalized:
+                continue
+            if normalized.isdigit():
+                normalized_words.append(normalized)
+                continue
+            if cls.is_list_marker(part):
+                continue
+            normalized_words.append(normalized)
+        return normalized_words
 
     @classmethod
     def syllables_for_text(cls, text):
