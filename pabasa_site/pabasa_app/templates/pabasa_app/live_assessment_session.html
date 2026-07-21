@@ -129,7 +129,157 @@
         .participant-row { font-size: 0.95rem; }
 
         /* Improve readability of inputs */
-        .teacher-control .form-control, .teacher-control .form-select { font-size: 0.95rem; }
+        .teacher-control .form-control { font-size: 0.95rem; }
+        .teacher-control .profile-surface-select {
+            position: absolute;
+            inset: 0;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .teacher-control .profile-surface-dropdown {
+            position: relative;
+            width: 100%;
+            min-width: 0;
+        }
+        .teacher-control .profile-surface-trigger {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.85rem;
+            border-radius: 18px;
+            border: 1px solid rgba(31, 111, 139, 0.18);
+            background: rgba(255, 255, 255, 0.98);
+            color: var(--dash-text, #1b1a17);
+            padding: 0.72rem 0.9rem;
+            box-shadow: 0 10px 24px rgba(31, 111, 139, 0.08);
+            cursor: pointer;
+            text-align: left;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+        }
+        .teacher-control .profile-surface-trigger:hover,
+        .teacher-control .profile-surface-trigger:focus-visible,
+        .teacher-control .profile-surface-dropdown.is-open .profile-surface-trigger {
+            transform: translateY(-1px);
+            border-color: rgba(31, 111, 139, 0.34);
+            box-shadow: 0 14px 28px rgba(31, 111, 139, 0.12);
+            outline: none;
+        }
+        .teacher-control .profile-surface-trigger-text {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+        }
+        .teacher-control .profile-surface-value {
+            color: var(--dash-text, #1b1a17);
+            font-size: 0.93rem;
+            font-weight: 400;
+            line-height: 1.45;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .teacher-control .profile-surface-trigger i {
+            flex: 0 0 auto;
+            color: var(--dash-muted, #6b7280);
+            font-size: 0.86rem;
+            transition: transform 0.18s ease;
+        }
+        .teacher-control .profile-surface-dropdown.is-open .profile-surface-trigger i {
+            transform: rotate(180deg);
+        }
+        .teacher-control .profile-surface-menu {
+            position: absolute;
+            top: calc(100% + 0.55rem);
+            left: 0;
+            right: 0;
+            z-index: 90;
+            padding: 0.45rem;
+            border-radius: 18px;
+            border: 1px solid rgba(31, 111, 139, 0.12);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 20px 44px rgba(31, 111, 139, 0.16);
+            backdrop-filter: blur(14px) saturate(135%);
+            -webkit-backdrop-filter: blur(14px) saturate(135%);
+            display: none;
+            overflow: hidden;
+            max-height: min(320px, 45vh);
+            overflow-y: auto;
+        }
+        .teacher-control .profile-surface-dropdown.is-open .profile-surface-menu {
+            display: grid;
+            gap: 0.25rem;
+        }
+        .teacher-control .profile-surface-option {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.85rem;
+            width: 100%;
+            border: 0;
+            border-radius: 14px;
+            background: transparent;
+            padding: 0.82rem 0.9rem 0.82rem 1rem;
+            color: var(--dash-text, #1b1a17);
+            text-align: left;
+            transition: background-color 0.16s ease, transform 0.16s ease;
+        }
+        .teacher-control .profile-surface-option::before {
+            content: "";
+            position: absolute;
+            left: 0.45rem;
+            top: 0.45rem;
+            bottom: 0.45rem;
+            width: 3px;
+            border-radius: 999px;
+            background: transparent;
+            transition: background-color 0.16s ease;
+        }
+        .teacher-control .profile-surface-option:hover {
+            background: rgba(31, 111, 139, 0.06);
+            transform: translateX(1px);
+        }
+        .teacher-control .profile-surface-option:hover::before {
+            background: rgba(31, 111, 139, 0.24);
+        }
+        .teacher-control .profile-surface-option.is-selected {
+            background: rgba(31, 111, 139, 0.1);
+        }
+        .teacher-control .profile-surface-option.is-selected::before {
+            background: rgba(31, 111, 139, 0.42);
+        }
+        .teacher-control .profile-surface-option-title {
+            color: inherit;
+            font-size: 0.95rem;
+            font-weight: 400;
+            line-height: 1.45;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .teacher-control .profile-surface-option-subtitle {
+            color: var(--dash-muted, #6b7280);
+            font-size: 0.8rem;
+            line-height: 1.35;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .teacher-control .profile-surface-option.is-selected .profile-surface-option-subtitle {
+            color: var(--dash-text, #1b1a17);
+        }
+        .teacher-control .profile-surface-option-check {
+            flex: 0 0 auto;
+            font-size: 1rem;
+            color: transparent;
+            transition: color 0.16s ease;
+        }
+        .teacher-control .profile-surface-option.is-selected .profile-surface-option-check {
+            color: var(--dash-primary, #1f6f8b);
+        }
 
         @media (max-width: 768px) {
             .teacher-control h1.h4 { font-size: 1.25rem; }
@@ -253,7 +403,7 @@
                             <div class="border rounded p-2" style="max-height:220px; overflow:auto; background:var(--dash-bg);">
                                 <div id="participantList" class="participant-list">
                                     {% for student in available_students %}
-                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row">
+                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row" data-search-text="{{ student.full_name|default:'' }} {{ student.grade|default:'' }} {{ student.section|default:'' }}">
                                             <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}">
                                             <div class="flex-grow-1">
                                                 <div class="small fw-semibold">{{ student.full_name }}</div>
@@ -264,16 +414,26 @@
                                         <div class="small text-muted">No students available for this material.</div>
                                     {% endfor %}
                                 </div>
+                                <div id="participantEmptyState" class="small text-muted mt-2 d-none">No students found.</div>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-3">
                         <div class="mb-3">
                             <label class="form-label mb-2">Session Timing</label>
-                            <select id="timingMode" class="form-select form-select-sm mb-3">
-                                <option value="none">No limit</option>
-                                <option value="duration">Duration</option>
-                            </select>
+                            <div class="profile-surface-dropdown mb-3" id="timingModeDropdown">
+                                <button type="button" class="profile-surface-trigger" id="timingModeTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="timingModeMenu">
+                                    <span class="profile-surface-trigger-text">
+                                        <span class="profile-surface-value" id="timingModeValue">No limit</span>
+                                    </span>
+                                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                                </button>
+                                <select id="timingMode" class="profile-surface-select" tabindex="-1" aria-hidden="true">
+                                    <option value="none" selected>No limit</option>
+                                    <option value="duration">Duration</option>
+                                </select>
+                                <div class="profile-surface-menu" id="timingModeMenu" role="listbox" aria-label="Session timing"></div>
+                            </div>
                             <div id="durationInputs" class="d-none mb-2">
                                 <input id="durationMinutes" type="number" min="1" class="form-control form-control-sm" placeholder="Minutes">
                             </div>
@@ -281,14 +441,23 @@
                         <div>
                             <label class="form-label mb-2">Countdown</label>
                             <div class="d-flex gap-2 align-items-center">
-                                <select id="countdown" class="form-select form-select-sm" style="min-width:120px;">
-                                    <option value="0">None</option>
-                                    <option value="3">3s</option>
-                                    <option value="5">5s</option>
-                                    <option value="10">10s</option>
-                                    <option value="15">15s</option>
-                                    <option value="custom">Custom</option>
-                                </select>
+                                <div class="profile-surface-dropdown" id="countdownDropdown" style="min-width:120px;">
+                                    <button type="button" class="profile-surface-trigger" id="countdownTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="countdownMenu">
+                                        <span class="profile-surface-trigger-text">
+                                            <span class="profile-surface-value" id="countdownValue">None</span>
+                                        </span>
+                                        <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                                    </button>
+                                    <select id="countdown" class="profile-surface-select" tabindex="-1" aria-hidden="true">
+                                        <option value="0" selected>None</option>
+                                        <option value="3">3s</option>
+                                        <option value="5">5s</option>
+                                        <option value="10">10s</option>
+                                        <option value="15">15s</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                    <div class="profile-surface-menu" id="countdownMenu" role="listbox" aria-label="Countdown"></div>
+                                </div>
                                 <input id="countdownCustom" type="number" min="1" class="form-control form-control-sm d-none" placeholder="Seconds">
                             </div>
                         </div>
@@ -794,26 +963,196 @@
         }
     });
 
+    let participantSearchQuery = '';
+    let participantData = [];
+
+    const participantList = document.getElementById('participantList');
+    const participantEmptyState = document.getElementById('participantEmptyState');
+    const studentSearchInput = document.getElementById('studentSearch');
+
+    function getParticipantData() {
+        const rows = Array.from(participantList?.querySelectorAll('.participant-row') || []);
+        return rows.map((row) => {
+            const checkbox = row.querySelector('.participant-checkbox');
+            const nameEl = row.querySelector('.fw-semibold');
+            const gradeEl = row.querySelector('.text-muted');
+            const name = nameEl?.textContent?.trim() || '';
+            const grade = gradeEl?.textContent?.trim() || '';
+            return {
+                id: checkbox?.dataset.studentId || '',
+                name,
+                grade,
+                searchText: `${name} ${grade}`.toLowerCase(),
+                checked: checkbox?.checked || false,
+            };
+        });
+    }
+
+    function renderParticipantList() {
+        if (!participantList || !participantEmptyState) return;
+
+        const query = participantSearchQuery.trim().toLowerCase();
+        const filteredParticipants = participantData.filter((participant) => {
+            if (!query) return true;
+            return (participant.searchText || '').includes(query);
+        });
+
+        participantList.innerHTML = '';
+
+        if (participantData.length === 0) {
+            participantEmptyState.textContent = 'No students available for this material.';
+            participantEmptyState.classList.remove('d-none');
+            return;
+        }
+
+        if (filteredParticipants.length === 0) {
+            participantEmptyState.textContent = 'No students found.';
+            participantEmptyState.classList.remove('d-none');
+            return;
+        }
+
+        participantEmptyState.classList.add('d-none');
+        filteredParticipants.forEach((participant) => {
+            const label = document.createElement('label');
+            label.className = 'd-flex align-items-center gap-2 mb-1 participant-row';
+            label.innerHTML = `
+                <input type="checkbox" class="participant-checkbox" data-student-id="${participant.id}" ${participant.checked ? 'checked' : ''}>
+                <div class="flex-grow-1">
+                    <div class="small fw-semibold">${participant.name}</div>
+                    <div class="small text-muted">${participant.grade}</div>
+                </div>
+            `;
+            participantList.appendChild(label);
+        });
+    }
+
+    function syncParticipantSelectionState() {
+        participantData = getParticipantData();
+        renderParticipantList();
+    }
+
     document.getElementById('selectAllBtn').addEventListener('click', () => {
-        document.querySelectorAll('.participant-checkbox').forEach(cb => cb.checked = true);
+        participantData = participantData.map((participant) => {
+            if (!participantSearchQuery || (participant.searchText || '').includes(participantSearchQuery.trim().toLowerCase())) {
+                return { ...participant, checked: true };
+            }
+            return participant;
+        });
+        renderParticipantList();
     });
     document.getElementById('resetSelectionBtn').addEventListener('click', () => {
-        document.querySelectorAll('.participant-checkbox').forEach(cb => cb.checked = false);
+        participantData = participantData.map((participant) => ({ ...participant, checked: false }));
+        renderParticipantList();
     });
-    document.getElementById('studentSearch').addEventListener('input', (e) => {
-        const q = e.target.value.toLowerCase();
-        document.querySelectorAll('.participant-row').forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(q) ? '' : 'none';
+
+    if (studentSearchInput) {
+        studentSearchInput.addEventListener('input', (event) => {
+            participantSearchQuery = (event.target.value || '').trim().toLowerCase();
+            renderParticipantList();
+        });
+    }
+
+    participantList?.addEventListener('change', (event) => {
+        const checkbox = event.target.closest('.participant-checkbox');
+        if (!checkbox) return;
+        const participant = participantData.find((item) => item.id === checkbox.dataset.studentId);
+        if (participant) {
+            participant.checked = checkbox.checked;
+        }
+    });
+
+    participantData = getParticipantData();
+    renderParticipantList();
+
+    function buildCustomDropdownOptions(selectEl, menuEl, triggerValueEl, triggerEl) {
+        const options = Array.from(selectEl.options || []);
+        const selectedValue = selectEl.value;
+        menuEl.innerHTML = '';
+
+        options.forEach((option) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `profile-surface-option${option.value === selectedValue ? ' is-selected' : ''}`;
+            button.dataset.value = option.value;
+            button.innerHTML = `
+                <span class="profile-surface-option-text">
+                    <span class="profile-surface-option-title">${option.text}</span>
+                </span>
+                <span class="profile-surface-option-check"><i class="bi bi-check"></i></span>
+            `;
+            button.addEventListener('click', () => {
+                selectEl.value = option.value;
+                selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                if (triggerValueEl) triggerValueEl.textContent = option.text;
+                closeCustomDropdown(triggerEl);
+            });
+            menuEl.appendChild(button);
+        });
+    }
+
+    function closeCustomDropdown(triggerEl) {
+        const dropdown = triggerEl?.closest('.profile-surface-dropdown');
+        if (!dropdown) return;
+        dropdown.classList.remove('is-open');
+        const button = dropdown.querySelector('.profile-surface-trigger');
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    function openCustomDropdown(triggerEl) {
+        const dropdown = triggerEl?.closest('.profile-surface-dropdown');
+        if (!dropdown) return;
+        const selectEl = dropdown.querySelector('.profile-surface-select');
+        const menuEl = dropdown.querySelector('.profile-surface-menu');
+        const triggerValueEl = dropdown.querySelector('.profile-surface-value');
+        if (!selectEl || !menuEl || !triggerValueEl) return;
+        buildCustomDropdownOptions(selectEl, menuEl, triggerValueEl, triggerEl);
+        dropdown.classList.add('is-open');
+        triggerEl.setAttribute('aria-expanded', 'true');
+    }
+
+    document.querySelectorAll('.profile-surface-trigger').forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+            const dropdown = trigger.closest('.profile-surface-dropdown');
+            const isOpen = dropdown?.classList.contains('is-open');
+            document.querySelectorAll('.profile-surface-dropdown.is-open').forEach((openDropdown) => {
+                openDropdown.classList.remove('is-open');
+                const openButton = openDropdown.querySelector('.profile-surface-trigger');
+                if (openButton) openButton.setAttribute('aria-expanded', 'false');
+            });
+            if (!isOpen) openCustomDropdown(trigger);
         });
     });
 
-    document.getElementById('timingMode').addEventListener('change', (e) => {
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.profile-surface-dropdown')) {
+            document.querySelectorAll('.profile-surface-dropdown.is-open').forEach((dropdown) => {
+                closeCustomDropdown(dropdown.querySelector('.profile-surface-trigger'));
+            });
+        }
+    });
+
+    function syncCustomDropdownValue(selectId, triggerValueId) {
+        const selectEl = document.getElementById(selectId);
+        const triggerValueEl = document.getElementById(triggerValueId);
+        if (!selectEl || !triggerValueEl) return;
+        const selectedOption = Array.from(selectEl.options).find((option) => option.value === selectEl.value);
+        if (selectedOption) triggerValueEl.textContent = selectedOption.text;
+    }
+
+    const timingModeSelect = document.getElementById('timingMode');
+    const countdownSelect = document.getElementById('countdown');
+
+    timingModeSelect.addEventListener('change', (e) => {
+        syncCustomDropdownValue('timingMode', 'timingModeValue');
         document.getElementById('durationInputs').classList.toggle('d-none', e.target.value !== 'duration');
     });
-    document.getElementById('countdown').addEventListener('change', (e) => {
+    countdownSelect.addEventListener('change', (e) => {
+        syncCustomDropdownValue('countdown', 'countdownValue');
         document.getElementById('countdownCustom').classList.toggle('d-none', e.target.value !== 'custom');
     });
+
+    syncCustomDropdownValue('timingMode', 'timingModeValue');
+    syncCustomDropdownValue('countdown', 'countdownValue');
 
     async function validateSessionSettings() {
         const selected = Array.from(document.querySelectorAll('.participant-checkbox')).filter(c => c.checked).map(c => parseInt(c.dataset.studentId));
