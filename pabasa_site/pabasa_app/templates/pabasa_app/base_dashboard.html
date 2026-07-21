@@ -2636,8 +2636,9 @@
             const alreadySeen = window.sessionStorage.getItem(seenKey);
             const liveParams = new URLSearchParams(actionUrl.split('?')[1] || '');
             const startAt = liveParams.get('start_at');
+            const isLiveSessionPage = actionUrl.includes('/dashboard/live-assessment/');
             const createdAt = notification.created_at ? Date.parse(notification.created_at) : 0;
-            const isFresh = Boolean(startAt) && (createdAt ? (Date.now() - createdAt) <= 5 * 60 * 1000 : true);
+            const isFresh = isLiveSessionPage || (Boolean(startAt) && (createdAt ? (Date.now() - createdAt) <= 5 * 60 * 1000 : true));
             if (!alreadySeen && actionUrl && isFresh) {
                 window.sessionStorage.setItem(seenKey, '1');
                 try {
@@ -2674,7 +2675,10 @@
                 const data = await response.json();
                 if (!data.success) throw new Error(data.error || "Unable to load notifications.");
                 const notifications = Array.isArray(data.notifications) ? data.notifications : [];
-                const liveNotification = notifications.find(n => (n.action_url || '').includes('live_session_id='));
+                const liveNotification = notifications.find(n => {
+                    const url = (n.action_url || '');
+                    return url.includes('live_session_id=') || url.includes('/dashboard/live-assessment/');
+                });
                 if (liveNotification && !liveNotification.is_read) {
                     return handleLiveAssessmentNotification(liveNotification);
                 }

@@ -9518,25 +9518,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                         if (action === 'live') {
                             if (!mat) return showToast('Material not found', 'error');
-                            const liveModalEl = document.getElementById('liveAssessmentLoadingModal');
-                            const closeLiveModal = () => {
-                                if (!liveModalEl) return;
-                                try {
-                                    const instance = bootstrap.Modal.getInstance(liveModalEl) || bootstrap.Modal.getOrCreateInstance(liveModalEl);
-                                    instance.hide();
-                                } catch (e) {
-                                    console.warn('Could not hide live assessment modal', e);
-                                }
-                                setTimeout(() => {
-                                    document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
-                                    document.body.classList.remove('modal-open');
-                                    document.body.style.removeProperty('overflow');
-                                    document.body.style.removeProperty('padding-right');
-                                }, 50);
-                            };
                             try {
-                                const liveModal = bootstrap.Modal.getOrCreateInstance(liveModalEl);
-                                liveModal.show();
                                 const materialIdForBackend = String(mat.id || mat.raw_id || rawRecordId(mid) || '').trim();
                                 const res = await fetch('/dashboard/teacher/start-live-assessment/', {
                                     method: 'POST',
@@ -9546,15 +9528,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 });
                                 const d = await res.json();
                                 if (!res.ok || !d.success) {
-                                    throw new Error(d.error || 'Unable to start live assessment');
+                                    throw new Error(d.error || 'Unable to create live assessment session');
                                 }
-                                window.setTimeout(() => {
-                                    closeLiveModal();
-                                    showToast('Live assessment started', 'success');
-                                }, 4000);
+                                if (d.session && d.session.url) {
+                                    window.location.href = d.session.url;
+                                    return;
+                                }
+                                showToast('Live assessment session created', 'success');
                             } catch (err) {
                                 console.error('live assessment error', err);
-                                closeLiveModal();
                                 showToast(err.message || 'Could not start live assessment', 'error');
                             }
                             return;

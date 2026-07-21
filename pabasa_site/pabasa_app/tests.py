@@ -17,7 +17,7 @@ from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
-from .models import Material, User, Section, Assessment, Notification, Course, Note
+from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession
 from .reading_stt import ReadingMatcher, analyze_reading
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
@@ -1204,13 +1204,120 @@ class LiveAssessmentStartTests(TestCase):
         body = response.json()
         self.assertTrue(body["success"])
         self.assertIn("session", body)
-        self.assertTrue(body["session"]["start_at"])
+        self.assertTrue(body["session"]["url"])
+
+        session = LiveAssessmentSession.objects.filter(id=body["session"]["id"]).first()
+        self.assertIsNotNone(session)
+        self.assertEqual(session.status, 'waiting')
+        self.assertEqual(session.student_count, 1)
 
         notif = Notification.objects.filter(recipient=self.student).order_by("-created_at").first()
         self.assertIsNotNone(notif)
         self.assertIn("live", notif.title.lower())
-        self.assertIn("live_session_id", notif.action_url)
-        self.assertIn("start_at", notif.action_url)
+        self.assertIn("/dashboard/live-assessment/", notif.action_url)
+        self.assertIn("live_session_id=", notif.action_url)
+
+    def test_live_assessment_session_state_api_returns_200_after_session_started(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=3,
+            start_at=timezone.now() - timedelta(seconds=1),
+        )
+
+        response = self.client.get(reverse("live_assessment_session_state", kwargs={"session_id": session.id}))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["session"]["status"], 'started')
+        self.assertIn('reader_url', data["session"])
+
+    def test_teacher_can_pause_and_resume_live_assessment_session(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'reading', 'progress': 0}},
+        )
+
+        response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({"action": "pause"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        pause_body = response.json()
+        self.assertTrue(pause_body["success"])
+        self.assertEqual(pause_body["session"]["status"], 'paused')
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'paused')
+        self.assertEqual(session.student_states[str(self.student.id)]["status"], 'paused')
+        self.assertEqual(session.student_states[str(self.student.id)]["previous_status"], 'reading')
+
+        response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({"action": "resume"}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        resume_body = response.json()
+        self.assertTrue(resume_body["success"])
+        self.assertEqual(resume_body["session"]["status"], 'started')
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'started')
+        self.assertEqual(session.student_states[str(self.student.id)]["status"], 'reading')
+        self.assertNotIn('previous_status', session.student_states[str(self.student.id)])
+
+    def test_save_settings_persists_selection_and_notifies_students_for_waiting_room(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[],
+            student_count=0,
+            status='waiting',
+            countdown_seconds=10,
+        )
+
+        response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({
+                "action": "save_settings",
+                "selected_student_ids": [self.student.id],
+                "countdown_seconds": 5,
+                "timing_mode": "none",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+
+        session.refresh_from_db()
+        self.assertEqual(session.student_ids, [self.student.id])
+        self.assertEqual(session.student_count, 1)
+        self.assertEqual(session.countdown_seconds, 5)
+        self.assertEqual(session.status, 'waiting')
+        self.assertIn(str(self.student.id), session.student_states)
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'waiting')
+
+        notif = Notification.objects.filter(recipient=self.student).order_by('-created_at').first()
+        self.assertIsNotNone(notif)
+        self.assertIn('/waiting/', notif.action_url)
+        self.assertIn('live-assessment', notif.action_url)
 
 
 class PrincipalAccountBootstrapTests(TestCase):

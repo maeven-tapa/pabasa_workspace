@@ -1,0 +1,864 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
+
+{% block page_title %}Live Assessment Control Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 teacher-control">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h1 class="h4 mb-0">Live Assessment — {{ live_session.material.title }}</h1>
+            <div class="text-muted small">{{ live_session.material.assessment_type|default:'Reading' }} • {{ live_session.course.title|default:'N/A' }}</div>
+        </div>
+        <div class="text-end">
+            <div class="d-inline-block px-3 py-2 rounded-pill" style="background:var(--dash-primary-soft); color:var(--dash-primary-deep);">
+                <strong id="headerStatus">{{ live_session.status|title }}</strong>
+                <div class="small text-muted">Session ID: {{ live_session.id }}</div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .live-monitor-card {
+            border: 1px solid rgba(31, 111, 139, 0.08);
+            background: var(--panel, #ffffff);
+            border-radius: 1.25rem;
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.06);
+            font-family: inherit;
+        }
+        .live-monitor-card .status-dot {
+            width: 0.7rem;
+            height: 0.7rem;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+        }
+        .live-monitor-card .table-monitor th {
+            font-size: 0.78rem;
+            color: var(--muted, #6b7280);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(31, 111, 139, 0.06);
+            padding: 0.85rem 0.75rem;
+            font-weight: 800;
+        }
+        .live-monitor-card .table-monitor td {
+            border-top: 1px solid rgba(31, 111, 139, 0.04);
+            padding: 0.9rem 0.75rem;
+            color: var(--ink, #1b1a17);
+            vertical-align: middle;
+        }
+        .live-monitor-card .student-cell {
+            min-width: 240px;
+        }
+        .live-monitor-card .student-avatar {
+            width: 38px;
+            height: 38px;
+            line-height: 38px;
+            font-size: 0.9rem;
+        }
+        .live-monitor-card .progress-sm {
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(15, 45, 69, 0.08);
+        }
+        .live-monitor-card .progress-sm .progress-bar {
+            background: var(--dash-primary);
+            border-radius: 999px;
+        }
+        .live-monitor-card .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.28rem 0.56rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            text-transform: capitalize;
+        }
+        .live-monitor-card .status-pill-reading { background: rgba(31,111,139,0.10); color: var(--accent-deep, #164e9b); }
+        .live-monitor-card .status-pill-waiting { background: rgba(250, 204, 21, 0.10); color: #92400e; }
+        .live-monitor-card .status-pill-ready { background: rgba(59, 130, 246, 0.10); color: #1d4ed8; }
+        .live-monitor-card .status-pill-finished { background: rgba(107, 114, 128, 0.08); color: #374151; }
+        .live-monitor-card .status-pill-needs_attention { background: rgba(220, 38, 38, 0.10); color: #991b1b; }
+
+        .live-monitor-card .small { font-size: 0.88rem; }
+        .live-monitor-card .fw-semibold { font-weight: 700; }
+    </style>
+
+    <style>
+        /* Page typography refinements for Live Assessment */
+        .teacher-control {
+            font-family: "Nunito", "Quattrocento Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+            color: var(--ink, #1b1a17);
+            font-size: 15px;
+            line-height: 1.55;
+        }
+
+        .teacher-control h1.h4 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: -0.01em;
+            color: var(--accent-deep, #155e75);
+        }
+
+        .teacher-control h5, .teacher-control h6 {
+            font-weight: 800;
+            color: var(--accent-deep, #155e75);
+            margin-bottom: 0.25rem;
+        }
+
+        .teacher-control .small { color: var(--muted, #6b7280); font-size: 0.92rem; }
+
+        .teacher-control label.form-label { font-weight: 800; color: var(--muted, #6b7280); }
+
+        .teacher-control .card { border-radius: 12px; }
+
+        .teacher-control .btn { font-weight: 800; border-radius: 10px; }
+        .teacher-control .btn.btn-lg { padding: 0.6rem 0.9rem; font-size: 1rem; }
+
+        .teacher-control .table-monitor th { font-size: 0.80rem; color: var(--muted, #6b7280); }
+        .teacher-control .table-monitor td { font-size: 0.96rem; }
+
+        /* Activity timeline and small UI elements */
+        #activityTimeline .mb-2 { padding: 6px 0; border-bottom: 1px dashed rgba(31,111,139,0.03); }
+        #activityTimeline .small.text-muted { font-size: 0.82rem; }
+
+        /* Participant list items */
+        .participant-row { font-size: 0.95rem; }
+
+        /* Improve readability of inputs */
+        .teacher-control .form-control, .teacher-control .form-select { font-size: 0.95rem; }
+
+        @media (max-width: 768px) {
+            .teacher-control h1.h4 { font-size: 1.25rem; }
+            .teacher-control .btn.btn-lg { font-size: 0.96rem; }
+        }
+    </style>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+            <div class="card live-monitor-card p-3 mb-3">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div>
+                        <h5 class="mb-1">Student Monitor</h5>
+                        <div class="small text-muted">Monitor selected participants in real time</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="d-inline-flex align-items-center gap-2 py-1 px-2 rounded-pill" style="background: rgba(34, 197, 94, 0.08);">
+                            <span class="status-dot bg-success"></span>
+                            <div class="text-start">
+                                <div class="small fw-semibold text-success">Live</div>
+                                <div class="small text-muted"><span id="monitorTime">—</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-borderless table-monitor mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th class="student-cell">Student</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Time</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            {% if student_profiles %}
+                                {% for student in student_profiles %}
+                                <tr data-student-id="{{ student.id }}">
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="avatar student-avatar rounded-circle bg-secondary text-white text-center">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+                                            <div class="small">
+                                                <div class="fw-semibold">{{ student.full_name }}</div>
+                                                <div class="text-muted small">{{ student.custom_id }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span class="status-pill status-pill-waiting" data-status-col="{{ student.id }}">Waiting</span></td>
+                                    <td>
+                                        <div class="progress progress-sm mb-1">
+                                            <div class="progress-bar" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-progress-bar="{{ student.id }}"></div>
+                                        </div>
+                                        <div class="small text-muted" data-progress-text="{{ student.id }}">--</div>
+                                    </td>
+                                    <td class="small text-muted" data-elapsed-col="{{ student.id }}">--</td>
+                                    <td class="small text-muted fw-semibold" data-score-col="{{ student.id }}">--</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr class="text-muted"><td colspan="5" class="small text-center py-4">
+                                    <strong>No participants selected yet.</strong><br>
+                                    Select students from Session Configuration below or click <strong>Select All</strong> to add participants.
+                                </td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card p-3 mb-3 sticky-top" style="top:16px">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h5 class="mb-1">Session Controls</h5>
+                        <div class="small text-muted">Teacher command center</div>
+                    </div>
+                    <button id="exitBtnTop" class="btn btn-link text-decoration-none p-0">← Exit Live Session</button>
+                </div>
+                <div id="saveNotice" class="alert alert-info py-2 px-3 small mb-3 d-none"></div>
+                <div class="d-grid gap-2 mb-3">
+                    <button id="startBtn" class="btn btn-success btn-lg">▶ Start Session</button>
+                    <div class="d-flex gap-2">
+                        <button id="pauseBtn" class="btn btn-outline-warning btn-lg flex-fill">⏸ Pause</button>
+                        <button id="resumeBtn" class="btn btn-outline-primary btn-lg flex-fill">▶ Resume</button>
+                    </div>
+                    <button id="endBtn" class="btn btn-outline-danger btn-lg">⏹ End Session</button>
+                </div>
+                <div class="small text-muted mb-2">Status: <span id="controlStatus">{{ live_session.status|title }}</span></div>
+                <div class="small text-muted mb-2">Last sync: <span id="lastUpdated">—</span></div>
+                <div class="small text-muted mb-2">Selected participants: <span id="selectedCount">{{ live_session.student_count }}</span></div>
+                <div class="small text-muted mb-3">Countdown: <span id="currentCountdown">{{ live_session.countdown_seconds }}s</span></div>
+                <hr>
+                <h6 class="mb-2">Activity Timeline</h6>
+                <div id="activityTimeline" style="max-height:320px; overflow:auto;"> 
+                    <!-- events inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card p-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h5 class="mb-1">Session Configuration</h5>
+                        <div class="small text-muted">Prepare the live assessment before starting.</div>
+                    </div>
+                </div>
+                <div class="row gy-3">
+                    <div class="col-lg-5">
+                        <div class="mb-3">
+                            <label class="form-label mb-2">Participants</label>
+                            <div class="d-flex gap-2 mb-2">
+                                <input type="text" id="studentSearch" class="form-control form-control-sm" placeholder="Search students...">
+                                <button id="selectAllBtn" class="btn btn-outline-primary btn-sm">Select All</button>
+                                <button id="resetSelectionBtn" class="btn btn-outline-secondary btn-sm">Clear</button>
+                            </div>
+                            <div class="border rounded p-2" style="max-height:220px; overflow:auto; background:var(--dash-bg);">
+                                <div id="participantList" class="participant-list">
+                                    {% for student in available_students %}
+                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row">
+                                            <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}">
+                                            <div class="flex-grow-1">
+                                                <div class="small fw-semibold">{{ student.full_name }}</div>
+                                                <div class="small text-muted">Grade {{ student.grade|default:"—" }}</div>
+                                            </div>
+                                        </label>
+                                    {% empty %}
+                                        <div class="small text-muted">No students available for this material.</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <div class="mb-3">
+                            <label class="form-label mb-2">Session Timing</label>
+                            <select id="timingMode" class="form-select form-select-sm mb-3">
+                                <option value="none">No limit</option>
+                                <option value="duration">Duration</option>
+                            </select>
+                            <div id="durationInputs" class="d-none mb-2">
+                                <input id="durationMinutes" type="number" min="1" class="form-control form-control-sm" placeholder="Minutes">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label mb-2">Countdown</label>
+                            <div class="d-flex gap-2 align-items-center">
+                                <select id="countdown" class="form-select form-select-sm" style="min-width:120px;">
+                                    <option value="0">None</option>
+                                    <option value="3">3s</option>
+                                    <option value="5">5s</option>
+                                    <option value="10">10s</option>
+                                    <option value="15">15s</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                                <input id="countdownCustom" type="number" min="1" class="form-control form-control-sm d-none" placeholder="Seconds">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label class="form-label mb-2">Session Timer</label>
+                                <div class="border rounded p-3" style="min-height:120px; background:var(--dash-bg); border:1px solid rgba(31,111,139,0.06);">
+                                    <div class="small text-muted">This timer is shared across all students in the live session.</div>
+                                    <div class="mt-3 fw-semibold" id="teacherSessionTimer">—</div>
+                                </div>
+                            </div>
+                            <div class="d-grid">
+                                <button id="saveSettingsBtn" class="btn btn-primary btn-sm">Save settings</button>
+                                <div class="small text-muted mt-2">Save configuration to keep your selections and send students to the waiting room</div>
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form class="d-none">{% csrf_token %}</form>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(() => {
+        // Reusable modal for live-assessment dialogs (confirm/alert/actions)
+        const modalHtml = `
+        <div id="liveAssessmentModal" class="modal" tabindex="-1" role="dialog" aria-hidden="true" aria-modal="true" style="display:none;position:fixed;inset:0;z-index:20000;padding:24px;display:flex;align-items:center;justify-content:center;">
+            <div id="liveAssessmentModalBackdrop" class="modal-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);z-index:20000;">
+            </div>
+            <div class="modal-dialog" role="document" style="position:relative;z-index:20010;max-width:420px;width:90%;margin:0 auto;">
+                <div class="modal-content" style="border-radius:12px;overflow:hidden;box-shadow:0 18px 40px rgba(2,6,23,0.28);border:1px solid rgba(2,6,23,0.06);background:#ffffff;">
+                    <div class="modal-header" style="padding:1rem 1.25rem;border-bottom:1px solid rgba(2,6,23,0.04);display:flex;align-items:center;justify-content:space-between;">
+                        <h3 id="liveAssessmentModalTitle" class="modal-title" style="margin:0;font-weight:800;font-size:1.05rem;color:#0f172a;"></h3>
+                        <button type="button" id="liveAssessmentModalClose" aria-label="Close" style="border:0;background:transparent;font-size:1.2rem;color:#475569;padding:6px 8px;border-radius:8px;">×</button>
+                    </div>
+                    <div id="liveAssessmentModalBody" class="modal-body" style="padding:1.25rem 1.5rem;color:#0b1220;font-size:0.99rem;line-height:1.4;"></div>
+                    <div class="modal-footer" id="liveAssessmentModalFooter" style="padding:0.75rem 1rem;background:#fbfdff;border-top:1px solid rgba(2,6,23,0.02);display:flex;gap:0.5rem;justify-content:flex-end;">
+                    </div>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml + '\n<div id="liveAssessmentToastContainer" style="position:fixed;right:16px;top:16px;z-index:1075;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>');
+        // ensure modal starts hidden and aria state set
+        try { const _m = document.getElementById('liveAssessmentModal'); if (_m) { _m.style.display = 'none'; _m.setAttribute('aria-hidden', 'true'); } } catch (e) {}
+        const liveModal = document.getElementById('liveAssessmentModal');
+        const liveModalTitle = document.getElementById('liveAssessmentModalTitle');
+        const liveModalBody = document.getElementById('liveAssessmentModalBody');
+        const liveModalFooter = document.getElementById('liveAssessmentModalFooter');
+        const liveModalClose = document.getElementById('liveAssessmentModalClose');
+
+        function clearModalFooter() {
+            liveModalFooter.innerHTML = '';
+        }
+
+        let activeModalResolver = null;
+        let activeKeydownHandler = null;
+        let activeBackdrop = null;
+        let activeBackdropHandler = null;
+        let previousActiveElement = null;
+
+        function hideModal(result = null) {
+                if (!liveModal) return;
+                liveModal.style.display = 'none';
+                document.body.style.overflow = '';
+                liveModal.setAttribute('aria-hidden', 'true');
+                // remove keydown handler
+                if (activeKeydownHandler) { document.removeEventListener('keydown', activeKeydownHandler); activeKeydownHandler = null; }
+                // remove backdrop handler
+                if (activeBackdrop && activeBackdropHandler) { activeBackdrop.removeEventListener('click', activeBackdropHandler); activeBackdrop = null; activeBackdropHandler = null; }
+                // resolve pending promise if any
+                if (activeModalResolver) { try { activeModalResolver(result); } catch (e) {} activeModalResolver = null; }
+                // restore focus
+                if (previousActiveElement && typeof previousActiveElement.focus === 'function') previousActiveElement.focus();
+                previousActiveElement = null;
+            }
+
+        function showModal(opts) {
+            return new Promise((resolve) => {
+                const { title = '', body = '', buttons = [{ label: 'OK', value: true, className: 'btn btn-primary' }], closable = true } = opts || {};
+                // Guard: don't open empty modals on mount or by mistake
+                const titleText = (typeof title === 'string' ? title : '').trim();
+                const bodyText = (typeof body === 'string' ? body : '').trim();
+                if (!titleText && !bodyText && (!buttons || buttons.length === 0)) { resolve(null); return; }
+                if (!liveModal) return resolve(null);
+                liveModalTitle.textContent = title || '';
+                if (typeof body === 'string') liveModalBody.textContent = body; else { liveModalBody.innerHTML = ''; liveModalBody.appendChild(body); }
+                clearModalFooter();
+                // prepare resolver and focus trap
+                activeModalResolver = resolve;
+                previousActiveElement = document.activeElement;
+
+                buttons.forEach((btnCfg) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = btnCfg.className || 'btn btn-secondary';
+                    btn.textContent = btnCfg.label || 'Button';
+                    btn.addEventListener('click', () => { hideModal(btnCfg.value); });
+                    liveModalFooter.appendChild(btn);
+                });
+                liveModalClose.style.display = closable ? '' : 'none';
+                // backdrop click closes as cancel
+                activeBackdrop = document.getElementById('liveAssessmentModalBackdrop');
+                activeBackdropHandler = (ev) => { if (ev.target === activeBackdrop) hideModal(false); };
+                if (activeBackdrop) activeBackdrop.addEventListener('click', activeBackdropHandler);
+
+                // key handling: Escape closes, Tab traps focus
+                activeKeydownHandler = function (ev) {
+                    if (ev.key === 'Escape') { ev.preventDefault(); hideModal(false); }
+                    if (ev.key === 'Tab') {
+                        const focusable = liveModal.querySelectorAll('a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+                        const list = Array.prototype.slice.call(focusable).filter(el => el.offsetParent !== null);
+                        if (!list.length) return;
+                        const first = list[0];
+                        const last = list[list.length - 1];
+                        if (ev.shiftKey) {
+                            if (document.activeElement === first) { ev.preventDefault(); last.focus(); }
+                        } else {
+                            if (document.activeElement === last) { ev.preventDefault(); first.focus(); }
+                        }
+                    }
+                };
+                document.addEventListener('keydown', activeKeydownHandler);
+
+                // show modal
+                liveModal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                liveModal.setAttribute('aria-hidden', 'false');
+
+                // focus first focusable element (prefer first button)
+                window.setTimeout(() => {
+                    const focusable = liveModal.querySelectorAll('a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+                    const list = Array.prototype.slice.call(focusable).filter(el => el.offsetParent !== null);
+                    if (list.length) list[0].focus(); else liveModalClose?.focus();
+                }, 10);
+            });
+        }
+
+        function showConfirm(title, message) {
+            return showModal({ title, body: message, buttons: [
+                { label: 'Cancel', value: false, className: 'btn btn-outline-secondary' },
+                { label: 'Confirm', value: true, className: 'btn btn-primary' }
+            ]});
+        }
+
+        function showAlert(title, message) {
+            return showModal({ title, body: message, buttons: [{ label: 'OK', value: true, className: 'btn btn-primary' }], closable: true });
+        }
+
+        liveModalClose?.addEventListener('click', () => hideModal(false));
+
+
+        // Lightweight toast for success messages (green)
+        function showToast(message, type='success', duration=3000) {
+            return new Promise((resolve) => {
+                const container = document.getElementById('liveAssessmentToastContainer');
+                if (!container) return resolve();
+                const toast = document.createElement('div');
+                toast.style.pointerEvents = 'auto';
+                toast.style.background = type === 'success' ? '#d1fae5' : '#fff';
+                toast.style.borderLeft = type === 'success' ? '4px solid #16a34a' : '4px solid #6b7280';
+                toast.style.color = '#064e3b';
+                toast.style.padding = '10px 14px';
+                toast.style.borderRadius = '8px';
+                toast.style.boxShadow = '0 8px 20px rgba(2,6,23,0.08)';
+                toast.style.maxWidth = '320px';
+                toast.style.fontWeight = '700';
+                toast.textContent = message;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.transition = 'opacity 300ms ease, transform 300ms ease';
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(-8px)';
+                }, duration - 300);
+                setTimeout(() => { toast.remove(); resolve(); }, duration);
+            });
+        }
+    const sessionId = '{{ live_session.id }}';
+    const stateUrl = `/api/live-assessment/session/${sessionId}/`;
+    const actionUrl = `/api/live-assessment/session/${sessionId}/action/`;
+    const pollInterval = 2500;
+    let pollTimer = null;
+
+    function csrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || document.cookie.split('; ').find(r => r.startsWith('csrftoken='))?.split('=')[1] || '';
+    }
+
+    function setText(selector, text) {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = text;
+    }
+
+    function formatDuration(seconds) {
+        if (seconds == null || seconds <= 0) return 'No limit';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return mins ? `${mins}m ${secs}s` : `${secs}s`;
+    }
+
+    function addActivity(message, when) {
+        const timeline = document.getElementById('activityTimeline');
+        const time = when || new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        const node = document.createElement('div');
+        node.className = 'mb-2';
+        node.innerHTML = `<div class="small text-muted">${time}</div><div>${message}</div>`;
+        timeline.prepend(node);
+    }
+
+    async function fetchState() {
+        try {
+            const r = await fetch(stateUrl, { cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' }});
+            if (!r.ok) return null;
+            const j = await r.json();
+            return j.success ? j.session : null;
+        } catch (e) { console.warn('state fetch', e); return null; }
+    }
+
+    function formatElapsed(seconds) {
+        if (!seconds) return '0s';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return m ? `${m}m ${s}s` : `${s}s`;
+    }
+
+    function updateButtonStates(status) {
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        const endBtn = document.getElementById('endBtn');
+        const statusKey = (status || '').toLowerCase();
+        if (startBtn) startBtn.disabled = statusKey !== 'waiting';
+        if (pauseBtn) pauseBtn.disabled = statusKey !== 'started';
+        if (resumeBtn) resumeBtn.disabled = statusKey !== 'paused';
+        if (endBtn) endBtn.disabled = statusKey === 'ended';
+    }
+
+    function updateFromState(session) {
+        if (!session) return;
+        setText('#headerStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
+        setText('#controlStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
+        setText('#lastUpdated', new Date().toLocaleTimeString());
+        setText('#monitorTime', new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        updateButtonStates(session.status);
+        const states = session.student_states || {};
+        const counts = {connected:0, ready:0, reading:0, completed:0, offline:0};
+        for (const [sid, st] of Object.entries(states)) {
+            const s = st.status || 'waiting';
+            if (st.connection_status && st.connection_status !== 'disconnected' && st.connection_status !== 'offline') counts.connected++;
+            if (s === 'ready') counts.ready++;
+            if (s === 'reading') counts.reading++;
+            if (s === 'completed') counts.completed++;
+            if (st.connection_status === 'disconnected' || st.connection_status === 'offline') counts.offline++;
+        }
+        setText('#statTotal', session.student_count || 0);
+        setText('#statConnected', counts.connected);
+        setText('#statReady', counts.ready);
+        setText('#statReading', counts.reading);
+        setText('#statCompleted', counts.completed);
+        setText('#statOffline', counts.offline);
+        setText('#selectedCount', session.student_count || 0);
+        const remainingSeconds = session.remaining_seconds;
+        setText('#teacherSessionTimer', session.timing_mode === 'duration' ? formatDuration(remainingSeconds) : 'No limit');
+        setText('#currentCountdown', session.start_countdown_seconds != null ? `${session.start_countdown_seconds}s` : (session.countdown_seconds != null ? `${session.countdown_seconds}s` : '0s'));
+
+        // Rebuild participant checkboxes if available_students provided
+        const avail = session.available_students || [];
+        if (avail && avail.length) {
+            const list = document.getElementById('participantList');
+            // Only rebuild if participant list is empty or differs
+            if (list && list.children.length === 0) {
+                for (const s of avail) {
+                    const label = document.createElement('label');
+                    label.className = 'd-flex align-items-center gap-2 mb-1 participant-row';
+                    label.innerHTML = `<input type="checkbox" class="participant-checkbox" data-student-id="${s.id}">` +
+                        `<div class="flex-grow-1"><div class="small fw-semibold">${s.full_name}</div><div class="small text-muted">Grade ${s.grade} • ${s.section}</div></div>` +
+                        `<div class="small text-muted" data-connected-for-id="${s.id}">—</div>`;
+                    list.appendChild(label);
+                }
+            }
+        }
+
+        // student rows: ensure only selected students are displayed in the monitoring table
+        const selectedIds = (session.student_states && Object.keys(session.student_states).length)
+            ? Object.keys(session.student_states)
+            : ((session.student_ids || []).map(String));
+        const tbody = document.getElementById('studentsTableBody');
+        // Sync participant checkbox checked state with session.student_states / session.student_ids
+        try {
+            const selectedSet = new Set((session.student_states && Object.keys(session.student_states).length) ? Object.keys(session.student_states) : (session.student_ids || []).map(String));
+            document.querySelectorAll('.participant-checkbox').forEach(cb => {
+                const id = String(cb.dataset.studentId);
+                cb.checked = selectedSet.has(id);
+            });
+        } catch (e) {}
+        if (tbody) {
+            // Remove empty-state row if present
+            const emptyRow = tbody.querySelector('tr.text-muted');
+            if (selectedIds.length > 0 && emptyRow) emptyRow.remove();
+
+            // Build map of existing rows
+            const existing = {};
+            tbody.querySelectorAll('tr[data-student-id]').forEach(r => existing[r.getAttribute('data-student-id')] = r);
+
+            // Use available_students map for profile info
+            const profileMap = {};
+            for (const p of (session.available_students || [])) profileMap[String(p.id)] = p;
+
+            // Ensure each selected student has a row
+            for (const sid of selectedIds) {
+                if (!existing[sid]) {
+                    const p = profileMap[sid] || { id: sid, full_name: 'Student', custom_id: '' };
+                    const initials = `${(p.first_name || '').slice(0,1) || ''}${(p.last_name || '').slice(0,1) || ''}`;
+                    const tr = document.createElement('tr');
+                    tr.setAttribute('data-student-id', sid);
+                    tr.innerHTML = `
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar student-avatar rounded-circle bg-secondary text-white text-center">${initials}</div>
+                                <div class="small"><div class="fw-semibold">${p.full_name}</div><div class="text-muted small">${p.custom_id || ''}</div></div>
+                            </div>
+                        </td>
+                        <td><span class="status-pill status-pill-waiting" data-status-col="${sid}">Waiting</span></td>
+                        <td>
+                            <div class="progress progress-sm mb-1"><div class="progress-bar" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-progress-bar="${sid}"></div></div>
+                            <div class="small text-muted" data-progress-text="${sid}">--</div>
+                        </td>
+                        <td class="small text-muted" data-elapsed-col="${sid}">--</td>
+                        <td class="small text-muted fw-semibold" data-score-col="${sid}">--</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            }
+
+            // Update existing rows with latest states
+            for (const [sid, st] of Object.entries(states)) {
+                const row = document.querySelector(`[data-student-id="${sid}"]`);
+                if (!row) continue;
+                const statusCol = row.querySelector(`[data-status-col="${sid}"]`);
+                const progressBar = row.querySelector(`[data-progress-bar="${sid}"]`);
+                const progressText = row.querySelector(`[data-progress-text="${sid}"]`);
+                const elapsedCol = row.querySelector(`[data-elapsed-col="${sid}"]`);
+                const scoreCol = row.querySelector(`[data-score-col="${sid}"]`);
+
+                const statusValue = (st.status || 'waiting').toLowerCase().replace(/\s+/g, '_');
+                const statusLabels = {
+                    reading: 'Reading',
+                    waiting: 'Waiting',
+                    ready: 'Ready',
+                    finished: 'Finished',
+                    needs_attention: 'Needs Attention',
+                };
+                const statusClasses = {
+                    reading: 'status-pill-reading',
+                    waiting: 'status-pill-waiting',
+                    ready: 'status-pill-ready',
+                    finished: 'status-pill-finished',
+                    needs_attention: 'status-pill-needs_attention',
+                };
+                const statusLabel = statusLabels[statusValue] || `${statusValue.charAt(0).toUpperCase()}${statusValue.slice(1)}`;
+                const pillClass = statusClasses[statusValue] || 'status-pill-waiting';
+
+                if (statusCol) {
+                    statusCol.className = `status-pill ${pillClass}`;
+                    statusCol.textContent = statusLabel;
+                }
+                // Progress handling per student status
+                const rawProgress = Number(st.progress) || 0;
+                const percent = st.items_total ? Math.round(rawProgress * 100) : 0;
+                const statusLower = (st.status || 'waiting').toLowerCase();
+
+                if (statusLower === 'waiting') {
+                    // No progress yet
+                    if (progressBar) {
+                        progressBar.style.width = `0%`;
+                        progressBar.setAttribute('aria-valuenow', 0);
+                    }
+                    if (progressText) progressText.textContent = '--';
+                    if (elapsedCol) elapsedCol.textContent = '--';
+                    if (scoreCol) scoreCol.textContent = '--';
+                } else if (statusLower === 'ready') {
+                    // Ready but not yet reading
+                    if (progressBar) {
+                        progressBar.style.width = `0%`;
+                        progressBar.setAttribute('aria-valuenow', 0);
+                    }
+                    if (progressText) progressText.textContent = '0%';
+                    if (elapsedCol) elapsedCol.textContent = '--';
+                    if (scoreCol) scoreCol.textContent = '--';
+                } else if (statusLower === 'reading') {
+                    // Ongoing reading progress; show live elapsed
+                    if (progressBar) {
+                        progressBar.style.width = `${percent}%`;
+                        progressBar.setAttribute('aria-valuenow', percent);
+                    }
+                    if (progressText) {
+                        progressText.textContent = st.items_total
+                            ? `${percent}% • ${st.items_completed || 0} / ${st.items_total}`
+                            : `${percent}%`;
+                    }
+                    if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
+                    if (scoreCol) scoreCol.textContent = '--';
+                } else {
+                    // finished or other terminal states
+                    const finalPercent = 100;
+                    if (progressBar) {
+                        progressBar.style.width = `${finalPercent}%`;
+                        progressBar.setAttribute('aria-valuenow', finalPercent);
+                    }
+                    if (progressText) progressText.textContent = '100%';
+                    if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
+                    if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : '--';
+                }
+            }
+
+            // If no selected students, show the empty-state row
+            if (selectedIds.length === 0) {
+                tbody.innerHTML = '<tr class="text-muted"><td colspan="5" class="small text-center py-4"><strong>No participants selected yet.</strong><br>Select students from the Session Configuration panel or click <strong>Select All</strong> to add participants.</td></tr>';
+            }
+        }
+
+        const log = (session.activity_log || []);
+        const timeline = document.getElementById('activityTimeline');
+        timeline.innerHTML = '';
+        for (let i = log.length - 1; i >= 0; i--) {
+            const ev = log[i];
+            const time = ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : new Date().toLocaleTimeString();
+            const node = document.createElement('div');
+            node.className = 'mb-2';
+            node.innerHTML = `<div class="small text-muted">${time}</div><div>${ev.message}</div>`;
+            timeline.appendChild(node);
+        }
+    }
+
+    async function sendAction(action, payload={}) {
+        try {
+            const body = Object.assign({ action }, payload);
+            const r = await fetch(actionUrl, {
+                method: 'POST', credentials: 'same-origin', headers: { 'Content-Type':'application/json', 'X-CSRFToken': csrfToken(), 'Accept':'application/json' },
+                body: JSON.stringify(body)
+            });
+            const j = await r.json();
+            if (!j.success) throw new Error(j.error || 'Action failed');
+            updateFromState(j.session);
+            return j.session;
+        } catch (e) { await showAlert('Action failed', String(e.message || e)); return null; }
+    }
+
+    let settingsSaved = false;
+
+    function setSaveNotice(message, type='info') {
+        const el = document.getElementById('saveNotice');
+        if (!el) return;
+        el.className = `alert alert-${type} py-2 px-3 small mb-3`;
+        el.textContent = message;
+        if (message) el.classList.remove('d-none'); else el.classList.add('d-none');
+    }
+
+    document.getElementById('startBtn').addEventListener('click', async () => {
+        const selected = Array.from(document.querySelectorAll('.participant-checkbox')).filter(c => c.checked).map(c => parseInt(c.dataset.studentId));
+        if (!selected || selected.length === 0) { await showToast('Please select at least one participant before starting the session.', 'success'); return; }
+        if (!settingsSaved) {
+            const saved = await sendAction('save_settings', {
+                selected_student_ids: selected,
+                timing_mode: document.getElementById('timingMode').value,
+                duration_seconds: document.getElementById('timingMode').value === 'duration' ? parseInt(document.getElementById('durationMinutes').value || 0) * 60 : null,
+                countdown_seconds: document.getElementById('countdown').value === 'custom' ? parseInt(document.getElementById('countdownCustom').value || 0) : parseInt(document.getElementById('countdown').value || 0),
+            });
+            if (!saved) return;
+            settingsSaved = true;
+        }
+
+        const confirmed = await showConfirm('Start Live Assessment', `You are about to begin this session for ${selected.length} selected student(s).\n\nStudents will automatically move into the assessment countdown once the teacher starts.`);
+        if (!confirmed) return;
+
+        await sendAction('start', {
+            selected_student_ids: selected,
+            timing_mode: document.getElementById('timingMode').value,
+            duration_seconds: document.getElementById('timingMode').value === 'duration' ? parseInt(document.getElementById('durationMinutes').value || 0) * 60 : null,
+            countdown_seconds: document.getElementById('countdown').value === 'custom' ? parseInt(document.getElementById('countdownCustom').value || 0) : parseInt(document.getElementById('countdown').value || 0),
+        });
+    });
+
+    document.getElementById('pauseBtn').addEventListener('click', () => sendAction('pause'));
+    document.getElementById('resumeBtn').addEventListener('click', () => sendAction('resume'));
+    document.getElementById('endBtn').addEventListener('click', async () => { const ok = await showConfirm('End session', 'End session for all students?'); if (ok) sendAction('end'); });
+    document.getElementById('exitBtnTop').addEventListener('click', async (event) => {
+        event.preventDefault();
+        const status = document.querySelector('#controlStatus')?.textContent?.trim().toLowerCase();
+        if (status === 'waiting') {
+            window.location.href = '{% url "dashboard_teacher" %}';
+            return;
+        }
+        const confirmed = await showConfirm('End session and exit', 'End the live assessment and return to the Teacher Dashboard?');
+        if (!confirmed) return;
+        const result = await sendAction('end');
+        if (result) {
+            window.location.href = '{% url "dashboard_teacher" %}';
+        }
+    });
+
+    document.getElementById('selectAllBtn').addEventListener('click', () => {
+        document.querySelectorAll('.participant-checkbox').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('resetSelectionBtn').addEventListener('click', () => {
+        document.querySelectorAll('.participant-checkbox').forEach(cb => cb.checked = false);
+    });
+    document.getElementById('studentSearch').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase();
+        document.querySelectorAll('.participant-row').forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(q) ? '' : 'none';
+        });
+    });
+
+    document.getElementById('timingMode').addEventListener('change', (e) => {
+        document.getElementById('durationInputs').classList.toggle('d-none', e.target.value !== 'duration');
+    });
+    document.getElementById('countdown').addEventListener('change', (e) => {
+        document.getElementById('countdownCustom').classList.toggle('d-none', e.target.value !== 'custom');
+    });
+
+    async function validateSessionSettings() {
+        const selected = Array.from(document.querySelectorAll('.participant-checkbox')).filter(c => c.checked).map(c => parseInt(c.dataset.studentId));
+            if (!selected || selected.length === 0) {
+            await showToast('Please select at least one participant before saving settings.', 'success');
+            return null;
+        }
+        const timing = document.getElementById('timingMode').value;
+        const duration = timing === 'duration' ? parseInt(document.getElementById('durationMinutes').value || 0) * 60 : null;
+        if (timing === 'duration' && (!duration || duration <= 0)) {
+            await showAlert('Invalid duration', 'Please enter a valid duration greater than zero.');
+            return null;
+        }
+        const countdownValue = document.getElementById('countdown').value;
+        const countdown = countdownValue === 'custom' ? parseInt(document.getElementById('countdownCustom').value || 0) : parseInt(countdownValue || 0);
+        if (countdownValue === 'custom' && (!countdown || countdown <= 0)) {
+            await showAlert('Invalid countdown', 'Please enter a valid custom countdown length.');
+            return null;
+        }
+        return { selected, timing, duration, countdown };
+    }
+
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+        const validated = await validateSessionSettings();
+        if (!validated) return;
+        const payload = {
+            selected_student_ids: validated.selected,
+            timing_mode: validated.timing,
+            duration_seconds: validated.duration,
+            countdown_seconds: validated.countdown,
+        };
+        const s = await sendAction('save_settings', payload);
+        if (s) {
+            settingsSaved = true;
+            setSaveNotice('Session configuration saved successfully.', 'success');
+        }
+    });
+
+    async function poll() {
+        const s = await fetchState();
+        if (s) updateFromState(s);
+    }
+
+    poll();
+    pollTimer = setInterval(poll, pollInterval);
+})();
+</script>
+{% endblock %}

@@ -1099,3 +1099,38 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} -> {self.recipient.custom_id}"
+
+
+class LiveAssessmentSession(models.Model):
+    STATUS_CHOICES = [
+        ('waiting', 'Waiting'),
+        ('countdown', 'Countdown'),
+        ('started', 'Started'),
+        ('paused', 'Paused'),
+        ('ended', 'Ended'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.CharField(max_length=64, primary_key=True)
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='live_assessment_sessions')
+    course = models.ForeignKey('Course', on_delete=models.SET_NULL, related_name='live_assessment_sessions', null=True, blank=True)
+    material = models.ForeignKey('Material', on_delete=models.CASCADE, related_name='live_assessment_sessions')
+    student_ids = models.JSONField(default=list, blank=True)
+    student_count = models.IntegerField(default=0)
+    student_states = models.JSONField(default=dict, blank=True)
+    activity_log = models.JSONField(default=list, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
+    start_at = models.DateTimeField(null=True, blank=True)
+    countdown_seconds = models.IntegerField(default=10)
+    timing_mode = models.CharField(max_length=20, choices=[('none', 'No Limit'), ('duration', 'Duration')], default='none')
+    duration_seconds = models.IntegerField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'live_assessment_sessions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Live assessment session {self.id} ({self.status})"

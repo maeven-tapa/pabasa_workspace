@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.hashers import make_password, check_password
@@ -44,7 +44,7 @@ from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, HuntStarAward
+from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward
 from .reading_material_utils import format_assigned_week_display, parse_assigned_week
 from .reading_stt import (
     analyze_reading,
@@ -4956,6 +4956,112 @@ def _build_live_assessment_action_url(material, session_id, start_at, countdown_
     return f'/dashboard/assessment/reading_ui/{mode}/?{query}'
 
 
+def _build_live_assessment_control_url(session_id):
+    if not session_id:
+        return ''
+    quoted_id = quote(str(session_id), safe='')
+    return f'/dashboard/live-assessment/{quoted_id}/control/'
+
+
+def _build_live_assessment_waiting_url(session_id):
+    if not session_id:
+        return ''
+    quoted_id = quote(str(session_id), safe='')
+    return f'/dashboard/live-assessment/{quoted_id}/waiting/'
+
+
+def _build_live_assessment_session_url(session_id):
+    return _build_live_assessment_control_url(session_id)
+
+
+def _append_live_session_activity(session, message):
+    try:
+        log = session.activity_log or []
+        if not isinstance(log, list):
+            log = []
+        log.append({
+            'timestamp': timezone.now().isoformat(),
+            'message': str(message),
+        })
+        session.activity_log = log[-200:]
+    except Exception:
+        session.activity_log = [{'timestamp': timezone.now().isoformat(), 'message': str(message)}]
+
+
+def _advance_live_assessment_state(session):
+    if session.status == 'countdown' and session.start_at:
+        if timezone.now() >= session.start_at:
+            session.status = 'started'
+            _append_live_session_activity(session, 'Live assessment countdown completed and session is now active.')
+            session.save(update_fields=['status', 'activity_log', 'updated_at'])
+    return session
+
+
+def _maybe_auto_end_live_session(session):
+    if session.status != 'started':
+        return session
+
+    now = timezone.now()
+    if session.timing_mode == 'duration' and session.duration_seconds and session.start_at:
+        if session.start_at + timedelta(seconds=session.duration_seconds) <= now:
+            session.status = 'ended'
+            states = session.student_states or {}
+            for student_key, student_state in states.items():
+                student_state['status'] = 'completed'
+                student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
+                states[student_key] = student_state
+            session.student_states = states
+            _append_live_session_activity(session, 'Live assessment session duration expired and session ended automatically.')
+            session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+    return session
+
+
+def _get_live_session_remaining_seconds(session):
+    if session.timing_mode != 'duration' or not session.duration_seconds or not session.start_at:
+        return None
+    remaining = int((session.start_at + timedelta(seconds=session.duration_seconds) - timezone.now()).total_seconds())
+    return max(0, remaining)
+
+
+def _get_live_session_start_countdown_seconds(session):
+    if not session.start_at:
+        return None
+    remaining = int((session.start_at - timezone.now()).total_seconds())
+    return max(0, remaining)
+
+
+def _update_live_student_state(session, student_id, state_values):
+    states = session.student_states or {}
+    if not isinstance(states, dict):
+        states = {}
+    student_key = str(student_id)
+    student_record = states.get(student_key, {}) if isinstance(states.get(student_key, {}), dict) else {}
+    student_record.update(state_values or {})
+    student_record['updated_at'] = timezone.now().isoformat()
+    states[student_key] = student_record
+    session.student_states = states
+
+
+def _ensure_live_session_student_states(session, student_ids):
+    states = session.student_states or {}
+    if not isinstance(states, dict):
+        states = {}
+    for student_id in student_ids or []:
+        student_key = str(student_id)
+        student_state = states.get(student_key, {}) if isinstance(states.get(student_key, {}), dict) else {}
+        student_state.update({
+            'status': student_state.get('status', 'waiting'),
+            'connection_status': student_state.get('connection_status', 'waiting'),
+            'progress': student_state.get('progress', 0),
+            'current_item': student_state.get('current_item', ''),
+            'elapsed_seconds': student_state.get('elapsed_seconds', 0),
+            'final_score': student_state.get('final_score'),
+        })
+        states[student_key] = student_state
+    session.student_states = states
+    return states
+
+
 def _build_assist_assessment_url(material, student_user, course, teacher_user, section=None):
     if not material or not student_user or not teacher_user:
         return ''
@@ -5164,7 +5270,8 @@ def start_live_assessment(request):
     if not sections:
         return JsonResponse({'success': False, 'error': 'No class sections available for this material'}, status=400)
 
-    student_ids = []
+    # Build the available roster from class sections but DO NOT auto-select them.
+    available_student_ids = []
     seen_student_ids = set()
     for section in sections:
         for entry in section.get_enrolled_students(active_only=True):
@@ -5174,43 +5281,494 @@ def start_live_assessment(request):
             student_user = User.objects.filter(id=student_id, role='student', is_archived=False).first()
             if student_user:
                 seen_student_ids.add(str(student_id))
-                student_ids.append(student_user.id)
+                available_student_ids.append(student_user.id)
 
-    if not student_ids:
+    if not available_student_ids:
         return JsonResponse({'success': False, 'error': 'No active students found for this course'}, status=400)
 
     session_id = uuid.uuid4().hex
-    start_at = timezone.now().isoformat()
     countdown_seconds = 10
-    action_url = _build_live_assessment_action_url(material, session_id, start_at, countdown_seconds)
-    title = 'Live Assessment Starting'
-    message = (
-        f"Your teacher has started a live assessment for {material.title or 'this reading'}. "
-        "You'll be redirected automatically and begin together in a moment."
+    # Create session with an empty participant list. Teacher will choose participants.
+    session = LiveAssessmentSession.objects.create(
+        id=session_id,
+        teacher=teacher_user,
+        course=course,
+        material=material,
+        student_ids=[],
+        student_count=0,
+        status='waiting',
+        countdown_seconds=countdown_seconds,
     )
 
-    for student_id in student_ids:
-        student_user = User.objects.filter(id=student_id).first()
-        if not student_user:
-            continue
-        _create_notification(
-            student_user,
-            title,
-            message,
-            'assessment',
-            action_url,
-            teacher_user,
-            send_email=False,
-            force_in_app=True,
+    control_url = _build_live_assessment_control_url(session.id)
+    waiting_url = _build_live_assessment_waiting_url(session.id)
+
+    # Provide available roster to the teacher so they can select participants.
+    available_profiles = list(
+        User.objects.filter(id__in=available_student_ids)
+        .order_by('first_name', 'last_name')
+        .values('id', 'first_name', 'last_name', 'custom_id', 'grade_level', 'section')
+    )
+    for student in available_profiles:
+        student['full_name'] = ' '.join(filter(None, [student.get('first_name') or '', student.get('last_name') or ''])).strip() or student.get('custom_id') or 'Student'
+        student['grade'] = student.get('grade_level') or 'N/A'
+        student['section'] = student.get('section') or 'N/A'
+
+    return JsonResponse({
+        'success': True,
+        'session': {
+            'id': session.id,
+            'url': control_url,
+            'start_at': session.created_at.isoformat() if session.created_at else timezone.now().isoformat(),
+            'student_count': 0,
+            'action_url': control_url,
+            'student_url': waiting_url,
+            'available_students': available_profiles,
+        },
+    })
+
+
+@never_cache
+@login_required()
+@ensure_csrf_cookie
+def live_assessment_session_entry(request, session_id):
+    session = LiveAssessmentSession.objects.filter(id=session_id).select_related('teacher', 'course', 'material').first()
+    if not session:
+        return HttpResponse('Live assessment session not found', status=404)
+
+    if not _check_auth(request):
+        return redirect('auth')
+
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    is_teacher = request.session.get('user_role') in ['teacher', 'admin'] and user and user.id == session.teacher_id
+    is_student = request.session.get('user_role') == 'student' and user and user.id in session.student_ids
+    if not is_teacher and not is_student:
+        return HttpResponseForbidden('You are not authorized to view this live assessment session')
+
+    if is_teacher:
+        return redirect(_build_live_assessment_control_url(session.id))
+    return redirect(_build_live_assessment_waiting_url(session.id))
+
+
+@never_cache
+@login_required(role='teacher')
+@ensure_csrf_cookie
+def live_assessment_session_page(request, session_id):
+    session = LiveAssessmentSession.objects.filter(id=session_id).select_related('teacher', 'course', 'material').first()
+    if not session:
+        return HttpResponse('Live assessment session not found', status=404)
+
+    if not _check_auth(request):
+        return redirect('auth')
+
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not user or user.id != session.teacher_id:
+        return HttpResponseForbidden('This page is only available to the session teacher')
+
+    teacher_name = ' '.join(filter(None, [session.teacher.first_name, session.teacher.last_name])) or session.teacher.email or 'Teacher'
+    # Profiles for currently selected participants (for monitoring)
+    student_profiles = list(
+        User.objects.filter(id__in=session.student_ids)
+        .order_by('first_name', 'last_name')
+        .values('id', 'first_name', 'last_name', 'custom_id', 'grade_level', 'section')
+    )
+    for student in student_profiles:
+        student['full_name'] = ' '.join(filter(None, [student.get('first_name') or '', student.get('last_name') or ''])).strip() or student.get('custom_id') or 'Student'
+        student['grade'] = student.get('grade_level') or 'N/A'
+        student['section'] = student.get('section') or 'N/A'
+
+    # Also provide the roster of available students for selection (teacher picks participants)
+    available_ids = []
+    try:
+        sections = []
+        if session.course:
+            sections = list(session.course.sections.filter(is_active=True))
+            if not sections and session.material and session.material.section and session.material.section.is_active:
+                sections = [session.material.section]
+        elif session.material and session.material.section and session.material.section.is_active:
+            sections = [session.material.section]
+        seen = set()
+        for section in sections:
+            for entry in section.get_enrolled_students(active_only=True):
+                sid = entry.get('student_id')
+                if sid and str(sid) not in seen:
+                    seen.add(str(sid))
+                    available_ids.append(sid)
+    except Exception:
+        available_ids = []
+
+    available_profiles = list(
+        User.objects.filter(id__in=available_ids)
+        .order_by('first_name', 'last_name')
+        .values('id', 'first_name', 'last_name', 'custom_id', 'grade_level', 'section')
+    )
+    for student in available_profiles:
+        student['full_name'] = ' '.join(filter(None, [student.get('first_name') or '', student.get('last_name') or ''])).strip() or student.get('custom_id') or 'Student'
+        student['grade'] = student.get('grade_level') or 'N/A'
+        student['section'] = student.get('section') or 'N/A'
+
+    context = _dashboard_context(request, 'teacher')
+    context.update({
+        'live_session': session,
+        'teacher_name': teacher_name,
+        'student_profiles': student_profiles,
+        'available_students': available_profiles,
+    })
+    return render(request, 'pabasa_app/live_assessment_session.html', context)
+
+
+@never_cache
+@login_required(role='student')
+@ensure_csrf_cookie
+def live_assessment_waiting_room_page(request, session_id):
+    session = LiveAssessmentSession.objects.filter(id=session_id).select_related('teacher', 'course', 'material').first()
+    if not session:
+        return HttpResponse('Live assessment session not found', status=404)
+
+    if not _check_auth(request):
+        return redirect('auth')
+
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not user or user.id not in session.student_ids:
+        return HttpResponseForbidden('This page is only available to students participating in the live session')
+
+    teacher_name = ' '.join(filter(None, [session.teacher.first_name, session.teacher.last_name])) or session.teacher.email or 'Teacher'
+    student_name = ' '.join(filter(None, [user.first_name, user.last_name])) or user.email or 'Student'
+    student_grade = user.grade_level or 'N/A'
+    student_section = user.section or 'N/A'
+
+    context = _dashboard_context(request, 'student')
+    context.update({
+        'live_session': session,
+        'teacher_name': teacher_name,
+        'student_name': student_name,
+        'student_grade': student_grade,
+        'student_section': student_section,
+    })
+    return render(request, 'pabasa_app/live_assessment_waiting_room.html', context)
+
+
+@csrf_protect
+@require_http_methods(['GET'])
+def live_assessment_session_state(request, session_id):
+    session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
+    if not session:
+        return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    user_id = request.session.get('user_id')
+    user_role = request.session.get('user_role')
+    if user_role == 'student':
+        if user_id not in session.student_ids:
+            return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    elif user_role in ['teacher', 'admin']:
+        if user_id != session.teacher_id:
+            return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    else:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    _advance_live_assessment_state(session)
+    _maybe_auto_end_live_session(session)
+
+    reader_url = ''
+    if user_role == 'student' and session.start_at:
+        reader_url = _build_live_assessment_action_url(
+            session.material,
+            session.id,
+            session.start_at.isoformat(),
+            session.countdown_seconds,
+        )
+
+    # Provide available roster for teachers so the UI can render the selection list
+    available_profiles = []
+    try:
+        src_sections = []
+        if session.course:
+            src_sections = list(session.course.sections.filter(is_active=True))
+            if not src_sections and session.material and session.material.section and session.material.section.is_active:
+                src_sections = [session.material.section]
+        elif session.material and session.material.section and session.material.section.is_active:
+            src_sections = [session.material.section]
+        seen = set()
+        avail_ids = []
+        for section in src_sections:
+            for entry in section.get_enrolled_students(active_only=True):
+                sid = entry.get('student_id')
+                if sid and str(sid) not in seen:
+                    seen.add(str(sid))
+                    avail_ids.append(sid)
+        available_profiles = list(
+            User.objects.filter(id__in=avail_ids)
+            .order_by('first_name', 'last_name')
+            .values('id', 'first_name', 'last_name', 'custom_id', 'grade_level', 'section')
+        )
+        for student in available_profiles:
+            student['full_name'] = ' '.join(filter(None, [student.get('first_name') or '', student.get('last_name') or ''])).strip() or student.get('custom_id') or 'Student'
+            student['grade'] = student.get('grade_level') or 'N/A'
+            student['section'] = student.get('section') or 'N/A'
+    except Exception:
+        available_profiles = []
+
+    return JsonResponse({
+        'success': True,
+        'session': {
+            'id': session.id,
+            'status': session.status,
+            'start_at': session.start_at.isoformat() if session.start_at else None,
+            'countdown_seconds': session.countdown_seconds,
+            'start_countdown_seconds': _get_live_session_start_countdown_seconds(session),
+            'remaining_seconds': _get_live_session_remaining_seconds(session),
+            'student_count': session.student_count,
+            'student_ids': session.student_ids or [],
+            'material_title': session.material.title if session.material else '',
+            'course_title': session.course.title if session.course else '',
+            'timing_mode': session.timing_mode or 'none',
+            'duration_seconds': session.duration_seconds or 0,
+            'ends_at': session.ends_at.isoformat() if session.ends_at else None,
+            'reader_url': reader_url,
+            'student_states': session.student_states or {},
+            'activity_log': session.activity_log or [],
+            'available_students': available_profiles,
+        },
+    })
+
+
+@csrf_protect
+@require_http_methods(['POST'])
+def live_assessment_session_action(request, session_id):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    user_id = request.session.get('user_id')
+    user_role = request.session.get('user_role')
+    session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
+    if not session:
+        return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+
+    if user_role not in ['teacher', 'admin'] or user_id != session.teacher_id:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        data = {}
+
+    action = (data.get('action') or '').strip().lower()
+    selected_student_ids = data.get('selected_student_ids') if isinstance(data.get('selected_student_ids'), list) else None
+    countdown_seconds = data.get('countdown_seconds')
+    timing_mode = (data.get('timing_mode') or session.timing_mode or 'none').strip().lower()
+    duration_seconds = data.get('duration_seconds')
+    ends_at = data.get('ends_at')
+
+    # Allow selecting students from the available course/section roster while in waiting state.
+    if selected_student_ids is not None and session.status == 'waiting':
+        available_ids = set()
+        try:
+            src_sections = []
+            if session.course:
+                src_sections = list(session.course.sections.filter(is_active=True))
+                if not src_sections and session.material and session.material.section and session.material.section.is_active:
+                    src_sections = [session.material.section]
+            elif session.material and session.material.section and session.material.section.is_active:
+                src_sections = [session.material.section]
+            for section in src_sections:
+                for entry in section.get_enrolled_students(active_only=True):
+                    sid = entry.get('student_id')
+                    if sid:
+                        available_ids.add(int(sid))
+        except Exception:
+            available_ids = set()
+
+        filtered_ids = [int(sid) for sid in selected_student_ids if int(sid) in available_ids]
+        session.student_ids = filtered_ids
+        session.student_count = len(filtered_ids)
+        existing_states = session.student_states or {}
+        session.student_states = {k: v for k, v in existing_states.items() if k in [str(sid) for sid in filtered_ids]}
+        _ensure_live_session_student_states(session, filtered_ids)
+
+    if timing_mode not in ['none', 'duration', 'deadline']:
+        timing_mode = 'none'
+
+    if countdown_seconds is not None and session.status == 'waiting':
+        try:
+            session.countdown_seconds = int(countdown_seconds)
+        except (ValueError, TypeError):
+            pass
+
+    if session.status == 'waiting':
+        session.timing_mode = timing_mode
+        if timing_mode == 'duration':
+            try:
+                session.duration_seconds = int(duration_seconds)
+            except (ValueError, TypeError):
+                session.duration_seconds = session.duration_seconds or 0
+            session.ends_at = None
+        else:
+            session.duration_seconds = None
+            session.ends_at = None
+
+    if action == 'start':
+        if session.status != 'waiting':
+            return JsonResponse({'success': False, 'error': 'Live assessment session already started or ended'}, status=400)
+        if session.student_count <= 0:
+            return JsonResponse({'success': False, 'error': 'No students selected for the live session'}, status=400)
+
+        session.start_at = timezone.now() + timedelta(seconds=session.countdown_seconds or 0)
+        if session.countdown_seconds and session.countdown_seconds > 0:
+            session.status = 'countdown'
+            activity_message = f'Teacher started countdown for {session.countdown_seconds}s.'
+        else:
+            session.status = 'started'
+            activity_message = 'Teacher started the session.'
+
+        _ensure_live_session_student_states(session, session.student_ids)
+        _append_live_session_activity(session, activity_message)
+        session.save(update_fields=['status', 'start_at', 'countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_states', 'student_count', 'activity_log', 'updated_at'])
+
+        try:
+            waiting_url = _build_live_assessment_waiting_url(session.id)
+            title = 'Live Assessment Countdown Started'
+            message = (
+                f"Your teacher has started the live assessment countdown for {session.material.title or 'this reading'}. "
+                'Please stay in the waiting room while the assessment begins.'
+            )
+            for sid in session.student_ids:
+                student_user = User.objects.filter(id=sid).first()
+                if not student_user:
+                    continue
+                _create_notification(
+                    student_user,
+                    title,
+                    message,
+                    'assessment',
+                    waiting_url,
+                    User.objects.filter(id=session.teacher_id).first(),
+                    send_email=False,
+                    force_in_app=True,
+                )
+        except Exception:
+            logger.exception('Failed to notify students on session start')
+    elif action == 'pause':
+        if session.status != 'started':
+            return JsonResponse({'success': False, 'error': 'Only an active session can be paused'}, status=400)
+        session.status = 'paused'
+        states = session.student_states or {}
+        for student_key, student_state in states.items():
+            if student_state.get('status') != 'paused':
+                student_state['previous_status'] = student_state.get('status', 'reading')
+                student_state['status'] = 'paused'
+            states[student_key] = student_state
+        session.student_states = states
+        _append_live_session_activity(session, 'Teacher paused the live session.')
+        session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+    elif action == 'resume':
+        if session.status != 'paused':
+            return JsonResponse({'success': False, 'error': 'Only a paused session can be resumed'}, status=400)
+        session.status = 'started'
+        states = session.student_states or {}
+        for student_key, student_state in states.items():
+            if student_state.get('status') == 'paused':
+                student_state['status'] = student_state.pop('previous_status', 'reading')
+            states[student_key] = student_state
+        session.student_states = states
+        _append_live_session_activity(session, 'Teacher resumed the live session.')
+        session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+    elif action == 'end':
+        if session.status == 'ended':
+            return JsonResponse({'success': False, 'error': 'Session already ended'}, status=400)
+        session.status = 'ended'
+        states = session.student_states or {}
+        for student_key, student_state in states.items():
+            student_state['status'] = 'completed'
+            student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
+            states[student_key] = student_state
+        session.student_states = states
+        _append_live_session_activity(session, 'Teacher ended the live session.')
+        session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+    elif action == 'save_settings':
+        if session.status != 'waiting':
+            return JsonResponse({'success': False, 'error': 'Settings can only be updated before the session starts'}, status=400)
+
+        valid_student_ids = []
+        try:
+            src_sections = []
+            if session.course:
+                src_sections = list(session.course.sections.filter(is_active=True))
+                if not src_sections and session.material and session.material.section and session.material.section.is_active:
+                    src_sections = [session.material.section]
+            elif session.material and session.material.section and session.material.section.is_active:
+                src_sections = [session.material.section]
+            allowed_ids = set()
+            for section in src_sections:
+                for entry in section.get_enrolled_students(active_only=True):
+                    sid = entry.get('student_id')
+                    if sid:
+                        allowed_ids.add(int(sid))
+            valid_student_ids = [int(sid) for sid in (selected_student_ids or []) if int(sid) in allowed_ids]
+        except Exception:
+            valid_student_ids = []
+
+        session.student_ids = valid_student_ids
+        session.student_count = len(valid_student_ids)
+        _ensure_live_session_student_states(session, valid_student_ids)
+        _append_live_session_activity(session, 'Teacher saved session configuration and invited students to the waiting room.')
+        session.save(update_fields=['countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_ids', 'student_count', 'student_states', 'updated_at', 'activity_log'])
+
+        try:
+            waiting_url = _build_live_assessment_waiting_url(session.id)
+            title = 'You have been invited to a live assessment'
+            message = (
+                f"Your teacher has prepared a live assessment for {session.material.title or 'this reading'}. "
+                'Please enter the waiting room now.'
+            )
+            for sid in valid_student_ids:
+                student_user = User.objects.filter(id=sid).first()
+                if not student_user:
+                    continue
+                _create_notification(
+                    student_user,
+                    title,
+                    message,
+                    'assessment',
+                    waiting_url,
+                    User.objects.filter(id=session.teacher_id).first(),
+                    send_email=False,
+                    force_in_app=True,
+                )
+        except Exception:
+            logger.exception('Failed to notify students when saving live assessment settings')
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid action'}, status=400)
+
+    reader_url = ''
+    if session.status == 'started' and session.start_at:
+        reader_url = _build_live_assessment_action_url(
+            session.material,
+            session.id,
+            session.start_at.isoformat(),
+            session.countdown_seconds,
         )
 
     return JsonResponse({
         'success': True,
         'session': {
-            'id': session_id,
-            'start_at': start_at,
-            'student_count': len(student_ids),
-            'action_url': action_url,
+            'id': session.id,
+            'status': session.status,
+            'start_at': session.start_at.isoformat() if session.start_at else None,
+            'countdown_seconds': session.countdown_seconds,
+            'student_count': session.student_count,
+            'student_ids': session.student_ids or [],
+            'material_title': session.material.title if session.material else '',
+            'course_title': session.course.title if session.course else '',
+            'reader_url': reader_url,
+            'timing_mode': session.timing_mode or 'none',
+            'duration_seconds': session.duration_seconds or 0,
+            'ends_at': session.ends_at.isoformat() if session.ends_at else None,
+            'student_states': session.student_states or {},
+            'activity_log': session.activity_log or [],
+            'available_students': [],
         },
     })
 

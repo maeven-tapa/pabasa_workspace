@@ -66,7 +66,7 @@
             const liveParam = urlParams.get('live');
             const liveSessionId = urlParams.get('live_session_id');
             const countdown = Number.parseInt(urlParams.get('countdown') || '10', 10);
-            return liveParam === '1' && Boolean(liveSessionId) && Number.isFinite(countdown) && countdown > 0;
+            return liveParam === '1' && Boolean(liveSessionId) && Number.isFinite(countdown) && countdown >= 0;
         }
 
         let items = [];
@@ -112,6 +112,11 @@
         let liveCountdownTimer = null;
         let liveCountdownStarted = false;
         let liveServerTimeOffsetMs = 0;
+        const liveSessionId = urlParams.get("live_session_id");
+        const liveSessionStateUrl = liveSessionId ? `/api/live-assessment/session/${liveSessionId}/` : null;
+        let liveSessionPollTimer = null;
+        let liveSessionPaused = false;
+        let liveSessionEnded = false;
         let audioContext = null;
         let audioAnalyser = null;
         let audioMeterFrame = null;
@@ -1352,6 +1357,130 @@
             return Date.now() + liveServerTimeOffsetMs;
         }
 
+        async function fetchLiveSessionState() {
+            if (!liveSessionStateUrl) return null;
+            try {
+                const response = await fetch(liveSessionStateUrl, {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' },
+                });
+                if (!response.ok) return null;
+                const payload = await response.json();
+                return payload.success ? payload.session : null;
+            } catch (error) {
+                console.warn('PABASA: Live session state fetch failed', error);
+                return null;
+            }
+        }
+
+        function disableReaderInteractions(disabled) {
+            [pauseBtn, btnStartReading, btnStopReading, btnReadAloud, btnToggleMic, btnTestMic, prevBtn, nextBtn].forEach((button) => {
+                if (button) button.disabled = disabled;
+            });
+        }
+
+        function showLiveSessionPaused() {
+            if (pauseOverlay) pauseOverlay.classList.remove('d-none');
+            if (pauseMenu) pauseMenu.classList.remove('d-none');
+            // Hide interactive buttons for students — teacher controls resume/end
+            if (resumeBtn) resumeBtn.style.display = 'none';
+            if (retryBtn) retryBtn.style.display = 'none';
+            if (quitBtn) quitBtn.style.display = 'none';
+            const title = pauseMenu?.querySelector('.pause-title');
+            const subtitle = pauseMenu?.querySelector('.pause-subtitle');
+            if (title) title.textContent = 'Paused by teacher';
+            if (subtitle) subtitle.textContent = 'Please wait until your teacher resumes the live assessment.';
+            disableReaderInteractions(true);
+            if (pauseBtn) pauseBtn.classList.add('d-none');
+            if (isRecording && recognitionActive) {
+                stopSpeechRecognition();
+            }
+            if (liveCountdownTimer) {
+                clearLiveCountdown();
+                hideLiveCountdown();
+            }
+            setSpeechStatus('Session paused by your teacher.', 'Please wait until the teacher resumes the assessment.', false);
+        }
+
+        function hideLiveSessionPaused() {
+            if (pauseOverlay) pauseOverlay.classList.add('d-none');
+            if (pauseMenu) pauseMenu.classList.add('d-none');
+            // Keep pause control hidden for live assessments (students shouldn't control resume)
+            if (pauseBtn) pauseBtn.classList.add('d-none');
+            if (resumeBtn) resumeBtn.style.display = 'none';
+            if (retryBtn) retryBtn.style.display = 'none';
+            disableReaderInteractions(false);
+            setSpeechStatus('Live session resumed. Continue reading when ready.', '', !isMuted && isRecording);
+        }
+
+        function showLiveSessionEnded() {
+            liveSessionPaused = true;
+            if (pauseOverlay) pauseOverlay.classList.remove('d-none');
+            if (pauseMenu) pauseMenu.classList.remove('d-none');
+            // Show exit button on session end so students can leave if needed
+            if (resumeBtn) resumeBtn.style.display = 'none';
+            if (retryBtn) retryBtn.style.display = 'none';
+            if (quitBtn) quitBtn.style.display = '';
+            const title = pauseMenu?.querySelector('.pause-title');
+            const subtitle = pauseMenu?.querySelector('.pause-subtitle');
+            if (title) title.textContent = 'Session ended';
+            if (subtitle) subtitle.textContent = 'Your teacher has ended the live assessment.';
+            if (pauseBtn) pauseBtn.classList.add('d-none');
+            disableReaderInteractions(true);
+            stopSpeechRecognition();
+            stopReadAloud();
+            if (liveCountdownTimer) {
+                clearLiveCountdown();
+                hideLiveCountdown();
+            }
+            setSpeechStatus('Live session ended.', 'Your teacher has ended the assessment.', false);
+        }
+
+        async function handleLiveSessionState(state) {
+            if (!state || !state.status) return;
+            if (state.status === 'paused') {
+                if (!liveSessionPaused) {
+                    liveSessionPaused = true;
+                    liveSessionEnded = false;
+                    showLiveSessionPaused();
+                }
+                return;
+            }
+            if (liveSessionPaused && state.status === 'started') {
+                liveSessionPaused = false;
+                liveSessionEnded = false;
+                hideLiveSessionPaused();
+                if (isRecording && !recognitionActive && !isMuted) {
+                    startSpeechRecognition();
+                }
+            }
+            if (state.status === 'ended') {
+                if (!liveSessionEnded) {
+                    liveSessionEnded = true;
+                    showLiveSessionEnded();
+                }
+            }
+        }
+
+        async function pollLiveSessionState() {
+            const state = await fetchLiveSessionState();
+            await handleLiveSessionState(state);
+        }
+
+        function startLiveSessionPolling() {
+            if (!liveSessionStateUrl) return;
+            pollLiveSessionState();
+            liveSessionPollTimer = window.setInterval(pollLiveSessionState, 2000);
+        }
+
+        function stopLiveSessionPolling() {
+            if (liveSessionPollTimer) {
+                window.clearInterval(liveSessionPollTimer);
+                liveSessionPollTimer = null;
+            }
+        }
+
         async function startLiveCountdown() {
             if (isReviewMode || liveCountdownStarted) return;
             const isLiveAssessment = isCurrentLiveAssessment();
@@ -1873,13 +2002,20 @@
             }
         });
 
+        if (isCurrentLiveAssessment()) {
+            pauseBtn?.classList.add('d-none');
+        }
         pauseBtn?.addEventListener("click", () => {
             const isHidden = pauseMenu?.classList.contains("d-none");
             pauseMenu?.classList.toggle("d-none", !isHidden);
             pauseOverlay?.classList.toggle("d-none", !isHidden);
         });
-        pauseOverlay?.addEventListener("click", closePauseMenu);
-        resumeBtn?.addEventListener("click", closePauseMenu);
+        pauseOverlay?.addEventListener("click", (event) => {
+            if (!liveSessionPaused) closePauseMenu();
+        });
+        resumeBtn?.addEventListener("click", () => {
+            if (!liveSessionPaused) closePauseMenu();
+        });
         retryBtn?.addEventListener("click", () => {
             if (isReviewMode) return;
             shell.classList.remove("is-complete");
@@ -1921,6 +2057,9 @@
 
         loadItems();
         startLiveCountdown();
+        if (liveSessionStateUrl) {
+            startLiveSessionPolling();
+        }
     };
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initReader);

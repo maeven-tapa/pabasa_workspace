@@ -1,0 +1,118 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
+
+{% block page_title %}Waiting Room — {{ live_session.material.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+      <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <h2 class="h4 mb-1">Waiting Room</h2>
+            <div class="small text-muted">{{ live_session.material.title }} • {{ live_session.course.title|default:'N/A' }}</div>
+            <div class="small text-muted">Teacher: {{ teacher_name }}</div>
+          </div>
+          <div class="text-end">
+            <div class="badge bg-primary text-white">Status: <span id="wrStatus">{{ live_session.status|title }}</span></div>
+            <div class="small text-muted">Session ID: {{ live_session.id }}</div>
+          </div>
+        </div>
+
+        <div id="waitingBody">
+          <div class="text-center py-4">
+            <div id="waitingAnimation" class="mb-3">
+              <i class="bi bi-hourglass-split" style="font-size:48px;color:var(--dash-primary);"></i>
+            </div>
+            <h4 id="waitingMessage">Waiting for your teacher to start the assessment.</h4>
+            <p class="text-muted">Selected students are gathered here first. Your teacher will begin the countdown when everyone is ready.</p>
+            <div class="mt-3">
+              <div class="h3 fw-bold text-primary" id="countdownDisplay" style="display:none"></div>
+            </div>
+            <div class="mt-3 small text-muted">Connection: <span id="connectionStatus">Connected</span></div>
+            <div class="mt-2 small text-muted">Last sync: <span id="footerLastSync">—</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<form class="d-none">{% csrf_token %}</form>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(() => {
+  const sessionId = '{{ live_session.id }}';
+  const stateUrl = `/api/live-assessment/session/${sessionId}/`;
+  const pollInterval = 1200;
+  let pollTimer = null;
+
+  function formatRemaining(seconds) {
+    if (!seconds || seconds <= 0) return '0s';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return m ? `${m}m ${s}s` : `${s}s`;
+  }
+
+  async function fetchState() {
+    try {
+      const r = await fetch(stateUrl, { cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' }});
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j.success ? j.session : null;
+    } catch (e) { console.warn('waiting room fetch', e); return null; }
+  }
+
+  function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
+
+  function redirectToReader(url) {
+    if (!url) return false;
+    window.location.replace(url);
+    return true;
+  }
+
+  async function handleState(state) {
+    if (!state) return;
+    setText('wrStatus', state.status?.charAt(0).toUpperCase() + state.status?.slice(1));
+    setText('footerLastSync', new Date().toLocaleTimeString());
+
+
+    if (state.status === 'waiting') {
+      setText('waitingMessage', 'Waiting for your teacher to start the assessment.');
+      return;
+    }
+
+    if (state.status === 'paused') {
+      setText('waitingMessage', 'Session has been paused by the teacher. Please wait...');
+      return;
+    }
+
+    if (state.status === 'ended') {
+      setText('waitingMessage', 'This live session has ended.');
+      return;
+    }
+
+    // When teacher starts (countdown or started), immediately transition students to Reading UI.
+    if ((state.status === 'countdown' || state.status === 'started') && state.reader_url) {
+      redirectToReader(state.reader_url);
+      return;
+    }
+
+    
+  }
+
+  async function poll() {
+    const s = await fetchState();
+    if (s) handleState(s);
+  }
+
+  poll();
+  pollTimer = setInterval(poll, pollInterval);
+})();
+</script>
+{% endblock %}
