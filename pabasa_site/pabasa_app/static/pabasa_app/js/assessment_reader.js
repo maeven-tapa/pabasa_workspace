@@ -923,7 +923,10 @@
                 if (!isCurrentSpeechContext(context)) return;
                 if (data.transcript) {
                     const fallbackNote = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : "";
-                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${fallbackNote} | Words: ${data.transcript}`);
+                    const rawNote = data.raw_transcript && data.raw_transcript !== data.transcript
+                        ? ` | Raw: ${data.raw_transcript}`
+                        : "";
+                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${fallbackNote} | Words: ${data.transcript}${rawNote}`);
                 }
                 handleSpeechResult(data, context);
             } catch (error) {

@@ -7,6 +7,8 @@ import re
 import urllib.error
 import urllib.request
 
+from num2words import num2words
+
 
 MARUNGKO_PHRASE_HINTS = [
     "ma", "me", "mi", "mo", "mu",
@@ -69,6 +71,23 @@ NUMBER_WORDS = {
     "eighty": "80",
     "ninety": "90",
 }
+
+
+def word_numbers_in_transcript(transcript, language_code="en-US"):
+    """Return a display copy of an STT transcript with integer digits worded."""
+    if not transcript or not str(language_code).lower().startswith("en"):
+        return transcript
+
+    def replace_number(match):
+        raw_number = match.group(0)
+        try:
+            return num2words(int(raw_number.replace(",", "")), lang="en")
+        except (NotImplementedError, OverflowError, ValueError):
+            return raw_number
+
+    integer_pattern = r"(?<![\w.])[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?![\w.]|\.\d)"
+    return re.sub(integer_pattern, replace_number, transcript)
+
 
 for tens_word, tens_value in (
     ("twenty", 20),

@@ -18,7 +18,7 @@ from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession
-from .reading_stt import ReadingMatcher, analyze_reading
+from .reading_stt import ReadingMatcher, analyze_reading, word_numbers_in_transcript
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload
@@ -155,6 +155,18 @@ class AssessmentResultsPageTests(TestCase):
 
 
 class ReadingMatcherTests(TestCase):
+    def test_word_numbers_in_english_transcript(self):
+        self.assertEqual(
+            word_numbers_in_transcript("I read 19 of 1,000 words."),
+            "I read nineteen of one thousand words.",
+        )
+
+    def test_word_numbers_preserves_raw_numbers_for_non_english_transcript(self):
+        self.assertEqual(word_numbers_in_transcript("Bumasa ng 19", "fil-PH"), "Bumasa ng 19")
+
+    def test_word_numbers_does_not_rewrite_decimal_values(self):
+        self.assertEqual(word_numbers_in_transcript("Score: 19.5"), "Score: 19.5")
+
     def test_wrong_word_does_not_complete_target(self):
         result = analyze_reading("water", 0, "apple")
 
