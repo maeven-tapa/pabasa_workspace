@@ -926,10 +926,11 @@
                 if (!isCurrentSpeechContext(context)) return;
                 if (data.transcript) {
                     const fallbackNote = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : "";
+                    const languageNote = data.language_code ? ` | Language: ${data.language_code}` : "";
                     const rawNote = data.raw_transcript && data.raw_transcript !== data.transcript
                         ? ` | Raw: ${data.raw_transcript}`
                         : "";
-                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${fallbackNote} | Words: ${data.transcript}${rawNote}`);
+                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${languageNote}${fallbackNote} | Words: ${data.transcript}${rawNote}`);
                 }
                 handleSpeechResult(data, context);
             } catch (error) {
