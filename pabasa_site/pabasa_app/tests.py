@@ -18,7 +18,13 @@ from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession
-from .reading_stt import ReadingMatcher, analyze_reading, language_code_for, word_numbers_in_transcript
+from .reading_stt import (
+    ReadingMatcher,
+    analyze_reading,
+    language_code_for,
+    v1_model_for_language,
+    word_numbers_in_transcript,
+)
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload
@@ -158,6 +164,10 @@ class ReadingMatcherTests(TestCase):
     def test_material_languages_use_philippine_stt_locales(self):
         self.assertEqual(language_code_for("English"), "en-PH")
         self.assertEqual(language_code_for("Filipino"), "fil-PH")
+
+    def test_philippine_locales_use_supported_v1_models(self):
+        self.assertEqual(v1_model_for_language("latest_short", "en-PH"), "command_and_search")
+        self.assertEqual(v1_model_for_language("latest_short", "fil-PH"), "")
 
     def test_english_homophone_is_accepted(self):
         result = analyze_reading("two", 0, "too", language_code="en-US")

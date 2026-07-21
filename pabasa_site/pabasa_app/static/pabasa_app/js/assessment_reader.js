@@ -895,6 +895,8 @@
             formData.append("current_syllable_index", String(context.syllableIndex));
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
+            const requestController = new AbortController();
+            const requestTimeout = window.setTimeout(() => requestController.abort(), 15000);
 
             try {
                 const response = await fetch("/api/reading/transcribe/", {
@@ -906,6 +908,7 @@
                     },
                     credentials: "same-origin",
                     body: formData,
+                    signal: requestController.signal,
                 });
                 const responseText = await response.text();
                 let data = null;
@@ -932,9 +935,13 @@
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
                 if (isCurrentSpeechContext(context)) {
-                    setSpeechStatus("Speech check had trouble.", error.message || "Keep reading, then try again.");
+                    const message = error?.name === "AbortError"
+                        ? "Speech processing timed out. Keep reading; the next audio chunk will retry automatically."
+                        : (error.message || "Keep reading, then try again.");
+                    setSpeechStatus("Speech check had trouble.", message);
                 }
             } finally {
+                window.clearTimeout(requestTimeout);
                 isSendingChunk = false;
                 if (pendingAudioChunk && isRecording && !isMuted && isCurrentSpeechContext(pendingAudioChunk.context)) {
                     const nextChunk = pendingAudioChunk.blob;

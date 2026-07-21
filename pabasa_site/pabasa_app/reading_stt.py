@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import socket
 import urllib.error
 import urllib.request
 
@@ -126,6 +127,20 @@ def phrase_hints_for(language="", mode=""):
     return MARUNGKO_PHRASE_HINTS if language_code_for(language, mode) == "fil-PH" else []
 
 
+def v1_model_for_language(model, language_code):
+    requested_model = (model or "").strip()
+    normalized_language = str(language_code or "").lower()
+    if normalized_language == "en-ph":
+        if requested_model in {"", "chirp_3", "latest_short", "latest_long"}:
+            return "command_and_search"
+    if normalized_language == "fil-ph":
+        if requested_model in {"chirp_3", "latest_short", "latest_long"}:
+            return ""
+    if requested_model == "chirp_3":
+        return "latest_short" if normalized_language.startswith("en-") else ""
+    return requested_model or ("latest_short" if normalized_language.startswith("en-") else "")
+
+
 def transcribe_audio_bytes(
     audio_bytes,
     api_key,
@@ -179,10 +194,7 @@ def transcribe_audio_bytes_with_model(
             if not api_key:
                 raise
 
-    is_english = str(language_code).lower().startswith("en-")
-    v1_model = model or ("latest_short" if is_english else "")
-    if v1_model == "chirp_3":
-        v1_model = "latest_short" if is_english else ""
+    v1_model = v1_model_for_language(model, language_code)
     return transcribe_audio_bytes_v1(
         audio_bytes,
         api_key,
@@ -200,7 +212,14 @@ def summarize_stt_error(exc):
     return message or exc.__class__.__name__
 
 
-def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, location, credentials_file):
+def transcribe_audio_bytes_v2_chirp3(
+    audio_bytes,
+    language_code,
+    project_id,
+    location,
+    credentials_file,
+    timeout_seconds=12,
+):
     if not project_id:
         raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp 3.")
     try:
@@ -227,7 +246,7 @@ def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, loc
         config=config,
         content=audio_bytes,
     )
-    response = client.recognize(request=request)
+    response = client.recognize(request=request, timeout=timeout_seconds)
     if not response.results:
         return ""
     alternatives = response.results[0].alternatives
@@ -273,7 +292,15 @@ def google_stt_credentials(service_account, credentials_file):
     )
 
 
-def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type):
+def transcribe_audio_bytes_v1(
+    audio_bytes,
+    api_key,
+    language_code,
+    phrase_hints,
+    model,
+    mime_type,
+    timeout_seconds=12,
+):
     config = {
         "languageCode": language_code,
         "enableAutomaticPunctuation": str(language_code).lower().startswith("en-"),
@@ -298,6 +325,7 @@ def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints,
         f"https://speech.googleapis.com/v1p1beta1/speech:recognize?key={api_key}",
         payload,
         "Google STT",
+        timeout_seconds=timeout_seconds,
     )
 
 
@@ -363,7 +391,7 @@ def _post_google_tts(url, payload):
     return audio_content
 
 
-def _post_google_stt(url, payload, label):
+def _post_google_stt(url, payload, label, timeout_seconds=12):
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
@@ -371,7 +399,7 @@ def _post_google_stt(url, payload, label):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             result = json.load(response)
     except urllib.error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
@@ -382,6 +410,8 @@ def _post_google_stt(url, payload, label):
         raise RuntimeError(f"{label} HTTP {exc.code}: {error_message}") from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Network error while contacting {label}: {exc.reason}") from exc
+    except (TimeoutError, socket.timeout) as exc:
+        raise RuntimeError(f"{label} timed out. Please keep reading and try again.") from exc
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"{label} returned an invalid response.") from exc
 
