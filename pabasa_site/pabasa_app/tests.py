@@ -18,7 +18,7 @@ from reportlab.pdfgen import canvas
 
 from .forms import AdminPracticeMaterialForm
 from .models import Material, User, Section, Assessment, Notification, Course, Note, LiveAssessmentSession
-from .reading_stt import ReadingMatcher, analyze_reading, word_numbers_in_transcript
+from .reading_stt import ReadingMatcher, analyze_reading, language_code_for, word_numbers_in_transcript
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload
@@ -155,6 +155,28 @@ class AssessmentResultsPageTests(TestCase):
 
 
 class ReadingMatcherTests(TestCase):
+    def test_material_languages_use_philippine_stt_locales(self):
+        self.assertEqual(language_code_for("English"), "en-PH")
+        self.assertEqual(language_code_for("Filipino"), "fil-PH")
+
+    def test_english_homophone_is_accepted(self):
+        result = analyze_reading("two", 0, "too", language_code="en-US")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertTrue(result["complete"])
+
+    def test_non_homophone_is_rejected(self):
+        result = analyze_reading("cat", 0, "cut", language_code="en-US")
+
+        self.assertEqual(result["correct_word_count"], 0)
+        self.assertFalse(result["complete"])
+
+    def test_cmu_homophones_are_not_applied_to_filipino(self):
+        result = analyze_reading("two", 0, "too", language_code="fil-PH")
+
+        self.assertEqual(result["correct_word_count"], 0)
+        self.assertFalse(result["complete"])
+
     def test_word_numbers_in_english_transcript(self):
         self.assertEqual(
             word_numbers_in_transcript("I read 19 of 1,000 words."),

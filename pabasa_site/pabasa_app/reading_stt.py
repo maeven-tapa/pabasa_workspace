@@ -1,4 +1,5 @@
 import base64
+from functools import lru_cache
 import html
 import json
 import os
@@ -8,6 +9,7 @@ import urllib.error
 import urllib.request
 
 from num2words import num2words
+import pronouncing
 
 
 MARUNGKO_PHRASE_HINTS = [
@@ -117,7 +119,7 @@ def language_code_for(language="", mode=""):
     value = f"{language} {mode}".lower()
     if any(marker in value for marker in ("fil", "tagalog", "marungko")):
         return "fil-PH"
-    return "en-US"
+    return "en-PH"
 
 
 def phrase_hints_for(language="", mode=""):
@@ -177,9 +179,10 @@ def transcribe_audio_bytes_with_model(
             if not api_key:
                 raise
 
-    v1_model = model or ("latest_short" if language_code == "en-US" else "")
+    is_english = str(language_code).lower().startswith("en-")
+    v1_model = model or ("latest_short" if is_english else "")
     if v1_model == "chirp_3":
-        v1_model = "latest_short" if language_code == "en-US" else ""
+        v1_model = "latest_short" if is_english else ""
     return transcribe_audio_bytes_v1(
         audio_bytes,
         api_key,
@@ -273,7 +276,7 @@ def google_stt_credentials(service_account, credentials_file):
 def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type):
     config = {
         "languageCode": language_code,
-        "enableAutomaticPunctuation": language_code == "en-US",
+        "enableAutomaticPunctuation": str(language_code).lower().startswith("en-"),
         "maxAlternatives": 3,
     }
     if "webm" in (mime_type or "").lower():
@@ -390,15 +393,16 @@ def _post_google_stt(url, payload, label):
     return alternatives[0].get("transcript", "").strip()
 
 
-def analyze_reading(target_text, current_syllable_index=0, transcript=""):
-    matcher = ReadingMatcher(target_text, current_syllable_index)
+def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US"):
+    matcher = ReadingMatcher(target_text, current_syllable_index, language_code)
     matched = matcher.advance_for_spoken_text(transcript)
     return matcher.payload(matched, transcript)
 
 
 class ReadingMatcher:
-    def __init__(self, target_text, current_syllable_index=0):
+    def __init__(self, target_text, current_syllable_index=0, language_code="en-US"):
         self.target_text = target_text or ""
+        self.language_code = language_code or "en-US"
         self.words = self.readable_words(self.target_text)
         self.current_syllable_index = max(0, int(current_syllable_index or 0))
         self.current_word_index = 0
@@ -470,9 +474,27 @@ class ReadingMatcher:
             return True
         if self.number_words_match(spoken_word, target_word):
             return True
+        if self.homophones_match(spoken_word, target_word):
+            return True
         if self.cv_syllables_sound_match(spoken_word, target_word):
             return True
         return False
+
+    @staticmethod
+    @lru_cache(maxsize=4096)
+    def pronunciations_for_word(word):
+        if not word or not re.fullmatch(r"[a-z]+(?:'[a-z]+)?", word):
+            return ()
+        return tuple(pronouncing.phones_for_word(word))
+
+    def homophones_match(self, spoken_word, target_word):
+        if not str(self.language_code).lower().startswith("en"):
+            return False
+        spoken_pronunciations = set(self.pronunciations_for_word(spoken_word))
+        if not spoken_pronunciations:
+            return False
+        target_pronunciations = set(self.pronunciations_for_word(target_word))
+        return bool(spoken_pronunciations.intersection(target_pronunciations))
 
     @classmethod
     def normalize_number_token(cls, word):

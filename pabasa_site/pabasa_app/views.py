@@ -4656,7 +4656,7 @@ def reading_transcribe_api(request):
             mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
             credentials_file=credentials_file,
         )
-        analysis = analyze_reading(target_text, current_syllable_index, transcript)
+        analysis = analyze_reading(target_text, current_syllable_index, transcript, language_code)
         analysis['raw_transcript'] = transcript
         analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
         analysis.update({
