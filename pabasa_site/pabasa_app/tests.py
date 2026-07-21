@@ -117,6 +117,13 @@ class AssessmentResultsPageTests(TestCase):
         self.assertNotIn("This assessment result is based on the student's reading accuracy, fluency, pronunciation, and pacing during the assessment.", content)
         self.assertNotIn("completionPerformanceInterpretation", content)
 
+    def test_completion_page_has_loading_placeholder_for_results(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "reading_assessment_base.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("completion-loading", content)
+        self.assertIn("Calculating your score breakdown...", content)
+
     def test_build_reading_report_pdf_omits_performance_interpretation(self):
         report = {
             "student_name": "Jane Doe",

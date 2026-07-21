@@ -81,6 +81,8 @@
         let spokenTranscript = "";
         let correctWordCounts = [];
         let latestScores = null;
+        let completionLoadingStartTime = 0;
+        let completionLoadingHideTimer = null;
         let readAloudAudio = null;
         let readAloudAudioUrl = "";
         let isReadAloudLoading = false;
@@ -541,12 +543,56 @@
             });
         }
 
+        function setCompletionLoadingState(isLoading, { minDurationMs = 500 } = {}) {
+            const loadingState = document.getElementById("completionLoadingState");
+            const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
+            const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
+
+            if (isLoading) {
+                clearTimeout(completionLoadingHideTimer);
+                completionLoadingStartTime = Date.now();
+                if (loadingState) {
+                    loadingState.classList.remove("is-hidden");
+                    loadingState.setAttribute("aria-busy", "true");
+                }
+                if (summary) {
+                    summary.classList.remove("is-visible");
+                    summary.setAttribute("aria-hidden", "true");
+                }
+                if (disclaimer) {
+                    disclaimer.textContent = "Calculating your score breakdown...";
+                }
+                return;
+            }
+
+            const finishTransition = () => {
+                if (loadingState) {
+                    loadingState.classList.add("is-hidden");
+                    loadingState.setAttribute("aria-busy", "false");
+                }
+                if (summary) {
+                    summary.classList.add("is-visible");
+                    summary.setAttribute("aria-hidden", "false");
+                }
+            };
+
+            const elapsed = Date.now() - completionLoadingStartTime;
+            const remaining = Math.max(0, minDurationMs - elapsed);
+            clearTimeout(completionLoadingHideTimer);
+            if (remaining > 0) {
+                completionLoadingHideTimer = window.setTimeout(finishTransition, remaining);
+            } else {
+                finishTransition();
+            }
+        }
+
         function renderScoreSummary(scores) {
             const summary = document.getElementById("completionSummary") || document.querySelector(".completion-summary");
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             if (!summary) return;
             const normalizedScores = normalizeCompletionScores(scores, {});
             summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
+            summary.classList.remove("is-visible");
             const readingTypeLabel = String(mode || "word").charAt(0).toUpperCase() + String(mode || "word").slice(1);
             const wordCount = normalizedScores.word_count != null ? String(Math.round(normalizedScores.word_count)) : "—";
             const accuracyValue = normalizedScores.accuracy != null ? `${Math.round(normalizedScores.accuracy)}%` : "—";
@@ -579,6 +625,7 @@
             if (disclaimer) {
                 disclaimer.textContent = normalizedScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.";
             }
+            setCompletionLoadingState(false);
         }
 
         function setSpeechStatus(message, detail = "", listening = false) {
@@ -1063,9 +1110,11 @@
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             if (summary) {
                 summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
+                summary.classList.remove("is-visible");
             }
-            if (disclaimer) {
-                disclaimer.textContent = "Finalizing your assessment results...";
+            setCompletionLoadingState(!isReviewMode && isFullCompletion && !completionSubmitted);
+            if (disclaimer && (!isReviewMode && isFullCompletion && !completionSubmitted)) {
+                disclaimer.textContent = "Calculating your score breakdown...";
             }
             if (completionLevel) completionLevel.textContent = resolveClassificationLabel(latestScores, mode.charAt(0).toUpperCase() + mode.slice(1));
             
@@ -1308,7 +1357,10 @@
                     return d;
                 }).catch(e => console.error("PABASA: Completion error", e)).finally(() => {
                     setCompletionActionButtonsProcessing(false);
+                    setCompletionLoadingState(false);
                 });
+            } else {
+                setCompletionLoadingState(false);
             }
         }
 

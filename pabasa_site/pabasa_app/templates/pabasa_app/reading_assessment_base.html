@@ -1260,6 +1260,94 @@
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 0.85rem;
             align-items: stretch;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+            transform: translateY(8px);
+            transition: opacity 220ms ease, transform 220ms ease, max-height 220ms ease;
+        }
+
+        .completion-summary.is-visible {
+            max-height: none;
+            opacity: 1;
+            overflow: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .completion-loading {
+            background: rgba(255, 255, 255, 0.64);
+            border: 1px solid rgba(27, 26, 23, 0.07);
+            border-radius: 20px;
+            display: grid;
+            gap: 0.8rem;
+            margin: 0.15rem auto 0;
+            max-height: 220px;
+            max-width: 580px;
+            overflow: hidden;
+            padding: 1rem 1rem 1.1rem;
+            transition: opacity 220ms ease, transform 220ms ease, max-height 220ms ease, margin 220ms ease, padding 220ms ease;
+        }
+
+        .completion-loading.is-hidden {
+            margin-block: 0;
+            max-height: 0;
+            opacity: 0;
+            padding-block: 0;
+            pointer-events: none;
+            transform: translateY(6px);
+            visibility: hidden;
+        }
+
+        .completion-loading-heading {
+            align-items: center;
+            color: var(--accent-deep);
+            display: inline-flex;
+            font-size: 0.95rem;
+            font-weight: 800;
+            gap: 0.6rem;
+            justify-content: center;
+        }
+
+        .completion-loading-spinner {
+            animation: completion-spin 0.9s linear infinite;
+            border: 2px solid rgba(31, 111, 139, 0.26);
+            border-radius: 50%;
+            border-top-color: var(--accent-deep);
+            display: inline-block;
+            flex-shrink: 0;
+            height: 15px;
+            width: 15px;
+            will-change: transform;
+        }
+
+        .completion-loading-skeleton {
+            display: grid;
+            gap: 0.55rem;
+        }
+
+        .completion-loading-bar {
+            animation: completion-shimmer 1.35s ease-in-out infinite;
+            background: linear-gradient(90deg, rgba(31, 111, 139, 0.16) 0%, rgba(31, 111, 139, 0.32) 50%, rgba(31, 111, 139, 0.16) 100%);
+            background-size: 200% 100%;
+            border-radius: 999px;
+            height: 10px;
+        }
+
+        .completion-loading-bar--wide {
+            margin: 0 auto;
+            width: min(100%, 220px);
+        }
+
+        .completion-loading-bar:nth-child(2) {
+            margin: 0 auto;
+            width: min(100%, 280px);
+        }
+
+        .completion-loading-bar:nth-child(3) {
+            margin: 0 auto;
+            width: min(100%, 180px);
         }
 
         .completion-disclaimer {
@@ -1344,6 +1432,24 @@
             background: #fff;
             color: var(--accent-deep);
             border: 1px solid rgba(31, 111, 139, 0.18) !important;
+        }
+
+        @keyframes completion-spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes completion-shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
         }
 
         @media (max-width: 760px) {
@@ -1759,7 +1865,18 @@
                 <div class="completion-mark">A</div>
                 <h1>Assessment complete.</h1>
                 <p>You finished the reading set. Your teacher can now review the session and use it for your next practice step.</p>
-                <div class="completion-summary" id="completionSummary"></div>
+                <div class="completion-summary" id="completionSummary" aria-live="polite"></div>
+                <div class="completion-loading" id="completionLoadingState" aria-live="polite" aria-busy="true">
+                    <div class="completion-loading-heading">
+                        <span class="completion-loading-spinner" aria-hidden="true"></span>
+                        <span class="completion-loading-text">Calculating your score breakdown...</span>
+                    </div>
+                    <div class="completion-loading-skeleton" aria-hidden="true">
+                        <span class="completion-loading-bar completion-loading-bar--wide"></span>
+                        <span class="completion-loading-bar"></span>
+                        <span class="completion-loading-bar"></span>
+                    </div>
+                </div>
                 <p class="completion-disclaimer is-encouragement" id="completionReadingLevelDisclaimer" aria-live="polite">Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.</p>
                 <div class="completion-actions">
                     <button class="completion-secondary" id="reviewBtn" type="button">Start Again</button>
