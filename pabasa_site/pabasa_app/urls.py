@@ -113,6 +113,7 @@ urlpatterns = [
     path('dashboard/live-assessment/<str:session_id>/waiting/', views.live_assessment_waiting_room_page, name='live_assessment_waiting_room'),
     path('api/live-assessment/session/<str:session_id>/', views.live_assessment_session_state, name='live_assessment_session_state'),
     path('api/live-assessment/session/<str:session_id>/action/', views.live_assessment_session_action, name='live_assessment_session_action'),
+    path('api/live-assessment/session/<str:session_id>/student-update/', views.live_assessment_student_state_update, name='live_assessment_student_state_update'),
     path('dashboard/teacher/assist/students/', views.get_assist_students, name='get_assist_students'),
     path('dashboard/teacher/assist/start/', views.start_assist_assessment, name='start_assist_assessment'),
     path('dashboard/student/classes/', views.get_student_joined_classes, name='get_student_joined_classes'),

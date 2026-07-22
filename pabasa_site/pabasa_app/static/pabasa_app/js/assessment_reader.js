@@ -119,6 +119,8 @@
         let liveSessionPollTimer = null;
         let liveSessionPaused = false;
         let liveSessionEnded = false;
+        let liveSessionHeartbeatTimer = null;
+        let liveSessionLastHeartbeatAt = 0;
         let audioContext = null;
         let audioAnalyser = null;
         let audioMeterFrame = null;
@@ -974,6 +976,20 @@
                 renderSyllableDisplay(data, previousCorrectWords);
             }
 
+            if (isCurrentLiveAssessment()) {
+                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const completedItems = Math.max(0, currentIndex + (data.complete ? 1 : 0));
+                publishLiveSessionState({
+                    status: data.complete ? 'completed' : 'reading',
+                    items_completed: completedItems,
+                    items_total: Math.max(1, items.length),
+                    progress: items.length ? Math.min(1, completedItems / items.length) : 0,
+                    elapsed_seconds: Math.round(elapsedSeconds),
+                    current_item: items[currentIndex] || '',
+                    connection_status: 'connected',
+                });
+            }
+
             if (data.complete) {
                 isAdvancingItem = true;
                 pendingAudioChunk = null;
@@ -1093,6 +1109,18 @@
             currentSyllableIndex = 0;
             updateUI();
             animateCurrentItem();
+            if (isCurrentLiveAssessment()) {
+                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                publishLiveSessionState({
+                    status: 'reading',
+                    items_completed: Math.max(0, currentIndex),
+                    items_total: Math.max(1, items.length),
+                    progress: items.length ? Math.min(1, currentIndex / items.length) : 0,
+                    elapsed_seconds: Math.round(elapsedSeconds),
+                    current_item: items[currentIndex] || '',
+                    connection_status: 'connected',
+                });
+            }
             if (statusMessage) {
                 setSpeechStatus(statusMessage, detail, Boolean(isRecording && !isMuted));
             }
@@ -1218,6 +1246,22 @@
             window.dispatchEvent(new Event('pabasa:notifications-updated'));
 
             // Persist completion server-side so the teacher receives an in-app notification.
+            if (isCurrentLiveAssessment()) {
+                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const completionSnapshot = calculateScores();
+                const finalScore = completionSnapshot?.final_score ?? completionSnapshot?.total_score ?? latestScores?.final_score ?? latestScores?.total_score ?? null;
+                publishLiveSessionState({
+                    status: 'completed',
+                    items_completed: Math.max(1, items.length),
+                    items_total: Math.max(1, items.length),
+                    progress: 1,
+                    elapsed_seconds: Math.round(elapsedSeconds),
+                    current_item: items[currentIndex] || '',
+                    final_score: finalScore != null ? Number(finalScore) : null,
+                    connection_status: 'connected',
+                });
+            }
+
             const token = getCsrfToken();
             if (materialId && token) {
                 setCompletionActionButtonsProcessing(true);
@@ -1368,6 +1412,18 @@
             if (!startTime || startTime === null) {
                 startTime = Date.now();
             }
+            if (isCurrentLiveAssessment()) {
+                publishLiveSessionState({
+                    status: 'reading',
+                    items_completed: 0,
+                    items_total: Math.max(1, items.length),
+                    progress: 0,
+                    elapsed_seconds: 0,
+                    current_item: items[currentIndex] || '',
+                    connection_status: 'connected',
+                });
+                startLiveSessionHeartbeat();
+            }
             return startTime;
         }
 
@@ -1424,6 +1480,58 @@
                 console.warn('PABASA: Live session state fetch failed', error);
                 return null;
             }
+        }
+
+        async function publishLiveSessionState(updateValues = {}) {
+            if (!liveSessionId || !isCurrentLiveAssessment()) return null;
+            if (!Object.keys(updateValues).length) return null;
+            try {
+                const response = await fetch(`/api/live-assessment/session/${liveSessionId}/student-update/`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                    },
+                    body: JSON.stringify(updateValues),
+                });
+                if (!response.ok) return null;
+                const payload = await response.json();
+                return payload.success ? payload.session : null;
+            } catch (error) {
+                console.warn('PABASA: Live session state update failed', error);
+                return null;
+            }
+        }
+
+        function stopLiveSessionHeartbeat() {
+            if (liveSessionHeartbeatTimer) {
+                window.clearInterval(liveSessionHeartbeatTimer);
+                liveSessionHeartbeatTimer = null;
+            }
+        }
+
+        function startLiveSessionHeartbeat() {
+            if (!liveSessionId || !isCurrentLiveAssessment()) return;
+            stopLiveSessionHeartbeat();
+            liveSessionLastHeartbeatAt = Date.now();
+            liveSessionHeartbeatTimer = window.setInterval(() => {
+                if (!isRecording || liveSessionPaused || liveSessionEnded) return;
+                const now = Date.now();
+                if (now - liveSessionLastHeartbeatAt < 1000) return;
+                liveSessionLastHeartbeatAt = now;
+                const elapsedSeconds = Math.max(0, Math.round(((now - (startTime || now)) / 1000) * 100) / 100);
+                publishLiveSessionState({
+                    status: 'reading',
+                    elapsed_seconds: Math.round(elapsedSeconds),
+                    items_completed: correctWordsRead() > 0 ? Math.max(0, currentIndex) : Math.max(0, currentIndex),
+                    items_total: Math.max(1, items.length),
+                    progress: items.length ? Math.min(1, (currentIndex + 1) / items.length) : 0,
+                    current_item: items[currentIndex] || '',
+                    connection_status: 'connected',
+                });
+            }, 2000);
         }
 
         function disableReaderInteractions(disabled) {

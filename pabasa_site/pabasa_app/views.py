@@ -5040,6 +5040,7 @@ def _update_live_student_state(session, student_id, state_values):
     student_record['updated_at'] = timezone.now().isoformat()
     states[student_key] = student_record
     session.student_states = states
+    return student_record
 
 
 def _ensure_live_session_student_states(session, student_ids):
@@ -5533,6 +5534,78 @@ def live_assessment_session_state(request, session_id):
             'available_students': available_profiles,
         },
     })
+
+
+@csrf_protect
+@require_http_methods(['POST'])
+def live_assessment_student_state_update(request, session_id):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    user_id = request.session.get('user_id')
+    user_role = request.session.get('user_role')
+    session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
+    if not session:
+        return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+
+    if user_role != 'student' or not user_id:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    if user_id not in session.student_ids:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    if session.status not in ['started', 'countdown', 'paused']:
+        return JsonResponse({'success': False, 'error': 'Session is not active'}, status=400)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        data = {}
+
+    state_values = {}
+    if isinstance(data, dict):
+        if 'status' in data:
+            state_values['status'] = str(data.get('status') or '').strip() or 'reading'
+        if 'items_completed' in data:
+            try:
+                state_values['items_completed'] = int(data.get('items_completed'))
+            except (TypeError, ValueError):
+                state_values['items_completed'] = 0
+        if 'items_total' in data:
+            try:
+                state_values['items_total'] = int(data.get('items_total'))
+            except (TypeError, ValueError):
+                state_values['items_total'] = 0
+        if 'progress' in data:
+            try:
+                state_values['progress'] = float(data.get('progress'))
+            except (TypeError, ValueError):
+                state_values['progress'] = None
+        if 'elapsed_seconds' in data:
+            try:
+                state_values['elapsed_seconds'] = int(data.get('elapsed_seconds'))
+            except (TypeError, ValueError):
+                state_values['elapsed_seconds'] = 0
+        if 'current_item' in data:
+            state_values['current_item'] = data.get('current_item')
+        if 'final_score' in data:
+            try:
+                state_values['final_score'] = float(data.get('final_score'))
+            except (TypeError, ValueError):
+                state_values['final_score'] = None
+        if 'connection_status' in data:
+            state_values['connection_status'] = str(data.get('connection_status') or '').strip() or 'connected'
+
+    # Keep teacher-driven states intact when the student sends a partial update.
+    if not state_values:
+        return JsonResponse({'success': False, 'error': 'No update data provided'}, status=400)
+
+    _update_live_student_state(session, user_id, state_values)
+    session.save(update_fields=['student_states', 'updated_at'])
+
+    return JsonResponse({'success': True, 'session': {
+        'id': session.id,
+        'status': session.status,
+        'student_states': session.student_states or {},
+    }})
 
 
 @csrf_protect

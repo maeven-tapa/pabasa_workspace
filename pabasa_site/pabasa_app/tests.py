@@ -1244,6 +1244,58 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(data["session"]["status"], 'started')
         self.assertIn('reader_url', data["session"])
 
+    def test_student_can_publish_live_assessment_state_updates(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0, 'connection_status': 'waiting'}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session.save()
+
+        response = student_client.post(
+            reverse('live_assessment_student_state_update', kwargs={'session_id': session.id}),
+            json.dumps({
+                'status': 'reading',
+                'items_completed': 2,
+                'items_total': 6,
+                'progress': 0.33,
+                'elapsed_seconds': 12,
+                'current_item': 'cat',
+                'final_score': 88,
+                'connection_status': 'connected',
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body['success'])
+        session.refresh_from_db()
+        student_state = session.student_states[str(self.student.id)]
+        self.assertEqual(student_state['status'], 'reading')
+        self.assertEqual(student_state['items_completed'], 2)
+        self.assertEqual(student_state['items_total'], 6)
+        self.assertEqual(student_state['progress'], 0.33)
+        self.assertEqual(student_state['elapsed_seconds'], 12)
+        self.assertEqual(student_state['final_score'], 88)
+        self.assertEqual(student_state['connection_status'], 'connected')
+
     def test_teacher_can_pause_and_resume_live_assessment_session(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

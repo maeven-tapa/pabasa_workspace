@@ -31,7 +31,58 @@
             height: 0.7rem;
             border-radius: 50%;
             display: inline-block;
+            box-shadow: 0 0 0 4px rgba(107, 114, 128, 0.12);
+        }
+        .live-monitor-card .monitor-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.9rem;
+            border-radius: 999px;
+            min-width: 6rem;
+        }
+        .live-monitor-card .monitor-status-waiting {
+            background: rgba(107, 114, 128, 0.08);
+            color: #374151;
+        }
+        .live-monitor-card .monitor-status-ready {
+            background: rgba(59, 130, 246, 0.12);
+            color: #1d4ed8;
+        }
+        .live-monitor-card .monitor-status-live {
+            background: rgba(34, 197, 94, 0.12);
+            color: #16a34a;
+        }
+        .live-monitor-card .monitor-status-paused {
+            background: rgba(245, 158, 11, 0.12);
+            color: #b45309;
+        }
+        .live-monitor-card .monitor-status-finished {
+            background: rgba(107, 114, 128, 0.08);
+            color: #374151;
+        }
+        .live-monitor-card .status-dot-waiting {
+            box-shadow: 0 0 0 4px rgba(107, 114, 128, 0.12);
+            background: #6b7280;
+        }
+        .live-monitor-card .status-dot-ready {
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+            background: #1d4ed8;
+        }
+        .live-monitor-card .status-dot-live {
             box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+            background: #16a34a;
+        }
+        .live-monitor-card .status-dot-paused {
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
+            background: #d97706;
+        }
+        .live-monitor-card .status-dot-finished {
+            box-shadow: 0 0 0 4px rgba(107, 114, 128, 0.12);
+            background: #374151;
+        }
+        .live-monitor-card .monitor-status-time {
+            color: var(--muted, #6b7280);
         }
         .live-monitor-card .table-monitor th {
             font-size: 0.78rem;
@@ -280,6 +331,55 @@
         .teacher-control .profile-surface-option.is-selected .profile-surface-option-check {
             color: var(--dash-primary, #1f6f8b);
         }
+        .teacher-control .countdown-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: flex-start;
+            min-width: 0;
+            width: 100%;
+        }
+        .teacher-control .countdown-controls .profile-surface-dropdown {
+            flex: 0 0 100px;
+            min-width: 100px;
+            max-width: 100px;
+        }
+        .teacher-control .countdown-controls .countdown-custom-input {
+            flex: 0 0 100px;
+            min-width: 100px;
+            max-width: 100px;
+            width: 100px;
+            appearance: textfield;
+            -webkit-appearance: textfield;
+            -moz-appearance: textfield;
+        }
+        .teacher-control .countdown-controls .countdown-custom-input::-webkit-outer-spin-button,
+        .teacher-control .countdown-controls .countdown-custom-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .teacher-control .live-session-summary-card {
+            background: var(--dash-bg);
+            border-color: rgba(31, 111, 139, 0.06);
+            padding: 1rem;
+            min-height: 220px;
+        }
+        .teacher-control .live-session-summary-card .text-muted.small {
+            font-size: 0.75rem;
+            color: var(--muted, #6b7280);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .teacher-control .live-session-summary-card .fw-semibold {
+            font-size: 0.98rem;
+        }
+        .teacher-control .live-session-summary-card .badge {
+            font-size: 0.75rem;
+            padding: 0.35rem 0.65rem;
+        }
+        .teacher-control .live-session-summary-card {
+            min-height: 180px;
+        }
 
         @media (max-width: 768px) {
             .teacher-control h1.h4 { font-size: 1.25rem; }
@@ -296,12 +396,12 @@
                         <div class="small text-muted">Monitor selected participants in real time</div>
                     </div>
                     <div class="text-end">
-                        <div class="d-inline-flex align-items-center gap-2 py-1 px-2 rounded-pill" style="background: rgba(34, 197, 94, 0.08);">
-                            <span class="status-dot bg-success"></span>
-                            <div class="text-start">
-                                <div class="small fw-semibold text-success">Live</div>
-                                <div class="small text-muted"><span id="monitorTime">—</span></div>
+                        <div class="d-inline-flex align-items-center gap-3">
+                            <div id="monitorStatusBadge" class="monitor-status-badge monitor-status-waiting">
+                                <span class="status-dot status-dot-waiting"></span>
+                                <span id="monitorStatusLabel" class="small fw-semibold">Waiting</span>
                             </div>
+                            <div id="monitorTime" class="small monitor-status-time">—</div>
                         </div>
                     </div>
                 </div>
@@ -403,8 +503,8 @@
                             <div class="border rounded p-2" style="max-height:220px; overflow:auto; background:var(--dash-bg);">
                                 <div id="participantList" class="participant-list">
                                     {% for student in available_students %}
-                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row" data-search-text="{{ student.full_name|default:'' }} {{ student.grade|default:'' }} {{ student.section|default:'' }}">
-                                            <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}">
+                                        <label class="d-flex align-items-center gap-2 mb-1 participant-row" data-search-text="{{ student.full_name|default:'' }} {{ student.grade|default:'' }} {{ student.section|default:'' }}" data-custom-id="{{ student.custom_id|default:'' }}">
+                                            <input type="checkbox" class="participant-checkbox" data-student-id="{{ student.id }}" data-custom-id="{{ student.custom_id|default:'' }}">
                                             <div class="flex-grow-1">
                                                 <div class="small fw-semibold">{{ student.full_name }}</div>
                                                 <div class="small text-muted">Grade {{ student.grade|default:"—" }}</div>
@@ -440,8 +540,8 @@
                         </div>
                         <div>
                             <label class="form-label mb-2">Countdown</label>
-                            <div class="d-flex gap-2 align-items-center">
-                                <div class="profile-surface-dropdown" id="countdownDropdown" style="min-width:120px;">
+                            <div class="countdown-controls">
+                                <div class="profile-surface-dropdown" id="countdownDropdown">
                                     <button type="button" class="profile-surface-trigger" id="countdownTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="countdownMenu">
                                         <span class="profile-surface-trigger-text">
                                             <span class="profile-surface-value" id="countdownValue">None</span>
@@ -458,16 +558,66 @@
                                     </select>
                                     <div class="profile-surface-menu" id="countdownMenu" role="listbox" aria-label="Countdown"></div>
                                 </div>
-                                <input id="countdownCustom" type="number" min="1" class="form-control form-control-sm d-none" placeholder="Seconds">
+                                <input id="countdownCustom" type="number" min="1" class="form-control form-control-sm d-none countdown-custom-input" placeholder="sec">
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-4">
                             <div class="mb-3">
-                                <label class="form-label mb-2">Session Timer</label>
-                                <div class="border rounded p-3" style="min-height:120px; background:var(--dash-bg); border:1px solid rgba(31,111,139,0.06);">
-                                    <div class="small text-muted">This timer is shared across all students in the live session.</div>
-                                    <div class="mt-3 fw-semibold" id="teacherSessionTimer">—</div>
+                                <label class="form-label mb-2">Live Session Summary</label>
+                                <div class="border rounded p-3 live-session-summary-card">
+                                    <div id="summaryPreStartFields">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Students Selected</div>
+                                            <div id="summaryStudentsSelected" class="fw-semibold">0</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Session Duration</div>
+                                            <div id="summarySessionDuration" class="fw-semibold">No Limit</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Countdown</div>
+                                            <div id="summaryCountdown" class="fw-semibold">None</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2" style="gap:0.75rem;">
+                                            <div class="text-muted small">Assessment</div>
+                                            <div id="summaryAssessment" class="fw-semibold text-end" style="min-width:0;">{{ live_session.material.title|default:'Not selected' }}</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Auto End</div>
+                                            <div id="summaryAutoEnd" class="fw-semibold">Disabled</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="text-muted small">Status</div>
+                                            <div><span id="summaryStartStatusBadge" class="badge bg-secondary">Ready to Start</span></div>
+                                        </div>
+                                    </div>
+                                    <div id="summaryLiveFields" class="d-none">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Time Remaining</div>
+                                            <div id="summaryTimeRemaining" class="fw-semibold">00:00</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Active</div>
+                                            <div id="summaryActive" class="fw-semibold">0</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Completed</div>
+                                            <div id="summaryCompleted" class="fw-semibold">0</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Waiting</div>
+                                            <div id="summaryWaiting" class="fw-semibold">0</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="text-muted small">Progress</div>
+                                            <div id="summaryProgress" class="fw-semibold">0 / 0 Completed</div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="text-muted small">Status</div>
+                                            <div><span id="summaryLiveStatusBadge" class="badge bg-success">Running</span></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="d-grid">
@@ -687,6 +837,166 @@
         return m ? `${m}m ${s}s` : `${s}s`;
     }
 
+    function formatClock(seconds) {
+        if (seconds == null || seconds < 0) return '00:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function formatDurationText(seconds) {
+        if (seconds == null || seconds <= 0) return 'No Limit';
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (minutes > 0 && secs === 0) {
+            return `${minutes} Minute${minutes === 1 ? '' : 's'}`;
+        }
+        if (minutes > 0) {
+            return `${minutes} Minute${minutes === 1 ? '' : 's'} ${secs} Second${secs === 1 ? '' : 's'}`;
+        }
+        return `${secs} Second${secs === 1 ? '' : 's'}`;
+    }
+
+    function getSelectedStudentCount() {
+        return selectedStudentIds.size;
+    }
+
+    function getCurrentPreStartSettings() {
+        const timingMode = document.getElementById('timingMode')?.value;
+        const durationMinutes = parseInt(document.getElementById('durationMinutes')?.value || 0, 10);
+        const countdownValue = document.getElementById('countdown')?.value;
+        const countdownCustomValue = parseInt(document.getElementById('countdownCustom')?.value || 0, 10);
+        return {
+            timing_mode: timingMode,
+            duration_seconds: timingMode === 'duration' ? (durationMinutes > 0 ? durationMinutes * 60 : null) : null,
+            countdown_seconds: countdownValue === 'custom' ? (countdownCustomValue > 0 ? countdownCustomValue : null) : parseInt(countdownValue || 0, 10),
+        };
+    }
+
+    function setSummaryPreStartFields(session) {
+        const selectedCount = session?.student_count ?? getSelectedStudentCount();
+        const timingMode = session?.timing_mode ?? getCurrentPreStartSettings().timing_mode;
+        const durationSeconds = session?.duration_seconds ?? getCurrentPreStartSettings().duration_seconds;
+        const countdownSeconds = session?.countdown_seconds ?? getCurrentPreStartSettings().countdown_seconds;
+        const assessmentTitle = session?.material?.title || document.getElementById('summaryAssessment')?.textContent?.trim() || 'Not selected';
+
+        const durationText = timingMode === 'duration' ? (durationSeconds ? formatDurationText(durationSeconds) : '0 Minutes') : 'No Limit';
+        const countdownText = countdownSeconds == null || countdownSeconds === 0 ? 'None' : `${countdownSeconds} Second${countdownSeconds === 1 ? '' : 's'}`;
+        const autoEndText = timingMode === 'duration' ? 'Enabled' : 'Disabled';
+
+        setText('#summaryStudentsSelected', selectedCount);
+        setText('#summarySessionDuration', durationText);
+        setText('#summaryCountdown', countdownText);
+        setText('#summaryAssessment', assessmentTitle);
+        setText('#summaryAutoEnd', autoEndText);
+        setText('#summaryStartStatusBadge', 'Ready to Start');
+        const badge = document.getElementById('summaryStartStatusBadge');
+        if (badge) badge.className = 'badge bg-secondary';
+
+        document.getElementById('summaryPreStartFields')?.classList.remove('d-none');
+        document.getElementById('summaryLiveFields')?.classList.add('d-none');
+    }
+
+    function setSummaryLiveFields(session) {
+        const totalSelected = session.student_count || getSelectedStudentCount();
+        const states = session.student_states || {};
+        const active = Object.values(states).filter((st) => (st.status || '').toLowerCase() === 'reading').length;
+        const completed = Object.values(states).filter((st) => (st.status || '').toLowerCase() === 'completed').length;
+        const waiting = Math.max(0, totalSelected - active - completed);
+        const statusKey = (session.status || '').toLowerCase();
+        const statusText = statusKey === 'started' ? 'Running' : statusKey === 'paused' ? 'Paused' : 'Finished';
+
+        setText('#summaryTimeRemaining', formatClock(session.remaining_seconds));
+        setText('#summaryActive', active);
+        setText('#summaryCompleted', completed);
+        setText('#summaryWaiting', waiting);
+        setText('#summaryProgress', `${completed} / ${totalSelected} Completed`);
+        setText('#summaryLiveStatusBadge', statusText);
+
+        const badge = document.getElementById('summaryLiveStatusBadge');
+        if (badge) {
+            badge.className = `badge ${statusKey === 'paused' ? 'bg-warning text-dark' : statusKey === 'ended' ? 'bg-secondary' : 'bg-success'}`;
+        }
+
+        document.getElementById('summaryPreStartFields')?.classList.add('d-none');
+        document.getElementById('summaryLiveFields')?.classList.remove('d-none');
+    }
+
+    function updateSummaryFromState(session) {
+        if ((session.status || '').toLowerCase() === 'waiting') {
+            setSummaryPreStartFields(session);
+        } else {
+            setSummaryLiveFields(session);
+            summaryRemainingSeconds = session.remaining_seconds;
+            summaryLastSyncAt = Date.now();
+            summaryCurrentStatus = (session.status || 'started').toLowerCase();
+        }
+    }
+
+    function refreshLiveTimer() {
+        if (summaryCurrentStatus !== 'started') return;
+        if (summaryRemainingSeconds == null) return;
+        const elapsed = Math.floor((Date.now() - summaryLastSyncAt) / 1000);
+        const remaining = Math.max(0, summaryRemainingSeconds - elapsed);
+        setText('#summaryTimeRemaining', formatClock(remaining));
+    }
+
+    let summaryRemainingSeconds = null;
+    let summaryLastSyncAt = Date.now();
+    let summaryCurrentStatus = 'waiting';
+
+    function updateSummaryFromDom() {
+        if (document.getElementById('summaryPreStartFields')?.classList.contains('d-none')) return;
+        setSummaryPreStartFields();
+    }
+
+    function setMonitorHeaderStatus(session) {
+        const badge = document.getElementById('monitorStatusBadge');
+        const label = document.getElementById('monitorStatusLabel');
+        const time = document.getElementById('monitorTime');
+        if (!badge || !label || !time) return;
+
+        const statusKey = (session.status || 'waiting').toLowerCase();
+        const selectedCount = session.student_count || 0;
+        let display = 'Waiting';
+        let className = 'monitor-status-waiting';
+        let dotClass = 'status-dot-waiting';
+
+        if (statusKey === 'waiting') {
+            if (selectedCount > 0) {
+                display = 'Ready';
+                className = 'monitor-status-ready';
+                dotClass = 'status-dot-ready';
+            } else {
+                display = 'Waiting';
+                className = 'monitor-status-waiting';
+                dotClass = 'status-dot-waiting';
+            }
+        } else if (statusKey === 'countdown' || statusKey === 'started') {
+            display = 'Live';
+            className = 'monitor-status-live';
+            dotClass = 'status-dot-live';
+        } else if (statusKey === 'paused') {
+            display = 'Paused';
+            className = 'monitor-status-paused';
+            dotClass = 'status-dot-paused';
+        } else if (statusKey === 'ended' || statusKey === 'finished') {
+            display = 'Finished';
+            className = 'monitor-status-finished';
+            dotClass = 'status-dot-finished';
+        } else if (statusKey === 'ready') {
+            display = 'Ready';
+            className = 'monitor-status-ready';
+            dotClass = 'status-dot-ready';
+        }
+
+        badge.className = `monitor-status-badge ${className}`;
+        const dot = badge.querySelector('.status-dot');
+        if (dot) dot.className = `status-dot ${dotClass}`;
+        label.textContent = display;
+        time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
     function updateButtonStates(status) {
         const startBtn = document.getElementById('startBtn');
         const pauseBtn = document.getElementById('pauseBtn');
@@ -704,7 +1014,7 @@
         setText('#headerStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
         setText('#controlStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
         setText('#lastUpdated', new Date().toLocaleTimeString());
-        setText('#monitorTime', new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        setMonitorHeaderStatus(session);
         updateButtonStates(session.status);
         const states = session.student_states || {};
         const counts = {connected:0, ready:0, reading:0, completed:0, offline:0};
@@ -722,166 +1032,58 @@
         setText('#statReading', counts.reading);
         setText('#statCompleted', counts.completed);
         setText('#statOffline', counts.offline);
-        setText('#selectedCount', session.student_count || 0);
+        const localSelectedCount = selectedStudentIds.size;
+        setText('#selectedCount', summaryCurrentStatus === 'waiting' ? (localSelectedCount || session.student_count || 0) : (session.student_count || localSelectedCount || 0));
         const remainingSeconds = session.remaining_seconds;
         setText('#teacherSessionTimer', session.timing_mode === 'duration' ? formatDuration(remainingSeconds) : 'No limit');
         setText('#currentCountdown', session.start_countdown_seconds != null ? `${session.start_countdown_seconds}s` : (session.countdown_seconds != null ? `${session.countdown_seconds}s` : '0s'));
 
-        // Rebuild participant checkboxes if available_students provided
+        lastSessionState = session;
+        summaryRemainingSeconds = remainingSeconds;
+        summaryLastSyncAt = Date.now();
+        summaryCurrentStatus = (session.status || 'waiting').toLowerCase();
+
+        const statusKey = summaryCurrentStatus;
+        if (statusKey === 'waiting') {
+            setSummaryPreStartFields(session);
+        } else {
+            setSummaryLiveFields(session);
+        }
+
+        // Rebuild participant checkboxes if available_students provided,
+        // preserving custom IDs and checkbox state.
         const avail = session.available_students || [];
         if (avail && avail.length) {
-            const list = document.getElementById('participantList');
-            // Only rebuild if participant list is empty or differs
-            if (list && list.children.length === 0) {
-                for (const s of avail) {
-                    const label = document.createElement('label');
-                    label.className = 'd-flex align-items-center gap-2 mb-1 participant-row';
-                    label.innerHTML = `<input type="checkbox" class="participant-checkbox" data-student-id="${s.id}">` +
-                        `<div class="flex-grow-1"><div class="small fw-semibold">${s.full_name}</div><div class="small text-muted">Grade ${s.grade} • ${s.section}</div></div>` +
-                        `<div class="small text-muted" data-connected-for-id="${s.id}">—</div>`;
-                    list.appendChild(label);
-                }
-            }
+            participantData = avail.map((s) => ({
+                id: String(s.id),
+                name: s.full_name || '',
+                grade: s.grade || '',
+                section: s.section || '',
+                custom_id: s.custom_id || '',
+                searchText: `${s.full_name || ''} Grade ${s.grade || ''} ${s.section || ''}`.toLowerCase(),
+                checked: selectedStudentIds.has(String(s.id)),
+            }));
+            renderParticipantList();
         }
 
-        // student rows: ensure only selected students are displayed in the monitoring table
-        const selectedIds = (session.student_states && Object.keys(session.student_states).length)
-            ? Object.keys(session.student_states)
+        // student rows: ensure selected students are displayed in the monitoring table
+        const serverIds = (session.student_states && Object.keys(session.student_states).length)
+            ? Object.keys(session.student_states).map(String)
             : ((session.student_ids || []).map(String));
-        const tbody = document.getElementById('studentsTableBody');
-        // Sync participant checkbox checked state with session.student_states / session.student_ids
         try {
-            const selectedSet = new Set((session.student_states && Object.keys(session.student_states).length) ? Object.keys(session.student_states) : (session.student_ids || []).map(String));
-            document.querySelectorAll('.participant-checkbox').forEach(cb => {
-                const id = String(cb.dataset.studentId);
-                cb.checked = selectedSet.has(id);
-            });
+            const selectedSet = new Set([...serverIds, ...Array.from(selectedStudentIds)]);
+            if (selectedSet.size > 0) {
+                selectedSet.forEach((id) => selectedStudentIds.add(String(id)));
+                participantData = participantData.map((participant) => ({
+                    ...participant,
+                    checked: selectedStudentIds.has(String(participant.id)),
+                }));
+                renderParticipantList();
+            }
         } catch (e) {}
-        if (tbody) {
-            // Remove empty-state row if present
-            const emptyRow = tbody.querySelector('tr.text-muted');
-            if (selectedIds.length > 0 && emptyRow) emptyRow.remove();
 
-            // Build map of existing rows
-            const existing = {};
-            tbody.querySelectorAll('tr[data-student-id]').forEach(r => existing[r.getAttribute('data-student-id')] = r);
-
-            // Use available_students map for profile info
-            const profileMap = {};
-            for (const p of (session.available_students || [])) profileMap[String(p.id)] = p;
-
-            // Ensure each selected student has a row
-            for (const sid of selectedIds) {
-                if (!existing[sid]) {
-                    const p = profileMap[sid] || { id: sid, full_name: 'Student', custom_id: '' };
-                    const initials = `${(p.first_name || '').slice(0,1) || ''}${(p.last_name || '').slice(0,1) || ''}`;
-                    const tr = document.createElement('tr');
-                    tr.setAttribute('data-student-id', sid);
-                    tr.innerHTML = `
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="avatar student-avatar rounded-circle bg-secondary text-white text-center">${initials}</div>
-                                <div class="small"><div class="fw-semibold">${p.full_name}</div><div class="text-muted small">${p.custom_id || ''}</div></div>
-                            </div>
-                        </td>
-                        <td><span class="status-pill status-pill-waiting" data-status-col="${sid}">Waiting</span></td>
-                        <td>
-                            <div class="progress progress-sm mb-1"><div class="progress-bar" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-progress-bar="${sid}"></div></div>
-                            <div class="small text-muted" data-progress-text="${sid}">--</div>
-                        </td>
-                        <td class="small text-muted" data-elapsed-col="${sid}">--</td>
-                        <td class="small text-muted fw-semibold" data-score-col="${sid}">--</td>
-                    `;
-                    tbody.appendChild(tr);
-                }
-            }
-
-            // Update existing rows with latest states
-            for (const [sid, st] of Object.entries(states)) {
-                const row = document.querySelector(`[data-student-id="${sid}"]`);
-                if (!row) continue;
-                const statusCol = row.querySelector(`[data-status-col="${sid}"]`);
-                const progressBar = row.querySelector(`[data-progress-bar="${sid}"]`);
-                const progressText = row.querySelector(`[data-progress-text="${sid}"]`);
-                const elapsedCol = row.querySelector(`[data-elapsed-col="${sid}"]`);
-                const scoreCol = row.querySelector(`[data-score-col="${sid}"]`);
-
-                const statusValue = (st.status || 'waiting').toLowerCase().replace(/\s+/g, '_');
-                const statusLabels = {
-                    reading: 'Reading',
-                    waiting: 'Waiting',
-                    ready: 'Ready',
-                    finished: 'Finished',
-                    needs_attention: 'Needs Attention',
-                };
-                const statusClasses = {
-                    reading: 'status-pill-reading',
-                    waiting: 'status-pill-waiting',
-                    ready: 'status-pill-ready',
-                    finished: 'status-pill-finished',
-                    needs_attention: 'status-pill-needs_attention',
-                };
-                const statusLabel = statusLabels[statusValue] || `${statusValue.charAt(0).toUpperCase()}${statusValue.slice(1)}`;
-                const pillClass = statusClasses[statusValue] || 'status-pill-waiting';
-
-                if (statusCol) {
-                    statusCol.className = `status-pill ${pillClass}`;
-                    statusCol.textContent = statusLabel;
-                }
-                // Progress handling per student status
-                const rawProgress = Number(st.progress) || 0;
-                const percent = st.items_total ? Math.round(rawProgress * 100) : 0;
-                const statusLower = (st.status || 'waiting').toLowerCase();
-
-                if (statusLower === 'waiting') {
-                    // No progress yet
-                    if (progressBar) {
-                        progressBar.style.width = `0%`;
-                        progressBar.setAttribute('aria-valuenow', 0);
-                    }
-                    if (progressText) progressText.textContent = '--';
-                    if (elapsedCol) elapsedCol.textContent = '--';
-                    if (scoreCol) scoreCol.textContent = '--';
-                } else if (statusLower === 'ready') {
-                    // Ready but not yet reading
-                    if (progressBar) {
-                        progressBar.style.width = `0%`;
-                        progressBar.setAttribute('aria-valuenow', 0);
-                    }
-                    if (progressText) progressText.textContent = '0%';
-                    if (elapsedCol) elapsedCol.textContent = '--';
-                    if (scoreCol) scoreCol.textContent = '--';
-                } else if (statusLower === 'reading') {
-                    // Ongoing reading progress; show live elapsed
-                    if (progressBar) {
-                        progressBar.style.width = `${percent}%`;
-                        progressBar.setAttribute('aria-valuenow', percent);
-                    }
-                    if (progressText) {
-                        progressText.textContent = st.items_total
-                            ? `${percent}% • ${st.items_completed || 0} / ${st.items_total}`
-                            : `${percent}%`;
-                    }
-                    if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
-                    if (scoreCol) scoreCol.textContent = '--';
-                } else {
-                    // finished or other terminal states
-                    const finalPercent = 100;
-                    if (progressBar) {
-                        progressBar.style.width = `${finalPercent}%`;
-                        progressBar.setAttribute('aria-valuenow', finalPercent);
-                    }
-                    if (progressText) progressText.textContent = '100%';
-                    if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
-                    if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : '--';
-                }
-            }
-
-            // If no selected students, show the empty-state row
-            if (selectedIds.length === 0) {
-                tbody.innerHTML = '<tr class="text-muted"><td colspan="5" class="small text-center py-4"><strong>No participants selected yet.</strong><br>Select students from the Session Configuration panel or click <strong>Select All</strong> to add participants.</td></tr>';
-            }
-        }
+        const selectedIds = Array.from(new Set([...serverIds, ...Array.from(selectedStudentIds)]));
+        updateMonitorRows(session, selectedIds);
 
         const log = (session.activity_log || []);
         const timeline = document.getElementById('activityTimeline');
@@ -951,24 +1153,265 @@
     document.getElementById('exitBtnTop').addEventListener('click', async (event) => {
         event.preventDefault();
         const status = document.querySelector('#controlStatus')?.textContent?.trim().toLowerCase();
-        if (status === 'waiting') {
+        if (status === 'waiting' || status === 'ended') {
             window.location.href = '{% url "dashboard_teacher" %}';
             return;
         }
-        const confirmed = await showConfirm('End session and exit', 'End the live assessment and return to the Teacher Dashboard?');
+        const confirmed = await showConfirm('Exit Live Session', 'The assessment session is still running. Are you sure you want to exit?');
         if (!confirmed) return;
-        const result = await sendAction('end');
-        if (result) {
-            window.location.href = '{% url "dashboard_teacher" %}';
-        }
+        window.location.href = '{% url "dashboard_teacher" %}';
     });
 
     let participantSearchQuery = '';
     let participantData = [];
+    const selectedStudentIds = new Set([{% for sid in live_session.student_ids %}"{{ sid }}"{% if not forloop.last %}, {% endif %}{% endfor %}]);
+    let selectionHydratedFromServer = false;
+    let lastSessionState = null;
 
     const participantList = document.getElementById('participantList');
     const participantEmptyState = document.getElementById('participantEmptyState');
     const studentSearchInput = document.getElementById('studentSearch');
+
+    function hydrateSelectedStudentIdsFromDom() {
+        participantData = getParticipantData();
+        participantData.forEach((participant) => {
+            if (participant.checked) {
+                selectedStudentIds.add(participant.id);
+            }
+        });
+        selectionHydratedFromServer = true;
+    }
+
+    function getMonitorStudentProfile(studentId, session) {
+        if (session && Array.isArray(session.available_students)) {
+            const profile = session.available_students.find((item) => String(item.id) === String(studentId));
+            if (profile) {
+                return {
+                    id: profile.id,
+                    full_name: profile.full_name || 'Student',
+                    custom_id: profile.custom_id || '',
+                    grade: profile.grade || 'N/A',
+                };
+            }
+        }
+
+        const existingRow = document.querySelector(`tr[data-student-id="${studentId}"]`);
+        if (existingRow) {
+            const nameEl = existingRow.querySelector('.fw-semibold');
+            const idEl = existingRow.querySelector('.text-muted.small');
+            return {
+                id: studentId,
+                full_name: nameEl?.textContent?.trim() || 'Student',
+                custom_id: idEl?.textContent?.trim() || '',
+                grade: existingRow.querySelector('td .text-muted')?.textContent?.trim() || 'N/A',
+            };
+        }
+
+        const checkbox = document.querySelector(`.participant-checkbox[data-student-id="${studentId}"]`);
+        if (checkbox) {
+            const rowEl = checkbox.closest('.participant-row');
+            return {
+                id: studentId,
+                full_name: rowEl?.querySelector('.fw-semibold')?.textContent?.trim() || 'Student',
+                custom_id: checkbox.dataset.customId || checkbox.getAttribute('data-custom-id') || rowEl?.dataset.customId || '',
+                grade: rowEl?.querySelector('.text-muted')?.textContent?.trim() || 'N/A',
+            };
+        }
+
+        const participant = participantData.find((item) => String(item.id) === String(studentId));
+        if (participant) {
+            return {
+                id: participant.id,
+                full_name: participant.name,
+                custom_id: participant.custom_id || '',
+                grade: participant.grade || 'N/A',
+            };
+        }
+
+        return { id: studentId, full_name: 'Student', custom_id: '', grade: 'N/A' };
+    }
+
+    function ensureMonitorRow(studentId, session) {
+        const tbody = document.getElementById('studentsTableBody');
+        if (!tbody) return null;
+        const existingRow = tbody.querySelector(`tr[data-student-id="${studentId}"]`);
+        const profile = getMonitorStudentProfile(studentId, session);
+
+        if (existingRow) {
+            const nameEl = existingRow.querySelector('.fw-semibold');
+            const idEl = existingRow.querySelector('.text-muted.small');
+            if (nameEl) {
+                nameEl.textContent = profile.full_name || nameEl.textContent;
+            }
+            if (idEl) {
+                idEl.textContent = profile.custom_id || idEl.textContent || '';
+            }
+            return existingRow;
+        }
+
+        const initials = `${(profile.full_name || '').slice(0, 1)}${(profile.full_name || '').split(' ').slice(-1)[0].slice(0, 1)}`;
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-student-id', studentId);
+        tr.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="avatar student-avatar rounded-circle bg-secondary text-white text-center">${initials}</div>
+                    <div class="small">
+                        <div class="fw-semibold">${profile.full_name}</div>
+                        <div class="text-muted small">${profile.custom_id || ''}</div>
+                    </div>
+                </div>
+            </td>
+            <td><span class="status-pill status-pill-waiting" data-status-col="${studentId}">Waiting</span></td>
+            <td>
+                <div class="progress progress-sm mb-1"><div class="progress-bar" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-progress-bar="${studentId}"></div></div>
+                <div class="small text-muted" data-progress-text="${studentId}">--</div>
+            </td>
+            <td class="small text-muted" data-elapsed-col="${studentId}">--</td>
+            <td class="small text-muted fw-semibold" data-score-col="${studentId}">--</td>
+        `;
+        tbody.appendChild(tr);
+        return tr;
+    }
+
+    function updateMonitorRows(session, selectedIds) {
+        const tbody = document.getElementById('studentsTableBody');
+        if (!tbody) return;
+        const ids = Array.from(selectedIds || []);
+        if (ids.length === 0) {
+            tbody.innerHTML = '<tr class="text-muted"><td colspan="5" class="small text-center py-4"><strong>No participants selected yet.</strong><br>Select students from the Session Configuration panel or click <strong>Select All</strong> to add participants.</td></tr>';
+            return;
+        }
+
+        // Remove any placeholder rows before we render actual student rows.
+        tbody.querySelectorAll('tr').forEach((row) => {
+            if (!row.hasAttribute('data-student-id')) {
+                row.remove();
+            }
+        });
+
+        const existing = {};
+        tbody.querySelectorAll('tr[data-student-id]').forEach((row) => {
+            const id = row.getAttribute('data-student-id');
+            if (id) existing[id] = row;
+        });
+
+        const desiredSet = new Set(ids.map(String));
+        for (const id of Object.keys(existing)) {
+            if (!desiredSet.has(id)) {
+                existing[id].remove();
+                delete existing[id];
+            }
+        }
+
+        ids.forEach((sid) => {
+            if (!existing[sid]) {
+                existing[sid] = ensureMonitorRow(sid, session);
+            }
+        });
+
+        const states = (session && session.student_states) ? session.student_states : {};
+        ids.forEach((sid) => {
+            const row = existing[sid];
+            if (!row) return;
+            const st = states[String(sid)] || {};
+            const statusCol = row.querySelector(`[data-status-col="${sid}"]`);
+            const progressBar = row.querySelector(`[data-progress-bar="${sid}"]`);
+            const progressText = row.querySelector(`[data-progress-text="${sid}"]`);
+            const elapsedCol = row.querySelector(`[data-elapsed-col="${sid}"]`);
+            const scoreCol = row.querySelector(`[data-score-col="${sid}"]`);
+
+            const statusValue = (st.status || 'waiting').toLowerCase().replace(/\s+/g, '_');
+            const statusLabels = {
+                reading: 'Reading',
+                started: 'Reading',
+                in_progress: 'Reading',
+                waiting: 'Waiting',
+                ready: 'Ready',
+                finished: 'Finished',
+                completed: 'Finished',
+                paused: 'Paused',
+                needs_attention: 'Needs Attention',
+                disconnected: 'Offline',
+                offline: 'Offline',
+            };
+            const statusClasses = {
+                reading: 'status-pill-reading',
+                started: 'status-pill-reading',
+                in_progress: 'status-pill-reading',
+                waiting: 'status-pill-waiting',
+                ready: 'status-pill-ready',
+                finished: 'status-pill-finished',
+                completed: 'status-pill-finished',
+                paused: 'status-pill-paused',
+                needs_attention: 'status-pill-needs_attention',
+                disconnected: 'status-pill-needs_attention',
+                offline: 'status-pill-needs_attention',
+            };
+            const statusLabel = statusLabels[statusValue] || `${statusValue.charAt(0).toUpperCase()}${statusValue.slice(1)}`;
+            const pillClass = statusClasses[statusValue] || 'status-pill-waiting';
+
+            if (statusCol) {
+                statusCol.className = `status-pill ${pillClass}`;
+                statusCol.textContent = statusLabel;
+            }
+
+            const rawProgress = Number(st.progress);
+            const progressPercent = Number.isFinite(rawProgress)
+                ? (rawProgress >= 0 && rawProgress <= 1 ? Math.round(rawProgress * 100) : Math.round(rawProgress))
+                : 0;
+            const itemsTotal = Number(st.items_total) || 0;
+            const itemsCompleted = Number(st.items_completed) || 0;
+            const percent = itemsTotal > 0 ? Math.round((itemsCompleted / itemsTotal) * 100) : progressPercent;
+            const statusLower = statusValue;
+            const progressTextValue = itemsTotal > 0
+                ? `${percent}% • ${itemsCompleted} / ${itemsTotal}`
+                : Number.isFinite(rawProgress)
+                    ? `${progressPercent}%`
+                    : '--';
+
+            if (statusLower === 'waiting') {
+                if (progressBar) {
+                    progressBar.style.width = `0%`;
+                    progressBar.setAttribute('aria-valuenow', 0);
+                }
+                if (progressText) progressText.textContent = '--';
+                if (elapsedCol) elapsedCol.textContent = '--';
+                if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : '--';
+            } else if (statusLower === 'ready') {
+                if (progressBar) {
+                    progressBar.style.width = `0%`;
+                    progressBar.setAttribute('aria-valuenow', 0);
+                }
+                if (progressText) progressText.textContent = '0%';
+                if (elapsedCol) elapsedCol.textContent = '--';
+                if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : '--';
+            } else if (statusLower === 'reading') {
+                if (progressBar) {
+                    progressBar.style.width = `${percent}%`;
+                    progressBar.setAttribute('aria-valuenow', percent);
+                }
+                if (progressText) {
+                    progressText.textContent = progressTextValue;
+                }
+                if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
+                if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : 'Calculating...';
+            } else {
+                const finalPercent = st.items_total ? Math.round((Number(st.items_completed) || st.items_total) / (Number(st.items_total) || 1) * 100) : 100;
+                if (progressBar) {
+                    progressBar.style.width = `${finalPercent}%`;
+                    progressBar.setAttribute('aria-valuenow', finalPercent);
+                }
+                if (progressText) progressText.textContent = st.items_total ? `${finalPercent}% • ${st.items_completed || 0} / ${st.items_total}` : `${finalPercent}%`;
+                if (elapsedCol) elapsedCol.textContent = st.elapsed_seconds ? formatElapsed(st.elapsed_seconds) : '--';
+                if (scoreCol) scoreCol.textContent = st.final_score != null ? st.final_score : 'Calculating...';
+            }
+        });
+    }
+
+    function updateMonitorForSelection() {
+        updateMonitorRows(lastSessionState, Array.from(selectedStudentIds));
+    }
 
     function getParticipantData() {
         const rows = Array.from(participantList?.querySelectorAll('.participant-row') || []);
@@ -978,12 +1421,15 @@
             const gradeEl = row.querySelector('.text-muted');
             const name = nameEl?.textContent?.trim() || '';
             const grade = gradeEl?.textContent?.trim() || '';
+            const id = checkbox?.dataset.studentId || '';
+            const customId = checkbox?.dataset.customId || checkbox?.getAttribute('data-custom-id') || '';
             return {
-                id: checkbox?.dataset.studentId || '',
+                id,
                 name,
                 grade,
+                custom_id: customId,
                 searchText: `${name} ${grade}`.toLowerCase(),
-                checked: checkbox?.checked || false,
+                checked: selectedStudentIds.has(id),
             };
         });
     }
@@ -1013,10 +1459,12 @@
 
         participantEmptyState.classList.add('d-none');
         filteredParticipants.forEach((participant) => {
+            const checked = selectedStudentIds.has(participant.id);
             const label = document.createElement('label');
             label.className = 'd-flex align-items-center gap-2 mb-1 participant-row';
+            label.setAttribute('data-custom-id', participant.custom_id || '');
             label.innerHTML = `
-                <input type="checkbox" class="participant-checkbox" data-student-id="${participant.id}" ${participant.checked ? 'checked' : ''}>
+                <input type="checkbox" class="participant-checkbox" data-student-id="${participant.id}" data-custom-id="${participant.custom_id || ''}" ${checked ? 'checked' : ''}>
                 <div class="flex-grow-1">
                     <div class="small fw-semibold">${participant.name}</div>
                     <div class="small text-muted">${participant.grade}</div>
@@ -1032,17 +1480,21 @@
     }
 
     document.getElementById('selectAllBtn').addEventListener('click', () => {
-        participantData = participantData.map((participant) => {
-            if (!participantSearchQuery || (participant.searchText || '').includes(participantSearchQuery.trim().toLowerCase())) {
-                return { ...participant, checked: true };
+        const query = participantSearchQuery.trim().toLowerCase();
+        participantData.forEach((participant) => {
+            if (!query || (participant.searchText || '').includes(query)) {
+                selectedStudentIds.add(participant.id);
             }
-            return participant;
         });
         renderParticipantList();
+        updateSummaryFromDom();
+        updateMonitorForSelection();
     });
     document.getElementById('resetSelectionBtn').addEventListener('click', () => {
-        participantData = participantData.map((participant) => ({ ...participant, checked: false }));
+        selectedStudentIds.clear();
         renderParticipantList();
+        updateSummaryFromDom();
+        updateMonitorForSelection();
     });
 
     if (studentSearchInput) {
@@ -1055,14 +1507,20 @@
     participantList?.addEventListener('change', (event) => {
         const checkbox = event.target.closest('.participant-checkbox');
         if (!checkbox) return;
-        const participant = participantData.find((item) => item.id === checkbox.dataset.studentId);
-        if (participant) {
-            participant.checked = checkbox.checked;
+        const studentId = checkbox.dataset.studentId;
+        if (!studentId) return;
+        if (checkbox.checked) {
+            selectedStudentIds.add(studentId);
+        } else {
+            selectedStudentIds.delete(studentId);
         }
+        updateSummaryFromDom();
+        updateMonitorForSelection();
     });
 
-    participantData = getParticipantData();
+    hydrateSelectedStudentIdsFromDom();
     renderParticipantList();
+    setSummaryPreStartFields();
 
     function buildCustomDropdownOptions(selectEl, menuEl, triggerValueEl, triggerEl) {
         const options = Array.from(selectEl.options || []);
