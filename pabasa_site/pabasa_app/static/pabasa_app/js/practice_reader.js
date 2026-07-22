@@ -24,7 +24,7 @@
     const starCounter = document.querySelector(".star-counter");
     const skipBtn = document.getElementById("skipBtn");
     const recordBtn = document.getElementById("recordBtn");
-    const huntReadAloudBtn = document.getElementById("huntReadAloudBtn");
+    const readAloudBtn = document.getElementById("readAloudBtn") || document.getElementById("huntReadAloudBtn");
     const nextBtn = document.getElementById("practiceNextBtn");
     const isFreeMode = shell.getAttribute("data-free-mode") === "true";
     const scrollsTrack = document.getElementById("scrollsTrack");
@@ -132,11 +132,16 @@
     let huntDiscardCurrentAudio = false;
     let huntReadAloudActive = false;
 
-    function updateHuntToggleButton() {
-        if (!isHuntMode || !recordBtn) return;
-        recordBtn.disabled = false;
-        recordBtn.classList.toggle("is-listening", huntListeningDesired);
-        recordBtn.innerHTML = huntListeningDesired
+    function activeReadingButton() {
+        return isFreeMode ? scrollRecordBtn : recordBtn;
+    }
+
+    function updateReadingToggleButton() {
+        const button = activeReadingButton();
+        if (!button) return;
+        button.disabled = false;
+        button.classList.toggle("is-listening", huntListeningDesired);
+        button.innerHTML = huntListeningDesired
             ? '<i class="bi bi-stop-circle-fill me-1"></i> Stop'
             : '<i class="bi bi-mic-fill me-1"></i> Start Reading';
     }
@@ -195,30 +200,34 @@
         fitFreeModeWordCardText();
     }
 
-    function scheduleHuntRecognition(index = currentIndex, delay = 180) {
+    function scheduleContinuousRecognition(index = (isFreeMode ? scrollCurrentIndex : currentIndex), delay = 180) {
         if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
         huntRecognitionRestartTimer = window.setTimeout(() => {
             huntRecognitionRestartTimer = null;
-            if (!huntListeningDesired || huntAdvanceInProgress || index !== currentIndex || huntResults[index]) return;
+            const activeIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
+            if (!huntListeningDesired || shell.classList.contains("is-complete") || huntAdvanceInProgress || index !== activeIndex || (isHuntMode && huntResults[index])) return;
             if (speechRequestActive || speechRecorder) {
-                scheduleHuntRecognition(index, 200);
+                scheduleContinuousRecognition(index, 200);
                 return;
             }
             if (huntRawMicInput) huntRawMicInput.textContent = "Waiting for speech...";
-            startPracticeSpeechRecording(recordBtn);
+            startPracticeSpeechRecording(activeReadingButton());
         }, delay);
     }
 
-    function stopHuntRecognitionByUser() {
+    function stopContinuousRecognitionByUser() {
         huntListeningDesired = false;
         if (huntRecognitionRestartTimer) window.clearTimeout(huntRecognitionRestartTimer);
         huntRecognitionRestartTimer = null;
         if (huntRetryTimer) window.clearTimeout(huntRetryTimer);
         huntRetryTimer = null;
-        if (speechRecorder?.state === "recording") stopPracticeSpeechRecording();
+        if (speechRecorder?.state === "recording") {
+            huntDiscardCurrentAudio = true;
+            stopPracticeSpeechRecording();
+        }
         releaseSpeechStream();
         restoreSpeechButton();
-        updateHuntToggleButton();
+        updateReadingToggleButton();
         setHuntSpeechPanel("Speech check stopped", "Google Speech results will appear here while you read.");
     }
 
@@ -286,6 +295,17 @@
     function supportedPracticeAudioType() {
         const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"];
         return candidates.find(type => window.MediaRecorder?.isTypeSupported?.(type)) || "";
+    }
+
+    function practiceRecordingWindowMs(targetText) {
+        const wordCount = Math.max(1, String(targetText || "").trim().split(/\s+/).filter(Boolean).length);
+        if (selectedDifficulty === "hard" || mode === "paragraph") {
+            return Math.min(30000, Math.max(12000, (wordCount * 700) + 2500));
+        }
+        if (selectedDifficulty === "medium" || mode === "sentence") {
+            return Math.min(20000, Math.max(7000, (wordCount * 1100) + 1800));
+        }
+        return Math.min(7000, Math.max(2600, (wordCount * 900) + 1200));
     }
 
     function restoreSpeechButton() {
@@ -476,7 +496,7 @@
     }
 
     async function submitPracticeSpeech(blob, targetText, button) {
-        const speechItemIndex = currentIndex;
+        const speechItemIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
         let retryHuntRecognition = false;
         speechRequestActive = true;
         if (button) {
@@ -544,6 +564,7 @@
                         : "No speech was recognized. Please speak clearly and try again.";
                 speechFeedback(hint, false);
                 restoreSpeechButton();
+                retryHuntRecognition = true;
             }
         } catch (error) {
             console.warn("PABASA [Practice]: Speech-to-text failed", error);
@@ -552,13 +573,16 @@
         } finally {
             speechRequestActive = false;
             releaseSpeechStream();
-            if (isHuntMode) {
-                restoreSpeechButton();
-                updateHuntToggleButton();
-            }
+            restoreSpeechButton();
+            updateReadingToggleButton();
             if (isHuntMode && huntListeningDesired && speechItemIndex === currentIndex && !huntAdvanceInProgress && !huntResults[speechItemIndex]) {
                 if (retryHuntRecognition) setHuntSpeechPanel("Try again", "Google Speech is listening for the same word.", true);
-                scheduleHuntRecognition(speechItemIndex, retryHuntRecognition ? 350 : 120);
+                scheduleContinuousRecognition(speechItemIndex, retryHuntRecognition ? 350 : 120);
+            } else if (!isHuntMode && huntListeningDesired) {
+                window.setTimeout(() => {
+                    if (!huntListeningDesired) return;
+                    scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 0);
+                }, retryHuntRecognition ? 350 : (isColorMode ? 1100 : 520));
             }
         }
     }
@@ -590,12 +614,8 @@
             speechOriginalButtonHtml = button.innerHTML;
             button.classList.add("is-listening");
             shell.classList.add("is-recording");
-            button.innerHTML = isHuntMode
-                ? '<i class="bi bi-stop-circle-fill me-1"></i> Stop'
-                : '<i class="bi bi-stop-circle-fill me-1"></i> Stop & Check';
-            speechFeedback(isHuntMode
-                ? "Listening… Read the word aloud."
-                : "Listening… Read the text aloud, then press Stop & Check.", true);
+            button.innerHTML = '<i class="bi bi-stop-circle-fill me-1"></i> Stop';
+            speechFeedback("Listening… Read the text aloud.", true);
             if (isHuntMode) {
                 setHuntSpeechPanel("Listening with Google Speech...", "Interim: listening for your word...", true);
                 if (huntRawMicInput) huntRawMicInput.textContent = "Waiting for speech...";
@@ -608,45 +628,42 @@
             speechRecorder.addEventListener("stop", () => {
                 const blob = new Blob(speechChunks, { type: speechRecorder?.mimeType || mimeType || "audio/webm" });
                 speechChunks = [];
-                if (isHuntMode && huntDiscardCurrentAudio) {
+                if (huntDiscardCurrentAudio) {
                     huntDiscardCurrentAudio = false;
                     restoreSpeechButton();
                     releaseSpeechStream();
-                    updateHuntToggleButton();
+                    updateReadingToggleButton();
                     return;
                 }
                 if (!blob.size) {
                     speechFeedback("No audio was captured. Please try again.", false);
                     restoreSpeechButton();
                     releaseSpeechStream();
-                    if (isHuntMode) {
-                        updateHuntToggleButton();
-                        if (huntListeningDesired) scheduleHuntRecognition(currentIndex, 350);
-                    }
+                    updateReadingToggleButton();
+                    if (huntListeningDesired) scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 350);
                     return;
                 }
                 submitPracticeSpeech(blob, targetText, button);
             }, { once: true });
             speechRecorder.start();
             startPracticeAudioMeter(speechStream);
-            // Hunt uses short Google Speech chunks and immediately starts another
-            // chunk while its single Start/Stop toggle remains active.
-            speechStopTimer = window.setTimeout(stopPracticeSpeechRecording, isHuntMode ? 2600 : 8000);
+            // Give longer sentence and paragraph items enough time to be read
+            // before sending the complete recording to Google Speech.
+            speechStopTimer = window.setTimeout(stopPracticeSpeechRecording, practiceRecordingWindowMs(targetText));
         } catch (error) {
             console.warn("PABASA [Practice]: Microphone unavailable", error);
             speechFeedback("Microphone access is required for speech checking.", false);
             restoreSpeechButton();
             releaseSpeechStream();
-            if (isHuntMode) {
-                updateHuntToggleButton();
-                if (huntListeningDesired) scheduleHuntRecognition(currentIndex, 700);
-            }
+            updateReadingToggleButton();
+            if (huntListeningDesired) scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 700);
         }
     }
 
     document.addEventListener("click", event => {
         const button = event.target.closest("button#recordBtn, button.scrolls-record-btn");
         if (!button || !shell.contains(button)) return;
+        if (button === readAloudBtn) return;
         if (button === scrollSkipBtn) return;
         if (speechBypassButtons.has(button)) {
             speechBypassButtons.delete(button);
@@ -654,14 +671,14 @@
         }
         event.preventDefault();
         event.stopImmediatePropagation();
-        if (isHuntMode && button === recordBtn) {
+        if (button === activeReadingButton()) {
             if (huntListeningDesired) {
-                stopHuntRecognitionByUser();
+                stopContinuousRecognitionByUser();
             } else {
                 huntListeningDesired = true;
-                updateHuntToggleButton();
+                updateReadingToggleButton();
                 setHuntSpeechPanel("Listening with Google Speech...", "Google Speech results will appear here while you read.", true);
-                scheduleHuntRecognition(currentIndex, 0);
+                scheduleContinuousRecognition(isFreeMode ? scrollCurrentIndex : currentIndex, 0);
             }
             return;
         }
@@ -689,10 +706,12 @@
         primaryButton.click();
     }, true);
 
-    huntReadAloudBtn?.addEventListener("click", async () => {
-        if (!isHuntMode || huntReadAloudActive || !items[currentIndex]) return;
+    readAloudBtn?.addEventListener("click", async () => {
+        const activeIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
+        if (huntReadAloudActive || !items[activeIndex]) return;
         huntReadAloudActive = true;
-        huntReadAloudBtn.disabled = true;
+        readAloudBtn.disabled = true;
+        readAloudBtn.classList.add("is-playing");
         const resumeListening = huntListeningDesired;
         if (speechRecorder?.state === "recording") {
             huntDiscardCurrentAudio = true;
@@ -704,7 +723,7 @@
         huntRecognitionRestartTimer = null;
         try {
             const formData = new FormData();
-            formData.append("target_text", items[currentIndex]);
+            formData.append("target_text", items[activeIndex]);
             formData.append("mode", mode);
             formData.append("tts_profile", "hunt");
             formData.append("language", getActiveMaterialMeta?.()?.language || document.documentElement.lang || "");
@@ -715,7 +734,7 @@
             });
             const data = await response.json();
             if (!response.ok || !data.success || !data.audio_content) throw new Error(data.error || "Read aloud is unavailable.");
-            setHuntSpeechPanel("Listen carefully", `Hear how to say: ${items[currentIndex]}`);
+            setHuntSpeechPanel("Listen carefully", `Hear how to say: ${items[activeIndex]}`);
             const audio = new Audio(`data:${data.mime_type || "audio/mpeg"};base64,${data.audio_content}`);
             await new Promise((resolve, reject) => {
                 audio.addEventListener("ended", resolve, { once: true });
@@ -726,9 +745,11 @@
             speechFeedback(error.message || "Read aloud is unavailable. Please try again.", false);
         } finally {
             huntReadAloudActive = false;
-            huntReadAloudBtn.disabled = false;
+            readAloudBtn.disabled = false;
+            readAloudBtn.classList.remove("is-playing");
             resetHuntSpeechPanel();
-            if (resumeListening && huntListeningDesired && !huntResults[currentIndex]) scheduleHuntRecognition(currentIndex, 180);
+            const resumeIndex = isFreeMode ? scrollCurrentIndex : currentIndex;
+            if (resumeListening && huntListeningDesired && (!isHuntMode || !huntResults[resumeIndex])) scheduleContinuousRecognition(resumeIndex, 180);
         }
     });
     let colorRevealedCount = 0;
@@ -941,18 +962,18 @@
     }
 
     function updateColorModeControls() {
-        if (!isColorMode || !skipBtn || !recordBtn || !nextBtn) return;
+        if (!isColorMode || !recordBtn || !nextBtn) return;
 
         if (colorModeCompletionReady) {
-            skipBtn.classList.add("d-none");
             recordBtn.classList.add("d-none");
+            readAloudBtn?.classList.add("d-none");
             nextBtn.textContent = "Finish";
             nextBtn.disabled = false;
         } else {
-            skipBtn.classList.remove("d-none");
             recordBtn.classList.remove("d-none");
-            nextBtn.textContent = "Finish";
-            nextBtn.disabled = currentIndex !== items.length - 1;
+            readAloudBtn?.classList.remove("d-none");
+            nextBtn.textContent = currentIndex === items.length - 1 ? "Finish" : "Next";
+            nextBtn.disabled = false;
         }
     }
 
@@ -1158,9 +1179,9 @@
 
         if (event.key === 'Shift') {
             event.preventDefault();
-            if (huntReadAloudBtn && !huntReadAloudBtn.disabled) {
-                pulseButtonPress(huntReadAloudBtn);
-                huntReadAloudBtn.click();
+            if (readAloudBtn && !readAloudBtn.disabled) {
+                pulseButtonPress(readAloudBtn);
+                readAloudBtn.click();
             }
             return true;
         }
@@ -1265,7 +1286,7 @@
     function completeHuntModeLevel() {
         if (!isHuntMode || huntLevelTransitionInProgress) return false;
         huntLevelTransitionInProgress = true;
-        if (huntListeningDesired) stopHuntRecognitionByUser();
+        if (huntListeningDesired) stopContinuousRecognitionByUser();
 
         const levelContext = getLevelProgressContext();
         const progressState = getPracticeProgressState();
@@ -1814,11 +1835,11 @@
         updateHuntVisuals();
         updateCompletionSummary();
         if (nextBtn) {
-            nextBtn.textContent = isColorMode ? "Finish" : (currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next");
+            nextBtn.textContent = currentIndex === items.length - 1 ? (viewMode === 'view' ? "Exit" : "Finish") : "Next";
             if (isColorMode && colorModeCompletionReady && currentIndex === items.length - 1) {
                 nextBtn.disabled = false;
             } else if (isColorMode) {
-                nextBtn.disabled = currentIndex !== items.length - 1;
+                nextBtn.disabled = false;
             } else if (isHuntMode && viewMode !== 'view') {
                 nextBtn.disabled = huntAdvanceInProgress;
             } else {
@@ -1899,6 +1920,7 @@
         if (scrollsLevelPill) scrollsLevelPill.textContent = levelLabelText || 'Level 2';
         if (scrollsProgressPill) scrollsProgressPill.textContent = `Card ${current + 1} of ${items.length}`;
         if (scrollsStatusPill) scrollsStatusPill.textContent = levelEntry.completed ? 'Level complete' : completedCards > 0 ? `${completedCards} completed` : 'Ready';
+        if (scrollSkipBtn) scrollSkipBtn.textContent = isFinalCard ? 'Finish' : 'Next';
         if (scrollsDots) {
             scrollsDots.innerHTML = items.map((_, index) => `<span class="${index === current ? 'is-active' : ''}"></span>`).join('');
         }
@@ -2320,6 +2342,7 @@
     }
 
     function showCompletion() {
+        if (huntListeningDesired) stopContinuousRecognitionByUser();
         document.body.classList.add("practice-results-open");
         shell.classList.add("is-complete");
         updateCompletionSummary();
@@ -2524,7 +2547,21 @@
     nextBtn?.addEventListener("click", function () {
         markPracticeSessionStarted();
         if (isColorMode) {
-            if (currentIndex !== items.length - 1) return;
+            if (currentIndex < items.length - 1) {
+                if (speechRecorder?.state === "recording") {
+                    huntDiscardCurrentAudio = true;
+                    stopPracticeSpeechRecording();
+                }
+                applyPracticeSkipOutcome(currentIndex);
+                currentIndex += 1;
+                practiceFeedback.textContent = "New item ready. Take your time.";
+                practiceFeedback.classList.remove("is-success", "is-warning");
+                setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
+                playCoachAnimation("next");
+                render();
+                if (huntListeningDesired) scheduleContinuousRecognition(currentIndex, 180);
+                return;
+            }
             setMascotState("next", { loop: false, holdIdle: true, duration: 150, force: true });
             if (colorModeCompletionReady) {
                 completeColorModeLevel();
@@ -2550,7 +2587,7 @@
                 releaseSpeechStream();
                 restoreSpeechButton();
             }
-            updateHuntToggleButton();
+            updateReadingToggleButton();
             if (!huntResults[currentIndex]) finalizeHuntSpeechResult(currentIndex, "", items[currentIndex], 0);
             nextBtn.disabled = true;
             huntWordArea?.classList.add("is-closing");
@@ -2573,7 +2610,7 @@
                 huntWordArea?.classList.remove("is-closing");
                 huntAdvanceInProgress = false;
                 render();
-                if (huntListeningDesired) scheduleHuntRecognition(currentIndex, 120);
+                if (huntListeningDesired) scheduleContinuousRecognition(currentIndex, 120);
             }, 220);
             return;
         }

@@ -5499,7 +5499,7 @@
 
         /* Match the assessment reader's animated microphone feedback in every mode. */
         .practice-shell.is-hearing button#recordBtn,
-        .practice-shell.is-hearing button.scrolls-record-btn {
+        .practice-shell.is-hearing button#scrollRecordBtn {
             background: linear-gradient(135deg, #1f6f8b, #7a8b5f, #f7c86a, #b95f44) !important;
             background-size: 260% 260% !important;
             box-shadow:
@@ -5514,7 +5514,7 @@
         }
 
         .practice-shell.is-hearing button#recordBtn::after,
-        .practice-shell.is-hearing button.scrolls-record-btn::after {
+        .practice-shell.is-hearing button#scrollRecordBtn::after {
             animation: practiceListeningGlow 1.05s ease-in-out infinite;
             background: linear-gradient(90deg, rgba(66, 133, 244, 0.5), rgba(52, 168, 83, 0.38), rgba(251, 188, 5, 0.42), rgba(234, 67, 53, 0.4));
             border-radius: inherit;
@@ -5524,6 +5524,13 @@
             pointer-events: none;
             position: absolute;
             z-index: -1;
+        }
+
+        button#readAloudBtn.is-playing,
+        button#huntReadAloudBtn.is-playing {
+            background: linear-gradient(135deg, #1f6f8b, #7a8b5f) !important;
+            box-shadow: 0 10px 24px rgba(31, 111, 139, 0.28) !important;
+            color: #fff !important;
         }
 
         @keyframes practiceListeningButton {
@@ -5538,9 +5545,9 @@
 
         @media (prefers-reduced-motion: reduce) {
             .practice-shell.is-hearing button#recordBtn,
-            .practice-shell.is-hearing button.scrolls-record-btn,
+            .practice-shell.is-hearing button#scrollRecordBtn,
             .practice-shell.is-hearing button#recordBtn::after,
-            .practice-shell.is-hearing button.scrolls-record-btn::after {
+            .practice-shell.is-hearing button#scrollRecordBtn::after {
                 animation: none !important;
             }
         }
@@ -5810,8 +5817,9 @@
                     <div class="scrolls-dots" id="scrollsDots" aria-label="Reading progress"></div>
                     <p class="scrolls-feedback" id="scrollsFeedback">Tap the mic to record your reading.</p>
                     <div class="scrolls-card-actions">
-                        <button class="scrolls-skip-btn" id="scrollSkipBtn" type="button">Skip</button>
-                        <button class="scrolls-record-btn" id="scrollRecordBtn" type="button"><i class="bi bi-mic-fill" aria-hidden="true"></i> Read Aloud</button>
+                        <button class="scrolls-record-btn" id="readAloudBtn" type="button"><i class="bi bi-volume-up-fill" aria-hidden="true"></i> Read Aloud</button>
+                        <button class="scrolls-record-btn" id="scrollRecordBtn" type="button"><i class="bi bi-mic-fill" aria-hidden="true"></i> Start Reading</button>
+                        <button class="scrolls-skip-btn" id="scrollSkipBtn" type="button">Next</button>
                     </div>
                 </div>
             </section>
@@ -5983,9 +5991,9 @@
                     <p class="practice-feedback" id="practiceFeedback">Begin reading.</p>
 
                     <div class="practice-controls">
-                        <button class="skip-btn" id="skipBtn" type="button">Skip</button>
-                        <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Read</button>
-                        <button class="next-btn" id="practiceNextBtn" type="button" {% if request.GET.game == 'color' %}disabled{% endif %}>{% if request.GET.game == 'color' %}Finish{% else %}Next{% endif %}</button>
+                        <button class="record-btn" id="readAloudBtn" type="button"><i class="bi bi-volume-up-fill me-1"></i> Read Aloud</button>
+                        <button class="record-btn" id="recordBtn" type="button"><i class="bi bi-mic-fill me-1"></i> Start Reading</button>
+                        <button class="next-btn" id="practiceNextBtn" type="button">Next</button>
                     </div>
                 </div>
             </article>

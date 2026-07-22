@@ -455,10 +455,6 @@
             order: 1;
         }
 
-        .student-signup-form .form-actions.is-final-step #prevStepBtn {
-            order: 2;
-        }
-
         .student-signup-form .form-actions.is-final-step #nextStepBtn {
             display: none;
         }
@@ -664,8 +660,7 @@
                     <!-- CHANGED: added student-signup-form's form-actions class scope via parent form -->
                     <div class="col-12 d-flex justify-content-between form-actions">
                         <div class="secondary-actions-row">
-                            <button class="btn btn-outline-secondary d-none" id="prevStepBtn" type="button">Previous</button>
-                            <a class="btn back-button" href="{% url 'signup' %}">Back</a>
+                            <a class="btn back-button" id="backStepBtn" href="{% url 'signup' %}">Back</a>
                         </div>
                         <div class="d-flex gap-2 flex-wrap justify-content-end step-actions-group">
                             <button class="btn btn-primary" id="nextStepBtn" type="button">Next</button>
@@ -734,7 +729,7 @@
         
         const submitButton = form.querySelector("button[type='submit']");
         const nextStepBtn = document.getElementById("nextStepBtn");
-        const prevStepBtn = document.getElementById("prevStepBtn");
+        const backStepBtn = document.getElementById("backStepBtn");
         const formActions = form.querySelector(".form-actions");
         const steps = Array.from(form.querySelectorAll("[data-signup-step]")).sort((a, b) => Number(a.dataset.signupStep) - Number(b.dataset.signupStep));
         const stepStatus = document.querySelector("[data-step-status]");
@@ -759,7 +754,6 @@
                 step.classList.toggle("is-active", index === currentStep);
             });
             if (stepStatus) stepStatus.textContent = `${stepLabels[currentStep]} ${currentStep + 1}/${steps.length}`;
-            prevStepBtn.classList.toggle("d-none", currentStep === 0);
             nextStepBtn.classList.toggle("d-none", currentStep === steps.length - 1);
             submitButton.classList.toggle("d-none", currentStep !== steps.length - 1);
             formActions.classList.toggle("is-final-step", currentStep === steps.length - 1);
@@ -853,7 +847,9 @@
             setStep(currentStep + 1);
         });
 
-        prevStepBtn.addEventListener("click", () => {
+        backStepBtn.addEventListener("click", (event) => {
+            if (currentStep === 0) return;
+            event.preventDefault();
             setStep(currentStep - 1);
         });
 
