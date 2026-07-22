@@ -50,6 +50,7 @@ from .reading_stt import (
     analyze_reading,
     language_code_for,
     phrase_hints_for,
+    target_phrase_hints,
     synthesize_read_aloud_audio,
     transcribe_audio_bytes_with_model,
     word_numbers_in_transcript,
@@ -4634,7 +4635,9 @@ def reading_transcribe_api(request):
     mode = (request.POST.get('mode') or '').strip().lower()
     language = (request.POST.get('language') or '').strip()
     language_code = language_code_for(language, mode)
-    phrase_hints = phrase_hints_for(language, mode)
+    phrase_hints = list(dict.fromkeys(
+        phrase_hints_for(language, mode) + target_phrase_hints(target_text, language_code)
+    ))
     api_key = getattr(settings, 'GOOGLE_STT_API_KEY', '').strip()
     project_id = getattr(settings, 'GOOGLE_CLOUD_PROJECT_ID', '').strip()
     location = getattr(settings, 'GOOGLE_STT_LOCATION', 'global').strip()

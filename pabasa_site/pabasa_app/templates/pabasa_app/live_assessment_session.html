@@ -5,13 +5,13 @@
 
 {% block content %}
 <div class="container-fluid py-3 teacher-control">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <div>
+    <div class="live-page-header d-flex align-items-center justify-content-between mb-3">
+        <div class="live-page-heading">
             <h1 class="h4 mb-0">Live Assessment — {{ live_session.material.title }}</h1>
             <div class="text-muted small">{{ live_session.material.assessment_type|default:'Reading' }} • {{ live_session.course.title|default:'N/A' }}</div>
         </div>
-        <div class="text-end">
-            <div class="d-inline-block px-3 py-2 rounded-pill" style="background:var(--dash-primary-soft); color:var(--dash-primary-deep);">
+        <div class="live-page-status text-end">
+            <div class="live-page-status-pill d-inline-block px-3 py-2 rounded-pill" style="background:var(--dash-primary-soft); color:var(--dash-primary-deep);">
                 <strong id="headerStatus">{{ live_session.status|title }}</strong>
                 <div class="small text-muted">Session ID: {{ live_session.id }}</div>
             </div>
@@ -381,16 +381,175 @@
             min-height: 180px;
         }
 
+        .teacher-control, .teacher-control * { box-sizing: border-box; }
+        .teacher-control { min-width: 0; max-width: 100%; overflow-x: clip; }
+        .teacher-control .live-page-header,
+        .teacher-control .live-page-heading,
+        .teacher-control .live-page-status,
+        .teacher-control .monitor-card-header,
+        .teacher-control .control-card-header { min-width: 0; }
+        .teacher-control .live-page-heading { padding-right: 1rem; }
+        .teacher-control .live-page-heading h1,
+        .teacher-control .live-page-heading .small { overflow-wrap: anywhere; }
+        .teacher-control .live-page-status-pill { max-width: min(100%, 22rem); }
+        .teacher-control .live-page-status-pill .small {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .teacher-control .control-panel-card { top: 16px; }
+        .teacher-control .participant-toolbar { flex-wrap: wrap; }
+        .teacher-control .participant-toolbar #studentSearch {
+            flex: 1 1 14rem;
+            min-width: 0;
+        }
+
         @media (max-width: 768px) {
-            .teacher-control h1.h4 { font-size: 1.25rem; }
+            .teacher-control {
+                padding: 0.75rem 0.25rem 1.25rem !important;
+                font-size: 14px;
+            }
+            .teacher-control h1.h4 { font-size: 1.15rem; line-height: 1.2; }
             .teacher-control .btn.btn-lg { font-size: 0.96rem; }
+            .teacher-control .live-page-header {
+                align-items: stretch !important;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .teacher-control .live-page-heading { padding-right: 0; }
+            .teacher-control .live-page-status { text-align: left !important; width: 100%; }
+            .teacher-control .live-page-status-pill {
+                align-items: center;
+                display: flex !important;
+                gap: 0.55rem;
+                justify-content: space-between;
+                max-width: 100%;
+                width: 100%;
+            }
+            .teacher-control .live-page-status-pill .small {
+                max-width: 65%;
+                text-align: right;
+            }
+            .teacher-control .live-monitor-card,
+            .teacher-control .control-panel-card,
+            .teacher-control .configuration-card {
+                border-radius: 16px;
+                padding: 0.9rem !important;
+            }
+            .teacher-control .monitor-card-header,
+            .teacher-control .control-card-header {
+                align-items: stretch !important;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .teacher-control .monitor-card-header > .text-end,
+            .teacher-control .control-card-header > .btn { text-align: left !important; }
+            .teacher-control .monitor-card-header .d-inline-flex {
+                justify-content: space-between;
+                width: 100%;
+            }
+            .teacher-control .monitor-status-badge { min-width: 0; }
+            .teacher-control .control-panel-card {
+                position: static !important;
+                top: auto !important;
+            }
+            .teacher-control .control-card-header #exitBtnTop {
+                align-self: flex-start;
+                min-height: 44px;
+                padding: 0.5rem 0 !important;
+            }
+            .teacher-control .table-responsive { overflow: visible; }
+            .teacher-control .table-monitor,
+            .teacher-control .table-monitor tbody { display: block; width: 100%; }
+            .teacher-control .table-monitor thead { display: none; }
+            .teacher-control .table-monitor tbody tr {
+                background: rgba(31, 111, 139, 0.035);
+                border: 1px solid rgba(31, 111, 139, 0.09);
+                border-radius: 14px;
+                display: grid;
+                margin-bottom: 0.75rem;
+                overflow: hidden;
+                padding: 0.35rem 0.75rem;
+                width: 100%;
+            }
+            .teacher-control .table-monitor tbody tr:last-child { margin-bottom: 0; }
+            .teacher-control .table-monitor tbody td {
+                align-items: center;
+                border-top: 1px solid rgba(31, 111, 139, 0.07);
+                display: grid;
+                gap: 0.75rem;
+                grid-template-columns: minmax(5.25rem, 34%) minmax(0, 1fr);
+                min-width: 0;
+                padding: 0.65rem 0;
+                width: 100%;
+            }
+            .teacher-control .table-monitor tbody td:first-child {
+                border-top: 0;
+                display: block;
+                padding: 0.7rem 0;
+            }
+            .teacher-control .table-monitor tbody td:nth-child(2)::before { content: "Status"; }
+            .teacher-control .table-monitor tbody td:nth-child(3)::before { content: "Progress"; }
+            .teacher-control .table-monitor tbody td:nth-child(4)::before { content: "Time"; }
+            .teacher-control .table-monitor tbody td:nth-child(5)::before { content: "Score"; }
+            .teacher-control .table-monitor tbody td::before {
+                color: var(--muted, #6b7280);
+                font-size: 0.7rem;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+            .teacher-control .table-monitor tbody tr.text-muted td[colspan] {
+                border: 0;
+                display: block;
+                padding: 1.25rem 0.4rem !important;
+                text-align: center;
+            }
+            .teacher-control .table-monitor tbody tr.text-muted td[colspan]::before { content: none; }
+            .teacher-control .participant-toolbar > .btn {
+                flex: 1 1 calc(50% - 0.25rem);
+                min-height: 42px;
+            }
+            .teacher-control .participant-toolbar #studentSearch {
+                flex-basis: 100%;
+                min-height: 44px;
+            }
+            .teacher-control .profile-surface-menu { max-height: min(280px, 42vh); }
+        }
+
+        @media (max-width: 420px) {
+            .teacher-control { padding-left: 0 !important; padding-right: 0 !important; }
+            .teacher-control .live-page-status-pill {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .teacher-control .live-page-status-pill .small {
+                max-width: 100%;
+                text-align: left;
+                width: 100%;
+            }
+            .teacher-control .session-secondary-actions { flex-direction: column; }
+            .teacher-control .session-secondary-actions .btn,
+            .teacher-control .session-actions > .btn {
+                min-height: 46px;
+                width: 100%;
+            }
+            .teacher-control .monitor-card-header .d-inline-flex {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 0.5rem !important;
+            }
+            .teacher-control .table-monitor tbody td {
+                grid-template-columns: 4.75rem minmax(0, 1fr);
+            }
         }
     </style>
 
     <div class="row g-3 mb-3">
-        <div class="col-lg-8">
+        <div class="col-lg-8 order-2 order-lg-1">
             <div class="card live-monitor-card p-3 mb-3">
-                <div class="d-flex align-items-start justify-content-between mb-3">
+                <div class="monitor-card-header d-flex align-items-start justify-content-between mb-3">
                     <div>
                         <h5 class="mb-1">Student Monitor</h5>
                         <div class="small text-muted">Monitor selected participants in real time</div>
@@ -451,9 +610,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-4">
-            <div class="card p-3 mb-3 sticky-top" style="top:16px">
-                <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="col-lg-4 order-1 order-lg-2">
+            <div class="card control-panel-card p-3 mb-3 sticky-top">
+                <div class="control-card-header d-flex align-items-center justify-content-between mb-3">
                     <div>
                         <h5 class="mb-1">Session Controls</h5>
                         <div class="small text-muted">Teacher command center</div>
@@ -461,9 +620,9 @@
                     <button id="exitBtnTop" class="btn btn-link text-decoration-none p-0">← Exit Live Session</button>
                 </div>
                 <div id="saveNotice" class="alert alert-info py-2 px-3 small mb-3 d-none"></div>
-                <div class="d-grid gap-2 mb-3">
+                <div class="session-actions d-grid gap-2 mb-3">
                     <button id="startBtn" class="btn btn-success btn-lg">▶ Start Session</button>
-                    <div class="d-flex gap-2">
+                    <div class="session-secondary-actions d-flex gap-2">
                         <button id="pauseBtn" class="btn btn-outline-warning btn-lg flex-fill">⏸ Pause</button>
                         <button id="resumeBtn" class="btn btn-outline-primary btn-lg flex-fill">▶ Resume</button>
                     </div>
@@ -484,7 +643,7 @@
 
     <div class="row g-3">
         <div class="col-12">
-            <div class="card p-3">
+            <div class="card configuration-card p-3">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <div>
                         <h5 class="mb-1">Session Configuration</h5>
@@ -495,7 +654,7 @@
                     <div class="col-lg-5">
                         <div class="mb-3">
                             <label class="form-label mb-2">Participants</label>
-                            <div class="d-flex gap-2 mb-2">
+                            <div class="participant-toolbar d-flex gap-2 mb-2">
                                 <input type="text" id="studentSearch" class="form-control form-control-sm" placeholder="Search students...">
                                 <button id="selectAllBtn" class="btn btn-outline-primary btn-sm">Select All</button>
                                 <button id="resetSelectionBtn" class="btn btn-outline-secondary btn-sm">Clear</button>

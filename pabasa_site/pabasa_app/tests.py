@@ -22,6 +22,7 @@ from .reading_stt import (
     ReadingMatcher,
     analyze_reading,
     language_code_for,
+    target_phrase_hints,
     v1_model_for_language,
     word_numbers_in_transcript,
 )
@@ -203,6 +204,29 @@ class ReadingMatcherTests(TestCase):
 
     def test_cmu_homophones_are_not_applied_to_filipino(self):
         result = analyze_reading("two", 0, "too", language_code="fil-PH")
+
+        self.assertEqual(result["correct_word_count"], 0)
+        self.assertFalse(result["complete"])
+
+    def test_filipino_syllable_tokens_match_one_target_word(self):
+        result = analyze_reading("kabayo", 0, "ka ba yo", language_code="fil-PH")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["matched"], 3)
+
+    def test_filipino_joined_syllables_allow_one_stt_vowel_error(self):
+        result = analyze_reading("puno", 0, "po no", language_code="fil-PH")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertTrue(result["complete"])
+
+    def test_filipino_target_adds_whole_word_and_syllable_hints(self):
+        self.assertEqual(target_phrase_hints("Araw Puno", "fil-PH"), ["araw", "a", "raw", "puno", "pu", "no"])
+        self.assertEqual(target_phrase_hints("Araw", "en-PH"), [])
+
+    def test_english_tokens_are_not_joined_into_one_target_word(self):
+        result = analyze_reading("somebody", 0, "some body", language_code="en-PH")
 
         self.assertEqual(result["correct_word_count"], 0)
         self.assertFalse(result["complete"])

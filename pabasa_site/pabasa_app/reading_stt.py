@@ -127,6 +127,21 @@ def phrase_hints_for(language="", mode=""):
     return MARUNGKO_PHRASE_HINTS if language_code_for(language, mode) == "fil-PH" else []
 
 
+def target_phrase_hints(target_text, language_code):
+    """Bias Filipino STT toward the displayed words and their syllables."""
+    if str(language_code).lower() != "fil-ph":
+        return []
+
+    hints = []
+    for word in ReadingMatcher.readable_words(target_text or ""):
+        normalized = ReadingMatcher.normalize_word(word)
+        if not normalized:
+            continue
+        hints.append(normalized)
+        hints.extend(ReadingMatcher.split_syllables(normalized))
+    return list(dict.fromkeys(hints))[:100]
+
+
 def v1_model_for_language(model, language_code):
     requested_model = (model or "").strip()
     normalized_language = str(language_code or "").lower()
@@ -472,16 +487,41 @@ class ReadingMatcher:
         spoken_index = 0
         while target_index < len(self.words) and spoken_index < len(spoken_words):
             target_word = self.normalize_word(self.words[target_index])
-            matched_at = -1
+            matched_span = None
             for candidate_index in range(spoken_index, len(spoken_words)):
                 if self.words_match(spoken_words[candidate_index], target_word):
-                    matched_at = candidate_index
+                    matched_span = (candidate_index, candidate_index + 1)
                     break
-            if matched_at == -1:
+                joined_end = self.filipino_joined_match_end(spoken_words, candidate_index, target_word)
+                if joined_end is not None:
+                    matched_span = (candidate_index, joined_end)
+                    break
+            if matched_span is None:
                 break
             target_index += 1
-            spoken_index = matched_at + 1
+            spoken_index = matched_span[1]
         return target_index
+
+    def filipino_joined_match_end(self, spoken_words, start_index, target_word):
+        """Match STT output such as ``ka ba yo`` against Filipino ``kabayo``."""
+        if str(self.language_code).lower() != "fil-ph":
+            return None
+
+        joined = spoken_words[start_index]
+        max_parts = min(len(spoken_words), start_index + 6)
+        for end_index in range(start_index + 1, max_parts):
+            joined += spoken_words[end_index]
+            if len(joined) > len(target_word):
+                break
+            if joined == target_word:
+                return end_index + 1
+            if (
+                len(target_word) >= 4
+                and len(joined) == len(target_word)
+                and self.edit_distance(joined, target_word, 1) <= 1
+            ):
+                return end_index + 1
+        return None
 
     def find_best_read_position(self, spoken_words, target_words):
         best_index = self.current_syllable_index
