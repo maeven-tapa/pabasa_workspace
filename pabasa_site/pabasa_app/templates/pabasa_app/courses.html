@@ -10265,7 +10265,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function resolveCourseAttemptReadingLevel(attempt, assessmentType) {
             const helper = window.PABASA_READING_LEVEL;
-            const hasCompletedAttempt = String(attempt?.status || '').toLowerCase() === 'completed' || Boolean(attempt?.completed_at);
             const totalScore = (() => {
                 const keys = ['final_score', 'total_score', 'score'];
                 for (const key of keys) {
@@ -10277,16 +10276,27 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 return null;
             })();
 
-            if (helper && typeof helper.getReadingLevelFromScore === 'function' && hasCompletedAttempt && totalScore !== null && totalScore !== undefined && totalScore !== '') {
-                const computed = helper.getReadingLevelFromScore(totalScore, assessmentType || attempt?.assessment_type || attempt?.assessmentType || attempt?.mode);
-                return computed?.adapted_reading_level || 'Pending';
-            }
+            const computedFromScore = (() => {
+                if (totalScore === null || totalScore === undefined || totalScore === '') return null;
+                if (helper && typeof helper.getReadingLevelFromScore === 'function') {
+                    return helper.getReadingLevelFromScore(totalScore, assessmentType || attempt?.assessment_type || attempt?.assessmentType || attempt?.mode)?.adapted_reading_level || null;
+                }
+                const score = Number(totalScore);
+                if (Number.isNaN(score)) return null;
+                const normalizedScore = Math.max(0, Math.min(100, score));
+                if (normalizedScore >= 90) return 'Readers at Grade Level';
+                if (normalizedScore >= 80) return 'Transitioning Readers';
+                if (normalizedScore >= 70) return 'Developing Readers';
+                if (normalizedScore >= 60) return 'High Emerging Readers';
+                return 'Low Emerging Readers';
+            })();
+            if (computedFromScore) return computedFromScore;
 
             const fallbackLevel = attempt?.adapted_reading_level || attempt?.reading_level || attempt?.level || attempt?.crla_classification || attempt?.classification || '';
             if (helper && typeof helper.normalizeReadingLevelLabel === 'function' && fallbackLevel) {
                 return helper.normalizeReadingLevelLabel(fallbackLevel) || 'Pending';
             }
-            return 'Pending';
+            return fallbackLevel ? String(fallbackLevel).trim() : 'Pending';
         }
 
         function getStudentStatus(student) {
