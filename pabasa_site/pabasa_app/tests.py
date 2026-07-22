@@ -114,6 +114,26 @@ class AssessmentPageTemplateTests(TestCase):
         self.assertIn('vowel: "{% url \'reading_vowel_page\' %}"', content)
 
 
+class TeacherSignupTemplateTests(TestCase):
+    def test_teacher_signup_template_includes_privacy_step_and_consent_controls(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "teacher_signup.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn('data-signup-step="3"', content)
+        self.assertIn("I agree to the Privacy Policy and Terms of Service", content)
+        self.assertIn("${stepLabels[currentStep]} ${currentStep + 1}/${steps.length}", content)
+
+
+class StudentSignupTemplateTests(TestCase):
+    def test_student_signup_template_includes_privacy_step_and_consent_controls(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "student_signup.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn('data-signup-step="3"', content)
+        self.assertIn("I agree to the Privacy Policy and Terms of Service", content)
+        self.assertIn("Step ${currentStep + 1} of ${steps.length}", content)
+
+
 class AssessmentResultsPageTests(TestCase):
     def test_completion_page_uses_child_friendly_summary_copy(self):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "reading_assessment_base.html"

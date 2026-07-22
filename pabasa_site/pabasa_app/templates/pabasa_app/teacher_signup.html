@@ -311,13 +311,147 @@
         display: block;
     }
 
+    .privacy-step-document {
+        padding: 1rem 0;
+        color: #334155;
+        font-size: 0.95rem;
+        line-height: 1.7;
+    }
+
+    .privacy-step-document h2,
+    .privacy-step-document h3 {
+        color: #12394f;
+        font-weight: 700;
+        margin-bottom: 0.45rem;
+    }
+
+    .privacy-step-document h2 {
+        font-size: 1.05rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .privacy-step-document h3 {
+        font-size: 0.96rem;
+        margin-top: 1rem;
+        padding-top: 0.8rem;
+        border-top: 1px solid rgba(15, 47, 69, 0.14);
+    }
+
+    .privacy-step-document p,
+    .privacy-step-document ul {
+        margin-bottom: 0.65rem;
+    }
+
+    .privacy-step-document .privacy-link-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.55rem 0.8rem;
+        margin-top: 0.75rem;
+        margin-bottom: 1.35rem;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid rgba(16, 70, 110, 0.12);
+        border-radius: 0.85rem;
+        background: rgba(84, 194, 240, 0.05);
+        color: #10466e;
+    }
+
+    .privacy-step-document ul {
+        padding-left: 1.1rem;
+        margin-top: 0.35rem;
+    }
+
+    .privacy-step-document li + li {
+        margin-top: 0.25rem;
+    }
+
+    .privacy-step-document .privacy-link-row a {
+        color: #10466e;
+        text-decoration: none;
+        font-weight: 600;
+        transition: text-decoration 0.2s ease;
+    }
+
+    .privacy-step-document .privacy-link-row a:hover,
+    .privacy-step-document .privacy-link-row a:focus-visible {
+        text-decoration: underline;
+    }
+
+    .privacy-step-document .privacy-consent-group {
+        display: grid;
+        gap: 0.65rem;
+        margin-top: 0.75rem;
+        padding-top: 1.15rem;
+        border-top: 1px solid rgba(15, 47, 69, 0.16);
+    }
+
+    .privacy-step-document .privacy-consent-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.7rem;
+        color: #12394f;
+        font-size: 0.92rem;
+    }
+
+    .privacy-step-document .privacy-consent-option input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin-top: 0.2rem;
+        flex-shrink: 0;
+    }
+
     @media (max-width: 575.98px) {
         .teacher-signup-form .form-actions {
-            flex-direction: column-reverse;
+            flex-direction: row;
+            align-items: stretch;
+            gap: 0.75rem;
         }
 
-        .teacher-signup-form .form-actions .btn {
+        .teacher-signup-form .form-actions > .back-button {
+            flex: 0 0 7rem;
+            min-height: 44px;
+            margin-right: 0;
+        }
+
+        .teacher-signup-form .form-actions .step-actions-group {
+            display: flex;
+            flex: 1 1 auto;
+            min-width: 0;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+
+        .teacher-signup-form .form-actions .step-actions-group .btn {
+            min-height: 44px;
+            width: auto;
+            flex: 1 1 auto;
+        }
+
+        .teacher-signup-form .form-actions .step-actions-group #nextStepBtn {
+            flex: 1.35 1 auto;
+        }
+
+        .teacher-signup-form .form-actions .step-actions-group:has(#submitBtn:not(.d-none)) {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+
+        .teacher-signup-form .form-actions .step-actions-group:has(#submitBtn:not(.d-none)) .btn {
             width: 100%;
+            flex: 0 0 auto;
+        }
+
+        .teacher-signup-form .form-actions .step-actions-group:has(#submitBtn:not(.d-none)) #submitBtn {
+            order: 1;
+        }
+
+        .teacher-signup-form .form-actions .step-actions-group:has(#submitBtn:not(.d-none)) #prevStepBtn {
+            order: 2;
+        }
+
+        .teacher-signup-form .form-actions .step-actions-group:has(#submitBtn:not(.d-none)) #nextStepBtn {
+            display: none;
         }
 
         .signup-card-topline {
@@ -486,10 +620,62 @@
                         </div>
                     </div>
                     </div>
+                    <div class="signup-step" data-signup-step="3">
+                        <div class="col-12">
+                            <div class="privacy-step-document">
+                                <h2>Privacy Notice</h2>
+                                <p class="text-muted">Please review the privacy notice below before creating your account.</p>
+
+                                <h3>1. Data We Collect</h3>
+                                <ul>
+                                    <li><strong>Full Name</strong> — Displayed on your profile and used in reading assessment reports and account identification.</li>
+                                    <li><strong>Email Address</strong> — Used for account registration, login, verification, password recovery, and important account notifications.</li>
+                                    <li><strong>Password</strong> — Securely hashed before storage and never stored or displayed in plain text.</li>
+                                    <li><strong>Contact Number</strong> — Used for account verification and important account-related notifications, when applicable.</li>
+                                    <li><strong>School Information</strong> — Includes your school name and other relevant institutional details to associate your account with your educational institution and manage access within the platform.</li>
+                                    <li><strong>Reading Assessment Records</strong> — Includes reading assessment results, progress, and generated reports to monitor learning performance and provide educational insights.</li>
+                                </ul>
+
+                                <h3>2. How We Use It</h3>
+                                <p>We use this information to create and secure your account, personalize your learning experience, and contact you about your account when needed. We do not sell your personal data to third parties.</p>
+
+                                <h3>3. Data Sharing</h3>
+                                <p>We do not use your information for advertising, and we share it only when necessary.</p>
+                                <p><strong>We do not:</strong> sell personal information · rent user information · share information for advertising</p>
+                                <p><strong>We only share when necessary with:</strong> authorized school personnel · school administrators · technical service providers · government authorities when legally required</p>
+
+                                <h3>4. Your Rights</h3>
+                                <p>You have rights under the Data Privacy Act of 2012, including the right to:</p>
+                                <ul>
+                                    <li>Be informed about how your information is handled</li>
+                                    <li>Access and correct your personal data</li>
+                                    <li>Object to or withdraw consent for processing</li>
+                                    <li>Request deletion of your data, subject to legal retention requirements</li>
+                                    <li>File a complaint with the National Privacy Commission</li>
+                                </ul>
+
+                                <h3>5. Related Documents</h3>
+                                <div class="privacy-link-row">
+                                    <a href="{% url 'privacy' %}">Privacy Policy</a>
+                                    <span>·</span>
+                                    <a href="{% url 'terms' %}">Terms and Conditions</a>
+                                </div>
+
+                                <div class="privacy-consent-group">
+                                    <label class="privacy-consent-option">
+                                        <input type="checkbox" name="privacy_consent" required>
+                                        <span>I agree to the Privacy Policy and Terms of Service, and consent to PABASA collecting and processing my personal data as described above.</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="col-12 d-flex justify-content-between form-actions">
-                        <a class="btn back-button" href="{% url 'signup' %}">Back</a>
-                        <div class="d-flex gap-2 flex-wrap justify-content-end">
+                        <div class="secondary-actions-row">
                             <button class="btn btn-outline-secondary d-none" id="prevStepBtn" type="button">Previous</button>
+                            <a class="btn back-button" href="{% url 'signup' %}">Back</a>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap justify-content-end step-actions-group">
                             <button class="btn btn-primary" id="nextStepBtn" type="button">Next</button>
                             <button class="btn btn-primary d-none" id="submitBtn" type="submit" disabled>Create Account</button>
                         </div>
@@ -546,14 +732,16 @@
         const submitButton = form.querySelector("button[type='submit']");
         const nextStepBtn = document.getElementById("nextStepBtn");
         const prevStepBtn = document.getElementById("prevStepBtn");
+        const formActions = form.querySelector(".form-actions");
         const steps = Array.from(form.querySelectorAll("[data-signup-step]")).sort((a, b) => Number(a.dataset.signupStep) - Number(b.dataset.signupStep));
         const stepStatus = document.querySelector("[data-step-status]");
-        const stepLabels = ["Personal", "School", "Password"];
+        const stepLabels = ["Personal", "School", "Password", "Privacy"];
         let currentStep = 0;
         const errorMessage = form.querySelector("#errorMessage");
         const passwordInput = form.elements.password;
         const confirmPasswordInput = form.elements.confirm_password;
         const passwordMatchError = form.querySelector("[data-password-match-error]");
+        const privacyConsentCheckbox = form.querySelector('input[name="privacy_consent"]');
         const passwordRules = {
             length: form.querySelector("[data-rule='length']"),
             uppercase: form.querySelector("[data-rule='uppercase']"),
@@ -629,7 +817,11 @@
             confirmPasswordInput.setCustomValidity(!hasConfirmValue || isPasswordMatch ? "" : "Passwords must match.");
             passwordInput.setCustomValidity(passwordIsValid ? "" : "Password does not meet the requirements.");
 
-            submitButton.disabled = !form.checkValidity() || !passwordIsValid || !isPasswordMatch;
+            const privacyConsentChecked = privacyConsentCheckbox ? privacyConsentCheckbox.checked : true;
+            submitButton.disabled = !form.checkValidity() || !passwordIsValid || !isPasswordMatch || !privacyConsentChecked;
+            if (privacyConsentCheckbox && currentStep === steps.length - 1) {
+                privacyConsentCheckbox.setCustomValidity(privacyConsentChecked ? "" : "Please agree to the privacy notice to continue.");
+            }
         };
 
         const otpStage = document.getElementById("teacherOtpStage");
