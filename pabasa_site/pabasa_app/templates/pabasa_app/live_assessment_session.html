@@ -405,11 +405,63 @@
             min-width: 0;
         }
 
+        /* Keep this page on the same theme contract as the dashboard shell. */
+        body.dark-theme .teacher-control {
+            --panel: var(--dash-panel, #1e293b);
+            --ink: var(--dash-text, #f1f5f9);
+            --muted: var(--dash-muted, #94a3b8);
+            color: var(--dash-text, #f1f5f9);
+        }
+        body.dark-theme .teacher-control .live-monitor-card,
+        body.dark-theme .teacher-control .control-panel-card,
+        body.dark-theme .teacher-control .configuration-card,
+        body.dark-theme .teacher-control .live-session-summary-card {
+            background: var(--dash-panel, #1e293b) !important;
+            border-color: rgba(148, 163, 184, 0.2) !important;
+            color: var(--dash-text, #f1f5f9) !important;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+        }
+        body.dark-theme .teacher-control .live-session-summary-card,
+        body.dark-theme .teacher-control .participant-list {
+            background: #0f172a !important;
+        }
+        body.dark-theme .teacher-control .profile-surface-trigger,
+        body.dark-theme .teacher-control .profile-surface-menu {
+            background: #0f172a;
+            border-color: rgba(148, 163, 184, 0.24);
+            color: #f1f5f9;
+        }
+        body.dark-theme .teacher-control .profile-surface-value,
+        body.dark-theme .teacher-control .profile-surface-option,
+        body.dark-theme .teacher-control .table-monitor td,
+        body.dark-theme .teacher-control label.form-label {
+            color: #f1f5f9;
+        }
+        body.dark-theme .teacher-control .profile-surface-option:hover,
+        body.dark-theme .teacher-control .profile-surface-option.is-selected,
+        body.dark-theme .teacher-control .table-monitor tbody tr {
+            background: rgba(56, 189, 248, 0.1);
+        }
+        body.dark-theme .teacher-control .table-monitor th,
+        body.dark-theme .teacher-control .table-monitor td,
+        body.dark-theme .teacher-control .participant-row {
+            border-color: rgba(148, 163, 184, 0.18);
+        }
+        body.dark-theme .teacher-control .monitor-status-waiting,
+        body.dark-theme .teacher-control .monitor-status-finished {
+            background: rgba(148, 163, 184, 0.16);
+            color: #e2e8f0;
+        }
+
         @media (max-width: 768px) {
             .teacher-control {
-                padding: 0.75rem 0.25rem 1.25rem !important;
+                padding: 0.75rem 0 1.25rem !important;
                 font-size: 14px;
+                overflow-x: hidden;
+                width: 100%;
             }
+            .teacher-control > .row { margin-left: 0; margin-right: 0; }
+            .teacher-control > .row > [class*="col-"] { padding-left: 0; padding-right: 0; }
             .teacher-control h1.h4 { font-size: 1.15rem; line-height: 1.2; }
             .teacher-control .btn.btn-lg { font-size: 0.96rem; }
             .teacher-control .live-page-header {
@@ -514,6 +566,18 @@
             .teacher-control .participant-toolbar #studentSearch {
                 flex-basis: 100%;
                 min-height: 44px;
+            }
+            .teacher-control .configuration-card .row > [class*="col-"] {
+                min-width: 0;
+                width: 100%;
+            }
+            .teacher-control .live-session-summary-card .d-flex {
+                gap: 0.75rem;
+            }
+            .teacher-control .live-session-summary-card .fw-semibold {
+                min-width: 0;
+                overflow-wrap: anywhere;
+                text-align: right;
             }
             .teacher-control .profile-surface-menu { max-height: min(280px, 42vh); }
         }
