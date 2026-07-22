@@ -1376,6 +1376,22 @@
                         if (disclaimer) {
                             disclaimer.textContent = latestScores.adapted_reading_level_disclaimer || window.PABASA_READING_LEVEL?.DISCLAIMER || "Great job completing your reading assessment! Your results show your current reading performance. Keep practicing to improve your reading skills.";
                         }
+                        if (isCurrentLiveAssessment()) {
+                            const completedScore = backendScores?.final_score ?? backendScores?.total_score ?? null;
+                            const liveScoreUpdate = {
+                                status: 'completed',
+                                items_completed: Math.max(1, items.length),
+                                items_total: Math.max(1, items.length),
+                                progress: 1,
+                                elapsed_seconds: Math.round(elapsedSeconds),
+                                current_item: items[currentIndex] || '',
+                                connection_status: 'connected',
+                            };
+                            if (completedScore != null) {
+                                liveScoreUpdate.final_score = Number(completedScore);
+                            }
+                            publishLiveSessionState(liveScoreUpdate);
+                        }
                     }
                     if (!isPractice && d.adapted_reading_level) {
                         try {

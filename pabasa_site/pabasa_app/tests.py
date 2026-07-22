@@ -1340,6 +1340,56 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(student_state['final_score'], 88)
         self.assertEqual(student_state['connection_status'], 'connected')
 
+    def test_record_assessment_completion_updates_live_session_score(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'reading', 'progress': 0.5, 'connection_status': 'connected'}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session.save()
+
+        response = student_client.post(
+            reverse('record_assessment_completion'),
+            json.dumps({
+                'material_id': f'material-{self.material.id}',
+                'activity_type': 'assessment',
+                'class_code': self.section.class_code,
+                'live_session_id': session.id,
+                'scores': {
+                    'fluency_score': 90,
+                    'accuracy': 88,
+                    'pronunciation_score': 86,
+                    'time_score': 94,
+                    'duration_seconds': 15,
+                    'word_count': 18,
+                    'transcript': 'cat dog',
+                    'speech_recognition_used': True,
+                },
+            }),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        session.refresh_from_db()
+        self.assertEqual(session.student_states[str(self.student.id)]['final_score'], 89)
+
     def test_teacher_can_pause_and_resume_live_assessment_session(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

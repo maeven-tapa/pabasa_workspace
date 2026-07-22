@@ -10597,6 +10597,27 @@ def record_assessment_completion(request):
         except Exception as e:
             logger.exception('Failed to persist assessment/practice attempt: %s', e)
 
+        live_session_id = data.get('live_session_id')
+        if live_session_id:
+            try:
+                live_session = LiveAssessmentSession.objects.filter(id=live_session_id).select_related('material', 'course').first()
+                if live_session:
+                    participant_ids = {str(student_id) for student_id in (live_session.student_ids or [])}
+                    if str(student_user.id) in participant_ids:
+                        score_value = score_payload.get('final_score') if score_payload.get('final_score') is not None else score_payload.get('total_score')
+                        state_update = {
+                            'status': 'completed',
+                            'connection_status': 'connected',
+                        }
+                        if score_value is not None:
+                            state_update['final_score'] = float(score_value)
+                        if score_payload.get('total_score') is not None:
+                            state_update['total_score'] = float(score_payload.get('total_score'))
+                        _update_live_student_state(live_session, student_user.id, state_update)
+                        live_session.save(update_fields=['student_states', 'updated_at'])
+            except Exception:
+                logger.exception('Failed to sync completion score into live assessment session %s', live_session_id)
+
         student_name = f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id
         class_name = _resolve_assessment_class_name(assessment=assessment, material=material, class_code=class_code)
 
