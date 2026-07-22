@@ -16,8 +16,10 @@ Jinja2==3.1.6
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
+num2words==0.5.14
 packaging==26.0
 Pillow==12.2.0
+pronouncing==0.3.0
 Pygments==2.20.0
 pypdf==6.4.1
 pytesseract==0.3.13

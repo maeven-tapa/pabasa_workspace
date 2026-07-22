@@ -897,6 +897,8 @@
             formData.append("current_syllable_index", String(context.syllableIndex));
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
+            const requestController = new AbortController();
+            const requestTimeout = window.setTimeout(() => requestController.abort(), 15000);
 
             try {
                 const response = await fetch("/api/reading/transcribe/", {
@@ -908,6 +910,7 @@
                     },
                     credentials: "same-origin",
                     body: formData,
+                    signal: requestController.signal,
                 });
                 const responseText = await response.text();
                 let data = null;
@@ -925,15 +928,23 @@
                 if (!isCurrentSpeechContext(context)) return;
                 if (data.transcript) {
                     const fallbackNote = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : "";
-                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${fallbackNote} | Words: ${data.transcript}`);
+                    const languageNote = data.language_code ? ` | Language: ${data.language_code}` : "";
+                    const rawNote = data.raw_transcript && data.raw_transcript !== data.transcript
+                        ? ` | Raw: ${data.raw_transcript}`
+                        : "";
+                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${languageNote}${fallbackNote} | Words: ${data.transcript}${rawNote}`);
                 }
                 handleSpeechResult(data, context);
             } catch (error) {
                 console.warn("PABASA: Reading transcription failed", error);
                 if (isCurrentSpeechContext(context)) {
-                    setSpeechStatus("Speech check had trouble.", error.message || "Keep reading, then try again.");
+                    const message = error?.name === "AbortError"
+                        ? "Speech processing timed out. Keep reading; the next audio chunk will retry automatically."
+                        : (error.message || "Keep reading, then try again.");
+                    setSpeechStatus("Speech check had trouble.", message);
                 }
             } finally {
+                window.clearTimeout(requestTimeout);
                 isSendingChunk = false;
                 if (pendingAudioChunk && isRecording && !isMuted && isCurrentSpeechContext(pendingAudioChunk.context)) {
                     const nextChunk = pendingAudioChunk.blob;

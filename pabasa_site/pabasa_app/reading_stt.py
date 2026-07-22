@@ -1,11 +1,16 @@
 import base64
+from functools import lru_cache
 import html
 import json
 import os
 from pathlib import Path
 import re
+import socket
 import urllib.error
 import urllib.request
+
+from num2words import num2words
+import pronouncing
 
 
 MARUNGKO_PHRASE_HINTS = [
@@ -70,6 +75,23 @@ NUMBER_WORDS = {
     "ninety": "90",
 }
 
+
+def word_numbers_in_transcript(transcript, language_code="en-US"):
+    """Return a display copy of an STT transcript with integer digits worded."""
+    if not transcript or not str(language_code).lower().startswith("en"):
+        return transcript
+
+    def replace_number(match):
+        raw_number = match.group(0)
+        try:
+            return num2words(int(raw_number.replace(",", "")), lang="en")
+        except (NotImplementedError, OverflowError, ValueError):
+            return raw_number
+
+    integer_pattern = r"(?<![\w.])[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?![\w.]|\.\d)"
+    return re.sub(integer_pattern, replace_number, transcript)
+
+
 for tens_word, tens_value in (
     ("twenty", 20),
     ("thirty", 30),
@@ -98,11 +120,25 @@ def language_code_for(language="", mode=""):
     value = f"{language} {mode}".lower()
     if any(marker in value for marker in ("fil", "tagalog", "marungko")):
         return "fil-PH"
-    return "en-US"
+    return "en-PH"
 
 
 def phrase_hints_for(language="", mode=""):
     return MARUNGKO_PHRASE_HINTS if language_code_for(language, mode) == "fil-PH" else []
+
+
+def v1_model_for_language(model, language_code):
+    requested_model = (model or "").strip()
+    normalized_language = str(language_code or "").lower()
+    if normalized_language == "en-ph":
+        if requested_model in {"", "chirp_3", "latest_short", "latest_long"}:
+            return "command_and_search"
+    if normalized_language == "fil-ph":
+        if requested_model in {"chirp_3", "latest_short", "latest_long"}:
+            return ""
+    if requested_model == "chirp_3":
+        return "latest_short" if normalized_language.startswith("en-") else ""
+    return requested_model or ("latest_short" if normalized_language.startswith("en-") else "")
 
 
 def transcribe_audio_bytes(
@@ -158,9 +194,7 @@ def transcribe_audio_bytes_with_model(
             if not api_key:
                 raise
 
-    v1_model = model or ("latest_short" if language_code == "en-US" else "")
-    if v1_model == "chirp_3":
-        v1_model = "latest_short" if language_code == "en-US" else ""
+    v1_model = v1_model_for_language(model, language_code)
     return transcribe_audio_bytes_v1(
         audio_bytes,
         api_key,
@@ -178,7 +212,14 @@ def summarize_stt_error(exc):
     return message or exc.__class__.__name__
 
 
-def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, location, credentials_file):
+def transcribe_audio_bytes_v2_chirp3(
+    audio_bytes,
+    language_code,
+    project_id,
+    location,
+    credentials_file,
+    timeout_seconds=12,
+):
     if not project_id:
         raise RuntimeError("Set GOOGLE_CLOUD_PROJECT_ID in settings.py to use Chirp 3.")
     try:
@@ -205,7 +246,7 @@ def transcribe_audio_bytes_v2_chirp3(audio_bytes, language_code, project_id, loc
         config=config,
         content=audio_bytes,
     )
-    response = client.recognize(request=request)
+    response = client.recognize(request=request, timeout=timeout_seconds)
     if not response.results:
         return ""
     alternatives = response.results[0].alternatives
@@ -251,10 +292,18 @@ def google_stt_credentials(service_account, credentials_file):
     )
 
 
-def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints, model, mime_type):
+def transcribe_audio_bytes_v1(
+    audio_bytes,
+    api_key,
+    language_code,
+    phrase_hints,
+    model,
+    mime_type,
+    timeout_seconds=12,
+):
     config = {
         "languageCode": language_code,
-        "enableAutomaticPunctuation": language_code == "en-US",
+        "enableAutomaticPunctuation": str(language_code).lower().startswith("en-"),
         "maxAlternatives": 3,
     }
     if "webm" in (mime_type or "").lower():
@@ -276,6 +325,7 @@ def transcribe_audio_bytes_v1(audio_bytes, api_key, language_code, phrase_hints,
         f"https://speech.googleapis.com/v1p1beta1/speech:recognize?key={api_key}",
         payload,
         "Google STT",
+        timeout_seconds=timeout_seconds,
     )
 
 
@@ -341,7 +391,7 @@ def _post_google_tts(url, payload):
     return audio_content
 
 
-def _post_google_stt(url, payload, label):
+def _post_google_stt(url, payload, label, timeout_seconds=12):
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
@@ -349,7 +399,7 @@ def _post_google_stt(url, payload, label):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             result = json.load(response)
     except urllib.error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
@@ -360,6 +410,8 @@ def _post_google_stt(url, payload, label):
         raise RuntimeError(f"{label} HTTP {exc.code}: {error_message}") from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Network error while contacting {label}: {exc.reason}") from exc
+    except (TimeoutError, socket.timeout) as exc:
+        raise RuntimeError(f"{label} timed out. Please keep reading and try again.") from exc
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"{label} returned an invalid response.") from exc
 
@@ -371,15 +423,16 @@ def _post_google_stt(url, payload, label):
     return alternatives[0].get("transcript", "").strip()
 
 
-def analyze_reading(target_text, current_syllable_index=0, transcript=""):
-    matcher = ReadingMatcher(target_text, current_syllable_index)
+def analyze_reading(target_text, current_syllable_index=0, transcript="", language_code="en-US"):
+    matcher = ReadingMatcher(target_text, current_syllable_index, language_code)
     matched = matcher.advance_for_spoken_text(transcript)
     return matcher.payload(matched, transcript)
 
 
 class ReadingMatcher:
-    def __init__(self, target_text, current_syllable_index=0):
+    def __init__(self, target_text, current_syllable_index=0, language_code="en-US"):
         self.target_text = target_text or ""
+        self.language_code = language_code or "en-US"
         self.words = self.readable_words(self.target_text)
         self.current_syllable_index = max(0, int(current_syllable_index or 0))
         self.current_word_index = 0
@@ -451,9 +504,27 @@ class ReadingMatcher:
             return True
         if self.number_words_match(spoken_word, target_word):
             return True
+        if self.homophones_match(spoken_word, target_word):
+            return True
         if self.cv_syllables_sound_match(spoken_word, target_word):
             return True
         return False
+
+    @staticmethod
+    @lru_cache(maxsize=4096)
+    def pronunciations_for_word(word):
+        if not word or not re.fullmatch(r"[a-z]+(?:'[a-z]+)?", word):
+            return ()
+        return tuple(pronouncing.phones_for_word(word))
+
+    def homophones_match(self, spoken_word, target_word):
+        if not str(self.language_code).lower().startswith("en"):
+            return False
+        spoken_pronunciations = set(self.pronunciations_for_word(spoken_word))
+        if not spoken_pronunciations:
+            return False
+        target_pronunciations = set(self.pronunciations_for_word(target_word))
+        return bool(spoken_pronunciations.intersection(target_pronunciations))
 
     @classmethod
     def normalize_number_token(cls, word):

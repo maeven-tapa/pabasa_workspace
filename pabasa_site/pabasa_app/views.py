@@ -52,6 +52,7 @@ from .reading_stt import (
     phrase_hints_for,
     synthesize_read_aloud_audio,
     transcribe_audio_bytes_with_model,
+    word_numbers_in_transcript,
 )
 from .hunt_scoring import classify_speech
 from .scoring import (
@@ -4655,7 +4656,9 @@ def reading_transcribe_api(request):
             mime_type=getattr(audio, 'content_type', '') or 'audio/webm',
             credentials_file=credentials_file,
         )
-        analysis = analyze_reading(target_text, current_syllable_index, transcript)
+        analysis = analyze_reading(target_text, current_syllable_index, transcript, language_code)
+        analysis['raw_transcript'] = transcript
+        analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
         analysis.update({
             'success': True,
             'language_code': language_code,
