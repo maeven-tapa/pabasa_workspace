@@ -4,37 +4,254 @@
 {% block page_title %}Waiting Room — {{ live_session.material.title }}{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-12 col-md-10 col-lg-8">
-      <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-          <div>
-            <h2 class="h4 mb-1">Waiting Room</h2>
-            <div class="small text-muted">{{ live_session.material.title }} • {{ live_session.course.title|default:'N/A' }}</div>
-            <div class="small text-muted">Teacher: {{ teacher_name }}</div>
+<style>
+  html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+  .waiting-room-page {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    padding: clamp(16px, 3.5vw, 32px);
+  }
+  .waiting-room-shell {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  .waiting-room-card {
+    width: min(100%, 760px);
+    margin: 0 auto;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: clamp(20px, 4vw, 28px);
+    padding: clamp(20px, 3.5vw, 32px);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.04);
+    background: var(--panel, #ffffff);
+  }
+  .waiting-room-top {
+    position: relative;
+    padding-top: clamp(2rem, 3vw, 2.5rem);
+    padding-bottom: clamp(2rem, 3vw, 2.5rem);
+  }
+  .waiting-room-badge-wrapper {
+    position: absolute;
+    right: clamp(1rem, 2vw, 1.5rem);
+    top: clamp(1rem, 2vw, 1.5rem);
+  }
+  .waiting-room-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 999px;
+    font-size: clamp(0.95rem, 2.4vw, 1rem);
+    font-weight: 700;
+    white-space: normal;
+    max-width: 100%;
+    box-shadow: 0 6px 18px rgba(31, 111, 139, 0.12);
+  }
+  .waiting-room-top-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(16px, 2.5vw, 20px);
+    min-width: 0;
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .waiting-room-icon {
+    display: grid;
+    place-items: center;
+    width: clamp(5rem, 12vw, 7rem);
+    height: clamp(5rem, 12vw, 7rem);
+    border-radius: 1.5rem;
+    background: rgba(31, 111, 139, 0.08);
+    color: var(--dash-primary, #1f6f8b);
+    font-size: clamp(2.5rem, 8vw, 3.6rem);
+    animation: waitingFloat 6s ease-in-out infinite;
+    box-shadow: inset 0 0 0 1px rgba(31, 111, 139, 0.08);
+  }
+  @keyframes waitingFloat {
+    0%, 100% { transform: translateY(0); opacity: 1; }
+    50% { transform: translateY(-3px); opacity: 0.97; }
+  }
+  .waiting-room-message {
+    font-size: clamp(1.55rem, 4vw, 2rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 0;
+    max-width: 30rem;
+  }
+  .waiting-room-description {
+    font-size: clamp(1rem, 2.5vw, 1.05rem);
+    line-height: 1.75;
+    color: var(--muted, #5d6d7a);
+    max-width: 34rem;
+    margin: 0;
+  }
+  .waiting-room-description {
+    font-size: clamp(1rem, 2.5vw, 1.05rem);
+    line-height: 1.75;
+    color: var(--muted, #5d6d7a);
+    max-width: 46ch;
+    margin: 0;
+  }
+  .waiting-room-divider {
+    height: 1px;
+    margin: clamp(22px, 3vw, 28px) 0;
+    background: rgba(15, 23, 42, 0.08);
+  }
+  .waiting-room-bottom {
+    display: grid;
+    gap: clamp(18px, 3vw, 24px);
+  }
+  .waiting-room-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(18px, 3vw, 24px);
+    align-items: stretch;
+  }
+  .info-column {
+    display: grid;
+    gap: clamp(14px, 2vw, 18px);
+    min-width: 0;
+  }
+  .info-row {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+  .info-label {
+    font-size: clamp(0.82rem, 2vw, 0.95rem);
+    font-weight: 600;
+    color: var(--muted, #6b7280);
+    letter-spacing: 0.02em;
+  }
+  .info-value {
+    font-size: clamp(1.05rem, 2.4vw, 1.12rem);
+    font-weight: 700;
+    color: var(--text, #0f172a);
+    line-height: 1.45;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .waiting-room-footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, auto));
+    gap: clamp(10px, 2vw, 14px);
+    justify-content: space-between;
+    color: var(--muted, #6b7280);
+    font-size: clamp(0.85rem, 2vw, 0.95rem);
+    line-height: 1.7;
+  }
+  .waiting-room-footer span {
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .waiting-room-countdown {
+    font-size: clamp(1.1rem, 4vw, 1.45rem);
+    font-weight: 700;
+    color: var(--dash-primary, #1f6f8b);
+    margin: 0;
+  }
+  @media (max-width: 600px) {
+    .waiting-room-page {
+      padding: clamp(16px, 4vw, 24px);
+    }
+    .waiting-room-card {
+      width: 100%;
+      padding: clamp(20px, 4vw, 24px);
+    }
+    .waiting-room-top {
+      padding-top: clamp(1.5rem, 3vw, 2rem);
+      padding-bottom: clamp(1.5rem, 3vw, 2rem);
+    }
+    .waiting-room-badge-wrapper {
+      position: static;
+      display: flex;
+      justify-content: center;
+      margin-bottom: clamp(16px, 3vw, 20px);
+    }
+    .waiting-room-top-content {
+      gap: clamp(14px, 2.5vw, 18px);
+    }
+    .waiting-room-info-grid {
+      grid-template-columns: 1fr;
+    }
+    .waiting-room-footer {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
+  @media (max-width: 420px) {
+    .waiting-room-page {
+      min-height: auto;
+    }
+    .waiting-room-message {
+      font-size: clamp(1.35rem, 5vw, 1.6rem);
+      max-width: 100%;
+    }
+    .waiting-room-description {
+      font-size: clamp(0.95rem, 2.8vw, 1rem);
+      max-width: 100%;
+    }
+  }
+</style>
+<div class="waiting-room-page">
+  <div class="waiting-room-shell">
+    <div class="card waiting-room-card">
+      <div class="waiting-room-top">
+        <div class="waiting-room-badge-wrapper">
+          <div class="waiting-room-badge badge bg-primary text-white">Status: <span id="wrStatus">{{ live_session.status|title }}</span></div>
+        </div>
+        <div class="waiting-room-top-content">
+          <div id="waitingAnimation" class="waiting-room-icon">
+            <i class="bi bi-hourglass-split"></i>
           </div>
-          <div class="text-end">
-            <div class="badge bg-primary text-white">Status: <span id="wrStatus">{{ live_session.status|title }}</span></div>
-            <div class="small text-muted">Session ID: {{ live_session.id }}</div>
+          <h2 class="waiting-room-message">Waiting for your teacher to start the assessment.</h2>
+          <p class="waiting-room-description">You’re connected and ready. Please stay on this page and your teacher will begin the activity when everyone is set.</p>
+        </div>
+      </div>
+
+      <div class="waiting-room-divider"></div>
+
+      <div class="waiting-room-bottom">
+        <div class="waiting-room-info-grid">
+          <div class="info-column">
+            <div class="info-row">
+              <span class="info-label">Course</span>
+              <span class="info-value">{{ live_session.course.title|default:'Reading Assessment' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Reading material</span>
+              <span class="info-value">{{ live_session.material.title }}</span>
+            </div>
+          </div>
+          <div class="info-column">
+            <div class="info-row">
+              <span class="info-label">Teacher</span>
+              <span class="info-value">{{ teacher_name }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Session ID</span>
+              <span class="info-value">{{ live_session.id }}</span>
+            </div>
           </div>
         </div>
 
-        <div id="waitingBody">
-          <div class="text-center py-4">
-            <div id="waitingAnimation" class="mb-3">
-              <i class="bi bi-hourglass-split" style="font-size:48px;color:var(--dash-primary);"></i>
-            </div>
-            <h4 id="waitingMessage">Waiting for your teacher to start the assessment.</h4>
-            <p class="text-muted">Selected students are gathered here first. Your teacher will begin the countdown when everyone is ready.</p>
-            <div class="mt-3">
-              <div class="h3 fw-bold text-primary" id="countdownDisplay" style="display:none"></div>
-            </div>
-            <div class="mt-3 small text-muted">Connection: <span id="connectionStatus">Connected</span></div>
-            <div class="mt-2 small text-muted">Last sync: <span id="footerLastSync">—</span></div>
-          </div>
+        <div class="waiting-room-footer">
+          <span>Connection: <strong id="connectionStatus">Connected</strong></span>
+          <span>Last sync: <strong id="footerLastSync">—</strong></span>
         </div>
-
       </div>
     </div>
   </div>
@@ -59,13 +276,28 @@
     return m ? `${m}m ${s}s` : `${s}s`;
   }
 
+  function stopPolling() {
+    if (pollTimer) {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
   async function fetchState() {
     try {
       const r = await fetch(stateUrl, { cache: 'no-store', credentials: 'same-origin', headers: { Accept: 'application/json' }});
-      if (!r.ok) return null;
+      if (!r.ok) {
+        if (r.status === 404 || r.status === 403) {
+          return { error: 'session-inactive' };
+        }
+        return null;
+      }
       const j = await r.json();
-      return j.success ? j.session : null;
-    } catch (e) { console.warn('waiting room fetch', e); return null; }
+      return j.success ? j.session : { error: 'session-inactive' };
+    } catch (e) {
+      console.warn('waiting room fetch', e);
+      return null;
+    }
   }
 
   function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
@@ -78,9 +310,14 @@
 
   async function handleState(state) {
     if (!state) return;
+    if (state.error === 'session-inactive') {
+      stopPolling();
+      window.location.replace('{% url "dashboard" %}');
+      return;
+    }
+
     setText('wrStatus', state.status?.charAt(0).toUpperCase() + state.status?.slice(1));
     setText('footerLastSync', new Date().toLocaleTimeString());
-
 
     if (state.status === 'waiting') {
       setText('waitingMessage', 'Waiting for your teacher to start the assessment.');
@@ -92,18 +329,18 @@
       return;
     }
 
-    if (state.status === 'ended') {
-      setText('waitingMessage', 'This live session has ended.');
+    if (state.status === 'ended' || state.status === 'cancelled') {
+      stopPolling();
+      window.location.replace('{% url "dashboard" %}');
       return;
     }
 
     // When teacher starts (countdown or started), immediately transition students to Reading UI.
     if ((state.status === 'countdown' || state.status === 'started') && state.reader_url) {
+      stopPolling();
       redirectToReader(state.reader_url);
       return;
     }
-
-    
   }
 
   async function poll() {

@@ -1312,6 +1312,142 @@ class LiveAssessmentStartTests(TestCase):
         self.assertIn("/dashboard/live-assessment/", notif.action_url)
         self.assertIn("live_session_id=", notif.action_url)
 
+    def test_teacher_start_live_assessment_closes_existing_active_session(self):
+        existing = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='waiting',
+            countdown_seconds=10,
+        )
+
+        response = self.client.post(
+            reverse("start_live_assessment"),
+            json.dumps({
+                "course_id": self.course.id,
+                "material_id": self.material.id,
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.status, 'ended')
+        self.assertIsNotNone(existing.ends_at)
+        self.assertEqual(existing.student_ids, [self.student.id])
+        self.assertTrue(any(
+            'Existing live assessment session closed automatically before starting a new session.' in entry.get('message', '')
+            for entry in existing.activity_log or []
+        ))
+
+        new_session = LiveAssessmentSession.objects.filter(id=body["session"]["id"]).first()
+        self.assertIsNotNone(new_session)
+        self.assertNotEqual(existing.id, new_session.id)
+        self.assertEqual(new_session.status, 'waiting')
+
+    def test_live_assessment_end_action_sets_ends_at_and_student_states(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={
+                str(self.student.id): {
+                    'status': 'reading',
+                    'progress': 0.5,
+                    'connection_status': 'connected',
+                }
+            },
+        )
+
+        response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({"action": "end"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["session"]["status"], 'ended')
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        self.assertIsNotNone(session.ends_at)
+        self.assertEqual(session.student_states[str(self.student.id)]["status"], 'completed')
+        self.assertEqual(session.student_states[str(self.student.id)]["connection_status"], 'disconnected')
+
+    def test_teacher_end_waiting_live_assessment_session(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='waiting',
+            countdown_seconds=10,
+        )
+
+        response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({"action": "end"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["session"]["status"], 'ended')
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        self.assertIsNotNone(session.ends_at)
+
+    def test_stale_live_assessment_session_auto_ends_on_poll(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='waiting',
+            countdown_seconds=10,
+        )
+        LiveAssessmentSession.objects.filter(id=session.id).update(created_at=timezone.now() - timedelta(hours=25))
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session.save()
+
+        response = student_client.get(reverse("live_assessment_session_state", kwargs={"session_id": session.id}))
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["session"]["status"], 'ended')
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        self.assertIsNotNone(session.ends_at)
+
     def test_live_assessment_session_state_api_returns_200_after_session_started(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

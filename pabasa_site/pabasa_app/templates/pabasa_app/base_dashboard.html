@@ -425,8 +425,10 @@
         }
 
         .dashboard-main {
-            min-height: auto;
+            min-height: 100dvh;
             margin-left: var(--sidebar-width); /* Add margin to push content away from the fixed sidebar */
+            display: flex;
+            flex-direction: column;
         }
 
         #dashboardSidebar {
@@ -850,6 +852,9 @@
         .dashboard-page-wrap {
             font-size: calc(1rem * var(--dash-ui-scale));
             line-height: 1.5;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
         }
 
         .dashboard-page-wrap .btn {
@@ -901,6 +906,8 @@
             padding: var(--dash-ui-pad-y) 0 0;
             margin: 0;
             width: 100%;
+            flex: 1 1 auto;
+            min-height: 0;
         }
 
         .dashboard-page-wrap {
@@ -2627,6 +2634,57 @@
             }
         }
 
+        function extractLiveSessionId(actionUrl) {
+            try {
+                const url = new URL(actionUrl, window.location.origin);
+                const params = new URLSearchParams(url.search);
+                return params.get('live_session_id') || (url.pathname.match(/\/dashboard\/live-assessment\/([^\/]+)/)?.[1] || null);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        async function markNotificationRead(notificationId) {
+            if (!notificationId) return false;
+            try {
+                const response = await fetch("{% url 'mark_notification_read' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getNotificationCsrfToken(),
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ notification_id: notificationId })
+                });
+                const data = await response.json();
+                return response.ok && data.success;
+            } catch (error) {
+                console.warn('Could not mark live notification as read', error);
+                return false;
+            }
+        }
+
+        async function validateLiveAssessmentNotification(actionUrl) {
+            const sessionId = extractLiveSessionId(actionUrl);
+            if (!sessionId) return false;
+
+            try {
+                const response = await fetch(`/api/live-assessment/session/${encodeURIComponent(sessionId)}/`, {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' }
+                });
+                if (!response.ok) return false;
+                const data = await response.json();
+                if (!data.success || !data.session) return false;
+                return ['waiting', 'countdown', 'started', 'paused'].includes(data.session.status);
+            } catch (error) {
+                console.warn('Live assessment notification validation failed', error);
+                return false;
+            }
+        }
+
         async function handleLiveAssessmentNotification(notification) {
             if (!notification) return false;
             const actionUrl = notification.action_url || '';
@@ -2636,10 +2694,18 @@
             const alreadySeen = window.sessionStorage.getItem(seenKey);
             const liveParams = new URLSearchParams(actionUrl.split('?')[1] || '');
             const startAt = liveParams.get('start_at');
-            const isLiveSessionPage = actionUrl.includes('/dashboard/live-assessment/');
             const createdAt = notification.created_at ? Date.parse(notification.created_at) : 0;
-            const isFresh = isLiveSessionPage || (Boolean(startAt) && (createdAt ? (Date.now() - createdAt) <= 5 * 60 * 1000 : true));
+            const isLiveSessionPage = actionUrl.includes('/dashboard/live-assessment/');
+            const isRecent = Boolean(startAt) && (createdAt ? (Date.now() - createdAt) <= 5 * 60 * 1000 : true);
+            const isFresh = isLiveSessionPage ? true : isRecent;
+
             if (!alreadySeen && actionUrl && isFresh) {
+                const isValidLiveNotification = await validateLiveAssessmentNotification(actionUrl);
+                if (!isValidLiveNotification) {
+                    await markNotificationRead(notification.id);
+                    return false;
+                }
+
                 window.sessionStorage.setItem(seenKey, '1');
                 try {
                     await fetch("{% url 'mark_notification_read' %}", {

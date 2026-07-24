@@ -4980,6 +4980,10 @@ def _build_live_assessment_session_url(session_id):
     return _build_live_assessment_control_url(session_id)
 
 
+LIVE_ASSESSMENT_ACTIVE_STATUSES = ['waiting', 'countdown', 'started', 'paused']
+LIVE_ASSESSMENT_STALE_HOURS = 24
+
+
 def _append_live_session_activity(session, message):
     try:
         log = session.activity_log or []
@@ -4994,6 +4998,54 @@ def _append_live_session_activity(session, message):
         session.activity_log = [{'timestamp': timezone.now().isoformat(), 'message': str(message)}]
 
 
+def _is_live_assessment_session_stale(session):
+    if not session or session.status not in LIVE_ASSESSMENT_ACTIVE_STATUSES:
+        return False
+
+    now = timezone.now()
+    reference_time = session.start_at or session.created_at or now
+    return (now - reference_time) >= timedelta(hours=LIVE_ASSESSMENT_STALE_HOURS)
+
+
+def _end_live_assessment_session(session, activity_message=None, ended_at=None):
+    if not session or session.status == 'ended':
+        return session
+
+    ended_at = ended_at or timezone.now()
+    session.status = 'ended'
+    session.ends_at = ended_at
+
+    states = session.student_states or {}
+    if isinstance(states, dict):
+        for student_key, student_state in states.items():
+            if isinstance(student_state, dict):
+                student_state['status'] = 'completed'
+                student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
+                states[student_key] = student_state
+        session.student_states = states
+
+    if not activity_message:
+        activity_message = 'Live assessment session ended.'
+    _append_live_session_activity(session, activity_message)
+    session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at', 'ends_at'])
+    return session
+
+
+def _end_active_live_assessment_sessions_for_teacher(teacher_user):
+    if not teacher_user or not getattr(teacher_user, 'id', None):
+        return
+
+    active_sessions = LiveAssessmentSession.objects.filter(
+        teacher=teacher_user,
+        status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
+    )
+    for active_session in active_sessions:
+        _end_live_assessment_session(
+            active_session,
+            'Existing live assessment session closed automatically before starting a new session.',
+        )
+
+
 def _advance_live_assessment_state(session):
     if session.status == 'countdown' and session.start_at:
         if timezone.now() >= session.start_at:
@@ -5004,21 +5056,15 @@ def _advance_live_assessment_state(session):
 
 
 def _maybe_auto_end_live_session(session):
-    if session.status != 'started':
-        return session
+    if session.status == 'started':
+        now = timezone.now()
+        if session.timing_mode == 'duration' and session.duration_seconds and session.start_at:
+            if session.start_at + timedelta(seconds=session.duration_seconds) <= now:
+                return _end_live_assessment_session(session, 'Live assessment session duration expired and session ended automatically.', ended_at=now)
 
-    now = timezone.now()
-    if session.timing_mode == 'duration' and session.duration_seconds and session.start_at:
-        if session.start_at + timedelta(seconds=session.duration_seconds) <= now:
-            session.status = 'ended'
-            states = session.student_states or {}
-            for student_key, student_state in states.items():
-                student_state['status'] = 'completed'
-                student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
-                states[student_key] = student_state
-            session.student_states = states
-            _append_live_session_activity(session, 'Live assessment session duration expired and session ended automatically.')
-            session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+    if session.status in ['waiting', 'countdown', 'paused'] and _is_live_assessment_session_stale(session):
+        return _end_live_assessment_session(session, 'Live assessment session was stale and ended automatically.')
+
     return session
 
 
@@ -5293,6 +5339,8 @@ def start_live_assessment(request):
     if not available_student_ids:
         return JsonResponse({'success': False, 'error': 'No active students found for this course'}, status=400)
 
+    _end_active_live_assessment_sessions_for_teacher(teacher_user)
+
     session_id = uuid.uuid4().hex
     countdown_seconds = 10
     # Create session with an empty participant list. Teacher will choose participants.
@@ -5343,6 +5391,8 @@ def live_assessment_session_entry(request, session_id):
     if not session:
         return HttpResponse('Live assessment session not found', status=404)
 
+    _maybe_auto_end_live_session(session)
+
     if not _check_auth(request):
         return redirect('auth')
 
@@ -5354,6 +5404,10 @@ def live_assessment_session_entry(request, session_id):
 
     if is_teacher:
         return redirect(_build_live_assessment_control_url(session.id))
+
+    if session.status in ['ended', 'cancelled']:
+        return redirect('dashboard')
+
     return redirect(_build_live_assessment_waiting_url(session.id))
 
 
@@ -5364,6 +5418,8 @@ def live_assessment_session_page(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('teacher', 'course', 'material').first()
     if not session:
         return HttpResponse('Live assessment session not found', status=404)
+
+    _maybe_auto_end_live_session(session)
 
     if not _check_auth(request):
         return redirect('auth')
@@ -5432,12 +5488,17 @@ def live_assessment_waiting_room_page(request, session_id):
     if not session:
         return HttpResponse('Live assessment session not found', status=404)
 
+    _maybe_auto_end_live_session(session)
+
     if not _check_auth(request):
         return redirect('auth')
 
     user = User.objects.filter(id=request.session.get('user_id')).first()
     if not user or user.id not in session.student_ids:
         return HttpResponseForbidden('This page is only available to students participating in the live session')
+
+    if session.status in ['ended', 'cancelled']:
+        return redirect('dashboard')
 
     teacher_name = ' '.join(filter(None, [session.teacher.first_name, session.teacher.last_name])) or session.teacher.email or 'Teacher'
     student_name = ' '.join(filter(None, [user.first_name, user.last_name])) or user.email or 'Student'
@@ -5461,6 +5522,8 @@ def live_assessment_session_state(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
     if not session:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+
+    _maybe_auto_end_live_session(session)
 
     if not _check_auth(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
@@ -5554,6 +5617,8 @@ def live_assessment_student_state_update(request, session_id):
     if not session:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
 
+    _maybe_auto_end_live_session(session)
+
     if user_role != 'student' or not user_id:
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
     if user_id not in session.student_ids:
@@ -5625,6 +5690,8 @@ def live_assessment_session_action(request, session_id):
     session = LiveAssessmentSession.objects.filter(id=session_id).select_related('material', 'course').first()
     if not session:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
+
+    _maybe_auto_end_live_session(session)
 
     if user_role not in ['teacher', 'admin'] or user_id != session.teacher_id:
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
@@ -5757,15 +5824,7 @@ def live_assessment_session_action(request, session_id):
     elif action == 'end':
         if session.status == 'ended':
             return JsonResponse({'success': False, 'error': 'Session already ended'}, status=400)
-        session.status = 'ended'
-        states = session.student_states or {}
-        for student_key, student_state in states.items():
-            student_state['status'] = 'completed'
-            student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
-            states[student_key] = student_state
-        session.student_states = states
-        _append_live_session_activity(session, 'Teacher ended the live session.')
-        session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+        session = _end_live_assessment_session(session, 'Teacher ended the live session.')
     elif action == 'save_settings':
         if session.status != 'waiting':
             return JsonResponse({'success': False, 'error': 'Settings can only be updated before the session starts'}, status=400)
