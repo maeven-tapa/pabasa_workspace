@@ -5008,6 +5008,471 @@ def _is_live_assessment_session_stale(session):
     return (now - reference_time) >= timedelta(hours=LIVE_ASSESSMENT_STALE_HOURS)
 
 
+def _build_live_session_completion_payload(session, student_user, student_state=None):
+    payload = {}
+    if not session:
+        return payload
+
+    material = getattr(session, 'material', None)
+    if material:
+        payload['material_id'] = f'material-{material.id}'
+        payload['activity_type'] = 'assessment'
+        payload['class_code'] = getattr(getattr(material, 'section', None), 'class_code', None) or getattr(getattr(session, 'course', None), 'code', None)
+        payload['live_session_id'] = session.id
+    else:
+        payload['activity_type'] = 'assessment'
+        payload['live_session_id'] = session.id
+
+    if not isinstance(student_state, dict):
+        student_state = {}
+
+    completion_payload = student_state.get('completion_payload')
+    if isinstance(completion_payload, str):
+        try:
+            parsed = json.loads(completion_payload)
+        except (TypeError, ValueError):
+            parsed = None
+        if isinstance(parsed, dict):
+            completion_payload = parsed
+        else:
+            completion_payload = None
+
+    if isinstance(completion_payload, dict):
+        payload.update(completion_payload)
+
+    scores = payload.get('scores') if isinstance(payload.get('scores'), dict) else {}
+    if 'scores' not in payload:
+        payload['scores'] = {}
+    if not isinstance(payload['scores'], dict):
+        payload['scores'] = {}
+
+    if student_state.get('elapsed_seconds') is not None:
+        payload['scores'].setdefault('duration_seconds', student_state.get('elapsed_seconds'))
+    if student_state.get('progress') is not None:
+        payload['scores'].setdefault('progress', student_state.get('progress'))
+    if student_state.get('final_score') is not None:
+        payload['scores'].setdefault('final_score', student_state.get('final_score'))
+    if student_state.get('items_completed') is not None:
+        payload['scores'].setdefault('items_completed', student_state.get('items_completed'))
+    if student_state.get('items_total') is not None:
+        payload['scores'].setdefault('items_total', student_state.get('items_total'))
+    if student_state.get('current_item') is not None:
+        payload['scores'].setdefault('current_item', student_state.get('current_item'))
+    if student_user is not None and 'student_id' not in payload:
+        payload['student_id'] = student_user.id
+
+    if 'material_id' not in payload and material:
+        payload['material_id'] = f'material-{material.id}'
+    if payload.get('material_id') is None and material:
+        payload['material_id'] = f'material-{material.id}'
+
+    return payload
+
+
+def _complete_assessment_for_student(student_user, data=None, request=None, live_session=None, is_retake=False, attempt_number=0, activity_type='assessment', assist_context=None):
+    data = dict(data or {})
+    if live_session and not data.get('live_session_id'):
+        data['live_session_id'] = live_session.id
+
+    assessment_id = data.get('assessment_id')
+    material_id = data.get('material_id')
+    is_retake = bool(data.get('is_retake', is_retake))
+    attempt_number = data.get('attempt_number', attempt_number)
+    activity_type = data.get('activity_type', activity_type)
+    assist_context = assist_context or _resolve_assist_token(data.get('assist_token'))
+
+    if assist_context:
+        student_user = assist_context['student']
+        assist_teacher_user = assist_context['teacher']
+        material_id = str(assist_context['material'].id)
+        assessment_id = None
+    else:
+        assist_teacher_user = None
+
+    assessment = None
+    teacher_user = None
+    title_text = None
+    material = None
+    practice_obj = None
+
+    a_prefix, a_id = _parse_prefixed_id(assessment_id)
+    m_prefix, m_id = _parse_prefixed_id(material_id)
+
+    if a_id and (a_prefix is None or a_prefix.startswith('assessment')):
+        assessment = Assessment.objects.select_related('teacher').filter(id=a_id, source_assessment__isnull=True).first()
+        if assessment:
+            teacher_user = assessment.teacher
+            title_text = assessment.title
+    if not assessment and m_id and m_prefix and m_prefix.startswith('assessment'):
+        assessment = Assessment.objects.select_related('teacher').filter(id=m_id, source_assessment__isnull=True).first()
+        if assessment:
+            teacher_user = assessment.teacher
+            title_text = assessment.title
+
+    if not assessment and m_id and (m_prefix is None or m_prefix.startswith('material')):
+        material = Material.objects.select_related('assessment', 'section__teacher').filter(id=m_id).first()
+        if material:
+            if material.assessment:
+                assessment = material.assessment
+                if assessment and assessment.source_assessment_id is not None:
+                    assessment = assessment.source_assessment or assessment._group_assessment()
+                teacher_user = assessment.teacher if assessment else None
+            elif material.section:
+                teacher_user = material.section.teacher
+            title_text = material.title or material.content_text or material.prompt_text or material.item_type
+
+    if not assessment and not material and m_id is not None:
+        possible_assessment = Assessment.objects.select_related('teacher').filter(id=m_id, source_assessment__isnull=True).first()
+        if possible_assessment:
+            assessment = possible_assessment
+            teacher_user = assessment.teacher
+            title_text = assessment.title
+
+    if not assessment and not material and m_id and m_prefix and m_prefix.startswith('practice') and activity_type == 'practice':
+        material = Material.objects.filter(id=m_id, type='practice').first()
+        if material:
+            title_text = material.title or material.content_text or material.prompt_text or material.item_type
+            try:
+                practice_obj = material.practice_result
+            except Practice.DoesNotExist:
+                practice_obj = None
+
+    if not assessment and m_id and m_prefix and m_prefix.startswith('practice'):
+        try:
+            from .models import Practice as PracticeModel
+            practice_obj = practice_obj or PracticeModel.objects.select_related('teacher').filter(id=m_id).first()
+            if practice_obj:
+                title_text = practice_obj.title or practice_obj.content_text or practice_obj.prompt_text
+                teacher_user = getattr(practice_obj, 'teacher', None)
+        except Exception:
+            practice_obj = None
+
+    if not assessment and not material and not practice_obj:
+        return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
+
+    class_code = data.get('class_code')
+    assessment_type_hint = data.get('assessment_type') or data.get('type') or data.get('mode') or ''
+    is_practice = (
+        activity_type == 'practice'
+        or practice_obj is not None
+        or (material and material.type == 'practice')
+    )
+    already_completed = False
+    if not is_practice:
+        already_completed = _student_completed_assessment_before(assessment, material, student_user)
+    score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
+    if not is_practice:
+        adapted_level_payload = _student_adapted_reading_level_payload(
+            student_user,
+            score_payload=score_payload,
+            assessment_type=assessment_type_hint,
+        )
+        score_payload['adapted_level_score'] = adapted_level_payload.get('adapted_level_score')
+        score_payload['adapted_reading_level'] = adapted_level_payload.get('adapted_reading_level')
+        score_payload['adapted_reading_level_disclaimer'] = adapted_level_payload.get('adapted_reading_level_disclaimer')
+    should_notify_assessment = (
+        not is_practice
+        and (is_retake or not already_completed)
+    )
+    completed_result_row = None
+
+    try:
+        device_info = {
+            'user_agent': request.META.get('HTTP_USER_AGENT', '') if request is not None else '',
+            'remote_addr': request.META.get('REMOTE_ADDR', '') if request is not None else '',
+        }
+        attempt_payload = {
+            'status': 'completed',
+            'completed_at': timezone.now().isoformat(),
+            'device_info': device_info,
+            'game_mode': str(data.get('game_mode') or '').strip().lower(),
+            'stars_earned': data.get('stars_earned', 0),
+            'items_completed': data.get('items_completed', 0),
+            **score_payload,
+        }
+        if is_practice:
+            material_content = dict(getattr(material, 'content_json', None) or {}) if material else {}
+            material_game_mode = str(material_content.get('mode') or attempt_payload.get('game_mode') or '').strip().lower()
+            if material and material_game_mode == 'color':
+                existing_completion = _material_practice_completion(material, student_user)
+                try:
+                    existing_stars = max(0, int(existing_completion.get('stars_earned', 0) or 0))
+                except (TypeError, ValueError):
+                    existing_stars = 0
+                try:
+                    incoming_stars = max(0, int(attempt_payload.get('stars_earned', 0) or 0))
+                except (TypeError, ValueError):
+                    incoming_stars = 0
+                attempt_payload['stars_earned'] = max(existing_stars, incoming_stars)
+            if practice_obj:
+                practice_obj.record_attempt(student_user, replace=True, **attempt_payload)
+            if material and material.type == 'practice':
+                _record_material_practice_completion(material, student_user, attempt_payload)
+        elif material and material.type in ('assessment', 'both'):
+            if teacher_user is None:
+                if getattr(material, 'teacher', None):
+                    teacher_user = material.teacher
+                elif material.section and getattr(material.section, 'teacher', None):
+                    teacher_user = material.section.teacher
+                else:
+                    first_section = material.assigned_sections.filter(is_active=True).select_related('teacher').first()
+                    if first_section and getattr(first_section, 'teacher', None):
+                        teacher_user = first_section.teacher
+            if material.teacher_id is None and teacher_user is not None:
+                material.teacher = teacher_user
+                material.save(update_fields=['teacher', 'updated_at'])
+            material.record_assessment_result(student_user, **attempt_payload)
+            completed_result_row = material.assessment_results.filter(
+                student=student_user,
+                attempt_status='completed',
+            ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
+        elif assessment:
+            assessment.record_attempt(student_user, **attempt_payload)
+            completed_result_row = assessment.attempt_rows.filter(
+                student=student_user,
+                attempt_status='completed',
+            ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
+        if not is_practice:
+            _update_student_reading_profile(student_user, score_payload)
+    except Exception as e:
+        logger.exception('Failed to persist assessment/practice attempt: %s', e)
+
+    if live_session is None and data.get('live_session_id'):
+        try:
+            live_session = LiveAssessmentSession.objects.filter(id=data.get('live_session_id')).select_related('material', 'course').first()
+        except Exception:
+            live_session = None
+
+    if live_session:
+        try:
+            participant_ids = {str(student_id) for student_id in (live_session.student_ids or [])}
+            if str(student_user.id) in participant_ids:
+                score_value = score_payload.get('final_score') if score_payload.get('final_score') is not None else score_payload.get('total_score')
+                state_update = {
+                    'status': 'completed',
+                    'connection_status': 'connected',
+                }
+                if score_value is not None:
+                    state_update['final_score'] = float(score_value)
+                if score_payload.get('total_score') is not None:
+                    state_update['total_score'] = float(score_payload.get('total_score'))
+
+                state_payload = data.get('scores') if isinstance(data.get('scores'), dict) else {}
+                if isinstance(data.get('completion_payload'), dict):
+                    state_payload = {**state_payload, **data.get('completion_payload')}
+                if isinstance(state_payload.get('scores'), dict):
+                    state_payload = {**state_payload, **state_payload.get('scores')}
+
+                progress_value = data.get('progress')
+                if progress_value is None and isinstance(state_payload, dict):
+                    progress_value = state_payload.get('progress')
+                if progress_value is None:
+                    progress_value = 1
+                try:
+                    state_update['progress'] = float(progress_value)
+                except (TypeError, ValueError):
+                    state_update['progress'] = progress_value
+
+                items_completed_value = data.get('items_completed')
+                if items_completed_value is None and isinstance(state_payload, dict):
+                    items_completed_value = state_payload.get('items_completed')
+                if items_completed_value is not None:
+                    try:
+                        state_update['items_completed'] = int(items_completed_value)
+                    except (TypeError, ValueError):
+                        state_update['items_completed'] = items_completed_value
+
+                items_total_value = data.get('items_total')
+                if items_total_value is None and isinstance(state_payload, dict):
+                    items_total_value = state_payload.get('items_total')
+                if items_total_value is not None:
+                    try:
+                        state_update['items_total'] = int(items_total_value)
+                    except (TypeError, ValueError):
+                        state_update['items_total'] = items_total_value
+
+                elapsed_seconds_value = data.get('elapsed_seconds')
+                if elapsed_seconds_value is None and isinstance(state_payload, dict):
+                    elapsed_seconds_value = state_payload.get('elapsed_seconds')
+                if elapsed_seconds_value is None:
+                    elapsed_seconds_value = score_payload.get('duration_seconds')
+                if elapsed_seconds_value is not None:
+                    try:
+                        state_update['elapsed_seconds'] = int(elapsed_seconds_value)
+                    except (TypeError, ValueError):
+                        state_update['elapsed_seconds'] = elapsed_seconds_value
+
+                if data.get('completion_payload') is not None:
+                    state_update['completion_payload'] = data.get('completion_payload')
+
+                _update_live_student_state(live_session, student_user.id, state_update)
+                live_session.save(update_fields=['student_states', 'updated_at'])
+        except Exception:
+            logger.exception('Failed to sync completion score into live assessment session %s', data.get('live_session_id'))
+
+    student_name = f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id
+    class_name = _resolve_assessment_class_name(assessment=assessment, material=material, class_code=class_code)
+
+    if not is_practice and should_notify_assessment:
+        _notify_principal_performance_events(
+            student_user,
+            assessment=assessment,
+            material=material,
+            class_name=class_name,
+            score_payload=score_payload,
+        )
+
+    email_subject = None
+    if is_retake:
+        title = "Student Retook an Assessment"
+        display_class = class_name or "a class"
+        notif_msg = f'{student_name} retook the assessment "{title_text}" in {display_class}.'
+        email_subject = "Student Retook an Assessment"
+    elif is_practice:
+        title = "Student Completed a Practice Material"
+        display_class = class_name or "a class"
+        notif_msg = f'{student_name} read "{title_text}" in {display_class}.'
+    else:
+        title = "Student Completed an Assessment"
+        notif_msg = _assessment_completion_message(student_name, title_text, class_name)
+
+    if is_practice:
+        _notify_admins(
+            title,
+            notif_msg,
+            "assessment",
+            reverse('admin_students'),
+            student_user,
+            send_email=False,
+        )
+    else:
+        teacher_recipients = []
+        if should_notify_assessment:
+            teacher_recipients = _teachers_for_assessment_completion(
+                assessment=assessment,
+                material=material,
+                student_user=student_user,
+            )
+
+        seen_teacher_ids = set()
+        for recipient in teacher_recipients:
+            if recipient.id in seen_teacher_ids:
+                continue
+            seen_teacher_ids.add(recipient.id)
+
+            if _assessment_completion_notif_exists(
+                recipient, student_user, notif_msg, is_retake=is_retake
+            ):
+                continue
+
+            current_email_body = None
+            if is_retake:
+                teacher_name = f"{recipient.first_name} {recipient.last_name}"
+                display_class = class_name or "a class"
+                current_email_body = (
+                    f"Hello {teacher_name},\n\n"
+                    f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
+                    f"for \"{title_text}\" in {display_class}.\n\n"
+                    "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
+                    "Thank you,\n\n"
+                    "The PABASA Team"
+                )
+
+            _create_notification(
+                recipient,
+                title,
+                notif_msg,
+                "assessment",
+                f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
+                student_user,
+                email_subject=email_subject,
+                email_body=current_email_body,
+            )
+
+        if should_notify_assessment:
+            _notify_admins(
+                title,
+                notif_msg,
+                "assessment",
+                reverse('admin_students'),
+                student_user,
+                send_email=False,
+            )
+            try:
+                auto_course = _resolve_course_for_assessment_completion(
+                    student_user,
+                    material=material,
+                    assessment=completed_result_row or assessment,
+                    teacher_user=teacher_user,
+                )
+                if auto_course and completed_result_row:
+                    auto_send_result = _auto_send_regular_progress_update(
+                        student=student_user,
+                        course=auto_course,
+                        teacher_user=teacher_user or auto_course.teacher,
+                        assessment_result=completed_result_row,
+                    )
+                    if not auto_send_result.get('success'):
+                        logger.info(
+                            'Auto regular progress update skipped for student %s: %s',
+                            student_user.id,
+                            auto_send_result.get('reason', 'unknown'),
+                        )
+            except Exception:
+                logger.exception('Failed to auto-send regular progress update')
+    if assist_teacher_user and not is_practice:
+        _create_notification(
+            assist_teacher_user,
+            'Assist assessment completed',
+            f'Assisted assessment "{title_text}" was completed for {student_name}.',
+            'assessment',
+            f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
+            assist_teacher_user,
+            send_email=False,
+            force_in_app=True,
+        )
+    response_payload = {'success': True}
+    if not is_practice:
+        response_payload.update({
+            'student_id': student_user.id,
+            'custom_id': student_user.custom_id,
+            'accuracy': score_payload.get('accuracy'),
+            'fluency_score': score_payload.get('fluency_score'),
+            'pronunciation_score': score_payload.get('pronunciation_score'),
+            'time_score': score_payload.get('time_score'),
+            'overall_raw_score': score_payload.get('overall_raw_score'),
+            'final_score': score_payload.get('final_score'),
+            'total_score': score_payload.get('total_score'),
+            'osps_multiplier': score_payload.get('osps_multiplier'),
+            'crla_classification': score_payload.get('crla_classification'),
+            'classification': score_payload.get('classification'),
+            'performance_interpretation': score_payload.get('performance_interpretation'),
+            'wpm': score_payload.get('wpm'),
+            'duration_seconds': score_payload.get('duration_seconds'),
+            'word_count': score_payload.get('word_count'),
+            'passed': score_payload.get('passed'),
+            'remarks': score_payload.get('remarks'),
+            'adapted_level_score': score_payload.get('adapted_level_score'),
+            'adapted_reading_level': score_payload.get('adapted_reading_level'),
+            'adapted_reading_level_disclaimer': score_payload.get('adapted_reading_level_disclaimer'),
+            'reading_level': score_payload.get('adapted_reading_level'),
+        })
+    if is_practice and material:
+        response_payload.update({
+            'material_id': f"practice-{material.id}" if material.type == 'practice' else f"material-{material.id}",
+            'status': 'Done',
+            'is_done': True,
+            'score': score_payload.get('score', 0),
+            'accuracy': score_payload.get('accuracy', 0),
+            'correct_responses': score_payload.get('correct_responses', 0),
+            'incorrect_responses': score_payload.get('incorrect_responses', 0),
+            'wpm': score_payload.get('wpm', 0),
+            'reading_time_seconds': score_payload.get('reading_time_seconds', 0),
+            'redirect_url': f"/dashboard/practice/results/?id=practice-{material.id}",
+        })
+    return JsonResponse(response_payload)
+
+
 def _end_live_assessment_session(session, activity_message=None, ended_at=None):
     if not session or session.status == 'ended':
         return session
@@ -5018,11 +5483,69 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
 
     states = session.student_states or {}
     if isinstance(states, dict):
-        for student_key, student_state in states.items():
-            if isinstance(student_state, dict):
-                student_state['status'] = 'completed'
+        for student_key, student_state in list(states.items()):
+            if not isinstance(student_state, dict):
+                continue
+            if str(student_state.get('status', '')).lower() == 'completed':
                 student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
                 states[student_key] = student_state
+                continue
+
+            student_id = None
+            try:
+                student_id = int(student_key)
+            except (TypeError, ValueError):
+                student_id = None
+            if student_id is None:
+                continue
+
+            student_user = User.objects.filter(id=student_id, role='student', is_archived=False).first()
+            status_value = str(student_state.get('status', '')).lower()
+            has_active_attempt = status_value in {'reading', 'started', 'in_progress', 'paused'} or (
+                (student_state.get('elapsed_seconds') or 0) > 0
+                or (student_state.get('items_completed') or 0) > 0
+                or (student_state.get('progress') not in (None, '', 0, False))
+            )
+
+            if not student_user:
+                student_state['status'] = 'ended'
+                student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
+                states[student_key] = student_state
+                continue
+
+            if has_active_attempt:
+                payload = _build_live_session_completion_payload(session, student_user, student_state)
+                payload.setdefault('scores', {})
+                payload['scores'].setdefault('duration_seconds', student_state.get('elapsed_seconds') or 0)
+                payload['scores'].setdefault('correct_words', student_state.get('correct_words') or 0)
+                payload['scores'].setdefault('accuracy', student_state.get('accuracy'))
+                payload['scores'].setdefault('pronunciation_score', student_state.get('pronunciation_score'))
+                payload['scores'].setdefault('fluency_score', student_state.get('fluency_score'))
+                payload['scores'].setdefault('time_score', student_state.get('time_score'))
+                payload['scores'].setdefault('final_score', student_state.get('final_score'))
+                payload['scores'].setdefault('items_completed', student_state.get('items_completed'))
+                payload['scores'].setdefault('items_total', student_state.get('items_total'))
+                payload['scores'].setdefault('progress', student_state.get('progress'))
+                if student_state.get('current_item') is not None:
+                    payload['scores']['current_item'] = student_state.get('current_item')
+                if student_state.get('completion_payload') is not None:
+                    payload['completion_payload'] = student_state.get('completion_payload')
+                _complete_assessment_for_student(student_user, data=payload, live_session=session)
+                student_state['status'] = 'completed'
+                student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
+                student_state['final_score'] = student_state.get('final_score') or payload.get('scores', {}).get('final_score')
+                student_state['progress'] = student_state.get('progress') if student_state.get('progress') is not None else 1
+                if student_state.get('items_completed') is None:
+                    student_state['items_completed'] = payload.get('scores', {}).get('items_completed') or (student_state.get('items_total') or 0)
+                if student_state.get('items_total') is None:
+                    student_state['items_total'] = payload.get('scores', {}).get('items_total') or (student_state.get('items_total') or 0)
+            else:
+                student_state['status'] = 'ended'
+                student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
+                student_state['final_score'] = student_state.get('final_score')
+                student_state['progress'] = student_state.get('progress', 0)
+            states[student_key] = student_state
+
         session.student_states = states
 
     if not activity_message:
@@ -5665,6 +6188,15 @@ def live_assessment_student_state_update(request, session_id):
                 state_values['final_score'] = None
         if 'connection_status' in data:
             state_values['connection_status'] = str(data.get('connection_status') or '').strip() or 'connected'
+        if 'completion_payload' in data:
+            completion_payload = data.get('completion_payload')
+            if isinstance(completion_payload, dict):
+                state_values['completion_payload'] = completion_payload
+            elif isinstance(completion_payload, str):
+                try:
+                    state_values['completion_payload'] = json.loads(completion_payload)
+                except (TypeError, ValueError):
+                    state_values['completion_payload'] = completion_payload
 
     # Keep teacher-driven states intact when the student sends a partial update.
     if not state_values:
@@ -10501,362 +11033,14 @@ def record_assessment_completion(request):
     """Handles notification when student completes reading material."""
     try:
         data = json.loads(request.body)
-        assessment_id = data.get('assessment_id')
-        material_id = data.get('material_id')
-        is_retake = data.get('is_retake', False)
-        attempt_number = data.get('attempt_number', 0)
-        activity_type = data.get('activity_type', 'assessment')
         assist_context = _resolve_assist_token(data.get('assist_token'))
         if assist_context:
             student_user = assist_context['student']
-            assist_teacher_user = assist_context['teacher']
-            material_id = str(assist_context['material'].id)
-            assessment_id = None
         else:
             if request.session.get('user_role') != 'student':
                 return JsonResponse({'success': False, 'error': 'Forbidden: insufficient role'}, status=403)
             student_user = User.objects.get(id=request.session.get('user_id'))
-            assist_teacher_user = None
-
-        assessment = None
-        teacher_user = None
-        title_text = None
-        material = None
-        practice_obj = None
-
-        a_prefix, a_id = _parse_prefixed_id(assessment_id)
-        m_prefix, m_id = _parse_prefixed_id(material_id)
-
-        # Prefer explicit assessment identifier
-        if a_id and (a_prefix is None or a_prefix.startswith('assessment')):
-            assessment = Assessment.objects.select_related('teacher').filter(id=a_id, source_assessment__isnull=True).first()
-            if assessment:
-                teacher_user = assessment.teacher
-                title_text = assessment.title
-        # material_id may refer to an Assessment (prefixed), Material, or Practice record
-        if not assessment and m_id and m_prefix and m_prefix.startswith('assessment'):
-            assessment = Assessment.objects.select_related('teacher').filter(id=m_id, source_assessment__isnull=True).first()
-            if assessment:
-                teacher_user = assessment.teacher
-                title_text = assessment.title
-
-        if not assessment and m_id and (m_prefix is None or m_prefix.startswith('material')):
-            material = Material.objects.select_related('assessment', 'section__teacher').filter(id=m_id).first()
-            if material:
-                if material.assessment:
-                    assessment = material.assessment
-                    if assessment and assessment.source_assessment_id is not None:
-                        assessment = assessment.source_assessment or assessment._group_assessment()
-                    teacher_user = assessment.teacher if assessment else None
-                elif material.section:
-                    teacher_user = material.section.teacher
-                title_text = material.title or material.content_text or material.prompt_text or material.item_type
-
-        # Fallback: numeric material id may actually be an assessment id when no Material record exists.
-        if not assessment and not material and m_id is not None:
-            possible_assessment = Assessment.objects.select_related('teacher').filter(id=m_id, source_assessment__isnull=True).first()
-            if possible_assessment:
-                assessment = possible_assessment
-                teacher_user = assessment.teacher
-                title_text = assessment.title
-
-        # Student practice hub sends practice-<material_id> for admin library materials.
-        if not assessment and not material and m_id and m_prefix and m_prefix.startswith('practice') and activity_type == 'practice':
-            material = Material.objects.filter(id=m_id, type='practice').first()
-            if material:
-                title_text = material.title or material.content_text or material.prompt_text or material.item_type
-                try:
-                    practice_obj = material.practice_result
-                except Practice.DoesNotExist:
-                    practice_obj = None
-
-        # support practice ids (practice-<id>) that map to Practice model
-        if not assessment and m_id and m_prefix and m_prefix.startswith('practice'):
-            try:
-                from .models import Practice as PracticeModel
-                practice_obj = practice_obj or PracticeModel.objects.select_related('teacher').filter(id=m_id).first()
-                if practice_obj:
-                    title_text = practice_obj.title or practice_obj.content_text or practice_obj.prompt_text
-                    teacher_user = getattr(practice_obj, 'teacher', None)
-            except Exception:
-                practice_obj = None
-
-        if not assessment and not material and not practice_obj:
-            return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
-
-        class_code = data.get('class_code')
-        assessment_type_hint = data.get('assessment_type') or data.get('type') or data.get('mode') or ''
-        is_practice = (
-            activity_type == 'practice'
-            or practice_obj is not None
-            or (material and material.type == 'practice')
-        )
-        already_completed = False
-        if not is_practice:
-            already_completed = _student_completed_assessment_before(assessment, material, student_user)
-        score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
-        if not is_practice:
-            adapted_level_payload = _student_adapted_reading_level_payload(
-                student_user,
-                score_payload=score_payload,
-                assessment_type=assessment_type_hint,
-            )
-            score_payload['adapted_level_score'] = adapted_level_payload.get('adapted_level_score')
-            score_payload['adapted_reading_level'] = adapted_level_payload.get('adapted_reading_level')
-            score_payload['adapted_reading_level_disclaimer'] = adapted_level_payload.get('adapted_reading_level_disclaimer')
-        should_notify_assessment = (
-            not is_practice
-            and (is_retake or not already_completed)
-        )
-        completed_result_row = None
-
-        # Record attempt server-side (authoritative). We mark attempts as completed
-        # because this endpoint is called when the student finishes the reading flow.
-        try:
-            device_info = {
-                'user_agent': request.META.get('HTTP_USER_AGENT', ''),
-                'remote_addr': request.META.get('REMOTE_ADDR', ''),
-            }
-            attempt_payload = {
-                'status': 'completed',
-                'completed_at': timezone.now().isoformat(),
-                'device_info': device_info,
-                'game_mode': str(data.get('game_mode') or '').strip().lower(),
-                'stars_earned': data.get('stars_earned', 0),
-                'items_completed': data.get('items_completed', 0),
-                **score_payload,
-            }
-            if is_practice:
-                material_content = dict(getattr(material, 'content_json', None) or {}) if material else {}
-                material_game_mode = str(material_content.get('mode') or attempt_payload.get('game_mode') or '').strip().lower()
-                if material and material_game_mode == 'color':
-                    existing_completion = _material_practice_completion(material, student_user)
-                    try:
-                        existing_stars = max(0, int(existing_completion.get('stars_earned', 0) or 0))
-                    except (TypeError, ValueError):
-                        existing_stars = 0
-                    try:
-                        incoming_stars = max(0, int(attempt_payload.get('stars_earned', 0) or 0))
-                    except (TypeError, ValueError):
-                        incoming_stars = 0
-                    attempt_payload['stars_earned'] = max(existing_stars, incoming_stars)
-                if practice_obj:
-                    practice_obj.record_attempt(student_user, replace=True, **attempt_payload)
-                if material and material.type == 'practice':
-                    _record_material_practice_completion(material, student_user, attempt_payload)
-            elif material and material.type in ('assessment', 'both'):
-                if teacher_user is None:
-                    if getattr(material, 'teacher', None):
-                        teacher_user = material.teacher
-                    elif material.section and getattr(material.section, 'teacher', None):
-                        teacher_user = material.section.teacher
-                    else:
-                        first_section = material.assigned_sections.filter(is_active=True).select_related('teacher').first()
-                        if first_section and getattr(first_section, 'teacher', None):
-                            teacher_user = first_section.teacher
-                if material.teacher_id is None and teacher_user is not None:
-                    material.teacher = teacher_user
-                    material.save(update_fields=['teacher', 'updated_at'])
-                material.record_assessment_result(student_user, **attempt_payload)
-                completed_result_row = material.assessment_results.filter(
-                    student=student_user,
-                    attempt_status='completed',
-                ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-            elif assessment:
-                assessment.record_attempt(student_user, **attempt_payload)
-                completed_result_row = assessment.attempt_rows.filter(
-                    student=student_user,
-                    attempt_status='completed',
-                ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
-            # Note: standalone Material objects that are not linked to Assessment do not
-            # currently have an attempts schema; they are handled by client-side notifications.
-            if not is_practice:
-                _update_student_reading_profile(student_user, score_payload)
-        except Exception as e:
-            logger.exception('Failed to persist assessment/practice attempt: %s', e)
-
-        live_session_id = data.get('live_session_id')
-        if live_session_id:
-            try:
-                live_session = LiveAssessmentSession.objects.filter(id=live_session_id).select_related('material', 'course').first()
-                if live_session:
-                    participant_ids = {str(student_id) for student_id in (live_session.student_ids or [])}
-                    if str(student_user.id) in participant_ids:
-                        score_value = score_payload.get('final_score') if score_payload.get('final_score') is not None else score_payload.get('total_score')
-                        state_update = {
-                            'status': 'completed',
-                            'connection_status': 'connected',
-                        }
-                        if score_value is not None:
-                            state_update['final_score'] = float(score_value)
-                        if score_payload.get('total_score') is not None:
-                            state_update['total_score'] = float(score_payload.get('total_score'))
-                        _update_live_student_state(live_session, student_user.id, state_update)
-                        live_session.save(update_fields=['student_states', 'updated_at'])
-            except Exception:
-                logger.exception('Failed to sync completion score into live assessment session %s', live_session_id)
-
-        student_name = f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id
-        class_name = _resolve_assessment_class_name(assessment=assessment, material=material, class_code=class_code)
-
-        if not is_practice and should_notify_assessment:
-            _notify_principal_performance_events(
-                student_user,
-                assessment=assessment,
-                material=material,
-                class_name=class_name,
-                score_payload=score_payload,
-            )
-
-        email_subject = None
-        if is_retake:
-            title = "Student Retook an Assessment"
-            display_class = class_name or "a class"
-            notif_msg = f'{student_name} retook the assessment "{title_text}" in {display_class}.'
-            email_subject = "Student Retook an Assessment"
-        elif is_practice:
-            title = "Student Completed a Practice Material"
-            display_class = class_name or "a class"
-            notif_msg = f'{student_name} read "{title_text}" in {display_class}.'
-        else:
-            title = "Student Completed an Assessment"
-            notif_msg = _assessment_completion_message(student_name, title_text, class_name)
-
-        if is_practice:
-            _notify_admins(
-                title,
-                notif_msg,
-                "assessment",
-                reverse('admin_students'),
-                student_user,
-                send_email=False,
-            )
-        else:
-            teacher_recipients = []
-            if should_notify_assessment:
-                teacher_recipients = _teachers_for_assessment_completion(
-                    assessment=assessment,
-                    material=material,
-                    student_user=student_user,
-                )
-
-            seen_teacher_ids = set()
-            for recipient in teacher_recipients:
-                if recipient.id in seen_teacher_ids:
-                    continue
-                seen_teacher_ids.add(recipient.id)
-
-                if _assessment_completion_notif_exists(
-                    recipient, student_user, notif_msg, is_retake=is_retake
-                ):
-                    continue
-
-                current_email_body = None
-                if is_retake:
-                    teacher_name = f"{recipient.first_name} {recipient.last_name}"
-                    display_class = class_name or "a class"
-                    current_email_body = (
-                        f"Hello {teacher_name},\n\n"
-                        f"This is to inform you that {student_name} has completed retake attempt {attempt_number} of 3 "
-                        f"for \"{title_text}\" in {display_class}.\n\n"
-                        "You may review the student's latest submission and performance through your PABASA dashboard.\n\n"
-                        "Thank you,\n\n"
-                        "The PABASA Team"
-                    )
-
-                _create_notification(
-                    recipient,
-                    title,
-                    notif_msg,
-                    "assessment",
-                    f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
-                    student_user,
-                    email_subject=email_subject,
-                    email_body=current_email_body,
-                )
-
-            if should_notify_assessment:
-                _notify_admins(
-                    title,
-                    notif_msg,
-                    "assessment",
-                    reverse('admin_students'),
-                    student_user,
-                    send_email=False,
-                )
-                try:
-                    auto_course = _resolve_course_for_assessment_completion(
-                        student_user,
-                        material=material,
-                        assessment=completed_result_row or assessment,
-                        teacher_user=teacher_user,
-                    )
-                    if auto_course and completed_result_row:
-                        auto_send_result = _auto_send_regular_progress_update(
-                            student=student_user,
-                            course=auto_course,
-                            teacher_user=teacher_user or auto_course.teacher,
-                            assessment_result=completed_result_row,
-                        )
-                        if not auto_send_result.get('success'):
-                            logger.info(
-                                'Auto regular progress update skipped for student %s: %s',
-                                student_user.id,
-                                auto_send_result.get('reason', 'unknown'),
-                            )
-                except Exception:
-                    logger.exception('Failed to auto-send regular progress update')
-        if assist_teacher_user and not is_practice:
-            _create_notification(
-                assist_teacher_user,
-                'Assist assessment completed',
-                f'Assisted assessment "{title_text}" was completed for {student_name}.',
-                'assessment',
-                f"/dashboard/teacher/students/detail/?student_id={student_user.custom_id}",
-                assist_teacher_user,
-                send_email=False,
-                force_in_app=True,
-            )
-        response_payload = {'success': True}
-        if not is_practice:
-            response_payload.update({
-                'student_id': student_user.id,
-                'custom_id': student_user.custom_id,
-                'accuracy': score_payload.get('accuracy'),
-                'fluency_score': score_payload.get('fluency_score'),
-                'pronunciation_score': score_payload.get('pronunciation_score'),
-                'time_score': score_payload.get('time_score'),
-                'overall_raw_score': score_payload.get('overall_raw_score'),
-                'final_score': score_payload.get('final_score'),
-                'total_score': score_payload.get('total_score'),
-                'osps_multiplier': score_payload.get('osps_multiplier'),
-                'crla_classification': score_payload.get('crla_classification'),
-                'classification': score_payload.get('classification'),
-                'performance_interpretation': score_payload.get('performance_interpretation'),
-                'wpm': score_payload.get('wpm'),
-                'duration_seconds': score_payload.get('duration_seconds'),
-                'word_count': score_payload.get('word_count'),
-                'passed': score_payload.get('passed'),
-                'remarks': score_payload.get('remarks'),
-                'adapted_level_score': score_payload.get('adapted_level_score'),
-                'adapted_reading_level': score_payload.get('adapted_reading_level'),
-                'adapted_reading_level_disclaimer': score_payload.get('adapted_reading_level_disclaimer'),
-                'reading_level': score_payload.get('adapted_reading_level'),
-            })
-        if is_practice and material:
-            response_payload.update({
-                'material_id': f"practice-{material.id}" if material.type == 'practice' else f"material-{material.id}",
-                'status': 'Done',
-                'is_done': True,
-                'score': score_payload.get('score', 0),
-                'accuracy': score_payload.get('accuracy', 0),
-                'correct_responses': score_payload.get('correct_responses', 0),
-                'incorrect_responses': score_payload.get('incorrect_responses', 0),
-                'wpm': score_payload.get('wpm', 0),
-                'reading_time_seconds': score_payload.get('reading_time_seconds', 0),
-                'redirect_url': f"/dashboard/practice/results/?id=practice-{material.id}",
-            })
-        return JsonResponse(response_payload)
+        return _complete_assessment_for_student(student_user, data=data, request=request, assist_context=assist_context)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

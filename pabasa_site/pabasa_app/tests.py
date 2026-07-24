@@ -1415,6 +1415,89 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(session.status, 'ended')
         self.assertIsNotNone(session.ends_at)
 
+    def test_teacher_end_session_finalizes_incomplete_participants(self):
+        other_student = User.objects.create(
+            custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}",
+            role="student",
+            first_name="Kai",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=4,
+            birth_day=8,
+            birth_year=2013,
+            email="live-student-2@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 2",
+        )
+        self.section.students.append({
+            "student_id": other_student.id,
+            "custom_id": other_student.custom_id,
+            "first_name": other_student.first_name,
+            "last_name": other_student.last_name,
+            "email": other_student.email,
+            "joined_at": timezone.now().isoformat(),
+            "is_active": True,
+        })
+        self.section.save(update_fields=['students', 'updated_at'])
+
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id, other_student.id],
+            student_count=2,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={
+                str(self.student.id): {
+                    'status': 'reading',
+                    'progress': 0.5,
+                    'items_completed': 3,
+                    'items_total': 6,
+                    'elapsed_seconds': 12,
+                    'connection_status': 'connected',
+                },
+                str(other_student.id): {
+                    'status': 'reading',
+                    'progress': 0.25,
+                    'items_completed': 1,
+                    'items_total': 4,
+                    'elapsed_seconds': 7,
+                    'connection_status': 'connected',
+                },
+            },
+        )
+
+        response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({"action": "end"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["session"]["status"], 'ended')
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'completed')
+        self.assertEqual(session.student_states[str(other_student.id)]['status'], 'completed')
+        self.assertEqual(session.student_states[str(other_student.id)]['progress'], 1)
+        self.assertEqual(session.student_states[str(other_student.id)]['items_completed'], 4)
+        self.assertEqual(session.student_states[str(other_student.id)]['items_total'], 4)
+
+        completed_attempts = Assessment.objects.filter(
+            student__in=[self.student, other_student],
+            attempt_status='completed',
+            is_active=True,
+        ).count()
+        self.assertEqual(completed_attempts, 2)
+
     def test_stale_live_assessment_session_auto_ends_on_poll(self):
         session = LiveAssessmentSession.objects.create(
             id=uuid.uuid4().hex,

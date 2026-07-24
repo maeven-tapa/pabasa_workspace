@@ -1256,29 +1256,12 @@
             localStorage.setItem('pabasa_notifications', JSON.stringify(notifications.slice(0, 100)));
             window.dispatchEvent(new Event('pabasa:notifications-updated'));
 
-            // Persist completion server-side so the teacher receives an in-app notification.
-            if (isCurrentLiveAssessment()) {
-                const elapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
-                const completionSnapshot = calculateScores();
-                const finalScore = completionSnapshot?.final_score ?? completionSnapshot?.total_score ?? latestScores?.final_score ?? latestScores?.total_score ?? null;
-                publishLiveSessionState({
-                    status: 'completed',
-                    items_completed: Math.max(1, items.length),
-                    items_total: Math.max(1, items.length),
-                    progress: 1,
-                    elapsed_seconds: Math.round(elapsedSeconds),
-                    current_item: items[currentIndex] || '',
-                    final_score: finalScore != null ? Number(finalScore) : null,
-                    connection_status: 'connected',
-                });
-            }
-
             const token = getCsrfToken();
             if (materialId && token) {
                 setCompletionActionButtonsProcessing(true);
                 const elapsedSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
                 const completionSnapshot = calculateScores();
-                latestScores = latestScores || completionSnapshot;
+                latestScores = normalizeCompletionScores(latestScores || completionSnapshot, completionSnapshot);
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
                 const payload = {
                     material_id: materialId,
@@ -1343,6 +1326,23 @@
                     payload.assessment_id = normalizedId;
                 }
                 if (assistToken) payload.assist_token = assistToken;
+
+                if (isCurrentLiveAssessment()) {
+                    const completionElapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                    const finalScore = completionSnapshot?.final_score ?? completionSnapshot?.total_score ?? latestScores?.final_score ?? latestScores?.total_score ?? null;
+                    publishLiveSessionState({
+                        status: 'completed',
+                        items_completed: Math.max(1, items.length),
+                        items_total: Math.max(1, items.length),
+                        progress: 1,
+                        elapsed_seconds: Math.round(completionElapsedSeconds),
+                        current_item: items[currentIndex] || '',
+                        final_score: finalScore != null ? Number(finalScore) : null,
+                        connection_status: 'connected',
+                        completion_payload: payload,
+                    });
+                }
+
                 completionSavePromise = fetch('/record-assessment-completion/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
@@ -1513,6 +1513,67 @@
             if (!liveSessionId || !isCurrentLiveAssessment()) return null;
             if (!Object.keys(updateValues).length) return null;
             try {
+                const completionSnapshot = calculateScores();
+                const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
+                const elapsedSeconds = Number.isFinite(Number(updateValues.elapsed_seconds))
+                    ? Number(updateValues.elapsed_seconds)
+                    : Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
+                const completionPayload = {
+                    assessment_type: mode,
+                    material_id: materialId,
+                    activity_type: 'assessment',
+                    class_code: testCode,
+                    correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
+                    incorrect_words: completionMetrics.incorrect_words ?? 0,
+                    skipped_words: completionMetrics.skipped_words ?? 0,
+                    duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
+                    target_word_count: completionMetrics.target_word_count ?? 0,
+                    pronunciation_score: completionMetrics.pronunciation_score ?? 0,
+                    fluency_score: completionMetrics.fluency_score ?? null,
+                    time_score: completionMetrics.time_score ?? null,
+                    transcript: completionMetrics.transcript || "",
+                    speech_recognition_used: completionMetrics.speech_recognition_used ?? false,
+                    needs_manual_review: completionMetrics.needs_manual_review ?? false,
+                    wpm: completionMetrics.wpm ?? 0,
+                    accuracy: completionMetrics.accuracy ?? null,
+                    scores: {
+                        ...(completionMetrics),
+                        correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
+                        incorrect_words: completionMetrics.incorrect_words ?? 0,
+                        skipped_words: completionMetrics.skipped_words ?? 0,
+                        duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
+                        target_word_count: completionMetrics.target_word_count ?? 0,
+                        pronunciation_score: completionMetrics.pronunciation_score ?? 0,
+                        fluency_score: completionMetrics.fluency_score ?? null,
+                        time_score: completionMetrics.time_score ?? null,
+                        transcript: completionMetrics.transcript || "",
+                        speech_recognition_used: completionMetrics.speech_recognition_used ?? false,
+                        needs_manual_review: completionMetrics.needs_manual_review ?? false,
+                        wpm: completionMetrics.wpm ?? 0,
+                        accuracy: completionMetrics.accuracy ?? null,
+                    },
+                    raw_metrics: {
+                        correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
+                        incorrect_words: completionMetrics.incorrect_words ?? 0,
+                        skipped_words: completionMetrics.skipped_words ?? 0,
+                        duration_seconds: completionMetrics.duration_seconds ?? elapsedSeconds,
+                        target_word_count: completionMetrics.target_word_count ?? 0,
+                        pronunciation_metrics: {
+                            score: completionMetrics.pronunciation_score ?? 0,
+                        },
+                        fluency_metrics: {
+                            score: completionMetrics.fluency_score ?? null,
+                        },
+                        transcript: completionMetrics.transcript || "",
+                        speech_recognition_used: completionMetrics.speech_recognition_used ?? false,
+                        needs_manual_review: completionMetrics.needs_manual_review ?? false,
+                    },
+                };
+                if (isRetakeMode && materialId) {
+                    const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
+                    completionPayload.attempt_number = retakeCounts[String(materialId).trim()] || 1;
+                }
+                if (assistToken) completionPayload.assist_token = assistToken;
                 const response = await fetch(`/api/live-assessment/session/${liveSessionId}/student-update/`, {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -1521,7 +1582,10 @@
                         'Accept': 'application/json',
                         'X-CSRFToken': getCsrfToken(),
                     },
-                    body: JSON.stringify(updateValues),
+                    body: JSON.stringify({
+                        ...updateValues,
+                        completion_payload: completionPayload,
+                    }),
                 });
                 if (!response.ok) return null;
                 const payload = await response.json();
@@ -1624,6 +1688,14 @@
             setSpeechStatus('Live session ended.', 'Your teacher has ended the assessment.', false);
         }
 
+        function hasActiveReadingAttempt() {
+            return Boolean(
+                isRecording || recognitionActive || currentIndex > 0 || (spokenTranscript || '').trim() ||
+                correctWordCounts.some((count) => count > 0) ||
+                (latestScores && (latestScores.word_count != null || latestScores.accuracy != null || latestScores.final_score != null))
+            );
+        }
+
         async function handleLiveSessionState(state) {
             if (!state || !state.status) return;
             if (state.status === 'paused') {
@@ -1642,10 +1714,14 @@
                     startSpeechRecognition();
                 }
             }
-            if (state.status === 'ended') {
+            if (state.status === 'ended' || state.status === 'completed') {
                 if (!liveSessionEnded) {
                     liveSessionEnded = true;
-                    showLiveSessionEnded();
+                    if (hasActiveReadingAttempt()) {
+                        showCompletion(true);
+                    } else {
+                        showLiveSessionEnded();
+                    }
                 }
             }
         }
