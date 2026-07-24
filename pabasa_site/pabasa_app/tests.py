@@ -1950,6 +1950,64 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(payload["material_ids"], [existing.id])
         self.assertEqual(Material.objects.filter(source_type="shared", title="Shared reading").count(), 1)
 
+    @patch("pabasa_app.views._compute_teacher_overview")
+    def test_add_reading_material_reuse_skips_overview(self, mock_overview):
+        user = User.objects.create(
+            custom_id="TCH-0008",
+            role="teacher",
+            first_name="ReuseOverview",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="reuse-overview@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        existing = Material.objects.create(
+            teacher=user,
+            title="Shared reading",
+            item_type="word",
+            prompt_text="Araw",
+            content_text="Araw\nBuwan",
+            content_json={"items": ["Araw", "Buwan"], "language": "Tagalog"},
+            type="assessment",
+            source_type="shared",
+            status="published",
+            is_active=True,
+        )
+        session = self.client.session
+        session["user_id"] = user.id
+        session["user_role"] = user.role
+        session["first_name"] = user.first_name
+        session["last_name"] = user.last_name
+        session["email"] = user.email
+        session["custom_id"] = user.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Shared reading",
+                "content": "Araw\nBuwan",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "assessment",
+                "source_type": "shared",
+                "source_material_id": existing.id,
+                "class_code": "",
+                "language": "Tagalog",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        mock_overview.assert_not_called()
+
     def test_add_reading_material_saves_vowel_and_vc_items_as_vowel(self):
         user = User.objects.create(
             custom_id="TCH-0007",

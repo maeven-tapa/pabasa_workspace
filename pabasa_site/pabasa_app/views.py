@@ -26,6 +26,7 @@ import random
 import traceback
 import ssl
 import time
+import threading
 import uuid
 import zipfile
 import csv
@@ -9985,6 +9986,57 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
     }
 
 
+def _queue_material_creation_followups(material, section, teacher_user, status, source_type):
+    def _run_followups():
+        try:
+            if section is not None and status == 'published':
+                action_url = reverse('assessment')
+                for student_user in _section_active_students(section):
+                    in_app_title = 'New Reading Material Available'
+                    in_app_message = f'"{material.title}" is now available in {section.class_name}.'
+                    email_subject = f'Start Reading: {material.title} Is Now Available'
+                    email_body = (
+                        f'Hello {student_user.first_name},\n\n'
+                        f'A new learning material, "{material.title}", has been published in {section.class_name} by {teacher_user.first_name} {teacher_user.last_name}.\n\n'
+                        f'Log in to PABASA to access the material and continue your learning journey.\n\n'
+                        f'Happy learning!\nThe PABASA Team'
+                    )
+                    _create_notification(
+                        student_user,
+                        in_app_title,
+                        in_app_message,
+                        'assessment',
+                        action_url,
+                        teacher_user,
+                        email_subject=email_subject,
+                        email_body=email_body,
+                    )
+
+            if source_type == 'shared' and getattr(material, 'source_type', '') == 'shared':
+                _notify_principals(
+                    'New shared reading material added',
+                    f'A new reading material from the Others shared library, "{material.title}", has been used by {teacher_user.first_name} {teacher_user.last_name}.',
+                    'info',
+                    reverse('dashboard_principal'),
+                    teacher_user,
+                    send_email=False,
+                )
+            _notify_admins(
+                'Teacher created a new material',
+                f'{teacher_user.first_name} {teacher_user.last_name} created "{material.title}".',
+                'info',
+                reverse('admin_course_detail', args=[material.id]),
+                teacher_user,
+            )
+        except Exception:
+            logger.exception('Failed to process follow-up work for material %s', getattr(material, 'id', None))
+
+    # Run follow-ups asynchronously after the DB transaction commits.
+    # Using a background thread ensures the HTTP response is returned
+    # immediately and heavy work does not block the request thread.
+    transaction.on_commit(lambda: threading.Thread(target=_run_followups, daemon=True).start())
+
+
 @csrf_protect
 @require_http_methods(["POST"])
 @login_required(role='teacher')
@@ -9993,6 +10045,7 @@ def add_reading_material(request):
     Creates a new reading material (Assessment) linked to a class.
     Expects JSON: { title, reading_type, content, status, class_code, scheduled_at? }
     """
+    perf_start = time.perf_counter()
     try:
         data = json.loads(request.body)
         title        = (data.get('title') or '').strip()
@@ -10134,7 +10187,6 @@ def add_reading_material(request):
                     'type': existing_shared.item_type,
                     'status': existing_shared.status,
                     'created_at': existing_shared.created_at.isoformat() if getattr(existing_shared, 'created_at', None) else None,
-                    'overview': _compute_teacher_overview(teacher_user),
                 })
 
             # If this material is intended to be an assessment (or both), do not
@@ -10166,54 +10218,19 @@ def add_reading_material(request):
             )
             if section is not None:
                 m.assigned_sections.add(section)
-                # Only notify students via database immediately if the material is live.
-                # Scheduled materials will trigger notifications via JS once the time is reached.
-                if status == 'published':
-                    action_url = reverse('assessment')
-                    for student_user in _section_active_students(section):
-                        # In-app notification content
-                        in_app_title = 'New Reading Material Available'
-                        in_app_message = f'"{m.title}" is now available in {section.class_name}.'
 
-                        # Email notification content
-                        email_subject = f'Start Reading: {m.title} Is Now Available'
-                        email_body = (
-                            f'Hello {student_user.first_name},\n\n'
-                            f'A new learning material, "{m.title}", has been published in {section.class_name} by {teacher_user.first_name} {teacher_user.last_name}.\n\n'
-                            f'Log in to PABASA to access the material and continue your learning journey.\n\n'
-                            f'Happy learning!\nThe PABASA Team'
-                        )
-                        _create_notification(
-                            student_user,
-                            in_app_title,
-                            in_app_message,
-                            'assessment',
-                            action_url,
-                            teacher_user,
-                            email_subject=email_subject,
-                            email_body=email_body,
-                        )
-            else:
-                action_url = reverse('courses')
-            if source_type == 'shared' and getattr(m, 'source_type', '') == 'shared':
-                _notify_principals(
-                    'New shared reading material added',
-                    f'A new reading material from the Others shared library, "{m.title}", has been used by {teacher_user.first_name} {teacher_user.last_name}.',
-                    'info',
-                    reverse('dashboard_principal'),
-                    teacher_user,
-                    send_email=False,
-                )
-            _notify_admins(
-                'Teacher created a new material',
-                f'{teacher_user.first_name} {teacher_user.last_name} created "{m.title}".',
-                'info',
-                reverse('admin_course_detail', args=[m.id]),
-                teacher_user,
-            )
             created_ids = [m.id]
             material_payload = _material_response_payload(m, tokens=tokens, section=section)
+            _queue_material_creation_followups(m, section, teacher_user, status, source_type)
 
+            logger.info(
+                'add_reading_material completed in %.3f seconds for title=%s class=%s source_type=%s status=%s',
+                time.perf_counter() - perf_start,
+                title,
+                class_code,
+                source_type,
+                status,
+            )
             return JsonResponse({
                 'success': True,
                 'message': 'Reading material(s) created successfully.',
@@ -10224,7 +10241,6 @@ def add_reading_material(request):
                 'type': reading_type,
                 'status': status,
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
-                'overview': _compute_teacher_overview(teacher_user),
             })
 
     except json.JSONDecodeError as e:

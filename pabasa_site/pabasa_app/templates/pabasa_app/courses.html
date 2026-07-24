@@ -14926,78 +14926,73 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     }
                                 }
                             }
-                            
-                            if (createdIds.length > 0 && apiData.material) {
+
+                            if (createdIds.length > 0 && apiData.material && effectiveRefreshCode) {
                                 try {
-                                    if (effectiveRefreshCode) {
-                                        cacheCreatedMaterialForClass(effectiveRefreshCode, apiData.material);
-                                        await loadReadings(effectiveRefreshCode);
-                                    }
-                                } catch (e) { console.warn('Could not reload readings after add', e); }
-                                try { await refreshCourseCardsFromServer(); } catch (e) { console.warn('Could not refresh course cards after add', e); }
-                                try { await renderClasses(); } catch (e) { console.warn('Could not render classes after add', e); }
-                            } else {
-                                try {
-                                    if (effectiveRefreshCode) await loadReadings(effectiveRefreshCode);
-                                } catch (e) { console.warn('Could not reload readings after add', e); }
-                                try { await refreshCourseCardsFromServer(); } catch (e) { console.warn('Could not refresh course cards after add', e); }
-                                try { await renderClasses(); } catch (e) { console.warn('Could not render classes after add', e); }
+                                    cacheCreatedMaterialForClass(effectiveRefreshCode, apiData.material);
+                                } catch (e) { console.warn('Could not cache created material locally', e); }
                             }
 
                             // If this add action was initiated from a Course view, attach created materials to that course
                             if (window.courseAttachTarget && Array.isArray(createdIds) && createdIds.length > 0) {
-                                try {
-                                    const csrftoken2 = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-                                    const course = (teacherCourses || []).find(c => Number(c.id) === Number(window.courseAttachTarget));
-                                    for (const mid of createdIds) {
-                                        const attachResp = await fetch('/dashboard/teacher/course/add-material/', {
-                                            method: 'POST',
-                                            credentials: 'same-origin',
-                                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken2 },
-                                            body: JSON.stringify({ course_id: Number(window.courseAttachTarget), material_id: Number(mid) })
-                                        });
-                                        let attachData = {};
-                                        try { attachData = await attachResp.json(); } catch (e) { /* ignore */ }
-                                        if (attachResp.ok && attachData.success) {
-                                            // update local cache with the full material object when possible
-                                            try {
-                                                if (course) {
-                                                    course.materials = course.materials || [];
-                                                    const attachedMaterial = apiData.material || {
-                                                        id: mid,
-                                                        title: (apiData.material && apiData.material.title) || title,
-                                                        item_type: attachData.material?.item_type || apiData.material?.item_type || '',
-                                                        type: apiData.material?.type || apiData.material?.usage || apiData.material?.usage_type || '',
-                                                        status: apiData.material?.status || 'published',
-                                                        assigned_week_display: apiData.material?.assigned_week_display || apiData.material?.assigned_week || apiData.material?.week || null,
-                                                        source_type: attachData.material?.source_type || apiData.material?.source_type || (window._pendingSharedMaterialOrigin ? 'shared' : 'personal')
-                                                    };
-                                                    const existing = findCourseMaterial(course, mid) || findCourseMaterial(course, attachedMaterial.id) || (course.materials.find(item => String(item.title || '').trim().toLowerCase() === String(attachedMaterial.title || '').trim().toLowerCase()) && attachedMaterial);
-                                                    if (!existing) {
-                                                        course.materials.push(attachedMaterial);
-                                                    }
-                                                }
-                                            } catch (e) { console.warn('Failed to update local course cache after attach', e); }
-                                        } else {
-                                            console.warn('Failed to attach material to course', attachData.error || attachResp.status);
-                                        }
-                                    }
-                                    try { await refreshCourseCardsFromServer(); } catch (e) { /* ignore */ }
-                                    try { await refreshOpenCourseAfterAssessmentChange({ courseId: window.courseAttachTarget, classCode: currentClassCode }); } catch (e) { console.warn('Could not refresh course after material attach', e); }
+                                // Capture values now — the modal reset clears `window.courseAttachTarget` synchronously,
+                                // so stash the course id, CSRF token and created ids for the deferred task.
+                                const _attachCourseId = Number(window.courseAttachTarget);
+                                const _attachCsrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                                const _createdIdsSnapshot = Array.isArray(createdIds) ? createdIds.slice() : [];
 
-                                    const cModal = document.getElementById('courseDetailModal');
-                                    if (cModal && cModal.classList.contains('show')) {
-                                        try {
-                                            await openCourseDetail(window.courseAttachTarget);
-                                        } catch (e) { console.warn('Could not refresh course modal after attach', e); }
+                                setTimeout(async () => {
+                                    try {
+                                        const course = (teacherCourses || []).find(c => Number(c.id) === _attachCourseId);
+                                        for (const mid of _createdIdsSnapshot) {
+                                            const attachResp = await fetch('/dashboard/teacher/course/add-material/', {
+                                                method: 'POST',
+                                                credentials: 'same-origin',
+                                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _attachCsrf },
+                                                body: JSON.stringify({ course_id: _attachCourseId, material_id: Number(mid) })
+                                            });
+                                            let attachData = {};
+                                            try { attachData = await attachResp.json(); } catch (e) { /* ignore */ }
+                                            if (attachResp.ok && attachData.success) {
+                                                try {
+                                                    if (course) {
+                                                        course.materials = course.materials || [];
+                                                        const attachedMaterial = apiData.material || {
+                                                            id: mid,
+                                                            title: (apiData.material && apiData.material.title) || title,
+                                                            item_type: attachData.material?.item_type || apiData.material?.item_type || '',
+                                                            type: apiData.material?.type || apiData.material?.usage || apiData.material?.usage_type || '',
+                                                            status: apiData.material?.status || 'published',
+                                                            assigned_week_display: apiData.material?.assigned_week_display || apiData.material?.assigned_week || apiData.material?.week || null,
+                                                            source_type: attachData.material?.source_type || apiData.material?.source_type || (window._pendingSharedMaterialOrigin ? 'shared' : 'personal')
+                                                        };
+                                                        const existing = findCourseMaterial(course, mid) || findCourseMaterial(course, attachedMaterial.id) || (course.materials.find(item => String(item.title || '').trim().toLowerCase() === String(attachedMaterial.title || '').trim().toLowerCase()) && attachedMaterial);
+                                                        if (!existing) {
+                                                            course.materials.push(attachedMaterial);
+                                                        }
+                                                    }
+                                                } catch (e) { console.warn('Failed to update local course cache after attach', e); }
+                                            } else {
+                                                console.warn('Failed to attach material to course', attachData.error || attachResp.status);
+                                            }
+                                        }
+                                        try { await refreshCourseCardsFromServer(); } catch (e) { /* ignore */ }
+                                        try { await refreshOpenCourseAfterAssessmentChange({ courseId: _attachCourseId, classCode: currentClassCode }); } catch (e) { console.warn('Could not refresh course after material attach', e); }
+
+                                        const cModal = document.getElementById('courseDetailModal');
+                                        if (cModal && cModal.classList.contains('show')) {
+                                            try {
+                                                await openCourseDetail(_attachCourseId);
+                                            } catch (e) { console.warn('Could not refresh course modal after attach', e); }
+                                        }
+                                    } catch (e) {
+                                        console.warn('Course attach step failed', e);
+                                    } finally {
+                                        window.courseAttachTarget = null;
+                                        window._pendingSharedMaterialOrigin = false;
+                                        window._pendingSharedMaterialSourceId = null;
                                     }
-                                } catch (e) {
-                                    console.warn('Course attach step failed', e);
-                                } finally {
-                                    window.courseAttachTarget = null;
-                                    window._pendingSharedMaterialOrigin = false;
-                                    window._pendingSharedMaterialSourceId = null;
-                                }
+                                }, 0);
                             }
 
                             // ── Step 4: Reset form ────────────────────────────────
@@ -15044,29 +15039,27 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 console.warn('Could not dispatch pabasa:materials-updated', e);
                             }
 
-                            // Also proactively refresh authoritative teacher overview
-                            // and persist it to localStorage so other tabs reliably
-                            // receive the `storage` event and update their UI.
-                            try {
-                                if (typeof refreshTeacherData === 'function') {
-                                    await refreshTeacherData();
-                                } else {
-                                    // Fallback: fetch overview and write to localStorage
-                                    try {
-                                        const r2 = await fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                                        if (r2.ok) {
-                                            const overview2 = await r2.json();
-                                            if (overview2) {
-                                                const overviewKey = 'pabasa_teacher_overview_stats';
-                                                const existing = JSON.parse(localStorage.getItem(overviewKey) || '{}');
-                                                localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existing, overview2)));
-                                            }
-                                        }
-                                    } catch (err2) { /* ignore fallback errors */ }
+                            // Defer the teacher overview refresh until after the create flow has completed.
+                            setTimeout(() => {
+                                try {
+                                    if (typeof refreshTeacherData === 'function') {
+                                        refreshTeacherData().catch(() => {});
+                                    } else {
+                                        fetch('/dashboard/teacher/overview/', { method: 'GET', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                                            .then(r2 => r2.ok ? r2.json() : null)
+                                            .then(overview2 => {
+                                                if (overview2) {
+                                                    const overviewKey = 'pabasa_teacher_overview_stats';
+                                                    const existing = JSON.parse(localStorage.getItem(overviewKey) || '{}');
+                                                    localStorage.setItem(overviewKey, JSON.stringify(Object.assign({}, existing, overview2)));
+                                                }
+                                            })
+                                            .catch(() => {});
+                                    }
+                                } catch (err) {
+                                    console.warn('Could not refresh teacher overview after add', err);
                                 }
-                            } catch (err) {
-                                console.warn('Could not refresh teacher overview after add', err);
-                            }
+                            }, 0);
 
                             // Ensure any "No materials yet" placeholders are removed
                             // from known containers so the new material appears immediately.
