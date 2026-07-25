@@ -121,6 +121,23 @@
         let liveSessionEnded = false;
         let liveSessionHeartbeatTimer = null;
         let liveSessionLastHeartbeatAt = 0;
+
+        function traceEndSession(event, details = {}) {
+            try {
+                console.log('[END_SESSION_TRACE][student-reader]', {
+                    event,
+                    liveSessionId,
+                    liveSessionEnded,
+                    liveSessionPaused,
+                    isRecording,
+                    recognitionActive,
+                    currentIndex,
+                    at: new Date().toISOString(),
+                    ...details,
+                });
+            } catch (error) {}
+        }
+
         let audioContext = null;
         let audioAnalyser = null;
         let audioMeterFrame = null;
@@ -1138,6 +1155,12 @@
         }
 
         function showCompletion(isFullCompletion) {
+            traceEndSession('showCompletion.enter', {
+                isFullCompletion,
+                completionSubmitted,
+                isReviewMode,
+                materialId,
+            });
             stopReadAloud();
             stopSpeechRecognition();
             shell.classList.add("is-complete");
@@ -1166,8 +1189,16 @@
             }
 
             // Skip side effects for review mode or partial progress
-            if (isReviewMode || !isFullCompletion || completionSubmitted) return;
+            if (isReviewMode || !isFullCompletion || completionSubmitted) {
+                traceEndSession('showCompletion.skipSideEffects', {
+                    isReviewMode,
+                    isFullCompletion,
+                    completionSubmitted,
+                });
+                return;
+            }
             completionSubmitted = true;
+            traceEndSession('showCompletion.sideEffectsStart');
 
             if (isRetakeMode && materialId) {
                 const retakeCounts = JSON.parse(localStorage.getItem('pabasa_retake_counts') || '{}');
@@ -1330,6 +1361,10 @@
                 if (isCurrentLiveAssessment()) {
                     const completionElapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
                     const finalScore = completionSnapshot?.final_score ?? completionSnapshot?.total_score ?? latestScores?.final_score ?? latestScores?.total_score ?? null;
+                    traceEndSession('showCompletion.publishCompletedBeforeRecord', {
+                        finalScore,
+                        payload,
+                    });
                     publishLiveSessionState({
                         status: 'completed',
                         items_completed: Math.max(1, items.length),
@@ -1343,13 +1378,20 @@
                     });
                 }
 
+                traceEndSession('showCompletion.recordAssessmentCompletion.request', { payload });
                 completionSavePromise = fetch('/record-assessment-completion/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
                     credentials: 'same-origin',
                     body: JSON.stringify(payload)
                 }).then(async r => {
+                    traceEndSession('showCompletion.recordAssessmentCompletion.responseStatus', { ok: r.ok, status: r.status });
                     const d = await r.json().catch(() => ({}));
+                    traceEndSession('showCompletion.recordAssessmentCompletion.responseBody', {
+                        success: d.success,
+                        error: d.error,
+                        response: d,
+                    });
                     if (!r.ok || !d.success) {
                         throw new Error(d.error || `Completion save failed (${r.status})`);
                     }
@@ -1390,6 +1432,7 @@
                             if (completedScore != null) {
                                 liveScoreUpdate.final_score = Number(completedScore);
                             }
+                            traceEndSession('showCompletion.publishCompletedAfterRecord', { liveScoreUpdate });
                             publishLiveSessionState(liveScoreUpdate);
                         }
                     }
@@ -1426,7 +1469,11 @@
                         }
                     }));
                     return d;
-                }).catch(e => console.error("PABASA: Completion error", e)).finally(() => {
+                }).catch(e => {
+                    traceEndSession('showCompletion.recordAssessmentCompletion.error', { message: String(e.message || e) });
+                    console.error("PABASA: Completion error", e);
+                }).finally(() => {
+                    traceEndSession('showCompletion.recordAssessmentCompletion.finally');
                     setCompletionActionButtonsProcessing(false);
                     setCompletionLoadingState(false);
                 });
@@ -1495,15 +1542,24 @@
         async function fetchLiveSessionState() {
             if (!liveSessionStateUrl) return null;
             try {
+                traceEndSession('fetchLiveSessionState.request');
                 const response = await fetch(liveSessionStateUrl, {
                     cache: 'no-store',
                     credentials: 'same-origin',
                     headers: { Accept: 'application/json' },
                 });
+                traceEndSession('fetchLiveSessionState.responseStatus', { ok: response.ok, status: response.status });
                 if (!response.ok) return null;
                 const payload = await response.json();
+                traceEndSession('fetchLiveSessionState.responseBody', {
+                    success: payload.success,
+                    error: payload.error,
+                    responseStatus: payload.session?.status,
+                    responseStudentStates: payload.session?.student_states || {},
+                });
                 return payload.success ? payload.session : null;
             } catch (error) {
+                traceEndSession('fetchLiveSessionState.error', { message: String(error.message || error) });
                 console.warn('PABASA: Live session state fetch failed', error);
                 return null;
             }
@@ -1513,6 +1569,7 @@
             if (!liveSessionId || !isCurrentLiveAssessment()) return null;
             if (!Object.keys(updateValues).length) return null;
             try {
+                traceEndSession('publishLiveSessionState.enter', { updateValues });
                 const completionSnapshot = calculateScores();
                 const completionMetrics = normalizeCompletionScores(completionSnapshot || {}, {});
                 const elapsedSeconds = Number.isFinite(Number(updateValues.elapsed_seconds))
@@ -1574,6 +1631,10 @@
                     completionPayload.attempt_number = retakeCounts[String(materialId).trim()] || 1;
                 }
                 if (assistToken) completionPayload.assist_token = assistToken;
+                traceEndSession('publishLiveSessionState.request', {
+                    updateValues,
+                    completionPayload,
+                });
                 const response = await fetch(`/api/live-assessment/session/${liveSessionId}/student-update/`, {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -1587,10 +1648,18 @@
                         completion_payload: completionPayload,
                     }),
                 });
+                traceEndSession('publishLiveSessionState.responseStatus', { ok: response.ok, status: response.status });
                 if (!response.ok) return null;
                 const payload = await response.json();
+                traceEndSession('publishLiveSessionState.responseBody', {
+                    success: payload.success,
+                    error: payload.error,
+                    responseStatus: payload.session?.status,
+                    responseStudentStates: payload.session?.student_states || {},
+                });
                 return payload.success ? payload.session : null;
             } catch (error) {
+                traceEndSession('publishLiveSessionState.error', { message: String(error.message || error) });
                 console.warn('PABASA: Live session state update failed', error);
                 return null;
             }
@@ -1666,6 +1735,7 @@
         }
 
         function showLiveSessionEnded() {
+            traceEndSession('showLiveSessionEnded.enter');
             liveSessionPaused = true;
             if (pauseOverlay) pauseOverlay.classList.remove('d-none');
             if (pauseMenu) pauseMenu.classList.remove('d-none');
@@ -1698,6 +1768,10 @@
 
         async function handleLiveSessionState(state) {
             if (!state || !state.status) return;
+            traceEndSession('handleLiveSessionState.enter', {
+                responseStatus: state.status,
+                responseStudentStates: state.student_states || {},
+            });
             if (state.status === 'paused') {
                 if (!liveSessionPaused) {
                     liveSessionPaused = true;
@@ -1717,6 +1791,9 @@
             if (state.status === 'ended' || state.status === 'completed') {
                 if (!liveSessionEnded) {
                     liveSessionEnded = true;
+                    traceEndSession('handleLiveSessionState.endedFirstSeen', {
+                        hasActiveReadingAttempt: hasActiveReadingAttempt(),
+                    });
                     if (hasActiveReadingAttempt()) {
                         showCompletion(true);
                     } else {

@@ -43,7 +43,6 @@ document.addEventListener("DOMContentLoaded", function () {
          * Reflects the current enrollment status from localStorage.
          */
     function updateClassStatusUI() {
-        console.log("UPDATE CLASS STATUS RUNNING");
         const classStatusTitle = document.getElementById("classStatusTitle");
         const classStatusText = document.getElementById("classStatusText");
 

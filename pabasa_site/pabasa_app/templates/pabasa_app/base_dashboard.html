@@ -2624,6 +2624,74 @@
             return div.innerHTML;
         }
 
+        function renderMissedAssessmentModalContent(notifications) {
+            const noticeItems = Array.isArray(notifications) ? notifications : [notifications].filter(Boolean);
+            const titles = noticeItems.flatMap(notification => {
+                const message = notification?.message || '';
+                const found = Array.from(message.matchAll(/📖\s*([^\n]+)/g), match => match[1].trim()).filter(Boolean);
+                return found.length ? found : [notification?.title || 'Reading Activity'];
+            }).filter(Boolean);
+            const titleList = titles.length ? titles : ['Reading Activity'];
+            const heading = titleList.length > 1
+                ? '😔 Oops! You Missed Some Reading Activities'
+                : '😔 Oops! You Missed a Reading Activity';
+            const intro = titleList.length > 1
+                ? 'You missed these reading activities:'
+                : 'You missed this reading activity:';
+            const closing = titleList.length > 1
+                ? 'Please tell your teacher if you still need to do these readings.'
+                : "Please tell your teacher if you still need to do today's reading.";
+            const itemHtml = titleList.map(title => `<li class="mb-2">📖 ${escapeNotificationHtml(title)}</li>`).join('');
+            return `
+                <div class="modal fade" id="missedAssessmentModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem;">
+                            <div class="modal-header border-0 pb-0">
+                                <div>
+                                    <h5 class="modal-title fw-bold mb-1">${escapeNotificationHtml(heading)}</h5>
+                                    <p class="text-muted small mb-0">Your teacher already ended the live assessment.</p>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body pt-2">
+                                <div class="p-3 rounded-4 mb-3" style="background: linear-gradient(135deg, #fff8d9, #fff);">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="fs-2">😔</div>
+                                        <div>
+                                            <p class="mb-2">${escapeNotificationHtml(intro)}</p>
+                                            <ul class="mb-0 ps-3">${itemHtml}</ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="mb-0">${escapeNotificationHtml(closing)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function showMissedAssessmentNotification(notifications) {
+            const noticeItems = Array.isArray(notifications) ? notifications : [notifications].filter(Boolean);
+            if (!noticeItems.length) return false;
+            const key = `pabasa_seen_missed_assessment_${noticeItems.map(n => n.id).join('_')}`;
+            if (window.sessionStorage.getItem(key)) return true;
+            window.sessionStorage.setItem(key, '1');
+
+            const existing = document.getElementById('missedAssessmentModal');
+            if (existing) existing.remove();
+            document.body.insertAdjacentHTML('beforeend', renderMissedAssessmentModalContent(noticeItems));
+            const modalEl = document.getElementById('missedAssessmentModal');
+            if (!modalEl || !window.bootstrap) return false;
+            const modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                noticeItems.forEach(notification => markNotificationRead(notification.id));
+                modalEl.remove();
+            }, { once: true });
+            modal.show();
+            return true;
+        }
+
         let liveAssessmentWatchTimer = null;
         let liveAssessmentWatchBusy = false;
 
@@ -2727,6 +2795,18 @@
             return false;
         }
 
+        async function handleMissedAssessmentNotification(notifications) {
+            const items = (Array.isArray(notifications) ? notifications : [notifications]).filter(notification => notification && !notification.is_read);
+            if (!items.length) return false;
+            const missedItems = items.filter(notification => {
+                const title = String(notification.title || '').toLowerCase();
+                const message = String(notification.message || '').toLowerCase();
+                return title.includes('missed a reading activity') || title.includes('missed some reading activities') || message.includes('you missed this reading activity') || message.includes('you missed these reading activities');
+            });
+            if (!missedItems.length) return false;
+            return showMissedAssessmentNotification(missedItems);
+        }
+
         async function checkForLiveAssessmentNotification() {
             if (window.PABASA_USER_ROLE !== 'student' || liveAssessmentWatchBusy) return false;
             const pabasaCurrentUserId = window.localStorage.getItem('pabasaCurrentUserId') || '';
@@ -2747,6 +2827,14 @@
                 });
                 if (liveNotification && !liveNotification.is_read) {
                     return handleLiveAssessmentNotification(liveNotification);
+                }
+                const missedNotifications = notifications.filter(n => {
+                    const title = String(n.title || '').toLowerCase();
+                    const message = String(n.message || '').toLowerCase();
+                    return title.includes('missed a reading activity') || title.includes('missed some reading activities') || message.includes('you missed this reading activity') || message.includes('you missed these reading activities');
+                });
+                if (missedNotifications.length) {
+                    return handleMissedAssessmentNotification(missedNotifications);
                 }
                 return false;
             } catch (error) {
@@ -2815,6 +2903,17 @@
                 if (liveNotification && !liveNotification.is_read) {
                     const handled = await handleLiveAssessmentNotification(liveNotification);
                     if (handled) {
+                        return;
+                    }
+                }
+                const missedNotifications = notifications.filter(n => {
+                    const title = String(n.title || '').toLowerCase();
+                    const message = String(n.message || '').toLowerCase();
+                    return title.includes('missed a reading activity') || title.includes('missed some reading activities') || message.includes('you missed this reading activity') || message.includes('you missed these reading activities');
+                });
+                if (missedNotifications.length) {
+                    const handledMissed = await handleMissedAssessmentNotification(missedNotifications);
+                    if (handledMissed) {
                         return;
                     }
                 }

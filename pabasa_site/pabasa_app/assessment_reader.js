@@ -1,6 +1,4 @@
 (function () {
-    console.log("PABASA: Assessment Reader script loaded.");
-
     const initReader = () => {
         const shell = document.querySelector(".reader-shell");
         if (!shell) return;
@@ -166,8 +164,6 @@
                         is_retake: viewMode === 'retake',
                         attempt_number: count
                     })
-                }).then(r => r.json()).then(d => {
-                    if (d.success) console.log("PABASA: Completion notified.");
                 }).catch(e => console.error("PABASA: Completion error", e));
             }
         }
@@ -178,7 +174,6 @@
             btnStartReading?.classList.add("d-none");
             btnStopReading?.classList.remove("d-none");
             updateUI();
-            console.log("PABASA: Assessment recording and timer started.");
         };
 
         const stopReading = () => {

@@ -4985,6 +4985,23 @@ LIVE_ASSESSMENT_ACTIVE_STATUSES = ['waiting', 'countdown', 'started', 'paused']
 LIVE_ASSESSMENT_STALE_HOURS = 24
 
 
+def _live_end_trace_state_counts(session):
+    counts = {}
+    states = getattr(session, 'student_states', None) or {}
+    if isinstance(states, dict):
+        for state in states.values():
+            if not isinstance(state, dict):
+                status = 'invalid'
+            else:
+                status = str(state.get('status') or 'missing')
+            counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def _trace_live_end_flow(event, session=None, **details):
+    return None
+
+
 def _append_live_session_activity(session, message):
     try:
         log = session.activity_log or []
@@ -5073,6 +5090,16 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
     data = dict(data or {})
     if live_session and not data.get('live_session_id'):
         data['live_session_id'] = live_session.id
+    if live_session or data.get('live_session_id'):
+        _trace_live_end_flow(
+            'complete_assessment_enter',
+            live_session,
+            student_id=getattr(student_user, 'id', None),
+            data_status=data.get('status'),
+            material_id=data.get('material_id'),
+            has_scores=isinstance(data.get('scores'), dict),
+            has_completion_payload=isinstance(data.get('completion_payload'), dict),
+        )
 
     assessment_id = data.get('assessment_id')
     material_id = data.get('material_id')
@@ -5148,6 +5175,14 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             practice_obj = None
 
     if not assessment and not material and not practice_obj:
+        if live_session or data.get('live_session_id'):
+            _trace_live_end_flow(
+                'complete_assessment_no_target',
+                live_session,
+                student_id=getattr(student_user, 'id', None),
+                material_id=material_id,
+                assessment_id=assessment_id,
+            )
         return JsonResponse({'success': False, 'error': 'No assessment_id or material_id provided.'}, status=400)
 
     class_code = data.get('class_code')
@@ -5234,8 +5269,24 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
         if not is_practice:
             _update_student_reading_profile(student_user, score_payload)
+        if live_session or data.get('live_session_id'):
+            _trace_live_end_flow(
+                'complete_assessment_persisted',
+                live_session,
+                student_id=getattr(student_user, 'id', None),
+                completed_result_id=getattr(completed_result_row, 'id', None),
+                final_score=score_payload.get('final_score'),
+                total_score=score_payload.get('total_score'),
+            )
     except Exception as e:
         logger.exception('Failed to persist assessment/practice attempt: %s', e)
+        if live_session or data.get('live_session_id'):
+            _trace_live_end_flow(
+                'complete_assessment_persist_failed',
+                live_session,
+                student_id=getattr(student_user, 'id', None),
+                error=str(e),
+            )
 
     if live_session is None and data.get('live_session_id'):
         try:
@@ -5305,10 +5356,28 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
                 if data.get('completion_payload') is not None:
                     state_update['completion_payload'] = data.get('completion_payload')
 
+                _trace_live_end_flow(
+                    'complete_assessment_live_state_sync_before',
+                    live_session,
+                    student_id=getattr(student_user, 'id', None),
+                    state_update=state_update,
+                )
                 _update_live_student_state(live_session, student_user.id, state_update)
                 live_session.save(update_fields=['student_states', 'updated_at'])
+                _trace_live_end_flow(
+                    'complete_assessment_live_state_sync_after',
+                    live_session,
+                    student_id=getattr(student_user, 'id', None),
+                    student_state=(live_session.student_states or {}).get(str(student_user.id), {}),
+                )
         except Exception:
             logger.exception('Failed to sync completion score into live assessment session %s', data.get('live_session_id'))
+            _trace_live_end_flow(
+                'complete_assessment_live_state_sync_failed',
+                live_session,
+                student_id=getattr(student_user, 'id', None),
+                live_session_id=data.get('live_session_id'),
+            )
 
     student_name = f"{student_user.first_name} {student_user.last_name}".strip() or student_user.custom_id
     class_name = _resolve_assessment_class_name(assessment=assessment, material=material, class_code=class_code)
@@ -5474,12 +5543,19 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
 
 
 def _end_live_assessment_session(session, activity_message=None, ended_at=None):
-    if not session or session.status == 'ended':
+    if not session:
         return session
 
     ended_at = ended_at or timezone.now()
-    session.status = 'ended'
-    session.ends_at = ended_at
+    was_already_ended = session.status == 'ended'
+    _trace_live_end_flow(
+        'end_session_enter',
+        session,
+        was_already_ended=was_already_ended,
+        activity_message=activity_message,
+    )
+    if not session.ends_at:
+        session.ends_at = ended_at
 
     states = session.student_states or {}
     if isinstance(states, dict):
@@ -5491,29 +5567,21 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 states[student_key] = student_state
                 continue
 
+            status_value = str(student_state.get('status', '')).lower()
             student_id = None
             try:
                 student_id = int(student_key)
             except (TypeError, ValueError):
                 student_id = None
-            if student_id is None:
-                continue
 
-            student_user = User.objects.filter(id=student_id, role='student', is_archived=False).first()
-            status_value = str(student_state.get('status', '')).lower()
+            student_user = User.objects.filter(id=student_id, role='student', is_archived=False).first() if student_id else None
             has_active_attempt = status_value in {'reading', 'started', 'in_progress', 'paused'} or (
                 (student_state.get('elapsed_seconds') or 0) > 0
                 or (student_state.get('items_completed') or 0) > 0
                 or (student_state.get('progress') not in (None, '', 0, False))
             )
 
-            if not student_user:
-                student_state['status'] = 'ended'
-                student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
-                states[student_key] = student_state
-                continue
-
-            if has_active_attempt:
+            if has_active_attempt and student_user:
                 payload = _build_live_session_completion_payload(session, student_user, student_state)
                 payload.setdefault('scores', {})
                 payload['scores'].setdefault('duration_seconds', student_state.get('elapsed_seconds') or 0)
@@ -5540,18 +5608,86 @@ def _end_live_assessment_session(session, activity_message=None, ended_at=None):
                 if student_state.get('items_total') is None:
                     student_state['items_total'] = payload.get('scores', {}).get('items_total') or (student_state.get('items_total') or 0)
             else:
-                student_state['status'] = 'ended'
-                student_state['connection_status'] = student_state.get('connection_status', 'disconnected')
-                student_state['final_score'] = student_state.get('final_score')
-                student_state['progress'] = student_state.get('progress', 0)
+                student_state['status'] = 'missed'
+                student_state['connection_status'] = 'disconnected'
+                student_state['final_score'] = None
+                student_state['progress'] = 0
+                student_state['accuracy'] = None
+                student_state['reading_time'] = None
+                student_state['items_completed'] = 0
+                student_state['items_total'] = student_state.get('items_total') or 0
+
+                if student_user:
+                    existing_title = '😔 Oops! You Missed a Reading Activity'
+                    existing_message = (
+                        f"You missed this reading activity:\n\n📖 {session.material.title or 'Reading Activity'}\n\n"
+                        "The reading activity is already over.\n\n"
+                        "Please tell your teacher if you still need to do today's reading."
+                    )
+                    try:
+                        Notification.objects.get_or_create(
+                            recipient=student_user,
+                            created_by=session.teacher,
+                            title=existing_title,
+                            message=existing_message,
+                            notification_type='assessment',
+                            action_url=reverse('dashboard'),
+                        )
+                    except Exception:
+                        logger.exception('Failed to create missed-assessment notification for student %s', student_user.id)
             states[student_key] = student_state
 
         session.student_states = states
 
-    if not activity_message:
-        activity_message = 'Live assessment session ended.'
-    _append_live_session_activity(session, activity_message)
+    session.status = 'ended'
+    if not was_already_ended:
+        if not activity_message:
+            activity_message = 'Live assessment session ended.'
+        _append_live_session_activity(session, activity_message)
     session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at', 'ends_at'])
+
+    if session.teacher and session.teacher.email and not was_already_ended:
+        try:
+            missed_students = []
+            completed_students = []
+            for sid in session.student_ids or []:
+                student_user = User.objects.filter(id=sid).first()
+                if not student_user:
+                    continue
+                student_state = (session.student_states or {}).get(str(sid), {}) if isinstance(session.student_states, dict) else {}
+                if str(student_state.get('status') or '').lower() == 'missed':
+                    missed_students.append(student_user)
+                else:
+                    completed_students.append(student_user)
+
+            session_time = timezone.localtime(ended_at)
+            body_lines = [
+                f"Assessment title: {session.material.title or 'Reading Activity'}",
+                f"Date and time: {session_time.strftime('%B %d, %Y %I:%M %p')}",
+                f"Total selected students: {len(session.student_ids or [])}",
+                f"Completed: {len(completed_students)}",
+                f"Missed: {len(missed_students)}",
+                "",
+                "Completed",
+            ]
+            body_lines.extend([
+                f"- {student.first_name} {student.last_name}".strip()
+                for student in completed_students
+            ] or ['- None'])
+            body_lines.extend(["", "Missed"])
+            body_lines.extend([
+                f"- {student.first_name} {student.last_name}".strip()
+                for student in missed_students
+            ] or ['- None'])
+            send_mail(
+                f"Live Assessment Summary: {session.material.title or 'Reading Activity'}",
+                "\n".join(body_lines),
+                getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+                [session.teacher.email],
+                fail_silently=True,
+            )
+        except Exception:
+            logger.exception('Failed to send live assessment summary email for session %s', session.id)
     return session
 
 
@@ -5573,9 +5709,11 @@ def _end_active_live_assessment_sessions_for_teacher(teacher_user):
 def _advance_live_assessment_state(session):
     if session.status == 'countdown' and session.start_at:
         if timezone.now() >= session.start_at:
+            _trace_live_end_flow('advance_state_countdown_to_started_before', session)
             session.status = 'started'
             _append_live_session_activity(session, 'Live assessment countdown completed and session is now active.')
             session.save(update_fields=['status', 'activity_log', 'updated_at'])
+            _trace_live_end_flow('advance_state_countdown_to_started_after', session)
     return session
 
 
@@ -5584,9 +5722,11 @@ def _maybe_auto_end_live_session(session):
         now = timezone.now()
         if session.timing_mode == 'duration' and session.duration_seconds and session.start_at:
             if session.start_at + timedelta(seconds=session.duration_seconds) <= now:
+                _trace_live_end_flow('auto_end_duration_triggered', session)
                 return _end_live_assessment_session(session, 'Live assessment session duration expired and session ended automatically.', ended_at=now)
 
     if session.status in ['waiting', 'countdown', 'paused'] and _is_live_assessment_session_stale(session):
+        _trace_live_end_flow('auto_end_stale_triggered', session)
         return _end_live_assessment_session(session, 'Live assessment session was stale and ended automatically.')
 
     return session
@@ -5612,10 +5752,24 @@ def _update_live_student_state(session, student_id, state_values):
         states = {}
     student_key = str(student_id)
     student_record = states.get(student_key, {}) if isinstance(states.get(student_key, {}), dict) else {}
+    before_record = dict(student_record)
+    _trace_live_end_flow(
+        'update_student_state_before',
+        session,
+        student_id=student_id,
+        before_state=before_record,
+        incoming_state=state_values or {},
+    )
     student_record.update(state_values or {})
     student_record['updated_at'] = timezone.now().isoformat()
     states[student_key] = student_record
     session.student_states = states
+    _trace_live_end_flow(
+        'update_student_state_after',
+        session,
+        student_id=student_id,
+        after_state=student_record,
+    )
     return student_record
 
 
@@ -5623,9 +5777,11 @@ def _ensure_live_session_student_states(session, student_ids):
     states = session.student_states or {}
     if not isinstance(states, dict):
         states = {}
+    _trace_live_end_flow('ensure_student_states_enter', session, student_ids=list(student_ids or []))
     for student_id in student_ids or []:
         student_key = str(student_id)
         student_state = states.get(student_key, {}) if isinstance(states.get(student_key, {}), dict) else {}
+        before_state = dict(student_state)
         student_state.update({
             'status': student_state.get('status', 'waiting'),
             'connection_status': student_state.get('connection_status', 'waiting'),
@@ -5635,7 +5791,15 @@ def _ensure_live_session_student_states(session, student_ids):
             'final_score': student_state.get('final_score'),
         })
         states[student_key] = student_state
+        _trace_live_end_flow(
+            'ensure_student_state_item',
+            session,
+            student_id=student_id,
+            before_state=before_state,
+            after_state=student_state,
+        )
     session.student_states = states
+    _trace_live_end_flow('ensure_student_states_exit', session)
     return states
 
 
@@ -6047,6 +6211,13 @@ def live_assessment_session_state(request, session_id):
     if not session:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
 
+    _trace_live_end_flow(
+        'state_endpoint_enter',
+        session,
+        method=request.method,
+        user_id=request.session.get('user_id'),
+        user_role=request.session.get('user_role'),
+    )
     _maybe_auto_end_live_session(session)
 
     if not _check_auth(request):
@@ -6065,6 +6236,13 @@ def live_assessment_session_state(request, session_id):
 
     _advance_live_assessment_state(session)
     _maybe_auto_end_live_session(session)
+    _trace_live_end_flow(
+        'state_endpoint_before_response',
+        session,
+        user_id=user_id,
+        user_role=user_role,
+        remaining_seconds=_get_live_session_remaining_seconds(session),
+    )
 
     reader_url = ''
     if user_role == 'student' and session.start_at:
@@ -6141,6 +6319,12 @@ def live_assessment_student_state_update(request, session_id):
     if not session:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
 
+    _trace_live_end_flow(
+        'student_update_enter',
+        session,
+        user_id=user_id,
+        user_role=user_role,
+    )
     _maybe_auto_end_live_session(session)
 
     if user_role != 'student' or not user_id:
@@ -6154,6 +6338,13 @@ def live_assessment_student_state_update(request, session_id):
         data = json.loads(request.body or '{}')
     except json.JSONDecodeError:
         data = {}
+    _trace_live_end_flow(
+        'student_update_payload',
+        session,
+        user_id=user_id,
+        payload_status=data.get('status') if isinstance(data, dict) else None,
+        payload_keys=sorted(list(data.keys())) if isinstance(data, dict) else [],
+    )
 
     state_values = {}
     if isinstance(data, dict):
@@ -6204,6 +6395,12 @@ def live_assessment_student_state_update(request, session_id):
 
     _update_live_student_state(session, user_id, state_values)
     session.save(update_fields=['student_states', 'updated_at'])
+    _trace_live_end_flow(
+        'student_update_saved',
+        session,
+        user_id=user_id,
+        saved_state=(session.student_states or {}).get(str(user_id), {}),
+    )
 
     return JsonResponse({'success': True, 'session': {
         'id': session.id,
@@ -6224,6 +6421,13 @@ def live_assessment_session_action(request, session_id):
     if not session:
         return JsonResponse({'success': False, 'error': 'Session not found'}, status=404)
 
+    _trace_live_end_flow(
+        'action_endpoint_enter',
+        session,
+        method=request.method,
+        user_id=user_id,
+        user_role=user_role,
+    )
     _maybe_auto_end_live_session(session)
 
     if user_role not in ['teacher', 'admin'] or user_id != session.teacher_id:
@@ -6235,6 +6439,14 @@ def live_assessment_session_action(request, session_id):
         data = {}
 
     action = (data.get('action') or '').strip().lower()
+    _trace_live_end_flow(
+        'action_endpoint_payload',
+        session,
+        user_id=user_id,
+        user_role=user_role,
+        action=action,
+        payload_keys=sorted(list(data.keys())) if isinstance(data, dict) else [],
+    )
     selected_student_ids = data.get('selected_student_ids') if isinstance(data.get('selected_student_ids'), list) else None
     countdown_seconds = data.get('countdown_seconds')
     timing_mode = (data.get('timing_mode') or session.timing_mode or 'none').strip().lower()
@@ -6294,6 +6506,7 @@ def live_assessment_session_action(request, session_id):
         if session.student_count <= 0:
             return JsonResponse({'success': False, 'error': 'No students selected for the live session'}, status=400)
 
+        _trace_live_end_flow('action_start_before_status_change', session, user_id=user_id)
         session.start_at = timezone.now() + timedelta(seconds=session.countdown_seconds or 0)
         if session.countdown_seconds and session.countdown_seconds > 0:
             session.status = 'countdown'
@@ -6305,6 +6518,7 @@ def live_assessment_session_action(request, session_id):
         _ensure_live_session_student_states(session, session.student_ids)
         _append_live_session_activity(session, activity_message)
         session.save(update_fields=['status', 'start_at', 'countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_states', 'student_count', 'activity_log', 'updated_at'])
+        _trace_live_end_flow('action_start_after_save', session, user_id=user_id)
 
         try:
             waiting_url = _build_live_assessment_waiting_url(session.id)
@@ -6332,6 +6546,7 @@ def live_assessment_session_action(request, session_id):
     elif action == 'pause':
         if session.status != 'started':
             return JsonResponse({'success': False, 'error': 'Only an active session can be paused'}, status=400)
+        _trace_live_end_flow('action_pause_before_status_change', session, user_id=user_id)
         session.status = 'paused'
         states = session.student_states or {}
         for student_key, student_state in states.items():
@@ -6342,9 +6557,11 @@ def live_assessment_session_action(request, session_id):
         session.student_states = states
         _append_live_session_activity(session, 'Teacher paused the live session.')
         session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+        _trace_live_end_flow('action_pause_after_save', session, user_id=user_id)
     elif action == 'resume':
         if session.status != 'paused':
             return JsonResponse({'success': False, 'error': 'Only a paused session can be resumed'}, status=400)
+        _trace_live_end_flow('action_resume_before_status_change', session, user_id=user_id)
         session.status = 'started'
         states = session.student_states or {}
         for student_key, student_state in states.items():
@@ -6354,10 +6571,16 @@ def live_assessment_session_action(request, session_id):
         session.student_states = states
         _append_live_session_activity(session, 'Teacher resumed the live session.')
         session.save(update_fields=['status', 'student_states', 'activity_log', 'updated_at'])
+        _trace_live_end_flow('action_resume_after_save', session, user_id=user_id)
     elif action == 'end':
-        if session.status == 'ended':
-            return JsonResponse({'success': False, 'error': 'Session already ended'}, status=400)
-        session = _end_live_assessment_session(session, 'Teacher ended the live session.')
+        _trace_live_end_flow('action_end_before_finalize', session, user_id=user_id, user_role=user_role)
+        try:
+            session = _end_live_assessment_session(session, 'Teacher ended the live session.')
+        except Exception:
+            logger.exception('Failed to finalize live assessment session %s', session.id)
+            _trace_live_end_flow('action_end_finalize_failed', session, user_id=user_id, user_role=user_role)
+            return JsonResponse({'success': False, 'error': 'Unable to finalize all live assessment participants'}, status=500)
+        _trace_live_end_flow('action_end_after_finalize', session, user_id=user_id, user_role=user_role)
     elif action == 'save_settings':
         if session.status != 'waiting':
             return JsonResponse({'success': False, 'error': 'Settings can only be updated before the session starts'}, status=400)
@@ -6386,6 +6609,7 @@ def live_assessment_session_action(request, session_id):
         _ensure_live_session_student_states(session, valid_student_ids)
         _append_live_session_activity(session, 'Teacher saved session configuration and invited students to the waiting room.')
         session.save(update_fields=['countdown_seconds', 'timing_mode', 'duration_seconds', 'ends_at', 'student_ids', 'student_count', 'student_states', 'updated_at', 'activity_log'])
+        _trace_live_end_flow('action_save_settings_after_save', session, user_id=user_id, valid_student_ids=valid_student_ids)
 
         try:
             waiting_url = _build_live_assessment_waiting_url(session.id)
@@ -6422,6 +6646,13 @@ def live_assessment_session_action(request, session_id):
             session.countdown_seconds,
         )
 
+    _trace_live_end_flow(
+        'action_endpoint_before_response',
+        session,
+        user_id=user_id,
+        user_role=user_role,
+        action=action,
+    )
     return JsonResponse({
         'success': True,
         'session': {
@@ -7111,11 +7342,6 @@ def send_parent_email(request):
 
         if not recipient or (not message and not html_message):
             return JsonResponse({'success': False, 'error': 'Missing recipient or message content'})
-
-        # Debugging SSL context and Environment
-        logger.debug(f"PABASA SMTP: Attempting send to {recipient}")
-        logger.debug(f"PABASA SSL: OpenSSL Version: {ssl.OPENSSL_VERSION}")
-        logger.debug(f"PABASA SSL: Default Verify Paths: {ssl.get_default_verify_paths()}")
 
         # Explicitly use the sender email requested
         sender = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pabasa.tupc@gmail.com')
@@ -11033,6 +11259,16 @@ def record_assessment_completion(request):
     """Handles notification when student completes reading material."""
     try:
         data = json.loads(request.body)
+        _trace_live_end_flow(
+            'record_assessment_completion_enter',
+            None,
+            user_id=request.session.get('user_id'),
+            user_role=request.session.get('user_role'),
+            material_id=data.get('material_id') if isinstance(data, dict) else None,
+            assessment_id=data.get('assessment_id') if isinstance(data, dict) else None,
+            live_session_id=data.get('live_session_id') if isinstance(data, dict) else None,
+            payload_keys=sorted(list(data.keys())) if isinstance(data, dict) else [],
+        )
         assist_context = _resolve_assist_token(data.get('assist_token'))
         if assist_context:
             student_user = assist_context['student']
@@ -11040,8 +11276,21 @@ def record_assessment_completion(request):
             if request.session.get('user_role') != 'student':
                 return JsonResponse({'success': False, 'error': 'Forbidden: insufficient role'}, status=403)
             student_user = User.objects.get(id=request.session.get('user_id'))
-        return _complete_assessment_for_student(student_user, data=data, request=request, assist_context=assist_context)
+        response = _complete_assessment_for_student(student_user, data=data, request=request, assist_context=assist_context)
+        _trace_live_end_flow(
+            'record_assessment_completion_return',
+            None,
+            user_id=getattr(student_user, 'id', None),
+            response_status=getattr(response, 'status_code', None),
+        )
+        return response
     except Exception as e:
+        _trace_live_end_flow(
+            'record_assessment_completion_failed',
+            None,
+            user_id=request.session.get('user_id'),
+            error=str(e),
+        )
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @login_required(role='student')

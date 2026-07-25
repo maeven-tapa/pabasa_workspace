@@ -1415,6 +1415,54 @@ class LiveAssessmentStartTests(TestCase):
         self.assertEqual(session.status, 'ended')
         self.assertIsNotNone(session.ends_at)
 
+    def test_teacher_end_session_action_is_idempotent_on_repeat_click(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={
+                str(self.student.id): {
+                    'status': 'reading',
+                    'progress': 0.5,
+                    'items_completed': 3,
+                    'items_total': 6,
+                    'elapsed_seconds': 12,
+                    'connection_status': 'connected',
+                }
+            },
+        )
+
+        first_response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({"action": "end"}),
+            content_type="application/json",
+        )
+        second_response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({"action": "end"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertTrue(first_response.json()["success"])
+        self.assertTrue(second_response.json()["success"])
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        completed_attempts = Assessment.objects.filter(
+            student=self.student,
+            attempt_status='completed',
+            is_active=True,
+        ).count()
+        self.assertEqual(completed_attempts, 1)
+
     def test_teacher_end_session_finalizes_incomplete_participants(self):
         other_student = User.objects.create(
             custom_id=f"STD-{uuid.uuid4().hex[:8].upper()}",
@@ -1497,6 +1545,49 @@ class LiveAssessmentStartTests(TestCase):
             is_active=True,
         ).count()
         self.assertEqual(completed_attempts, 2)
+
+    def test_teacher_end_session_reconciles_already_ended_incomplete_participants(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='ended',
+            countdown_seconds=0,
+            start_at=timezone.now() - timedelta(seconds=10),
+            ends_at=timezone.now() - timedelta(seconds=1),
+            student_states={
+                str(self.student.id): {
+                    'status': 'reading',
+                    'progress': 0.5,
+                    'items_completed': 3,
+                    'items_total': 6,
+                    'elapsed_seconds': 12,
+                    'connection_status': 'connected',
+                }
+            },
+        )
+
+        response = self.client.post(
+            reverse("live_assessment_session_action", kwargs={"session_id": session.id}),
+            json.dumps({"action": "end"}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, 'ended')
+        self.assertEqual(session.student_states[str(self.student.id)]['status'], 'completed')
+        completed_attempts = Assessment.objects.filter(
+            student=self.student,
+            attempt_status='completed',
+            is_active=True,
+        ).count()
+        self.assertEqual(completed_attempts, 1)
 
     def test_stale_live_assessment_session_auto_ends_on_poll(self):
         session = LiveAssessmentSession.objects.create(

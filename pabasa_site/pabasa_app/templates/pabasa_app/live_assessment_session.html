@@ -1163,7 +1163,9 @@
             if (!r.ok) return null;
             const j = await r.json();
             return j.success ? j.session : null;
-        } catch (e) { console.warn('state fetch', e); return null; }
+        } catch (e) {
+            return null;
+        }
     }
 
     function formatElapsed(seconds) {
@@ -1342,11 +1344,29 @@
         if (startBtn) startBtn.disabled = statusKey !== 'waiting';
         if (pauseBtn) pauseBtn.disabled = statusKey !== 'started';
         if (resumeBtn) resumeBtn.disabled = statusKey !== 'paused';
-        if (endBtn) endBtn.disabled = statusKey === 'ended';
+        if (endBtn) endBtn.disabled = statusKey === 'ended' || statusKey === 'cancelled';
+    }
+
+    function setEndSessionLoading(isLoading) {
+        const endBtn = document.getElementById('endBtn');
+        if (!endBtn) return;
+        if (!endBtn.dataset.originalLabel) {
+            endBtn.dataset.originalLabel = endBtn.textContent.trim();
+        }
+        endBtn.disabled = Boolean(isLoading);
+        endBtn.innerHTML = isLoading
+            ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>Ending Session...</span>'
+            : endBtn.dataset.originalLabel || '⏹ End Session';
+        endBtn.classList.toggle('btn-outline-danger', !isLoading);
+        endBtn.classList.toggle('btn-danger', Boolean(isLoading));
     }
 
     function updateFromState(session) {
         if (!session) return;
+        if (session.status === 'ended' || session.status === 'cancelled') {
+            stopPolling();
+            setEndSessionLoading(false);
+        }
         setText('#headerStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
         setText('#controlStatus', session.status?.charAt(0).toUpperCase() + session.status?.slice(1));
         setText('#lastUpdated', new Date().toLocaleTimeString());
@@ -1445,7 +1465,10 @@
             if (!j.success) throw new Error(j.error || 'Action failed');
             updateFromState(j.session);
             return j.session;
-        } catch (e) { await showAlert('Action failed', String(e.message || e)); return null; }
+        } catch (e) {
+            await showAlert('Action failed', String(e.message || e));
+            return null;
+        }
     }
 
     let settingsSaved = false;
@@ -1485,11 +1508,26 @@
 
     document.getElementById('pauseBtn').addEventListener('click', () => sendAction('pause'));
     document.getElementById('resumeBtn').addEventListener('click', () => sendAction('resume'));
-    document.getElementById('endBtn').addEventListener('click', async () => { const ok = await showConfirm('End session', 'End session for all students?'); if (ok) sendAction('end'); });
+    document.getElementById('endBtn').addEventListener('click', async () => {
+        const ok = await showConfirm('End session', 'End session for all students?');
+        if (ok) {
+            setEndSessionLoading(true);
+            try {
+                const result = await sendAction('end');
+                if (!result) {
+                    setEndSessionLoading(false);
+                }
+            } catch (error) {
+                setEndSessionLoading(false);
+            }
+        }
+    });
     document.getElementById('exitBtnTop').addEventListener('click', async (event) => {
         event.preventDefault();
         const status = document.querySelector('#controlStatus')?.textContent?.trim().toLowerCase();
         if (status === 'ended' || status === 'cancelled') {
+            stopPolling();
+            setEndSessionLoading(false);
             window.location.href = '{% url "dashboard_teacher" %}';
             return;
         }
@@ -1993,6 +2031,13 @@
     async function poll() {
         const s = await fetchState();
         if (s) updateFromState(s);
+    }
+
+    function stopPolling() {
+        if (pollTimer) {
+            window.clearInterval(pollTimer);
+            pollTimer = null;
+        }
     }
 
     poll();
