@@ -1735,6 +1735,7 @@
                 statusCol.textContent = statusLabel;
             }
 
+            const statusLower = statusValue;
             const rawProgress = Number(st.progress);
             const progressPercent = Number.isFinite(rawProgress)
                 ? (rawProgress >= 0 && rawProgress <= 1 ? Math.round(rawProgress * 100) : Math.round(rawProgress))
@@ -1742,12 +1743,22 @@
             const itemsTotal = Number(st.items_total) || 0;
             const itemsCompleted = Number(st.items_completed) || 0;
             const percent = itemsTotal > 0 ? Math.round((itemsCompleted / itemsTotal) * 100) : progressPercent;
-            const statusLower = statusValue;
             const progressTextValue = itemsTotal > 0
                 ? `${percent}% • ${itemsCompleted} / ${itemsTotal}`
                 : Number.isFinite(rawProgress)
                     ? `${progressPercent}%`
                     : '--';
+
+            if (statusLower === 'missed') {
+                if (progressBar) {
+                    progressBar.style.width = '0%';
+                    progressBar.setAttribute('aria-valuenow', 0);
+                }
+                if (progressText) progressText.textContent = '--';
+                if (elapsedCol) elapsedCol.textContent = '--';
+                if (scoreCol) scoreCol.textContent = '--';
+                return;
+            }
 
             if (statusLower === 'waiting') {
                 if (progressBar) {
