@@ -1130,6 +1130,7 @@
     const stateUrl = `/api/live-assessment/session/${sessionId}/`;
     const actionUrl = `/api/live-assessment/session/${sessionId}/action/`;
     const pollInterval = 2500;
+    const timerTickPaddingMs = 50;
     let pollTimer = null;
 
     function csrfToken() {
@@ -1235,6 +1236,38 @@
         document.getElementById('summaryLiveFields')?.classList.add('d-none');
     }
 
+    function formatSecondsClock(totalSeconds) {
+        const value = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+        return formatClock(value);
+    }
+
+    function getSessionStartTimestamp(session) {
+        if (!session?.start_at) return null;
+        const parsed = Date.parse(session.start_at);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function getSessionDurationDeadlineMs() {
+        if (summarySessionStartAtMs == null || summarySessionDurationSeconds == null) return null;
+        return summarySessionStartAtMs + (summarySessionDurationSeconds * 1000);
+    }
+
+    function getSessionCountdownDeadlineMs() {
+        return summarySessionStartAtMs;
+    }
+
+    function getLiveSessionDurationRemainingSeconds(nowMs = Date.now()) {
+        const deadlineMs = getSessionDurationDeadlineMs();
+        if (deadlineMs == null) return null;
+        return Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
+    }
+
+    function getLiveSessionCountdownRemainingSeconds(nowMs = Date.now()) {
+        const deadlineMs = getSessionCountdownDeadlineMs();
+        if (deadlineMs == null) return null;
+        return Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
+    }
+
     function setSummaryLiveFields(session) {
         const totalSelected = session.student_count || getSelectedStudentCount();
         const states = session.student_states || {};
@@ -1244,7 +1277,10 @@
         const statusKey = (session.status || '').toLowerCase();
         const statusText = statusKey === 'started' ? 'Running' : statusKey === 'paused' ? 'Paused' : 'Finished';
 
-        setText('#summaryTimeRemaining', formatClock(session.remaining_seconds));
+        const remainingSeconds = session.timing_mode === 'duration'
+            ? getLiveSessionDurationRemainingSeconds()
+            : null;
+        setText('#summaryTimeRemaining', session.timing_mode === 'duration' ? formatSecondsClock(remainingSeconds) : 'No limit');
         setText('#summaryActive', active);
         setText('#summaryCompleted', completed);
         setText('#summaryWaiting', waiting);
@@ -1264,23 +1300,50 @@
         if ((session.status || '').toLowerCase() === 'waiting') {
             setSummaryPreStartFields(session);
         } else {
+            summarySessionStartAtMs = getSessionStartTimestamp(session);
+            summarySessionDurationSeconds = Number.isFinite(Number(session.duration_seconds)) ? Number(session.duration_seconds) : null;
+            summaryCountdownSeconds = Number.isFinite(Number(session.countdown_seconds)) ? Number(session.countdown_seconds) : null;
             setSummaryLiveFields(session);
-            summaryRemainingSeconds = session.remaining_seconds;
-            summaryLastSyncAt = Date.now();
             summaryCurrentStatus = (session.status || 'started').toLowerCase();
         }
     }
 
-    function refreshLiveTimer() {
-        if (summaryCurrentStatus !== 'started') return;
-        if (summaryRemainingSeconds == null) return;
-        const elapsed = Math.floor((Date.now() - summaryLastSyncAt) / 1000);
-        const remaining = Math.max(0, summaryRemainingSeconds - elapsed);
-        setText('#summaryTimeRemaining', formatClock(remaining));
+    function refreshLiveTimers() {
+        const sessionStatus = summaryCurrentStatus;
+        if (sessionStatus === 'waiting') return;
+
+        if (summarySessionStartAtMs != null) {
+            const countdownRemaining = getLiveSessionCountdownRemainingSeconds();
+            if (countdownRemaining != null && sessionStatus === 'countdown') {
+                setText('#currentCountdown', `${countdownRemaining}s`);
+            } else if (sessionStatus !== 'countdown' && summaryCountdownSeconds != null) {
+                setText('#currentCountdown', `${summaryCountdownSeconds}s`);
+            }
+        }
+
+        if (sessionStatus === 'started' && summarySessionDurationSeconds != null) {
+            setText('#summaryTimeRemaining', formatSecondsClock(getLiveSessionDurationRemainingSeconds()));
+        } else if (sessionStatus === 'paused' && summarySessionDurationSeconds != null) {
+            setText('#summaryTimeRemaining', formatSecondsClock(getLiveSessionDurationRemainingSeconds()));
+        }
     }
 
-    let summaryRemainingSeconds = null;
-    let summaryLastSyncAt = Date.now();
+    function scheduleLiveTimerTick() {
+        if (liveTimerTickHandle) {
+            window.clearTimeout(liveTimerTickHandle);
+            liveTimerTickHandle = null;
+        }
+        const delay = Math.max(25, 1000 - (Date.now() % 1000) + timerTickPaddingMs);
+        liveTimerTickHandle = window.setTimeout(() => {
+            refreshLiveTimers();
+            scheduleLiveTimerTick();
+        }, delay);
+    }
+
+    let liveTimerTickHandle = null;
+    let summarySessionStartAtMs = null;
+    let summarySessionDurationSeconds = null;
+    let summaryCountdownSeconds = null;
     let summaryCurrentStatus = 'waiting';
 
     function updateSummaryFromDom() {
@@ -1395,8 +1458,9 @@
         setText('#currentCountdown', session.start_countdown_seconds != null ? `${session.start_countdown_seconds}s` : (session.countdown_seconds != null ? `${session.countdown_seconds}s` : '0s'));
 
         lastSessionState = session;
-        summaryRemainingSeconds = remainingSeconds;
-        summaryLastSyncAt = Date.now();
+        summarySessionStartAtMs = getSessionStartTimestamp(session);
+        summarySessionDurationSeconds = Number.isFinite(Number(session.duration_seconds)) ? Number(session.duration_seconds) : null;
+        summaryCountdownSeconds = Number.isFinite(Number(session.countdown_seconds)) ? Number(session.countdown_seconds) : null;
         summaryCurrentStatus = (session.status || 'waiting').toLowerCase();
 
         const statusKey = summaryCurrentStatus;
@@ -2049,10 +2113,15 @@
             window.clearInterval(pollTimer);
             pollTimer = null;
         }
+        if (liveTimerTickHandle) {
+            window.clearTimeout(liveTimerTickHandle);
+            liveTimerTickHandle = null;
+        }
     }
 
     poll();
     pollTimer = setInterval(poll, pollInterval);
+    scheduleLiveTimerTick();
 })();
 </script>
 {% endblock %}

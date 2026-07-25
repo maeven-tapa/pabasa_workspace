@@ -20,6 +20,7 @@ import logging
 import json
 import os
 import shutil
+import math
 from pathlib import Path
 from html import escape
 import random
@@ -5743,7 +5744,7 @@ def _get_live_session_remaining_seconds(session):
 def _get_live_session_start_countdown_seconds(session):
     if not session.start_at:
         return None
-    remaining = int((session.start_at - timezone.now()).total_seconds())
+    remaining = math.ceil((session.start_at - timezone.now()).total_seconds())
     return max(0, remaining)
 
 
