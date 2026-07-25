@@ -111,6 +111,10 @@
         let isAdvancingItem = false;
         let currentSyllableIndex = 0;
         let currentMaterialLanguage = "";
+        let currentSttLanguageCode = "";
+        let syllableStitchingContext = "";
+        let syllableStitchingContextAt = 0;
+        const syllableStitchingWindowMs = 4000;
         let liveCountdownTimer = null;
         let liveCountdownStarted = false;
         let liveServerTimeOffsetMs = 0;
@@ -882,6 +886,11 @@
             return !audioAnalyser || hasHeardSinceLastChunk || Date.now() - lastHeardAt < speechChunkMs + 700;
         }
 
+        function resetSyllableStitching() {
+            syllableStitchingContext = "";
+            syllableStitchingContextAt = 0;
+        }
+
         function currentSpeechContext() {
             return {
                 index: currentIndex,
@@ -914,6 +923,18 @@
             formData.append("current_syllable_index", String(context.syllableIndex));
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
+            if (
+                (
+                    String(currentSttLanguageCode || "").toLowerCase() === "fil-ph"
+                    || String(currentMaterialLanguage || "").toLowerCase().includes("fil")
+                )
+                && syllableStitchingContext
+                && Date.now() - syllableStitchingContextAt <= syllableStitchingWindowMs
+            ) {
+                formData.append("syllable_context", syllableStitchingContext);
+            } else {
+                resetSyllableStitching();
+            }
             const requestController = new AbortController();
             const requestTimeout = window.setTimeout(() => requestController.abort(), 15000);
 
@@ -943,13 +964,23 @@
                     throw new Error(data.error || "Speech check failed.");
                 }
                 if (!isCurrentSpeechContext(context)) return;
+                currentSttLanguageCode = String(data.language_code || currentSttLanguageCode || "");
+                if (String(data.language_code || "").toLowerCase() === "fil-ph" && data.syllable_context) {
+                    syllableStitchingContext = String(data.syllable_context);
+                    syllableStitchingContextAt = Date.now();
+                } else {
+                    resetSyllableStitching();
+                }
                 if (data.transcript) {
                     const fallbackNote = data.stt_fallback_reason ? ` | Fallback: ${data.stt_fallback_reason}` : "";
                     const languageNote = data.language_code ? ` | Language: ${data.language_code}` : "";
                     const rawNote = data.raw_transcript && data.raw_transcript !== data.transcript
                         ? ` | Raw: ${data.raw_transcript}`
                         : "";
-                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${languageNote}${fallbackNote} | Words: ${data.transcript}${rawNote}`);
+                    const stitchingNote = data.syllable_stitching_applied
+                        ? ` | TASS: ${data.syllable_stitched_transcript}`
+                        : "";
+                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${languageNote}${fallbackNote} | Words: ${data.transcript}${rawNote}${stitchingNote}`);
                 }
                 handleSpeechResult(data, context);
             } catch (error) {
@@ -1109,6 +1140,7 @@
             stopReadAloud();
             if (readingWord) readingWord.textContent = items[currentIndex];
             currentSyllableIndex = 0;
+            resetSyllableStitching();
             pendingAudioChunk = null;
             isAdvancingItem = false;
             itemResultVersion += 1;

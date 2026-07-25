@@ -142,6 +142,42 @@ def target_phrase_hints(target_text, language_code):
     return list(dict.fromkeys(hints))[:100]
 
 
+def target_aware_syllable_stitching(
+    target_text,
+    current_syllable_index,
+    prior_context,
+    transcript,
+    language_code,
+):
+    """Join short Filipino STT results only while they prefix the target word."""
+    if str(language_code).lower() != "fil-ph":
+        return transcript, "", False
+
+    matcher = ReadingMatcher(target_text, current_syllable_index, language_code)
+    if matcher.current_word_index >= len(matcher.words):
+        return transcript, "", False
+
+    target_word = matcher.normalize_word(matcher.words[matcher.current_word_index])
+    current_parts = matcher.normalize_spoken_words(transcript)[:6]
+    prior_parts = matcher.normalize_spoken_words(prior_context)[-5:]
+    if not target_word or not current_parts:
+        return transcript, "", False
+
+    combined_parts = (prior_parts + current_parts)[-6:]
+    combined_word = "".join(combined_parts)
+    current_word = "".join(current_parts)
+
+    if prior_parts and combined_word == target_word:
+        return " ".join(combined_parts), "", True
+    if prior_parts and target_word.startswith(combined_word):
+        return transcript, " ".join(combined_parts), False
+    if current_word == target_word:
+        return transcript, "", False
+    if target_word.startswith(current_word):
+        return transcript, " ".join(current_parts), False
+    return transcript, "", False
+
+
 def v1_model_for_language(model, language_code):
     requested_model = (model or "").strip()
     normalized_language = str(language_code or "").lower()

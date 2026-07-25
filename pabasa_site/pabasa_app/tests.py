@@ -23,6 +23,7 @@ from .reading_stt import (
     analyze_reading,
     language_code_for,
     target_phrase_hints,
+    target_aware_syllable_stitching,
     v1_model_for_language,
     word_numbers_in_transcript,
 )
@@ -214,6 +215,40 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(result["correct_word_count"], 1)
         self.assertTrue(result["complete"])
         self.assertEqual(result["matched"], 3)
+
+    def test_tass_stitches_filipino_syllables_across_chunks(self):
+        first_analysis, first_context, first_applied = target_aware_syllable_stitching(
+            "Tatay", 0, "", "ta", "fil-PH"
+        )
+        stitched, next_context, applied = target_aware_syllable_stitching(
+            "Tatay", 0, first_context, "tay", "fil-PH"
+        )
+
+        self.assertEqual(first_analysis, "ta")
+        self.assertEqual(first_context, "ta")
+        self.assertFalse(first_applied)
+        self.assertEqual(stitched, "ta tay")
+        self.assertEqual(next_context, "")
+        self.assertTrue(applied)
+        self.assertTrue(analyze_reading("Tatay", 0, stitched, "fil-PH")["complete"])
+
+    def test_tass_discards_non_prefix_syllables(self):
+        analysis_text, context, applied = target_aware_syllable_stitching(
+            "Tatay", 0, "ta", "bo", "fil-PH"
+        )
+
+        self.assertEqual(analysis_text, "bo")
+        self.assertEqual(context, "")
+        self.assertFalse(applied)
+
+    def test_tass_is_disabled_for_english(self):
+        analysis_text, context, applied = target_aware_syllable_stitching(
+            "today", 0, "to", "day", "en-PH"
+        )
+
+        self.assertEqual(analysis_text, "day")
+        self.assertEqual(context, "")
+        self.assertFalse(applied)
 
     def test_filipino_joined_syllables_allow_one_stt_vowel_error(self):
         result = analyze_reading("puno", 0, "po no", language_code="fil-PH")
