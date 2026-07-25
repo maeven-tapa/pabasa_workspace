@@ -1826,6 +1826,209 @@ class LiveAssessmentStartTests(TestCase):
         self.assertIn('/waiting/', notif.action_url)
         self.assertIn('live-assessment', notif.action_url)
 
+    def test_dashboard_template_uses_live_assessment_available_heading(self):
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session.save()
+
+        response = student_client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Live Assessment Available')
+        self.assertNotContains(response, 'Live Assessment in Progress')
+
+    def test_student_active_invitation_endpoint_only_returns_late_joiner_modal(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            timing_mode='duration',
+            duration_seconds=60,
+            start_at=timezone.now() - timedelta(seconds=20),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0, 'connection_status': 'waiting'}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session['login_at'] = (timezone.now() + timedelta(seconds=5)).isoformat()
+        student_session.save()
+
+        response = student_client.get(reverse('live_assessment_active_invitation'))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body['success'])
+        self.assertIsNotNone(body['session'])
+        self.assertTrue(body['session']['show_modal'])
+        self.assertEqual(body['session']['id'], session.id)
+        self.assertEqual(body['session']['timing_mode'], 'duration')
+        self.assertIsNotNone(body['session']['remaining_seconds'])
+        self.assertTrue(body['session']['join_url'].endswith(f'/dashboard/live-assessment/{session.id}/waiting/'))
+
+    def test_student_active_invitation_endpoint_redirects_already_logged_in_students_to_waiting_room(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            timing_mode='none',
+            duration_seconds=None,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0, 'connection_status': 'waiting'}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session['login_at'] = (timezone.now() - timedelta(hours=1)).isoformat()
+        student_session.save()
+
+        response = student_client.get(reverse('live_assessment_active_invitation'))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body['success'])
+        self.assertIsNotNone(body['session'])
+        self.assertTrue(body['session']['redirect_to_waiting_room'])
+        self.assertFalse(body['session']['show_modal'])
+
+    def test_student_active_invitation_endpoint_returns_duration_session_details(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            timing_mode='duration',
+            duration_seconds=60,
+            start_at=timezone.now() - timedelta(seconds=20),
+            student_states={str(self.student.id): {'status': 'reading', 'progress': 0.5, 'connection_status': 'connected'}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session.save()
+
+        response = student_client.get(reverse('live_assessment_active_invitation'))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body['success'])
+        self.assertEqual(body['session']['id'], session.id)
+        self.assertEqual(body['session']['timing_mode'], 'duration')
+        self.assertIsNotNone(body['session']['remaining_seconds'])
+        self.assertGreaterEqual(body['session']['remaining_seconds'], 0)
+        self.assertLessEqual(body['session']['remaining_seconds'], 60)
+        self.assertTrue(body['session']['join_url'].endswith(f'/dashboard/live-assessment/{session.id}/waiting/'))
+
+    def test_student_active_invitation_endpoint_returns_no_limit_session_details(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            timing_mode='none',
+            duration_seconds=None,
+            start_at=timezone.now() - timedelta(seconds=10),
+            student_states={str(self.student.id): {'status': 'reading', 'progress': 0.5, 'connection_status': 'connected'}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session.save()
+
+        response = student_client.get(reverse('live_assessment_active_invitation'))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body['success'])
+        self.assertEqual(body['session']['id'], session.id)
+        self.assertEqual(body['session']['timing_mode'], 'none')
+        self.assertIsNone(body['session']['remaining_seconds'])
+        self.assertTrue(body['session']['join_url'].endswith(f'/dashboard/live-assessment/{session.id}/waiting/'))
+
+    def test_student_active_invitation_uses_login_timestamp_for_late_join_modal(self):
+        session = LiveAssessmentSession.objects.create(
+            id=uuid.uuid4().hex,
+            teacher=self.teacher,
+            course=self.course,
+            material=self.material,
+            student_ids=[self.student.id],
+            student_count=1,
+            status='started',
+            countdown_seconds=0,
+            timing_mode='duration',
+            duration_seconds=120,
+            start_at=timezone.now() - timedelta(minutes=2),
+            student_states={str(self.student.id): {'status': 'waiting', 'progress': 0, 'connection_status': 'waiting'}},
+        )
+
+        student_client = Client()
+        student_session = student_client.session
+        student_session['user_id'] = self.student.id
+        student_session['user_role'] = 'student'
+        student_session['first_name'] = self.student.first_name
+        student_session['last_name'] = self.student.last_name
+        student_session['email'] = self.student.email
+        student_session['custom_id'] = self.student.custom_id
+        student_session['login_at'] = (timezone.now() - timedelta(seconds=10)).isoformat()
+        student_session.save()
+
+        response = student_client.get(reverse('live_assessment_active_invitation'))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body['success'])
+        self.assertIsNotNone(body['session'])
+        self.assertTrue(body['session']['show_modal'])
+        self.assertFalse(body['session']['redirect_to_waiting_room'])
+        self.assertEqual(body['session']['id'], session.id)
+
 
 class PrincipalAccountBootstrapTests(TestCase):
     def test_login_recreates_missing_principal_account_once(self):
@@ -3945,6 +4148,28 @@ class PrincipalSettingsViewTests(TestCase):
         self.assertEqual(self.user.email, "maria.cruz@example.org")
         self.assertEqual(self.user.contact_no, "09171234567")
         self.assertEqual(self.user.preference["principal_profile_info"]["position"], "Principal II")
+
+
+class LiveAssessmentWaitingRoomTemplateTests(TestCase):
+    def test_waiting_room_template_does_not_render_a_separate_countdown(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "live_assessment_waiting_room.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertNotIn('waitingRoomCountdown', content)
+        self.assertNotIn('startCountdownClock', content)
+
+    def test_reader_template_still_uses_the_live_countdown_overlay(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "reading_assessment_base.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn('id="liveCountdownOverlay"', content)
+
+    def test_dashboard_template_prioritizes_waiting_room_over_modal_for_pending_sessions(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "base_dashboard.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn("['waiting', 'countdown'].includes(sessionStatus)", content)
+        self.assertIn("window.location.assign(session.join_url)", content)
 
 
 class AssessmentCompletionNotificationTests(TestCase):

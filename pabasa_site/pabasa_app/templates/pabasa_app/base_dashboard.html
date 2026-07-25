@@ -2624,6 +2624,227 @@
             return div.innerHTML;
         }
 
+        function formatLiveAssessmentInviteTime(seconds) {
+            const value = Number(seconds);
+            if (!Number.isFinite(value) || value <= 0) return '0s';
+            const minutes = Math.floor(value / 60);
+            const remainingSeconds = Math.floor(value % 60);
+            if (minutes > 0) {
+                return `${minutes}m ${remainingSeconds}s`;
+            }
+            return `${remainingSeconds}s`;
+        }
+
+        function renderActiveLiveAssessmentModalContent(session) {
+            const timingMode = String(session?.timing_mode || 'none').toLowerCase();
+            const isDurationMode = timingMode === 'duration';
+            const heading = 'Live Assessment Available';
+            const summaryText = isDurationMode
+                ? 'Your teacher has already started a live assessment. You joined after the session began.'
+                : 'Your teacher has started a live assessment. This assessment has no time limit and is currently available.';
+            const remainingHtml = isDurationMode && Number.isFinite(Number(session?.remaining_seconds))
+                ? `<div class="alert alert-light border-0 p-3 mb-3 rounded-4" style="background: linear-gradient(135deg, #eef7fb, #fff);">
+                    <div class="fw-bold text-primary">Remaining time</div>
+                    <div class="fs-4 fw-bold">${escapeNotificationHtml(formatLiveAssessmentInviteTime(session.remaining_seconds))}</div>
+                </div>`
+                : (!isDurationMode
+                    ? `<div class="alert alert-light border-0 p-3 mb-3 rounded-4" style="background: linear-gradient(135deg, #eef7fb, #fff);">
+                        <div class="fw-bold text-primary">Time limit</div>
+                        <div class="fs-6">This assessment has no time limit and remains available until your teacher ends the session.</div>
+                    </div>`
+                    : '');
+            return `
+                <div class="modal fade" id="activeLiveAssessmentModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg" style="border-radius: 1.25rem;">
+                            <div class="modal-header border-0 pb-0">
+                                <div>
+                                    <h5 class="modal-title fw-bold mb-1">${escapeNotificationHtml(heading)}</h5>
+                                    <p class="text-muted small mb-0">${escapeNotificationHtml(session?.material_title || 'A live assessment is ready for you.')}</p>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body pt-2">
+                                <div class="p-3 rounded-4 mb-3" style="background: linear-gradient(135deg, #f5fbff, #fff);">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="fs-2">📝</div>
+                                        <div>
+                                            <p class="mb-2">${escapeNotificationHtml(summaryText)}</p>
+                                            ${remainingHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Maybe Later</button>
+                                    <button type="button" class="btn btn-primary btn-sm" data-action="join-live-assessment">Join Assessment</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateActiveLiveAssessmentRemainingTime(session) {
+            const modalEl = document.getElementById('activeLiveAssessmentModal');
+            if (!modalEl) return false;
+            const remainingValue = modalEl.querySelector('.alert-light .fs-4');
+            if (!remainingValue || !Number.isFinite(Number(session?.remaining_seconds))) return false;
+            remainingValue.textContent = formatLiveAssessmentInviteTime(session.remaining_seconds);
+            return true;
+        }
+
+        let liveAssessmentInviteRefreshTimer = null;
+        let liveAssessmentInviteWatchTimer = null;
+        let liveAssessmentInviteBusy = false;
+        let liveAssessmentInviteObservedNoSession = false;
+
+        function stopActiveLiveAssessmentInviteRefresh() {
+            if (liveAssessmentInviteRefreshTimer) {
+                window.clearInterval(liveAssessmentInviteRefreshTimer);
+                liveAssessmentInviteRefreshTimer = null;
+            }
+        }
+
+        function startActiveLiveAssessmentInviteWatch() {
+            if (liveAssessmentInviteWatchTimer) return;
+            checkForActiveLiveAssessmentInvitation();
+            liveAssessmentInviteWatchTimer = window.setInterval(() => {
+                if (!liveAssessmentInviteBusy) {
+                    checkForActiveLiveAssessmentInvitation();
+                }
+            }, 3000);
+        }
+
+        function dismissActiveLiveAssessmentInvite(sessionId) {
+            if (sessionId) {
+                window.sessionStorage.setItem(`pabasa_dismissed_live_invitation_${sessionId}`, '1');
+            }
+            stopActiveLiveAssessmentInviteRefresh();
+            const modalEl = document.getElementById('activeLiveAssessmentModal');
+            if (modalEl && window.bootstrap) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) {
+                    modal.hide();
+                }
+            }
+            if (modalEl) {
+                modalEl.remove();
+            }
+        }
+
+        function bindActiveLiveAssessmentModalHandlers(root) {
+            if (!root) return;
+            const sessionId = root.dataset.sessionId;
+            const dismissSession = () => {
+                if (sessionId) {
+                    window.sessionStorage.setItem(`pabasa_dismissed_live_invitation_${sessionId}`, '1');
+                }
+            };
+            root.querySelector('[data-action="join-live-assessment"]')?.addEventListener('click', () => {
+                dismissSession();
+                stopActiveLiveAssessmentInviteRefresh();
+                const joinUrl = root.dataset.joinUrl || '';
+                if (joinUrl) {
+                    window.location.assign(joinUrl);
+                }
+            });
+            root.querySelector('[data-bs-dismiss="modal"]')?.addEventListener('click', dismissSession);
+            root.querySelector('.btn-outline-secondary')?.addEventListener('click', dismissSession);
+            root.addEventListener('hidden.bs.modal', () => {
+                dismissSession();
+                stopActiveLiveAssessmentInviteRefresh();
+                root.remove();
+            }, { once: true });
+        }
+
+        async function showActiveLiveAssessmentInvitation(session) {
+            if (!session?.id) return false;
+            const existing = document.getElementById('activeLiveAssessmentModal');
+            if (existing) {
+                existing.dataset.sessionId = session.id;
+                existing.dataset.joinUrl = session.join_url || existing.dataset.joinUrl || '';
+                bindActiveLiveAssessmentModalHandlers(existing);
+                updateActiveLiveAssessmentRemainingTime(session);
+                return true;
+            }
+            const modalHtml = renderActiveLiveAssessmentModalContent(session);
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modalEl = document.getElementById('activeLiveAssessmentModal');
+            if (!modalEl || !window.bootstrap) return false;
+            modalEl.dataset.sessionId = session.id;
+            modalEl.dataset.joinUrl = session.join_url || '';
+            bindActiveLiveAssessmentModalHandlers(modalEl);
+            const modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+            modal.show();
+            if (String(session?.timing_mode || 'none').toLowerCase() === 'duration') {
+                stopActiveLiveAssessmentInviteRefresh();
+                liveAssessmentInviteRefreshTimer = window.setInterval(async () => {
+                    try {
+                        const response = await fetch("{% url 'live_assessment_active_invitation' %}", {
+                            cache: 'no-store',
+                            credentials: 'same-origin',
+                            headers: { Accept: 'application/json' }
+                        });
+                        const data = await response.json();
+                        if (!data.success || !data.session || data.session.id !== session.id) return;
+                        updateActiveLiveAssessmentRemainingTime(data.session);
+                    } catch (error) {
+                        console.warn('Live assessment invite refresh failed', error);
+                    }
+                }, 10000);
+            }
+            return true;
+        }
+
+        async function checkForActiveLiveAssessmentInvitation() {
+            if (window.PABASA_USER_ROLE !== 'student') return false;
+            if (window.location.pathname.includes('/dashboard/live-assessment/')) return false;
+            const pabasaCurrentUserId = window.localStorage.getItem('pabasaCurrentUserId') || '';
+            if (!pabasaCurrentUserId) return false;
+            if (liveAssessmentInviteBusy) return false;
+            liveAssessmentInviteBusy = true;
+            try {
+                const response = await fetch("{% url 'live_assessment_active_invitation' %}", {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' }
+                });
+                const data = await response.json();
+                if (!data.success || !data.session) {
+                    liveAssessmentInviteObservedNoSession = true;
+                    return false;
+                }
+                const session = data.session;
+                const dismissedKey = `pabasa_dismissed_live_invitation_${session.id}`;
+                if (window.sessionStorage.getItem(dismissedKey) === '1') return false;
+
+                const sessionStatus = String(session?.status || '').toLowerCase();
+                if (session?.show_modal) {
+                    return showActiveLiveAssessmentInvitation(session);
+                }
+
+                if (session?.redirect_to_waiting_room || ['waiting', 'countdown', 'started', 'paused'].includes(sessionStatus)) {
+                    if (session.join_url) {
+                        window.location.assign(session.join_url);
+                        return true;
+                    }
+                }
+
+                if (liveAssessmentInviteObservedNoSession && session.join_url && !session?.show_modal) {
+                    window.location.assign(session.join_url);
+                    return true;
+                }
+
+                return false;
+            } catch (error) {
+                console.warn('Live assessment invitation lookup failed', error);
+                return false;
+            } finally {
+                liveAssessmentInviteBusy = false;
+            }
+        }
+
         function renderMissedAssessmentModalContent(notifications) {
             const noticeItems = Array.isArray(notifications) ? notifications : [notifications].filter(Boolean);
             const titles = noticeItems.flatMap(notification => {
@@ -2812,6 +3033,9 @@
             const pabasaCurrentUserId = window.localStorage.getItem('pabasaCurrentUserId') || '';
             if (!pabasaCurrentUserId) return false;
 
+            const hasActiveInvitation = await checkForActiveLiveAssessmentInvitation();
+            if (hasActiveInvitation) return true;
+
             liveAssessmentWatchBusy = true;
             try {
                 const response = await fetch("{% url 'get_notifications' %}", {
@@ -2821,13 +3045,6 @@
                 const data = await response.json();
                 if (!data.success) throw new Error(data.error || "Unable to load notifications.");
                 const notifications = Array.isArray(data.notifications) ? data.notifications : [];
-                const liveNotification = notifications.find(n => {
-                    const url = (n.action_url || '');
-                    return url.includes('live_session_id=') || url.includes('/dashboard/live-assessment/');
-                });
-                if (liveNotification && !liveNotification.is_read) {
-                    return handleLiveAssessmentNotification(liveNotification);
-                }
                 const missedNotifications = notifications.filter(n => {
                     const title = String(n.title || '').toLowerCase();
                     const message = String(n.message || '').toLowerCase();
@@ -2899,12 +3116,9 @@
             }
 
             if (window.PABASA_USER_ROLE === 'student') {
-                const liveNotification = notifications.find(n => (n.action_url || '').includes('live_session_id='));
-                if (liveNotification && !liveNotification.is_read) {
-                    const handled = await handleLiveAssessmentNotification(liveNotification);
-                    if (handled) {
-                        return;
-                    }
+                const activeInvitationHandled = await checkForActiveLiveAssessmentInvitation();
+                if (activeInvitationHandled) {
+                    return;
                 }
                 const missedNotifications = notifications.filter(n => {
                     const title = String(n.title || '').toLowerCase();
@@ -3031,19 +3245,27 @@
         document.addEventListener('DOMContentLoaded', () => {
             updateInAppNotifications();
             startLiveAssessmentWatch();
+            startActiveLiveAssessmentInviteWatch();
+            checkForActiveLiveAssessmentInvitation();
         });
         window.addEventListener('pabasa:notifications-updated', () => {
             updateInAppNotifications();
             startLiveAssessmentWatch();
+            startActiveLiveAssessmentInviteWatch();
+            checkForActiveLiveAssessmentInvitation();
         });
         window.addEventListener('pabasa:preferences-updated', () => {
             updateInAppNotifications();
             startLiveAssessmentWatch();
+            startActiveLiveAssessmentInviteWatch();
+            checkForActiveLiveAssessmentInvitation();
         });
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
                 updateInAppNotifications();
                 startLiveAssessmentWatch();
+                startActiveLiveAssessmentInviteWatch();
+                checkForActiveLiveAssessmentInvitation();
             }
         });
         window.setInterval(updateInAppNotifications, 10000);

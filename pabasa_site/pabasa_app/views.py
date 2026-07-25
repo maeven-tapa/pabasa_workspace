@@ -2774,6 +2774,7 @@ def login_user(request):
         request.session['first_name'] = user.first_name
         request.session['last_name'] = user.last_name
         request.session['email'] = user.email
+        request.session['login_at'] = timezone.now().isoformat()
         
         if user.role == 'admin':
             redirect_url = '/dashboard/admin/'
@@ -5746,6 +5747,25 @@ def _get_live_session_start_countdown_seconds(session):
     return max(0, remaining)
 
 
+def _coerce_aware_datetime(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, str):
+        dt = parse_datetime(value)
+    else:
+        return None
+    if dt is None:
+        return None
+    if timezone.is_naive(dt):
+        try:
+            dt = timezone.make_aware(dt, timezone.get_default_timezone())
+        except Exception:
+            return None
+    return dt
+
+
 def _update_live_student_state(session, student_id, state_values):
     states = session.student_states or {}
     if not isinstance(states, dict):
@@ -5946,6 +5966,106 @@ def start_assist_assessment(request):
     return JsonResponse({
         'success': True,
         'launch_url': _build_assist_assessment_url(material, student_user, course, teacher_user, section),
+    })
+
+
+@csrf_protect
+@require_http_methods(["GET"])
+def live_assessment_active_invitation(request):
+    if not _check_auth(request):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    if request.session.get('user_role') != 'student':
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    student_user = User.objects.filter(id=request.session.get('user_id'), role='student', is_archived=False).first()
+    if not student_user:
+        return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
+
+    candidate_sessions = LiveAssessmentSession.objects.filter(
+        status__in=LIVE_ASSESSMENT_ACTIVE_STATUSES,
+    ).select_related('material', 'course', 'teacher').order_by('-created_at')
+
+    session = None
+    for candidate in candidate_sessions:
+        student_ids = []
+        for value in candidate.student_ids or []:
+            try:
+                student_ids.append(int(value))
+            except (TypeError, ValueError):
+                continue
+        if student_user.id in student_ids:
+            session = candidate
+            break
+
+    if not session:
+        return JsonResponse({'success': True, 'session': None})
+
+    _maybe_auto_end_live_session(session)
+    session.refresh_from_db()
+
+    student_ids = []
+    for value in session.student_ids or []:
+        try:
+            student_ids.append(int(value))
+        except (TypeError, ValueError):
+            continue
+
+    if session.status in ['ended', 'cancelled'] or student_user.id not in student_ids:
+        return JsonResponse({'success': True, 'session': None})
+
+    student_state = (session.student_states or {}).get(str(student_user.id), {}) if isinstance(session.student_states, dict) else {}
+    student_status = str(student_state.get('status') or '').strip().lower()
+    student_connection_status = str(student_state.get('connection_status') or '').strip().lower()
+    student_completed = student_state.get('final_score') is not None or student_status in {'completed', 'submitted'}
+    student_has_participated = student_status in {'reading', 'started', 'paused', 'completed', 'submitted'} or student_connection_status in {'connected', 'disconnected'}
+
+    login_at_raw = request.session.get('login_at') or request.session.get('created_at')
+    login_at = _coerce_aware_datetime(login_at_raw)
+    session_started_at = session.start_at or session.created_at
+
+    is_late_joiner = bool(
+        session.status in ['countdown', 'started', 'paused']
+        and session_started_at
+        and login_at
+        and login_at >= session_started_at
+    )
+    should_redirect_to_waiting_room = bool(
+        session.status in ['waiting', 'countdown', 'started', 'paused']
+        and not student_completed
+        and not student_has_participated
+        and (
+            session.status == 'waiting'
+            or (
+                session_started_at
+                and login_at
+                and login_at < session_started_at
+            )
+        )
+    )
+    should_show_modal = bool(
+        session.status in ['countdown', 'started', 'paused']
+        and session_started_at
+        and is_late_joiner
+        and not student_completed
+        and not student_has_participated
+    )
+
+    if not should_show_modal and not should_redirect_to_waiting_room:
+        return JsonResponse({'success': True, 'session': None})
+
+    return JsonResponse({
+        'success': True,
+        'session': {
+            'id': session.id,
+            'status': session.status,
+            'timing_mode': session.timing_mode or 'none',
+            'remaining_seconds': _get_live_session_remaining_seconds(session),
+            'join_url': _build_live_assessment_waiting_url(session.id),
+            'material_title': session.material.title if session.material else '',
+            'course_title': session.course.title if session.course else '',
+            'show_modal': should_show_modal,
+            'redirect_to_waiting_room': should_redirect_to_waiting_room,
+        },
     })
 
 

@@ -1511,11 +1511,15 @@
         function showLiveCountdown() {
             if (!liveCountdownOverlay) return;
             liveCountdownOverlay.classList.remove('d-none');
+            liveCountdownOverlay.style.display = '';
+            liveCountdownOverlay.setAttribute('aria-hidden', 'false');
         }
 
         function hideLiveCountdown() {
             if (!liveCountdownOverlay) return;
             liveCountdownOverlay.classList.add('d-none');
+            liveCountdownOverlay.style.display = 'none';
+            liveCountdownOverlay.setAttribute('aria-hidden', 'true');
         }
 
         async function syncLiveServerTime() {
@@ -1716,7 +1720,7 @@
             if (isRecording && recognitionActive) {
                 stopSpeechRecognition();
             }
-            if (liveCountdownTimer) {
+            if (liveCountdownTimer && !liveCountdownStarted) {
                 clearLiveCountdown();
                 hideLiveCountdown();
             }
@@ -1751,7 +1755,7 @@
             disableReaderInteractions(true);
             stopSpeechRecognition();
             stopReadAloud();
-            if (liveCountdownTimer) {
+            if (liveCountdownTimer && !liveCountdownStarted) {
                 clearLiveCountdown();
                 hideLiveCountdown();
             }
@@ -1832,7 +1836,15 @@
 
             liveCountdownStarted = true;
             showLiveCountdown();
-            const countdownDuration = Number.parseInt(urlParams.get('countdown') || '10', 10);
+            let countdownDuration = Number.parseInt(urlParams.get('countdown') || '10', 10);
+            const sessionState = await fetchLiveSessionState();
+            const serverStartCountdownSeconds = Number(sessionState?.start_countdown_seconds);
+            const serverConfiguredCountdownSeconds = Number(sessionState?.countdown_seconds);
+            if (Number.isFinite(serverStartCountdownSeconds) && serverStartCountdownSeconds >= 0) {
+                countdownDuration = Math.max(0, serverStartCountdownSeconds);
+            } else if (Number.isFinite(serverConfiguredCountdownSeconds) && serverConfiguredCountdownSeconds >= 0) {
+                countdownDuration = Math.max(0, serverConfiguredCountdownSeconds);
+            }
             const countdownStartedAt = Date.now();
             const getRemainingSeconds = () => {
                 const elapsedSeconds = Math.floor((Date.now() - countdownStartedAt) / 1000);
@@ -1849,6 +1861,7 @@
                     startReading();
                     return true;
                 }
+                showLiveCountdown();
                 if (liveCountdownSubtext) liveCountdownSubtext.textContent = 'Everyone will begin together in a moment.';
                 return false;
             };
@@ -2397,6 +2410,11 @@
 
         loadItems();
         startLiveCountdown();
+        window.setTimeout(() => {
+            if (isCurrentLiveAssessment()) {
+                startLiveCountdown();
+            }
+        }, 250);
         if (liveSessionStateUrl) {
             startLiveSessionPolling();
         }

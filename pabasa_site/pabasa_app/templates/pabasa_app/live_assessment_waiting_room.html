@@ -157,12 +157,6 @@
     align-items: center;
     justify-content: flex-start;
   }
-  .waiting-room-countdown {
-    font-size: clamp(1.1rem, 4vw, 1.45rem);
-    font-weight: 700;
-    color: var(--dash-primary, #1f6f8b);
-    margin: 0;
-  }
   @media (max-width: 600px) {
     .waiting-room-page {
       padding: clamp(16px, 4vw, 24px);
@@ -217,7 +211,7 @@
           <div id="waitingAnimation" class="waiting-room-icon">
             <i class="bi bi-hourglass-split"></i>
           </div>
-          <h2 class="waiting-room-message">Waiting for your teacher to start the assessment.</h2>
+          <h2 id="waitingMessage" class="waiting-room-message">Waiting for your teacher to start the assessment.</h2>
           <p class="waiting-room-description">You’re connected and ready. Please stay on this page and your teacher will begin the activity when everyone is set.</p>
         </div>
       </div>
@@ -268,13 +262,6 @@
   const stateUrl = `/api/live-assessment/session/${sessionId}/`;
   const pollInterval = 1200;
   let pollTimer = null;
-
-  function formatRemaining(seconds) {
-    if (!seconds || seconds <= 0) return '0s';
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return m ? `${m}m ${s}s` : `${s}s`;
-  }
 
   function stopPolling() {
     if (pollTimer) {
@@ -329,16 +316,17 @@
       return;
     }
 
+    if (state.status === 'countdown' || state.status === 'started') {
+      if (state.reader_url) {
+        stopPolling();
+        redirectToReader(state.reader_url);
+        return;
+      }
+    }
+
     if (state.status === 'ended' || state.status === 'cancelled') {
       stopPolling();
       window.location.replace('{% url "dashboard" %}');
-      return;
-    }
-
-    // When teacher starts (countdown or started), immediately transition students to Reading UI.
-    if ((state.status === 'countdown' || state.status === 'started') && state.reader_url) {
-      stopPolling();
-      redirectToReader(state.reader_url);
       return;
     }
   }
