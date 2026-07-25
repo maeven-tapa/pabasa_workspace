@@ -178,6 +178,34 @@ def target_aware_syllable_stitching(
     return transcript, "", False
 
 
+def syllable_context_metrics(target_text, current_syllable_index, context, language_code):
+    """Count TASS progress against target syllables, not STT token boundaries."""
+    if str(language_code).lower() != "fil-ph":
+        return 0, 0, 0
+
+    matcher = ReadingMatcher(target_text, current_syllable_index, language_code)
+    if matcher.current_word_index >= len(matcher.words):
+        return 0, 0, 0
+
+    target_word = matcher.normalize_word(matcher.words[matcher.current_word_index])
+    target_syllables = matcher.split_syllables(target_word)
+    context_word = "".join(matcher.normalize_spoken_words(context))
+    if not target_syllables or not context_word or not target_word.startswith(context_word):
+        return 0, len(target_syllables), 0
+
+    matched_count = 0
+    cumulative = ""
+    for syllable in target_syllables:
+        cumulative += syllable
+        if len(cumulative) <= len(context_word):
+            matched_count += 1
+        else:
+            break
+
+    progress = round((matched_count / len(target_syllables)) * 100, 2)
+    return matched_count, len(target_syllables), progress
+
+
 def v1_model_for_language(model, language_code):
     requested_model = (model or "").strip()
     normalized_language = str(language_code or "").lower()

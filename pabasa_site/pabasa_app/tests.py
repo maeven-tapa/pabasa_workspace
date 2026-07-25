@@ -24,6 +24,7 @@ from .reading_stt import (
     language_code_for,
     target_phrase_hints,
     target_aware_syllable_stitching,
+    syllable_context_metrics,
     v1_model_for_language,
     word_numbers_in_transcript,
 )
@@ -240,6 +241,22 @@ class ReadingMatcherTests(TestCase):
         self.assertEqual(analysis_text, "bo")
         self.assertEqual(context, "")
         self.assertFalse(applied)
+
+    def test_tass_counts_target_syllables_in_context(self):
+        self.assertEqual(
+            syllable_context_metrics("Kabayo", 0, "kaba", "fil-PH"),
+            (2, 3, 66.67),
+        )
+        self.assertEqual(
+            syllable_context_metrics("Tatay", 0, "ta tay", "fil-PH"),
+            (2, 2, 100.0),
+        )
+
+    def test_tass_context_metrics_reject_non_prefix_context(self):
+        self.assertEqual(
+            syllable_context_metrics("Tatay", 0, "bo", "fil-PH"),
+            (0, 2, 0),
+        )
 
     def test_tass_is_disabled_for_english(self):
         analysis_text, context, applied = target_aware_syllable_stitching(

@@ -979,8 +979,11 @@
                         : "";
                     const stitchingNote = data.syllable_stitching_applied
                         ? ` | TASS: ${data.syllable_stitched_transcript}`
+                        : (data.syllable_context ? ` | TASS Context: ${data.syllable_context}` : "");
+                    const syllableCountNote = Number(data.target_syllable_count || 0) > 0
+                        ? ` | Syllables: ${Number(data.syllable_context_count || 0)}/${Number(data.target_syllable_count)}`
                         : "";
-                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${languageNote}${fallbackNote} | Words: ${data.transcript}${rawNote}${stitchingNote}`);
+                    appendRawMicInput(`Model: ${sttModelLabel(data.stt_model)}${languageNote}${fallbackNote} | Words: ${data.transcript}${rawNote}${stitchingNote}${syllableCountNote}`);
                 }
                 handleSpeechResult(data, context);
             } catch (error) {

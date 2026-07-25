@@ -54,6 +54,7 @@ from .reading_stt import (
     phrase_hints_for,
     target_phrase_hints,
     target_aware_syllable_stitching,
+    syllable_context_metrics,
     synthesize_read_aloud_audio,
     transcribe_audio_bytes_with_model,
     word_numbers_in_transcript,
@@ -4672,11 +4673,21 @@ def reading_transcribe_api(request):
             language_code,
         )
         analysis = analyze_reading(target_text, current_syllable_index, analysis_transcript, language_code)
+        metrics_context = analysis_transcript if stitching_applied else next_syllable_context
+        context_count, target_count, context_progress = syllable_context_metrics(
+            target_text,
+            current_syllable_index,
+            metrics_context,
+            language_code,
+        )
         analysis['raw_transcript'] = transcript
         analysis['transcript'] = word_numbers_in_transcript(transcript, language_code)
         analysis['syllable_context'] = next_syllable_context
         analysis['syllable_stitching_applied'] = stitching_applied
         analysis['syllable_stitched_transcript'] = analysis_transcript if stitching_applied else ''
+        analysis['syllable_context_count'] = context_count
+        analysis['target_syllable_count'] = target_count
+        analysis['syllable_context_progress'] = context_progress
         analysis.update({
             'success': True,
             'language_code': language_code,
