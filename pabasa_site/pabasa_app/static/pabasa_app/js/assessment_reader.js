@@ -471,6 +471,10 @@
             const matchedWords = correctWordsRead();
             const speechRecognitionUsed = spokenWords.length > 0;
             const targetWordCount = targetWords.length;
+            const correctItems = items.reduce((total, item, index) => {
+                const itemWordCount = readableWordCount(item);
+                return total + (itemWordCount > 0 && Number(correctWordCounts[index] || 0) >= itemWordCount ? 1 : 0);
+            }, 0);
             const needsManualReview = !speechRecognitionUsed;
 
             return {
@@ -484,10 +488,14 @@
                 speech_recognition_used: speechRecognitionUsed,
                 needs_manual_review: needsManualReview,
                 correct_words: matchedWords,
+                correct_items: correctItems,
+                items_completed: items.length,
                 incorrect_words: Math.max(0, targetWordCount - matchedWords),
                 skipped_words: 0,
                 raw_metrics: {
                     correct_words: matchedWords,
+                    correct_items: correctItems,
+                    items_completed: items.length,
                     incorrect_words: Math.max(0, targetWordCount - matchedWords),
                     skipped_words: 0,
                     duration_seconds: durationSeconds,
@@ -522,13 +530,13 @@
 
         function resolveClassificationLabel(scorePayload, fallback = "") {
             const helper = window.PABASA_READING_LEVEL;
-            const totalScore = scorePayload?.final_score ?? scorePayload?.total_score ?? scorePayload?.overall_raw_score;
-            if (helper?.getClassificationFromScore && totalScore !== undefined && totalScore !== null && totalScore !== "") {
-                return helper.getClassificationFromScore(totalScore);
-            }
             const explicitLevel = scorePayload?.crla_classification || scorePayload?.adapted_reading_level || scorePayload?.classification || scorePayload?.reading_level;
             if (explicitLevel) {
                 return helper?.normalizeReadingLevelLabel?.(explicitLevel) || explicitLevel;
+            }
+            const totalScore = scorePayload?.final_score ?? scorePayload?.total_score ?? scorePayload?.overall_raw_score;
+            if (helper?.getClassificationFromScore && totalScore !== undefined && totalScore !== null && totalScore !== "") {
+                return helper.getClassificationFromScore(totalScore);
             }
             return fallback;
         }

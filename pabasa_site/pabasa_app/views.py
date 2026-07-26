@@ -60,6 +60,7 @@ from .reading_stt import (
     word_numbers_in_transcript,
 )
 from .hunt_scoring import classify_speech
+from .reader_classification import classify_student_account
 from .scoring import (
     ADAPTED_READING_LEVEL_DISCLAIMER,
     ADAPTED_READING_LEVEL_MULTIPLIERS,
@@ -606,12 +607,6 @@ def _adapted_reading_level_label(level_score):
 
 def _display_reading_level(value=None, score_payload=None):
     if isinstance(score_payload, dict):
-        total_score = score_payload.get('final_score')
-        if total_score is None:
-            total_score = score_payload.get('total_score')
-        if total_score is not None:
-            return _crla_classification(total_score)
-
         explicit_level = (
             score_payload.get('adapted_reading_level')
             or score_payload.get('reading_level')
@@ -623,6 +618,12 @@ def _display_reading_level(value=None, score_payload=None):
             if normalized:
                 return normalized
             return str(explicit_level)
+
+        total_score = score_payload.get('final_score')
+        if total_score is None:
+            total_score = score_payload.get('total_score')
+        if total_score is not None:
+            return _crla_classification(total_score)
 
     normalized = _canonical_reading_level_label(value)
     if normalized:
@@ -5222,13 +5223,28 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
         already_completed = _student_completed_assessment_before(assessment, material, student_user)
     score_payload = _practice_score_payload(data) if is_practice else _assessment_score_payload(data)
     if not is_practice:
+        account_assessment_type = (
+            getattr(assessment, 'assessment_type', None)
+            or assessment_type_hint
+            or getattr(material, 'item_type', None)
+            or ''
+        )
+        account_level = classify_student_account(student_user, {
+            'status': 'completed',
+            'assessment_type': account_assessment_type,
+            'correct_items': score_payload.get('correct_items', 0),
+            'items_completed': score_payload.get('items_completed', data.get('items_completed', 0)),
+        })
+        if account_level:
+            score_payload['crla_classification'] = account_level
+            score_payload['classification'] = account_level
         adapted_level_payload = _student_adapted_reading_level_payload(
             student_user,
             score_payload=score_payload,
             assessment_type=assessment_type_hint,
         )
         score_payload['adapted_level_score'] = adapted_level_payload.get('adapted_level_score')
-        score_payload['adapted_reading_level'] = adapted_level_payload.get('adapted_reading_level')
+        score_payload['adapted_reading_level'] = account_level or adapted_level_payload.get('adapted_reading_level')
         score_payload['adapted_reading_level_disclaimer'] = adapted_level_payload.get('adapted_reading_level_disclaimer')
     should_notify_assessment = (
         not is_practice

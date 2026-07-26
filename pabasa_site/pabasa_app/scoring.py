@@ -217,6 +217,12 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         raw_metrics = {}
 
     payload = raw if isinstance(raw, dict) else {}
+    correct_items = _coerce_int(data.get("correct_items"))
+    if correct_items is None:
+        correct_items = _coerce_int(payload.get("correct_items", raw_metrics.get("correct_items")))
+    items_completed = _coerce_int(data.get("items_completed"))
+    if items_completed is None:
+        items_completed = _coerce_int(payload.get("items_completed", raw_metrics.get("items_completed")))
     correct_words = _coerce_int(data.get("correct_words"))
     if correct_words is None:
         correct_words = _coerce_int(payload.get("correct_words", raw_metrics.get("correct_words")))
@@ -331,6 +337,8 @@ def build_assessment_score_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "duration_seconds": round(max(0.0, duration_seconds), 2),
         "word_count": correct_words,
         "target_word_count": target_word_count,
+        "correct_items": max(0, correct_items or 0),
+        "items_completed": max(0, items_completed or 0),
         "transcript": str(payload.get("transcript", raw.get("transcript", raw_metrics.get("transcript", ""))))[:5000],
         "speech_recognition_used": bool(payload.get("speech_recognition_used", raw.get("speech_recognition_used", raw_metrics.get("speech_recognition_used", False)))),
         "needs_manual_review": bool(payload.get("needs_manual_review", raw.get("needs_manual_review", raw_metrics.get("needs_manual_review", False)))),

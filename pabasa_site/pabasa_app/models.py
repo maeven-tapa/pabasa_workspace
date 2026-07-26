@@ -314,6 +314,7 @@ class Assessment(models.Model):
     remarks = models.TextField(blank=True, default="")
     stars_earned = models.PositiveIntegerField(default=0)
     items_completed = models.PositiveIntegerField(default=0)
+    correct_items = models.PositiveIntegerField(null=True, blank=True)
 
     @property
     def attempt_history(self):
@@ -391,6 +392,7 @@ class Assessment(models.Model):
             'remarks': self.remarks,
             'stars_earned': self.stars_earned,
             'items_completed': self.items_completed,
+            'correct_items': self.correct_items,
         }
 
     def _sync_attempt_count(self):
@@ -455,6 +457,8 @@ class Assessment(models.Model):
                 attempt_row.stars_earned = value
             elif key == 'items_completed':
                 attempt_row.items_completed = value
+            elif key == 'correct_items':
+                attempt_row.correct_items = value
             elif key == 'remarks':
                 attempt_row.remarks = str(value or '')
             elif key == 'attempt_id':
@@ -795,7 +799,7 @@ class Practice(models.Model):
             "speech_recognition_used", "needs_manual_review",
             "passed", "remarks", "score", "correct_responses",
             "incorrect_responses", "reading_time_seconds",
-            "attempt_number", "stars_earned", "items_completed",
+            "attempt_number", "stars_earned", "items_completed", "correct_items",
             "total_practice_items", "total_read_words", "total_skipped_words",
         ]:
             if key in kwargs:
