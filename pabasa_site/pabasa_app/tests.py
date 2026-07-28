@@ -217,6 +217,13 @@ class ReadingMatcherTests(TestCase):
         self.assertTrue(result["complete"])
         self.assertEqual(result["matched"], 3)
 
+    def test_filipino_diphthong_word_ay_is_accepted(self):
+        result = analyze_reading("ay", 0, "ay", language_code="fil-PH")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertTrue(result["complete"])
+        self.assertEqual(result["matched"], 1)
+
     def test_tass_stitches_filipino_syllables_across_chunks(self):
         first_analysis, first_context, first_applied = target_aware_syllable_stitching(
             "Tatay", 0, "", "ta", "fil-PH"

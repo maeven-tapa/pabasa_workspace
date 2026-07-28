@@ -37,11 +37,11 @@ SPOKEN_VOWELS = {
     "u": "u", "uh": "u", "oo": "u", "you": "u",
 }
 VOWEL_SOUND_ALIASES = {
-    "a": {"a", "ah"},
+    "a": {"a", "ah", "ay"},
     "e": {"e", "eh"},
-    "i": {"i", "e", "ee", "y"},
-    "o": {"o", "oh", "ow"},
-    "u": {"u", "oo", "ew"},
+    "i": {"i", "e", "ee", "y", "iy", "ie"},
+    "o": {"o", "oh", "ow", "oy"},
+    "u": {"u", "oo", "ew", "uy"},
 }
 
 NUMBER_WORDS = {
@@ -606,6 +606,9 @@ class ReadingMatcher:
     def words_match(self, spoken_word, target_word):
         if spoken_word == target_word:
             return True
+        if spoken_word in SPOKEN_VOWELS and target_word in SPOKEN_VOWELS:
+            if SPOKEN_VOWELS[spoken_word] == SPOKEN_VOWELS[target_word]:
+                return True
         if self.number_words_match(spoken_word, target_word):
             return True
         if self.homophones_match(spoken_word, target_word):
@@ -692,12 +695,17 @@ class ReadingMatcher:
             spoken_consonant, spoken_vowel = spoken
             if spoken_consonant == target_consonant and spoken_vowel in aliases:
                 return True
+            if cls.ending_y_diphthong_match(spoken_variant, target_word):
+                return True
         return False
 
     @staticmethod
     def cv_parts(syllable):
+        if not syllable:
+            return None
         if len(syllable) < 2:
             return None
+
         consonant = syllable[:-1]
         vowel = syllable[-1]
         if vowel not in VOWELS:
@@ -705,6 +713,22 @@ class ReadingMatcher:
         if not consonant or any(char in VOWELS for char in consonant):
             return None
         return consonant, vowel
+
+    @staticmethod
+    def ending_y_diphthong_match(spoken_word, target_word):
+        if not spoken_word or not target_word:
+            return False
+        spoken_lower = spoken_word.lower()
+        target_lower = target_word.lower()
+        if not spoken_lower.endswith("y") and not target_lower.endswith("y"):
+            return False
+        if len(spoken_lower) < 2 or len(target_lower) < 2:
+            return False
+        spoken_core = spoken_lower[:-1]
+        target_core = target_lower[:-1]
+        if not spoken_core or not target_core:
+            return False
+        return spoken_core[-1] == target_core[-1] and spoken_core[:-1] == target_core[:-1]
 
     @staticmethod
     def spoken_sound_variants(word):
@@ -806,7 +830,7 @@ class ReadingMatcher:
             return vowel_syllable
         collapsed = cls.collapse_repeated_letters(word)
         if collapsed in SPOKEN_VOWELS:
-            return SPOKEN_VOWELS[collapsed]
+            return word if word in SPOKEN_VOWELS else SPOKEN_VOWELS[collapsed]
         return word
 
     @staticmethod
