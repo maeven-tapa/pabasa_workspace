@@ -843,7 +843,10 @@ class ReadingMatcher:
         # and causes exact matches to fail. Restricting to short tokens
         # preserves matching for common short vowel syllables like
         # "ay", "eh", "oh" while avoiding altering full English words.
-        if not word or len(word) > 3:
+        # Only normalize very short tokens (2 letters or fewer).
+        # Avoid changing 3-letter words like "cow" or "how" which are
+        # valid full words and should remain unchanged.
+        if not word or len(word) > 2:
             return ""
 
         patterns = [
