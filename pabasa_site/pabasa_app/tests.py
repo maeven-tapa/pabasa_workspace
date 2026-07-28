@@ -224,6 +224,12 @@ class ReadingMatcherTests(TestCase):
         self.assertTrue(result["complete"])
         self.assertEqual(result["matched"], 1)
 
+    def test_filipino_spoken_vowel_tokens_preserve_exact_tokens(self):
+        self.assertEqual(ReadingMatcher.normalize_spoken_word("ay"), "ay")
+        self.assertEqual(ReadingMatcher.normalize_spoken_word("aye"), "aye")
+        self.assertTrue(ReadingMatcher("ay", 0, "fil-PH").words_match("aye", "ay"))
+        self.assertTrue(ReadingMatcher("ay", 0, "fil-PH").words_match("ay", "a"))
+
     def test_tass_stitches_filipino_syllables_across_chunks(self):
         first_analysis, first_context, first_applied = target_aware_syllable_stitching(
             "Tatay", 0, "", "ta", "fil-PH"

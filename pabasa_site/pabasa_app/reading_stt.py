@@ -825,16 +825,27 @@ class ReadingMatcher:
 
     @classmethod
     def normalize_spoken_word(cls, word):
+        if word in SPOKEN_VOWELS:
+            return word
         vowel_syllable = cls.normalize_spoken_vowel_syllable(word)
         if vowel_syllable:
             return vowel_syllable
         collapsed = cls.collapse_repeated_letters(word)
         if collapsed in SPOKEN_VOWELS:
-            return word if word in SPOKEN_VOWELS else SPOKEN_VOWELS[collapsed]
+            return SPOKEN_VOWELS[collapsed]
         return word
 
     @staticmethod
     def normalize_spoken_vowel_syllable(word):
+        # Only attempt vowel-syllable collapsing for short spoken tokens.
+        # Longer words (e.g. "blue") can contain vowel clusters that
+        # should not be collapsed because it changes the word structure
+        # and causes exact matches to fail. Restricting to short tokens
+        # preserves matching for common short vowel syllables like
+        # "ay", "eh", "oh" while avoiding altering full English words.
+        if not word or len(word) > 3:
+            return ""
+
         patterns = [
             (r"([^aeiou]+)ah", "a"),
             (r"([^aeiou]+)eh", "e"),
