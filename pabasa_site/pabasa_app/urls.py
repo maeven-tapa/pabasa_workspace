@@ -57,6 +57,7 @@ urlpatterns = [
     path('dashboard/admin/settings/', views.admin_settings, name='admin_settings'),
     path('dashboard/courses/', views.courses, name='courses'),
     path('dashboard/assessment/', views.assessment, name='assessment'),
+    path('assessment/<int:assessment_id>/export-crla/', views.export_crla_assessment, name='export_crla_assessment'),
     path('dashboard/assessment/reading_ui/word/', views.reading_word_page, name='reading_word_page'),
     path('dashboard/assessment/reading_ui/sentence/', views.reading_sentence_page, name='reading_sentence_page'),
     path('dashboard/assessment/reading_ui/para/', views.reading_para_page, name='reading_para_page'),

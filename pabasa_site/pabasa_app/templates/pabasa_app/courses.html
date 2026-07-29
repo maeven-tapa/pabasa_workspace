@@ -5586,6 +5586,78 @@
         min-width: 720px;
     }
 
+    .course-assessment-overview-list {
+        display: grid;
+        gap: 0.85rem;
+        margin-bottom: 1.35rem;
+    }
+
+    .course-assessment-overview-card {
+        align-items: center;
+        background: linear-gradient(135deg, #ffffff 0%, #fbfdff 100%);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        border-radius: 16px;
+        box-shadow: 0 8px 22px rgba(15, 78, 100, 0.06);
+        display: flex;
+        gap: 1.25rem;
+        justify-content: space-between;
+        padding: 1.15rem 1.25rem;
+    }
+
+    .course-assessment-overview-copy {
+        min-width: 0;
+    }
+
+    .course-assessment-overview-title {
+        color: var(--dash-ink);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.08rem;
+        font-weight: 900;
+        line-height: 1.3;
+        margin: 0;
+    }
+
+    .course-assessment-overview-meta {
+        align-items: center;
+        color: var(--dash-muted);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 0.79rem;
+        gap: 0.45rem 0.8rem;
+        margin-top: 0.42rem;
+    }
+
+    .course-assessment-overview-meta span {
+        align-items: center;
+        display: inline-flex;
+        gap: 0.3rem;
+    }
+
+    .course-assessment-export-btn {
+        align-items: center;
+        background: var(--dash-primary);
+        border: 1px solid var(--dash-primary);
+        border-radius: 11px;
+        color: #fff;
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-weight: 800;
+        gap: 0.35rem;
+        justify-content: center;
+        min-height: 38px;
+        padding: 0.48rem 0.82rem;
+        text-decoration: none;
+        transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    }
+
+    .course-assessment-export-btn:hover {
+        background: var(--dash-primary-deep);
+        border-color: var(--dash-primary-deep);
+        box-shadow: 0 8px 18px rgba(31, 111, 139, 0.2);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
     .course-assessment-results-table thead th {
         background: #f4f9fc;
         border-bottom: 1px solid rgba(31, 111, 139, 0.14);
@@ -5659,6 +5731,31 @@
 
     body.dark-theme .course-assessment-results-table tbody tr:hover {
         background: rgba(56, 189, 248, 0.08);
+    }
+
+    body.dark-theme .course-assessment-overview-card {
+        background: linear-gradient(135deg, #1e293b 0%, #172033 100%);
+        border-color: rgba(125, 211, 252, 0.14);
+        box-shadow: 0 10px 24px rgba(2, 6, 23, 0.18);
+    }
+
+    body.dark-theme .course-assessment-overview-title {
+        color: #f8fafc;
+    }
+
+    body.dark-theme .course-assessment-overview-meta {
+        color: #94a3b8;
+    }
+
+    @media (max-width: 575.98px) {
+        .course-assessment-overview-card {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .course-assessment-export-btn {
+            width: 100%;
+        }
     }
 </style>
 
@@ -5997,15 +6094,16 @@
                                                     <button class="assessment-filter-btn" type="button" data-filter="not-started">Not Started</button>
                                                 </div>
                                                 <div class="assessment-sort-group">
-                                                    <select id="courseAssessmentSortField" class="form-select" aria-label="Sort field">
-                                                        <option value="name">Sort by Student</option>
-                                                        <option value="score">Sort by Score</option>
-                                                        <option value="status">Sort by Status</option>
-                                                        <option value="created_at">Sort by Date</option>
+                                                    <select id="courseAssessmentSortField" class="form-select" aria-label="Sort assessments by">
+                                                        <option value="name">Sort Assessments By: Name</option>
+                                                        <option value="date">Date Created/Published</option>
+                                                        <option value="type">Assessment Type</option>
+                                                        <option value="result_count">Number of Learner Results</option>
+                                                        <option value="completion_rate">Completion Rate</option>
                                                     </select>
                                                     <select id="courseAssessmentSortOrder" class="form-select" aria-label="Sort order">
-                                                        <option value="desc">Descending</option>
-                                                        <option value="asc">Ascending</option>
+                                                        <option value="asc">A-Z</option>
+                                                        <option value="desc">Z-A</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -8331,6 +8429,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     })();
     let sharedTeacherCourses = null;
     let courseAssessmentsTableData = [];
+    let courseAssessmentCatalog = [];
     let courseAssessmentTableInitialized = false;
     const teacherCoursesKey = () => {
         const email = (window.PABASA_USER_EMAIL || '').trim();
@@ -8395,20 +8494,55 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         return { label: 'In Progress', className: 'status-in-progress' };
     }
 
+    function getCourseAssessmentCardStats(assessmentId) {
+        const results = courseAssessmentsTableData.filter(result =>
+            String(result.assessment_id || '') === String(assessmentId)
+            && result.student_id !== null
+            && result.student_id !== undefined
+            && result.student_id !== ''
+        );
+        const completed = results.filter(result => getAssessmentStatus(result).label === 'Completed').length;
+        return {
+            resultCount: results.length,
+            completionRate: results.length ? completed / results.length : 0,
+        };
+    }
+
     function getCourseAssessmentSortKey(assessment, field) {
+        const stats = getCourseAssessmentCardStats(assessment.id);
         switch (field) {
-            case 'score':
-                return Number(assessment.score) || 0;
-            case 'status':
-                return getAssessmentStatus(assessment).label.toLowerCase();
-            case 'created_at':
-                return assessment.date ? new Date(assessment.date).getTime() : 0;
-            case 'updated_at':
-                return assessment.updated_at ? new Date(assessment.updated_at).getTime() : 0;
+            case 'date': {
+                const value = assessment.published_at || assessment.created_at || assessment.updated_at;
+                const timestamp = value ? new Date(value).getTime() : 0;
+                return Number.isNaN(timestamp) ? 0 : timestamp;
+            }
+            case 'type':
+                return String(assessment.level || assessment.assessment_type || '').toLowerCase();
+            case 'result_count':
+                return stats.resultCount;
+            case 'completion_rate':
+                return stats.completionRate;
             case 'name':
             default:
-                return String(assessment.student_name || '').toLowerCase();
+                return String(assessment.title || '').toLowerCase();
         }
+    }
+
+    function updateCourseAssessmentSortOrderLabels() {
+        const sortField = document.getElementById('courseAssessmentSortField');
+        const sortOrder = document.getElementById('courseAssessmentSortOrder');
+        if (!sortField || !sortOrder) return;
+        const labels = {
+            name: { asc: 'A-Z', desc: 'Z-A' },
+            date: { asc: 'Oldest first', desc: 'Newest first' },
+            type: { asc: 'Type A-Z', desc: 'Type Z-A' },
+            result_count: { asc: 'Lowest first', desc: 'Highest first' },
+            completion_rate: { asc: 'Lowest first', desc: 'Highest first' },
+        };
+        const selectedLabels = labels[sortField.value] || labels.name;
+        Array.from(sortOrder.options).forEach(option => {
+            option.textContent = selectedLabels[option.value] || option.textContent;
+        });
     }
 
     function refreshCourseAssessmentTable() {
@@ -8453,15 +8587,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return false;
         });
 
-        filtered.sort((a, b) => {
-            const keyA = getCourseAssessmentSortKey(a, sortBy);
-            const keyB = getCourseAssessmentSortKey(b, sortBy);
-            if (typeof keyA === 'string' && typeof keyB === 'string') {
-                return order * String(keyA).localeCompare(keyB);
-            }
-            return order * (Number(keyA) - Number(keyB));
-        });
-
         const totalAssessments = new Set(filtered.map(item => String(item.assessment_id || ''))).size;
         const completedCount = filtered.filter(item => getAssessmentStatus(item).label === 'Completed').length;
         const scoredRows = filtered.filter(item => item.score !== null && item.score !== undefined && item.score !== '');
@@ -8486,56 +8611,78 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             </div>
         `;
 
-        if (filtered.length === 0) {
+        if (!Array.isArray(courseAssessmentCatalog) || courseAssessmentCatalog.length === 0 || filtered.length === 0) {
             body.innerHTML = '';
             empty.classList.remove('d-none');
             return;
         }
 
         empty.classList.add('d-none');
+        const visibleAssessmentIds = new Set(
+            filtered.map(result => String(result.assessment_id || '')).filter(Boolean)
+        );
+        const sortedAssessments = courseAssessmentCatalog
+            .filter(assessment => visibleAssessmentIds.has(String(assessment.id)))
+            .filter(assessment => {
+                const assessmentId = Number(assessment.id);
+                return Number.isInteger(assessmentId) && assessmentId > 0;
+            })
+            .slice()
+            .sort((a, b) => {
+                const keyA = getCourseAssessmentSortKey(a, sortBy);
+                const keyB = getCourseAssessmentSortKey(b, sortBy);
+                let comparison;
+                if (typeof keyA === 'string' && typeof keyB === 'string') {
+                    comparison = keyA.localeCompare(keyB, undefined, { sensitivity: 'base' });
+                } else {
+                    comparison = Number(keyA) - Number(keyB);
+                }
+                if (comparison !== 0) return order * comparison;
+                const titleComparison = String(a.title || '').localeCompare(
+                    String(b.title || ''),
+                    undefined,
+                    { sensitivity: 'base' }
+                );
+                if (titleComparison !== 0) return titleComparison;
+                return Number(a.id) - Number(b.id);
+            });
+        const assessmentExportCards = sortedAssessments
+            .map(assessment => {
+                const assessmentId = Number(assessment.id);
+                const rawTypeLabel = String(assessment.level || assessment.assessment_type || '').trim();
+                const typeLabel = rawTypeLabel
+                    ? rawTypeLabel.replace(/[_-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
+                    : '';
+                const metadataDate = assessment.published_at || assessment.created_at || assessment.updated_at || null;
+                const metadataDateObject = metadataDate ? new Date(metadataDate) : null;
+                const dateLabel = metadataDateObject && !Number.isNaN(metadataDateObject.getTime())
+                    ? metadataDateObject.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                    : '';
+                return `
+                    <div class="course-assessment-overview-card">
+                        <div class="course-assessment-overview-copy">
+                            <h6 class="course-assessment-overview-title">${escapeHtml(assessment.title || 'Untitled Assessment')}</h6>
+                            ${(typeLabel || dateLabel) ? `
+                                <div class="course-assessment-overview-meta">
+                                    ${typeLabel ? `<span><i class="bi bi-journal-text"></i>${escapeHtml(typeLabel)}</span>` : ''}
+                                    ${dateLabel ? `<span><i class="bi bi-calendar3"></i>${escapeHtml(dateLabel)}</span>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <a class="course-assessment-export-btn"
+                           href="/assessment/${assessmentId}/export-crla/"
+                           title="Export all learners for this assessment to CRLA"
+                           aria-label="Export CRLA for ${escapeHtml(assessment.title || 'assessment')}">
+                            <i class="bi bi-file-earmark-spreadsheet"></i>Export CRLA
+                        </a>
+                    </div>
+                `;
+            })
+            .join('');
         body.innerHTML = `
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 course-assessment-results-table">
-                    <thead>
-                        <tr>
-                            <th>Student</th>
-                            <th>Status</th>
-                            <th>Score</th>
-                            <th>Date</th>
-                            <th class="text-end">View Result</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${filtered.map(result => {
-                            const status = getAssessmentStatus(result);
-                            const score = result.score === null || result.score === undefined || result.score === ''
-                                ? '—'
-                                : `${Math.round(Number(result.score))}%`;
-                            const date = result.date
-                                ? new Date(result.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-                                : '—';
-                            return `
-                                <tr>
-                                    <td>
-                                        <strong>${escapeHtml(result.student_name || 'Unknown Student')}</strong>
-                                        <div class="small text-muted">${escapeHtml(result.assessment_title || 'Assessment')}</div>
-                                    </td>
-                                    <td><span class="assessment-status-pill ${escapeHtml(status.className)}">${escapeHtml(status.label)}</span></td>
-                                    <td class="fw-bold">${escapeHtml(score)}</td>
-                                    <td>${escapeHtml(date)}</td>
-                                    <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-outline-primary view-student-progress"
-                                            data-student-id="${escapeHtml(String(result.student_id || ''))}"
-                                            data-student-name="${escapeHtml(result.student_name || 'Student')}">
-                                            <i class="bi bi-eye me-1"></i>View Result
-                                        </button>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>
+            ${assessmentExportCards
+                ? `<div class="course-assessment-overview-list">${assessmentExportCards}</div>`
+                : ''}
         `;
     }
 
@@ -8547,7 +8694,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const filterGroup = document.getElementById('courseAssessmentFilterGroup');
         if (!searchInput || !sortField || !sortOrder) return;
         searchInput.addEventListener('input', refreshCourseAssessmentTable);
-        sortField.addEventListener('change', refreshCourseAssessmentTable);
+        sortField.addEventListener('change', () => {
+            updateCourseAssessmentSortOrderLabels();
+            refreshCourseAssessmentTable();
+        });
         sortOrder.addEventListener('change', refreshCourseAssessmentTable);
         if (filterGroup) {
             filterGroup.addEventListener('click', (event) => {
@@ -8568,7 +8718,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const filterGroup = document.getElementById('courseAssessmentFilterGroup');
         if (searchInput) searchInput.value = '';
         if (sortField) sortField.value = 'name';
-        if (sortOrder) sortOrder.value = 'desc';
+        if (sortOrder) sortOrder.value = 'asc';
+        updateCourseAssessmentSortOrderLabels();
         if (filterGroup) {
             filterGroup.querySelectorAll('.assessment-filter-btn').forEach(button => {
                 button.classList.toggle('active', (button.dataset.filter || 'all') === 'all');
@@ -10134,10 +10285,62 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
     }
 
+        function latestAttemptValue(attempt, ...keys) {
+            if (!attempt) return null;
+            for (const key of keys) {
+                const value = attempt[key];
+                if (value !== undefined && value !== null && value !== '') {
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        async function fetchAssessmentProgressDetails(assessmentIds) {
+            const uniqueIds = [...new Set(assessmentIds.filter(Boolean))];
+            const entries = await Promise.all(uniqueIds.map(async rawId => {
+                try {
+                    if (String(rawId).startsWith('material-')) {
+                        const id = String(rawId).replace(/^material-/, '');
+                        const res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
+                        return [String(rawId), null];
+                    }
+
+                    const id = rawRecordId(rawId);
+                    let res = await fetch(`/dashboard/teacher/assessment/${id}/`, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    let data = await res.json();
+                    if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
+
+                    res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    data = await res.json();
+                    if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
+                } catch (err) {
+                    console.warn('Failed to load assessment or material progress', rawId, err);
+                }
+                return [String(rawId), null];
+            }));
+            return Object.fromEntries(entries);
+        }
+
         async function loadCourseAssessments(courseId) {
             initializeCourseAssessmentTableHandlers();
             resetCourseAssessmentFilters();
             courseAssessmentsTableData = [];
+            courseAssessmentCatalog = [];
 
             try {
                 const res = await fetch(`/dashboard/teacher/assessments/?course_id=${encodeURIComponent(courseId)}`, {
@@ -10149,15 +10352,28 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const data = await res.json();
                     if (data && data.success && Array.isArray(data.assessments)) {
                         const assessments = data.assessments;
+                        courseAssessmentCatalog = assessments;
                         const detailMap = await fetchAssessmentProgressDetails(
                             assessments.map(assessment => assessment.id)
                         );
                         courseAssessmentsTableData = assessments.flatMap(assessment => {
                             const detail = detailMap[String(rawRecordId(assessment.id))] || detailMap[String(assessment.id)] || {};
                             const attempts = Array.isArray(detail.attempts) ? detail.attempts : [];
-                            return attempts
-                                .filter(attempt => String(attempt.status || '').toLowerCase() !== 'cancelled')
-                                .map(attempt => ({
+                            const visibleAttempts = attempts.filter(
+                                attempt => String(attempt.status || '').toLowerCase() !== 'cancelled'
+                            );
+                            if (!visibleAttempts.length) {
+                                return [{
+                                    assessment_id: assessment.id,
+                                    assessment_title: assessment.title,
+                                    student_id: null,
+                                    student_name: 'No student results',
+                                    result_status: 'not_started',
+                                    score: null,
+                                    date: assessment.updated_at || assessment.created_at || null,
+                                }];
+                            }
+                            return visibleAttempts.map(attempt => ({
                                     assessment_id: assessment.id,
                                     assessment_title: assessment.title,
                                     student_id: attempt.student_id,
@@ -11271,17 +11487,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return { label: 'In Progress', className: 'bg-warning text-dark' };
         }
 
-        function latestAttemptValue(attempt, ...keys) {
-            if (!attempt) return null;
-            for (const key of keys) {
-                const value = attempt[key];
-                if (value !== undefined && value !== null && value !== '') {
-                    return value;
-                }
-            }
-            return null;
-        }
-
         function formatAttemptMetric(value, suffix = '') {
             return (value !== undefined && value !== null && value !== '') ? `${escapeHtml(value)}${suffix}` : '—';
         }
@@ -11327,49 +11532,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 });
             });
             return tasks;
-        }
-
-        async function fetchAssessmentProgressDetails(assessmentIds) {
-            const uniqueIds = [...new Set(assessmentIds.filter(Boolean))];
-            const entries = await Promise.all(uniqueIds.map(async rawId => {
-                try {
-                    // If id is prefixed with 'material-' call material attempts endpoint
-                    if (String(rawId).toString().startsWith('material-')) {
-                        const id = String(rawId).replace(/^material-/, '');
-                        const res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
-                            method: 'GET',
-                            credentials: 'same-origin',
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        });
-                        const data = await res.json();
-                        if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
-                        return [String(rawId), null];
-                    }
-
-                    // otherwise, try assessment endpoint
-                    const id = rawRecordId(rawId);
-                    let res = await fetch(`/dashboard/teacher/assessment/${id}/`, {
-                        method: 'GET',
-                        credentials: 'same-origin',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    let data = await res.json();
-                    if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
-
-                    // fallback: if assessment endpoint failed, try material endpoint using rawId
-                    res = await fetch(`/dashboard/teacher/material-attempts/?material_id=${encodeURIComponent(id)}`, {
-                        method: 'GET',
-                        credentials: 'same-origin',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    data = await res.json();
-                    if (res.ok && data.success && data.assessment) return [String(rawId), data.assessment];
-                } catch (err) {
-                    console.warn('Failed to load assessment or material progress', rawId, err);
-                }
-                return [String(rawId), null];
-            }));
-            return Object.fromEntries(entries);
         }
 
         async function openStudentProgressModal(studentId, studentName, courseId) {
@@ -12095,6 +12257,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     </div>
                 </div>
                 <div class="assessment-actions">
+                    <a class="material-btn" title="Export CRLA" aria-label="Export CRLA"
+                       href="/assessment/${assessment.id}/export-crla/">
+                        <i class="bi bi-file-earmark-spreadsheet"></i>
+                        <span>Export CRLA</span>
+                    </a>
                     <button class="material-btn" title="Preview" data-assessment-action="preview">
                         <i class="bi bi-eye"></i>
                     </button>

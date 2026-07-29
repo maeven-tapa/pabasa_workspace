@@ -77,6 +77,7 @@ from .scoring import (
     osps_multiplier,
     performance_interpretation,
 )
+from .utils.crla_export import export_crla_excel
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -8457,12 +8458,14 @@ def get_teacher_courses_api(request):
 
 
 @require_http_methods(["GET"])
-@login_required(role='teacher')
+@login_required()
 def get_teacher_assessments_api(request):
     try:
         teacher_user = User.objects.filter(id=request.session.get('user_id')).first()
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+        if teacher_user.role not in {'teacher', 'admin'}:
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
 
         course_id = request.GET.get('course_id')
         assessments_qs = Assessment.objects.filter(
@@ -8472,23 +8475,27 @@ def get_teacher_assessments_api(request):
         )
 
         if course_id is not None:
-            course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
-            if course:
-                # When viewing a specific course, only include assessments
-                # that are explicitly linked to that course (via the
-                # Course.assessments M2M), assessments attached to the
-                # course's sections, or assessments produced by materials
-                # that belong to the course or its assigned sections.
-                # Do NOT include all teacher-owned assessments across other courses.
-                assessments_qs = Assessment.objects.filter(
-                    source_assessment__isnull=True,
-                    is_active=True
-                ).filter(
-                    Q(courses=course, teacher=teacher_user) |
-                    Q(section__in=course.sections.all(), teacher=teacher_user) |
-                    Q(material__courses=course, teacher=teacher_user) |
-                    Q(material__assigned_sections__in=course.sections.all(), teacher=teacher_user)
-                ).distinct()
+            course = Course.objects.filter(id=course_id, is_active=True).select_related("teacher").first()
+            if not course:
+                return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+            if teacher_user.role != 'admin' and course.teacher_id != teacher_user.id:
+                return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+
+            # Match the assessment scope serialized by get_teacher_courses_api:
+            # root assessments explicitly linked to this course, plus root
+            # assessments owned by the course teacher and attached to one of
+            # this course's active sections. The course owner is intentionally
+            # used instead of the session user so authorized administrators see
+            # the same records without broadening access to unrelated courses.
+            course_owner = course.teacher
+            course_sections = course.sections.filter(is_active=True)
+            assessments_qs = Assessment.objects.filter(
+                source_assessment__isnull=True,
+                is_active=True
+            ).filter(
+                Q(courses=course, teacher=course_owner) |
+                Q(section__in=course_sections, teacher=course_owner)
+            ).distinct()
 
         # Always exclude records explicitly marked as archived (status field)
         assessments_qs = assessments_qs.exclude(status__iexact='archived').prefetch_related('materials').order_by('-created_at').distinct()
@@ -8525,9 +8532,10 @@ def get_teacher_assessments_api(request):
         try:
             from .models import Material
             if course_id is not None and course:
-                # Only include teacher-owned assessment materials attached to this course.
+                # Only include assessment materials owned by the requested
+                # course's teacher and attached to this course.
                 materials_qs = course.materials.filter(
-                    teacher=teacher_user,
+                    teacher=course.teacher,
                     type__in=['assessment', 'both'],
                     is_active=True,
                 )
@@ -8644,14 +8652,51 @@ def _teacher_can_access_material(teacher_user, material):
 
 
 @require_http_methods(["GET"])
-@login_required(role='teacher')
+def export_crla_assessment(request, assessment_id):
+    """Download an assessment using the official Grade 2 Tagalog CRLA template."""
+    if not _check_auth(request):
+        return redirect("auth")
+
+    user = User.objects.filter(id=request.session.get("user_id")).first()
+    if not user or user.role not in {"teacher", "admin"}:
+        return HttpResponseForbidden("Only teachers and administrators can export CRLA workbooks.")
+
+    assessment = Assessment.objects.filter(id=assessment_id).select_related("section").first()
+    if not assessment:
+        return HttpResponse("Assessment not found.", status=404)
+    root_assessment = assessment.source_assessment or assessment
+    if not _teacher_can_access_assessment(user, root_assessment):
+        return HttpResponseForbidden("You do not have access to this assessment.")
+
+    try:
+        workbook = export_crla_excel(root_assessment.id)
+    except (FileNotFoundError, ValueError) as exc:
+        logger.warning("Unable to export CRLA workbook for assessment %s: %s", assessment_id, exc)
+        return HttpResponse(str(exc), status=400)
+    except Exception:
+        logger.exception("CRLA export failed for assessment %s", assessment_id)
+        return HttpResponse("Unable to generate the CRLA workbook.", status=500)
+
+    response = HttpResponse(
+        workbook.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{workbook.name}"'
+    response["Content-Length"] = str(len(response.content))
+    return response
+
+
+@require_http_methods(["GET"])
+@login_required()
 def get_teacher_assessment_api(request, assessment_id):
-    """Return detailed data for a single assessment (teacher-only)."""
+    """Return assessment details to its teacher or an administrator."""
     try:
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first()
         if not teacher_user:
             return JsonResponse({'success': False, 'error': 'Teacher not found'}, status=404)
+        if teacher_user.role not in {'teacher', 'admin'}:
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
 
         assessment = Assessment.objects.filter(id=assessment_id).first()
         if not assessment:
