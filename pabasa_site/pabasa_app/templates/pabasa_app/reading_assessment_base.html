@@ -1695,6 +1695,117 @@
         body.dark-theme .assessment-help-card { background:#172335; color:#edf5f4; }
         body.dark-theme .assessment-help-step { background:#223146; }
         body.dark-theme .assessment-help-step span { color:#b7c5ca; }
+        /* Completion/results clarity refinements */
+        .completion-card {
+            border-color: rgba(31, 111, 139, 0.18);
+            box-shadow: 0 28px 70px rgba(15, 78, 100, 0.16);
+        }
+
+        .completion-kicker,
+        .completion-breakdown-title {
+            color: var(--accent-deep);
+            font-size: 0.78rem;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .completion-kicker {
+            background: rgba(31, 111, 139, 0.1);
+            border: 1px solid rgba(31, 111, 139, 0.14);
+            border-radius: 999px;
+            justify-self: center;
+            padding: 0.42rem 0.75rem;
+        }
+
+        .completion-breakdown-title {
+            align-items: center;
+            display: flex;
+            gap: 0.55rem;
+            justify-content: flex-start;
+            margin-top: 0.25rem;
+            text-align: left;
+        }
+
+        .completion-breakdown-title::after {
+            background: linear-gradient(90deg, rgba(31, 111, 139, 0.22), transparent);
+            content: "";
+            flex: 1;
+            height: 1px;
+        }
+
+        .summary-tile {
+            border-color: rgba(31, 111, 139, 0.12);
+            box-shadow: 0 10px 24px rgba(15, 78, 100, 0.07);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .summary-tile::before {
+            background: linear-gradient(90deg, var(--accent), var(--leaf));
+            content: "";
+            height: 4px;
+            inset: 0 0 auto;
+            position: absolute;
+        }
+
+        .summary-tile strong {
+            font-size: clamp(1.25rem, 2.2vw, 1.65rem);
+        }
+
+        .summary-tile:nth-last-child(2) {
+            background: linear-gradient(145deg, rgba(31, 111, 139, 0.12), rgba(255, 255, 255, 0.92));
+            border-color: rgba(31, 111, 139, 0.28);
+        }
+
+        .summary-tile:nth-last-child(2) strong {
+            color: var(--accent-deep);
+            font-size: clamp(1.5rem, 2.8vw, 2rem);
+        }
+
+        .summary-tile--score {
+            padding-bottom: 1.15rem;
+        }
+
+        .summary-score-progress {
+            background: rgba(31, 111, 139, 0.12);
+            border-radius: 999px;
+            bottom: 0.55rem;
+            height: 5px;
+            left: 0.75rem;
+            overflow: hidden;
+            position: absolute;
+            right: 0.75rem;
+        }
+
+        .summary-score-progress span {
+            background: linear-gradient(90deg, var(--accent), var(--leaf));
+            display: block;
+            height: 100%;
+        }
+
+        .completion-disclaimer.is-encouragement {
+            background: rgba(43, 122, 72, 0.08);
+            border: 1px solid rgba(43, 122, 72, 0.14);
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
+        }
+
+        body.dark-theme .completion-kicker {
+            background: rgba(56, 189, 248, 0.12);
+            border-color: rgba(125, 211, 252, 0.22);
+            color: #7dd3fc;
+        }
+
+        body.dark-theme .completion-breakdown-title {
+            color: #7dd3fc;
+        }
+
+        body.dark-theme .completion-disclaimer.is-encouragement {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(134, 239, 172, 0.18);
+        }
 </style>
 </head>
 <body>
@@ -1863,8 +1974,10 @@
         <section class="completion-page" id="completionPage" aria-live="polite" aria-atomic="true">
             <article class="completion-card">
                 <div class="completion-mark">A</div>
+                <div class="completion-kicker">Reading Assessment Results</div>
                 <h1>Assessment complete.</h1>
                 <p>You finished the reading set. Your teacher can now review the session and use it for your next practice step.</p>
+                <h2 class="completion-breakdown-title">Score Breakdown</h2>
                 <div class="completion-summary" id="completionSummary" aria-live="polite"></div>
                 <div class="completion-loading" id="completionLoadingState" aria-live="polite" aria-busy="true">
                     <div class="completion-loading-heading">

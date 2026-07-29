@@ -295,6 +295,24 @@
         margin: 0;
     }
 
+    .course-card-heading {
+        align-items: flex-start;
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .course-card-heading-icon {
+        align-items: center;
+        background: linear-gradient(135deg, var(--dash-primary-soft), rgba(56, 189, 248, 0.16));
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 12px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        flex: 0 0 38px;
+        height: 38px;
+        justify-content: center;
+    }
+
     .course-card-subtitle {
         color: var(--dash-ink-soft);
         font-size: 0.9rem;
@@ -3849,6 +3867,16 @@
         white-space: nowrap;
     }
 
+    .students-header-actions {
+        align-items: center;
+        display: flex;
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+        gap: 0.65rem;
+        justify-content: flex-end;
+        margin-left: auto;
+    }
+
     .students-shell {
         background: rgba(255, 255, 255, 0.82);
         border: 1px solid rgba(27, 26, 23, 0.06);
@@ -4171,6 +4199,12 @@
         .students-header-card {
             align-items: flex-start;
             flex-direction: column;
+        }
+
+        .students-header-actions {
+            justify-content: flex-end;
+            margin-left: 0;
+            width: 100%;
         }
 
         .students-toolbar {
@@ -5521,6 +5555,113 @@
     }
 </style>
 
+<style>
+    /* Course cards and assessment-result table refinements */
+    .course-dashboard-card {
+        isolation: isolate;
+    }
+
+    .course-card-heading-icon {
+        box-shadow: 0 8px 18px rgba(31, 111, 139, 0.1);
+    }
+
+    .course-card-metric {
+        transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    .course-card-metric:hover {
+        border-color: rgba(31, 111, 139, 0.2);
+        box-shadow: 0 8px 18px rgba(15, 78, 100, 0.08);
+        transform: translateY(-2px);
+    }
+
+    .course-card-footer {
+        background: rgba(31, 111, 139, 0.035);
+        border-radius: 14px;
+    }
+
+    .course-assessment-results-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 720px;
+    }
+
+    .course-assessment-results-table thead th {
+        background: #f4f9fc;
+        border-bottom: 1px solid rgba(31, 111, 139, 0.14);
+        color: var(--dash-primary-deep);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        padding: 0.9rem 1rem;
+        position: sticky;
+        text-transform: uppercase;
+        top: 0;
+        white-space: nowrap;
+        z-index: 1;
+    }
+
+    .course-assessment-results-table tbody td {
+        border-bottom-color: rgba(27, 26, 23, 0.07);
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .course-assessment-results-table tbody tr {
+        transition: background-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .course-assessment-results-table tbody tr:hover {
+        background: rgba(31, 111, 139, 0.045);
+        box-shadow: inset 4px 0 0 rgba(31, 111, 139, 0.45);
+    }
+
+    .course-assessment-results-table td:first-child strong {
+        color: var(--dash-ink);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.95rem;
+    }
+
+    .course-assessment-results-table .view-student-progress {
+        border-radius: 999px;
+        font-weight: 800;
+        min-width: 112px;
+    }
+
+    #courseAssessmentTableBody > .table-responsive {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(31, 111, 139, 0.11);
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        max-height: 520px;
+    }
+
+    body.dark-theme .course-card-heading-icon {
+        background: rgba(56, 189, 248, 0.12);
+        border-color: rgba(125, 211, 252, 0.2);
+        color: #7dd3fc;
+    }
+
+    body.dark-theme #courseAssessmentTableBody > .table-responsive,
+    body.dark-theme .course-assessment-results-table,
+    body.dark-theme .course-assessment-results-table tbody td {
+        background: #1e293b;
+        border-color: rgba(255, 255, 255, 0.09);
+        color: #e2e8f0;
+    }
+
+    body.dark-theme .course-assessment-results-table thead th {
+        background: #0f172a;
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #7dd3fc;
+    }
+
+    body.dark-theme .course-assessment-results-table tbody tr:hover {
+        background: rgba(56, 189, 248, 0.08);
+    }
+</style>
+
 <!-- Courses (teacher created course groups) -->
 <section class="courses-home mb-4">
     <div class="course-floating-action">
@@ -5540,9 +5681,12 @@
                         </div>
                     </div>
 
-                    <div>
-                        <h3 class="course-card-title">{{ course.title }}</h3>
-                        <p class="course-card-subtitle">{{ course.description|default_if_none:"" }}{% if course.metrics %}{% with s=course.metrics.sections %}{% if s %}Reading Materials • {{ s }} section{% if s|add:-1 %}s{% endif %}{% endif %}{% endwith %}{% endif %}</p>
+                    <div class="course-card-heading">
+                        <span class="course-card-heading-icon" aria-hidden="true"><i class="bi bi-journal-bookmark-fill"></i></span>
+                        <div>
+                            <h3 class="course-card-title">{{ course.title }}</h3>
+                            <p class="course-card-subtitle">{{ course.description|default_if_none:"" }}{% if course.metrics %}{% with s=course.metrics.sections %}{% if s %}Reading Materials • {{ s }} section{% if s|add:-1 %}s{% endif %}{% endif %}{% endwith %}{% endif %}</p>
+                        </div>
                     </div>
 
                     <div class="course-card-divider" aria-hidden="true"></div>
@@ -5844,20 +5988,19 @@
                                             <div class="assessment-toolbar">
                                                 <label class="assessment-search" for="courseAssessmentSearch">
                                                     <span class="students-search-icon"><i class="bi bi-search"></i></span>
-                                                    <input id="courseAssessmentSearch" type="search" placeholder="Search by title, ID, or date..." aria-label="Search assessments">
+                                                    <input id="courseAssessmentSearch" type="search" placeholder="Search student, status, or date..." aria-label="Search assessment results">
                                                 </label>
                                                 <div class="assessment-filter-group" id="courseAssessmentFilterGroup" role="tablist" aria-label="Assessment filters">
-                                                    <button class="assessment-filter-btn active" type="button" data-filter="all">All Assessments</button>
+                                                    <button class="assessment-filter-btn active" type="button" data-filter="all">All Results</button>
                                                     <button class="assessment-filter-btn" type="button" data-filter="completed">Completed</button>
                                                     <button class="assessment-filter-btn" type="button" data-filter="in-progress">In Progress</button>
-                                                    <button class="assessment-filter-btn" type="button" data-filter="not-started">No Attempts</button>
+                                                    <button class="assessment-filter-btn" type="button" data-filter="not-started">Not Started</button>
                                                 </div>
                                                 <div class="assessment-sort-group">
                                                     <select id="courseAssessmentSortField" class="form-select" aria-label="Sort field">
-                                                        <option value="name">Sort by Name</option>
-                                                        <option value="accuracy">Sort by Accuracy</option>
-                                                        <option value="fluency">Sort by Fluency</option>
-                                                        <option value="time">Sort by Time</option>
+                                                        <option value="name">Sort by Student</option>
+                                                        <option value="score">Sort by Score</option>
+                                                        <option value="status">Sort by Status</option>
                                                         <option value="created_at">Sort by Date</option>
                                                     </select>
                                                     <select id="courseAssessmentSortOrder" class="form-select" aria-label="Sort order">
@@ -5884,7 +6027,7 @@
                                                 <h6 class="mb-1">Students</h6>
                                                 <p class="students-header-copy">Track enrolled learners, reading progress, and course engagement in one premium workspace.</p>
                                             </div>
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <div class="students-header-actions">
                                                 <span class="students-count-pill" id="studentsCountPill">0 enrolled</span>
                                                 <button class="btn btn-sm btn-primary" id="btnAddStudentToCourse">Add Student</button>
                                             </div>
@@ -7692,6 +7835,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 </div>
                 <h5 class="modal-title mb-2" id="deleteConfirmTitle">Are you sure?</h5>
                 <div id="deleteConfirmText" class="text-muted px-3">This action cannot be undone.</div>
+                <div id="deleteConfirmationInputWrap" class="text-start px-3 mt-3 d-none">
+                    <label class="form-label small fw-bold" for="deleteConfirmationInput">
+                        Type <code id="deleteConfirmationWord">DELETE</code> to confirm
+                    </label>
+                    <input class="form-control" id="deleteConfirmationInput" type="text"
+                           autocomplete="off" spellcheck="false" aria-describedby="deleteConfirmationHelp">
+                    <div class="form-text" id="deleteConfirmationHelp">The confirmation text must match exactly.</div>
+                </div>
             </div>
             <div class="modal-footer border-0 justify-content-center pb-4">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
@@ -8226,6 +8377,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     }
 
     function getAssessmentStatus(assessment) {
+        const explicitStatus = String(assessment?.result_status || assessment?.status || '').trim().toLowerCase();
+        if (explicitStatus === 'completed') return { label: 'Completed', className: 'status-completed' };
+        if (explicitStatus === 'in_progress' || explicitStatus === 'in-progress' || explicitStatus === 'started') {
+            return { label: 'In Progress', className: 'status-in-progress' };
+        }
+        if (explicitStatus === 'not_started' || explicitStatus === 'not-started' || explicitStatus === 'pending') {
+            return { label: 'Not Started', className: 'status-not-started' };
+        }
         const archived = assessment?.archived || assessment?.is_archived || assessment?.status === 'archived' || assessment?.is_active === false;
         if (archived) return { label: 'Archived', className: 'status-archived' };
         const attempts = Number(assessment?.attempt_count || assessment?.attempts || assessment?.total_attempts || assessment?.attempts_count || 0);
@@ -8238,19 +8397,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function getCourseAssessmentSortKey(assessment, field) {
         switch (field) {
-            case 'accuracy':
-                return Number(assessment.avg_accuracy) || 0;
-            case 'fluency':
-                return Number(assessment.avg_fluency) || 0;
-            case 'time':
-                return Number(assessment.avg_time_score) || 0;
+            case 'score':
+                return Number(assessment.score) || 0;
+            case 'status':
+                return getAssessmentStatus(assessment).label.toLowerCase();
             case 'created_at':
-                return assessment.created_at ? new Date(assessment.created_at).getTime() : 0;
+                return assessment.date ? new Date(assessment.date).getTime() : 0;
             case 'updated_at':
                 return assessment.updated_at ? new Date(assessment.updated_at).getTime() : 0;
             case 'name':
             default:
-                return String(assessment.title || '').toLowerCase();
+                return String(assessment.student_name || '').toLowerCase();
         }
     }
 
@@ -8283,17 +8440,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const matchesFilter = activeFilter === 'all' || (activeFilter === 'completed' && status === 'completed') || (activeFilter === 'in-progress' && status === 'in progress') || (activeFilter === 'not-started' && status === 'not started');
             if (!matchesFilter) return false;
             if (!searchTerm) return true;
-            const titleHit = String(assessment.title || '').toLowerCase().includes(searchTerm);
-            const codeHit = String(assessment.code || '').toLowerCase().includes(searchTerm);
-            const createdAtText = String(assessment.created_at || '').toLowerCase();
-            const updatedAtText = String(assessment.updated_at || '').toLowerCase();
-            const createdAtDisplay = String(typeof formatDateTime === 'function' ? formatDateTime(assessment.created_at) : assessment.created_at || '').toLowerCase();
-            const updatedAtDisplay = String(typeof formatDateTime === 'function' ? formatDateTime(assessment.updated_at) : assessment.updated_at || '').toLowerCase();
-            const dateHit = [createdAtText, updatedAtText, createdAtDisplay, updatedAtDisplay].some(value => value.includes(searchTerm));
-            if (titleHit || codeHit || dateHit) return true;
+            const studentHit = String(assessment.student_name || '').toLowerCase().includes(searchTerm);
+            const assessmentHit = String(assessment.assessment_title || '').toLowerCase().includes(searchTerm);
+            const statusHit = status.includes(searchTerm);
+            const dateText = String(assessment.date || '').toLowerCase();
+            const dateDisplay = String(typeof formatDateTime === 'function' ? formatDateTime(assessment.date) : assessment.date || '').toLowerCase();
+            if (studentHit || assessmentHit || statusHit || dateText.includes(searchTerm) || dateDisplay.includes(searchTerm)) return true;
             const numeric = Number(searchTerm);
             if (!Number.isNaN(numeric)) {
-                return [assessment.avg_accuracy, assessment.avg_wpm, assessment.avg_fluency, assessment.avg_pronunciation, assessment.avg_time_score].some(value => Number(value) === numeric);
+                return Number(assessment.score) === numeric;
             }
             return false;
         });
@@ -8307,11 +8462,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return order * (Number(keyA) - Number(keyB));
         });
 
-        const totalAssessments = filtered.length;
+        const totalAssessments = new Set(filtered.map(item => String(item.assessment_id || ''))).size;
         const completedCount = filtered.filter(item => getAssessmentStatus(item).label === 'Completed').length;
-        const averageAccuracy = totalAssessments ? Math.round(filtered.reduce((sum, item) => sum + Number(item.avg_accuracy || 0), 0) / totalAssessments) : 0;
-        const averageWpm = totalAssessments ? Math.round(filtered.reduce((sum, item) => sum + Number(item.avg_wpm || 0), 0) / totalAssessments) : 0;
-        const totalAttempts = filtered.reduce((sum, item) => sum + Number(item.attempt_count || item.attempts || item.total_attempts || item.attempts_count || 0), 0);
+        const scoredRows = filtered.filter(item => item.score !== null && item.score !== undefined && item.score !== '');
+        const averageScore = scoredRows.length ? Math.round(scoredRows.reduce((sum, item) => sum + Number(item.score || 0), 0) / scoredRows.length) : 0;
 
         summary.innerHTML = `
             <div class="assessment-summary-card">
@@ -8319,16 +8473,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 <span>Assessments</span>
             </div>
             <div class="assessment-summary-card">
-                <strong>${averageAccuracy}%</strong>
-                <span>Avg Accuracy</span>
+                <strong>${filtered.length}</strong>
+                <span>Student Results</span>
             </div>
             <div class="assessment-summary-card">
-                <strong>${averageWpm}</strong>
-                <span>Avg WPM</span>
+                <strong>${completedCount}</strong>
+                <span>Completed</span>
             </div>
             <div class="assessment-summary-card">
-                <strong>${totalAttempts}</strong>
-                <span>Total Attempts</span>
+                <strong>${averageScore}%</strong>
+                <span>Average Score</span>
             </div>
         `;
 
@@ -8339,56 +8493,50 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         empty.classList.add('d-none');
-        body.innerHTML = filtered.map(assessment => {
-            const status = getAssessmentStatus(assessment);
-            const code = assessment.code || 'ASS-000';
-            const createdAt = formatAssessmentRelativeDate(assessment.created_at);
-            const updatedAt = formatAssessmentRelativeDate(assessment.updated_at);
-            const attempts = Number(assessment.attempt_count || assessment.attempts || assessment.total_attempts || assessment.attempts_count || 0);
-            return `
-                <article class="assessment-card" data-assessment-id="${escapeHtml(String(assessment.id || ''))}">
-                    <div class="assessment-card-header">
-                        <div class="assessment-card-main">
-                            <div class="assessment-icon"><i class="bi bi-clipboard2-check"></i></div>
-                            <div style="min-width:0;">
-                                <h6 class="assessment-title">${escapeHtml(assessment.title || 'Untitled assessment')}</h6>
-                                <div class="assessment-id-pill"><i class="bi bi-tag"></i><span>${escapeHtml(code)}</span></div>
-                                <div class="assessment-meta">
-                                    <span><i class="bi bi-calendar3 me-1"></i>${escapeHtml(createdAt)}</span>
-                                    <span><i class="bi bi-arrow-repeat me-1"></i>${attempts} attempt${attempts === 1 ? '' : 's'}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <span class="assessment-status-pill ${escapeHtml(status.className)}">${escapeHtml(status.label)}</span>
-                    </div>
-                    <div class="assessment-metrics">
-                        <div class="assessment-metric-chip metric-accuracy">
-                            <span class="metric-label">Accuracy</span>
-                            <strong>${formatAssessmentMetric(assessment.avg_accuracy, '%')}</strong>
-                        </div>
-                        <div class="assessment-metric-chip metric-wpm">
-                            <span class="metric-label">WPM</span>
-                            <strong>${formatAssessmentMetric(assessment.avg_wpm)}</strong>
-                        </div>
-                        <div class="assessment-metric-chip metric-fluency">
-                            <span class="metric-label">Fluency</span>
-                            <strong>${formatAssessmentMetric(assessment.avg_fluency, '%')}</strong>
-                        </div>
-                        <div class="assessment-metric-chip metric-pronunciation">
-                            <span class="metric-label">Pronunciation</span>
-                            <strong>${formatAssessmentMetric(assessment.avg_pronunciation, '%')}</strong>
-                        </div>
-                        <div class="assessment-metric-chip metric-time">
-                            <span class="metric-label">Time</span>
-                            <strong>${formatAssessmentMetric(assessment.avg_time_score, 'm')}</strong>
-                        </div>
-                    </div>
-                    <div class="assessment-card-footer">
-                        <span class="assessment-date" title="Updated ${escapeHtml(formatDateTime(assessment.updated_at))}">Updated ${escapeHtml(formatAssessmentRelativeDate(assessment.updated_at))}</span>
-                    </div>
-                </article>
-            `;
-        }).join('');
+        body.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 course-assessment-results-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th>Date</th>
+                            <th class="text-end">View Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(result => {
+                            const status = getAssessmentStatus(result);
+                            const score = result.score === null || result.score === undefined || result.score === ''
+                                ? '—'
+                                : `${Math.round(Number(result.score))}%`;
+                            const date = result.date
+                                ? new Date(result.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                                : '—';
+                            return `
+                                <tr>
+                                    <td>
+                                        <strong>${escapeHtml(result.student_name || 'Unknown Student')}</strong>
+                                        <div class="small text-muted">${escapeHtml(result.assessment_title || 'Assessment')}</div>
+                                    </td>
+                                    <td><span class="assessment-status-pill ${escapeHtml(status.className)}">${escapeHtml(status.label)}</span></td>
+                                    <td class="fw-bold">${escapeHtml(score)}</td>
+                                    <td>${escapeHtml(date)}</td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-primary view-student-progress"
+                                            data-student-id="${escapeHtml(String(result.student_id || ''))}"
+                                            data-student-name="${escapeHtml(result.student_name || 'Student')}">
+                                            <i class="bi bi-eye me-1"></i>View Result
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
     }
 
     function initializeCourseAssessmentTableHandlers() {
@@ -8724,9 +8872,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </div>
                     </div>
 
-                    <div>
-                        <h3 class="course-card-title">${escapeHtml(course.title || 'Untitled Course')}</h3>
-                        <p class="course-card-subtitle">${escapeHtml(subtitle)}</p>
+                    <div class="course-card-heading">
+                        <span class="course-card-heading-icon" aria-hidden="true"><i class="bi bi-journal-bookmark-fill"></i></span>
+                        <div>
+                            <h3 class="course-card-title">${escapeHtml(course.title || 'Untitled Course')}</h3>
+                            <p class="course-card-subtitle">${escapeHtml(subtitle)}</p>
+                        </div>
                     </div>
 
                     <div class="course-card-divider" aria-hidden="true"></div>
@@ -8781,7 +8932,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken,
                 },
-                body: JSON.stringify({ course_id: courseId }),
+                body: JSON.stringify({ course_id: courseId, confirmation: 'DELETE' }),
             });
             const data = await response.json();
             if (!response.ok || !data.success) {
@@ -8816,7 +8967,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const course = findCourseById(courseId);
         const title = course?.title || 'this course';
         showDeleteConfirmModal(
-            `<p>Delete <strong>${escapeHtml(title)}</strong>?</p><p class="text-secondary small mt-2"><i class="bi bi-exclamation-triangle text-danger me-2"></i>This action will archive linked materials and assessments and remove the course from your dashboard.</p>`,
+            `<p>Permanently delete <strong>${escapeHtml(title)}</strong>?</p><p class="text-secondary small mt-2"><i class="bi bi-exclamation-triangle text-danger me-2"></i>This cannot be undone. Linked content will be archived.</p>`,
             async () => {
                 await deleteCourse(courseId);
             },
@@ -8824,6 +8975,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 title: 'Delete Course?',
                 confirmText: 'Delete Course',
                 confirmClass: 'btn btn-danger px-4',
+                requireConfirmation: 'DELETE',
             }
         );
     };
@@ -9996,7 +10148,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 if (res.ok) {
                     const data = await res.json();
                     if (data && data.success && Array.isArray(data.assessments)) {
-                        courseAssessmentsTableData = data.assessments;
+                        const assessments = data.assessments;
+                        const detailMap = await fetchAssessmentProgressDetails(
+                            assessments.map(assessment => assessment.id)
+                        );
+                        courseAssessmentsTableData = assessments.flatMap(assessment => {
+                            const detail = detailMap[String(rawRecordId(assessment.id))] || detailMap[String(assessment.id)] || {};
+                            const attempts = Array.isArray(detail.attempts) ? detail.attempts : [];
+                            return attempts
+                                .filter(attempt => String(attempt.status || '').toLowerCase() !== 'cancelled')
+                                .map(attempt => ({
+                                    assessment_id: assessment.id,
+                                    assessment_title: assessment.title,
+                                    student_id: attempt.student_id,
+                                    student_name: attempt.student_name || `Student ${attempt.student_id || ''}`.trim(),
+                                    result_status: attempt.status || 'completed',
+                                    score: latestAttemptValue(attempt, 'final_score', 'total_score', 'score', 'accuracy'),
+                                    date: attempt.completed_at || attempt.updated_at || attempt.started_at || assessment.updated_at,
+                                }));
+                        });
                     }
                 }
             } catch (e) {
@@ -11730,6 +11900,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     function showDeleteClassConfirmation(classCode, className) {
         classToDeleteCode = classCode;
         const deleteConfirmText = document.getElementById('deleteConfirmText');
+        document.getElementById('deleteConfirmationInputWrap')?.classList.add('d-none');
+        const confirmButton = document.getElementById('confirmDelete');
+        if (confirmButton) confirmButton.disabled = false;
         
         deleteConfirmText.innerHTML = `<p>Are you sure you want to delete <strong>${className}</strong>?</p><p class="text-secondary small mt-2"><i class="bi bi-exclamation-triangle text-danger me-2"></i>This action cannot be undone. All class data will be removed.</p>`;
         
@@ -12352,14 +12525,33 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         if (titleEl) titleEl.textContent = options.title || 'Are you sure?';
         document.getElementById('deleteConfirmText').innerHTML = message;
         const confirmBtn = document.getElementById('confirmDelete');
+        const confirmationWrap = document.getElementById('deleteConfirmationInputWrap');
+        const confirmationInput = document.getElementById('deleteConfirmationInput');
+        const confirmationWordEl = document.getElementById('deleteConfirmationWord');
+        const requiredConfirmation = String(options.requireConfirmation || '');
         confirmBtn.textContent = options.confirmText || 'Delete Forever';
         confirmBtn.className = options.confirmClass || 'btn btn-danger px-4';
+        confirmationWrap?.classList.toggle('d-none', !requiredConfirmation);
+        if (confirmationInput) {
+            confirmationInput.value = '';
+            confirmationInput.oninput = null;
+            confirmationInput.setAttribute('aria-required', requiredConfirmation ? 'true' : 'false');
+        }
+        if (confirmationWordEl && requiredConfirmation) confirmationWordEl.textContent = requiredConfirmation;
         
         // Remove old listener and add new one
         const newConfirmBtn = confirmBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        newConfirmBtn.disabled = Boolean(requiredConfirmation);
+
+        if (requiredConfirmation && confirmationInput) {
+            confirmationInput.oninput = function() {
+                newConfirmBtn.disabled = confirmationInput.value.trim() !== requiredConfirmation;
+            };
+        }
         
         newConfirmBtn.addEventListener('click', async function() {
+            if (requiredConfirmation && confirmationInput?.value.trim() !== requiredConfirmation) return;
             bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
             if (onConfirm) await onConfirm();
             // Success modal is now handled by the caller after confirming API success

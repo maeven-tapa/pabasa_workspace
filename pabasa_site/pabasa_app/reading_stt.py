@@ -76,15 +76,99 @@ NUMBER_WORDS = {
 }
 
 
+_FILIPINO_UNDER_TWENTY = {
+    0: "sero",
+    1: "isa",
+    2: "dalawa",
+    3: "tatlo",
+    4: "apat",
+    5: "lima",
+    6: "anim",
+    7: "pito",
+    8: "walo",
+    9: "siyam",
+    10: "sampu",
+    11: "labing-isa",
+    12: "labindalawa",
+    13: "labintatlo",
+    14: "labing-apat",
+    15: "labinlima",
+    16: "labing-anim",
+    17: "labimpito",
+    18: "labingwalo",
+    19: "labinsiyam",
+}
+_FILIPINO_TENS = {
+    20: "dalawampu",
+    30: "tatlumpu",
+    40: "apatnapu",
+    50: "limampu",
+    60: "animnapu",
+    70: "pitumpu",
+    80: "walumpu",
+    90: "siyamnapu",
+}
+_FILIPINO_COUNTING_PREFIX = {
+    1: "isang",
+    2: "dalawang",
+    3: "tatlong",
+    4: "apat na",
+    5: "limang",
+    6: "anim na",
+    7: "pitong",
+    8: "walong",
+    9: "siyam na",
+}
+
+
+def filipino_number_to_words(number):
+    """Convert a whole number to commonly used Filipino/Tagalog words."""
+    number = int(number)
+    if number < 0:
+        return f"negatibong {filipino_number_to_words(abs(number))}"
+    if number < 20:
+        return _FILIPINO_UNDER_TWENTY[number]
+    if number < 100:
+        tens, ones = divmod(number, 10)
+        base = _FILIPINO_TENS[tens * 10]
+        return base if not ones else f"{base}'t {_FILIPINO_UNDER_TWENTY[ones]}"
+    if number < 1_000:
+        hundreds, remainder = divmod(number, 100)
+        base = f"{_FILIPINO_COUNTING_PREFIX[hundreds]} daan"
+        return base if not remainder else f"{base} at {filipino_number_to_words(remainder)}"
+
+    for value, singular, plural in (
+        (1_000_000_000, "isang bilyon", "bilyon"),
+        (1_000_000, "isang milyon", "milyon"),
+        (1_000, "isang libo", "libo"),
+    ):
+        if number >= value:
+            count, remainder = divmod(number, value)
+            if count == 1:
+                base = singular
+            elif count < 10:
+                base = f"{_FILIPINO_COUNTING_PREFIX[count]} {plural}"
+            else:
+                base = f"{filipino_number_to_words(count)} {plural}"
+            return base if not remainder else f"{base} at {filipino_number_to_words(remainder)}"
+    return str(number)
+
+
 def word_numbers_in_transcript(transcript, language_code="en-US"):
     """Return a display copy of an STT transcript with integer digits worded."""
-    if not transcript or not str(language_code).lower().startswith("en"):
+    if not transcript:
+        return transcript
+    normalized_language = str(language_code or "").lower()
+    is_filipino = normalized_language.startswith(("fil", "tl")) or "tagalog" in normalized_language
+    is_english = normalized_language.startswith("en")
+    if not is_english and not is_filipino:
         return transcript
 
     def replace_number(match):
         raw_number = match.group(0)
         try:
-            return num2words(int(raw_number.replace(",", "")), lang="en")
+            number = int(raw_number.replace(",", ""))
+            return filipino_number_to_words(number) if is_filipino else num2words(number, lang="en")
         except (NotImplementedError, OverflowError, ValueError):
             return raw_number
 
@@ -114,6 +198,10 @@ for tens_word, tens_value in (
         ("nine", 9),
     ):
         NUMBER_WORDS[f"{tens_word}{ones_word}"] = str(tens_value + ones_value)
+
+for number in range(0, 100):
+    filipino_words = re.sub(r"[^a-z0-9]", "", filipino_number_to_words(number).lower())
+    NUMBER_WORDS[filipino_words] = str(number)
 
 
 def language_code_for(language="", mode=""):

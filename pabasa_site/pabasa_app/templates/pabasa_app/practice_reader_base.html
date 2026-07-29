@@ -5723,6 +5723,83 @@
                 padding-inline: .25rem;
             }
         }
+        /* Completion result and score-breakdown refinements */
+        .practice-complete-card {
+            border-color: rgba(46, 168, 229, 0.2);
+            box-shadow: 0 28px 70px rgba(16, 70, 110, 0.16);
+        }
+
+        .practice-result-kicker {
+            background: rgba(46, 168, 229, 0.1);
+            border: 1px solid rgba(46, 168, 229, 0.16);
+            border-radius: 999px;
+            color: #10466e;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-size: 0.76rem;
+            font-weight: 900;
+            justify-self: center;
+            letter-spacing: 0.11em;
+            padding: 0.4rem 0.72rem;
+            text-transform: uppercase;
+        }
+
+        .practice-breakdown-title {
+            align-items: center;
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        .practice-breakdown-title::after {
+            background: linear-gradient(90deg, rgba(46, 168, 229, 0.28), transparent);
+            content: "";
+            flex: 1;
+            height: 1px;
+        }
+
+        .practice-metric-card {
+            overflow: hidden;
+            position: relative;
+            transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+        }
+
+        .practice-metric-card::before {
+            background: linear-gradient(180deg, #2ea8e5, #7dd3fc);
+            content: "";
+            inset: 0 auto 0 0;
+            position: absolute;
+            width: 4px;
+        }
+
+        .practice-metric-card:hover {
+            border-color: rgba(46, 168, 229, 0.28);
+            box-shadow: 0 12px 28px rgba(16, 70, 110, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .practice-metric-card.metric-primary {
+            background: linear-gradient(145deg, #e8f7ff, #fff);
+            border-color: rgba(46, 168, 229, 0.3);
+        }
+
+        .practice-metric-card.metric-primary .practice-metric-body strong {
+            color: #0876a8;
+            font-size: clamp(1.35rem, 3.2vw, 1.85rem);
+        }
+
+        .practice-metric-card.metric-success::before {
+            background: linear-gradient(180deg, #16a34a, #86efac);
+        }
+
+        body.dark-theme .practice-result-kicker {
+            background: rgba(56, 189, 248, 0.12);
+            border-color: rgba(125, 211, 252, 0.22);
+            color: #7dd3fc;
+        }
+
+        body.dark-theme .practice-metric-card.metric-primary {
+            background: rgba(14, 116, 144, 0.18) !important;
+            border-color: rgba(125, 211, 252, 0.26) !important;
+        }
     </style>
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
@@ -6004,6 +6081,7 @@
         <section class="practice-complete" id="practiceComplete" aria-live="polite" aria-atomic="true">
             <article class="practice-complete-card">
                 <div class="complete-star">📖</div>
+                <div class="practice-result-kicker">Practice Results</div>
                 <h2>Practice complete.</h2>
                 <div class="practice-feedback-card" aria-live="polite">
                     <div class="practice-feedback-icon" id="feedbackIcon" aria-hidden="true">🎉</div>
@@ -6043,14 +6121,14 @@
                             <span>Total Skipped Words</span>
                         </div>
                     </div>
-                    <div class="practice-metric-card">
+                    <div class="practice-metric-card metric-primary">
                         <div class="practice-metric-icon">🏆</div>
                         <div class="practice-metric-body">
                             <strong id="completeScore">0%</strong>
                             <span>Total Score</span>
                         </div>
                     </div>
-                    <div class="practice-metric-card">
+                    <div class="practice-metric-card metric-success">
                         <div class="practice-metric-icon">🎯</div>
                         <div class="practice-metric-body">
                             <strong id="completeAccuracy">0%</strong>

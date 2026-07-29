@@ -8991,9 +8991,12 @@ def delete_course(request):
     try:
         data = json.loads(request.body or '{}')
         course_id = data.get('course_id')
+        confirmation = str(data.get('confirmation') or '').strip()
 
         if not course_id:
             return JsonResponse({'success': False, 'error': 'Course ID is required'}, status=400)
+        if confirmation != 'DELETE':
+            return JsonResponse({'success': False, 'error': 'Type DELETE to confirm course deletion'}, status=400)
 
         _, parsed_course_id = _parse_prefixed_id(course_id)
         if parsed_course_id:

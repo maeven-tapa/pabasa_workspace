@@ -656,6 +656,17 @@
                 const span = document.createElement("span");
                 span.textContent = label;
                 tile.append(strong, span);
+                const numericScore = Number.parseFloat(String(value).replace("%", ""));
+                if (String(value).includes("%") && Number.isFinite(numericScore)) {
+                    tile.classList.add("summary-tile--score");
+                    const progress = document.createElement("div");
+                    progress.className = "summary-score-progress";
+                    progress.setAttribute("aria-hidden", "true");
+                    const progressFill = document.createElement("span");
+                    progressFill.style.width = `${Math.max(0, Math.min(100, numericScore))}%`;
+                    progress.appendChild(progressFill);
+                    tile.appendChild(progress);
+                }
                 summary.appendChild(tile);
             });
             if (disclaimer) {

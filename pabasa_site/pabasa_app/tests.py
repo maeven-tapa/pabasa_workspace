@@ -302,8 +302,14 @@ class ReadingMatcherTests(TestCase):
             "I read nineteen of one thousand words.",
         )
 
-    def test_word_numbers_preserves_raw_numbers_for_non_english_transcript(self):
-        self.assertEqual(word_numbers_in_transcript("Bumasa ng 19", "fil-PH"), "Bumasa ng 19")
+    def test_word_numbers_in_filipino_transcript(self):
+        self.assertEqual(word_numbers_in_transcript("Bumasa ng 15", "fil-PH"), "Bumasa ng labinlima")
+
+    def test_filipino_numeric_target_and_spoken_number_word_match(self):
+        result = analyze_reading("15", 0, "labinlima", language_code="fil-PH")
+
+        self.assertEqual(result["correct_word_count"], 1)
+        self.assertTrue(result["complete"])
 
     def test_word_numbers_does_not_rewrite_decimal_values(self):
         self.assertEqual(word_numbers_in_transcript("Score: 19.5"), "Score: 19.5")
@@ -692,6 +698,57 @@ class StudentSignupCustomIdTests(TestCase):
 
         self.assertEqual(result["correct_word_count"], 1)
         self.assertFalse(result["complete"])
+
+
+class StudentLrnTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.signup_data = {
+            "first_name": "Lia",
+            "last_name": "Santos",
+            "email": "lia@example.com",
+            "password": "Student123",
+            "confirm_password": "Student123",
+            "sex": "female",
+            "birth_month": "1",
+            "birth_day": "15",
+            "birth_year": "2014",
+            "grade_level": "Grade 2",
+        }
+
+    def test_student_signup_requires_exactly_twelve_digit_lrn(self):
+        for lrn in ("", "12345678901", "1234567890123", "12345678901A"):
+            with self.subTest(lrn=lrn):
+                response = self.client.post(
+                    reverse("register_student"),
+                    {**self.signup_data, "lrn": lrn},
+                )
+                self.assertEqual(response.status_code, 400)
+
+    def test_lrn_is_saved_after_otp_verification(self):
+        session = self.client.session
+        session["pending_student_signup"] = {
+            **self.signup_data,
+            "password_hash": make_password(self.signup_data["password"]),
+            "lrn": "123456789012",
+            "contact_no": "",
+            "section": "",
+            "reading_level": "",
+        }
+        session["pending_student_signup_otp"] = "123456"
+        session["pending_student_signup_otp_created"] = timezone.now().timestamp()
+        session.save()
+
+        with patch("pabasa_app.views.send_student_confirmation_email"), patch("pabasa_app.views._notify_admins"):
+            response = self.client.post(reverse("verify_student_otp"), {"otp": "123456"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(User.objects.get(email="lia@example.com").lrn, "123456789012")
+
+    def test_student_signup_page_exposes_required_lrn_field(self):
+        response = self.client.get(reverse("student_signup"))
+        self.assertContains(response, 'name="lrn"')
+        self.assertContains(response, 'pattern="[0-9]{12}"')
 
 
 class PracticeProgressionTests(TestCase):
@@ -3004,7 +3061,7 @@ class MaterialCreationTests(TestCase):
 
         response = self.client.post(
             reverse("delete_course"),
-            json.dumps({"course_id": course.id}),
+            json.dumps({"course_id": course.id, "confirmation": "DELETE"}),
             content_type="application/json",
         )
 
@@ -3048,13 +3105,42 @@ class MaterialCreationTests(TestCase):
 
         response = self.client.post(
             reverse("delete_course"),
-            json.dumps({"course_id": f"course-{course.id}"}),
+            json.dumps({"course_id": f"course-{course.id}", "confirmation": "DELETE"}),
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["success"])
         self.assertFalse(Course.objects.filter(id=course.id).exists())
+
+    def test_delete_course_rejects_missing_confirmation(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0016",
+            role="teacher",
+            first_name="Confirm",
+            last_name="Teacher",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="delete-course-confirmation@example.com",
+            password_hash="hashed-password",
+        )
+        course = Course.objects.create(code="C-CONFIRM", title="Protected Course", teacher=teacher)
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session.save()
+
+        response = self.client.post(
+            reverse("delete_course"),
+            json.dumps({"course_id": course.id}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["success"])
+        self.assertTrue(Course.objects.filter(id=course.id).exists())
 
     def test_shared_courses_api_includes_own_shared_materials_without_personal_rows(self):
         current_teacher = User.objects.create(
