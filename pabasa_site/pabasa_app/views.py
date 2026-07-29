@@ -4903,6 +4903,7 @@ def _serialize_student_practice_material(material, student_user=None):
         'level': selected_level,
         'level_label': _practice_config_label(selected_level, AdminPracticeMaterialForm.LEVEL_CHOICES),
         'game_mode': str(content_json.get('mode') or '').strip().lower(),
+        'language': str(content_json.get('language') or getattr(material, 'language', '') or 'English').strip(),
         'type': material.item_type,
         'status': 'Done' if is_done else material.status,
         'raw_status': material.status,

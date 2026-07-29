@@ -59,7 +59,11 @@
         const isReviewMode = viewMode === "view";
         const isRetakeMode = viewMode === "retake";
         const isPractice = false;
-        if (testMeta) testMeta.textContent = `${testTitle} - ${testCode}`;
+        const updateAssessmentLanguageLabel = (language) => {
+            const displayLanguage = /tagalog|filipino|fil\b/i.test(String(language || "")) ? "Tagalog" : "English";
+            if (testMeta) testMeta.textContent = `${testTitle} - ${testCode} · Language: ${displayLanguage}`;
+        };
+        updateAssessmentLanguageLabel(liveLanguage);
 
         function isCurrentLiveAssessment() {
             if (isReviewMode || isRetakeMode) return false;
@@ -384,6 +388,7 @@
                                 if (!currentMaterialLanguage && material.language) {
                                     currentMaterialLanguage = material.language;
                                 }
+                                updateAssessmentLanguageLabel(currentMaterialLanguage);
                             }
                         });
                     }

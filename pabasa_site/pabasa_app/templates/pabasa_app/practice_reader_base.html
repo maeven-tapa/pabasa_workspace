@@ -5787,7 +5787,7 @@
                     <header class="scrolls-phone-header">
                         <a class="back-link" href="{% url 'practice' %}" aria-label="Back to practice"><i class="bi bi-arrow-left"></i></a>
                         <div class="scrolls-header-copy">
-                            <h1 id="scrollsAppTitle">PABASA Scrolls</h1>
+                            <h1 id="scrollsAppTitle">PABASA Scrolls <span class="practice-language-label">· Language: English</span></h1>
                             <div class="scrolls-header-meta">
                                 <span class="scrolls-meta-pill" id="scrollsDifficultyPill">Easy</span>
                                 <span class="scrolls-meta-pill" id="scrollsLevelPill">Level 2</span>
@@ -5838,7 +5838,7 @@
             <header class="hunt-topbar">
                 <a class="hunt-back" href="{% url 'practice' %}"><i class="bi bi-arrow-left"></i> Back</a>
                 <div class="hunt-heading">
-                    <p>Treasure Voyage</p>
+                    <p>Treasure Voyage <span class="practice-language-label">· Language: English</span></p>
                     <h1>Hunt Mode Reading</h1>
                 </div>
                 <div class="hunt-stars" title="Stars collected during this Hunt attempt" aria-label="Stars collected: 0"><i class="bi bi-star-fill"></i><span id="starCount">Stars Collected: 0</span></div>
@@ -5911,7 +5911,7 @@
                         </svg>
                     </div>
                     <h1>Build the Picture</h1>
-                    <div class="practice-journey-subtitle"><span>{{ request.GET.difficulty|default:"easy"|title }}</span><span>•</span><span>Level {{ request.GET.level|default:"level_1"|cut:"level_" }}</span></div>
+                    <div class="practice-journey-subtitle"><span>{{ request.GET.difficulty|default:"easy"|title }}</span><span>•</span><span>Level {{ request.GET.level|default:"level_1"|cut:"level_" }} <span class="practice-language-label">· Language: English</span></span></div>
                     <div class="practice-color-hud" aria-hidden="true">
                         <div class="practice-color-hud-top">
                             <a class="practice-color-back" href="{% url 'practice' %}" aria-label="Back to practice"><i class="bi bi-arrow-left" aria-hidden="true"></i><span>Back</span></a>
@@ -5922,11 +5922,11 @@
                         </div>
                         <div class="practice-color-heading">
                             <h1>Build the Picture</h1>
-                            <div class="practice-color-difficulty"><span>{{ request.GET.difficulty|default:"easy"|title }}</span><span aria-hidden="true">•</span><span>Level {{ request.GET.level|default:"level_1"|cut:"level_" }}</span></div>
+                            <div class="practice-color-difficulty"><span>{{ request.GET.difficulty|default:"easy"|title }}</span><span aria-hidden="true">•</span><span>Level {{ request.GET.level|default:"level_1"|cut:"level_" }} <span class="practice-language-label">· Language: English</span></span></div>
                         </div>
                     </div>
                 {% else %}
-                    <p>{% block eyebrow %}Practice mode{% endblock %}</p>
+                    <p>{% block eyebrow %}Practice mode{% endblock %} <span class="practice-language-label">· Language: English</span></p>
                     <h1>{% block heading %}Word Adventure{% endblock %}</h1>
                 {% endif %}
             </div>

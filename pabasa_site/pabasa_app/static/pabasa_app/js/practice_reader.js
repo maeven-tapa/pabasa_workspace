@@ -1459,6 +1459,17 @@
         return serverMaterials.find(matchesMaterial) || null;
     }
 
+    function updatePracticeLanguageLabels() {
+        const activeMaterial = getActiveMaterialMeta();
+        const rawLanguage = normalizeMaterialValue(
+            activeMaterial?.language || urlParams.get("language") || "English"
+        );
+        const displayLanguage = /tagalog|filipino|fil\b/i.test(rawLanguage) ? "Tagalog" : "English";
+        document.querySelectorAll(".practice-language-label").forEach((label) => {
+            label.textContent = `· Language: ${displayLanguage}`;
+        });
+    }
+
     function parseItems(material, currentMode) {
         if (Array.isArray(material.items) && material.items.length > 0) return material.items;
         if (material.content && typeof material.content === 'string') {
@@ -2695,5 +2706,6 @@
         toggleFreeModeBodyLock(false);
     }
 
+    updatePracticeLanguageLabels();
     loadItems();
 })();
