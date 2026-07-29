@@ -564,6 +564,14 @@
                         <input class="form-control" type="email" name="email" placeholder="you@example.com" required>
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label" for="studentLrn">LRN Number</label>
+                        <input class="form-control" id="studentLrn" type="text" name="lrn"
+                               inputmode="numeric" autocomplete="off" maxlength="12"
+                               pattern="[0-9]{12}" placeholder="Enter 12-digit LRN"
+                               title="Enter exactly 12 digits." required>
+                        <div class="form-text">Your 12-digit DepEd Learner Reference Number.</div>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">Grade level</label>
                         <select class="form-select" name="grade_level" required>
                             <option value="" selected disabled>Select Grade Level</option>

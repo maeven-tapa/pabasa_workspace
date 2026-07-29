@@ -1765,9 +1765,10 @@ function exportVisibleStudentsWorkbook() {
 
     const workbook = XLSX.utils.book_new();
     const data = [
-        ['Name', 'Email', 'Accuracy', 'WPM', 'Reading Level'],
+        ['Name', 'LRN', 'Email', 'Accuracy', 'WPM', 'Reading Level'],
         ...rows.map(student => [
             student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student',
+            student.lrn || '',
             student.email || '',
             formatStudentMetric(student.accuracy, '%'),
             formatStudentMetric(student.wpm),
@@ -1778,13 +1779,14 @@ function exportVisibleStudentsWorkbook() {
 
     worksheet['!cols'] = [
         { wch: 28 },
+        { wch: 16 },
         { wch: 34 },
         { wch: 16 },
         { wch: 14 },
         { wch: 24 },
     ];
 
-    ['A1', 'B1', 'C1', 'D1', 'E1'].forEach((cellRef) => {
+    ['A1', 'B1', 'C1', 'D1', 'E1', 'F1'].forEach((cellRef) => {
         if (worksheet[cellRef]) {
             worksheet[cellRef].s = {
                 font: { bold: true, color: { rgb: 'FFFFFF' } },
@@ -1795,7 +1797,7 @@ function exportVisibleStudentsWorkbook() {
     });
 
     for (let rowIndex = 2; rowIndex <= data.length; rowIndex += 1) {
-        const levelCellRef = `E${rowIndex}`;
+        const levelCellRef = `F${rowIndex}`;
         if (worksheet[levelCellRef]) {
             worksheet[levelCellRef].s = getReadingLevelExportStyle(worksheet[levelCellRef].v);
         }
@@ -1831,6 +1833,7 @@ function renderStudentDirectory(sourceStudents) {
             student.pabasa_id,
             student.custom_id,
             student.student_id,
+            student.lrn,
             studentLevel
         ].map(value => String(value || '').toLowerCase()).join(' ');
         const matchesSearch = !query || haystack.includes(query);
@@ -1866,6 +1869,7 @@ function renderStudentDirectory(sourceStudents) {
                         <div class="student-identity">
                             <strong>${escapeStudentDirectoryHtml(name)}</strong>
                             <div class="small text-secondary">${escapeStudentDirectoryHtml(student.email || student.pabasa_id || student.custom_id || '')}</div>
+                            <div class="small text-secondary"><strong>LRN:</strong> ${escapeStudentDirectoryHtml(student.lrn || 'Not set')}</div>
                         </div>
                         ${levelBadgeHtml}
                     </div>

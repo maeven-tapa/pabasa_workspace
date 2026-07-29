@@ -1,6 +1,6 @@
 import uuid
 
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from django.utils import timezone
 from datetime import datetime
@@ -42,6 +42,14 @@ class User(models.Model):
     school = models.CharField(max_length=150, blank=True, null=True)
     department = models.CharField(max_length=100, blank=True, null=True)
     # Student-specific fields
+    lrn = models.CharField(
+        "Learner Reference Number",
+        max_length=12,
+        unique=True,
+        null=True,
+        blank=True,
+        validators=[RegexValidator(regex=r"^\d{12}$", message="LRN must contain exactly 12 digits.")],
+    )
     grade_level = models.CharField(max_length=20, blank=True, null=True)
     section = models.CharField(max_length=50, blank=True, null=True)
     reading_level = models.CharField(max_length=50, blank=True, null=True)

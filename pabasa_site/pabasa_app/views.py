@@ -1101,6 +1101,7 @@ def _teacher_student_roster_payload(teacher_user, section=None):
             'name': f"{user.first_name} {user.last_name}".strip() or sdata.get('name', ''),
             'email': user.email or sdata.get('email', ''),
             'custom_id': user.custom_id or sdata.get('custom_id', ''),
+            'lrn': user.lrn or '',
             'grade_level': getattr(user, 'grade_level', '') or profile.get('grade_level') or profile.get('grade') or '',
             'level': reading_level,
             'reading_level': reading_level,
@@ -2106,6 +2107,7 @@ def _store_pending_student_signup(request, data):
         'birth_year': int(data.get('birth_year', 0)),
         'password_hash': make_password(data.get('password')),
         'contact_no': data.get('contact_no', ''),
+        'lrn': data.get('lrn', '').strip(),
         'grade_level': data.get('grade_level', ''),
         'section': data.get('section', ''),
         'reading_level': data.get('reading_level', ''),
@@ -2522,7 +2524,7 @@ def register_student(request):
         data = request.POST
         
         # Validate required fields
-        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password',
+        required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn',
                          'sex', 'birth_month', 'birth_day', 'birth_year']
         
         for field in required_fields:
@@ -2532,6 +2534,12 @@ def register_student(request):
         # Validate password match
         if data.get('password') != data.get('confirm_password'):
             return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
+
+        lrn = data.get('lrn', '').strip()
+        if not re.fullmatch(r'\d{12}', lrn):
+            return JsonResponse({'success': False, 'error': 'LRN must contain exactly 12 digits.'}, status=400)
+        if User.objects.filter(lrn=lrn).exists():
+            return JsonResponse({'success': False, 'error': 'LRN is already registered'}, status=400)
         
         # Check if email already exists
         if User.objects.filter(email=data.get('email')).exists():
@@ -2673,6 +2681,14 @@ def verify_student_otp(request):
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
 
+        lrn = str(pending.get('lrn') or '').strip()
+        if lrn and not re.fullmatch(r'\d{12}', lrn):
+            _clear_pending_student_signup(request)
+            return JsonResponse({'success': False, 'error': 'LRN must contain exactly 12 digits.'}, status=400)
+        if lrn and User.objects.filter(lrn=lrn).exists():
+            _clear_pending_student_signup(request)
+            return JsonResponse({'success': False, 'error': 'LRN is already registered'}, status=400)
+
         custom_id = generate_custom_id('student', pending.get('grade_level', ''))
         user = User.objects.create(
             custom_id=custom_id,
@@ -2688,6 +2704,7 @@ def verify_student_otp(request):
             birth_year=pending['birth_year'],
             password_hash=pending['password_hash'],
             contact_no=pending.get('contact_no', ''),
+            lrn=lrn or None,
             grade_level=pending.get('grade_level', ''),
             section=pending.get('section', ''),
             reading_level=pending.get('reading_level', ''),
@@ -7472,6 +7489,7 @@ def profile(request):
         'suffix': user.suffix,
         'email': user.email,
         'pabasa_id': pabasa_id,
+        'lrn': user.lrn or '',
         'role_display': role_display,
         'initials': initials,
         'bio': bio,
