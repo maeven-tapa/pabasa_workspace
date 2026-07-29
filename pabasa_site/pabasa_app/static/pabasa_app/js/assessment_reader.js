@@ -1036,12 +1036,21 @@
                 spokenTranscript = [spokenTranscript, transcript].filter(Boolean).join(" ");
             }
             const previousCorrectWords = Number(correctWordCounts[currentIndex] || 0);
+            const proposedCorrectWords = Number(data.correct_word_count || data.current_word_index || 0);
+            const proposedSyllableIndex = Number(data.current_syllable_index || currentSyllableIndex || 0);
+            const hasProgressRegression = proposedSyllableIndex < currentSyllableIndex
+                || (proposedSyllableIndex === currentSyllableIndex && proposedCorrectWords < previousCorrectWords);
+
+            if (hasProgressRegression && !data.complete) {
+                return;
+            }
+
             const itemCorrectWords = Math.max(
                 previousCorrectWords,
-                Number(data.correct_word_count || data.current_word_index || 0)
+                proposedCorrectWords
             );
             correctWordCounts[currentIndex] = Math.min(itemCorrectWords, readableWordCount(items[currentIndex]));
-            currentSyllableIndex = Number(data.current_syllable_index || currentSyllableIndex || 0);
+            currentSyllableIndex = Math.max(currentSyllableIndex, proposedSyllableIndex);
             if (transcript || Number(data.matched || 0) > 0) {
                 renderSyllableDisplay(data, previousCorrectWords);
             }
