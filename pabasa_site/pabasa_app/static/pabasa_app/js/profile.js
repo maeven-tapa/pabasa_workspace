@@ -291,6 +291,59 @@ function initProfilePage() {
         return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
     }
 
+    function normalizeStudentLookupKey(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function findStudentProfileRecord() {
+        const storedStudents = getStoredArray("pabasa_added_students");
+        const lookupKeys = [
+            profilePabasaId,
+            profileUsername,
+            profileEmail,
+            profileFullName
+        ].map(normalizeStudentLookupKey).filter(Boolean);
+
+        if (!lookupKeys.length) return null;
+
+        return storedStudents.find(function (student) {
+            const recordKeys = [
+                student?.custom_id,
+                student?.student_id,
+                student?.id,
+                student?.email,
+                student?.name
+            ].map(normalizeStudentLookupKey).filter(Boolean);
+
+            return recordKeys.some(function (recordKey) {
+                return lookupKeys.includes(recordKey);
+            });
+        }) || null;
+    }
+
+    function getStudentReadingLevelText(student) {
+        const helper = window.PABASA_READING_LEVEL;
+        const explicitLevel = student?.adapted_reading_level || student?.reading_level || student?.level || student?.classification || student?.crla_classification;
+        if (explicitLevel) {
+            if (helper && typeof helper.normalizeReadingLevelLabel === 'function') {
+                const normalized = helper.normalizeReadingLevelLabel(explicitLevel);
+                if (normalized && normalized !== 'Pending') {
+                    return normalized;
+                }
+            }
+            return String(explicitLevel).trim();
+        }
+
+        const scoreValue = Number(student?.final_score ?? student?.total_score);
+        if (Number.isFinite(scoreValue) && scoreValue >= 0) {
+            if (helper && typeof helper.getClassificationFromScore === 'function') {
+                return helper.getClassificationFromScore(scoreValue);
+            }
+        }
+
+        return '';
+    }
+
     function countClassReadings() {
         const readingsByClass = getStoredValue("pabasa_class_readings", {});
         if (!readingsByClass || typeof readingsByClass !== "object" || Array.isArray(readingsByClass)) {
@@ -591,10 +644,6 @@ function initProfilePage() {
             if (completedEl) completedEl.textContent = completedCount;
             if (percentEl) percentEl.textContent = percentage + "%";
 
-            // Update level and other persistent stats
-            const totalStars = parseInt(window.pabasaStore.get("pabasa_total_stars", "0"), 10);
-            const assessmentsCompleted = parseInt(window.pabasaStore.get("pabasa_assessments_completed", "0"), 10);
-            
             const progressBar = document.getElementById("profileStudentProgressBar");
             if (progressBar) {
                 progressBar.style.width = percentage + "%";
@@ -603,14 +652,26 @@ function initProfilePage() {
 
             const levelDisplay = document.getElementById("profileStudentLevel");
             if (levelDisplay) {
-                // Level logic based on total progress
-                let level = "Novice";
-                if (completedCount >= 50 || totalStars >= 500 || assessmentsCompleted >= 10) level = "Expert Reader";
-                else if (completedCount >= 20 || totalStars >= 200 || assessmentsCompleted >= 5) level = "Advanced";
-                else if (completedCount >= 10 || totalStars >= 100 || assessmentsCompleted >= 2) level = "Intermediate";
-                else if (completedCount > 0 || totalStars > 0) level = "Developing";
-                
-                levelDisplay.textContent = level;
+                const studentRecord = findStudentProfileRecord();
+                const latestAssessmentLevel = getStudentReadingLevelText(studentRecord);
+                const hasCompletedAssessment = Boolean(
+                    studentRecord?.completed_at ||
+                    studentRecord?.assessment_type ||
+                    Number(studentRecord?.final_score ?? studentRecord?.total_score) >= 0 ||
+                    Number(window.pabasaStore.get("pabasa_assessments_completed", "0")) > 0
+                );
+
+                if (hasCompletedAssessment && latestAssessmentLevel) {
+                    levelDisplay.textContent = latestAssessmentLevel;
+                } else {
+                    levelDisplay.textContent = 'Not Assessed Yet';
+                }
+
+                if (levelDisplay.textContent.length > 15) {
+                    levelDisplay.style.fontSize = '1rem';
+                } else {
+                    levelDisplay.style.fontSize = '';
+                }
             }
 
         // Update Activity Status (Active, Pending, Inactive)
@@ -1004,6 +1065,7 @@ function initProfilePage() {
                 k === "pabasa_class_readings" ||
                 k === "pabasaStudentClassCodes" ||
                 k === "pabasaStudentClassCode" ||
+                k === "pabasa_added_students" ||
                 k === "pabasa_total_stars" ||
                 k === "pabasa_assessments_completed" ||
                 k === "pabasa_notifications"
@@ -1026,6 +1088,11 @@ function initProfilePage() {
     window.addEventListener("pabasa:preferences-updated", function () {
         updateClassOverview();
         updateStudentProgress();
+    });
+
+    window.addEventListener("pabasa:assessment-completed", function () {
+        updateStudentProgress();
+        updateDashboardClassStats();
     });
 
     window.addEventListener("pabasa:teacher-classes-updated", function () {
