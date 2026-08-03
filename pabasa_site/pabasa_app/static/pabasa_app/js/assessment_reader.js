@@ -12,6 +12,7 @@
 
         const readingWord = document.getElementById("readingWord");
         const readingHelperText = document.getElementById("readingHelperText");
+        const speechTranscript = document.getElementById("speechTranscript");
         const counter = document.getElementById("counter");
         const progressFill = document.getElementById("progressFill");
         const prevBtn = document.getElementById("prevBtn");
@@ -48,6 +49,12 @@
         const rawMicInput = document.getElementById("rawMicInput");
         const speechPanel = document.getElementById("speechPanel");
         const speechDebugToggle = document.getElementById("speechDebugToggle");
+
+        // Keep the helper caption and optional debug panel in sync. The caption
+        // therefore shows the speech assessment result, not a repeated prompt.
+        if (readingHelperText && speechTranscript) {
+            readingHelperText.textContent = speechTranscript.textContent;
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         const testTitle = urlParams.get("test") || "Assessment";
@@ -691,12 +698,13 @@
         function setSpeechStatus(message, detail = "", listening = false) {
             const panel = document.getElementById("speechPanel");
             const status = document.getElementById("speechStatus");
-            const transcript = document.getElementById("speechTranscript");
+            const transcriptText = detail || "No words recognized yet. Keep reading clearly.";
             panel?.classList.toggle("is-listening", listening);
             shell?.classList.toggle("is-recording", Boolean(listening && isRecording && !isMuted));
             if (!listening || !isRecording || isMuted) shell?.classList.remove("is-hearing");
             if (status) status.textContent = message;
-            if (transcript) transcript.textContent = detail || "Google Speech results will appear here while you read.";
+            if (speechTranscript) speechTranscript.textContent = transcriptText;
+            if (readingHelperText) readingHelperText.textContent = transcriptText;
         }
 
         function setRawMicInput(value) {
@@ -1188,7 +1196,6 @@
             if (!items.length) return;
             stopReadAloud();
             if (readingWord) readingWord.textContent = items[currentIndex];
-            if (readingHelperText) readingHelperText.textContent = items[currentIndex];
             currentSyllableIndex = 0;
             resetSyllableStitching();
             pendingAudioChunk = null;
