@@ -546,6 +546,37 @@
             return normalizeWords(text).length;
         }
 
+        function punctuationHelperForProgress(text, wordsRead) {
+            if (!["sentence", "paragraph"].includes(mode) || wordsRead < 1) return "";
+
+            const source = String(text || "");
+            const targetWords = Array.from(source.matchAll(/[a-z0-9]+(?:['-][a-z0-9]+)*/gi))
+                .filter(match => !/^\d+$/.test(match[0]));
+            const completedWord = targetWords[wordsRead - 1];
+            if (!completedWord) return "";
+
+            const followingText = source.slice((completedWord.index || 0) + completedWord[0].length);
+            const punctuation = followingText.match(/^\s*(\.\.\.|…|[.,;:!?])/);
+            if (!punctuation) return "";
+
+            const reminders = {
+                ",": "Pause briefly at the comma.",
+                ";": "Pause briefly at the semicolon.",
+                ":": "Pause briefly at the colon.",
+                ".": "Stop briefly at the period.",
+                "?": "Pause at the question mark.",
+                "!": "Pause at the exclamation mark.",
+                "...": "Pause at the ellipsis.",
+                "…": "Pause at the ellipsis.",
+            };
+            return reminders[punctuation[1]] || "";
+        }
+
+        function appendPunctuationHelper(detail, wordsRead) {
+            const helper = punctuationHelperForProgress(items[currentIndex], wordsRead);
+            return helper ? `${detail} | ${helper}` : detail;
+        }
+
         function formatDuration(seconds) {
             const totalSeconds = Math.max(0, Math.round(Number(seconds || 0)));
             const hours = Math.floor(totalSeconds / 3600);
@@ -1091,6 +1122,10 @@
                 proposedCorrectWords
             );
             correctWordCounts[currentIndex] = Math.min(itemCorrectWords, readableWordCount(items[currentIndex]));
+            const speechDetail = appendPunctuationHelper(
+                transcript ? `Words: ${transcript}` : "No words recognized yet. Keep reading clearly.",
+                correctWordCounts[currentIndex]
+            );
             currentSyllableIndex = Math.max(currentSyllableIndex, proposedSyllableIndex);
             if (transcript || Number(data.matched || 0) > 0) {
                 renderSyllableDisplay(data, previousCorrectWords);
@@ -1130,12 +1165,12 @@
             if (Number(data.matched || 0) > 0) {
                 setSpeechStatus(
                     `Matched ${correctWordCounts[currentIndex]} word${Number(correctWordCounts[currentIndex]) === 1 ? "" : "s"}.`,
-                    `Words: ${transcript || "..."}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}`,
+                    `${speechDetail}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}`,
                     true
                 );
             } else {
                 const nextHint = data.next_syllable && data.next_word ? `Try again from: ${data.next_syllable} in ${data.next_word}` : "Keep reading.";
-                setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", transcript ? `Words: ${transcript}` : "No words recognized yet. Keep reading clearly.", true);
+                setSpeechStatus(transcript ? nextHint : "Listening with Google Speech...", speechDetail, true);
             }
         }
 
