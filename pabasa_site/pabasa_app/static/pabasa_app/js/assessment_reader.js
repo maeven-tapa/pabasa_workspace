@@ -163,7 +163,11 @@
         let hasHeardSinceLastChunk = false;
         let ambientNoiseFloor = 0;
         let speechFrameCount = 0;
-        const speechChunkMs = 2400;
+        // Sentences and paragraphs need enough context for reliable recognition.
+        // Keep fast feedback for word/vowel assessments, but allow longer
+        // recordings for continuous reading while remaining below Google's
+        // 12-second transcription timeout.
+        const speechChunkMs = ["sentence", "paragraph"].includes(mode) ? 10000 : 2400;
         const speechLevelThreshold = 0.014;
         const speechNoiseMultiplier = 3.2;
         let micDeviceOptionButtons = [];
