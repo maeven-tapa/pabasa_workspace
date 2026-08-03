@@ -512,7 +512,7 @@
         background: rgba(255, 255, 255, 0.94);
         border: 1px solid rgba(255, 255, 255, 0.9);
         border-radius: 14px;
-        padding: 1rem 0.5rem;
+        padding: 0.9rem 0.45rem;
         text-align: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
@@ -520,6 +520,11 @@
         box-shadow: 0 8px 18px rgba(31, 111, 139, 0.08);
         backdrop-filter: blur(10px) saturate(130%);
         -webkit-backdrop-filter: blur(10px) saturate(130%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 96px;
     }
 
     /* Prevent grid items from overflowing their cells */
@@ -527,6 +532,21 @@
     .mic-status-info, .mic-test-area,
     .speaker-status-info, .speaker-volume-area {
         min-width: 0;
+    }
+
+    @media (max-width: 575px) {
+        .profile-stat-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .profile-stat-box {
+            min-height: 88px;
+            padding: 0.8rem 0.35rem;
+        }
+
+        .profile-stat-value {
+            font-size: clamp(0.92rem, 4vw, 1.08rem);
+        }
     }
 
     @media (min-width: 992px) {
@@ -812,13 +832,18 @@
 
     .profile-stat-value {
         font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1.55rem;
+        font-size: clamp(1rem, 2vw, 1.55rem);
         font-weight: 900;
         color: var(--dash-primary);
         margin-bottom: 0.2rem;
-        line-height: 1;
+        line-height: 1.15;
         position: relative;
         z-index: 1;
+        max-width: 100%;
+        white-space: normal;
+        overflow: visible;
+        word-break: break-word;
+        text-wrap: balance;
     }
 
     .profile-stat-label {
@@ -830,6 +855,8 @@
         letter-spacing: 0.04em;
         position: relative;
         z-index: 1;
+        line-height: 1.25;
+        max-width: 100%;
     }
 
     .btn-group-small {
