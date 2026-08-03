@@ -1,0 +1,213 @@
+/* Forest Storybook World — deliberately scoped to the student Forest theme. */
+body.dashboard-body[data-student-theme="forest"] {
+  --dash-primary:#4e8f45; --dash-primary-soft:#eef7d9; --dash-primary-deep:#214f38;
+  --dash-accent:#f3c956; --dash-accent-strong:#d99a32; --dash-bg:#eaf5d8;
+  --dash-border:rgba(58,95,48,.24); --dash-ink:#24412f; --dash-text:#24412f;
+  --dash-muted:#58705d; --dash-panel:rgba(255,253,235,.94); --dash-warm:#fff0b8;
+  --dash-shadow:0 13px 0 rgba(74,105,50,.07),0 21px 38px rgba(37,74,45,.17);
+  background:#dff1c8 !important; color:var(--dash-text);
+}
+/* Outrank the legacy shop's later "clean Forest" background without touching its grid. */
+body.dashboard-body.dashboard-body[data-student-theme="forest"] {background:#dff1c8!important}
+body.dashboard-body[data-student-theme="forest"] .theme-preview.forest {
+  background:linear-gradient(145deg,#163f2e,#6ea455)!important;border-color:#82603a;
+  box-shadow:inset 0 0 0 2px rgba(255,246,190,.22),0 12px 22px rgba(27,68,40,.24)!important;
+}
+body.dashboard-body[data-student-theme="forest"] .theme-shop-hero::after,
+body.dashboard-body[data-student-theme="forest"] .appearance-note::after {
+  content:none!important;display:none!important;background:none!important;
+}
+.theme-preview-dialog[data-theme="forest"] {
+  --preview-primary:#4f9149;--preview-soft:#eaf4cf;--preview-deep:#214f38;
+}
+.theme-preview-dialog[data-theme="forest"] .theme-preview-window {
+  background:linear-gradient(rgba(239,247,212,.9),rgba(197,224,160,.9));
+  border-color:#6f8d4d;box-shadow:0 22px 65px rgba(20,55,35,.35);
+}
+.theme-preview-dialog[data-theme="forest"] .theme-preview-sidebar {
+  background:linear-gradient(160deg,#173e2d,#2f6d42 70%,#173e2d);
+  border-right:4px solid #76512e;
+}
+.theme-preview-dialog[data-theme="forest"] .theme-preview-sample,
+.theme-preview-dialog[data-theme="forest"] .theme-preview-welcome {
+  background:linear-gradient(145deg,#fffdec,#f2ebc5);border:1px solid #9da66a;
+  border-bottom:4px solid rgba(111,78,42,.25);border-radius:20px 15px 22px 16px;
+}
+.forest-world { display:none }
+body[data-student-theme="forest"] .forest-world {
+  display:block; position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none;
+  background:#b9dca9 url("images/forest/forest-world.svg") center/cover no-repeat;
+}
+.forest-sky,.forest-rays,.forest-mountains,.forest-tree-line,.forest-floor,.forest-mist {position:absolute;inset:0}
+.forest-sky {background:radial-gradient(circle at 75% 9%,rgba(255,251,208,.24),transparent 20%)}
+.forest-rays {opacity:.27;background:conic-gradient(from 202deg at 76% -8%,transparent 0 8deg,rgba(255,250,196,.58) 9deg 15deg,transparent 16deg 25deg,rgba(255,250,196,.35) 26deg 31deg,transparent 32deg);filter:blur(5px)}
+.forest-mountains,.forest-tree-line,.forest-floor {display:none}
+.forest-mist {height:22%;top:42%;filter:blur(20px);background:radial-gradient(ellipse at 20% 50%,rgba(255,255,236,.54),transparent 42%),radial-gradient(ellipse at 78% 50%,rgba(255,255,236,.48),transparent 43%)}
+.forest-mist-two {top:57%;opacity:.45;transform:translateX(8%);animation:forest-drift 24s ease-in-out infinite alternate}
+.forest-fireflies i {position:absolute;width:5px;height:5px;border-radius:50%;background:#fff7a7;box-shadow:0 0 5px 2px #f7dc54,0 0 15px 5px rgba(251,228,87,.5);animation:firefly 5s ease-in-out infinite}
+.forest-fireflies i:nth-child(1){left:19%;top:22%}.forest-fireflies i:nth-child(2){left:34%;top:66%;animation-delay:-2s}.forest-fireflies i:nth-child(3){left:49%;top:31%;animation-delay:-4s}.forest-fireflies i:nth-child(4){left:63%;top:73%;animation-delay:-1s}.forest-fireflies i:nth-child(5){left:78%;top:29%;animation-delay:-3s}.forest-fireflies i:nth-child(6){left:88%;top:61%;animation-delay:-.7s}.forest-fireflies i:nth-child(7){left:10%;top:76%;animation-delay:-3.5s}.forest-fireflies i:nth-child(8){left:71%;top:47%;animation-delay:-2.4s}
+.forest-leaves i {position:absolute;top:-35px;width:19px;height:11px;border-radius:100% 0 100% 0;background:linear-gradient(135deg,#a9c94e,#4d914b);animation:falling-leaf 13s linear infinite}
+.forest-leaves i:nth-child(1){left:16%}.forest-leaves i:nth-child(2){left:38%;animation-delay:-8s}.forest-leaves i:nth-child(3){left:57%;animation-delay:-4s}.forest-leaves i:nth-child(4){left:76%;animation-delay:-11s}.forest-leaves i:nth-child(5){left:92%;animation-delay:-6s}
+.forest-leaves i:nth-child(2){width:13px;height:8px;animation-duration:17s}.forest-leaves i:nth-child(3){width:23px;height:13px;animation-duration:20s}.forest-leaves i:nth-child(4){width:16px;height:9px;animation-duration:15s}.forest-leaves i:nth-child(5){width:11px;height:7px;animation-duration:22s}
+.forest-butterflies i {position:absolute;width:13px;height:9px;background:radial-gradient(ellipse at 22% 50%,#efb2d5 0 43%,transparent 46%),radial-gradient(ellipse at 78% 50%,#f7d06d 0 43%,transparent 46%);filter:drop-shadow(0 2px 2px rgba(53,75,48,.25));animation:butterfly 13s ease-in-out infinite}
+.forest-butterflies i:first-child{left:28%;top:38%}.forest-butterflies i:last-child{right:22%;top:31%;animation-delay:-7s;scale:.72}
+.forest-friend {position:fixed;filter:drop-shadow(0 8px 7px rgba(36,68,36,.25))}
+.forest-owl {right:24px;top:128px;width:76px;animation:owl-sway 6s ease-in-out infinite}
+.forest-fox {right:18px;bottom:4px;width:142px}
+.forest-mushrooms {position:fixed;left:calc(var(--sidebar-width) + 14px);bottom:4px;display:flex;align-items:end;gap:5px}
+.forest-mushrooms i {display:block;width:21px;height:24px;border-radius:50% 50% 6px 6px;background:radial-gradient(circle at 35% 25%,#fff 0 2px,transparent 3px),linear-gradient(#e56b51 0 48%,#f9e9b8 49%);box-shadow:0 0 14px rgba(255,229,123,.75)}
+.forest-mushrooms i:nth-child(2){width:15px;height:18px}.forest-mushrooms i:nth-child(3){width:11px;height:14px}
+body[data-student-theme="forest"] .dashboard-main {position:relative;z-index:1}
+body[data-student-theme="forest"] .dashboard-sidebar {
+  background:linear-gradient(90deg,rgba(24,57,38,.98),rgba(39,83,50,.96)),radial-gradient(circle at 20% 10%,#527c42,transparent 30%) !important;
+  border-right:4px solid #76512e;box-shadow:9px 0 0 rgba(92,63,34,.22),18px 0 28px rgba(23,54,34,.28);
+}
+body[data-student-theme="forest"] .dashboard-sidebar::after {content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 12% 15%,rgba(151,192,86,.22),transparent 20%),repeating-linear-gradient(88deg,transparent 0 34px,rgba(255,255,255,.018) 35px 36px);pointer-events:none}
+body[data-student-theme="forest"] .dash-link i {background:linear-gradient(145deg,#f5e9ae,#d7ba5c);color:#315c37;box-shadow:inset 0 1px #fff6ca,0 3px 7px rgba(0,0,0,.22)}
+body[data-student-theme="forest"] .dash-link:hover,body[data-student-theme="forest"] .dash-link.is-active,body[data-student-theme="forest"] .dash-link.active {background:linear-gradient(90deg,rgba(164,194,94,.34),rgba(83,137,66,.45));border-color:rgba(235,224,150,.4);transform:translateX(2px)}
+body[data-student-theme="forest"] .dashboard-topbar {
+  background:linear-gradient(150deg,rgba(255,253,232,.96),rgba(241,245,207,.93)) !important;
+  border:1px solid rgba(91,119,58,.3)!important;border-bottom:5px solid rgba(116,83,45,.22)!important;
+  box-shadow:0 12px 26px rgba(43,73,44,.16)!important;
+}
+body[data-student-theme="forest"] :is(.dash-card,.dash-surface,.kids-card,.course-card,.subject-card,.profile-pane-card,.modal-content,.offcanvas,.theme-card,.theme-shop-hero,.appearance-note) {
+  background:linear-gradient(145deg,rgba(255,254,238,.97),rgba(247,241,207,.95))!important;
+  border:1px solid rgba(107,126,61,.28)!important;border-bottom:5px solid rgba(111,78,42,.2)!important;
+  border-radius:24px 20px 26px 19px!important;box-shadow:var(--dash-shadow)!important;
+}
+body[data-student-theme="forest"] :is(.dash-card,.dash-surface,.kids-card,.course-card,.subject-card) {position:relative}
+body[data-student-theme="forest"] :is(.dash-card,.dash-surface,.kids-card,.course-card,.subject-card)::after {content:"";position:absolute;right:-5px;top:-7px;width:34px;height:25px;background:radial-gradient(ellipse at 28% 60%,#78a64d 0 37%,transparent 40%),radial-gradient(ellipse at 78% 35%,#a5c659 0 35%,transparent 38%);transform:rotate(16deg);pointer-events:none}
+body[data-student-theme="forest"] .dashboard-main :is(.btn-primary,.theme-action) {background:linear-gradient(#a8733f,#704521)!important;border:2px solid #54341d!important;border-bottom-width:5px!important;border-radius:13px 18px 13px 18px!important;color:#fff9dc!important;box-shadow:inset 0 2px rgba(255,231,171,.25),0 5px 9px rgba(65,42,24,.2)!important;text-shadow:0 1px #4b2d1c}
+body[data-student-theme="forest"] .dashboard-main :is(.btn-primary,.theme-action):hover {filter:brightness(1.09);transform:translateY(-2px) rotate(-.4deg)}
+body[data-student-theme="forest"] .progress {background:#d9d2a4;border:2px solid #8b774d;border-radius:999px;overflow:visible;padding:2px}
+body[data-student-theme="forest"] .progress-bar {position:relative;border-radius:999px;background:repeating-linear-gradient(135deg,#4e974d 0 10px,#6bad52 11px 20px)!important;box-shadow:inset 0 2px rgba(255,255,255,.3)}
+body[data-student-theme="forest"] .progress-bar::after {content:"✿";position:absolute;right:-8px;top:50%;translate:0 -50%;color:#ffd85a;font-size:18px;text-shadow:0 1px 2px #6b7131}
+body[data-student-theme="forest"] :is(.badge,.dash-pill,.status-pill) {border:1px solid rgba(96,91,42,.25);box-shadow:inset 0 1px rgba(255,255,255,.5)}
+body.dark-theme[data-student-theme="forest"] {--dash-panel:rgba(25,55,40,.96);--dash-text:#eef5cf;--dash-ink:#f6f1ce;--dash-muted:#b8c9ad;--dash-border:rgba(184,213,133,.25);background:#092f28!important}
+body.dark-theme[data-student-theme="forest"] .forest-world {background:linear-gradient(rgba(4,29,29,.68),rgba(8,47,34,.78)),url("images/forest/forest-world.svg") center/cover no-repeat;background-blend-mode:multiply}
+body.dark-theme[data-student-theme="forest"] .forest-sky {background:radial-gradient(circle at 78% 10%,#f8f3c5 0 4%,rgba(207,231,205,.19) 5% 14%,transparent 15%),linear-gradient(#082431,#174638 65%,transparent)}
+body.dark-theme[data-student-theme="forest"] .forest-rays {opacity:.12}
+body.dark-theme[data-student-theme="forest"] .forest-tree-line {filter:brightness(.45);opacity:.85}
+body.dark-theme[data-student-theme="forest"] .forest-mist {opacity:.18}
+body.dark-theme[data-student-theme="forest"] :is(.dashboard-topbar,.dash-card,.dash-surface,.kids-card,.course-card,.subject-card,.profile-pane-card,.modal-content,.offcanvas,.theme-card,.theme-shop-hero,.appearance-note) {background:linear-gradient(145deg,rgba(25,58,41,.97),rgba(18,46,34,.97))!important;border-color:rgba(178,202,119,.25)!important;color:#edf3d2!important}
+body.dark-theme[data-student-theme="forest"] .dashboard-page-loader {background:#0b3028}
+@keyframes firefly {0%,100%{opacity:.2;transform:translate(0,0) scale(.7)}45%{opacity:1;transform:translate(12px,-18px) scale(1.2)}70%{transform:translate(-7px,-28px)}}
+@keyframes falling-leaf {to{transform:translate(50px,105vh) rotate(640deg)}}
+@keyframes forest-drift {to{transform:translateX(-8%)}}
+@keyframes owl-sway {50%{transform:rotate(2deg) translateY(3px)}}
+@keyframes butterfly {0%,100%{transform:translate(0,0) rotate(-5deg) scaleX(.7)}25%{transform:translate(28px,-18px) rotate(7deg) scaleX(1)}55%{transform:translate(54px,8px) rotate(-8deg) scaleX(.65)}78%{transform:translate(23px,24px) rotate(4deg) scaleX(1)}}
+@media(max-width:991.98px){.forest-owl{top:92px;right:8px;width:58px}.forest-fox{width:94px;opacity:.82}.forest-mushrooms{left:5px}.forest-tree-line{opacity:.38}}
+@media(max-width:600px){.forest-owl,.forest-fox,.forest-mushrooms{display:none}.forest-rays{opacity:.25}.forest-leaves i:nth-child(even){display:none}body[data-student-theme="forest"] :is(.dash-card,.dash-surface,.kids-card,.course-card,.subject-card)::after{scale:.75}}
+@media(prefers-reduced-motion:reduce){body[data-student-theme="forest"] .forest-world *,body[data-student-theme="forest"] .dashboard-main *{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.forest-leaves{display:none}}
+
+/* Practice and reading assessment are separate shells, so they receive the same
+   Forest world without changing their dimensions or interaction layout. */
+body[data-student-theme="forest"]:not(.dashboard-body) {
+  --sky:#4e8f45;--sky-deep:#214f38;--sky-soft:#eef7d9;--accent:#4e8f45;
+  --accent-deep:#214f38;--accent-soft:#eef7d9;--paper:#fffdf0;--panel:#fffdf0;
+  background:transparent!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-top,.play-card,.practice-complete-card,.reader-top,.reader-card,.completion-card,.pause-menu) {
+  background:linear-gradient(145deg,rgba(255,254,238,.97),rgba(247,242,213,.96))!important;
+  border-color:rgba(83,116,58,.28)!important;
+  box-shadow:0 16px 38px rgba(34,72,42,.18)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-top,.play-card,.reader-top,.reader-card) {border-radius:24px 20px 27px 19px!important}
+body[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-top,.reader-top)::before {
+  background:radial-gradient(ellipse at 25% 55%,#78a64d 0 38%,transparent 41%),radial-gradient(ellipse at 76% 40%,#a8c85d 0 36%,transparent 39%)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-top::before {
+  background:none!important;content:none!important;display:none!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) :is(.record-btn,.next-btn,.completion-primary,.nav-btn,.primary-btn) {
+  background:linear-gradient(#a8733f,#704521)!important;border-color:#58381f!important;color:#fff9dc!important;
+  box-shadow:inset 0 2px rgba(255,235,181,.25),0 5px 10px rgba(62,40,22,.2)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-progress,.progress-track) {background:#d9d2a4!important;border-color:#89774e!important}
+body[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-progress-fill,.progress-fill) {background:repeating-linear-gradient(135deg,#4e974d 0 10px,#6bad52 11px 20px)!important}
+
+/* Practice results use the same parchment, moss, and carved-wood language as
+   the Forest world instead of falling back to the default blue reader skin. */
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-card {
+  background:
+    radial-gradient(circle at 8% 5%,rgba(165,198,89,.13),transparent 22%),
+    linear-gradient(145deg,rgba(255,254,238,.98),rgba(244,239,202,.97))!important;
+  border:2px solid rgba(100,123,62,.42)!important;
+  border-bottom:6px solid rgba(104,75,42,.3)!important;
+  border-radius:26px 20px 30px 18px!important;
+  box-shadow:0 18px 0 rgba(75,101,49,.08),0 28px 58px rgba(32,69,40,.22)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-card::after {
+  background:
+    radial-gradient(ellipse at 24% 66%,#5f9849 0 31%,transparent 34%),
+    radial-gradient(ellipse at 72% 35%,#9dbf55 0 29%,transparent 32%)!important;
+  border-radius:0!important;height:52px!important;opacity:.75;right:-10px!important;top:-15px!important;
+  transform:rotate(14deg);width:72px!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .complete-star {
+  background:linear-gradient(145deg,#f7e9a9,#dfbc55)!important;
+  border:2px solid #8b6b35;border-radius:18px 13px 20px 14px!important;
+  box-shadow:inset 0 2px rgba(255,250,205,.8),0 8px 15px rgba(86,65,34,.2)!important;
+  color:#244f35!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-result-kicker {
+  background:#e8f0c8!important;border-color:rgba(82,119,58,.36)!important;color:#28583b!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-card h2,
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-breakdown-title,
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-feedback-copy h3,
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-metric-body strong {color:#214f38!important}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-card p,
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-metric-body span {color:#58705d!important}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-feedback-card {
+  background:linear-gradient(135deg,rgba(235,244,207,.96),rgba(246,241,207,.94))!important;
+  border-color:rgba(83,124,60,.3)!important;box-shadow:0 7px 16px rgba(48,84,45,.1)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-feedback-icon,
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-metric-icon {
+  background:linear-gradient(145deg,#f4e8ad,#e3ca71)!important;color:#315f3b!important;
+  box-shadow:inset 0 1px rgba(255,255,225,.7)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-breakdown-title::after {
+  background:linear-gradient(90deg,rgba(72,126,65,.48),transparent)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-metric-card {
+  background:linear-gradient(145deg,rgba(255,254,239,.98),rgba(247,242,215,.96))!important;
+  border-color:rgba(100,123,62,.27)!important;border-radius:15px 12px 17px 11px!important;
+  box-shadow:0 7px 15px rgba(45,77,43,.1)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-metric-card::before {
+  background:linear-gradient(#4e9149,#9bbc58)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-metric-card.metric-primary {
+  background:linear-gradient(145deg,#edf4d3,#fffbed)!important;border-color:rgba(79,139,68,.42)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-metric-card.metric-primary .practice-metric-body strong {color:#287244!important}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-actions .complete-primary:not(.is-disabled) {
+  background:linear-gradient(#a8733f,#704521)!important;border:2px solid #54341d!important;
+  border-bottom-width:5px!important;color:#fff9dc!important;
+  box-shadow:inset 0 2px rgba(255,231,171,.25),0 5px 9px rgba(65,42,24,.2)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-actions .complete-secondary {
+  background:linear-gradient(#fffdec,#eee5bd)!important;border:2px solid rgba(89,116,58,.42)!important;
+  border-bottom-width:4px!important;color:#28583b!important;box-shadow:0 5px 9px rgba(54,79,41,.12)!important;
+}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-actions :is(button,a) {border-radius:12px 17px 12px 16px!important}
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-actions .is-disabled,
+body[data-student-theme="forest"]:not(.dashboard-body) .practice-complete-actions [aria-disabled="true"] {
+  background:#a8ad8b!important;border-color:#868c70!important;color:#f0efd8!important;
+}
+body.dark-theme[data-student-theme="forest"]:not(.dashboard-body) {
+  --paper:#193a2b;--panel:#193a2b;--ink:#eff4d2;--muted:#bdcbb2;
+  background:transparent!important;
+}
+body.dark-theme[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-top,.play-card,.practice-complete-card,.reader-top,.reader-card,.completion-card,.pause-menu) {
+  background:linear-gradient(145deg,rgba(24,58,40,.97),rgba(15,43,32,.97))!important;
+  border-color:rgba(178,205,119,.28)!important;color:#eff4d2!important;
+}
+body.dark-theme[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-feedback-card,.practice-metric-card,.practice-metric-card.metric-primary) {
+  background:linear-gradient(145deg,rgba(30,67,44,.98),rgba(21,52,37,.98))!important;
+  border-color:rgba(178,205,119,.28)!important;
+}
+body.dark-theme[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-complete-card h2,.practice-breakdown-title,.practice-feedback-copy h3,.practice-metric-body strong) {color:#f0f3d0!important}
+body.dark-theme[data-student-theme="forest"]:not(.dashboard-body) :is(.practice-complete-card p,.practice-metric-body span) {color:#bdcbb2!important}

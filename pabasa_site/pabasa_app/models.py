@@ -57,6 +57,7 @@ class User(models.Model):
     theme_stars_credited = models.PositiveIntegerField(default=0)
     unlocked_themes = models.JSONField(default=default_unlocked_themes, blank=True)
     equipped_theme = models.CharField(max_length=30, default="sky")
+    animal_avatar = models.CharField(max_length=20, default="cat", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

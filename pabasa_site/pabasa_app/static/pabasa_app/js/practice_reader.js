@@ -1443,10 +1443,18 @@
         return String(value || "").trim();
     }
 
+    function normalizeMaterialId(value) {
+        const match = normalizeMaterialValue(value).match(/\d+/);
+        return match ? match[0] : "";
+    }
+
     function matchesMaterial(material) {
         if (!material) return false;
-        const mItemType = material.item_type || material.type;
-        if (mItemType !== mode) return false;
+        const mItemType = normalizeMaterialValue(material.item_type || material.type).toLowerCase();
+        const materialGameMode = normalizeMaterialValue(material.game_mode).toLowerCase();
+        const itemTypeMatches = mItemType === normalizeMaterialValue(mode).toLowerCase();
+        const legacyGameModeMatches = materialGameMode && materialGameMode === selectedGameMode;
+        if (!itemTypeMatches && !legacyGameModeMatches) return false;
 
         const materialDifficulty = normalizeMaterialValue(material.difficulty || material.difficulty_level || selectedDifficulty || "").toLowerCase();
         const requestedDifficulty = normalizeMaterialValue(selectedDifficulty).toLowerCase();
@@ -1456,9 +1464,9 @@
         const requestedLevel = hasSelectedProgressLevel ? normalizeMaterialValue(selectedProgressLevel).toLowerCase() : "";
         if (requestedLevel && materialLevel && materialLevel !== requestedLevel) return false;
 
-        const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+        const mId = normalizeMaterialId(material.id);
         return !materialId && !testTitle
-            || (materialId && mId === String(materialId).trim())
+            || (materialId && mId === normalizeMaterialId(materialId))
             || (testTitle && material.title === testTitle);
     }
 
@@ -2398,10 +2406,10 @@
         const fallbackTitle = urlParams.get("test") || "Practice Material";
         const serverMaterials = getServerPracticeMaterials();
         const matchingMaterial = serverMaterials.find((material) => {
-            const mId = (material.id !== undefined && material.id !== null) ? String(material.id).trim() : null;
+            const mId = normalizeMaterialId(material.id);
             const normalizedTitle = typeof material.title === 'string' ? material.title.trim() : '';
             const normalizedTestTitle = typeof testTitle === 'string' ? testTitle.trim() : '';
-            return (materialId && mId && String(materialId).trim() === mId)
+            return (materialId && mId && normalizeMaterialId(materialId) === mId)
                 || (normalizedTestTitle && normalizedTitle && normalizedTitle === normalizedTestTitle)
                 || (!materialId && !normalizedTestTitle && normalizedTitle);
         });

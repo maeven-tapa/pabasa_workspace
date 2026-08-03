@@ -637,6 +637,19 @@ class HuntScoringRuleTests(TestCase):
         self.assertIn('Available Stars: {{ student_available_stars|default:0 }}', template)
         self.assertIn('starCount.textContent = `Available Stars: ${data.available_stars}`', source)
 
+    def test_frontend_normalizes_prefixed_material_ids_and_accepts_legacy_game_types(self):
+        source = (Path(__file__).resolve().parent / "static" / "pabasa_app" / "js" / "practice_reader.js").read_text(encoding="utf-8")
+        self.assertIn("function normalizeMaterialId(value)", source)
+        self.assertIn("mId === normalizeMaterialId(materialId)", source)
+        self.assertIn("materialGameMode === selectedGameMode", source)
+        self.assertIn("if (!itemTypeMatches && !legacyGameModeMatches) return false", source)
+
+    def test_hunt_reader_preserves_the_treasure_map_in_dark_mode(self):
+        template = (Path(__file__).resolve().parent / "templates" / "pabasa_app" / "practice_reader_base.html").read_text(encoding="utf-8")
+        self.assertIn("hunt-treasure-map.svg", template)
+        self.assertIn("body.dark-theme .practice-hunt-shell .hunt-card", template)
+        self.assertIn("background-image:linear-gradient", template)
+
 
 class StudentSignupCustomIdTests(TestCase):
     def setUp(self):
@@ -3688,6 +3701,32 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, "Sky Island")
         self.assertContains(response, "Magic Library")
         self.assertContains(response, "Light and Dark Mode stay separate.")
+
+    def test_profile_uses_the_students_equipped_theme(self):
+        self.student.equipped_theme = "forest"
+        self.student.save(update_fields=["equipped_theme", "updated_at"])
+
+        response = self.client.get(reverse("profile"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["student_theme_slug"], "forest")
+        self.assertContains(response, 'data-student-theme="forest"')
+
+    def test_forest_dark_mode_styles_shared_custom_select_menus(self):
+        template = (Path(__file__).resolve().parent / "templates" / "pabasa_app" / "base_dashboard.html").read_text(encoding="utf-8")
+        selector = 'body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-menu'
+        self.assertIn(selector, template)
+        self.assertIn('.custom-device-option.is-selected', template)
+        self.assertIn('.custom-device-option-title {color:#f3f2d3 !important}', template)
+        self.assertIn('scrollbar-color:#708b55 #102e25', template)
+
+    def test_every_student_theme_has_readable_dark_custom_selects(self):
+        template = (Path(__file__).resolve().parent / "templates" / "pabasa_app" / "base_dashboard.html").read_text(encoding="utf-8")
+        self.assertIn('body.dark-theme.dashboard-body[data-student-theme] .custom-device-menu', template)
+        for slug in ("forest", "treasure", "ocean", "space", "zoo", "library"):
+            self.assertIn(f'data-student-theme="{slug}"] {{--theme-dark-accent:', template)
+        self.assertIn('.custom-device-option-title {color:#f8fafc !important}', template)
+        self.assertIn('background:#111827 !important', template)
 
     def test_theme_unlock_is_charged_once_and_can_be_equipped(self):
         self.student.available_stars = 200

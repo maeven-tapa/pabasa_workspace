@@ -22,6 +22,12 @@
     .appearance-note strong { color: var(--dash-text); }
     .theme-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0,1fr)); }
     .theme-card { background: rgba(255,255,255,.94); border: 1px solid rgba(31,111,139,.13); border-radius: 22px; box-shadow: 0 12px 28px rgba(31,111,139,.08); display: grid; gap: .85rem; min-width: 0; overflow: hidden; padding: .8rem; }
+    .theme-card.is-unaffordable { filter:grayscale(1) blur(.35px); opacity:.52; }
+    .theme-card.is-unaffordable .theme-action { pointer-events:none; }
+    .theme-card.theme-coming-soon { align-content:center; background:linear-gradient(145deg,color-mix(in srgb,var(--dash-primary-soft) 55%,var(--dash-panel)),var(--dash-panel)); border:2px dashed var(--dash-border); filter:none; min-height:372px; opacity:1; text-align:center; }
+    .coming-soon-icon { align-items:center; background:var(--dash-primary-soft); border:1px solid var(--dash-border); border-radius:50%; color:var(--dash-primary); display:flex; font-size:2rem; height:72px; justify-content:center; margin:0 auto .8rem; width:72px; }
+    .theme-coming-soon h3 { color:var(--dash-text); font-size:1.2rem; font-weight:900; margin:0 0 .35rem; }
+    .theme-coming-soon p { color:var(--dash-muted); font-size:.84rem; margin:0 auto; max-width:230px; }
     .theme-preview {
         background: #0f6f8b; border-radius: 16px; display: grid; grid-template-rows: 1fr auto; height: 188px; overflow: hidden;
         padding: .9rem; position: relative; isolation: isolate;
@@ -176,6 +182,143 @@
         body.dashboard-body[data-student-theme="forest"] .theme-preview { height:190px; }
         body.dashboard-body[data-student-theme="forest"] .appearance-note::after { opacity:.25; }
     }
+
+    /* Forest keeps its woodland palette here, but the shop uses the same clean,
+       quiet layout as the default theme. The immersive scenery belongs inside
+       theme previews and learning pages—not behind this catalog UI. */
+    body.dashboard-body[data-student-theme="forest"] {
+        background:
+            radial-gradient(circle at 92% 7%,rgba(244,214,105,.16),transparent 24%),
+            linear-gradient(135deg,#f4faf0 0%,#f8fbf3 58%,#f8f1d9 100%) !important;
+    }
+    body.dashboard-body[data-student-theme="forest"] .forest-world {
+        display:block !important;
+        opacity:.2;
+        filter:saturate(.72) brightness(1.08);
+    }
+    body.dashboard-body[data-student-theme="forest"] .forest-world .forest-friend { opacity:.62; }
+    body.dashboard-body[data-student-theme="forest"] .forest-world .forest-leaves,
+    body.dashboard-body[data-student-theme="forest"] .forest-world .forest-butterflies,
+    body.dashboard-body[data-student-theme="forest"] .forest-world .forest-fireflies { opacity:.55; }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-shell {
+        gap:1.1rem; max-width:1440px;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero {
+        background:linear-gradient(135deg,rgba(255,255,255,.97),rgba(238,247,224,.95)) !important;
+        border:1px solid rgba(55,104,67,.16) !important;
+        border-bottom-width:1px !important;
+        border-radius:26px !important;
+        box-shadow:0 16px 38px rgba(48,90,57,.09) !important;
+        gap:1rem;
+        grid-template-columns:minmax(0,1fr) auto;
+        min-height:0;
+        padding:clamp(1.25rem,3vw,2rem);
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero::before {
+        background:rgba(115,171,101,.09);
+        border-radius:50%;
+        content:"";
+        height:180px;
+        inset:auto -55px auto auto;
+        opacity:1;
+        position:absolute;
+        top:-75px;
+        width:180px;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero::after,
+    body.dashboard-body[data-student-theme="forest"] .appearance-note::after {
+        content:none !important; display:none !important; background:none !important;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-eyebrow {
+        color:#376843; font-size:.76rem;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero h2 {
+        color:#173f2c;
+        font-size:clamp(1.7rem,4vw,2.5rem);
+        line-height:1.15;
+        max-width:none;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero p {
+        color:#56705d; font-size:1rem; font-weight:400; max-width:680px;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-shop-hero > .d-flex {
+        display:flex !important; grid-template-columns:none;
+    }
+    body.dashboard-body[data-student-theme="forest"] .star-wallet {
+        background:#fff8dc !important;
+        border:1px solid #dfc66c !important;
+        border-bottom-width:1px !important;
+        border-radius:18px !important;
+        box-shadow:none !important;
+        color:#5f4a19;
+        min-width:180px;
+        padding:.9rem 1rem;
+    }
+    body.dashboard-body[data-student-theme="forest"] .star-wallet i { color:#6d9f55; }
+    body.dashboard-body[data-student-theme="forest"] .appearance-note {
+        background:rgba(255,255,255,.92) !important;
+        border:1px solid rgba(55,104,67,.15) !important;
+        border-bottom-width:1px !important;
+        border-radius:18px !important;
+        box-shadow:0 10px 24px rgba(48,90,57,.05) !important;
+        color:#58705d;
+        min-height:0;
+        padding:.85rem 1rem;
+    }
+    body.dashboard-body[data-student-theme="forest"] .appearance-note i { color:#65a553; }
+    body.dashboard-body[data-student-theme="forest"] .theme-grid { gap:1rem; }
+    body.dashboard-body[data-student-theme="forest"] .theme-card {
+        background:rgba(255,255,255,.95) !important;
+        border:1px solid rgba(55,104,67,.14) !important;
+        border-bottom-width:1px !important;
+        border-radius:22px !important;
+        box-shadow:0 12px 28px rgba(48,90,57,.08) !important;
+        gap:.85rem;
+        padding:.8rem;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-card[data-theme-card="forest"] {
+        border:2px solid #659a58 !important;
+        box-shadow:0 0 0 4px rgba(111,163,85,.11),0 16px 32px rgba(38,83,48,.16) !important;
+        position:relative;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-preview.forest .theme-preview-title {
+        background:none !important;
+        border:0 !important;
+        box-shadow:none !important;
+        color:#fff !important;
+        justify-self:start;
+        padding:0 !important;
+        width:max-content;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-card[data-theme-card="forest"] .status-pill {
+        background:#dbeafe;
+        border:0;
+        color:#1d4ed8;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-preview {
+        border-radius:16px; height:188px;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-action {
+        background:#356f47 !important;
+        border:0 !important;
+        border-radius:10px !important;
+        box-shadow:none !important;
+        color:#fff !important;
+        text-shadow:none;
+    }
+    body.dashboard-body[data-student-theme="forest"] .theme-card[data-theme-card="forest"] .theme-action:disabled {
+        background:#94a3b8 !important;
+        color:#e2e8f0 !important;
+        cursor:not-allowed;
+    }
+    @media (max-width:700px) {
+        body.dashboard-body[data-student-theme="forest"] .theme-shop-hero {
+            grid-template-columns:1fr;
+            padding:1.25rem;
+        }
+        body.dashboard-body[data-student-theme="forest"] .theme-shop-hero > .d-flex { width:100%; }
+        body.dashboard-body[data-student-theme="forest"] .star-wallet { width:100%; }
+    }
 </style>
 {% endblock %}
 
@@ -206,7 +349,7 @@
 
     <section class="theme-grid" aria-label="Available visual themes">
         {% for theme in shop_themes %}
-        <article class="theme-card" data-theme-card="{{ theme.slug }}">
+        <article class="theme-card{% if not theme.owned and not theme.can_afford %} is-unaffordable{% endif %}" data-theme-card="{{ theme.slug }}">
             <div class="theme-preview {{ theme.slug }}" aria-label="{{ theme.name }} theme preview">
                 {% with preview_path="pabasa_app/images/theme-previews/theme-"|add:theme.slug|add:".svg" %}
                 <picture class="theme-preview-art" aria-hidden="true">
@@ -215,7 +358,6 @@
                 {% endwith %}
                 <div class="theme-preview-header">
                     <span class="theme-preview-icon"><i class="bi bi-{{ theme.icon }}" aria-hidden="true"></i></span>
-                    <button class="preview-chip" type="button" data-theme-preview data-theme-slug="{{ theme.slug }}" data-theme-name="{{ theme.name }}" aria-label="Preview {{ theme.name }} theme">Preview</button>
                 </div>
                 <span class="theme-preview-title">{{ theme.name }}</span>
             </div>
@@ -256,6 +398,9 @@
             </div>
         </article>
         {% endfor %}
+        <article class="theme-card theme-coming-soon" aria-label="More themes coming soon">
+            <div><div class="coming-soon-icon"><i class="bi bi-stars" aria-hidden="true"></i></div><h3>More Themes Coming Soon</h3><p>New reading worlds, characters, and playful adventures are on the way.</p></div>
+        </article>
     </section>
 </main>
 <div class="theme-preview-modal" id="themePreviewModal" role="dialog" aria-modal="true" aria-labelledby="themePreviewTitle" hidden>
@@ -278,39 +423,6 @@
         const toast = document.getElementById('themeShopToast');
         let toastTimer = null;
         const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]')?.value || '';
-        const previewModal = document.getElementById('themePreviewModal');
-        const previewDialog = document.getElementById('themePreviewDialog');
-        const previewTitle = document.getElementById('themePreviewTitle');
-        const previewWelcome = document.getElementById('themePreviewWelcome');
-        const previewImage = document.getElementById('themePreviewImage');
-        const previewClose = document.getElementById('themePreviewClose');
-        let previewTrigger = null;
-
-        const closeThemePreview = () => {
-            if (!previewModal) return;
-            previewModal.hidden = true;
-            previewTrigger?.focus();
-        };
-
-        document.querySelectorAll('[data-theme-preview]').forEach((button) => {
-            button.addEventListener('click', () => {
-                if (!previewModal || !previewDialog) return;
-                previewTrigger = button;
-                const themeName = button.dataset.themeName || 'Theme';
-                previewDialog.dataset.theme = button.dataset.themeSlug || 'sky';
-                if (previewTitle) previewTitle.textContent = `${themeName} preview`;
-                if (previewWelcome) previewWelcome.textContent = `Welcome to ${themeName}`;
-                if (previewImage) previewImage.src = button.closest('.theme-preview')?.querySelector('img')?.src || '';
-                previewModal.hidden = false;
-                previewClose?.focus();
-            });
-        });
-        previewClose?.addEventListener('click', closeThemePreview);
-        previewModal?.addEventListener('click', (event) => { if (event.target === previewModal) closeThemePreview(); });
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && previewModal && !previewModal.hidden) closeThemePreview();
-        });
-
         document.querySelectorAll('[data-theme-action]').forEach((button) => {
             button.addEventListener('click', async () => {
                 if (!toast || button.disabled) return;

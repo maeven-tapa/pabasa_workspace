@@ -26,9 +26,6 @@ function initProfilePage() {
     const form = document.getElementById("accountDetailsForm");
     const editBtn = document.getElementById("editAccountDetailsBtn");
     const actions = document.getElementById("accountDetailsActions");
-    const profilePhotoInput = document.getElementById("profilePhoto");
-    const uploadPhotoBtn = document.getElementById("uploadPhotoBtn");
-    const removePhotoBtn = document.getElementById("removePhotoBtn");
     const profileSummaryCard = document.querySelector(".profile-summary");
     const profileUsername = JSON.parse(document.getElementById("profileUsername")?.textContent || "\"user\"");
     const profileFullName = JSON.parse(document.getElementById("profileFullName")?.textContent || '""');
@@ -39,6 +36,35 @@ function initProfilePage() {
     const profileStorageKey = "pabasa_profile_settings_" + profileUsername;
 
     const accountFields = form ? form.querySelectorAll("[data-account-details-field]") : [];
+    const avatarChoices = form ? form.querySelectorAll("[data-avatar-choice]") : [];
+
+    function updateAvatarPreview(input) {
+        if (!input) return;
+        const emoji = input.getAttribute("data-avatar-emoji") || "";
+        const name = input.getAttribute("data-avatar-name") || "Avatar";
+        const previewBadge = document.getElementById("avatarPreviewBadge");
+        const profileAvatarDisplay = document.getElementById("profileAvatarDisplay");
+        const playerAvatarBadge = document.querySelector(".player-hero .student-avatar-badge");
+
+        [previewBadge, profileAvatarDisplay, playerAvatarBadge].forEach(function (badge) {
+            if (!badge) return;
+            badge.innerHTML = "<span>" + emoji + "</span>" + (badge === playerAvatarBadge ? "" : "<small>" + name + "</small>");
+            badge.setAttribute("aria-label", name + " avatar");
+            badge.setAttribute("data-avatar-name", name);
+            badge.setAttribute("data-avatar-emoji", emoji);
+            badge.style.backgroundImage = "";
+            badge.style.backgroundSize = "";
+            badge.style.backgroundPosition = "";
+        });
+    }
+
+    avatarChoices.forEach(function (input) {
+        input.addEventListener("change", function () {
+            if (input.checked) {
+                updateAvatarPreview(input);
+            }
+        });
+    });
 
     // Theme Toggle Logic
     const themeToggle = document.getElementById("themeToggle");
@@ -89,7 +115,12 @@ function initProfilePage() {
 
         form.addEventListener("reset", function () {
             setTimeout(function () {
-                setEditMode(false);
+                const studentEditModal = document.getElementById("studentEditModal");
+                updateAvatarPreview(form.querySelector("[data-avatar-choice]:checked"));
+                // Reset restores the original values without kicking the
+                // student out of the edit screen. Closing the modal returns
+                // the form to its non-editing state.
+                setEditMode(Boolean(studentEditModal?.classList.contains("show")));
             }, 0);
         });
 
@@ -109,7 +140,8 @@ function initProfilePage() {
                 middle_initial: document.getElementById("middleInitial")?.value || "",
                 suffix: document.getElementById("suffix")?.value || "",
                 email: document.getElementById("email")?.value || "",
-                bio: document.getElementById("bio")?.value || ""
+                bio: document.getElementById("bio")?.value || "",
+                animal_avatar: form.querySelector("[data-avatar-choice]:checked")?.value || ""
             };
 
             postProfileAction("save_account_details", fields).then(function (data) {
@@ -120,6 +152,10 @@ function initProfilePage() {
 
                 showToast(data.message || "Profile updated successfully", "success");
                 setEditMode(false);
+                const studentEditModal = document.getElementById("studentEditModal");
+                if (studentEditModal && window.bootstrap?.Modal) {
+                    window.bootstrap.Modal.getInstance(studentEditModal)?.hide();
+                }
                 form.reset();
                 
                 // Update the display with new values
@@ -865,8 +901,11 @@ function initProfilePage() {
 
     const changePasswordForm = document.getElementById("changePasswordForm");
     if (changePasswordForm) {
+        const internalPasswordView = changePasswordForm.closest('[data-settings-view="password"]');
+        const internalPasswordError = document.getElementById("settingsPasswordError");
         changePasswordForm.addEventListener("submit", function (event) {
             event.preventDefault();
+            if (internalPasswordError) internalPasswordError.hidden = true;
             const submitBtn = changePasswordForm.querySelector("button[type='submit']");
             const originalText = submitBtn ? submitBtn.textContent : "";
             if (submitBtn) {
@@ -880,7 +919,12 @@ function initProfilePage() {
                 confirm_password: document.getElementById("confirmPassword")?.value || ""
             }).then(function (data) {
                 if (!data.success) {
-                    alert(data.error || "Could not change password");
+                    if (internalPasswordView && internalPasswordError) {
+                        internalPasswordError.textContent = data.error || "Could not change password";
+                        internalPasswordError.hidden = false;
+                    } else {
+                        showToast(data.error || "Could not change password", "error");
+                    }
                     return;
                 }
 
@@ -899,14 +943,23 @@ function initProfilePage() {
                 saveProfileSettings(settings);
 
                 if (passwordLastChanged) passwordLastChanged.textContent = timestamp;
-                const modalEl = document.getElementById("changePasswordModal");
                 if (changePasswordForm) changePasswordForm.reset();
-                if (modalEl) {
-                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                if (internalPasswordView && typeof window.profileSettingsShowView === "function") {
+                    window.profileSettingsShowView("settings");
+                    showToast("Your password has been updated successfully.", "success");
+                } else {
+                    const modalEl = document.getElementById("changePasswordModal");
+                    if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+                    showProfileSuccessModal("Password Changed", "Your password has been updated successfully.");
                 }
-                showProfileSuccessModal("Password Changed", "Your password has been updated successfully.");
             }).catch(function (error) {
-                alert("Error changing password: " + error.message);
+                const message = "Error changing password: " + error.message;
+                if (internalPasswordView && internalPasswordError) {
+                    internalPasswordError.textContent = message;
+                    internalPasswordError.hidden = false;
+                } else {
+                    showToast(message, "error");
+                }
             }).finally(function () {
                 if (submitBtn) {
                     submitBtn.textContent = originalText;
@@ -1006,6 +1059,29 @@ function initProfilePage() {
                 if (deleteFinalBtn) {
                     deleteFinalBtn.textContent = originalText;
                 }
+            });
+        });
+    } else if (deleteAccountBtn && deleteConfirmInput && deleteFinalBtn) {
+        const internalDeleteError = document.getElementById("settingsDeleteError");
+        deleteConfirmInput.addEventListener("input", function () {
+            deleteFinalBtn.disabled = this.value !== "DELETE";
+            if (internalDeleteError) internalDeleteError.hidden = true;
+        });
+        deleteFinalBtn.addEventListener("click", function () {
+            const originalText = deleteFinalBtn.textContent;
+            deleteFinalBtn.textContent = "Deleting...";
+            deleteFinalBtn.disabled = true;
+            postProfileAction("delete_account").then(function (data) {
+                if (!data.success) throw new Error(data.error || "Could not delete account");
+                localStorage.removeItem(profileStorageKey);
+                window.location.href = data.redirect_url || "/";
+            }).catch(function (error) {
+                if (internalDeleteError) {
+                    internalDeleteError.textContent = error.message || "Could not delete account";
+                    internalDeleteError.hidden = false;
+                }
+                deleteFinalBtn.textContent = originalText;
+                deleteFinalBtn.disabled = deleteConfirmInput.value !== "DELETE";
             });
         });
     }
@@ -1129,141 +1205,6 @@ function initProfilePage() {
         updateStudentProgress();
         updateDashboardClassStats();
     });
-
-    // Photo upload and remove logic
-    if (profilePhotoInput && uploadPhotoBtn && removePhotoBtn) {
-        // Handle file selection
-        profilePhotoInput.addEventListener("change", function () {
-            const file = this.files[0];
-            if (file) {
-                // Show file preview
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const profileAvatarDisplay = document.getElementById("profileAvatarDisplay");
-                    if (profileAvatarDisplay) {
-                        profileAvatarDisplay.textContent = "";
-                        profileAvatarDisplay.style.backgroundImage = "url('" + e.target.result + "')";
-                        profileAvatarDisplay.style.backgroundSize = "cover";
-                        profileAvatarDisplay.style.backgroundPosition = "center";
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        // Handle upload photo button
-        uploadPhotoBtn.addEventListener("click", function () {
-            const file = profilePhotoInput.files[0];
-            if (!file) {
-                showProfileSuccessModal("Action Required", "Please select a photo first.", "info");
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("profile_photo", file);
-            formData.append("csrfmiddlewaretoken", getCsrfToken());
-
-            // Show loading state
-            const originalText = uploadPhotoBtn.textContent;
-            uploadPhotoBtn.textContent = "Uploading...";
-            uploadPhotoBtn.disabled = true;
-
-            fetch(window.location.pathname, {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showProfileSuccessModal("Photo Updated", "Your profile picture has been successfully updated.");
-                    // Update avatar display with the new photo URL
-                    const profileAvatarDisplay = document.getElementById("profileAvatarDisplay");
-                    if (profileAvatarDisplay && data.photo_url) {
-                        profileAvatarDisplay.textContent = "";
-                        const photoUrl = data.photo_url + "?t=" + Date.now();
-                        profileAvatarDisplay.style.background = "none";
-                        profileAvatarDisplay.style.backgroundImage = "url('" + photoUrl + "')";
-                        profileAvatarDisplay.style.backgroundSize = "cover";
-                        profileAvatarDisplay.style.backgroundPosition = "center";
-                    }
-                    setEditMode(false);
-                    profilePhotoInput.value = "";
-                } else {
-                    showProfileSuccessModal("Upload Failed", data.error || "Could not upload photo.", "error");
-                }
-            })
-            .catch(error => {
-                alert("Error uploading photo: " + error.message);
-            })
-            .finally(() => {
-                uploadPhotoBtn.textContent = originalText;
-                uploadPhotoBtn.disabled = false;
-            });
-        });
-
-        // Handle remove photo button
-        removePhotoBtn.addEventListener("click", function () {
-            showProfileConfirmModal(
-                "Remove Photo?",
-                "Are you sure you want to remove your profile photo? This will reset your avatar to your initials.",
-                "Yes, Remove Photo",
-                executeRemovePhoto
-            );
-        });
-
-        function executeRemovePhoto() {
-            const formData = new FormData();
-            formData.append("remove_photo", "true");
-            
-            // Get CSRF token from the form
-            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
-            if (csrfToken) {
-                formData.append("csrfmiddlewaretoken", csrfToken);
-            }
-
-            // Show loading state
-            const originalText = removePhotoBtn.textContent;
-            removePhotoBtn.textContent = "Removing...";
-            removePhotoBtn.disabled = true;
-
-            fetch(window.location.pathname, {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showProfileSuccessModal("Photo Removed", "Your profile picture has been removed.");
-                    // Reset avatar to initials
-                    const profileAvatarDisplay = document.getElementById("profileAvatarDisplay");
-                    if (profileAvatarDisplay) {
-                        profileAvatarDisplay.textContent = profileAvatarDisplay.getAttribute("data-initials") || "";
-                        profileAvatarDisplay.style.background = "";
-                        profileAvatarDisplay.style.backgroundImage = "";
-                        profileAvatarDisplay.style.backgroundSize = "";
-                        profileAvatarDisplay.style.backgroundPosition = "";
-                    }
-                    setEditMode(false);
-                    profilePhotoInput.value = "";
-                } else {
-                    alert("Error removing photo: " + (data.error || "Unknown error"));
-                }
-            })
-            .catch(error => {
-                alert("Error removing photo: " + error.message);
-            })
-            .finally(() => {
-                removePhotoBtn.textContent = originalText;
-                removePhotoBtn.disabled = false;
-            });
-        }
-    }
 
     function initMicSettings() {
         const btnRequestMic = document.getElementById("btnRequestMic");

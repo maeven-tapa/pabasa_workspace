@@ -13,6 +13,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{% static 'pabasa_app/notification_nav.css' %}">
     <link rel="stylesheet" href="{% static 'pabasa_app/notifications_shared.css' %}">
+    <link rel="stylesheet" href="{% static 'pabasa_app/forest-theme.css' %}?v=storybook-forest-4">
+    <link rel="stylesheet" href="{% static 'pabasa_app/treasure-theme.css' %}?v=storybook-treasure-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/space-theme.css' %}?v=storybook-space-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/library-theme.css' %}?v=storybook-library-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/zoo-theme.css' %}?v=storybook-zoo-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/ocean-theme.css' %}?v=storybook-ocean-1">
     <style>
         :root {
             --dash-primary: #2EA8E5;
@@ -1761,6 +1767,23 @@
             box-shadow: 0 24px 60px rgba(31, 111, 139, 0.18);
             font-family: 'Quattrocento Sans', serif;
         }
+        .logout-modal {
+            z-index: 2065 !important;
+            pointer-events: auto !important;
+        }
+        .logout-modal.show {
+            display: block !important;
+        }
+        .logout-modal .modal-dialog,
+        .logout-modal .modal-content,
+        .logout-modal .modal-footer,
+        .logout-modal .btn,
+        #confirmLogoutBtn {
+            pointer-events: auto !important;
+        }
+        .modal-backdrop.show {
+            z-index: 2060 !important;
+        }
         .logout-modal .modal-body {
             padding: 1.5rem 1.5rem 1rem;
         }
@@ -1815,6 +1838,38 @@
             background: linear-gradient(135deg, #1f6f8b 0%, #38bdf8 100%) !important;
             color: #fff !important;
             border: 0 !important;
+        }
+        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .logout-modal .modal-content {
+            background: #fffdf5 !important;
+            border: 1px solid rgba(82, 64, 36, 0.16) !important;
+            border-bottom: 0 !important;
+            box-shadow: 0 24px 70px rgba(25, 23, 17, 0.28) !important;
+        }
+        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .logout-modal-title {
+            color: #0f4f67 !important;
+        }
+        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .logout-modal-copy {
+            color: #4b5563 !important;
+        }
+        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .logout-modal-actions .btn-outline-secondary {
+            background: #fffdf5 !important;
+            border: 1px solid #d8d0bd !important;
+            color: #374151 !important;
+            opacity: 1 !important;
+        }
+        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .logout-modal-actions .btn.btn-danger {
+            background: linear-gradient(135deg, #0f6f8b 0%, #168ac2 100%) !important;
+            border: 0 !important;
+            color: #fff !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) #confirmLogoutBtn {
+            cursor: pointer !important;
+            pointer-events: auto !important;
+        }
+        body.dashboard-body[data-student-theme]:not([data-student-theme="sky"]) .logout-modal-actions .btn:not(:disabled):hover {
+            transform: translateY(-1px);
         }
         .logout-modal-actions .btn.btn-danger:hover {
             box-shadow: 0 10px 24px rgba(31, 111, 139, 0.24);
@@ -2590,8 +2645,181 @@
         }
     </style>
     {% block extra_head %}{% endblock %}
+    <style>
+        /* Theme-aware dark selects shared by every student theme. */
+        body.dark-theme.dashboard-body[data-student-theme] {--theme-dark-accent:#7dd3fc;--theme-dark-accent-rgb:125,211,252}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] {--theme-dark-accent:#b8d47c;--theme-dark-accent-rgb:184,212,124}
+        body.dark-theme.dashboard-body[data-student-theme="treasure"] {--theme-dark-accent:#5eead4;--theme-dark-accent-rgb:94,234,212}
+        body.dark-theme.dashboard-body[data-student-theme="ocean"] {--theme-dark-accent:#67e8f9;--theme-dark-accent-rgb:103,232,249}
+        body.dark-theme.dashboard-body[data-student-theme="space"] {--theme-dark-accent:#c4b5fd;--theme-dark-accent-rgb:196,181,253}
+        body.dark-theme.dashboard-body[data-student-theme="zoo"] {--theme-dark-accent:#bef264;--theme-dark-accent-rgb:190,242,100}
+        body.dark-theme.dashboard-body[data-student-theme="library"] {--theme-dark-accent:#f0abfc;--theme-dark-accent-rgb:240,171,252}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-dropdown {color-scheme:dark}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-trigger {
+            background:#172033 !important;border:1px solid rgba(var(--theme-dark-accent-rgb),.42) !important;
+            color:#f1f5f9 !important;box-shadow:inset 0 1px rgba(255,255,255,.05),0 5px 14px rgba(0,0,0,.24) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-trigger:is(:hover,:focus-visible),
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-dropdown.is-open .custom-device-trigger {
+            background:#202b40 !important;border-color:var(--theme-dark-accent) !important;
+            box-shadow:0 0 0 3px rgba(var(--theme-dark-accent-rgb),.16) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme] :is(.custom-device-value,.custom-device-trigger i) {color:#f1f5f9 !important}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-menu {
+            background:#111827 !important;border:1px solid rgba(var(--theme-dark-accent-rgb),.34) !important;
+            box-shadow:0 18px 40px rgba(0,0,0,.46) !important;color:#f1f5f9 !important;
+            scrollbar-color:var(--theme-dark-accent) #172033;
+        }
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-option {background:transparent !important;border-color:transparent !important;color:#f1f5f9 !important}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-option:is(:hover,:focus-visible) {
+            background:rgba(var(--theme-dark-accent-rgb),.12) !important;border-color:rgba(var(--theme-dark-accent-rgb),.2) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-option.is-selected {
+            background:rgba(var(--theme-dark-accent-rgb),.16) !important;border-color:rgba(var(--theme-dark-accent-rgb),.42) !important;
+            box-shadow:inset 4px 0 var(--theme-dark-accent) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-option-title {color:#f8fafc !important}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-option-subtitle {color:#94a3b8 !important}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-option.is-selected .custom-device-option-subtitle {color:#cbd5e1 !important}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-check {color:var(--theme-dark-accent) !important}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-option:disabled {color:#64748b !important;opacity:.62}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-menu::-webkit-scrollbar {width:10px}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-menu::-webkit-scrollbar-track {background:#172033;border-radius:999px}
+        body.dark-theme.dashboard-body[data-student-theme] .custom-device-menu::-webkit-scrollbar-thumb {background:var(--theme-dark-accent);border:2px solid #172033;border-radius:999px}
+        /* Final Forest dashboard layer. It intentionally follows page-local CSS
+           so Theme Shop and Profile share the same navigation shell. */
+        body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar {
+            background:linear-gradient(90deg,rgba(24,57,38,.99),rgba(39,83,50,.98)),radial-gradient(circle at 20% 10%,#527c42,transparent 30%) !important;
+            border-right:4px solid #76512e !important;
+            box-shadow:9px 0 0 rgba(92,63,34,.22),18px 0 28px rgba(23,54,34,.28) !important;
+        }
+        body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar::after {
+            background:radial-gradient(ellipse at 12% 15%,rgba(151,192,86,.22),transparent 20%),repeating-linear-gradient(88deg,transparent 0 34px,rgba(255,255,255,.018) 35px 36px) !important;
+            content:"" !important;inset:0;pointer-events:none;position:absolute;
+        }
+        body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar :is(.sidebar-role-card,.sidebar-profile-card,.sidebar-collapse-btn,.btn-outline-danger) {
+            background:rgba(117,166,91,.18) !important;border-color:rgba(220,230,166,.28) !important;color:#fffbea !important;
+        }
+        body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar :is(.sidebar-section-label,.sidebar-subtext,.brand-note) {color:#c8d8ae !important}
+        body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar .dash-link {background:transparent !important;border-color:transparent !important;color:#f6f8e8 !important}
+        body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar .dash-link i {
+            background:linear-gradient(145deg,#f5e9ae,#d7ba5c) !important;color:#315c37 !important;
+            box-shadow:inset 0 1px #fff6ca,0 3px 7px rgba(0,0,0,.22) !important;
+        }
+        body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar .dash-link:is(:hover,.is-active,.active) {
+            background:linear-gradient(90deg,rgba(164,194,94,.34),rgba(83,137,66,.45)) !important;
+            border-color:rgba(235,224,150,.4) !important;color:#fff !important;
+        }
+        body.dashboard-body[data-student-theme="forest"] .dashboard-sidebar .dash-link:is(.is-active,.active)::before {background:#d7d45b !important}
+
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .dashboard-sidebar {
+            background:linear-gradient(90deg,#0c2f24,#173f2e) !important;
+            border-right-color:#4f3825 !important;box-shadow:9px 0 0 rgba(45,31,21,.35),18px 0 32px rgba(0,0,0,.4) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .dashboard-sidebar :is(.sidebar-role-card,.sidebar-profile-card,.sidebar-collapse-btn,.btn-outline-danger) {
+            background:rgba(8,37,28,.72) !important;border-color:rgba(178,205,119,.24) !important;color:#eef4d2 !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .dashboard-sidebar .dash-link:is(:hover,.is-active,.active) {
+            background:rgba(132,166,82,.24) !important;color:#f4f2cf !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.theme-shop-hero,.theme-card,.appearance-note,.profile-summary,.profile-section-card,.dash-page-head) {
+            background:linear-gradient(145deg,rgba(25,58,41,.98),rgba(16,44,33,.98)) !important;
+            background-image:none !important;border-color:rgba(179,205,120,.27) !important;color:#eef4d2 !important;
+            box-shadow:0 18px 38px rgba(0,0,0,.3) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.theme-shop-hero h2,.theme-card h3,.profile-section-title,.profile-stat-value,.profile-main-content h2) {color:#f2f3d2 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.theme-shop-hero p,.theme-note,.appearance-note,.profile-stat-label,.profile-details-mini .label) {color:#bdcbb2 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.theme-detail-chip,.profile-details-mini>div,.profile-stat-box) {
+            background:rgba(19,49,35,.94) !important;border-color:rgba(179,205,120,.2) !important;color:#dce7c2 !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.theme-detail-chip i,.profile-section-title i) {color:#b8d47c !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .star-wallet {background:#342e17 !important;border-color:#8f793b !important;color:#f5dfa0 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.form-control,.form-select) {background:#112f25 !important;border-color:#5f7d4c !important;color:#eff4d2 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .dashboard-main :is(.btn-primary,.theme-action:not(:disabled)) {
+            background:linear-gradient(#8c5d32,#5e391f) !important;border-color:#3f2718 !important;color:#fff4d2 !important;
+        }
+        /* Forest dark mode uses one woodland surface system on every student
+           dashboard page; no generic navy cards or electric-blue accents. */
+        body.dark-theme.dashboard-body[data-student-theme="forest"] {
+            --dash-primary:#78ad61;--dash-primary-deep:#c6dc91;--dash-primary-soft:rgba(112,160,83,.18);
+            --dash-accent:#e0c45e;--dash-accent-strong:#b88b37;--dash-bg:#082a22;
+            --dash-panel:#123b2d;--dash-text:#f0f3d5;--dash-ink:#f0f3d5;--dash-muted:#b7c6aa;
+            --dash-border:rgba(173,202,117,.24);background:#082a22 !important;color:#f0f3d5 !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(
+            .student-studio,.join-desk,.my-classes-section,.my-reading-journey,.my-achievements,
+            .hub-section,.game-card,.challenge-badge,.achievement-item,.achievement-stat,
+            .dash-surface,.dash-card,.kids-card,.course-card,.subject-card,.class-card,
+            .code-input-shell,.stat-item,.progression-card,.level-card
+        ) {
+            background:linear-gradient(145deg,rgba(22,67,49,.96),rgba(13,49,38,.97)) !important;
+            background-image:none !important;border-color:rgba(173,202,117,.24) !important;
+            color:#f0f3d5 !important;box-shadow:0 14px 30px rgba(0,0,0,.27) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(
+            .student-studio h2,.join-desk h3,.my-classes-header,.section-title,.section-heading h3,
+            .challenge-copy strong,.game-card h4,.achievement-item strong,.class-card h3,
+            .level-card strong,.progression-card h2,.progression-card h3,.difficulty-label
+        ) {color:#f4f3d4 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(
+            .student-studio p,.join-desk p,.section-heading p,.challenge-copy p,.game-card p,
+            .achievement-item span,.class-card p,.difficulty-note,.text-muted,.text-secondary
+        ) {color:#b7c6aa !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(
+            .dash-pill,.greeting-kicker,.challenge-tag,.game-card .difficulty-pill,.skill-list li,
+            .achievement-icon,.mode-emoji
+        ) {background:rgba(126,168,83,.18) !important;border-color:rgba(184,211,126,.25) !important;color:#c9df92 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(
+            .badge-number,.stat-item-value,.profile-stat-value,.challenge-copy strong
+        ) {color:#e5d276 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.challenge-bar,.progress-bar-container,.progress) {
+            background:#092b22 !important;border-color:#668052 !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.challenge-bar span,.progress-bar-fill,.progress-bar) {
+            background:repeating-linear-gradient(135deg,#4e974d 0 10px,#75ae58 11px 20px) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.class-code-form input,.practice-language-select-wrap .form-select) {
+            background:#0d3528 !important;border-color:#708d58 !important;color:#eff4d2 !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(a,button,.text-primary) {--bs-primary-rgb:120,173,97}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-dropdown {color-scheme:dark}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-trigger {
+            background:#103a2c !important;border:1px solid #668255 !important;color:#f0f3d5 !important;
+            box-shadow:inset 0 1px rgba(222,235,174,.08),0 5px 14px rgba(0,0,0,.2) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-trigger:is(:hover,:focus-visible),
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-dropdown.is-open .custom-device-trigger {
+            background:#164735 !important;border-color:#9ab56b !important;box-shadow:0 0 0 3px rgba(145,177,94,.17) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] :is(.custom-device-value,.custom-device-trigger i) {color:#f0f3d5 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-menu {
+            background:#0d3025 !important;border:1px solid #5c774c !important;
+            box-shadow:0 18px 40px rgba(0,0,0,.42) !important;color:#eef2d2 !important;
+            scrollbar-color:#708b55 #102e25;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-option {
+            background:transparent !important;border-color:transparent !important;color:#eef2d2 !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-option:is(:hover,:focus-visible) {
+            background:#1c513b !important;border-color:rgba(180,205,121,.2) !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-option.is-selected {
+            background:#234f38 !important;border-color:#759454 !important;box-shadow:inset 4px 0 #d6c65e !important;
+        }
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-option-title {color:#f3f2d3 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-option-subtitle {color:#afc2a2 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-option.is-selected .custom-device-option-subtitle {color:#c8d99e !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-check {color:#d8ce68 !important}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-option:disabled {color:#728476 !important;opacity:.62}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-menu::-webkit-scrollbar {width:10px}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-menu::-webkit-scrollbar-track {background:#102e25;border-radius:999px}
+        body.dark-theme.dashboard-body[data-student-theme="forest"] .custom-device-menu::-webkit-scrollbar-thumb {background:#708b55;border:2px solid #102e25;border-radius:999px}
+    </style>
 </head>
 <body class="dashboard-body dashboard-preloading{% if nav_role == 'teacher' %} teacher-dashboard-body{% endif %}" data-student-theme="{% if nav_role == 'student' %}{{ student_theme_slug|default:'sky' }}{% endif %}">
+    {% if nav_role == 'student' %}
+        {% include "pabasa_app/partials/_forest_world.html" %}
+    {% endif %}
     <div class="dashboard-page-loader" id="dashboardPageLoader" aria-hidden="false" role="status" aria-label="Loading page">
         <div class="dashboard-page-loader__content">
             <img class="dashboard-page-loader__logo" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
@@ -2708,7 +2936,7 @@
                         </div>
                         <div class="modal-footer border-0 justify-content-center pb-4 logout-modal-actions">
                             <button type="button" class="btn btn-outline-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
-                            <a class="btn btn-danger rounded-pill" href="{% url 'home' %}">Yes, Logout</a>
+                            <button class="btn btn-danger rounded-pill" type="button" id="confirmLogoutBtn" data-logout-url="{% url 'logout' %}">Yes, Logout</button>
                         </div>
                     </div>
                 </div>
@@ -2795,17 +3023,28 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=assessment-branded-loader"></script>
+    <script src="{% static 'pabasa_app/js/base_dashboard.js' %}?v=modal-stack-fix-1"></script>
     <script src="{% static 'pabasa_app/js/notifications_shared.js' %}"></script>
     <script>
         (() => {
-            const logoutLink = document.querySelector("#logoutConfirmModal a[href*='home']");
-            if (logoutLink) {
-                logoutLink.addEventListener("click", (e) => {
+            const logoutModal = document.getElementById("logoutConfirmModal");
+            if (logoutModal && logoutModal.parentElement !== document.body) {
+                document.body.appendChild(logoutModal);
+            }
+
+            const logoutButton = document.getElementById("confirmLogoutBtn");
+            if (logoutButton) {
+                logoutButton.disabled = false;
+                logoutButton.classList.remove("disabled");
+                logoutButton.removeAttribute("aria-disabled");
+                logoutButton.addEventListener("click", (e) => {
                     e.preventDefault();
+                    logoutButton.disabled = false;
+                    logoutButton.classList.remove("disabled");
+                    logoutButton.removeAttribute("aria-disabled");
                     window.localStorage.removeItem("pabasaCurrentUserId");
                     window.localStorage.removeItem("pabasaUserRole");
-                    window.location.href = logoutLink.href;
+                    window.location.assign(logoutButton.dataset.logoutUrl || "{% url 'logout' %}");
                 });
             }
         })();

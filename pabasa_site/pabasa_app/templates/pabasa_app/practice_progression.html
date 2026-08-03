@@ -592,8 +592,8 @@
     body.dark-theme .level-play-btn.is-unavailable { background: #475569; border-color: #64748b; color: #e2e8f0; }
     body.dark-theme .level-play-btn.is-locked i,
     body.dark-theme .level-play-btn.is-unavailable i { color: #e2e8f0; }
-    body.dark-theme .level-play-btn.is-completed { background: #15803d; border-color: #22c55e; color: #ecfdf5; }
-    body.dark-theme .level-play-btn.is-completed i { color: #bbf7d0; }
+    body.dark-theme .level-play-btn.is-completed { background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-deep)); border-color: var(--dash-primary); color: #f8fafc; }
+    body.dark-theme .level-play-btn.is-completed i { color: #f8fafc; }
     body.dark-theme .back-link { background: #1e293b; border-color: #334155; box-shadow: 0 10px 24px #020617; color: #7dd3fc; }
     body.dark-theme .back-link i { color: #38bdf8; }
     @media (max-width: 991.98px) { .progression-hero { grid-template-columns: 1fr; } .level-grid { grid-template-columns: 1fr; } }
@@ -628,6 +628,23 @@
         pointer-events: none;
         cursor: not-allowed;
     }
+
+    /* Completed levels use the equipped theme accent.  The previous green
+       gradient made every theme look like Forest, especially in dark mode. */
+    .level-play-btn.is-completed,
+    body.dark-theme .level-play-btn.is-completed {
+        background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-deep)) !important;
+        border-color: color-mix(in srgb, var(--dash-primary) 72%, white) !important;
+        box-shadow: 0 7px 18px color-mix(in srgb, var(--dash-primary) 28%, transparent) !important;
+    }
+    .level-card.is-completed,
+    body.dark-theme .level-card.is-completed {
+        border-color: color-mix(in srgb, var(--dash-primary) 48%, transparent) !important;
+    }
+    .level-status.is-completed,
+    body.dark-theme .level-status.is-completed {
+        color: var(--dash-primary) !important;
+    }
 </style>
 {% endblock %}
 
@@ -637,7 +654,7 @@
 
 {% block content %}
 <section class="progression-shell">
-    <a class="back-link" href="{% url 'practice' %}"><i class="bi bi-arrow-left"></i> Back to game hub</a>
+    <a class="back-link" href="{% url 'practice' %}?language={{ selected_practice_language|urlencode }}"><i class="bi bi-arrow-left"></i> Back to game hub</a>
 
     <section class="progression-card progression-hero">
         <div>

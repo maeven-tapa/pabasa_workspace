@@ -1807,8 +1807,15 @@
             border-color: rgba(134, 239, 172, 0.18);
         }
 </style>
+<link rel="stylesheet" href="{% static 'pabasa_app/forest-theme.css' %}?v=storybook-forest-3">
+<link rel="stylesheet" href="{% static 'pabasa_app/treasure-theme.css' %}?v=storybook-treasure-1">
+<link rel="stylesheet" href="{% static 'pabasa_app/space-theme.css' %}?v=storybook-space-1">
+<link rel="stylesheet" href="{% static 'pabasa_app/library-theme.css' %}?v=storybook-library-1">
+<link rel="stylesheet" href="{% static 'pabasa_app/zoo-theme.css' %}?v=storybook-zoo-1">
+<link rel="stylesheet" href="{% static 'pabasa_app/ocean-theme.css' %}?v=storybook-ocean-1">
 </head>
-<body>
+<body data-student-theme="{{ student_theme_slug|default:'sky' }}">
+    {% include "pabasa_app/partials/_forest_world.html" %}
     <script>
         (function() {
             const readTheme = () => {

@@ -1,0 +1,888 @@
+[
+  {
+    "title": "Color Easy Level 1",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Mabait ang aming guro.\nNatutulog ang munting pusa.\nDilaw ang aking payong.\nMasarap ang mainit na sopas.\nWalong ibon ang lumipad.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "easy",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "Mabait ang aming guro.",
+        "Natutulog ang munting pusa.",
+        "Dilaw ang aking payong.",
+        "Masarap ang mainit na sopas.",
+        "Walong ibon ang lumipad."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Color Easy Level 2",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Nagdidilig si Lino ng halaman.\nSumasakay kami sa dyip.\nMalinis ang silid namin.\nNaghugas ako ng kamay.\nBilog ang buwan ngayong gabi.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "easy",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "Nagdidilig si Lino ng halaman.",
+        "Sumasakay kami sa dyip.",
+        "Malinis ang silid namin.",
+        "Naghugas ako ng kamay.",
+        "Bilog ang buwan ngayong gabi."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Color Easy Level 3",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Tumatawa ang aking bunso.\nMay itlog sa basket.\nMabilis tumakbo ang kabayo.\nNagbabasa si Mina ng aklat.\nMalamig ang tubig sa pitsel.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "easy",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "Tumatawa ang aking bunso.",
+        "May itlog sa basket.",
+        "Mabilis tumakbo ang kabayo.",
+        "Nagbabasa si Mina ng aklat.",
+        "Malamig ang tubig sa pitsel."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Color Easy Level 4",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Nagluto si Tatay ng lugaw.\nMaaliwalas ang aming bakuran.\nMay palaka sa tabi.\nNagsusulat ako sa kuwaderno.\nSampung mangga ang hinog.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "easy",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "Nagluto si Tatay ng lugaw.",
+        "Maaliwalas ang aming bakuran.",
+        "May palaka sa tabi.",
+        "Nagsusulat ako sa kuwaderno.",
+        "Sampung mangga ang hinog."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Color Easy Level 5",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Huminto ang pulang bus.\nNagtanim kami ng pechay.\nMahaba ang buntot ng unggoy.\nNagwalis si Nena sa sala.\nMasaya ang pista sa baryo.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "easy",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "Huminto ang pulang bus.",
+        "Nagtanim kami ng pechay.",
+        "Mahaba ang buntot ng unggoy.",
+        "Nagwalis si Nena sa sala.",
+        "Masaya ang pista sa baryo."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Color Hard Level 1",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Nagdala si Luning ng payong dahil makulimlim ang langit bago siya pumasok sa paaralan.\nHabang nagluluto si Nanay, maingat na naghanda ng mga plato ang masipag kong kapatid.\nPinakain muna ni Omar ang kaniyang kuneho bago siya nakipaglaro sa mga kaibigan.\nMasayang naglakad ang klase sa hardin upang pagmasdan ang iba't ibang halaman at paru-paro.\nBagaman pagod si Mina, inayos pa rin niya ang mga laruan bago matulog kagabi.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "hard",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "Nagdala si Luning ng payong dahil makulimlim ang langit bago siya pumasok sa paaralan.",
+        "Habang nagluluto si Nanay, maingat na naghanda ng mga plato ang masipag kong kapatid.",
+        "Pinakain muna ni Omar ang kaniyang kuneho bago siya nakipaglaro sa mga kaibigan.",
+        "Masayang naglakad ang klase sa hardin upang pagmasdan ang iba't ibang halaman at paru-paro.",
+        "Bagaman pagod si Mina, inayos pa rin niya ang mga laruan bago matulog kagabi."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Color Hard Level 2",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Nagtipon ang pamilya sa sala habang ikinukuwento ni Lolo ang kaniyang masayang kabataan.\nDahil maagang dumating ang bus, nakaupo nang maayos ang mga bata bago tumunog ang kampana.\nIbinahagi ni Kiko ang kaniyang baon upang may makain din ang bagong kaklase.\nNagtanim kami ng maliliit na buto, at araw-araw namin itong dinidiligan nang maingat.\nHabang lumalakas ang ulan, pinapasok ni Ate ang mga sinampay sa malinis na bahay.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "hard",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "Nagtipon ang pamilya sa sala habang ikinukuwento ni Lolo ang kaniyang masayang kabataan.",
+        "Dahil maagang dumating ang bus, nakaupo nang maayos ang mga bata bago tumunog ang kampana.",
+        "Ibinahagi ni Kiko ang kaniyang baon upang may makain din ang bagong kaklase.",
+        "Nagtanim kami ng maliliit na buto, at araw-araw namin itong dinidiligan nang maingat.",
+        "Habang lumalakas ang ulan, pinapasok ni Ate ang mga sinampay sa malinis na bahay."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Color Hard Level 3",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Inalagaan ni Sela ang napulot na sisiw hanggang matagpuan nila ang tunay nitong may-ari.\nMasayang pumalakpak ang mga magulang nang matapos ang mahusay na pagtatanghal ng mga bata.\nNag-impok si Nilo ng baryang natira upang makabili siya ng bagong aklat sa Sabado.\nBagaman mataas ang puno, kitang-kita namin ang makukulay na ibon sa mga sanga nito.\nHinugasan muna ng magkapatid ang mga gulay bago nila tinulungan si Tatay sa pagluluto.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "hard",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "Inalagaan ni Sela ang napulot na sisiw hanggang matagpuan nila ang tunay nitong may-ari.",
+        "Masayang pumalakpak ang mga magulang nang matapos ang mahusay na pagtatanghal ng mga bata.",
+        "Nag-impok si Nilo ng baryang natira upang makabili siya ng bagong aklat sa Sabado.",
+        "Bagaman mataas ang puno, kitang-kita namin ang makukulay na ibon sa mga sanga nito.",
+        "Hinugasan muna ng magkapatid ang mga gulay bago nila tinulungan si Tatay sa pagluluto."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Color Hard Level 4",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Dahan-dahang tumawid ang mga mag-aaral habang hawak ng guro ang pulang babalang watawat.\nNagsauli si Pina ng pitakang nakita niya dahil alam niyang hinahanap iyon ng may-ari.\nHabang naghihintay sa klinika, tahimik na nagbasa si Jun ng kuwento tungkol sa kalawakan.\nNaglinis kami ng silid-aralan, kaya naging maaliwalas ang paligid bago dumating ang bisita.\nIpinahiram ni Mara ang kaniyang krayola nang mapansing walang kulay asul ang katabi niya.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "hard",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "Dahan-dahang tumawid ang mga mag-aaral habang hawak ng guro ang pulang babalang watawat.",
+        "Nagsauli si Pina ng pitakang nakita niya dahil alam niyang hinahanap iyon ng may-ari.",
+        "Habang naghihintay sa klinika, tahimik na nagbasa si Jun ng kuwento tungkol sa kalawakan.",
+        "Naglinis kami ng silid-aralan, kaya naging maaliwalas ang paligid bago dumating ang bisita.",
+        "Ipinahiram ni Mara ang kaniyang krayola nang mapansing walang kulay asul ang katabi niya."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Color Hard Level 5",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Nagbaon ang pamilya ng sapat na pagkain bago sila naglakbay patungo sa tahimik na bukid.\nDahil marunong sumunod sa pila ang lahat, mabilis kaming nakapasok sa museo nang ligtas.\nMaingat na pinaghiwalay ni Rafi ang nabubulok at di-nabubulok na basura sa dalawang lalagyan.\nNagtulungan ang magkakapitbahay upang maayos ang munting palaruan na nasira ng malakas na hangin.\nKahit natalo ang kaniyang pangkat, binati pa rin ni Elsa ang mga nanalo sa paligsahan.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "hard",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "Nagbaon ang pamilya ng sapat na pagkain bago sila naglakbay patungo sa tahimik na bukid.",
+        "Dahil marunong sumunod sa pila ang lahat, mabilis kaming nakapasok sa museo nang ligtas.",
+        "Maingat na pinaghiwalay ni Rafi ang nabubulok at di-nabubulok na basura sa dalawang lalagyan.",
+        "Nagtulungan ang magkakapitbahay upang maayos ang munting palaruan na nasira ng malakas na hangin.",
+        "Kahit natalo ang kaniyang pangkat, binati pa rin ni Elsa ang mga nanalo sa paligsahan."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Color Medium Level 1",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Maingat na inayos ni Mila ang makukulay niyang lapis.\nTahimik na nagbabasa ang magkapatid sa kanilang silid.\nMasayang lumalangoy ang maliliit na isda sa malinaw na lawa.\nNagdala si Carlo ng sariwang prutas para sa klase.\nMabagal na tumawid ang matandang pagong sa damuhan.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "medium",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "Maingat na inayos ni Mila ang makukulay niyang lapis.",
+        "Tahimik na nagbabasa ang magkapatid sa kanilang silid.",
+        "Masayang lumalangoy ang maliliit na isda sa malinaw na lawa.",
+        "Nagdala si Carlo ng sariwang prutas para sa klase.",
+        "Mabagal na tumawid ang matandang pagong sa damuhan."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Color Medium Level 2",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Maagang naghanda si Nanay ng masarap na almusal para sa amin.\nTinulungan ni Pilo ang guro sa pagkuha ng mga aklat.\nMakulay na saranggola ang pinalipad namin sa malawak na bukid.\nNaglakad ang pamilya papunta sa malapit na palengke kaninang umaga.\nMaingat na inilagay ni Rosa ang baso sa mesa.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "medium",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "Maagang naghanda si Nanay ng masarap na almusal para sa amin.",
+        "Tinulungan ni Pilo ang guro sa pagkuha ng mga aklat.",
+        "Makulay na saranggola ang pinalipad namin sa malawak na bukid.",
+        "Naglakad ang pamilya papunta sa malapit na palengke kaninang umaga.",
+        "Maingat na inilagay ni Rosa ang baso sa mesa."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Color Medium Level 3",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Masipag na nagdidilig si Ben ng mga halaman tuwing hapon.\nNakita namin ang malaking bahaghari matapos ang mahinang ulan.\nDahan-dahang kumain ang bata ng mainit na nilagang mais.\nNagbigay si Lira ng malambot na tinapay sa kaniyang kaibigan.\nSabay na umawit ang mga mag-aaral sa harap ng klase.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "medium",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "Masipag na nagdidilig si Ben ng mga halaman tuwing hapon.",
+        "Nakita namin ang malaking bahaghari matapos ang mahinang ulan.",
+        "Dahan-dahang kumain ang bata ng mainit na nilagang mais.",
+        "Nagbigay si Lira ng malambot na tinapay sa kaniyang kaibigan.",
+        "Sabay na umawit ang mga mag-aaral sa harap ng klase."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Color Medium Level 4",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Malinis na uniporme ang isinuot ni Tomas sa paaralan.\nNaglaro ng habulan ang limang bata sa maluwang na bakuran.\nKulay lila ang mabangong bulaklak sa aming munting hardin.\nInihatid ni Kuya ang bunso sakay ng asul na bisikleta.\nMasayang nagkuwentuhan ang pamilya habang kumakain ng hapunan.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "medium",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "Malinis na uniporme ang isinuot ni Tomas sa paaralan.",
+        "Naglaro ng habulan ang limang bata sa maluwang na bakuran.",
+        "Kulay lila ang mabangong bulaklak sa aming munting hardin.",
+        "Inihatid ni Kuya ang bunso sakay ng asul na bisikleta.",
+        "Masayang nagkuwentuhan ang pamilya habang kumakain ng hapunan."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Color Medium Level 5",
+    "item_type": "sentence",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Huminto ang mahabang tren sa istasyon nang eksaktong alas otso.\nMaingat na tinulungan ng doktor ang batang masakit ang tiyan.\nNagtipon ang mga kapitbahay upang linisin ang maliit na parke.\nMabilis na tumakbo ang kayumangging aso papunta sa kaniyang amo.\nBinilang ni Maya ang labindalawang kabibe sa tabing-dagat.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "color",
+      "difficulty": "medium",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "Huminto ang mahabang tren sa istasyon nang eksaktong alas otso.",
+        "Maingat na tinulungan ng doktor ang batang masakit ang tiyan.",
+        "Nagtipon ang mga kapitbahay upang linisin ang maliit na parke.",
+        "Mabilis na tumakbo ang kayumangging aso papunta sa kaniyang amo.",
+        "Binilang ni Maya ang labindalawang kabibe sa tabing-dagat."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Free Easy Level 1",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "pusa\nmesa\ngatas\npuno\nlapis",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "easy",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "pusa",
+        "mesa",
+        "gatas",
+        "puno",
+        "lapis"
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Free Easy Level 2",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "ibon\nsaging\nulan\naklat\nguro",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "easy",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "ibon",
+        "saging",
+        "ulan",
+        "aklat",
+        "guro"
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Free Easy Level 3",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "kubo\nbibe\ndamit\nkendi\nilog",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "easy",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "kubo",
+        "bibe",
+        "damit",
+        "kendi",
+        "ilog"
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Free Easy Level 4",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "nanay\ntatay\nkapatid\nkanin\nulam",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "easy",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "nanay",
+        "tatay",
+        "kapatid",
+        "kanin",
+        "ulam"
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Free Easy Level 5",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "tren\ndyip\nbangka\npula\nbilog",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "easy",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "tren",
+        "dyip",
+        "bangka",
+        "pula",
+        "bilog"
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Free Hard Level 1",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "kapaligiran\npamayanan\nkabutihan\nkalinisan\nkasiyahan",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "hard",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "kapaligiran",
+        "pamayanan",
+        "kabutihan",
+        "kalinisan",
+        "kasiyahan"
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Free Hard Level 2",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "pakikipagtulungan\npagkakaunawaan\nmapagbigay\nmapagmahal\nmaaasahan",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "hard",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "pakikipagtulungan",
+        "pagkakaunawaan",
+        "mapagbigay",
+        "mapagmahal",
+        "maaasahan"
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Free Hard Level 3",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "pangangalaga\nkaligtasan\nkagubatan\nkabundukan\nkaragatan",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "hard",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "pangangalaga",
+        "kaligtasan",
+        "kagubatan",
+        "kabundukan",
+        "karagatan"
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Free Hard Level 4",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "silid-aklatan\npaligsahan\npagdiriwang\nkuwentuhan\npagtatanghal",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "hard",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "silid-aklatan",
+        "paligsahan",
+        "pagdiriwang",
+        "kuwentuhan",
+        "pagtatanghal"
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Free Hard Level 5",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "pananagutan\npaggalang\npagkakaisa\nkatapatan\nkapayapaan",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "hard",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "pananagutan",
+        "paggalang",
+        "pagkakaisa",
+        "katapatan",
+        "kapayapaan"
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Free Medium Level 1",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "palengke\nlaruan\ngulay\nkabayo\nsapatos",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "medium",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "palengke",
+        "laruan",
+        "gulay",
+        "kabayo",
+        "sapatos"
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Free Medium Level 2",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "umaga\nhapunan\nmasipag\nmakulay\nmalinis",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "medium",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "umaga",
+        "hapunan",
+        "masipag",
+        "makulay",
+        "malinis"
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Free Medium Level 3",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "paruparo\nkalabaw\nkamatis\nkutsara\nsalamin",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "medium",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "paruparo",
+        "kalabaw",
+        "kamatis",
+        "kutsara",
+        "salamin"
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Free Medium Level 4",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "pamilya\nsilid-aralan\nmunting\nmalambot\nmatamis",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "medium",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "pamilya",
+        "silid-aralan",
+        "munting",
+        "malambot",
+        "matamis"
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Free Medium Level 5",
+    "item_type": "word",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "bisikleta\neroplano\nbarangay\nbilangan\ntahanan",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "free",
+      "difficulty": "medium",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "bisikleta",
+        "eroplano",
+        "barangay",
+        "bilangan",
+        "tahanan"
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Hunt Easy Level 1",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "May bagong bola si Niko. Nakipaglaro siya sa kaniyang kapatid.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "easy",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "May bagong bola si Niko. Nakipaglaro siya sa kaniyang kapatid."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Hunt Easy Level 2",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Nakita ni Aya ang kuting sa halamanan. Binigyan niya ito ng malinis na tubig.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "easy",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "Nakita ni Aya ang kuting sa halamanan. Binigyan niya ito ng malinis na tubig."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Hunt Easy Level 3",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Maagang nagising si Pepe. Tinulungan niya si Tatay sa pagwawalis.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "easy",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "Maagang nagising si Pepe. Tinulungan niya si Tatay sa pagwawalis."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Hunt Easy Level 4",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "May pulang saranggola si Lita. Mataas niya itong pinalipad sa bukid.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "easy",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "May pulang saranggola si Lita. Mataas niya itong pinalipad sa bukid."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Hunt Easy Level 5",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Pumunta si Berto sa tindahan. Bumili siya ng tinapay para kay Lola.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "easy",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "Pumunta si Berto sa tindahan. Bumili siya ng tinapay para kay Lola."
+      ]
+    },
+    "difficulty_level": "easy"
+  },
+  {
+    "title": "Hunt Hard Level 1",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Sabado ng umaga nang dalhin ni Lolo si Mia sa tabing-ilog. Tinuruan niya si Mia kung paano magtanim ng munting puno. Habang naghuhukay si Lolo, maingat namang humawak si Mia sa punla. Tinabunan nila ng lupa ang mga ugat at diniligan ito. Nangako si Mia na babalikan niya ang puno bawat linggo upang alagaan ito.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "hard",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "Sabado ng umaga nang dalhin ni Lolo si Mia sa tabing-ilog. Tinuruan niya si Mia kung paano magtanim ng munting puno. Habang naghuhukay si Lolo, maingat namang humawak si Mia sa punla. Tinabunan nila ng lupa ang mga ugat at diniligan ito. Nangako si Mia na babalikan niya ang puno bawat linggo upang alagaan ito."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Hunt Hard Level 2",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "May paligsahan sa pagbasa sa paaralan nina Andoy. Kinabahan siya dahil maraming batang mahusay bumasa. Bago siya umakyat sa harap, sinabi ng guro na huminga siya nang malalim. Dahan-dahang binasa ni Andoy ang kuwento at malinaw niyang sinabi ang bawat salita. Pumalakpak ang lahat nang matapos siya, kaya napangiti siya nang buong galak.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "hard",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "May paligsahan sa pagbasa sa paaralan nina Andoy. Kinabahan siya dahil maraming batang mahusay bumasa. Bago siya umakyat sa harap, sinabi ng guro na huminga siya nang malalim. Dahan-dahang binasa ni Andoy ang kuwento at malinaw niyang sinabi ang bawat salita. Pumalakpak ang lahat nang matapos siya, kaya napangiti siya nang buong galak."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Hunt Hard Level 3",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Papunta sa tindahan si Cora nang makakita siya ng pitaka sa daan. Binuksan niya ito upang hanapin ang pangalan ng may-ari. May kard sa loob na may pangalan at tirahan ni Aling Rosa. Humingi si Cora ng tulong sa tanod upang maibalik ang pitaka. Tuwang-tuwa si Aling Rosa at pinasalamatan niya ang matapat na bata.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "hard",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "Papunta sa tindahan si Cora nang makakita siya ng pitaka sa daan. Binuksan niya ito upang hanapin ang pangalan ng may-ari. May kard sa loob na may pangalan at tirahan ni Aling Rosa. Humingi si Cora ng tulong sa tanod upang maibalik ang pitaka. Tuwang-tuwa si Aling Rosa at pinasalamatan niya ang matapat na bata."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Hunt Hard Level 4",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Naghanda ang klase ni Ben para sa araw ng kalinisan. Ang isang pangkat ay nagwalis habang ang iba ay nagpunas ng mga mesa. Pinaghiwalay nila ang papel, bote, at tirang pagkain sa tamang basurahan. Pagkatapos maglinis, naghugas silang lahat ng kamay. Natuwa ang guro dahil naging malinis at maaliwalas ang silid-aralan.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "hard",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "Naghanda ang klase ni Ben para sa araw ng kalinisan. Ang isang pangkat ay nagwalis habang ang iba ay nagpunas ng mga mesa. Pinaghiwalay nila ang papel, bote, at tirang pagkain sa tamang basurahan. Pagkatapos maglinis, naghugas silang lahat ng kamay. Natuwa ang guro dahil naging malinis at maaliwalas ang silid-aralan."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Hunt Hard Level 5",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Naglakbay ang pamilya ni Sinta patungo sa bahay ng kaniyang lola. Habang nasa bus, nakita niya ang palayan, bundok, at maliliit na bahay. Nagbilang sila ng sampung kalabaw na nagpapahinga sa putikan. Pagdating nila, sinalubong sila ni Lola ng mainit na suman. Masayang nagsalo at nagkuwentuhan ang buong pamilya hanggang dapithapon.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "hard",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "Naglakbay ang pamilya ni Sinta patungo sa bahay ng kaniyang lola. Habang nasa bus, nakita niya ang palayan, bundok, at maliliit na bahay. Nagbilang sila ng sampung kalabaw na nagpapahinga sa putikan. Pagdating nila, sinalubong sila ni Lola ng mainit na suman. Masayang nagsalo at nagkuwentuhan ang buong pamilya hanggang dapithapon."
+      ]
+    },
+    "difficulty_level": "hard"
+  },
+  {
+    "title": "Hunt Medium Level 1",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Namitas ng bayabas si Rina sa kanilang bakuran. Inilagay niya ang mga bunga sa maliit na basket. Hinugasan niya ang mga ito bago ibinigay sa pamilya.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "medium",
+      "level": "level_1",
+      "language": "Filipino",
+      "items": [
+        "Namitas ng bayabas si Rina sa kanilang bakuran. Inilagay niya ang mga bunga sa maliit na basket. Hinugasan niya ang mga ito bago ibinigay sa pamilya."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Hunt Medium Level 2",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "May gawain tungkol sa mga hayop ang klase ni Dino. Gumuhit siya ng kalabaw na nasa bukid. Nilagyan niya ito ng damo at asul na langit. Masayang ipinakita ni Dino ang kaniyang larawan.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "medium",
+      "level": "level_2",
+      "language": "Filipino",
+      "items": [
+        "May gawain tungkol sa mga hayop ang klase ni Dino. Gumuhit siya ng kalabaw na nasa bukid. Nilagyan niya ito ng damo at asul na langit. Masayang ipinakita ni Dino ang kaniyang larawan."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Hunt Medium Level 3",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Sumama si Tala kay Nanay sa palengke. Bumili sila ng isda, kamatis, at talbos ng kamote. Tinulungan ni Tala si Nanay sa pagbitbit ng magaang supot.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "medium",
+      "level": "level_3",
+      "language": "Filipino",
+      "items": [
+        "Sumama si Tala kay Nanay sa palengke. Bumili sila ng isda, kamatis, at talbos ng kamote. Tinulungan ni Tala si Nanay sa pagbitbit ng magaang supot."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Hunt Medium Level 4",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Umulan bago matapos ang klase ni Emil. Ipinahiram sa kaniya ni Rosa ang malaking payong. Magkasabay silang naglakad hanggang sa hintayan ng dyip. Nagpasalamat si Emil sa mabait niyang kaibigan.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "medium",
+      "level": "level_4",
+      "language": "Filipino",
+      "items": [
+        "Umulan bago matapos ang klase ni Emil. Ipinahiram sa kaniya ni Rosa ang malaking payong. Magkasabay silang naglakad hanggang sa hintayan ng dyip. Nagpasalamat si Emil sa mabait niyang kaibigan."
+      ]
+    },
+    "difficulty_level": "medium"
+  },
+  {
+    "title": "Hunt Medium Level 5",
+    "item_type": "paragraph",
+    "prompt_text": "Basahin nang malinaw.",
+    "content_text": "Nakita ni Lino na maraming tuyong dahon sa parke. Tinawag niya ang kaniyang mga kalaro upang maglinis. Sama-sama nilang pinuno ang dalawang sako. Naging maayos muli ang kanilang palaruan.",
+    "content_json": {
+      "source": "grade_2_filipino_seed",
+      "mode": "hunt",
+      "difficulty": "medium",
+      "level": "level_5",
+      "language": "Filipino",
+      "items": [
+        "Nakita ni Lino na maraming tuyong dahon sa parke. Tinawag niya ang kaniyang mga kalaro upang maglinis. Sama-sama nilang pinuno ang dalawang sako. Naging maayos muli ang kanilang palaruan."
+      ]
+    },
+    "difficulty_level": "medium"
+  }
+]
+

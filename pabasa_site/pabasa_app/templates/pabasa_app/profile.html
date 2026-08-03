@@ -182,6 +182,121 @@
         box-shadow: 0 4px 12px rgba(31, 111, 139, 0.15);
     }
 
+    .student-avatar-badge,
+    .avatar-preview-badge {
+        align-items: center;
+        background:
+            radial-gradient(circle at 28% 20%, rgba(255,255,255,.9), transparent 26%),
+            linear-gradient(145deg, #fff8d8, #dff0c7 58%, #bfe1d3);
+        border: 3px solid rgba(255,255,255,.9);
+        border-radius: 26px;
+        box-shadow: 0 12px 22px rgba(49,111,72,.16), inset 0 -10px 24px rgba(49,111,72,.08);
+        color: #234b34;
+        display: inline-flex;
+        flex-direction: column;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-weight: 900;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .student-avatar-badge {
+        font-size: 3.4rem;
+        height: 92px;
+        position: relative;
+        transform: rotate(-2deg);
+        width: 92px;
+        z-index: 1;
+    }
+
+    .student-avatar-badge span,
+    .avatar-preview-badge span,
+    .avatar-card-emoji { line-height: 1; }
+
+    .student-avatar-badge small,
+    .avatar-preview-badge small {
+        font-size: .62rem;
+        letter-spacing: .06em;
+        margin-top: .35rem;
+        text-transform: uppercase;
+    }
+
+    .avatar-section {
+        background: linear-gradient(145deg, rgba(242,246,233,.9), rgba(255,250,221,.88));
+        border: 1px solid rgba(79,132,84,.18);
+        border-radius: 20px;
+        padding: .9rem;
+    }
+
+    .avatar-section-head {
+        align-items: center;
+        display: flex;
+        gap: .85rem;
+        margin-bottom: .85rem;
+    }
+
+    .avatar-preview-badge {
+        flex: 0 0 auto;
+        font-size: 2.4rem;
+        height: 78px;
+        width: 78px;
+    }
+
+    .avatar-grid {
+        display: grid;
+        gap: .72rem;
+        grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+    }
+
+    .avatar-choice-input {
+        height: 1px;
+        opacity: 0;
+        position: absolute;
+        width: 1px;
+    }
+
+    .avatar-choice-card {
+        align-items: center;
+        background:
+            radial-gradient(circle at 30% 15%, rgba(255,255,255,.9), transparent 30%),
+            linear-gradient(145deg, #fffdf0, #e8f4dc);
+        border: 2px solid rgba(79,132,84,.18);
+        border-radius: 18px;
+        box-shadow: 0 7px 16px rgba(38,81,48,.08);
+        color: #285239;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        font-weight: 900;
+        gap: .35rem;
+        min-height: 104px;
+        padding: .75rem .55rem;
+        text-align: center;
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .avatar-choice-card:hover {
+        border-color: rgba(228,189,71,.75);
+        box-shadow: 0 12px 22px rgba(38,81,48,.14);
+        transform: translateY(-3px) rotate(-1deg);
+    }
+
+    .avatar-card-emoji { font-size: 2.15rem; }
+    .avatar-card-name { font-size: .82rem; }
+
+    .avatar-choice-input:checked + .avatar-choice-card {
+        background: linear-gradient(145deg, #fff3b6, #d7efd0);
+        border-color: #e4bd47;
+        box-shadow: 0 0 0 4px rgba(228,189,71,.22), 0 14px 24px rgba(38,81,48,.18);
+        transform: translateY(-2px);
+    }
+
+    .avatar-choice-input:focus-visible + .avatar-choice-card {
+        outline: 3px solid rgba(46,168,229,.45);
+        outline-offset: 3px;
+    }
+
+
     .profile-identity {
         display: grid;
         gap: 0.65rem;
@@ -939,6 +1054,486 @@
             grid-template-columns: repeat(2, 1fr);
         }
     }
+    .profile-page-actions { display:flex; gap:.65rem; align-items:center; }
+    .profile-settings-link { border-radius:999px; font-weight:800; padding:.65rem 1rem; }
+    .profile-achievements { margin-top:1.25rem; }
+    .profile-achievement-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.8rem; }
+    .profile-achievement-badge { background:rgba(255,255,255,.86); border:1px solid rgba(49,111,72,.18); border-radius:18px; padding:1rem; text-align:center; }
+    .profile-achievement-badge.locked { filter:saturate(.45); opacity:.62; }
+    .profile-achievement-icon { align-items:center; background:rgba(49,111,72,.12); border-radius:50%; color:#2f7048; display:inline-flex; font-size:1.15rem; height:42px; justify-content:center; margin-bottom:.55rem; width:42px; }
+    .profile-achievement-badge strong,.profile-achievement-badge span { display:block; }
+    .profile-achievement-badge span { color:var(--dash-muted); font-size:.82rem; margin-top:.2rem; }
+    .profile-achievement-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.8rem; margin-top:1rem; }
+    .profile-achievement-stat { background:linear-gradient(135deg,rgba(82,142,86,.14),rgba(255,255,255,.94)); border:1px solid rgba(49,111,72,.18); border-radius:18px; padding:1rem; }
+    .profile-achievement-stat strong,.profile-achievement-stat span { display:block; }
+    .profile-achievement-stat strong { color:var(--dash-text); font-size:1.35rem; }
+    .profile-achievement-stat span { color:var(--dash-muted); font-size:.8rem; }
+    body.dark-theme .profile-achievement-badge,
+    body.dark-theme .profile-achievement-stat { background:rgba(20,49,36,.92); border-color:rgba(179,205,120,.22); color:#eff4d2; }
+    body.dark-theme .profile-achievement-icon { background:rgba(219,226,137,.14); color:#e7df86; }
+    @media (max-width:900px) { .profile-achievement-grid,.profile-achievement-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:520px) { .profile-achievement-grid,.profile-achievement-stats { grid-template-columns:1fr; } }
+    .player-profile { display:grid; gap:1rem; }
+    .player-hero { align-items:center; background:linear-gradient(135deg,rgba(247,246,210,.96),rgba(220,239,190,.95)); border:1px solid rgba(63,111,65,.2); border-radius:24px; box-shadow:0 12px 28px rgba(38,81,48,.1); display:grid; gap:1rem; grid-template-columns:auto 1fr; padding:1rem 1.2rem; position:relative; overflow:hidden; }
+    .player-hero::after { content:""; background:radial-gradient(circle,rgba(255,255,255,.75),transparent 68%); height:150px; position:absolute; right:-25px; top:-65px; width:150px; }
+    .player-emblem { align-items:center; background:#fff9dd; border:3px solid #efd274; border-radius:20px; color:#34744b; display:flex; font-size:1.65rem; height:64px; justify-content:center; transform:rotate(-3deg); width:64px; }
+    .player-emblem.student-avatar-badge { font-size:2.8rem; height:92px; width:92px; }
+    .player-greeting { color:#56705e; font-size:.8rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .player-name { color:#173f2c; font-family:"Nunito",sans-serif; font-size:clamp(1.45rem,3vw,2rem); font-weight:900; line-height:1.05; margin:.15rem 0; }
+    .player-class { color:#55705d; font-weight:700; }
+    .player-reading-level { align-items:center; background:rgba(255,255,255,.68); border:1px solid rgba(54,105,65,.16); border-radius:999px; color:#37644a; display:inline-flex; font-size:.75rem; font-weight:800; gap:.4rem; margin-top:.45rem; padding:.35rem .65rem; }
+    .player-dashboard-grid { align-items:start; display:grid; gap:.75rem 1rem; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); }
+    .player-card { align-self:start; background:rgba(255,255,248,.92); border:1px solid rgba(54,105,65,.16); border-radius:22px; box-shadow:0 10px 24px rgba(38,81,48,.08); height:auto !important; min-height:0 !important; padding:.9rem !important; }
+    .player-card-title { align-items:center; color:#204b34; display:flex; font-family:"Nunito",sans-serif; font-size:1.05rem; font-weight:900; gap:.5rem; margin:0 0 .65rem; }
+    .player-student-info { grid-column:1; grid-row:1 / span 2; }
+    .player-info-grid { display:grid; gap:.45rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .player-info-chip { align-items:center; background:#f2f6e9; border:1px solid #dbe6cd; border-radius:14px; display:flex; gap:.55rem; min-height:52px; padding:.48rem .6rem; }
+    .player-info-chip i { color:#43805a; font-size:1rem; }
+    .player-info-chip small,.player-info-chip strong { display:block; }
+    .player-info-chip small { color:#789080; font-size:.67rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+    .player-info-chip strong { color:#254734; font-size:.88rem; line-height:1.25; }
+    .player-progress-grid { display:grid; gap:.65rem; grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .player-progress-stat { background:#f7f3d9; border-radius:14px; padding:.62rem .45rem; text-align:center; }
+    .player-progress-stat i { color:#c69326; display:block; margin-bottom:.2rem; }
+    .player-progress-stat strong,.player-progress-stat span { display:block; }
+    .player-progress-stat strong { color:#224a34; font-size:1.15rem; }
+    .player-progress-stat span { color:#6e806f; font-size:.68rem; font-weight:800; }
+    .player-progress-track { background:#dfe9d7; border-radius:999px; height:10px; margin-top:.75rem; overflow:hidden; }
+    .player-progress-fill { background:linear-gradient(90deg,#58a867,#e4bd47); border-radius:inherit; height:100%; min-width:4px; }
+    .player-progress-details { display:grid; gap:.45rem; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:.65rem; }
+    .player-progress-detail { background:rgba(79,132,84,.08); border:1px solid rgba(79,132,84,.13); border-radius:12px; padding:.5rem .6rem; }
+    .player-progress-detail small,.player-progress-detail strong { display:block; }
+    .player-progress-detail small { color:#789080; font-size:.65rem; font-weight:800; text-transform:uppercase; }
+    .player-progress-detail strong { color:#285239; font-size:.8rem; }
+    .player-achievements { grid-column:2; grid-row:2; }
+    .player-badge-grid { display:grid; gap:.5rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .collectible-badge { align-items:center; background:#f5f7ed; border:1px solid #dce7d1; border-radius:16px; display:flex; gap:.55rem; padding:.6rem; }
+    .collectible-badge.locked { filter:grayscale(1); opacity:.48; }
+    .collectible-medallion { align-items:center; background:linear-gradient(145deg,#f5dc7f,#dcae3c); border:3px solid #fff4c8; border-radius:50%; box-shadow:0 4px 0 #bb8c2d; color:#315d3f; display:flex; flex:0 0 auto; height:48px; justify-content:center; width:48px; }
+    .collectible-badge strong,.collectible-badge span { display:block; }
+    .collectible-badge strong { color:#244631; font-size:.84rem; }
+    .collectible-badge span { color:#748474; font-size:.7rem; }
+    .player-settings-modal { z-index:4100 !important; }
+    .player-settings-modal .modal-dialog { z-index:4110 !important; position:relative; }
+    .player-settings-modal .modal-dialog { max-height:calc(100vh - 1.5rem); }
+    .player-settings-modal .modal-content { background:#fbfae9; border:1px solid rgba(61,108,64,.25); border-radius:24px; box-shadow:0 24px 70px rgba(8,35,20,.45); height:auto; max-height:calc(100vh - 1.5rem); overflow:hidden; }
+    .player-settings-modal .modal-header { padding:.85rem 1rem .45rem; }
+    .player-settings-modal .modal-body { display:block; overflow-y:auto; padding:.75rem 1rem 1rem !important; }
+    .settings-view { animation:settingsViewIn .2s ease; }
+    .settings-view[hidden] { display:none !important; }
+    .settings-form-shell { background:rgba(240,245,231,.72); border:1px solid #d8e4cd; border-radius:16px; padding:.8rem; }
+    @keyframes settingsViewIn { from { opacity:0; transform:translateX(10px); } to { opacity:1; transform:translateX(0); } }
+    .player-settings-modal.modal.fade .modal-dialog { transform:scale(.92); transition:transform .22s ease; }
+    .player-settings-modal.modal.show .modal-dialog { transform:scale(1); }
+    .modal-backdrop,
+    .modal-backdrop.show { background-color:rgba(0,0,0,.65) !important; background-image:none !important; backdrop-filter:none !important; filter:none !important; height:100vh !important; inset:0 !important; opacity:1 !important; position:fixed !important; width:100vw !important; }
+    .modal-backdrop.settings-modal-backdrop,
+    body.modal-open > .modal-backdrop { z-index:4000 !important; }
+    body.modal-open > .modal { z-index:4100 !important; }
+    body.modal-open > .modal .modal-dialog { z-index:4110 !important; position:relative; }
+    body.modal-open { overflow:hidden !important; padding-right:var(--bs-scrollbar-width,0); }
+    .player-settings-list { display:grid; gap:.55rem; }
+    .player-setting-action { align-items:center; background:#f0f5e7; border:1px solid #d9e4ce; border-radius:15px; color:#285239; display:flex; font-weight:800; gap:.7rem; padding:.8rem .9rem; text-align:left; text-decoration:none; width:100%; }
+    .player-setting-action:hover { background:#e5efd9; color:#19462d; }
+    @media(max-width:900px){.player-dashboard-grid{grid-template-columns:1fr}.player-student-info,.player-achievements{grid-column:1;grid-row:auto}.player-badge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:560px){.player-hero{grid-template-columns:1fr;text-align:center}.player-emblem{margin:auto}.player-info-grid,.player-progress-grid,.player-badge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    body:has(.player-profile) .profile-layout { margin-top:0; }
+    body:has(.player-profile) .profile-main { align-items:start; gap:1rem; grid-template-columns:minmax(0,1fr) minmax(0,1.25fr); }
+    body:has(.player-profile) .profile-summary { border-radius:22px; padding:1rem; }
+    body:has(.player-profile) .student-edit-panel { display:block; width:100%; }
+    body:has(.player-profile) .student-edit-panel .profile-identity { display:none; }
+    body:has(.player-profile) .profile-avatar-lg { display:none; }
+    body:has(.player-profile) .profile-identity { display:block; }
+    body:has(.player-profile) .profile-main-content h2,
+    body:has(.player-profile) .profile-role { display:none; }
+    body:has(.player-profile) .profile-details-mini { display:grid; gap:.55rem; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    body:has(.player-profile) .profile-details-mini > div { border-radius:14px; min-height:56px; padding:.55rem .65rem; }
+    body:has(.player-profile) .profile-card-spacing { display:none; }
+    body:has(.player-profile) .profile-section-card { border-radius:22px; padding:1rem; }
+    body:has(.player-profile) .mic-settings-card { grid-column:1/-1; }
+    body:has(.player-profile) .danger-zone-wrapper { margin:0; }
+    body:has(.player-profile) .danger-zone-card { border-color:rgba(174,83,67,.24); }
+    .settings-accordion .accordion-item { background:transparent; border:1px solid #d8e4cd; border-radius:14px !important; margin-bottom:.4rem; overflow:hidden; }
+    .settings-accordion .accordion-button { background:#f0f5e7; color:#285239; font-weight:800; min-height:44px; padding:.6rem .8rem; }
+    .settings-accordion .accordion-button:not(.collapsed) { background:#e4efd8; box-shadow:none; color:#19462d; }
+    .settings-accordion .accordion-body { background:#fbfae9; padding:.75rem .85rem; }
+    .settings-theme-grid { display:grid; gap:.45rem; grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .settings-theme-choice { border:1px solid #cadbbd; border-radius:12px; color:#315e41; font-size:.78rem; font-weight:800; padding:.55rem; }
+    .settings-feedback { border-radius:10px; display:none; font-size:.78rem; margin-top:.65rem; padding:.55rem .7rem; }
+    .settings-feedback.show { display:block; }
+    body.dark-theme .settings-accordion .accordion-item { border-color:rgba(194,207,123,.2); }
+    body.dark-theme .settings-accordion .accordion-button,body.dark-theme .settings-accordion .accordion-body { background:#173d2b; color:#eff4d2; }
+    @media(max-width:900px){body:has(.player-profile) .profile-main{grid-template-columns:1fr}}
+    @media(max-width:560px){body:has(.player-profile) .profile-details-mini{grid-template-columns:1fr}.settings-theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+    .student-edit-modal { z-index:2000; }
+    .student-edit-modal .modal-dialog { max-width:760px; }
+    .student-edit-modal .modal-content { background:var(--dash-panel); border:1px solid var(--dash-border); border-radius:24px; box-shadow:0 24px 70px rgba(0,0,0,.42); max-height:calc(100vh - 2rem); overflow:hidden; }
+    .student-edit-modal .modal-header { border-bottom:1px solid var(--dash-border); padding:.8rem 1rem; }
+    .student-edit-modal .modal-body { overflow-y:auto; padding:0; }
+    .student-edit-modal .student-edit-panel { background:transparent !important; border:0 !important; box-shadow:none !important; margin:0 !important; padding:1rem !important; }
+    .student-edit-modal.modal.fade .modal-dialog { transform:scale(.94); transition:transform .2s ease; }
+    .student-edit-modal.modal.show .modal-dialog { transform:scale(1); }
+
+    /* Profile surfaces consume the active dashboard tokens only. Theme-specific
+       artwork and palettes are supplied by the equipped theme stylesheet. */
+    body.dashboard-body .player-hero {
+        background:linear-gradient(135deg,var(--dash-panel),color-mix(in srgb,var(--dash-primary-soft) 62%,var(--dash-panel))) !important;
+        border-color:var(--dash-border) !important;
+        box-shadow:var(--dash-shadow) !important;
+    }
+    body.dashboard-body .player-emblem,
+    body.dashboard-body .collectible-medallion {
+        background:color-mix(in srgb,var(--dash-accent) 72%,var(--dash-panel)) !important;
+        border-color:color-mix(in srgb,var(--dash-accent) 48%,var(--dash-border)) !important;
+        box-shadow:0 4px 0 color-mix(in srgb,var(--dash-accent-strong) 55%,var(--dash-border)) !important;
+        color:var(--dash-primary-deep) !important;
+    }
+    body.dashboard-body :is(.player-name,.player-card-title,.player-info-chip strong,.player-progress-stat strong,.player-progress-detail strong,.collectible-badge strong) { color:var(--dash-text) !important; }
+    body.dashboard-body :is(.player-greeting,.player-class,.player-info-chip small,.player-progress-stat span,.player-progress-detail small,.collectible-badge span) { color:var(--dash-muted) !important; }
+    body.dashboard-body .player-reading-level {
+        background:color-mix(in srgb,var(--dash-panel) 88%,var(--dash-primary-soft)) !important;
+        border-color:var(--dash-border) !important;
+        color:var(--dash-primary-deep) !important;
+    }
+    body.dashboard-body :is(.player-card,.player-settings-modal .modal-content) {
+        background:var(--dash-panel) !important;
+        background-image:none !important;
+        border-color:var(--dash-border) !important;
+        box-shadow:var(--dash-shadow) !important;
+        color:var(--dash-text) !important;
+    }
+    body.dashboard-body :is(.player-info-chip,.player-progress-detail,.collectible-badge,.settings-form-shell) {
+        background:color-mix(in srgb,var(--dash-primary-soft) 42%,var(--dash-panel)) !important;
+        border-color:var(--dash-border) !important;
+    }
+    body.dashboard-body .player-progress-stat {
+        background:color-mix(in srgb,var(--dash-primary-soft) 58%,var(--dash-panel)) !important;
+        border:1px solid var(--dash-border) !important;
+    }
+    body.dashboard-body :is(.player-info-chip i,.player-card-title i,.player-reading-level i) { color:var(--dash-primary) !important; }
+    body.dashboard-body .player-progress-stat i { color:var(--dash-accent-strong) !important; }
+    body.dark-theme.dashboard-body .player-progress-stat i { color:var(--dash-primary) !important; }
+    body.dark-theme.dashboard-body .player-progress-stat span { color:var(--dash-muted) !important; }
+    body.dashboard-body .player-progress-track { background:color-mix(in srgb,var(--dash-muted) 20%,var(--dash-panel)) !important; }
+    body.dashboard-body .player-progress-fill { background:linear-gradient(90deg,var(--dash-primary),var(--dash-accent)) !important; }
+    body.dashboard-body .collectible-badge.locked { background:color-mix(in srgb,var(--dash-muted) 8%,var(--dash-panel)) !important; }
+    body.dashboard-body .settings-accordion .accordion-item { border-color:var(--dash-border) !important; }
+    body.dashboard-body .settings-accordion :is(.accordion-button,.accordion-body) {
+        background:color-mix(in srgb,var(--dash-primary-soft) 35%,var(--dash-panel)) !important;
+        color:var(--dash-text) !important;
+    }
+    body.dashboard-body .settings-accordion .accordion-button:not(.collapsed) {
+        background:color-mix(in srgb,var(--dash-primary-soft) 72%,var(--dash-panel)) !important;
+        color:var(--dash-primary-deep) !important;
+    }
+    body.dashboard-body .player-settings-modal :is(.form-control,.form-select,.custom-device-trigger,.custom-device-menu) {
+        background:var(--dash-panel) !important;
+        border-color:var(--dash-border) !important;
+        color:var(--dash-text) !important;
+    }
+    body.dashboard-body .player-settings-modal .btn-close { filter:none; opacity:.72; }
+    body.dark-theme.dashboard-body .player-settings-modal .btn-close { filter:invert(1) grayscale(1); }
+    /* The backdrop is deliberately outside the token system. */
+    body.dashboard-body .modal-backdrop,
+    body.dashboard-body .modal-backdrop.show {
+        background:rgba(0,0,0,.65) !important;
+        background-image:none !important;
+        border:0 !important;
+        box-shadow:none !important;
+        filter:none !important;
+        opacity:1 !important;
+    }
+
+    /* Professional compact profile layout.
+       Scoped away from the student game-style profile so the rest of the app
+       and student avatar experience stay untouched. */
+    body.dashboard-body:not(:has(.player-profile)) section {
+        padding-bottom: 1rem !important;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .dash-page-head {
+        border-radius: 18px;
+        margin-bottom: .9rem;
+        padding: .95rem 1.05rem;
+    }
+
+    .teacher-profile-hero {
+        align-items: center;
+        background:
+            radial-gradient(circle at 92% 12%, rgba(46, 168, 229, .16), transparent 28%),
+            linear-gradient(135deg, rgba(255,255,255,.96), rgba(236,248,253,.94));
+        border: 1px solid rgba(31, 111, 139, .14);
+        border-radius: 24px;
+        box-shadow: 0 16px 36px rgba(16, 70, 110, .09);
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: auto minmax(0, 1fr);
+        margin-bottom: 1rem;
+        overflow: hidden;
+        padding: 1.45rem 1.65rem;
+        position: relative;
+    }
+
+    .teacher-profile-hero::after {
+        background: radial-gradient(circle, rgba(255,255,255,.75), transparent 68%);
+        content: "";
+        height: 160px;
+        position: absolute;
+        right: -34px;
+        top: -74px;
+        width: 160px;
+    }
+
+    .teacher-hero-emblem {
+        align-items: center;
+        background: linear-gradient(145deg, #e9f7ff, #ffffff);
+        border: 1px solid rgba(46, 168, 229, .28);
+        border-radius: 22px;
+        box-shadow: 0 12px 24px rgba(46, 168, 229, .12);
+        color: var(--dash-primary);
+        display: inline-flex;
+        font-size: 2rem;
+        height: 86px;
+        justify-content: center;
+        width: 86px;
+        z-index: 1;
+    }
+
+    .teacher-hero-copy {
+        min-width: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .teacher-hero-greeting {
+        color: var(--dash-muted);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: .78rem;
+        font-weight: 900;
+        letter-spacing: .11em;
+        text-transform: uppercase;
+    }
+
+    .teacher-hero-name {
+        color: var(--dash-text);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: clamp(1.8rem, 3vw, 2.55rem);
+        font-weight: 900;
+        line-height: 1.02;
+        margin: .2rem 0 .35rem;
+    }
+
+    .teacher-hero-meta {
+        align-items: center;
+        color: var(--dash-muted);
+        display: flex;
+        flex-wrap: wrap;
+        font-weight: 800;
+        gap: .45rem;
+    }
+
+    .teacher-hero-pill {
+        align-items: center;
+        background: rgba(255,255,255,.72);
+        border: 1px solid rgba(31, 111, 139, .14);
+        border-radius: 999px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-size: .78rem;
+        font-weight: 900;
+        gap: .35rem;
+        margin-top: .5rem;
+        padding: .35rem .7rem;
+    }
+
+    body.dark-theme .teacher-profile-hero {
+        background: linear-gradient(135deg, rgba(30,41,59,.86), rgba(15,23,42,.78));
+        border-color: rgba(255,255,255,.12);
+    }
+
+    body.dark-theme .teacher-hero-emblem,
+    body.dark-theme .teacher-hero-pill {
+        background: rgba(15,23,42,.5);
+        border-color: rgba(46,168,229,.24);
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-layout {
+        margin: 0;
+        max-width: none;
+        width: 100%;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-main {
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-summary,
+    body.dashboard-body:not(:has(.player-profile)) .profile-section-card {
+        border-radius: 24px;
+        box-shadow: 0 16px 36px rgba(16, 70, 110, .1);
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-summary {
+        align-self: stretch;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-summary .card-body {
+        padding: 1.35rem !important;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-identity {
+        align-items: start;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-avatar-lg {
+        display: none;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-avatar-lg:hover {
+        transform: none;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-main-content {
+        padding: 0;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-main-content h2 {
+        font-size: clamp(1.55rem, 2vw, 2rem);
+        margin-bottom: .12rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-role {
+        font-size: .9rem;
+        margin-bottom: 1rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-details-mini {
+        gap: .65rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-details-mini > div {
+        border-radius: 16px;
+        grid-template-columns: 34px minmax(0, 1fr);
+        min-height: 58px;
+        padding: .66rem .78rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-detail-icon {
+        border-radius: 11px;
+        height: 34px;
+        width: 34px;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-details-mini .label {
+        font-size: .7rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-details-mini .value {
+        font-size: .95rem;
+        line-height: 1.3;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-status-badge {
+        font-size: .82rem;
+        margin-top: .85rem;
+        padding: .38rem .78rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) #editAccountDetailsBtn {
+        border-radius: 14px;
+        font-weight: 800;
+        margin-top: .35rem;
+        min-height: 48px;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-card-spacing {
+        align-self: start;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 1fr;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-section-card {
+        height: auto;
+        padding: 1.35rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-section-title {
+        font-size: 1.15rem;
+        margin-bottom: 1rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-stat-grid {
+        gap: .8rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-stat-box {
+        border-radius: 16px;
+        min-height: 118px;
+        padding: 1rem .65rem;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-stat-value {
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    body.dashboard-body:not(:has(.player-profile)) .profile-stat-label {
+        font-size: .78rem;
+        line-height: 1.15;
+        margin-top: .35rem;
+    }
+
+    @media (min-width: 992px) {
+        body.dashboard-body:not(:has(.player-profile)) .profile-main {
+            grid-template-columns: minmax(0, 1fr) minmax(340px, .62fr);
+            gap: 1rem;
+        }
+
+        body.dashboard-body:not(:has(.player-profile)) .profile-summary {
+            position: static;
+            top: auto;
+        }
+
+        body.dashboard-body:not(:has(.player-profile)) .profile-card-spacing {
+            grid-column: auto;
+        }
+    }
+
+    @media (max-width: 700px) {
+        body.dashboard-body:not(:has(.player-profile)) .profile-layout {
+            max-width: none;
+        }
+
+        body.dashboard-body:not(:has(.player-profile)) .profile-identity {
+            grid-template-columns: 1fr;
+        }
+
+        body.dashboard-body:not(:has(.player-profile)) .profile-details-mini {
+            grid-template-columns: 1fr;
+        }
+
+        .teacher-profile-hero {
+            grid-template-columns: 1fr;
+            padding: 1.2rem;
+            text-align: center;
+        }
+
+        .teacher-hero-emblem {
+            margin: 0 auto;
+        }
+
+        .teacher-hero-meta {
+            justify-content: center;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -953,18 +1548,83 @@
             <p class="small text-secondary mb-1">Manage your dashboard profile and account details.</p>
             <p class="small mb-0"><strong>Note:</strong> {% if nav_role == 'teacher' %}Teacher details support class ownership, material posts, and progress reports.{% else %}Student details support learner tracking, reminders, and reading reports.{% endif %}</p>
         </div>
-        <button class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" id="themeToggle" type="button" style="width: 38px; height: 38px; padding: 0;" title="Toggle Theme">
-            <i class="bi bi-sun"></i>
-        </button>
+        <div class="profile-page-actions">
+            {% if nav_role == 'student' or nav_role == 'teacher' %}<button class="btn btn-primary profile-settings-link" type="button" data-bs-toggle="modal" data-bs-target="#playerSettingsModal"><i class="bi bi-gear-fill me-1"></i> Settings</button>{% else %}<a class="btn btn-primary profile-settings-link" href="{% url 'settings' %}"><i class="bi bi-gear-fill me-1"></i> Settings</a>{% endif %}
+            <button class="btn btn-outline-primary btn-sm rounded-circle d-flex align-items-center justify-content-center" id="themeToggle" type="button" style="width: 38px; height: 38px; padding: 0;" title="Toggle Theme">
+                <i class="bi bi-sun"></i>
+            </button>
+        </div>
     </div>
 
+    {% if nav_role == 'teacher' %}
+    <header class="teacher-profile-hero">
+        <div class="teacher-hero-emblem" aria-hidden="true"><i class="bi bi-person-workspace"></i></div>
+        <div class="teacher-hero-copy">
+            <div class="teacher-hero-greeting">Hello, Teacher</div>
+            <h2 class="teacher-hero-name">{{ full_name }}</h2>
+            <div class="teacher-hero-meta">
+                <span>{{ role_display }}</span>
+                <span aria-hidden="true">&bull;</span>
+                <span>{{ account_status_label|default:"Active" }} Teacher</span>
+            </div>
+            <div class="teacher-hero-pill"><i class="bi bi-people-fill"></i> {{ teacher_active_classes|default:"0" }} active classes</div>
+        </div>
+    </header>
+    {% endif %}
+
+    {% if nav_role == 'student' %}
+    <div class="player-profile">
+        <header class="player-hero">
+            <div class="player-emblem student-avatar-badge" aria-label="{{ selected_avatar.name }} avatar"><span>{{ selected_avatar.emoji }}</span></div>
+            <div><div class="player-greeting">Hello, Reader</div><h2 class="player-name">{{ full_name }}</h2><div class="player-class">{{ grade_level|default:"Grade not set" }} &bull; {{ section_name|default:"Section not set" }}</div><div class="player-reading-level"><i class="bi bi-book-half"></i> {{ reading_level|default:"Reading level not set" }}</div></div>
+        </header>
+        <div class="player-dashboard-grid">
+            <section class="player-card player-student-info"><h3 class="player-card-title"><i class="bi bi-person-lines-fill"></i> Student Info</h3><div class="player-info-grid">
+                <div class="player-info-chip"><i class="bi bi-envelope"></i><div><small>Email</small><strong>{{ email }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-person-badge"></i><div><small>PABASA ID</small><strong>{{ pabasa_id }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-person-vcard"></i><div><small>Gender</small><strong>{{ gender|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-calendar-heart"></i><div><small>Birthday</small><strong>{{ birthday_display|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-at"></i><div><small>Username</small><strong>{{ username|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-mortarboard"></i><div><small>Grade</small><strong>{{ grade_level|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-people"></i><div><small>Section</small><strong>{{ section_name|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-building"></i><div><small>School</small><strong>{{ school_name|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-book"></i><div><small>Reading Level</small><strong>{{ reading_level|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-card-heading"></i><div><small>LRN</small><strong>{{ lrn|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-telephone"></i><div><small>Contact Number</small><strong>{{ contact_number|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-check-circle"></i><div><small>Student Status</small><strong>{{ account_status_label|default:"Active" }} Student</strong></div></div>
+            </div><button class="btn btn-outline-primary w-100 mt-3" id="openStudentEditBtn" type="button"><i class="bi bi-pencil-square me-1"></i> Edit Profile</button></section>
+            <section class="player-card"><h3 class="player-card-title"><i class="bi bi-graph-up-arrow"></i> Reading Progress</h3><div class="player-progress-grid">
+                <div class="player-progress-stat"><i class="bi bi-star-fill"></i><strong>{{ achievement_total_stars }}</strong><span>Total Stars</span></div>
+                <div class="player-progress-stat"><i class="bi bi-award"></i><strong id="profileProgressAchievementCount">0</strong><span>Achievements</span></div>
+                <div class="player-progress-stat"><i class="bi bi-journal-check"></i><strong>{{ achievement_completed_sets }}</strong><span>Sets Completed</span></div>
+                <div class="player-progress-stat"><i class="bi bi-signpost-split"></i><strong>{{ achievement_completed_levels }}</strong><span>Levels Cleared</span></div>
+            </div><div class="player-progress-track" role="progressbar" aria-label="Practice progress" aria-valuenow="{{ achievement_progress_percent }}" aria-valuemin="0" aria-valuemax="100"><div class="player-progress-fill" style="width:{{ achievement_progress_percent }}%"></div></div><div class="player-progress-details"><div class="player-progress-detail"><small>Current Level</small><strong>{{ reading_level|default:"Not set" }}</strong></div><div class="player-progress-detail"><small>Practice Completion</small><strong>{{ achievement_progress_percent }}%</strong></div><div class="player-progress-detail"><small>Next Goal</small><strong>{% if not achievement_star_collector %}Collect 25 stars{% elif not achievement_word_master %}Clear five levels{% elif not achievement_practice_streak %}Complete ten sets{% else %}Keep reading{% endif %}</strong></div><div class="player-progress-detail"><small>Reading Trail</small><strong>{{ achievement_completed_sets }} sets finished</strong></div></div><p class="small text-muted mt-2 mb-0">Every page you read builds your reading journey.</p></section>
+            <section class="player-card player-achievements"><h3 class="player-card-title"><i class="bi bi-patch-check"></i> My Reading Achievements</h3><div class="player-badge-grid">
+                <div class="collectible-badge{% if not achievement_first_challenge %} locked{% endif %}" data-earned="{{ achievement_first_challenge|yesno:'true,false' }}"><div class="collectible-medallion"><i class="bi bi-trophy"></i></div><div><strong>First Adventure</strong><span>{% if achievement_first_challenge %}Collected{% else %}Complete one practice set{% endif %}</span></div></div>
+                <div class="collectible-badge{% if not achievement_star_collector %} locked{% endif %}" data-earned="{{ achievement_star_collector|yesno:'true,false' }}"><div class="collectible-medallion"><i class="bi bi-star-fill"></i></div><div><strong>Star Collector</strong><span>{% if achievement_star_collector %}Collected{% else %}Collect 25 stars{% endif %}</span></div></div>
+                <div class="collectible-badge{% if not achievement_word_master %} locked{% endif %}" data-earned="{{ achievement_word_master|yesno:'true,false' }}"><div class="collectible-medallion"><i class="bi bi-book-half"></i></div><div><strong>Word Master</strong><span>{% if achievement_word_master %}Collected{% else %}Clear five levels{% endif %}</span></div></div>
+                <div class="collectible-badge{% if not achievement_practice_streak %} locked{% endif %}" data-earned="{{ achievement_practice_streak|yesno:'true,false' }}"><div class="collectible-medallion"><i class="bi bi-tree"></i></div><div><strong>Forest Trail</strong><span>{% if achievement_practice_streak %}Collected{% else %}Complete ten practice sets{% endif %}</span></div></div>
+            </div></section>
+        </div>
+    </div>
+    {% endif %}
     <div class="profile-layout">
         <div class="profile-main">
-            <!-- Profile Summary Card -->
-            <aside class="profile-summary">
+            <!-- About You -->
+            {% if nav_role == 'student' %}
+            <div class="modal fade student-edit-modal" id="studentEditModal" tabindex="-1" aria-labelledby="studentEditModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+                    <div class="modal-header"><h2 class="modal-title fs-5" id="studentEditModalLabel"><i class="bi bi-person-gear me-2"></i>Edit Student Profile</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-body">
+            {% endif %}
+            <aside class="profile-summary{% if nav_role == 'student' %} student-edit-panel{% endif %}">
                 <div class="card-body p-0">
                     <div class="profile-identity">
-                        <div class="profile-avatar-lg" id="profileAvatarDisplay" data-initials="{{ initials }}"{% if profile_photo_url %} style="background-image: url('{{ profile_photo_url }}'); background-size: cover; background-position: center;"{% endif %}>{% if not profile_photo_url %}{{ initials }}{% endif %}</div>
+                        {% if nav_role == 'student' %}
+                        <div class="profile-avatar-lg student-avatar-badge" id="profileAvatarDisplay" data-avatar-name="{{ selected_avatar.name }}" data-avatar-emoji="{{ selected_avatar.emoji }}" aria-label="{{ selected_avatar.name }} avatar"><span>{{ selected_avatar.emoji }}</span><small>{{ selected_avatar.name }}</small></div>
+                        {% else %}
+                        <div class="profile-avatar-lg" id="profileAvatarDisplay" aria-label="{{ full_name }} profile initials">{{ initials }}</div>
+                        {% endif %}
                         <div class="profile-main-content">
                             <h2>{{ full_name }}</h2>
                             <div class="profile-role">{{ role_display }}</div>
@@ -999,11 +1659,27 @@
                                 </div>
                                 {% if nav_role == 'student' %}
                                 <div>
+                                    <span class="profile-detail-icon"><i class="bi bi-at"></i></span>
+                                    <span class="profile-detail-text"><span class="label">Username</span><span class="value">{{ username|default:"Not set" }}</span></span>
+                                </div>
+                                <div>
                                     <span class="profile-detail-icon"><i class="bi bi-mortarboard"></i></span>
                                     <span class="profile-detail-text">
                                         <span class="label">Grade Level</span>
                                         <span class="value">{{ grade_level|default:"Not set" }}</span>
                                     </span>
+                                </div>
+                                <div>
+                                    <span class="profile-detail-icon"><i class="bi bi-people"></i></span>
+                                    <span class="profile-detail-text"><span class="label">Section</span><span class="value">{{ section_name|default:"Not set" }}</span></span>
+                                </div>
+                                <div>
+                                    <span class="profile-detail-icon"><i class="bi bi-building"></i></span>
+                                    <span class="profile-detail-text"><span class="label">School</span><span class="value">{{ school_name|default:"Not set" }}</span></span>
+                                </div>
+                                <div>
+                                    <span class="profile-detail-icon"><i class="bi bi-book-half"></i></span>
+                                    <span class="profile-detail-text"><span class="label">Reading Level</span><span class="value">{{ reading_level|default:"Not set" }}</span></span>
                                 </div>
                                 <div>
                                     <span class="profile-detail-icon"><i class="bi bi-card-heading"></i></span>
@@ -1032,20 +1708,28 @@
                             {% csrf_token %}
                             <input type="hidden" name="save_account_details" value="true">
                             <div class="profile-edit-grid">
-                                <div class="full profile-photo-actions">
-                                    <label class="form-label" for="profilePhoto">Profile Photo</label>
-                                    <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
-                                        <div style="flex: 1; min-width: 140px;">
-                                            <input class="form-control d-none" id="profilePhoto" name="profile_photo" type="file" accept="image/*">
-                                            <button class="btn btn-outline-primary w-100" type="button" onclick="document.getElementById('profilePhoto').click();">
-                                                <i class="bi bi-cloud-upload"></i> Choose Photo
-                                            </button>
+                                {% if nav_role == 'student' %}
+                                <div class="full avatar-section">
+                                    <div class="avatar-section-head">
+                                        <div class="avatar-preview-badge" id="avatarPreviewBadge"><span>{{ selected_avatar.emoji }}</span><small>{{ selected_avatar.name }}</small></div>
+                                        <div>
+                                            <label class="form-label mb-1">Avatar</label>
+                                            <p class="small text-muted mb-0">Choose one forest friend for your reading adventure.</p>
                                         </div>
-                                        <button class="btn btn-primary btn-sm" type="button" id="uploadPhotoBtn">Save</button>
-                                        <button class="btn btn-outline-danger btn-sm" type="button" id="removePhotoBtn">Remove</button>
                                     </div>
-                                    <p class="text-muted small mt-2 mb-0">PNG, JPG, GIF. Max 5MB.</p>
+                                    <div class="avatar-grid" role="radiogroup" aria-label="Choose your avatar animal">
+                                        {% for avatar in avatar_catalog %}
+                                        <div class="avatar-choice">
+                                            <input class="avatar-choice-input" type="radio" id="avatar_{{ avatar.slug }}_card" name="animal_avatar" value="{{ avatar.slug }}" {% if animal_avatar == avatar.slug %}checked{% endif %} data-account-details-field data-avatar-choice data-avatar-name="{{ avatar.name }}" data-avatar-emoji="{{ avatar.emoji }}" disabled>
+                                            <label class="avatar-choice-card" for="avatar_{{ avatar.slug }}_card">
+                                                <span class="avatar-card-emoji" aria-hidden="true">{{ avatar.emoji }}</span>
+                                                <span class="avatar-card-name">{{ avatar.name }}</span>
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
+                                {% endif %}
                                 <div>
                                     <label class="form-label" for="firstName">First Name</label>
                                     <input class="form-control" id="firstName" name="first_name" type="text" value="{{ first_name }}" data-account-details-field disabled>
@@ -1112,6 +1796,11 @@
                     </div>
                 </div>
             </aside>
+            {% if nav_role == 'student' %}
+                    </div>
+                </div></div>
+            </div>
+            {% endif %}
 
             <!-- Right Column Cards -->
             <div class="profile-card-spacing">
@@ -1171,6 +1860,7 @@
             </div>
             {% endif %}
 
+            {% if nav_role != 'student' and nav_role != 'teacher' %}
             <!-- Account Security -->
             <div class="profile-section-card">
                 <h3 class="profile-section-title">
@@ -1189,6 +1879,7 @@
                 </div>
                 <div class="mt-3 btn-group-small">
                     <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Change Password</button>
+                    {% if nav_role == 'student' %}<button class="btn btn-outline-danger" type="button" id="deleteAccountBtn">Delete Account</button>{% endif %}
                 </div>
             </div>
 
@@ -1265,9 +1956,9 @@
                 </div>
             </div>
             {% endif %}
+            {% endif %}
 
-            </div> <!-- End of grid -->
-
+            {% if nav_role != 'student' and nav_role != 'teacher' %}
             <!-- Account Actions -->
             <div class="danger-zone-wrapper">
                 <div class="profile-section-card danger-zone-card">
@@ -1283,10 +1974,142 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
+            </div> <!-- End of grid -->
         </div>
     </div>
+
 </section>
 
+{% if nav_role == 'student' or nav_role == 'teacher' %}
+<div class="modal fade player-settings-modal" id="playerSettingsModal" tabindex="-1" aria-labelledby="playerSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><div class="modal-header border-0"><h2 class="modal-title fs-4 fw-bold" id="playerSettingsModalLabel"><i class="bi bi-gear-fill me-2"></i>Settings</h2><button type="button" class="btn-close" id="playerSettingsCloseBtn" aria-label="Close"></button></div><div class="modal-body">
+        <div class="settings-view" data-settings-view="settings">
+        <div class="accordion settings-accordion" id="profileSettingsAccordion">
+            <div class="accordion-item">
+                <h3 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#settingsSecurity"><i class="bi bi-shield-lock me-2"></i> Account Security</button></h3>
+                <div id="settingsSecurity" class="accordion-collapse collapse show" data-bs-parent="#profileSettingsAccordion"><div class="accordion-body">
+                    <div class="profile-info-row"><span class="profile-info-label">Password Status</span><span class="profile-info-value"><span class="badge bg-success">Secure</span></span></div>
+                    <div class="profile-info-row"><span class="profile-info-label">Last Changed</span><span class="profile-info-value" id="passwordLastChanged">Not changed yet</span></div>
+                    <div class="mt-3 d-flex gap-2 flex-wrap"><button class="btn btn-primary btn-sm settings-password-launch" type="button">Change Password</button></div>
+                </div></div>
+            </div>
+            <div class="accordion-item">
+                <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#settingsMicrophone"><i class="bi bi-mic me-2"></i> Microphone Settings</button></h3>
+                <div id="settingsMicrophone" class="accordion-collapse collapse" data-bs-parent="#profileSettingsAccordion"><div class="accordion-body">
+                    <div class="mic-settings-grid">
+                        <div class="mic-status-info"><div class="profile-info-row"><span class="profile-info-label">Microphone Status</span><span class="profile-info-value"><span id="micStatusBadge" class="badge bg-secondary">Unknown</span></span></div><div class="mt-3"><label class="form-label" for="micDeviceSelect">Input Device</label><div class="custom-device-dropdown" id="micDeviceDropdown"><button type="button" class="custom-device-trigger" id="micDeviceTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="micDeviceMenu"><span class="custom-device-trigger-text"><span class="custom-device-value" id="micDeviceValue">Detecting devices...</span></span><i class="bi bi-chevron-down"></i></button><select class="custom-device-select" id="micDeviceSelect" tabindex="-1" aria-hidden="true"><option value="">Detecting devices...</option></select><div class="custom-device-menu" id="micDeviceMenu" role="listbox" aria-label="Microphone devices"></div></div></div></div>
+                        <div class="mic-test-area"><label class="form-label">Input Level</label><div class="mic-visualizer-container"><div id="micVisualizerBar" class="mic-visualizer-bar"></div></div><div class="mt-3 d-flex gap-2 flex-wrap"><button id="btnTestMic" class="btn btn-outline-primary btn-sm"><i class="bi bi-play-fill"></i> Test Mic</button><button id="btnRequestMic" class="btn btn-primary btn-sm">Request Permission</button></div></div>
+                        <div class="speaker-status-info pt-3"><label class="form-label" for="speakerDeviceSelect">Speaker Device</label><div class="custom-device-dropdown" id="speakerDeviceDropdown"><button type="button" class="custom-device-trigger" id="speakerDeviceTrigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="speakerDeviceMenu"><span class="custom-device-trigger-text"><span class="custom-device-value" id="speakerDeviceValue">Detecting speakers...</span></span><i class="bi bi-chevron-down"></i></button><select class="custom-device-select" id="speakerDeviceSelect" tabindex="-1" aria-hidden="true"><option value="">Detecting speakers...</option></select><div class="custom-device-menu" id="speakerDeviceMenu" role="listbox" aria-label="Speaker devices"></div></div></div>
+                        <div class="speaker-volume-area pt-3"><div class="d-flex justify-content-between align-items-center mb-2"><label class="form-label mb-0">Speaker Volume</label><span id="volumeValue" class="fw-bold text-primary">80%</span></div><input type="range" class="form-range" id="speakerVolumeInput" min="0" max="100" value="80"><p class="text-muted small mt-2 mb-0">Adjust the volume for practice audio and feedback.</p></div>
+                    </div>
+                </div></div>
+            </div>
+            <div class="accordion-item">
+                <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#settingsAccount"><i class="bi bi-person-gear me-2"></i> Account</button></h3>
+                <div id="settingsAccount" class="accordion-collapse collapse" data-bs-parent="#profileSettingsAccordion"><div class="accordion-body">
+                    <p class="small text-muted mb-3">Manage account data and account-level actions here.</p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline-primary btn-sm" type="button" id="downloadDataBtn">Download Data</button>
+                        {% if nav_role == 'teacher' %}<button class="btn btn-outline-danger btn-sm" type="button" id="deactivateAccountBtn">Deactivate Account</button>{% endif %}
+                        {% if nav_role == 'student' or nav_role == 'teacher' %}<button class="btn btn-danger btn-sm" type="button" id="deleteAccountBtn">Delete Account</button>{% endif %}
+                    </div>
+                </div></div>
+            </div>
+        </div>
+        </div>
+        <div class="settings-view" data-settings-view="password" hidden>
+            <form id="changePasswordForm" class="settings-form-shell d-grid gap-2">
+                {% csrf_token %}
+                <div><label class="form-label" for="currentPassword">Current Password</label><input class="form-control" id="currentPassword" name="current_password" type="password" autocomplete="current-password" required></div>
+                <div><label class="form-label" for="newPassword">New Password</label><input class="form-control" id="newPassword" name="new_password" type="password" autocomplete="new-password" required></div>
+                <div><label class="form-label" for="confirmPassword">Confirm New Password</label><input class="form-control" id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" required></div>
+                <div class="alert alert-danger py-2 mb-0" id="settingsPasswordError" role="alert" hidden></div>
+                <div class="d-flex gap-2 mt-1"><button class="btn btn-outline-secondary" type="button" data-settings-back>Cancel</button><button class="btn btn-primary" type="submit">Save Password</button></div>
+            </form>
+        </div>
+        {% if nav_role == 'student' or nav_role == 'teacher' %}
+        <div class="settings-view" data-settings-view="delete" hidden>
+            <div class="settings-form-shell"><div class="text-danger fs-3 mb-1"><i class="bi bi-exclamation-triangle-fill"></i></div><p class="fw-bold mb-1">This permanently deletes your account.</p><p class="text-muted small mb-2">All profile{% if nav_role == 'student' %} and reading{% else %}, class, material, and report{% endif %} data will be removed and cannot be recovered. Type <strong>DELETE</strong> to continue.</p><label class="form-label small fw-bold mb-1" for="deleteConfirmInput">Confirmation</label><input type="text" id="deleteConfirmInput" class="form-control text-center fw-bold" placeholder="DELETE" autocomplete="off"><div class="alert alert-danger py-2 mt-2 mb-0" id="settingsDeleteError" role="alert" hidden></div><div class="d-flex gap-2 mt-2"><button class="btn btn-outline-secondary" type="button" data-settings-back>Cancel</button><button type="button" class="btn btn-danger" id="profileDeleteFinalBtn" disabled>Permanently Delete</button></div></div>
+        </div>
+        {% endif %}
+    </div></div></div>
+</div>
+{% endif %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const earnedCount = document.querySelectorAll('.collectible-badge[data-earned="true"]').length;
+        ["profileAchievementCount", "profileProgressAchievementCount"].forEach((id) => {
+            const target = document.getElementById(id);
+            if (target) target.textContent = String(earnedCount);
+        });
+
+        const studentEditPanel = document.querySelector(".student-edit-panel");
+        const studentEditModalElement = document.getElementById("studentEditModal");
+        if (studentEditModalElement && studentEditModalElement.parentElement !== document.body) {
+            document.body.appendChild(studentEditModalElement);
+        }
+        document.getElementById("openStudentEditBtn")?.addEventListener("click", () => {
+            if (!studentEditPanel || !studentEditModalElement || !window.bootstrap?.Modal) return;
+            document.getElementById("editAccountDetailsBtn")?.click();
+            window.bootstrap.Modal.getOrCreateInstance(studentEditModalElement).show();
+        });
+        studentEditModalElement?.addEventListener("shown.bs.modal", () => {
+            document.querySelector("#studentEditModal [data-account-details-field]")?.focus();
+        });
+        studentEditModalElement?.addEventListener("hidden.bs.modal", () => {
+            document.getElementById("accountDetailsForm")?.reset();
+        });
+
+        const settingsModalElement = document.getElementById("playerSettingsModal");
+        // Theme wrappers may create their own stacking contexts (Forest does this
+        // for its scenery). Keep the modal at the document root so the shared
+        // backdrop can never render above it, regardless of equipped theme.
+        if (settingsModalElement && settingsModalElement.parentElement !== document.body) {
+            document.body.appendChild(settingsModalElement);
+        }
+        const settingsTitle = document.getElementById("playerSettingsModalLabel");
+        const settingsViews = Array.from(document.querySelectorAll("[data-settings-view]"));
+        let currentSettingsView = "settings";
+        const showSettingsView = (viewName) => {
+            currentSettingsView = viewName;
+            settingsViews.forEach((view) => { view.hidden = view.dataset.settingsView !== viewName; });
+            if (settingsTitle) {
+                const labels = {settings:"Settings", password:"Change Password", delete:"Delete Account"};
+                settingsTitle.innerHTML = `<i class="bi bi-gear-fill me-2"></i>${labels[viewName] || "Settings"}`;
+            }
+        };
+        window.profileSettingsShowView = showSettingsView;
+        document.getElementById("playerSettingsCloseBtn")?.addEventListener("click", () => {
+            if (currentSettingsView !== "settings") {
+                showSettingsView("settings");
+                return;
+            }
+            if (settingsModalElement && window.bootstrap?.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(settingsModalElement).hide();
+            }
+        });
+        settingsModalElement?.addEventListener("shown.bs.modal", () => {
+            document.querySelectorAll(".modal-backdrop").forEach((backdrop) => backdrop.classList.remove("settings-modal-backdrop"));
+            document.querySelector(".modal-backdrop:last-of-type")?.classList.add("settings-modal-backdrop");
+        });
+        settingsModalElement?.addEventListener("hidden.bs.modal", () => showSettingsView("settings"));
+        document.querySelector(".settings-password-launch")?.addEventListener("click", () => {
+            showSettingsView("password");
+        });
+        document.getElementById("deleteAccountBtn")?.addEventListener("click", () => {
+            const input = document.getElementById("deleteConfirmInput");
+            if (input) input.value = "";
+            const finalButton = document.getElementById("profileDeleteFinalBtn");
+            if (finalButton) finalButton.disabled = true;
+            showSettingsView("delete");
+        });
+        document.querySelectorAll("[data-settings-back]").forEach((button) => button.addEventListener("click", () => showSettingsView("settings")));
+
+    });
+</script>
+
+{% if nav_role != 'student' and nav_role != 'teacher' %}
 <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -1320,6 +2143,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- Refined Success Modal for Profile Updates -->
 <div class="modal fade" id="profileSuccessModal" tabindex="-1" aria-hidden="true">
@@ -1359,6 +2183,7 @@
 </div>
 
 <!-- Refined Delete Account Modal with extra safety -->
+{% if nav_role != 'student' and nav_role != 'teacher' %}
 <div class="modal fade" id="profileDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content" style="border-radius: 28px; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
@@ -1380,6 +2205,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 {{ username|json_script:"profileUsername" }}
 {{ full_name|json_script:"profileFullName" }}

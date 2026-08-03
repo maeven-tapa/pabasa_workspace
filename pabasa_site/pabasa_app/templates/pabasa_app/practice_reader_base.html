@@ -5800,9 +5800,99 @@
             background: rgba(14, 116, 144, 0.18) !important;
             border-color: rgba(125, 211, 252, 0.26) !important;
         }
+        /* Keep the treasure map visible in both color modes. Earlier generic
+           dark-reader rules used a background shorthand that removed the SVG. */
+        .practice-hunt-shell .hunt-card {
+            background-color:#d8bd76 !important;
+            background-image:none !important;
+            border-radius:18px;
+        }
+        .practice-hunt-shell .hunt-map-art {
+            height:100%;
+            inset:0;
+            object-fit:cover;
+            opacity:.9;
+            pointer-events:none;
+            position:absolute;
+            width:100%;
+            z-index:0;
+        }
+        /* A subtle wash improves legibility without hiding the map artwork. */
+        .practice-hunt-shell .hunt-card::after {
+            background:linear-gradient(180deg,rgba(255,247,211,.08),rgba(109,73,30,.04));
+            content:"";
+            display:block !important;
+            inset:0;
+            pointer-events:none;
+            position:absolute;
+            z-index:0;
+        }
+        body.dark-theme .practice-hunt-shell {background:#0f172a !important}
+        body.dark-theme .practice-hunt-shell .hunt-card {
+            background-color:#806b3f !important;
+            background-image:none !important;
+            border-color:#64748b !important;box-shadow:0 16px 36px rgba(0,0,0,.38) !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-map-art {filter:brightness(.7) contrast(1.12) saturate(.78);opacity:.82}
+        body.dark-theme .practice-hunt-shell .hunt-card::after {background:linear-gradient(180deg,rgba(15,23,42,.08),rgba(15,23,42,.24));filter:none}
+        body.dark-theme .practice-hunt-shell :is(.hunt-word-area,.hunt-actions) {
+            background:linear-gradient(145deg,rgba(30,41,59,.98),rgba(15,23,42,.98)) !important;
+            border-color:rgba(125,211,252,.34) !important;color:#f8fafc !important;
+        }
+        body.dark-theme .practice-hunt-shell :is(.hunt-word-area .practice-text,.hunt-speech-status,.hunt-raw-mic strong) {color:#f8fafc !important}
+        body.dark-theme .practice-hunt-shell :is(.hunt-word-instruction,.hunt-speech-transcript,.hunt-actions .practice-feedback) {color:#cbd5e1 !important}
+        body.dark-theme .practice-hunt-shell :is(.hunt-speech-panel,.hunt-raw-mic) {
+            background:rgba(15,23,42,.9) !important;border-color:rgba(125,211,252,.24) !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-raw-mic code {color:#e2e8f0 !important}
+
+        /* Forest is the only theme allowed to use the green Hunt treatment. */
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell {background:#071f1a !important}
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-card {
+            background-color:#8e7747 !important;
+            background-image:none !important;
+            border-color:#a98542 !important;
+        }
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-map-art {filter:brightness(.66) saturate(.82) hue-rotate(12deg);opacity:.82}
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-card::after {background:linear-gradient(rgba(8,35,29,.08),rgba(8,35,29,.22));filter:none}
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell :is(.hunt-word-area,.hunt-actions) {
+            background:linear-gradient(145deg,rgba(24,61,43,.97),rgba(15,46,34,.98)) !important;
+            border-color:rgba(190,170,96,.5) !important;color:#f2efd0 !important;
+        }
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell :is(.hunt-word-area .practice-text,.hunt-speech-status,.hunt-raw-mic strong) {color:#f4f1d2 !important}
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell :is(.hunt-word-instruction,.hunt-speech-transcript,.hunt-actions .practice-feedback) {color:#bdc9ad !important}
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell :is(.hunt-speech-panel,.hunt-raw-mic) {background:rgba(8,38,29,.88) !important;border-color:rgba(177,196,111,.3) !important}
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-raw-mic code {color:#edf1d0 !important}
+
+        /* Treasure-map UI polish. */
+        .practice-hunt-shell .hunt-card {border-width:2px;box-shadow:0 18px 42px rgba(55,76,63,.18)}
+        .practice-hunt-shell .hunt-map-art {filter:saturate(.78) contrast(.96)}
+        .practice-hunt-shell .hunt-card::before {border-color:rgba(111,72,31,.38);border-width:2px}
+        .practice-hunt-shell .hunt-word-area {
+            backdrop-filter:blur(3px);
+            background:rgba(255,254,244,.94);
+            border-width:2px;
+            box-shadow:0 16px 36px rgba(73,45,17,.22);
+        }
+        .practice-hunt-shell .hunt-actions {backdrop-filter:blur(5px);background:rgba(255,255,255,.94)}
+        .practice-hunt-shell .hunt-map-dot {box-shadow:0 3px 9px rgba(76,48,20,.28)}
+        .practice-hunt-shell .hunt-map-dot.is-active {box-shadow:0 0 0 6px rgba(255,247,211,.72),0 5px 13px rgba(76,48,20,.3)}
+        body.dark-theme .practice-hunt-shell .hunt-card {border-color:#8f7a4c !important}
+        body.dark-theme .practice-hunt-shell .hunt-word-area {background:rgba(24,35,52,.92) !important;border-color:#70839a !important}
+        body.dark-theme .practice-hunt-shell .hunt-actions {background:rgba(24,35,52,.94) !important;border-color:#475569 !important}
+        body.dark-theme .practice-hunt-shell .hunt-card::before {border-color:rgba(255,225,151,.34)}
+        body.dark-theme .practice-hunt-shell :is(.hunt-map-dot,.hunt-checkpoint) {filter:brightness(1.08)}
+        body.dark-theme .practice-hunt-shell .hunt-destination {filter:brightness(1.18);text-shadow:0 2px rgba(255,240,195,.38)}
     </style>
+    <link rel="stylesheet" href="{% static 'pabasa_app/forest-theme.css' %}?v=storybook-forest-4">
+    <link rel="stylesheet" href="{% static 'pabasa_app/treasure-theme.css' %}?v=storybook-treasure-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/space-theme.css' %}?v=storybook-space-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/library-theme.css' %}?v=storybook-library-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/zoo-theme.css' %}?v=storybook-zoo-1">
+    <link rel="stylesheet" href="{% static 'pabasa_app/ocean-theme.css' %}?v=storybook-ocean-1">
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
+    {% include "pabasa_app/partials/_forest_world.html" %}
     <script>
         (function() {
             const readTheme = () => {
@@ -5922,6 +6012,7 @@
             </header>
 
             <article class="hunt-card">
+                <img class="hunt-map-art" src="{% static 'pabasa_app/images/hunt-treasure-map.svg' %}" alt="" aria-hidden="true">
                 <div class="hunt-flight">
                     <div class="hunt-flight-meta">
                         <span>Reading journey</span>

@@ -192,6 +192,16 @@ var getStudentClassData = window.getStudentClassData = function() {
         });
         if (!document.querySelectorAll('.modal.show').length) {
             document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        }
+    }
+
+    function cleanupOrphanModalState() {
+        const hasVisibleModal = Boolean(document.querySelector('.modal.show'));
+        const hasBackdrop = Boolean(document.querySelector('.modal-backdrop'));
+        if (!hasVisibleModal && (hasBackdrop || document.body.classList.contains('modal-open'))) {
+            cleanupModalBackdrops();
         }
     }
 
@@ -279,7 +289,7 @@ var getStudentClassData = window.getStudentClassData = function() {
     }
 
     document.addEventListener("show.bs.modal", function () {
-        cleanupModalBackdrops();
+        window.requestAnimationFrame(dedupeModalBackdrops);
     });
 
     document.addEventListener("shown.bs.modal", function () {
@@ -288,15 +298,17 @@ var getStudentClassData = window.getStudentClassData = function() {
 
     document.addEventListener("hidden.bs.modal", function () {
         window.setTimeout(function () {
-            cleanupModalBackdrops();
+            if (!document.querySelectorAll('.modal.show').length) {
+                cleanupModalBackdrops();
+            } else {
+                dedupeModalBackdrops();
+            }
         }, 100);
     });
 
-    document.addEventListener("hide.bs.modal", function () {
-        window.setTimeout(function () {
-            cleanupModalBackdrops();
-        }, 100);
-    });
+    document.addEventListener("pointerdown", cleanupOrphanModalState, true);
+    window.addEventListener("focus", cleanupOrphanModalState);
+    window.setTimeout(cleanupOrphanModalState, 250);
 
     document.addEventListener("click", function (event) {
         if (navigationPending) return;

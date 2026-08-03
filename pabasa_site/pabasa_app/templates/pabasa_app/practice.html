@@ -136,18 +136,33 @@
     }
 
     .practice-language-select-wrap {
+        align-items: center;
         display: grid;
-        gap: 0.45rem;
-        max-width: 340px;
+        gap: 0.6rem;
+        grid-template-columns: auto minmax(150px, 220px);
+        margin-top: 0.8rem;
+        max-width: 360px;
         width: 100%;
     }
 
     .practice-language-select-wrap .form-label {
+        color: var(--dash-muted);
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.04em;
         margin: 0;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .practice-language-select-wrap .form-select,
+    .practice-language-select-wrap .custom-device-trigger {
+        min-height: 42px;
     }
 
     @media (max-width: 767.98px) {
         .practice-language-select-wrap {
+            grid-template-columns: 1fr;
             max-width: 100%;
         }
     }
@@ -749,32 +764,22 @@
 
 {% block content %}
 <section class="practice-board">
-    <section class="hub-section">
-        <div class="section-heading mb-3">
-            <h3>Choose Your Practice Language</h3>
-            <p>Select one language to begin Practice Mode. You can change it later.</p>
-        </div>
-        <form method="post" class="practice-language-select-wrap" id="practiceLanguageForm">
-            {% csrf_token %}
-            <input type="hidden" name="settings_action" value="save_practice_language">
-            <label class="form-label fw-bold mb-0" for="practiceLanguageSelect">Language</label>
-            <select class="form-select" id="practiceLanguageSelect" name="language" data-dashboard-custom-select="true" onchange="this.form.submit()">
-                {% for value, label in language_options %}
-                <option value="{{ value }}" {% if selected_practice_language == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-            <noscript>
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-primary">Save Language</button>
-                </div>
-            </noscript>
-        </form>
-    </section>
     <section class="hub-section challenge-panel">
         <div class="challenge-copy">
             <div class="challenge-tag">Challenge board</div>
             <strong id="challengeCount">1 Practice Set Unlocked</strong>
             <p>Choose a game and practice reading through exciting challenges!</p>
+            <form method="post" class="practice-language-select-wrap" id="practiceLanguageForm">
+                {% csrf_token %}
+                <input type="hidden" name="settings_action" value="save_practice_language">
+                <label class="form-label" for="practiceLanguageSelect">Practice language</label>
+                <select class="form-select" id="practiceLanguageSelect" name="language" data-dashboard-custom-select="true" onchange="this.form.submit()">
+                    {% for value, label in language_options %}
+                    <option value="{{ value }}" {% if selected_practice_language == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <noscript><button type="submit" class="btn btn-primary">Save Language</button></noscript>
+            </form>
         </div>
         <div class="challenge-badge">
             <span class="badge-number" id="challengeStars">0</span>
@@ -791,49 +796,6 @@
         <div class="game-grid" id="gameGrid"></div>
     </section>
 
-    <section class="hub-section achievement-panel">
-        <div class="section-heading">
-            <h3>My Reading Achievements</h3>
-            <p>Celebrate your progress and keep building confidence.</p>
-        </div>
-        <div class="achievement-grid">
-            <div class="achievement-item">
-                <div class="achievement-icon"><i class="bi bi-trophy"></i></div>
-                <strong>First Reading Challenge</strong>
-                <span>Start your first adventure</span>
-            </div>
-            <div class="achievement-item">
-                <div class="achievement-icon"><i class="bi bi-star-fill"></i></div>
-                <strong>Star Collector</strong>
-                <span>Earn stars by finishing games</span>
-            </div>
-            <div class="achievement-item">
-                <div class="achievement-icon"><i class="bi bi-book"></i></div>
-                <strong>Word Master</strong>
-                <span>Practice reading with accuracy</span>
-            </div>
-            <div class="achievement-item">
-                <div class="achievement-icon"><i class="bi bi-fire"></i></div>
-                <strong>Practice Streak</strong>
-                <span>Keep coming back to learn</span>
-            </div>
-        </div>
-        <div class="achievement-stats">
-            <div class="achievement-stat">
-                <strong id="totalStars">0</strong>
-                <span>Total stars earned</span>
-            </div>
-            <div class="achievement-stat">
-                <strong id="completedChallenges">0</strong>
-                <span>Completed challenges</span>
-            </div>
-            <div class="achievement-stat">
-                <strong id="readingProgress">0%</strong>
-                <span>Reading progress</span>
-            </div>
-        </div>
-        <div class="achievement-message" id="achievementMessage">Great job! Keep practicing!</div>
-    </section>
 </section>
 
 {{ practice_materials|json_script:"practiceMaterialsData" }}

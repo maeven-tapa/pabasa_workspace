@@ -281,6 +281,25 @@ logger = logging.getLogger(__name__)
 
 PROFILE_PHOTOS_DIR = settings.BASE_DIR / 'pabasa_app' / 'static' / 'pabasa_app' / 'uploads' / 'profiles'
 
+STUDENT_AVATAR_CATALOG = [
+    {'slug': 'fox', 'name': 'Fox', 'emoji': '🦊', 'pack': 'forest_friends'},
+    {'slug': 'owl', 'name': 'Owl', 'emoji': '🦉', 'pack': 'forest_friends'},
+    {'slug': 'rabbit', 'name': 'Rabbit', 'emoji': '🐰', 'pack': 'forest_friends'},
+    {'slug': 'bear', 'name': 'Bear', 'emoji': '🐻', 'pack': 'forest_friends'},
+    {'slug': 'squirrel', 'name': 'Squirrel', 'emoji': '🐿️', 'pack': 'forest_friends'},
+    {'slug': 'raccoon', 'name': 'Raccoon', 'emoji': '🦝', 'pack': 'forest_friends'},
+    {'slug': 'hedgehog', 'name': 'Hedgehog', 'emoji': '🦔', 'pack': 'forest_friends'},
+    {'slug': 'frog', 'name': 'Frog', 'emoji': '🐸', 'pack': 'pond_friends'},
+    {'slug': 'duck', 'name': 'Duck', 'emoji': '🦆', 'pack': 'pond_friends'},
+    {'slug': 'penguin', 'name': 'Penguin', 'emoji': '🐧', 'pack': 'pond_friends'},
+    {'slug': 'turtle', 'name': 'Turtle', 'emoji': '🐢', 'pack': 'pond_friends'},
+    {'slug': 'butterfly', 'name': 'Butterfly', 'emoji': '🦋', 'pack': 'garden_friends'},
+    {'slug': 'bee', 'name': 'Bee', 'emoji': '🐝', 'pack': 'garden_friends'},
+    {'slug': 'panda', 'name': 'Panda', 'emoji': '🐼', 'pack': 'forest_friends'},
+    {'slug': 'koala', 'name': 'Koala', 'emoji': '🐨', 'pack': 'forest_friends'},
+]
+STUDENT_AVATAR_BY_SLUG = {avatar['slug']: avatar for avatar in STUDENT_AVATAR_CATALOG}
+
 # Authentication decorator
 def login_required(role=None):
     """Decorator to check if user is authenticated and optionally check role"""
@@ -7361,13 +7380,8 @@ def profile(request):
 
     initials = "".join(part[:1] for part in full_name.split()[:2]).upper() or "PA"
     
-    # Check if user has a profile photo
-    profile_photo_url = None
-    photos_dir = PROFILE_PHOTOS_DIR
-    if photos_dir.exists():
-        for file in photos_dir.glob(f'profile_photo_{username}.*'):
-            profile_photo_url = f'/static/pabasa_app/uploads/profiles/{file.name}'
-            break
+    selected_avatar_slug = user.animal_avatar if user.animal_avatar in STUDENT_AVATAR_BY_SLUG else 'owl'
+    selected_avatar = STUDENT_AVATAR_BY_SLUG[selected_avatar_slug]
     
     # Get user bio from tags (profile information)
     bio = ''
@@ -7386,6 +7400,7 @@ def profile(request):
                 suffix = request.POST.get('suffix', '').strip()
                 email = request.POST.get('email', '').strip()
                 bio = request.POST.get('bio', '').strip()
+                animal_avatar = request.POST.get('animal_avatar', '').strip()
                 
                 # Validate required fields
                 if not first_name or not last_name:
@@ -7404,6 +7419,8 @@ def profile(request):
                 user.middle_initial = middle_initial if middle_initial else ''
                 user.suffix = suffix if suffix else ''
                 user.email = email
+                if animal_avatar and animal_avatar in STUDENT_AVATAR_BY_SLUG:
+                    user.animal_avatar = animal_avatar
                 request.session['first_name'] = user.first_name
                 request.session['last_name'] = user.last_name
                 request.session['email'] = user.email
@@ -7512,110 +7529,23 @@ def profile(request):
                 logger.error(f"Error deleting account: {str(e)}")
                 return JsonResponse({'success': False, 'error': str(e)})
         
-        # Handle photo removal
-        elif request.POST.get('remove_photo') == 'true':
-            try:
-                photos_dir = PROFILE_PHOTOS_DIR
-                
-                # Find and delete any profile photo for this user
-                if photos_dir.exists():
-                    for file in photos_dir.glob(f'profile_photo_{username}.*'):
-                        file.unlink()
-                
-                logger.info(f"Profile photo removed for user {user.custom_id}")
-                return JsonResponse({'success': True, 'message': 'Photo removed successfully'})
-            
-            except Exception as e:
-                logger.error(f"Error removing photo for {user.custom_id}: {str(e)}")
-                return JsonResponse({'success': False, 'error': str(e)})
-        
-        # Handle photo upload
-        elif request.POST.get('upload_photo') == 'true' and 'profile_photo' in request.FILES:
-            try:
-                photo_file = request.FILES['profile_photo']
-                
-                # Validate file size (max 5MB)
-                if photo_file.size > 5 * 1024 * 1024:
-                    return JsonResponse({'success': False, 'error': 'File size must be less than 5MB'})
-                
-                # Validate file type
-                allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-                file_ext = photo_file.name.split('.')[-1].lower()
-                if file_ext not in allowed_extensions:
-                    return JsonResponse({'success': False, 'error': 'Only image files are allowed'})
-                
-                # Create photos directory if it doesn't exist
-                photos_dir = PROFILE_PHOTOS_DIR
-                photos_dir.mkdir(parents=True, exist_ok=True)
-                
-                filename = f"profile_photo_{username}.{file_ext}"
-                filepath = photos_dir / filename
-                
-                # Delete any previous photos with different extensions
-                for file in photos_dir.glob(f'profile_photo_{username}.*'):
-                    try:
-                        file.unlink()
-                    except:
-                        pass
-                
-                # Save the file
-                with open(filepath, 'wb') as f:
-                    for chunk in photo_file.chunks():
-                        f.write(chunk)
-                
-                photo_url = f'/static/pabasa_app/uploads/profiles/{filename}'
-                logger.info(f"Profile photo uploaded for user {user.custom_id}: {filename}")
-                return JsonResponse({'success': True, 'message': 'Photo uploaded successfully', 'photo_url': photo_url})
-            
-            except Exception as e:
-                logger.error(f"Error uploading photo for {user.custom_id}: {str(e)}")
-                return JsonResponse({'success': False, 'error': str(e)})
-        
-        # Handle photo upload via XMLHttpRequest with file in request.FILES (for direct file submission)
-        elif request.headers.get('X-Requested-With') == 'XMLHttpRequest' and 'profile_photo' in request.FILES:
-            try:
-                photo_file = request.FILES['profile_photo']
-                
-                # Validate file size (max 5MB)
-                if photo_file.size > 5 * 1024 * 1024:
-                    return JsonResponse({'success': False, 'error': 'File size must be less than 5MB'})
-                
-                # Validate file type
-                allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-                file_ext = photo_file.name.split('.')[-1].lower()
-                if file_ext not in allowed_extensions:
-                    return JsonResponse({'success': False, 'error': 'Only image files are allowed'})
-                
-                # Create photos directory if it doesn't exist
-                photos_dir = PROFILE_PHOTOS_DIR
-                photos_dir.mkdir(parents=True, exist_ok=True)
-                
-                filename = f"profile_photo_{username}.{file_ext}"
-                filepath = photos_dir / filename
-                
-                # Delete any previous photos with different extensions
-                for file in photos_dir.glob(f'profile_photo_{username}.*'):
-                    try:
-                        file.unlink()
-                    except:
-                        pass
-                
-                # Save the file
-                with open(filepath, 'wb') as f:
-                    for chunk in photo_file.chunks():
-                        f.write(chunk)
-                
-                photo_url = f'/static/pabasa_app/uploads/profiles/{filename}'
-                logger.info(f"Profile photo uploaded (AJAX) for user {user.custom_id}: {filename}")
-                return JsonResponse({'success': True, 'message': 'Photo uploaded successfully', 'photo_url': photo_url})
-            
-            except Exception as e:
-                logger.error(f"Error uploading photo (AJAX) for {user.custom_id}: {str(e)}")
-                return JsonResponse({'success': False, 'error': str(e)})
-    
-    return render(request, 'pabasa_app/profile.html', {
+        # Profile photos are intentionally disabled for Grade 2 student safety.
+        elif (
+            request.POST.get('remove_photo') == 'true'
+            or request.POST.get('upload_photo') == 'true'
+            or 'profile_photo' in request.FILES
+        ):
+            return JsonResponse({
+                'success': False,
+                'error': 'Profile photo uploads are disabled. Please choose one of the animal avatars.'
+            }, status=400)
+
+    profile_context = {
         'nav_role': nav_role,
-        'profile_photo_url': profile_photo_url,
+        'profile_photo_url': '',
+        'avatar_catalog': STUDENT_AVATAR_CATALOG,
+        'animal_avatar': selected_avatar_slug,
+        'selected_avatar': selected_avatar,
         'username': username,
         'full_name': full_name,
         'first_name': user.first_name,
@@ -7631,9 +7561,50 @@ def profile(request):
         'gender': user.sex or '',
         'birthday_display': birthday_display,
         'grade_level': user.grade_level or '',
+        'section_name': user.section or '',
+        'school_name': user.school or '',
+        'reading_level': user.reading_level or '',
         'contact_number': user.contact_no or '',
         'notification_settings': _notification_settings_for_user(user),
-    })
+        'student_theme_slug': (
+            user.equipped_theme
+            if user.role == 'student' and user.equipped_theme in STUDENT_THEME_CATALOG
+            else 'sky'
+        ),
+    }
+
+    if user.role == 'student':
+        selected_language = _practice_selected_language(
+            request,
+            _get_practice_language_preference(user) or 'English',
+        )
+        practice_materials = [
+            _serialize_student_practice_material(material, user)
+            for material in _student_practice_queryset(request)
+        ]
+        completed_sets = sum(1 for material in practice_materials if material.get('is_done'))
+        total_sets = len(practice_materials)
+        progression_summaries = {
+            mode: _practice_game_progression(mode, user, selected_language)['summary']
+            for mode in ['free', 'color', 'hunt']
+        }
+        completed_levels = sum(
+            max(0, int(summary.get('completed_levels') or 0))
+            for summary in progression_summaries.values()
+        )
+        profile_context.update({
+            'achievement_total_stars': _student_theme_lifetime_stars(user),
+            'achievement_completed_sets': completed_sets,
+            'achievement_total_sets': total_sets,
+            'achievement_completed_levels': completed_levels,
+            'achievement_progress_percent': round((completed_sets / total_sets) * 100) if total_sets else 0,
+            'achievement_first_challenge': completed_sets >= 1,
+            'achievement_star_collector': _student_theme_lifetime_stars(user) >= 25,
+            'achievement_word_master': completed_levels >= 5,
+            'achievement_practice_streak': completed_sets >= 10,
+        })
+
+    return render(request, 'pabasa_app/profile.html', profile_context)
 
 def notifications(request):
     nav_role = request.GET.get('role', 'teacher')

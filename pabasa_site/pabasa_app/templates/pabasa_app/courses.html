@@ -4960,6 +4960,22 @@
         background-color: rgba(27, 26, 23, 0.5);
     }
 
+    /* Course page has custom helper overlays up to z-index:3000. Keep every
+       Bootstrap modal above those layers so the dimming overlay never captures
+       clicks while the modal content is visible. */
+    body.modal-open > .modal {
+        z-index: 4100 !important;
+    }
+
+    body.modal-open > .modal .modal-dialog {
+        z-index: 4110 !important;
+        position: relative;
+    }
+
+    body.modal-open > .modal-backdrop {
+        z-index: 4000 !important;
+    }
+
     /* Course page dark mode support */
     body.dark-theme .workspace-hero,
     body.dark-theme .modern-tabs,
@@ -9349,6 +9365,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     window.openCourseDetail = async function(courseId) {
         try {
             closeCourseMaterialDetail();
+            // Defensive reset: when a previous modal transition is interrupted,
+            // Bootstrap can leave an orphan backdrop that makes the page look
+            // disabled. Course detail is standalone, so clear that stale state
+            // before opening a fresh course modal.
+            if (!document.querySelector('.modal.show')) {
+                document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
             let course = findCourseById(courseId);
             if (!course) {
                 await loadTeacherCoursesFromServer();
@@ -10207,6 +10233,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             // store current course id on modal for create flow
             const modalEl = document.getElementById('courseDetailModal');
+            if (modalEl && modalEl.parentElement !== document.body) {
+                document.body.appendChild(modalEl);
+            }
             modalEl.dataset.courseId = course.id;
             try { if (typeof loadCourseOverview === 'function') loadCourseOverview(course.id); } catch (err) { console.warn('loadCourseOverview error', err); }
             try { if (typeof loadCourseAssessments === 'function') loadCourseAssessments(course.id); } catch (err) { console.warn('loadCourseAssessments error', err); }
@@ -10339,7 +10368,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             // No parent modal shown — course modal is standalone to avoid nested/backdrop issues
 
-            const modal = new bootstrap.Modal(modalEl);
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.show();
         } catch (e) {
             console.warn('openCourseDetail error', e);
