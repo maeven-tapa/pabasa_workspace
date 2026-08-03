@@ -476,6 +476,10 @@
             z-index: 1;
         }
 
+        .speech-panel[hidden] {
+            display: none;
+        }
+
         .speech-panel strong {
             color: var(--accent-deep);
             font-family: "Nunito", "Segoe UI", sans-serif;
@@ -1892,7 +1896,7 @@
                 <section class="word-stage" aria-live="polite" aria-atomic="true">
                     <h1 class="reading-word" id="readingWord">{% block initial_text %}{% endblock %}</h1>
                 </section>
-                <div class="speech-panel" id="speechPanel">
+                <div class="speech-panel" id="speechPanel" hidden aria-hidden="true">
                     <strong id="speechStatus">Ready to start reading</strong>
                     <span class="speech-transcript" id="speechTranscript">Google Speech results will appear here while you read.</span>
                     <div class="raw-mic-output">
@@ -1961,6 +1965,10 @@
                         </select>
                         <div class="mic-device-menu" id="micDeviceMenu" role="listbox" aria-label="Microphone devices"></div>
                     </div>
+                    <label class="form-check form-switch mb-0">
+                        <input class="form-check-input" id="speechDebugToggle" type="checkbox">
+                        <span class="form-check-label">Show speech debug panel</span>
+                    </label>
                 </div>
                 <hr class="mic-test-divider">
                 <div class="mic-check-section">

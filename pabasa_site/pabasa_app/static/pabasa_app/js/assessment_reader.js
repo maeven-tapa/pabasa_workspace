@@ -46,6 +46,8 @@
         const micDeviceValue = document.getElementById("micDeviceValue");
         const micDeviceSelect = document.getElementById("micDeviceSelect");
         const rawMicInput = document.getElementById("rawMicInput");
+        const speechPanel = document.getElementById("speechPanel");
+        const speechDebugToggle = document.getElementById("speechDebugToggle");
 
         const urlParams = new URLSearchParams(window.location.search);
         const testTitle = urlParams.get("test") || "Assessment";
@@ -158,6 +160,16 @@
         const speechLevelThreshold = 0.014;
         const speechNoiseMultiplier = 3.2;
         let micDeviceOptionButtons = [];
+
+        function setSpeechDebugPanelVisible(isVisible) {
+            const enabled = Boolean(isVisible);
+            speechPanel?.toggleAttribute("hidden", !enabled);
+            speechPanel?.setAttribute("aria-hidden", String(!enabled));
+            if (speechDebugToggle) speechDebugToggle.checked = enabled;
+            localStorage.setItem("pabasaShowSpeechDebugPanel", enabled ? "true" : "false");
+        }
+
+        setSpeechDebugPanelVisible(localStorage.getItem("pabasaShowSpeechDebugPanel") === "true");
 
         function setMicDropdownOpen(isOpen) {
             if (!micDeviceDropdown || !micDeviceTrigger) return;
@@ -2101,6 +2113,7 @@
                 stopSpeechRecognition();
             }
         });
+        speechDebugToggle?.addEventListener("change", () => setSpeechDebugPanelVisible(speechDebugToggle.checked));
         micTestCloseBtn?.addEventListener("click", closeMicTestDialog);
         micTestOverlay?.addEventListener("click", (event) => {
             if (event.target === micTestOverlay) closeMicTestDialog();
