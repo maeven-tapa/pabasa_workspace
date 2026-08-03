@@ -4684,18 +4684,30 @@ def assessment(request):
 
 @xframe_options_sameorigin
 def reading_word_page(request):
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
     return render(request, 'pabasa_app/reading_word_page.html', _dashboard_context(request))
 
 @xframe_options_sameorigin
 def reading_sentence_page(request):
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
     return render(request, 'pabasa_app/reading_sentence_page.html', _dashboard_context(request))
 
 @xframe_options_sameorigin
 def reading_para_page(request):
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
     return render(request, 'pabasa_app/reading_para_page.html', _dashboard_context(request))
 
 @xframe_options_sameorigin
 def reading_vowel_page(request):
+    access_response = _enforce_student_access_for_request(request)
+    if access_response:
+        return access_response
     return render(request, 'pabasa_app/reading_vowel_page.html', _dashboard_context(request))
 
 
@@ -4704,6 +4716,10 @@ def reading_vowel_page(request):
 def reading_transcribe_api(request):
     if not _check_auth(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    access_response = _enforce_student_access_for_request(request, json_response=True)
+    if access_response:
+        return access_response
 
     audio = request.FILES.get('audio')
     target_text = (request.POST.get('target_text') or '').strip()
@@ -4785,6 +4801,10 @@ def reading_transcribe_api(request):
 def reading_read_aloud_api(request):
     if not _check_auth(request):
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    access_response = _enforce_student_access_for_request(request, json_response=True)
+    if access_response:
+        return access_response
 
     target_text = (request.POST.get('target_text') or '').strip()
     mode = (request.POST.get('mode') or '').strip().lower()
@@ -8471,6 +8491,7 @@ def get_teacher_courses_api(request):
                     'shared_owner_teacher_name': material_teacher_name if is_shared_material else None,
                     'language': language_value,
                     'content_json': content_json,
+                    'student_access': bool(getattr(m, 'student_access', False)),
                 })
 
             # Practices (normalized)
@@ -8681,6 +8702,7 @@ def get_teacher_assessments_api(request):
                     'assessment_type': m.item_type,
                     'status': m.status,
                     'is_active': m.is_active,
+                    'student_access': bool(getattr(m, 'student_access', False)),
                     'attempt_count': attempts_qs.count(),
                     'avg_accuracy': avg_list(accs),
                     'avg_wpm': avg_list(wpms),
@@ -9723,6 +9745,7 @@ def get_class_materials(request):
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
                     'language': language_value,
                     'content_json': content_json,
+                    'student_access': bool(getattr(m, 'student_access', False)),
                 }
             elif kind == 'assessment':
                 a = obj
@@ -9773,6 +9796,7 @@ def get_class_materials(request):
                     'assigned_week': None,
                     'assigned_week_display': format_assigned_week_display(None),
                     'language': '',
+                    'student_access': bool(getattr(a, 'student_access', False)),
                 }
             else:
                 # practice
@@ -9803,6 +9827,7 @@ def get_class_materials(request):
                     'assigned_week': None,
                     'assigned_week_display': format_assigned_week_display(None),
                     'language': '',
+                    'student_access': bool(getattr(p, 'student_access', False)),
                 }
 
             item_type = str(item.get('item_type') or '').strip().lower()
@@ -11051,7 +11076,47 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'assigned_week_display': format_assigned_week_display(material.assigned_week),
         'content_json': content_json,
         'randomize_order': bool(content_json.get('randomize_order')),
+        'student_access': bool(getattr(material, 'student_access', False)),
     }
+
+
+def _requested_material_from_request(request):
+    raw_material_id = (
+        request.GET.get('material_id')
+        or request.GET.get('id')
+        or request.GET.get('assessment_id')
+        or request.POST.get('material_id')
+        or request.POST.get('id')
+    )
+    _, material_id = _parse_prefixed_id(raw_material_id)
+    if not material_id:
+        return None
+    return Material.objects.filter(id=material_id).first()
+
+
+def _student_access_block_response(json_response=False):
+    message = 'This assessment is currently unavailable. Please wait for your teacher to enable student access.'
+    if json_response:
+        return JsonResponse({'success': False, 'error': message}, status=403)
+    return HttpResponseForbidden(message)
+
+
+def _enforce_student_access_for_request(request, material=None, json_response=False):
+    if request.session.get('user_role') != 'student':
+        return None
+
+    material = material or _requested_material_from_request(request)
+    if not material:
+        return None
+
+    material_type = str(getattr(material, 'type', '') or '').strip().lower()
+    if material_type not in {'assessment', 'both'} and getattr(material, 'assessment_id', None) is None:
+        return None
+
+    if bool(getattr(material, 'student_access', False)):
+        return None
+
+    return _student_access_block_response(json_response=json_response)
 
 
 def _queue_material_creation_followups(material, section, teacher_user, status, source_type):
@@ -11131,6 +11196,7 @@ def add_reading_material(request):
         source_material_id = data.get('source_material_id')
         randomize_order_raw = data.get('randomize_order')
         randomize_order = str(randomize_order_raw).strip().lower() in ('1', 'true', 'yes', 'on')
+        student_access = str(data.get('student_access', False)).strip().lower() in ('1', 'true', 'yes', 'on')
 
         if source_type not in ('personal', 'shared'):
             source_type = 'shared'
@@ -11282,6 +11348,7 @@ def add_reading_material(request):
                 scheduled_at=scheduled_at if status == 'scheduled' else None,
                 difficulty_level='', # This field is not set in this context, consider if it should be
                 assigned_week=assigned_week,
+                student_access=student_access,
                 is_active=(status in ['published', 'scheduled'])
             )
             if section is not None:
@@ -11356,6 +11423,8 @@ def teacher_update_material(request):
         material.type = 'assessment'
         randomize_order_raw = data.get('randomize_order')
         randomize_order = str(randomize_order_raw).strip().lower() in ('1', 'true', 'yes', 'on') if randomize_order_raw is not None else None
+        if 'student_access' in data:
+            material.student_access = str(data.get('student_access')).strip().lower() in ('1', 'true', 'yes', 'on')
 
         source_type = (data.get('source_type') or material.source_type).strip().lower()
         if source_type in ('personal', 'shared'):
@@ -11440,6 +11509,59 @@ def teacher_update_material(request):
         return JsonResponse({'success': True, 'message': 'Material updated successfully', 'overview': overview})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required()
+def toggle_material_student_access(request):
+    if request.session.get('user_role') not in ['teacher', 'admin']:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        data = {}
+
+    user_id = request.session.get('user_id')
+    teacher_user = User.objects.filter(id=user_id).first()
+    if not teacher_user:
+        return JsonResponse({'success': False, 'error': 'Session expired. Please log in again.'}, status=401)
+
+    _, material_id = _parse_prefixed_id(data.get('material_id'))
+    if not material_id:
+        return JsonResponse({'success': False, 'error': 'Material ID is required'}, status=400)
+
+    material = Material.objects.filter(
+        Q(id=material_id) & (
+            Q(teacher_id=user_id) |
+            Q(section__teacher_id=user_id) |
+            Q(assigned_sections__teacher_id=user_id) |
+            Q(courses__teacher_id=user_id) |
+            Q(assessment__teacher_id=user_id)
+        )
+    ).distinct().first()
+
+    if not material:
+        if Material.objects.filter(id=material_id).exists():
+            return JsonResponse({'success': False, 'error': 'Material access denied'}, status=403)
+        return JsonResponse({'success': False, 'error': 'Material not found'}, status=404)
+
+    desired_access = data.get('student_access')
+    if desired_access is None:
+        desired_access = not bool(getattr(material, 'student_access', False))
+    else:
+        desired_access = str(desired_access).strip().lower() in ('1', 'true', 'yes', 'on')
+
+    material.student_access = desired_access
+    material.save(update_fields=['student_access', 'updated_at'])
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Student access updated successfully.',
+        'material': _material_response_payload(material),
+        'student_access': bool(material.student_access),
+    })
 
 
 @csrf_protect
@@ -11586,6 +11708,13 @@ def record_assessment_completion(request):
             if request.session.get('user_role') != 'student':
                 return JsonResponse({'success': False, 'error': 'Forbidden: insufficient role'}, status=403)
             student_user = User.objects.get(id=request.session.get('user_id'))
+
+        if not assist_context:
+            material = Material.objects.filter(id=data.get('material_id')).first()
+            access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
+            if access_response:
+                return access_response
+
         response = _complete_assessment_for_student(student_user, data=data, request=request, assist_context=assist_context)
         _trace_live_end_flow(
             'record_assessment_completion_return',

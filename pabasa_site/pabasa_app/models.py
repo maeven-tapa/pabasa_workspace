@@ -906,6 +906,7 @@ class Material(models.Model):
         blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(99)],
     )
+    student_access = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

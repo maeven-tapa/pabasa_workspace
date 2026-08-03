@@ -84,6 +84,7 @@ class MaterialAdmin(admin.ModelAdmin):
 		"type",
 		"item_type",
 		"status",
+		"student_access",
 		"teacher",
 		"section",
 		"assigned_week",
@@ -93,7 +94,7 @@ class MaterialAdmin(admin.ModelAdmin):
 		"updated_at",
 		"content_preview",
 	)
-	list_filter = ("type", "item_type", "status", "is_active", "teacher", "section", "created_at")
+	list_filter = ("type", "item_type", "status", "student_access", "is_active", "teacher", "section", "created_at")
 	search_fields = ("code", "section__class_code", "teacher__custom_id", "teacher__last_name", "prompt_text", "content_text", "title")
 	ordering = ("section", "created_at")
 

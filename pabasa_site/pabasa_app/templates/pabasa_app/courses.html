@@ -1427,6 +1427,42 @@
             padding: 0.48rem 0.85rem !important;
             white-space: nowrap;
         }
+
+        .material-access-pill {
+            align-items: center;
+            border-radius: 999px;
+            display: inline-flex;
+            font-size: 0.72rem;
+            font-weight: 800;
+            gap: 0.35rem;
+            line-height: 1;
+            padding: 0.42rem 0.65rem;
+            white-space: nowrap;
+        }
+
+        .material-access-pill.access-available {
+            background: rgba(22, 163, 74, 0.12);
+            border: 1px solid rgba(22, 163, 74, 0.18);
+            color: #15803d;
+        }
+
+        .material-access-pill.access-locked,
+        .material-access-pill.access-hidden {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.16);
+            color: #b91c1c;
+        }
+
+        .material-access-toggle {
+            border: 1px solid rgba(31, 111, 139, 0.14) !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            color: var(--dash-primary-deep) !important;
+        }
+
+        .material-access-toggle.is-enabled {
+            border-color: rgba(220, 38, 38, 0.18) !important;
+            color: #b91c1c !important;
+        }
     }
 
     @media (max-width: 767.98px) {
@@ -1485,6 +1521,10 @@
             min-height: 42px;
             width: 100%;
             white-space: nowrap;
+        }
+
+        .material-access-pill {
+            width: fit-content;
         }
     }
 
@@ -5436,7 +5476,7 @@
 {% block content %}
 <script>
     // Global JS context variables used elsewhere
-    window.PABASA_USER_ROLE = "teacher";
+    window.PABASA_USER_ROLE = "{{ nav_role|default:'teacher'|escapejs }}";
     window.PABASA_USER_EMAIL = "{{ email|default:''|escapejs }}";
     window.TEACHER_NAME = "{{ user_full_name|default:''|escapejs }}";
     window.TEACHER_ROLE = "{{ role_display|default:'Teacher'|escapejs }}";
@@ -8302,6 +8342,124 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
     }
 
+    function isAssessmentMaterial(material) {
+        const materialType = String(material?.type || material?.usage || material?.usage_type || '').toLowerCase();
+        return materialType === 'assessment' || materialType === 'both';
+    }
+
+    function canManageStudentAccess() {
+        const role = String(window.PABASA_USER_ROLE || '').toLowerCase();
+        return role === 'teacher' || role === 'admin';
+    }
+
+    function getMaterialStudentAccessState(material) {
+        return Boolean(material && material.student_access);
+    }
+
+    function getMaterialStudentAccessBadge(material) {
+        const enabled = getMaterialStudentAccessState(material);
+        return `<span class="material-access-pill ${enabled ? 'access-available' : 'access-locked'}">${enabled ? '🟢 Available' : '🔒 Locked'}</span>`;
+    }
+
+    function getMaterialStudentAccessToggle(material) {
+        if (!canManageStudentAccess() || !isAssessmentMaterial(material)) {
+            return '';
+        }
+
+        const enabled = getMaterialStudentAccessState(material);
+        const nextState = enabled ? '0' : '1';
+        return `
+            <button type="button"
+                    class="material-btn material-access-toggle ${enabled ? 'is-enabled' : ''}"
+                    data-material-action="student-access"
+                    data-mid="${courseMaterialActionId(material)}"
+                    data-next-access="${nextState}"
+                    title="${enabled ? 'Lock from students' : 'Unlock for students'}">
+                <i class="bi bi-${enabled ? 'lock-fill' : 'unlock-fill'}"></i>
+                <span>${enabled ? 'Lock' : 'Unlock'}</span>
+            </button>
+        `;
+    }
+
+    function syncMaterialStudentAccessUi(materialId, studentAccess) {
+        const enabled = Boolean(studentAccess);
+        const materialIdText = String(materialId || '').trim();
+        if (!materialIdText) return;
+
+        document.querySelectorAll('.material-card-modern').forEach(card => {
+            if (String(card.dataset.materialId || '').trim() !== materialIdText) return;
+
+            card.dataset.studentAccess = enabled ? '1' : '0';
+
+            card.querySelectorAll('.material-access-pill').forEach(badge => {
+                badge.classList.remove('access-available', 'access-locked', 'access-hidden');
+                badge.classList.add(enabled ? 'access-available' : 'access-locked');
+                badge.textContent = enabled ? '🟢 Available' : '🔒 Locked';
+            });
+
+            card.querySelectorAll('[data-material-action="student-access"], [data-action="student-access"]').forEach(button => {
+                button.dataset.nextAccess = enabled ? '0' : '1';
+                button.title = enabled ? 'Lock from students' : 'Unlock for students';
+                button.setAttribute('aria-label', enabled ? 'Lock' : 'Unlock');
+                button.classList.toggle('is-enabled', enabled);
+
+                const icon = button.querySelector('i');
+                if (icon) {
+                    icon.className = `bi bi-${enabled ? 'lock-fill' : 'unlock-fill'}`;
+                }
+
+                const label = button.querySelector('span');
+                if (label) {
+                    label.textContent = enabled ? 'Lock' : 'Unlock';
+                }
+            });
+        });
+    }
+
+    async function saveMaterialStudentAccess(material, nextAccess) {
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || await ensureCsrfToken();
+        const materialId = courseMaterialActionId(material) || material?.id || material?.raw_id;
+        const response = await fetch('/dashboard/teacher/toggle-material-access/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+            body: JSON.stringify({ material_id: materialId, student_access: nextAccess }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Unable to update student access');
+        }
+        return data;
+    }
+
+    async function refreshAssessmentMaterialViews() {
+        try {
+            if (typeof currentClassCode !== 'undefined' && currentClassCode && typeof loadReadings === 'function') {
+                await loadReadings(currentClassCode);
+            }
+        } catch (e) {
+            console.warn('Could not refresh class readings after student access change', e);
+        }
+
+        try {
+            const courseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+            if (courseId && typeof loadCourseReadings === 'function') {
+                await loadCourseReadings(courseId);
+            }
+        } catch (e) {
+            console.warn('Could not refresh course readings after student access change', e);
+        }
+
+        try {
+            await refreshCourseCardsFromServer();
+        } catch (e) {
+            console.warn('Could not refresh course cards after student access change', e);
+        }
+    }
+
     function closeCourseMaterialDetail() {
         const listView = document.getElementById('courseMaterialsListView');
         const detailView = document.getElementById('courseMaterialDetailView');
@@ -9255,6 +9413,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <div class="material-info">
                                 <p class="material-title">${m.title || 'Untitled material'}${renderSharedMaterialBadge(m)}</p>
                                 ${typeLabel ? `<span class="material-type-badge ${typeSlug}">${typeLabel}</span>` : ''}
+                                ${isAssessmentMaterial(m) ? getMaterialStudentAccessBadge(m) : ''}
                                 ${m.description ? `<p class="material-preview">${m.description}</p>` : ''}
                             </div>
                             <div class="material-actions">
@@ -9262,6 +9421,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <button type="button" class="material-btn course-readings-action-btn" data-material-action="edit" data-mid="${courseMaterialActionId(m)}" title="Edit"><i class="bi bi-pencil"></i>Edit</button>
                                 <button type="button" class="material-btn course-readings-action-btn" data-material-action="live" data-mid="${courseMaterialActionId(m)}" title="Start Live"><i class="bi bi-broadcast"></i>Live</button>
                                 <button type="button" class="material-btn course-readings-action-btn" data-material-action="assist" data-mid="${courseMaterialActionId(m)}" title="Assist"><i class="bi bi-person-check"></i>Assist</button>
+                                ${getMaterialStudentAccessToggle(m)}
                                 <button type="button" class="material-btn delete course-readings-action-btn" data-material-action="delete" data-mid="${courseMaterialActionId(m)}" title="Archive"><i class="bi bi-archive"></i>Archive</button>
                             </div>
                         `;
@@ -9919,6 +10079,34 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 console.error('update material error', err);
                                 showToast('Failed to update material', 'error');
                             }
+                            return;
+                        }
+
+                        if (action === 'student-access') {
+                            if (!mat) return showToast('Material not found', 'error');
+                            const nextAccess = String(btn.dataset.nextAccess || '').trim() === '1';
+                            const title = nextAccess ? 'Enable Student Access?' : 'Disable Student Access?';
+                            const message = nextAccess
+                                ? `<p>Make <strong>${escapeHtml(mat.title || 'this assessment')}</strong> available to students?</p><p class="text-muted small mt-2 mb-0">Students will be able to open and start this assessment immediately.</p>`
+                                : `<p>Hide <strong>${escapeHtml(mat.title || 'this assessment')}</strong> from students?</p><p class="text-muted small mt-2 mb-0">The card will stay visible, but students will see it locked.</p>`;
+
+                            showDeleteConfirmModal(message, async () => {
+                                try {
+                                    const data = await saveMaterialStudentAccess(mat, nextAccess);
+                                    const updatedAccess = data?.material ? !!data.material.student_access : nextAccess;
+                                    mat.student_access = updatedAccess;
+                                    syncMaterialStudentAccessUi(mid, updatedAccess);
+                                    await refreshAssessmentMaterialViews();
+                                    showToast(nextAccess ? 'Student access enabled' : 'Student access hidden', 'success');
+                                } catch (err) {
+                                    console.error('course student access toggle error', err);
+                                    showToast(err.message || 'Could not update student access', 'error');
+                                }
+                            }, {
+                                title,
+                                confirmText: nextAccess ? 'Enable Access' : 'Hide Assessment',
+                                confirmClass: nextAccess ? 'btn btn-primary px-4' : 'btn btn-danger px-4',
+                            });
                             return;
                         }
 
@@ -14559,12 +14747,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         <span class="material-type-badge ${escapeHtml(badgeType)}">${escapeHtml(reading.type || '')}</span>
                                         <span class="material-type-badge status-${escapeHtml(displayStatus)}">${escapeHtml(displayStatus.toUpperCase())}</span>
                                         <span class="material-type-badge week-badge">${escapeHtml(weekLabel)}</span>
+                                        ${isAssessmentMaterial(reading) ? getMaterialStudentAccessBadge(reading) : ''}
                                     </p>
                                 </div>
                             </div>
                             <div class="material-actions">
                                 <button type="button" class="material-btn" title="View" data-action="view"><i class="bi bi-eye"></i>View</button>
                                 <button type="button" class="material-btn" title="Edit" data-action="edit"><i class="bi bi-pencil"></i>Edit</button>
+                                ${getMaterialStudentAccessToggle(reading)}
                                 <button type="button" class="material-btn delete" title="Archive" data-action="delete"><i class="bi bi-archive"></i>Archive</button>
                             </div>
                         </div>
@@ -14736,6 +14926,39 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         // prevent attaching new materials during edit flows
                         window.courseAttachTarget = null;
                         new bootstrap.Modal(addModalEl).show();
+                    }
+
+                    if (e.target.closest('[data-action="student-access"]')) {
+                        const button = e.target.closest('[data-action="student-access"]');
+                        const card = button.closest('.material-card-modern');
+                        const materialId = card?.dataset?.materialId;
+                        const material = getMaterialById(materialId);
+                        if (!material) return showToast('Material not found', 'error');
+
+                        const nextAccess = String(button.dataset.nextAccess || '').trim() === '1';
+                        const title = nextAccess ? 'Enable Student Access?' : 'Disable Student Access?';
+                        const message = nextAccess
+                            ? `<p>Make <strong>${escapeHtml(material.title || 'this assessment')}</strong> available to students?</p><p class="text-muted small mt-2 mb-0">Students will be able to open and start this assessment immediately.</p>`
+                            : `<p>Hide <strong>${escapeHtml(material.title || 'this assessment')}</strong> from students?</p><p class="text-muted small mt-2 mb-0">The card will stay visible, but students will see it locked.</p>`;
+
+                        showDeleteConfirmModal(message, async () => {
+                            try {
+                                const data = await saveMaterialStudentAccess(material, nextAccess);
+                                const updatedAccess = data?.material ? !!data.material.student_access : nextAccess;
+                                material.student_access = updatedAccess;
+                                syncMaterialStudentAccessUi(button.dataset.mid || material.id || material.raw_id, updatedAccess);
+                                await refreshAssessmentMaterialViews();
+                                showToast(nextAccess ? 'Student access enabled' : 'Student access hidden', 'success');
+                            } catch (err) {
+                                console.error('student access toggle error', err);
+                                showToast(err.message || 'Could not update student access', 'error');
+                            }
+                        }, {
+                            title,
+                            confirmText: nextAccess ? 'Enable Access' : 'Hide Assessment',
+                            confirmClass: nextAccess ? 'btn btn-primary px-4' : 'btn btn-danger px-4',
+                        });
+                        return;
                     }
                     
                     // Delete / Archive material button
