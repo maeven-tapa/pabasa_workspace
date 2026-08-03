@@ -1457,9 +1457,35 @@
         }
 
         @media (max-width: 760px) {
-            .reader-top,
-            .reader-footer {
+            .reader-top {
                 grid-template-columns: 1fr;
+            }
+
+            .reader-footer {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-areas:
+                    "controls controls"
+                    "back next";
+                gap: 0.75rem;
+            }
+
+            .recording-controls {
+                grid-area: controls;
+                width: 100%;
+                gap: 0.5rem;
+            }
+
+            .recording-controls button {
+                flex: 1 1 0;
+                min-width: 0;
+            }
+
+            #btnStartReading,
+            #btnStopReading,
+            #btnReadAloud {
+                padding: 0 0.75rem;
+                font-size: 0.9rem;
+                white-space: nowrap;
             }
 
             .reader-card {
@@ -1469,7 +1495,11 @@
             .nav-prev,
             .nav-next {
                 justify-self: stretch;
+                width: 100%;
             }
+
+            .nav-prev { grid-area: back; }
+            .nav-next { grid-area: next; }
 
             .mic-chip {
                 justify-content: center;
@@ -1494,6 +1524,14 @@
         }
 
         @media (max-width: 460px) {
+            #btnStartReading,
+            #btnStopReading,
+            #btnReadAloud {
+                padding: 0 0.5rem;
+                font-size: 0.82rem;
+                gap: 0.35rem;
+            }
+
             .completion-summary {
                 grid-template-columns: 1fr;
             }
