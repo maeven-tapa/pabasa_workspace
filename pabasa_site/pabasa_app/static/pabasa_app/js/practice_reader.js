@@ -81,7 +81,15 @@
     ]);
 
     const urlParams = new URLSearchParams(window.location.search);
-    const materialId = urlParams.get("id");
+    const rawMaterialId = urlParams.get("id");
+    const materialId = (() => {
+        const text = String(rawMaterialId || '').trim();
+        if (!text) return null;
+        const match = text.match(/\d+/);
+        if (!match) return null;
+        const parsed = Number.parseInt(match[0], 10);
+        return Number.isFinite(parsed) ? parsed : null;
+    })();
     const testTitle = urlParams.get("test");
     const viewMode = urlParams.get("viewMode");
     const selectedDifficulty = (urlParams.get("difficulty") || "").trim().toLowerCase();

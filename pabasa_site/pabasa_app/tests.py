@@ -182,6 +182,40 @@ class AssessmentResultsPageTests(TestCase):
         self.assertIn("Reading Level", text)
         self.assertNotIn("Performance Interpretation", text)
 
+    def test_build_reading_report_pdf_includes_derived_classification_labels(self):
+        report = {
+            "student_name": "Jane Doe",
+            "student_id": "1001",
+            "grade_level": "Grade 2",
+            "email": "jane@example.com",
+            "joined_classes": ["Class A"],
+            "course_name": "Reading",
+            "course_code": "R1",
+            "reading_level": "Readers at Grade Level",
+            "accuracy": 88,
+            "wpm": 68,
+            "fluency_score": 84,
+            "duration_seconds": 120,
+            "time_score": 90,
+            "pronunciation_score": 82,
+            "final_score": 85,
+            "summary": "Strong performance",
+            "recommendation": "Keep practicing",
+            "completed_at": timezone.now().isoformat(),
+        }
+
+        pdf_bytes = _build_reading_report_pdf(report)
+        reader = PdfReader(BytesIO(pdf_bytes))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+
+        self.assertIn("Reading Classification", text)
+        self.assertIn("CRLA Reading Classification", text)
+        self.assertIn("Readers at Grade Level", text)
+        self.assertIn("Phil-IRI Classification", text)
+        self.assertIn("Independent", text)
+        self.assertIn("PABASA Level", text)
+        self.assertIn("Expert Reader", text)
+
 
 class ReadingMatcherTests(TestCase):
     def test_material_languages_use_philippine_stt_locales(self):

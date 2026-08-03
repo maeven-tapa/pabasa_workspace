@@ -12,6 +12,22 @@ CRLA_CLASSIFICATIONS = [
     (0, "Low Emerging Readers"),
 ]
 
+PHIL_IRI_CLASSIFICATION_MAP = {
+    "Low Emerging Readers": "Frustration",
+    "High Emerging Readers": "Frustration",
+    "Developing Readers": "Instructional",
+    "Transitioning Readers": "Instructional",
+    "Readers at Grade Level": "Independent",
+}
+
+PABASA_LEVEL_MAP = {
+    "Low Emerging Readers": "Novice",
+    "High Emerging Readers": "Developing",
+    "Developing Readers": "Intermediate",
+    "Transitioning Readers": "Advanced",
+    "Readers at Grade Level": "Expert Reader",
+}
+
 OSPS_MULTIPLIERS = {
     "vowel": 0.85,
     "word": 0.90,
@@ -104,6 +120,40 @@ def crla_classification(total_score: Any) -> str:
         if score >= threshold:
             return label
     return CRLA_CLASSIFICATIONS[-1][1]
+
+
+def normalize_classification_label(value: Any) -> Optional[str]:
+    text = str(value or '').strip().lower().replace('_', ' ').replace('-', ' ')
+    if not text:
+        return None
+    if 'pending' in text:
+        return None
+    if 'low' in text and 'emerging' in text:
+        return 'Low Emerging Readers'
+    if 'high' in text and 'emerging' in text:
+        return 'High Emerging Readers'
+    if 'develop' in text:
+        return 'Developing Readers'
+    if 'transition' in text:
+        return 'Transitioning Readers'
+    if 'grade' in text or 'ready' in text or text in {'g', 'gr'}:
+        return 'Readers at Grade Level'
+    return None
+
+
+def derive_classification_equivalents(crla_label: Any) -> dict[str, str]:
+    normalized_crla = normalize_classification_label(crla_label)
+    if not normalized_crla:
+        return {
+            'crla_reading_classification': 'Not yet available',
+            'phil_iri_classification': 'Not yet available',
+            'pabasa_level': 'Not yet available',
+        }
+    return {
+        'crla_reading_classification': normalized_crla,
+        'phil_iri_classification': PHIL_IRI_CLASSIFICATION_MAP.get(normalized_crla, 'Not yet available'),
+        'pabasa_level': PABASA_LEVEL_MAP.get(normalized_crla, 'Not yet available'),
+    }
 
 
 def osps_multiplier(assessment_type: Any) -> float:

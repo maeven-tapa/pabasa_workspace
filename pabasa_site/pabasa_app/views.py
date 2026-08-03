@@ -72,6 +72,7 @@ from .scoring import (
     calculate_fluency_score,
     clamp_score,
     crla_classification,
+    derive_classification_equivalents,
     normalize_adapted_level_score,
     normalize_assessment_type,
     osps_multiplier,
@@ -1465,6 +1466,8 @@ def _format_reading_report_text(report):
         except Exception:
             return str(dt_str)
 
+    classification_details = derive_classification_equivalents(report.get('reading_level'))
+
     lines = [
         "Reading Performance Report",
         f"Student: {report.get('student_name') or 'Student'}",
@@ -1472,6 +1475,10 @@ def _format_reading_report_text(report):
         f"Joined Classes: {', '.join(report.get('joined_classes') or ['Not yet available'])}",
         f"Course: {report.get('course_name') or 'Course'} ({report.get('course_code') or 'No code'})",
         f"Reading Level: {report.get('reading_level') or 'Not yet available'}",
+        "Reading Classification",
+        f"CRLA Reading Classification: {classification_details.get('crla_reading_classification') or 'Not yet available'}",
+        f"Phil-IRI Classification: {classification_details.get('phil_iri_classification') or 'Not yet available'}",
+        f"PABASA Level: {classification_details.get('pabasa_level') or 'Not yet available'}",
         metric("Accuracy", report.get('accuracy'), "%"),
         metric("Words Per Minute", report.get('wpm'), " WPM"),
         metric("Fluency Score", report.get('fluency_score'), "%"),
@@ -1740,6 +1747,7 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
 
     reading_level_value = _display_reading_level(report.get('reading_level'), report)
     reading_level_text = reading_level_value or 'Not yet available'
+    classification_details = derive_classification_equivalents(reading_level_text)
 
     elements.append(Paragraph('Reading Overview', section_style))
     metrics = [
@@ -1764,6 +1772,25 @@ def _build_reading_report_pdf(report, message='', course=None, teacher=None, rec
         f"Summary: {report.get('summary') or 'No summary available'}",
     ]
     elements.extend([Paragraph(item, note_style) for item in assessment_text])
+    elements.append(Spacer(1, 0.12 * inch))
+
+    elements.append(Paragraph('Reading Classification', section_style))
+    classification_rows = [
+        ['CRLA Reading Classification', classification_details.get('crla_reading_classification') or 'Not yet available'],
+        ['Phil-IRI Classification', classification_details.get('phil_iri_classification') or 'Not yet available'],
+        ['PABASA Level', classification_details.get('pabasa_level') or 'Not yet available'],
+    ]
+    classification_table = Table(classification_rows, colWidths=[2.4 * inch, available_width - 2.4 * inch], repeatRows=0)
+    classification_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#fcfcfc')),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e5e7eb')),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elements.append(classification_table)
     elements.append(Spacer(1, 0.12 * inch))
 
     elements.append(Paragraph('Recommendations & Support', section_style))
@@ -11713,7 +11740,12 @@ def record_assessment_completion(request):
             student_user = User.objects.get(id=request.session.get('user_id'))
 
         if not assist_context:
-            material = Material.objects.filter(id=data.get('material_id')).first()
+            raw_material_id = data.get('material_id')
+            _material_prefix, normalized_material_id = _parse_prefixed_id(raw_material_id)
+            if normalized_material_id is None:
+                return JsonResponse({'success': False, 'error': 'A valid material_id is required before saving completion.'}, status=400)
+            data['material_id'] = normalized_material_id
+            material = Material.objects.filter(id=normalized_material_id).first()
             access_response = _enforce_student_access_for_request(request, material=material, json_response=True)
             if access_response:
                 return access_response
