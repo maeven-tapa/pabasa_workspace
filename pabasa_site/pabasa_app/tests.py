@@ -22,6 +22,7 @@ from .reading_stt import (
     ReadingMatcher,
     analyze_reading,
     language_code_for,
+    synthesize_read_aloud_audio,
     target_phrase_hints,
     target_aware_syllable_stitching,
     syllable_context_metrics,
@@ -221,10 +222,19 @@ class ReadingMatcherTests(TestCase):
     def test_material_languages_use_philippine_stt_locales(self):
         self.assertEqual(language_code_for("English"), "en-PH")
         self.assertEqual(language_code_for("Filipino"), "fil-PH")
+        self.assertEqual(language_code_for("Tagalog"), "fil-PH")
 
     def test_philippine_locales_use_supported_v1_models(self):
         self.assertEqual(v1_model_for_language("latest_short", "en-PH"), "command_and_search")
         self.assertEqual(v1_model_for_language("latest_short", "fil-PH"), "")
+
+    @patch("pabasa_app.reading_stt._post_google_tts", return_value="encoded-audio")
+    def test_read_aloud_uses_filipino_voice_for_tagalog_locale(self, post_google_tts):
+        synthesize_read_aloud_audio("Magandang araw", "test-key", language_code="fil-PH")
+
+        _, payload = post_google_tts.call_args.args
+        self.assertEqual(payload["voice"]["languageCode"], "fil-PH")
+        self.assertEqual(payload["voice"]["name"], "fil-ph-Neural2-A")
 
     def test_english_homophone_is_accepted(self):
         result = analyze_reading("two", 0, "too", language_code="en-US")

@@ -501,8 +501,15 @@ def synthesize_read_aloud_audio(text, api_key, language_code="en-US", speaking_r
     if not clean_text:
         raise RuntimeError("Text is required for read aloud.")
 
-    tts_language = "en-US"
-    voice_name = "en-US-Chirp3-HD-Vindemiatrix"
+    # Google TTS provides Filipino voices under the fil-PH locale.  The reading
+    # APIs pass Tagalog and Filipino materials in with this language code, so
+    # preserve it instead of always using the English assessment voice.
+    if str(language_code or "").lower() in {"fil", "fil-ph", "tl", "tl-ph"}:
+        tts_language = "fil-PH"
+        voice_name = "fil-ph-Neural2-A"
+    else:
+        tts_language = "en-US"
+        voice_name = "en-US-Chirp3-HD-Vindemiatrix"
     teaching_ssml = (
         '<speak>'
         f'<prosody rate="{prosody_rate}" pitch="+0st" volume="medium">'
