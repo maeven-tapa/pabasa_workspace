@@ -79,14 +79,15 @@
                 <div class="border rounded-3 p-3 bg-light">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <label class="form-label fw-bold mb-0" for="practice-items-input">Items</label>
-                        <span class="small text-secondary" id="practice-items-helper">Choose a difficulty to see item guidance.</span>
+                        <span class="small text-secondary" id="practice-items-helper">Choose a game mode to see item guidance.</span>
                     </div>
                     <div id="practice-items-container">
-                        <input class="form-control" id="practice-items-input" type="text" placeholder="Type and press Enter" autocomplete="off">
+                        <input class="form-control" id="practice-items-input" type="text" placeholder="Type a word..." autocomplete="off">
                         <div class="mt-2" id="practice-items-tags"></div>
                     </div>
-                    <textarea class="form-control d-none" id="practice-items-textarea" rows="8" placeholder="Write one sentence per line"></textarea>
-                    <div class="form-text text-secondary mt-2">This section will change based on Difficulty and will be stored for future gameplay integration.</div>
+                    <div class="mt-2 small text-secondary" id="practice-items-count">0 words</div>
+                    <textarea class="form-control d-none" id="practice-items-textarea" rows="8" placeholder="Enter one paragraph per line"></textarea>
+                    <div class="form-text text-secondary mt-2" id="practice-items-note">This section will change based on Game Mode and will be stored for future gameplay integration.</div>
                     {% if form.content_text.errors %}<div class="invalid-feedback d-block">{{ form.content_text.errors|join:", " }}</div>{% endif %}
                 </div>
             </div>
@@ -113,21 +114,39 @@
     const itemsInput = document.getElementById('practice-items-input');
     const itemsTags = document.getElementById('practice-items-tags');
     const itemsTextarea = document.getElementById('practice-items-textarea');
+    const itemsCount = document.getElementById('practice-items-count');
     const hiddenField = document.getElementById('{{ form.content_text.id_for_label }}');
     const helper = document.getElementById('practice-items-helper');
     const container = document.getElementById('practice-items-container');
     const maxItemsPerContent = 5;
+    const itemModeConfig = {
+        free: {
+            singular: 'word',
+            plural: 'words',
+            placeholder: 'Type a word...',
+            helperText: 'Enter one simple word per item.',
+            emptyState: 'No words added yet.',
+        },
+        color: {
+            singular: 'sentence',
+            plural: 'sentences',
+            placeholder: 'Type a sentence...',
+            helperText: 'Enter one complete sentence per item.',
+            emptyState: 'No sentences added yet.',
+        },
+        hunt: {
+            singular: 'paragraph',
+            plural: 'paragraphs',
+            placeholder: 'Enter one paragraph per line',
+            helperText: 'Enter one complete paragraph per item.',
+            emptyState: 'No paragraphs added yet.',
+        },
+    };
+    function getItemConfig() {
+        return itemModeConfig[mode.value] || itemModeConfig.free;
+    }
     function isColorModeSelected() {
         return mode.value === 'color';
-    }
-    function getDifficultyGuidance(value) {
-        if (value === 'medium') {
-            return 'Enter one complete sentence per line. Commas stay inside the sentence.';
-        }
-        if (value === 'hard') {
-            return 'Enter one complete paragraph per item.';
-        }
-        return 'Enter one simple word per item.';
     }
     const levelHelp = document.getElementById('level-availability-help');
     const occupiedLevelsMap = JSON.parse(document.getElementById('occupied-levels-map').textContent);
@@ -137,8 +156,48 @@
         return value.split(/\n+/).map(item => item.trim()).filter(Boolean);
     }
 
+    function parseParagraphItems(value) {
+        if (!value) return [];
+        return value.split(/\n+/).map(item => item.trim()).filter(Boolean);
+    }
+
+    function isValidWordEntry(value) {
+        return Boolean(value) && !/\s/.test(value);
+    }
+
+    function isValidSentenceEntry(value) {
+        return Boolean(value) && /[.!?]$/.test(value);
+    }
+
+    function isValidParagraphEntry(value) {
+        return Boolean(value) && value.split(/\s+/).filter(Boolean).length >= 2;
+    }
+
+    function validateEntry(value, config) {
+        if (config.singular === 'word' && !isValidWordEntry(value)) {
+            return 'Free Mode only accepts single words.';
+        }
+        if (config.singular === 'sentence' && !isValidSentenceEntry(value)) {
+            return 'Color Mode only accepts sentences.';
+        }
+        if (config.singular === 'paragraph' && !isValidParagraphEntry(value)) {
+            return 'Hunt Mode only accepts paragraphs.';
+        }
+        return '';
+    }
+
+    function updateItemsCount(values) {
+        const config = getItemConfig();
+        const count = values.length;
+        itemsCount.textContent = count === 1 ? `1 ${config.singular}` : `${count} ${config.plural}`;
+        helper.textContent = config.helperText;
+        if (isColorModeSelected()) {
+            helper.textContent = `Color Mode allows only up to ${maxItemsPerContent} sentences for each level.`;
+        }
+    }
+
     function syncHiddenField() {
-        if (difficulty.value === 'hard') {
+        if (getItemConfig().singular === 'paragraph') {
             hiddenField.value = itemsTextarea.value.trim();
         } else {
             hiddenField.value = Array.from(itemsTags.querySelectorAll('[data-value]')).map(tag => tag.getAttribute('data-value')).join('\n');
@@ -193,28 +252,34 @@
     }
 
     function renderForDifficulty() {
-        const selected = difficulty.value;
+        const config = getItemConfig();
         updateLevelOptions();
-        helper.textContent = selected ? getDifficultyGuidance(selected) : 'Choose a difficulty to see item guidance.';
-        if (selected === 'hard') {
+        helper.textContent = mode.value ? config.helperText : 'Choose a game mode to see item guidance.';
+        if (config.singular === 'paragraph') {
             container.classList.add('d-none');
             itemsTextarea.classList.remove('d-none');
             itemsTextarea.value = hiddenField.value || '';
-            helper.textContent = 'Enter one complete paragraph per item.';
+            itemsTextarea.placeholder = config.placeholder;
+            helper.textContent = config.helperText;
         } else {
             container.classList.remove('d-none');
             itemsTextarea.classList.add('d-none');
             itemsTextarea.value = '';
-            helper.textContent = selected === 'medium'
-                ? 'Enter one complete sentence per line. Commas stay inside the sentence.'
-                : 'Enter one simple word per item.';
+            itemsInput.placeholder = config.placeholder;
+            helper.textContent = config.helperText;
             renderTags();
         }
+        updateItemsCount(parseExistingItems(hiddenField.value || ''));
     }
 
     function renderTags() {
         itemsTags.innerHTML = '';
         const values = parseExistingItems(hiddenField.value || '');
+        updateItemsCount(values);
+        if (!values.length) {
+            itemsTags.innerHTML = getItemConfig().emptyState;
+            return;
+        }
         values.forEach(function (value) {
             const chip = document.createElement('span');
             chip.className = 'badge rounded-pill bg-primary-subtle text-primary-emphasis me-2 mb-2 px-3 py-2 fs-6';
@@ -236,10 +301,17 @@
                 if (!value) {
                     return;
                 }
+                const config = getItemConfig();
+                const validationMessage = validateEntry(value, config);
+                if (validationMessage) {
+                    helper.textContent = validationMessage;
+                    itemsInput.value = '';
+                    return;
+                }
                 const normalized = value;
                 const existingValues = Array.from(itemsTags.querySelectorAll('[data-value]')).map(tag => tag.getAttribute('data-value'));
                 if (isColorModeSelected() && existingValues.length >= maxItemsPerContent) {
-                    helper.textContent = `You can add up to ${maxItemsPerContent} items for this difficulty and level.`;
+                    helper.textContent = `Color Mode allows only up to ${maxItemsPerContent} sentences for each level.`;
                     itemsInput.value = '';
                     return;
                 }
@@ -256,6 +328,7 @@
                 }
                 itemsInput.value = '';
                 syncHiddenField();
+                updateItemsCount(parseExistingItems(hiddenField.value || ''));
             }
         });
     }
@@ -269,6 +342,7 @@
                 itemsTextarea.value = lines.slice(0, maxItemsPerContent).join('\n');
             }
             syncHiddenField();
+            updateItemsCount(lines);
         });
     }
 
@@ -283,6 +357,7 @@
     });
 
     renderForDifficulty();
+    updateItemsCount(parseExistingItems(hiddenField.value || ''));
 })();
 </script>
 {% endblock %}

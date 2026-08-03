@@ -41,7 +41,7 @@ IMAGE_OCR_EMPTY_MESSAGE = (
 OCR_ENGINE_UNAVAILABLE_MESSAGE = (
     'No OCR engine is currently configured. Image text extraction is temporarily unavailable.'
 )
-from .forms import AdminPracticeMaterialForm, difficulty_to_item_type, parse_practice_items
+from .forms import AdminPracticeMaterialForm, mode_to_item_type, parse_practice_items
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal_account
 from django.db import transaction
 import re
@@ -4105,9 +4105,9 @@ def _admin_practice_status(material):
 def _practice_material_items(material):
     if not material:
         return []
-    expected_type = difficulty_to_item_type(getattr(material, 'difficulty_level', '') or getattr(material, 'content_json', {}).get('difficulty', '') if isinstance(getattr(material, 'content_json', None), dict) else '')
-    item_type = (getattr(material, 'item_type', '') or expected_type or 'word').strip().lower()
     content_json = getattr(material, 'content_json', None) or {}
+    expected_type = mode_to_item_type(content_json.get('mode', ''))
+    item_type = (getattr(material, 'item_type', '') or expected_type or 'word').strip().lower()
     stored_items = content_json.get('items')
     if isinstance(stored_items, list) and stored_items:
         return [str(item).strip() for item in stored_items if str(item).strip()]
@@ -4352,7 +4352,7 @@ def _practice_game_progression(mode, student_user=None, language=None):
 def _practice_row_summary(material):
     content_json = getattr(material, 'content_json', None) or {}
     selected_difficulty = getattr(material, 'difficulty_level', '') or content_json.get('difficulty', '')
-    item_type = difficulty_to_item_type(selected_difficulty)
+    item_type = (getattr(material, 'item_type', '') or mode_to_item_type(content_json.get('mode', '')) or 'word').strip().lower()
     items = _practice_material_items(material)
     item_count = len(items)
     summary_text = f"{item_count} {item_type}{'s' if item_count != 1 else ''}"
@@ -4526,10 +4526,10 @@ def _save_admin_practice_material(form, material=None, request=None):
     practice_items = form.practice_items()
     content_text = cleaned.get('content_text', '')
     if practice_items:
-        content_text = '\n\n'.join(practice_items) if cleaned['difficulty_level'] == 'hard' else '\n'.join(practice_items)
+        content_text = '\n\n'.join(practice_items) if cleaned['mode'] == 'hunt' else '\n'.join(practice_items)
     material_obj = material if material and isinstance(material, Material) else Material()
     material_obj.title = f"{cleaned['mode'].title()} {cleaned['difficulty_level'].title()} {cleaned['level'].replace('_', ' ').title()}"
-    material_obj.item_type = difficulty_to_item_type(cleaned['difficulty_level'])
+    material_obj.item_type = mode_to_item_type(cleaned['mode'])
     material_obj.prompt_text = ''
     material_obj.content_text = content_text
     material_obj.content_json = {

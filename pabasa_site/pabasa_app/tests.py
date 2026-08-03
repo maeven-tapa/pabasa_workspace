@@ -30,7 +30,7 @@ from .reading_stt import (
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -3794,29 +3794,57 @@ class PracticeReaderMaterialTests(TestCase):
 
 
 class AdminPracticeMaterialFormTests(TestCase):
-    def test_easy_items_require_at_least_one_item(self):
+    def test_free_mode_accepts_words_for_any_difficulty(self):
         form = AdminPracticeMaterialForm(data={
             'mode': 'free',
-            'difficulty_level': 'easy',
+            'difficulty_level': 'hard',
             'level': 'level_1',
             'status': 'draft',
-            'content_text': '',
+            'language': 'English',
+            'content_text': 'sun\nmoon',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.practice_items(), ['sun', 'moon'])
+
+    def test_color_mode_items_are_limited_to_five_sentences_per_level(self):
+        form = AdminPracticeMaterialForm(data={
+            'mode': 'color',
+            'difficulty_level': 'medium',
+            'level': 'level_1',
+            'status': 'draft',
+            'language': 'English',
+            'content_text': 'One sentence.\nTwo sentence.\nThree sentence.\nFour sentence.\nFive sentence.\nSix sentence.',
         })
 
         self.assertFalse(form.is_valid())
         self.assertIn('content_text', form.errors)
 
-    def test_color_mode_items_are_limited_to_five_per_difficulty_and_level(self):
+    def test_color_mode_requires_sentences_even_when_difficulty_is_easy(self):
         form = AdminPracticeMaterialForm(data={
             'mode': 'color',
             'difficulty_level': 'easy',
             'level': 'level_1',
             'status': 'draft',
-            'content_text': 'one\ntwo\nthree\nfour\nfive\nsix',
+            'language': 'English',
+            'content_text': 'sun',
         })
 
         self.assertFalse(form.is_valid())
         self.assertIn('content_text', form.errors)
+
+    def test_hunt_mode_accepts_paragraphs_for_any_difficulty(self):
+        form = AdminPracticeMaterialForm(data={
+            'mode': 'hunt',
+            'difficulty_level': 'easy',
+            'level': 'level_1',
+            'status': 'draft',
+            'language': 'English',
+            'content_text': 'First paragraph here.\nSecond paragraph here.',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.practice_items(), ['First paragraph here.', 'Second paragraph here.'])
 
     def test_duplicate_mode_difficulty_and_level_is_rejected(self):
         Material.objects.create(
@@ -3842,17 +3870,34 @@ class AdminPracticeMaterialFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('__all__', form.errors)
 
-    def test_medium_sentence_keeps_commas_inside_the_sentence(self):
+    def test_color_mode_sentence_keeps_commas_inside_the_sentence(self):
         form = AdminPracticeMaterialForm(data={
-            'mode': 'free',
-            'difficulty_level': 'medium',
+            'mode': 'color',
+            'difficulty_level': 'hard',
             'level': 'level_1',
             'status': 'draft',
+            'language': 'English',
             'content_text': 'The cat ran home, and it slept on the couch.',
         })
 
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.practice_items(), ['The cat ran home, and it slept on the couch.'])
+
+    def test_save_helper_uses_mode_for_item_type(self):
+        form = AdminPracticeMaterialForm(data={
+            'mode': 'color',
+            'difficulty_level': 'hard',
+            'level': 'level_1',
+            'status': 'draft',
+            'language': 'English',
+            'content_text': 'First sentence.\nSecond sentence.',
+        })
+
+        self.assertTrue(form.is_valid(), form.errors)
+        material = _save_admin_practice_material(form)
+
+        self.assertEqual(material.item_type, 'sentence')
+        self.assertEqual(material.content_text, 'First sentence.\nSecond sentence.')
 
     def test_occupied_levels_are_detected_for_a_configuration(self):
         Material.objects.create(
@@ -3871,6 +3916,25 @@ class AdminPracticeMaterialFormTests(TestCase):
         occupied_levels = form.get_occupied_levels('free', 'easy')
 
         self.assertEqual(occupied_levels, ['level_1'])
+
+
+class AdminPracticeTemplateTests(TestCase):
+    def test_practice_create_template_uses_mode_based_item_copy(self):
+        template_path = Path(__file__).resolve().parent / 'templates' / 'pabasa_app' / 'admin_practice_create.html'
+        content = template_path.read_text(encoding='utf-8')
+
+        self.assertIn('Choose a game mode to see item guidance.', content)
+        self.assertIn('Color Mode allows only up to 5 sentences for each level.', content)
+        self.assertIn('Words Added', content)
+        self.assertIn('Enter one paragraph per line...', content)
+
+    def test_practice_edit_template_uses_mode_based_item_copy(self):
+        template_path = Path(__file__).resolve().parent / 'templates' / 'pabasa_app' / 'admin_practice_edit.html'
+        content = template_path.read_text(encoding='utf-8')
+
+        self.assertIn('Choose a game mode to see item guidance.', content)
+        self.assertIn('This section will change based on Game Mode', content)
+        self.assertIn('Enter one paragraph per line', content)
 
 
 class PracticeAccessControlTests(TestCase):

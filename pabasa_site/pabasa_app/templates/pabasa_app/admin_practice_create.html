@@ -114,23 +114,23 @@
         <div class="border rounded-3 p-3 bg-white mb-3" id="items-section">
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                 <div>
-                    <h3 class="h6 fw-bold mb-1">Items *</h3>
-                    <p class="text-secondary small mb-0">Add the content for this game challenge.</p>
+                    <h3 class="h6 fw-bold mb-1" id="items-section-title">Items *</h3>
+                    <p class="text-secondary small mb-0" id="items-section-description">Add the content for this game challenge.</p>
                 </div>
-                <div class="small text-secondary" id="difficulty-helper">Choose a difficulty to see item guidance.</div>
+                <div class="small text-secondary" id="difficulty-helper">Choose a game mode to see item guidance.</div>
             </div>
             <div id="items-input-card">
-                <input class="form-control" id="practice-items-input" type="text" placeholder="Type a one-syllable word..." autocomplete="off" disabled>
+                <input class="form-control" id="practice-items-input" type="text" placeholder="Type a word..." autocomplete="off" disabled>
                 <div class="mt-2 text-secondary small" id="items-helper-text">Enter one simple word per item.</div>
                 <div class="mt-2 alert alert-info py-2 px-3 mb-0 small" id="color-mode-limit-note" style="display: none;">
-                    <i class="bi bi-info-circle me-1"></i>Color Mode allows only up to 5 items for each difficulty and level.
+                    <i class="bi bi-info-circle me-1"></i>Color Mode allows only up to 5 sentences for each level.
                 </div>
             </div>
-            <textarea class="form-control d-none mt-2" id="practice-items-textarea" rows="8" placeholder="Enter one sentence per line..." disabled></textarea>
+            <textarea class="form-control d-none mt-2" id="practice-items-textarea" rows="8" placeholder="Enter one paragraph per line..." disabled></textarea>
             <div class="border rounded-3 p-3 bg-light mt-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h4 class="h6 fw-bold mb-0">Items Added</h4>
-                    <span id="items-count" class="small text-secondary">0 items</span>
+                    <h4 class="h6 fw-bold mb-0" id="items-count-label">Words Added</h4>
+                    <span id="items-count" class="small text-secondary">0 words</span>
                 </div>
                 <div id="items-list" class="d-flex flex-wrap gap-2">No items added yet.</div>
             </div>
@@ -177,24 +177,59 @@
     const itemsInput = document.getElementById('practice-items-input');
     const itemsList = document.getElementById('items-list');
     const itemsCount = document.getElementById('items-count');
+    const itemsCountLabel = document.getElementById('items-count-label');
     const itemsTextarea = document.getElementById('practice-items-textarea');
     const hiddenField = document.getElementById('{{ form.content_text.id_for_label }}');
     const helperText = document.getElementById('items-helper-text');
     const colorModeLimitNote = document.getElementById('color-mode-limit-note');
     const maxItemsPerContent = 5;
+    const itemModeConfig = {
+        free: {
+            title: 'Free Mode',
+            singular: 'word',
+            plural: 'words',
+            sectionTitle: 'Words *',
+            sectionDescription: 'Add words for this game challenge.',
+            placeholder: 'Type a word...',
+            helperText: 'Enter one simple word per item.',
+            emptyState: 'No words added yet.',
+            countLabel: 'Words Added',
+            limitNote: 'Color Mode allows only up to 5 sentences for each level.',
+        },
+        color: {
+            title: 'Color Mode',
+            singular: 'sentence',
+            plural: 'sentences',
+            sectionTitle: 'Sentences *',
+            sectionDescription: 'Add sentences for this game challenge.',
+            placeholder: 'Type a sentence...',
+            helperText: 'Enter one complete sentence per item.',
+            emptyState: 'No sentences added yet.',
+            countLabel: 'Sentences Added',
+            limitNote: 'Color Mode allows only up to 5 sentences for each level.',
+        },
+        hunt: {
+            title: 'Hunt Mode',
+            singular: 'paragraph',
+            plural: 'paragraphs',
+            sectionTitle: 'Paragraphs *',
+            sectionDescription: 'Add paragraphs for this game challenge.',
+            placeholder: 'Enter one paragraph per line...',
+            helperText: 'Enter one complete paragraph per item.',
+            emptyState: 'No paragraphs added yet.',
+            countLabel: 'Paragraphs Added',
+            limitNote: '',
+        },
+    };
+    function getItemConfig() {
+        return itemModeConfig[modeSelect.value] || itemModeConfig.free;
+    }
     function isColorModeSelected() {
         return modeSelect.value === 'color';
     }
-    function getDifficultyGuidance(value) {
-        if (value === 'medium') {
-            return 'Enter one complete sentence per item.';
-        }
-        if (value === 'hard') {
-            return 'Enter one complete paragraph per item.';
-        }
-        return 'Enter one simple word per item.';
-    }
     const helperLabel = document.getElementById('difficulty-helper');
+    const itemsSectionTitle = document.getElementById('items-section-title');
+    const itemsSectionDescription = document.getElementById('items-section-description');
     const summaryMode = document.getElementById('summary-mode');
     const summaryDifficulty = document.getElementById('summary-difficulty');
     const summaryLevel = document.getElementById('summary-level');
@@ -227,15 +262,46 @@
         return value.split(/\n+/).map(item => item.trim()).filter(Boolean);
     }
 
+    function parseParagraphItems(value) {
+        if (!value) return [];
+        return value.split(/\n+/).map(item => item.trim()).filter(Boolean);
+    }
+
+    function isValidWordEntry(value) {
+        return Boolean(value) && !/\s/.test(value);
+    }
+
+    function isValidSentenceEntry(value) {
+        return Boolean(value) && /[.!?]$/.test(value);
+    }
+
+    function isValidParagraphEntry(value) {
+        return Boolean(value) && value.split(/\s+/).filter(Boolean).length >= 2;
+    }
+
+    function validateEntry(value, config) {
+        if (config.singular === 'word' && !isValidWordEntry(value)) {
+            return 'Free Mode only accepts single words.';
+        }
+        if (config.singular === 'sentence' && !isValidSentenceEntry(value)) {
+            return 'Color Mode only accepts sentences.';
+        }
+        if (config.singular === 'paragraph' && !isValidParagraphEntry(value)) {
+            return 'Hunt Mode only accepts paragraphs.';
+        }
+        return '';
+    }
+
     function getSelectedItems() {
-        if (difficulty.value === 'hard') {
-            return (itemsTextarea.value || hiddenField.value || '').split(/\n/).map(item => item.trim()).filter(Boolean);
+        const config = getItemConfig();
+        if (config.singular === 'paragraph') {
+            return parseParagraphItems(itemsTextarea.value || hiddenField.value || '');
         }
         return parseItems(hiddenField.value || '');
     }
 
     function syncHiddenField() {
-        if (difficulty.value === 'hard') {
+        if (getItemConfig().singular === 'paragraph') {
             hiddenField.value = itemsTextarea.value.trim();
         } else {
             hiddenField.value = getSelectedItems().join('\n');
@@ -306,6 +372,7 @@
     }
 
     function updateFormAvailability() {
+        const config = getItemConfig();
         const hasMode = Boolean(modeSelect.value);
         const hasLanguage = Boolean(language.value);
         const hasDifficulty = Boolean(difficulty.value);
@@ -323,13 +390,16 @@
 
         itemsSection.classList.toggle('opacity-50', !canEditItems);
         itemsSection.style.pointerEvents = canEditItems ? '' : 'none';
-        setDisabledState(itemsInput, !canEditItems);
-        setDisabledState(itemsTextarea, !canEditItems || difficulty.value !== 'hard');
+        setDisabledState(itemsInput, !canEditItems || config.singular === 'paragraph');
+        setDisabledState(itemsTextarea, !canEditItems || config.singular !== 'paragraph');
         if (colorModeLimitNote) {
             colorModeLimitNote.style.display = isColorModeSelected() ? 'block' : 'none';
+            if (isColorModeSelected()) {
+                colorModeLimitNote.textContent = `Color Mode allows only up to ${maxItemsPerContent} sentences for each level.`;
+            }
         }
 
-        const hasContent = difficulty.value === 'hard'
+        const hasContent = config.singular === 'paragraph'
             ? Boolean(itemsTextarea.value.trim())
             : Boolean(getSelectedItems().length);
 
@@ -355,6 +425,7 @@
             modeTitle.textContent = 'Select a game mode to begin.';
             modeDescription.textContent = 'Choose one of the available game modes before configuring the practice content.';
         }
+        updateDifficultyUI();
         updateFormAvailability();
         updateSummary();
     }
@@ -404,7 +475,6 @@
 
     function applyModeChange(value) {
         updateModeSelection(value);
-        updateDifficultyUI();
         updateSummary();
         updateFormAvailability();
     }
@@ -439,43 +509,39 @@
     }
 
     function updateDifficultyUI() {
-        const selected = difficulty.value;
+        const config = getItemConfig();
         const itemsDisabled = !modeSelect.value || !difficulty.value || !level.value || !status.value;
         updateLevelOptions();
-        helperLabel.textContent = selected ? getDifficultyGuidance(selected) : 'Choose a difficulty to see item guidance.';
-        if (selected === 'hard') {
+        helperLabel.textContent = modeSelect.value ? `${config.title} requires ${config.plural} only.` : 'Choose a game mode to see item guidance.';
+        itemsSectionTitle.textContent = config.sectionTitle;
+        itemsSectionDescription.textContent = config.sectionDescription;
+        itemsCountLabel.textContent = config.countLabel;
+        if (config.singular === 'paragraph') {
             itemsInput.parentElement.classList.add('d-none');
             itemsTextarea.classList.remove('d-none');
             itemsTextarea.value = hiddenField.value || '';
-            helperLabel.textContent = 'Hard difficulty';
-            helperText.textContent = 'Enter one complete paragraph per item.';
-            itemsInput.placeholder = 'Type a paragraph...';
+            helperText.textContent = config.helperText;
+            itemsTextarea.placeholder = config.placeholder;
         } else {
             itemsInput.parentElement.classList.remove('d-none');
             itemsTextarea.classList.add('d-none');
             itemsTextarea.value = '';
-            if (selected === 'medium') {
-                helperLabel.textContent = 'Medium difficulty';
-                helperText.textContent = 'Enter one complete sentence per line. Commas stay inside the sentence.';
-                itemsInput.placeholder = 'Type a sentence...';
-            } else {
-                helperLabel.textContent = 'Easy difficulty';
-                helperText.textContent = 'Enter one simple word per item.';
-                itemsInput.placeholder = 'Type a word...';
-            }
+            helperText.textContent = config.helperText;
+            itemsInput.placeholder = config.placeholder;
         }
         setDisabledState(itemsInput, itemsDisabled);
-        setDisabledState(itemsTextarea, itemsDisabled || selected !== 'hard');
+        setDisabledState(itemsTextarea, itemsDisabled || config.singular !== 'paragraph');
         renderItemsList();
         updateFormAvailability();
     }
 
     function renderItemsList() {
+        const config = getItemConfig();
         const items = getSelectedItems();
-        itemsCount.textContent = items.length === 1 ? '1 item' : `${items.length} items`;
+        itemsCount.textContent = items.length === 1 ? `1 ${config.singular}` : `${items.length} ${config.plural}`;
         summaryItems.textContent = items.length;
         if (!items.length) {
-            itemsList.innerHTML = 'No items added yet.';
+            itemsList.innerHTML = config.emptyState;
             return;
         }
         itemsList.innerHTML = '';
@@ -490,7 +556,7 @@
                     return value !== item;
                 });
                 hiddenField.value = nextItems.join('\n');
-                if (difficulty.value === 'hard') {
+                if (getItemConfig().singular === 'paragraph') {
                     itemsTextarea.value = nextItems.join('\n');
                 }
                 renderItemsList();
@@ -515,16 +581,22 @@
                 if (!value) {
                     return;
                 }
+                const config = getItemConfig();
+                const validationMessage = validateEntry(value, config);
+                if (validationMessage) {
+                    helperText.textContent = validationMessage;
+                    return;
+                }
                 const existingItems = getSelectedItems();
                 if (isColorModeSelected() && existingItems.length >= maxItemsPerContent) {
-                    helperText.textContent = `You can add up to ${maxItemsPerContent} items for this difficulty and level.`;
+                    helperText.textContent = `You can add up to ${maxItemsPerContent} sentences for this level.`;
                     itemsInput.value = '';
                     return;
                 }
                 if (!existingItems.includes(value)) {
                     const nextItems = existingItems.concat(value);
                     hiddenField.value = nextItems.join('\n');
-                    if (difficulty.value === 'hard') {
+                    if (config.singular === 'paragraph') {
                         itemsTextarea.value = nextItems.join('\n');
                     }
                     itemsInput.value = '';
@@ -558,7 +630,6 @@
     [modeSelect, difficulty, level, status, language].forEach(function (field) {
         field.addEventListener('change', function () {
             updateModeSelection(modeSelect.value);
-            updateDifficultyUI();
             updateSummary();
             updateFormAvailability();
         });
@@ -574,7 +645,6 @@
     });
 
     updateModeSelection(modeSelect.value);
-    updateDifficultyUI();
     updateSummary();
     updateFormAvailability();
 })();
