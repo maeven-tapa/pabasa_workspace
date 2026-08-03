@@ -1887,7 +1887,7 @@
             <article class="reader-card {% block content_class %}{% endblock %}" data-level="{% block watermark %}read{% endblock %}">
                 <div class="read-helper">
                     <span class="helper-dot" aria-hidden="true"></span>
-                    <span>{% block helper_text %}Read clearly when your teacher starts the timer.{% endblock %}</span>
+                    <span id="readingHelperText" aria-live="polite">{% block helper_text %}{% endblock %}</span>
                 </div>
                 <section class="word-stage" aria-live="polite" aria-atomic="true">
                     <h1 class="reading-word" id="readingWord">{% block initial_text %}{% endblock %}</h1>

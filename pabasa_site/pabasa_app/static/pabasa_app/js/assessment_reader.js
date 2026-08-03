@@ -11,6 +11,7 @@
         if (shell.classList.contains('reader-vowel')) mode = 'vowel';
 
         const readingWord = document.getElementById("readingWord");
+        const readingHelperText = document.getElementById("readingHelperText");
         const counter = document.getElementById("counter");
         const progressFill = document.getElementById("progressFill");
         const prevBtn = document.getElementById("prevBtn");
@@ -1175,6 +1176,7 @@
             if (!items.length) return;
             stopReadAloud();
             if (readingWord) readingWord.textContent = items[currentIndex];
+            if (readingHelperText) readingHelperText.textContent = items[currentIndex];
             currentSyllableIndex = 0;
             resetSyllableStitching();
             pendingAudioChunk = null;
