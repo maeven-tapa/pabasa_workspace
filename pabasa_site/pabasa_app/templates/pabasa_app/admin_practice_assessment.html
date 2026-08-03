@@ -39,6 +39,38 @@
         line-height: 1.45;
         max-width: 680px;
     }
+
+    .practice-language-filter {
+        min-width: 220px;
+        width: 260px;
+    }
+
+    .practice-language-filter label {
+        white-space: nowrap;
+    }
+
+    .practice-language-filter select {
+        min-width: 220px;
+        width: 100%;
+        text-align: left;
+        text-overflow: clip;
+        padding-right: 2.25rem;
+    }
+
+    .practice-language-filter option {
+        text-align: left;
+    }
+
+    @media (max-width: 575.98px) {
+        .practice-language-filter {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .practice-language-filter select {
+            min-width: 0;
+        }
+    }
 </style>
 <div class="admin-panel">
     <div class="practice-content-header d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
@@ -46,9 +78,19 @@
             <h2 class="h4 fw-bold mb-1">Practice Content</h2>
             <p class="text-secondary mb-0">Manage game configurations for Practice Mode by mode, difficulty, and level.</p>
         </div>
-        <a class="btn btn-primary" href="{% url 'admin_practice_create' %}">
-            <i class="bi bi-plus-lg me-1"></i>Add Practice Content
-        </a>
+        <div class="d-flex flex-column align-items-end gap-2">
+            <form method="get" class="practice-language-filter d-flex flex-column align-items-end gap-1">
+                <label class="form-label small fw-bold text-secondary mb-0" for="adminPracticeLanguage">Language</label>
+                <select class="form-select" id="adminPracticeLanguage" name="language" onchange="this.form.submit()">
+                    {% for value, label in language_options %}
+                    <option value="{{ value }}" {% if language_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <a class="btn btn-primary" href="{% url 'admin_practice_create' %}?language={{ language_filter|urlencode }}">
+                <i class="bi bi-plus-lg me-1"></i>Add Practice Content
+            </a>
+        </div>
     </div>
 
     <style>

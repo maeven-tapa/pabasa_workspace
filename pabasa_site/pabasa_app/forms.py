@@ -56,8 +56,8 @@ class AdminPracticeMaterialForm(forms.Form):
         ("draft", "Draft"),
     ]
     LANGUAGE_CHOICES = [
-        ("Filipino", "Filipino"),
         ("English", "English"),
+        ("Filipino", "Filipino"),
     ]
 
     mode = forms.ChoiceField(choices=MODE_CHOICES)
@@ -71,9 +71,16 @@ class AdminPracticeMaterialForm(forms.Form):
         self.material = kwargs.pop("material", None)
         super().__init__(*args, **kwargs)
 
-    def get_occupied_levels(self, mode=None, difficulty=None, material=None):
+    def get_occupied_levels(self, mode=None, difficulty=None, language=None, material=None):
         selected_mode = mode or self.data.get("mode") or self.initial.get("mode")
         selected_difficulty = difficulty or self.data.get("difficulty_level") or self.initial.get("difficulty_level")
+        selected_language = (
+            language
+            or self.data.get("language")
+            or self.initial.get("language")
+            or (getattr(material or self.material, "language", "") if (material or self.material) else "")
+        )
+        selected_language = Material.normalize_language_value(selected_language)
         if not selected_mode or not selected_difficulty:
             return []
 
@@ -81,6 +88,7 @@ class AdminPracticeMaterialForm(forms.Form):
             type="practice",
             content_json__mode=selected_mode,
             content_json__difficulty=selected_difficulty,
+            language=selected_language,
         )
         material_obj = material or self.material
         if material_obj:
@@ -151,6 +159,7 @@ class AdminPracticeMaterialForm(forms.Form):
                 content_json__mode=mode,
                 content_json__difficulty=difficulty,
                 content_json__level=level,
+                language=Material.normalize_language_value(cleaned_data.get("language")),
             )
             if self.material:
                 duplicate_query = duplicate_query.exclude(pk=self.material.pk)

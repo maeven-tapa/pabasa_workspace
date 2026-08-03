@@ -79,6 +79,42 @@ from .scoring import (
 )
 from .utils.crla_export import export_crla_excel
 
+PRACTICE_LANGUAGE_CHOICES = [
+    ("English", "English"),
+    ("Filipino", "Filipino"),
+]
+PRACTICE_LANGUAGE_SESSION_KEY = "practice_mode_language"
+PRACTICE_LANGUAGE_PREFERENCE_KEY = "practice_mode_language"
+
+
+def _practice_language_value(value):
+    normalized = Material.normalize_language_value(value)
+    if normalized == "Tagalog":
+        return "Filipino"
+    return normalized
+
+
+def _practice_selected_language(request, default="English"):
+    session_value = request.session.get(PRACTICE_LANGUAGE_SESSION_KEY)
+    query_value = request.GET.get("language")
+    selected = _practice_language_value(query_value or session_value or default)
+    request.session[PRACTICE_LANGUAGE_SESSION_KEY] = selected
+    return selected
+
+
+def _get_practice_language_preference(user):
+    preferences = _get_user_preference_dict(user)
+    return _practice_language_value(preferences.get(PRACTICE_LANGUAGE_PREFERENCE_KEY))
+
+
+def _set_practice_language_preference(user, language):
+    if not user:
+        return
+    preferences = dict(_get_user_preference_dict(user))
+    preferences[PRACTICE_LANGUAGE_PREFERENCE_KEY] = _practice_language_value(language)
+    user.preference = preferences
+    user.save(update_fields=['preference', 'updated_at'])
+
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
     if not user:
@@ -4146,10 +4182,11 @@ def _apply_progression_unlock_override(progression, unlock_target):
     return progression
 
 
-def _practice_game_progression(mode, student_user=None):
+def _practice_game_progression(mode, student_user=None, language=None):
     normalized_mode = (mode or '').strip().lower()
     if normalized_mode not in {'free', 'color', 'hunt'}:
         normalized_mode = 'free'
+    selected_language = _practice_language_value(language or 'English')
 
     level_keys = _practice_progression_level_keys()
     difficulty_keys = _practice_progression_difficulty_keys()
@@ -4160,6 +4197,7 @@ def _practice_game_progression(mode, student_user=None):
         is_active=True,
         status='published',
         content_json__mode=normalized_mode,
+        language=selected_language,
     ).order_by('created_at', 'id'):
         content_json = getattr(material, 'content_json', None) or {}
         if not isinstance(content_json, dict):
@@ -4260,7 +4298,15 @@ def _practice_game_progression(mode, student_user=None):
                 'completed': is_completed,
                 'stars_earned': stars_earned,
                 'button_label': button_label,
-                'play_url': reverse('practice_word_page') if material and (material.item_type or 'word') == 'word' else reverse('practice_sentence_page') if material and (material.item_type or 'word') == 'sentence' else reverse('practice_para_page') if material else '#',
+                'play_url': (
+                    f"{reverse('practice_word_page')}?language={selected_language}"
+                    if material and (material.item_type or 'word') == 'word'
+                    else f"{reverse('practice_sentence_page')}?language={selected_language}"
+                    if material and (material.item_type or 'word') == 'sentence'
+                    else f"{reverse('practice_para_page')}?language={selected_language}"
+                    if material
+                    else '#'
+                ),
                 'material_id': f"practice-{material.id}" if material else None,
                 'completion': completion,
                 'locked_reason': 'Complete Level 1 to unlock this level.' if level_key != 'level_1' and state == 'locked' else 'Complete all previous difficulty levels to unlock this section.' if state == 'locked' and difficulty != 'easy' else '',
@@ -4317,7 +4363,7 @@ def _practice_row_summary(material):
         'mode_label': _practice_config_label(content_json.get('mode', ''), AdminPracticeMaterialForm.MODE_CHOICES),
         'difficulty_label': _practice_config_label(selected_difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
         'level_label': _practice_config_label(content_json.get('level', ''), AdminPracticeMaterialForm.LEVEL_CHOICES),
-        'language_label': content_json.get('language', ''),
+        'language_label': _practice_language_value(getattr(material, 'language', '') or content_json.get('language', '')),
         'item_count': item_count,
         'item_summary': summary_text,
         'items': items,
@@ -4365,8 +4411,10 @@ def _admin_practice_context(request, page_title):
     difficulty_filter = request.GET.get('difficulty', 'all').strip().lower()
     level_filter = request.GET.get('level', 'all').strip().lower()
     sort_value = request.GET.get('sort', '-created_at').strip()
+    language_filter = _practice_selected_language(request)
 
     practice_items = _admin_practice_queryset()
+    practice_items = practice_items.filter(language=language_filter)
 
     if mode_filter in {value for value, _label in AdminPracticeMaterialForm.MODE_CHOICES}:
         practice_items = practice_items.filter(content_json__mode=mode_filter)
@@ -4410,6 +4458,8 @@ def _admin_practice_context(request, page_title):
         'status_filter': status_filter,
         'difficulty_filter': difficulty_filter,
         'level_filter': level_filter,
+        'language_filter': language_filter,
+        'language_options': PRACTICE_LANGUAGE_CHOICES,
         'sort': sort_value,
         'mode_options': [('all', 'All Modes')] + AdminPracticeMaterialForm.MODE_CHOICES,
         'status_options': [('all', 'All Statuses'), ('active', 'Active')] + AdminPracticeMaterialForm.STATUS_CHOICES + [('archived', 'Archived')],
@@ -4431,6 +4481,7 @@ def _admin_practice_context(request, page_title):
     return context
 
 def _admin_practice_template_context(request, material=None, page_title='Practice'):
+    selected_language = _practice_selected_language(request)
     initial = {}
     if material:
         content_json = getattr(material, 'content_json', None) or {}
@@ -4439,16 +4490,25 @@ def _admin_practice_template_context(request, material=None, page_title='Practic
             'difficulty_level': material.difficulty_level,
             'level': content_json.get('level', ''),
             'status': material.status if getattr(material, 'status', None) in dict(AdminPracticeMaterialForm.STATUS_CHOICES) else 'draft',
-            'language': content_json.get('language', ''),
+            'language': _practice_language_value(getattr(material, 'language', '') or content_json.get('language', '')),
             'content_text': material.content_text,
         }
+    else:
+        initial['language'] = selected_language
 
     form = AdminPracticeMaterialForm(initial=initial, material=material)
     occupied_levels_map = {}
     for mode, _mode_label in AdminPracticeMaterialForm.MODE_CHOICES:
         occupied_levels_map[mode] = {}
         for difficulty, _difficulty_label in AdminPracticeMaterialForm.DIFFICULTY_CHOICES:
-            occupied_levels_map[mode][difficulty] = form.get_occupied_levels(mode, difficulty)
+            occupied_levels_map[mode][difficulty] = {}
+            for language_value, _language_label in AdminPracticeMaterialForm.LANGUAGE_CHOICES:
+                occupied_levels_map[mode][difficulty][language_value] = form.get_occupied_levels(
+                    mode=mode,
+                    difficulty=difficulty,
+                    language=language_value,
+                    material=material,
+                )
 
     context = _admin_context(request, page_title, [])
     context.update({
@@ -4476,9 +4536,10 @@ def _save_admin_practice_material(form, material=None, request=None):
         'mode': cleaned['mode'],
         'difficulty': cleaned['difficulty_level'],
         'level': cleaned['level'],
-        'language': cleaned.get('language', ''),
+        'language': _practice_language_value(cleaned.get('language', '')),
         'items': practice_items,
     }
+    material_obj.language = _practice_language_value(cleaned.get('language', ''))
     material_obj.type = 'practice'
     material_obj.status = cleaned['status']
     material_obj.difficulty_level = cleaned['difficulty_level']
@@ -4753,13 +4814,15 @@ def reading_read_aloud_api(request):
         return JsonResponse({'success': False, 'error': str(exc)}, status=502)
 
 
-def _student_practice_queryset():
+def _student_practice_queryset(request):
+    selected_language = _practice_selected_language(request)
     return Material.objects.filter(
         section__isnull=True,
         type='practice',
         is_active=True,
         status='published',
         difficulty_level__in=_practice_difficulty_values(),
+        language=selected_language,
     ).order_by('created_at', 'id')
 
 def _material_practice_completion(material, student_user):
@@ -4920,7 +4983,8 @@ def _serialize_student_practice_material(material, student_user=None):
 def _student_practice_context(request, mode=None):
     context = _dashboard_context(request, 'student')
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
-    materials = [_serialize_student_practice_material(material, student_user) for material in _student_practice_queryset()]
+    selected_language = _practice_selected_language(request)
+    materials = [_serialize_student_practice_material(material, student_user) for material in _student_practice_queryset(request)]
     animation_root = Path(__file__).resolve().parent / 'static' / 'pabasa_app' / 'animation'
 
     def load_animation_frames(folder_name: str):
@@ -4947,8 +5011,10 @@ def _student_practice_context(request, mode=None):
     context.update({
         'practice_materials': materials,
         'practice_difficulties': AdminPracticeMaterialForm.DIFFICULTY_CHOICES,
+        'language_options': PRACTICE_LANGUAGE_CHOICES,
         'selected_practice_mode': mode or '',
         'selected_practice_difficulty': request.GET.get('difficulty', '').strip().lower(),
+        'selected_practice_language': selected_language,
         'student_available_stars': max(0, int(student_user.available_stars or 0)) if student_user else 0,
         'mascot_animation_frames': mascot_animation_frames,
         'mascot_animation_first_frame': (
@@ -7012,14 +7078,28 @@ def _practice_tutorial_content(mode):
 
 @never_cache
 @login_required(role='student')
+@require_http_methods(["GET", "POST"])
 def practice(request):
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
+    saved_language = _get_practice_language_preference(student_user)
+    if request.method == "POST":
+        selected_language = _practice_language_value(request.POST.get("language") or saved_language or "English")
+        _set_practice_language_preference(student_user, selected_language)
+        request.session[PRACTICE_LANGUAGE_SESSION_KEY] = selected_language
+        request.session.modified = True
+        return redirect(f"{reverse('practice')}?language={selected_language}")
+
+    selected_language = _practice_selected_language(request, saved_language or "English")
+    has_language_preference = bool(saved_language)
     context = _student_practice_context(request)
     context['game_progression_summary'] = {
-        mode: _practice_game_progression(mode, student_user)['summary']
+        mode: _practice_game_progression(mode, student_user, selected_language)['summary']
         for mode in ['free', 'color', 'hunt']
     }
     context['authoritative_total_stars_earned'] = _student_theme_lifetime_stars(student_user)
+    context['selected_practice_language'] = selected_language
+    context['has_practice_language_preference'] = has_language_preference
+    context['language_options'] = PRACTICE_LANGUAGE_CHOICES
     return render(request, 'pabasa_app/practice.html', context)
 
 
@@ -7159,8 +7239,9 @@ def practice_mark_tutorial_seen(request, mode):
     normalized_mode = (mode or '').strip().lower()
     flag_key = _practice_tutorial_flag_key(normalized_mode)
     student_user = User.objects.filter(id=request.session.get('user_id'), role='student').first()
+    selected_language = _practice_selected_language(request, _get_practice_language_preference(student_user) or "English")
     _mark_practice_tutorial_seen(request, student_user, flag_key)
-    return redirect('practice_game_progression', mode=normalized_mode)
+    return redirect(f"{reverse('practice_game_progression', kwargs={'mode': normalized_mode})}?language={selected_language}")
 
 
 @never_cache
@@ -7172,7 +7253,8 @@ def practice_game_progression(request, mode):
         return redirect('practice')
 
     context = _student_practice_context(request)
-    progression = _practice_game_progression(normalized_mode, student_user)
+    selected_language = _practice_selected_language(request, _get_practice_language_preference(student_user) or "English")
+    progression = _practice_game_progression(normalized_mode, student_user, selected_language)
     progression = _apply_progression_unlock_override(progression, request.GET.get('unlock', ''))
     flag_key = _practice_tutorial_flag_key(normalized_mode)
     show_tutorial = not _has_seen_practice_tutorial(request, student_user, flag_key)
@@ -7185,6 +7267,7 @@ def practice_game_progression(request, mode):
         'game_mode_title': progression['mode_title'],
         'game_progression': progression,
         'game_progression_summary': progression['summary'],
+        'selected_practice_language': selected_language,
         'tutorial_mode': normalized_mode,
         'tutorial_title': progression['mode_title'],
         'tutorial_cards': _practice_tutorial_content(normalized_mode),

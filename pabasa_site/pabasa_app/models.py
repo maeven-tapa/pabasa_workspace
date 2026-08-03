@@ -886,6 +886,7 @@ class Material(models.Model):
     prompt_text = models.TextField(blank=True, default='')
     content_text = models.TextField(blank=True, default='')
     content_json = models.JSONField(default=dict, blank=True)
+    language = models.CharField(max_length=20, default="English", blank=True)
     type = models.CharField(max_length=20, choices=USAGE_TYPE_CHOICES, default='practice')
     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default='personal')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
@@ -952,6 +953,9 @@ class Material(models.Model):
     def save(self, *args, **kwargs):
         if not self.code:
             self.code = self._generate_code()
+        self.language = self.normalize_language_value(self.language or self.get_saved_language())
+        if isinstance(self.content_json, dict):
+            self.content_json.setdefault("language", self.language)
         if self.teacher_id is None and self.section_id and getattr(self.section, "teacher_id", None):
             self.teacher = self.section.teacher
         super().save(*args, **kwargs)
