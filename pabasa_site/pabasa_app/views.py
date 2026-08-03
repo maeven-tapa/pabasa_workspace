@@ -4352,10 +4352,12 @@ def _practice_game_progression(mode, student_user=None, language=None):
 def _practice_row_summary(material):
     content_json = getattr(material, 'content_json', None) or {}
     selected_difficulty = getattr(material, 'difficulty_level', '') or content_json.get('difficulty', '')
-    item_type = (getattr(material, 'item_type', '') or mode_to_item_type(content_json.get('mode', '')) or 'word').strip().lower()
+    selected_mode = (content_json.get('mode', '') or '').strip().lower()
+    item_type = (getattr(material, 'item_type', '') or mode_to_item_type(selected_mode) or 'word').strip().lower()
     items = _practice_material_items(material)
     item_count = len(items)
-    summary_text = f"{item_count} {item_type}{'s' if item_count != 1 else ''}"
+    item_label = item_type if item_type in {'word', 'sentence', 'paragraph'} else 'word'
+    summary_text = f"{item_count} {item_label}{'s' if item_count != 1 else ''}"
     status_label = 'Archived' if not material.is_active else (material.get_status_display() or material.status)
     status_badge_class = 'text-bg-secondary' if not material.is_active else ('text-bg-success' if material.status == 'published' else 'text-bg-warning')
     return {
@@ -4365,9 +4367,10 @@ def _practice_row_summary(material):
         'level_label': _practice_config_label(content_json.get('level', ''), AdminPracticeMaterialForm.LEVEL_CHOICES),
         'language_label': _practice_language_value(getattr(material, 'language', '') or content_json.get('language', '')),
         'item_count': item_count,
+        'item_type': item_type,
+        'item_label': item_label,
         'item_summary': summary_text,
         'items': items,
-        'is_hard': selected_difficulty == 'hard',
         'status_label': status_label,
         'status_badge_class': status_badge_class,
     }

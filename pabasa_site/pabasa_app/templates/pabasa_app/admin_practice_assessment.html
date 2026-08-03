@@ -262,7 +262,7 @@
                     <td>{{ row.language_label }}</td>
                     <td>
                         <span class="fw-semibold">{{ row.item_count }}</span>
-                        <span class="small text-secondary">{% if row.is_hard %}sentences{% else %}words{% endif %}</span>
+                        <span class="small text-secondary">{{ row.item_label }}{% if row.item_count != 1 %}s{% endif %}</span>
                     </td>
                     <td>
                         <span class="badge rounded-pill {{ row.status_badge_class }}">{{ row.status_label }}</span>
@@ -391,10 +391,10 @@
 
                     <div class="border rounded-3 p-3 bg-white">
                         <div class="small text-secondary text-uppercase fw-bold mb-2">Items</div>
-                        {% if row.is_hard %}
+                        {% if row.item_type == 'sentence' or row.item_type == 'paragraph' %}
                         <ol class="mb-0 ps-3">
-                            {% for sentence in row.items %}
-                            <li class="mb-2">{{ sentence }}</li>
+                            {% for item_text in row.items %}
+                            <li class="mb-2">{{ item_text }}</li>
                             {% empty %}
                             <li>No items available.</li>
                             {% endfor %}

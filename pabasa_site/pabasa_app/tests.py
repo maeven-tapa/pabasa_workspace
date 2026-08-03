@@ -3793,6 +3793,78 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, '"is_done": false', html=False)
 
 
+class AdminPracticeAssessmentListTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create(
+            custom_id="ADM-PRACT-LIST",
+            role="admin",
+            first_name="Practice",
+            last_name="Admin",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="practice-admin-list@example.com",
+            password_hash=make_password("admin-password"),
+        )
+
+    def test_admin_practice_assessment_uses_mode_for_item_label(self):
+        Material.objects.create(
+            title="Free Hard Words",
+            item_type='word',
+            prompt_text='',
+            content_text='sun\nmoon',
+            content_json={'mode': 'free', 'difficulty': 'hard', 'level': 'level_1', 'items': ['sun', 'moon']},
+            type='practice',
+            status='published',
+            difficulty_level='hard',
+            language='English',
+            is_active=True,
+        )
+        Material.objects.create(
+            title="Color Easy Sentences",
+            item_type='sentence',
+            prompt_text='',
+            content_text='One sentence.\nTwo sentence.',
+            content_json={'mode': 'color', 'difficulty': 'easy', 'level': 'level_1', 'items': ['One sentence.', 'Two sentence.']},
+            type='practice',
+            status='published',
+            difficulty_level='easy',
+            language='English',
+            is_active=True,
+        )
+        Material.objects.create(
+            title="Hunt Medium Paragraphs",
+            item_type='paragraph',
+            prompt_text='',
+            content_text='First paragraph.\n\nSecond paragraph.',
+            content_json={'mode': 'hunt', 'difficulty': 'medium', 'level': 'level_1', 'items': ['First paragraph.', 'Second paragraph.']},
+            type='practice',
+            status='published',
+            difficulty_level='medium',
+            language='English',
+            is_active=True,
+        )
+
+        session = self.client.session
+        session['user_id'] = self.admin.id
+        session['user_role'] = self.admin.role
+        session['first_name'] = self.admin.first_name
+        session['last_name'] = self.admin.last_name
+        session['email'] = self.admin.email
+        session['custom_id'] = self.admin.custom_id
+        session.save()
+
+        response = self.client.get(reverse('admin_practice_assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '2 words')
+        self.assertContains(response, '2 sentences')
+        self.assertContains(response, '2 paragraphs')
+
+
 class AdminPracticeMaterialFormTests(TestCase):
     def test_free_mode_accepts_words_for_any_difficulty(self):
         form = AdminPracticeMaterialForm(data={
