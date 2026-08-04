@@ -3298,42 +3298,65 @@
 
     .system-modal {
         border: 0;
-        border-radius: 16px;
-        box-shadow: 0 30px 90px rgba(20, 24, 28, 0.3);
+        border-radius: 20px;
+        box-shadow: 0 28px 80px rgba(20, 24, 28, 0.22);
         overflow: hidden;
-        background: linear-gradient(135deg, #ffffff 0%, #f9fbfa 100%);
-        border: 1px solid rgba(31, 111, 139, 0.1);
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbfd 100%);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        max-width: 520px;
+        margin: auto;
     }
 
     .system-modal-accent {
-        height: 4px;
-        background: linear-gradient(90deg, var(--dash-primary), var(--dash-primary-soft));
+        height: 5px;
+        background: linear-gradient(90deg, var(--dash-primary), #38bdf8);
+    }
+
+    .system-modal-accent.success {
+        background: linear-gradient(90deg, #0f766e, #14b8a6);
+    }
+
+    .system-modal-accent.warning {
+        background: linear-gradient(90deg, #e879f9, #f97316);
     }
 
     .system-modal-accent.danger {
-        background: linear-gradient(90deg, #dc2626, #ef4444);
+        background: linear-gradient(90deg, #dc2626, #f87171);
     }
 
     .system-modal-icon {
         align-items: center;
         background: linear-gradient(135deg, rgba(31, 111, 139, 0.12), rgba(31, 111, 139, 0.08));
-        border-radius: 12px;
+        border-radius: 18px;
         color: var(--dash-primary-deep);
         display: inline-flex;
         font-size: 1.8rem;
-        height: 56px;
+        height: 64px;
         justify-content: center;
         margin-bottom: 0.85rem;
-        width: 56px;
-        border: 2px solid rgba(31, 111, 139, 0.15);
-        box-shadow: 0 4px 16px rgba(31, 111, 139, 0.1);
+        width: 64px;
+        border: 2px solid rgba(31, 111, 139, 0.16);
+        box-shadow: 0 10px 26px rgba(31, 111, 139, 0.14);
+    }
+
+    .system-modal-icon.primary,
+    .system-modal-icon.success {
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.14), rgba(56, 189, 248, 0.12));
+        color: var(--dash-primary-deep);
+        border-color: rgba(31, 111, 139, 0.22);
+    }
+
+    .system-modal-icon.warning {
+        background: linear-gradient(135deg, rgba(249, 115, 22, 0.14), rgba(244, 114, 182, 0.12));
+        color: #b45309;
+        border-color: rgba(249, 115, 22, 0.22);
     }
 
     .system-modal-icon.danger {
-        background: linear-gradient(135deg, rgba(220, 38, 38, 0.12), rgba(220, 38, 38, 0.08));
-        color: #dc2626;
-        border-color: rgba(220, 38, 38, 0.15);
-        box-shadow: 0 4px 16px rgba(220, 38, 38, 0.1);
+        background: linear-gradient(135deg, rgba(220, 38, 38, 0.12), rgba(248, 113, 113, 0.1));
+        color: #b91c1c;
+        border-color: rgba(220, 38, 38, 0.18);
+        box-shadow: 0 10px 26px rgba(220, 38, 38, 0.12);
     }
 
     /* Dark Mode Overrides for System Modals and Modal Sidebar */
@@ -3475,40 +3498,54 @@
 
     .system-modal .modal-title {
         color: var(--dash-ink);
-        font-weight: 800;
+        font-weight: 900;
         font-size: 1.35rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.45rem;
     }
 
     .system-modal .modal-body {
         color: var(--dash-ink-soft);
-        line-height: 1.65;
+        line-height: 1.7;
         font-size: 0.95rem;
-        padding: 1.5rem 0;
+        padding: 1.75rem 1.75rem 1rem;
     }
     
     .system-modal .modal-footer {
         border-top: 1px solid rgba(27, 26, 23, 0.08);
-        padding: 1.5rem 2rem;
+        padding: 1rem 1.75rem 1.75rem;
         background: rgba(31, 111, 139, 0.02);
+        gap: 0.75rem;
+        justify-content: center;
     }
     
     .system-modal .modal-footer .btn {
-        border-radius: 10px;
-        font-weight: 600;
-        min-height: 42px;
-        padding: 0.65rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 700;
+        min-height: 44px;
+        padding: 0.7rem 1.35rem;
         transition: all 0.2s ease;
     }
     
+    .system-modal .modal-footer .btn-secondary {
+        background: transparent;
+        border: 1px solid rgba(27, 26, 23, 0.14);
+        color: var(--dash-ink);
+    }
+
+    .system-modal .modal-footer .btn-secondary:hover {
+        background: rgba(31, 111, 139, 0.06);
+        border-color: rgba(31, 111, 139, 0.22);
+        transform: translateY(-1px);
+    }
+    
     .system-modal .modal-footer .btn-primary {
-        background: linear-gradient(135deg, var(--dash-primary), var(--dash-primary-soft));
+        background: linear-gradient(135deg, var(--dash-primary), #0ea5e9);
         border: none;
-        box-shadow: 0 4px 12px rgba(31, 111, 139, 0.25);
+        box-shadow: 0 8px 22px rgba(31, 111, 139, 0.24);
     }
     
     .system-modal .modal-footer .btn-primary:hover {
-        box-shadow: 0 8px 24px rgba(31, 111, 139, 0.35);
+        box-shadow: 0 10px 28px rgba(31, 111, 139, 0.35);
         transform: translateY(-2px);
     }
 
@@ -7983,16 +8020,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
 <!-- Modal for Delete Confirmation -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content system-modal">
-            <div class="system-modal-accent danger"></div>
-            <div class="modal-body text-center pt-5 pb-4">
-                <div class="system-modal-icon danger mb-3">
-                    <i class="bi bi-trash3-fill"></i>
+            <div class="system-modal-accent danger" id="deleteConfirmAccent"></div>
+            <div class="modal-body text-center pt-4 pb-3">
+                <div class="system-modal-icon danger mb-3" id="deleteConfirmIconWrap">
+                    <i class="bi bi-trash3-fill" id="deleteConfirmIcon"></i>
                 </div>
                 <h5 class="modal-title mb-2" id="deleteConfirmTitle">Are you sure?</h5>
-                <div id="deleteConfirmText" class="text-muted px-3">This action cannot be undone.</div>
-                <div id="deleteConfirmationInputWrap" class="text-start px-3 mt-3 d-none">
+                <div id="deleteConfirmText" class="text-muted px-1">This action cannot be undone.</div>
+                <div id="deleteConfirmationInputWrap" class="text-start px-1 mt-3 d-none">
                     <label class="form-label small fw-bold" for="deleteConfirmationInput">
                         Type <code id="deleteConfirmationWord">DELETE</code> to confirm
                     </label>
@@ -8001,7 +8038,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     <div class="form-text" id="deleteConfirmationHelp">The confirmation text must match exactly.</div>
                 </div>
             </div>
-            <div class="modal-footer border-0 justify-content-center pb-4">
+            <div class="modal-footer border-0 pb-4">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger px-4" id="confirmDelete">Delete Forever</button>
             </div>
@@ -9319,6 +9356,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         return String(value || '').replace(/^[a-z]+-/i, '');
     }
 
+    window.openCourseDetail = openCourseDetail;
+
     function findCourseById(courseId) {
         return (teacherCourses || []).find(c => String(c.id) === String(courseId));
     }
@@ -9365,7 +9404,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         return `<span class="shared-material-badge" title="${escapeHtml(title)}">&#128101;</span>`;
     }
 
-    window.openCourseDetail = async function(courseId) {
+    async function openCourseDetail(courseId) {
         try {
             closeCourseMaterialDetail();
             // Defensive reset: when a previous modal transition is interrupted,
@@ -10114,10 +10153,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         if (action === 'student-access') {
                             if (!mat) return showToast('Material not found', 'error');
                             const nextAccess = String(btn.dataset.nextAccess || '').trim() === '1';
-                            const title = nextAccess ? 'Enable Student Access?' : 'Disable Student Access?';
+                            const title = nextAccess ? 'Enable Student Access' : 'Disable Student Access';
                             const message = nextAccess
-                                ? `<p>Make <strong>${escapeHtml(mat.title || 'this assessment')}</strong> available to students?</p><p class="text-muted small mt-2 mb-0">Students will be able to open and start this assessment immediately.</p>`
-                                : `<p>Hide <strong>${escapeHtml(mat.title || 'this assessment')}</strong> from students?</p><p class="text-muted small mt-2 mb-0">The card will stay visible, but students will see it locked.</p>`;
+                                ? `<p class="mb-2">Students will be able to access this course immediately.</p>`
+                                : `<p class="mb-2">Students will no longer be able to access this course until access is enabled again.</p>`;
 
                             showDeleteConfirmModal(message, async () => {
                                 try {
@@ -10133,8 +10172,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 }
                             }, {
                                 title,
-                                confirmText: nextAccess ? 'Enable Access' : 'Hide Assessment',
+                                confirmText: nextAccess ? 'Enable Access' : 'Disable Access',
                                 confirmClass: nextAccess ? 'btn btn-primary px-4' : 'btn btn-danger px-4',
+                                accentClass: nextAccess ? 'success' : 'warning',
+                                iconClassName: nextAccess ? 'success' : 'warning',
+                                icon: nextAccess ? 'bi-unlock-fill' : 'bi-lock-fill',
                             });
                             return;
                         }
@@ -12917,6 +12959,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     function showDeleteConfirmModal(message, onConfirm, options = {}) {
         const modalEl = document.getElementById('deleteConfirmModal');
         const titleEl = document.getElementById('deleteConfirmTitle');
+        const accentEl = document.getElementById('deleteConfirmAccent');
+        const iconWrapEl = document.getElementById('deleteConfirmIconWrap');
+        const iconEl = document.getElementById('deleteConfirmIcon');
+        const defaultAccent = options.accentClass || 'danger';
+        const defaultIcon = options.icon || 'bi-trash3-fill';
+        const defaultIconWrapClass = options.iconClassName || defaultAccent;
+
         if (titleEl) titleEl.textContent = options.title || 'Are you sure?';
         document.getElementById('deleteConfirmText').innerHTML = message;
         const confirmBtn = document.getElementById('confirmDelete');
@@ -12926,6 +12975,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const requiredConfirmation = String(options.requireConfirmation || '');
         confirmBtn.textContent = options.confirmText || 'Delete Forever';
         confirmBtn.className = options.confirmClass || 'btn btn-danger px-4';
+        if (accentEl) {
+            accentEl.className = `system-modal-accent ${defaultAccent}`;
+        }
+        if (iconWrapEl) {
+            iconWrapEl.className = `system-modal-icon ${defaultIconWrapClass} mb-3`;
+        }
+        if (iconEl) {
+            iconEl.className = `bi ${defaultIcon}`;
+        }
         confirmationWrap?.classList.toggle('d-none', !requiredConfirmation);
         if (confirmationInput) {
             confirmationInput.value = '';
@@ -14988,10 +15046,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         if (!material) return showToast('Material not found', 'error');
 
                         const nextAccess = String(button.dataset.nextAccess || '').trim() === '1';
-                        const title = nextAccess ? 'Enable Student Access?' : 'Disable Student Access?';
+                        const title = nextAccess ? 'Enable Student Access' : 'Disable Student Access';
                         const message = nextAccess
-                            ? `<p>Make <strong>${escapeHtml(material.title || 'this assessment')}</strong> available to students?</p><p class="text-muted small mt-2 mb-0">Students will be able to open and start this assessment immediately.</p>`
-                            : `<p>Hide <strong>${escapeHtml(material.title || 'this assessment')}</strong> from students?</p><p class="text-muted small mt-2 mb-0">The card will stay visible, but students will see it locked.</p>`;
+                            ? `<p class="mb-2">Students will be able to access this course immediately.</p>`
+                            : `<p class="mb-2">Students will no longer be able to access this course until access is enabled again.</p>`;
 
                         showDeleteConfirmModal(message, async () => {
                             try {
@@ -15007,8 +15065,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             }
                         }, {
                             title,
-                            confirmText: nextAccess ? 'Enable Access' : 'Hide Assessment',
+                            confirmText: nextAccess ? 'Enable Access' : 'Disable Access',
                             confirmClass: nextAccess ? 'btn btn-primary px-4' : 'btn btn-danger px-4',
+                            accentClass: nextAccess ? 'success' : 'warning',
+                            iconClassName: nextAccess ? 'success' : 'warning',
+                            icon: nextAccess ? 'bi-unlock-fill' : 'bi-lock-fill',
                         });
                         return;
                     }
