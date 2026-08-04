@@ -4965,15 +4965,18 @@
        clicks while the modal content is visible. */
     body.modal-open > .modal {
         z-index: 4100 !important;
+        pointer-events: auto !important;
     }
 
     body.modal-open > .modal .modal-dialog {
         z-index: 4110 !important;
         position: relative;
+        pointer-events: auto !important;
     }
 
     body.modal-open > .modal-backdrop {
         z-index: 4000 !important;
+        pointer-events: auto !important;
     }
 
     /* Course page dark mode support */
@@ -12780,9 +12783,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         if (!modalEl || !window.bootstrap) return null;
         ensureModalOnBody(modalEl);
         const openModalCount = document.querySelectorAll('.modal.show').length;
-        const zIndex = 1055 + (openModalCount * 10);
+        const zIndex = 4100 + (openModalCount * 5);
         modalEl.style.setProperty('--bs-modal-zindex', String(zIndex));
         modalEl.style.zIndex = String(zIndex);
+
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.style.zIndex = String(Math.max(4000, zIndex - 5));
+            backdrop.style.pointerEvents = 'auto';
+        }
+
         const instance = bootstrap.Modal.getOrCreateInstance(modalEl);
         instance.show();
         return instance;
@@ -12905,6 +12915,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
     }
 
     function showDeleteConfirmModal(message, onConfirm, options = {}) {
+        const modalEl = document.getElementById('deleteConfirmModal');
         const titleEl = document.getElementById('deleteConfirmTitle');
         if (titleEl) titleEl.textContent = options.title || 'Are you sure?';
         document.getElementById('deleteConfirmText').innerHTML = message;
@@ -12936,13 +12947,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         
         newConfirmBtn.addEventListener('click', async function() {
             if (requiredConfirmation && confirmationInput?.value.trim() !== requiredConfirmation) return;
-            bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+            const instance = bootstrap.Modal.getInstance(modalEl);
+            instance?.hide();
             if (onConfirm) await onConfirm();
             // Success modal is now handled by the caller after confirming API success
         });
-        
-        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-        modal.show();
+
+        const modal = typeof showStackedModal === 'function'
+            ? showStackedModal(modalEl)
+            : bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        modal?.show();
+        window.requestAnimationFrame(function () {
+            const focusTarget = requiredConfirmation && confirmationInput
+                ? confirmationInput
+                : newConfirmBtn;
+            if (focusTarget && typeof focusTarget.focus === 'function') {
+                focusTarget.focus({ preventScroll: true });
+            }
+        });
     }
 
     // Format timestamp to relative time string
