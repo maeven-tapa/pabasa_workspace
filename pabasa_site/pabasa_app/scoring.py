@@ -43,8 +43,7 @@ ADAPTED_READING_LEVEL_MULTIPLIERS = {
 }
 
 ADAPTED_READING_LEVEL_DISCLAIMER = (
-    "Great job completing your reading assessment! Your results show your current reading performance. "
-    "Keep practicing to improve your reading skills."
+    "Great job completing your reading assessment!"
 )
 
 

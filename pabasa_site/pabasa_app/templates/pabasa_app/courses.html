@@ -5052,30 +5052,44 @@
     .modal-backdrop.fade {
         opacity: 0;
         transition: opacity 0.3s ease;
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
     }
 
     .modal-backdrop.show {
         opacity: 0.65;
         background-color: rgba(27, 26, 23, 0.5);
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
     }
 
     /* Course page has custom helper overlays up to z-index:3000. Keep every
        Bootstrap modal above those layers so the dimming overlay never captures
        clicks while the modal content is visible. */
-    body.modal-open > .modal {
+    body.modal-open .modal {
         z-index: 4100 !important;
         pointer-events: auto !important;
+        position: fixed !important;
+        inset: 0 !important;
     }
 
-    body.modal-open > .modal .modal-dialog {
+    body.modal-open .modal .modal-dialog {
         z-index: 4110 !important;
         position: relative;
         pointer-events: auto !important;
     }
 
-    body.modal-open > .modal-backdrop {
+    body.modal-open .modal-backdrop {
         z-index: 4000 !important;
         pointer-events: auto !important;
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
     }
 
     /* Course page dark mode support */
