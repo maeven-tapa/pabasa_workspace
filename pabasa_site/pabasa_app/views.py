@@ -7382,6 +7382,9 @@ def profile(request):
     
     selected_avatar_slug = user.animal_avatar if user.animal_avatar in STUDENT_AVATAR_BY_SLUG else 'owl'
     selected_avatar = STUDENT_AVATAR_BY_SLUG[selected_avatar_slug]
+    teacher_active_classes = 0
+    if user.role == 'teacher':
+        teacher_active_classes = Section.objects.filter(teacher=user, is_active=True).count()
     
     # Get user bio from tags (profile information)
     bio = ''
@@ -7566,6 +7569,7 @@ def profile(request):
         'reading_level': user.reading_level or '',
         'contact_number': user.contact_no or '',
         'notification_settings': _notification_settings_for_user(user),
+        'teacher_active_classes': teacher_active_classes,
         'student_theme_slug': (
             user.equipped_theme
             if user.role == 'student' and user.equipped_theme in STUDENT_THEME_CATALOG

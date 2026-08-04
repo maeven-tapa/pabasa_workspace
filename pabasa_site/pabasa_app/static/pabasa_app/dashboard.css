@@ -858,42 +858,48 @@ h1, h2, h3, h4, h5, h6, .brand, .button-primary, .button-ghost, .nav-item, .dash
 }
 
 .modal-dialog {
-    z-index: 1061 !important;
+    z-index: 4110 !important;
     position: relative;
 }
 
 .modal-backdrop {
-    z-index: 1050 !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 4000 !important;
+    background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+body.modal-open .modal-backdrop,
+body.modal-open .modal-backdrop.show {
+    z-index: 4000 !important;
+}
+
+body.modal-open .modal,
+body.modal-open .modal.show {
+    z-index: 4100 !important;
+}
+
+body.modal-open .modal .modal-dialog,
+body.modal-open .modal.show .modal-dialog {
+    z-index: 4110 !important;
+    position: relative;
 }
 
 #classCreatedModal {
-    z-index: 1065 !important;
+    z-index: 4105 !important;
 }
 
 #classCreatedModal .modal-dialog {
-    z-index: 1066 !important;
+    z-index: 4106 !important;
     position: relative;
 }
 
-.modal-backdrop {
-    z-index: 1055 !important;
+#classCreatedModal .modal-content {
+    border-radius: 20px;
 }
 
-#classCreatedModal .modal-content{
-    border-radius:20px;
-}
-
-#classCreatedModal .modal-dialog{
-    z-index:1065;
-}
-
-.modal-backdrop{
-    z-index:1050;
-}
-
-.modal-backdrop {
-    display: none !important;
-}
 
 #classCreatedModal {
     background: transparent !important;

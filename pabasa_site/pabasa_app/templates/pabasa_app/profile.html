@@ -1567,7 +1567,7 @@
                 <span aria-hidden="true">&bull;</span>
                 <span>{{ account_status_label|default:"Active" }} Teacher</span>
             </div>
-            <div class="teacher-hero-pill"><i class="bi bi-people-fill"></i> {{ teacher_active_classes|default:"0" }} active classes</div>
+            <div class="teacher-hero-pill"><i class="bi bi-people-fill"></i> <span id="profileHeroActiveClassesCount">{{ teacher_active_classes|default:"0" }}</span> active classes</div>
         </div>
     </header>
     {% endif %}

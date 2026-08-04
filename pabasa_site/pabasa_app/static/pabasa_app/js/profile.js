@@ -494,6 +494,7 @@ function initProfilePage() {
     function updateClassOverview() {
         const stats = getTeacherOverviewStats();
         const activeClassesCount = document.getElementById("profileActiveClassesCount");
+        const heroActiveClassesCount = document.getElementById("profileHeroActiveClassesCount");
         const totalStudentsCount = document.getElementById("profileTotalStudentsCount");
         const materialsPostedCount = document.getElementById("profileMaterialsPostedCount");
         const reportsGeneratedCount = document.getElementById("profileReportsGeneratedCount");
@@ -505,6 +506,7 @@ function initProfilePage() {
         };
 
         setCounterValue(activeClassesCount, stats.activeClasses, 0);
+        setCounterValue(heroActiveClassesCount, stats.activeClasses, 0);
         setCounterValue(totalStudentsCount, stats.totalStudents, 0);
         setCounterValue(materialsPostedCount, stats.materialsPosted, 0);
         setCounterValue(reportsGeneratedCount, stats.reportsGenerated, 0);
@@ -561,6 +563,7 @@ function initProfilePage() {
                     } catch (e) {}
 
                     setCounterValue(activeClassesCount, safeClassesCount, stats.activeClasses);
+                    setCounterValue(heroActiveClassesCount, safeClassesCount, stats.activeClasses);
                     setCounterValue(totalStudentsCount, safeStudentsCount, stats.totalStudents);
                     setCounterValue(materialsPostedCount, safeMaterialsCount, stats.materialsPosted);
                     setCounterValue(reportsGeneratedCount, safeReportsCount, stats.reportsGenerated);
