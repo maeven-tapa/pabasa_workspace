@@ -669,9 +669,12 @@ function initProfilePage() {
 
             const levelDisplay = document.getElementById("profileStudentLevel");
             if (levelDisplay) {
-                const totalStars = parseInt(window.pabasaStore.get("pabasa_total_stars", "0"), 10) || 0;
-                const assessmentsCompleted = parseInt(window.pabasaStore.get("pabasa_assessments_completed", "0"), 10) || 0;
-                const dynamicLevel = getPabasaLevelFromProgress(completedCount, totalStars, assessmentsCompleted);
+                const profilePabasaLevel = document.querySelector(".player-profile")?.dataset?.pabasaReadingLevel || "";
+                const dynamicLevel = profilePabasaLevel || getPabasaLevelFromProgress(
+                    completedCount,
+                    parseInt(window.pabasaStore.get("pabasa_total_stars", "0"), 10) || 0,
+                    parseInt(window.pabasaStore.get("pabasa_assessments_completed", "0"), 10) || 0
+                );
 
                 levelDisplay.textContent = dynamicLevel;
                 if (levelDisplay.textContent.length > 15) {

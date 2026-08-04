@@ -7391,6 +7391,8 @@ def profile(request):
     if user.role == 'teacher':
         profile_info = _get_profile_dict(user, 'profile_info')
         bio = profile_info.get('bio', 'Creates reading materials, manages class codes, and monitors student reading levels.')
+
+    pabasa_reading_level = 'Pending'
     
     if request.method == 'POST':
         # Check for profile save first (most common action)
@@ -7582,6 +7584,24 @@ def profile(request):
             request,
             _get_practice_language_preference(user) or 'English',
         )
+        has_assessment_records = Assessment.objects.filter(student=user, is_active=True).exists()
+        latest_completed_assessment = (
+            Assessment.objects.filter(student=user, attempt_status='completed', is_active=True)
+            .select_related('source_assessment')
+            .order_by('-completed_at', '-updated_at', '-created_at')
+            .first()
+        )
+        if latest_completed_assessment:
+            latest_level_source = (
+                latest_completed_assessment.crla_classification
+                or latest_completed_assessment.classification
+            )
+            if latest_level_source:
+                pabasa_reading_level = derive_classification_equivalents(latest_level_source).get('pabasa_level', pabasa_reading_level)
+            elif latest_completed_assessment.total_score is not None:
+                pabasa_reading_level = derive_classification_equivalents(_crla_classification(latest_completed_assessment.total_score)).get('pabasa_level', pabasa_reading_level)
+        if not has_assessment_records:
+            pabasa_reading_level = 'Pending'
         practice_materials = [
             _serialize_student_practice_material(material, user)
             for material in _student_practice_queryset(request)
@@ -7606,6 +7626,7 @@ def profile(request):
             'achievement_star_collector': _student_theme_lifetime_stars(user) >= 25,
             'achievement_word_master': completed_levels >= 5,
             'achievement_practice_streak': completed_sets >= 10,
+            'pabasa_reading_level': pabasa_reading_level,
         })
 
     return render(request, 'pabasa_app/profile.html', profile_context)

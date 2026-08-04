@@ -1573,10 +1573,10 @@
     {% endif %}
 
     {% if nav_role == 'student' %}
-    <div class="player-profile">
+    <div class="player-profile" data-pabasa-reading-level="{{ pabasa_reading_level|default:'Not set' }}">
         <header class="player-hero">
             <div class="player-emblem student-avatar-badge" aria-label="{{ selected_avatar.name }} avatar"><span>{{ selected_avatar.emoji }}</span></div>
-            <div><div class="player-greeting">Hello, Reader</div><h2 class="player-name">{{ full_name }}</h2><div class="player-class">{{ grade_level|default:"Grade not set" }} &bull; {{ section_name|default:"Section not set" }}</div><div class="player-reading-level"><i class="bi bi-book-half"></i> {{ reading_level|default:"Reading level not set" }}</div></div>
+            <div><div class="player-greeting">Hello, Reader</div><h2 class="player-name">{{ full_name }}</h2><div class="player-class">{{ grade_level|default:"Grade not set" }} &bull; {{ section_name|default:"Section not set" }}</div><div class="player-reading-level"><i class="bi bi-book-half"></i> {{ pabasa_reading_level|default:"Not set" }}</div></div>
         </header>
         <div class="player-dashboard-grid">
             <section class="player-card player-student-info"><h3 class="player-card-title"><i class="bi bi-person-lines-fill"></i> Student Info</h3><div class="player-info-grid">
@@ -1588,7 +1588,7 @@
                 <div class="player-info-chip"><i class="bi bi-mortarboard"></i><div><small>Grade</small><strong>{{ grade_level|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-people"></i><div><small>Section</small><strong>{{ section_name|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-building"></i><div><small>School</small><strong>{{ school_name|default:"Not set" }}</strong></div></div>
-                <div class="player-info-chip"><i class="bi bi-book"></i><div><small>Reading Level</small><strong>{{ reading_level|default:"Not set" }}</strong></div></div>
+                <div class="player-info-chip"><i class="bi bi-book"></i><div><small>PABASA Reading Level</small><strong>{{ pabasa_reading_level|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-card-heading"></i><div><small>LRN</small><strong>{{ lrn|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-telephone"></i><div><small>Contact Number</small><strong>{{ contact_number|default:"Not set" }}</strong></div></div>
                 <div class="player-info-chip"><i class="bi bi-check-circle"></i><div><small>Student Status</small><strong>{{ account_status_label|default:"Active" }} Student</strong></div></div>
@@ -1679,7 +1679,7 @@
                                 </div>
                                 <div>
                                     <span class="profile-detail-icon"><i class="bi bi-book-half"></i></span>
-                                    <span class="profile-detail-text"><span class="label">Reading Level</span><span class="value">{{ reading_level|default:"Not set" }}</span></span>
+                                    <span class="profile-detail-text"><span class="label">PABASA Reading Level</span><span class="value">{{ pabasa_reading_level|default:"Not set" }}</span></span>
                                 </div>
                                 <div>
                                     <span class="profile-detail-icon"><i class="bi bi-card-heading"></i></span>
