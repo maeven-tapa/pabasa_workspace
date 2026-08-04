@@ -5077,7 +5077,8 @@
         inset: 0 !important;
     }
 
-    body.modal-open .modal .modal-dialog {
+    body.modal-open .modal .modal-dialog,
+    body.modal-open .modal .modal-content {
         z-index: 4110 !important;
         position: relative;
         pointer-events: auto !important;
@@ -5085,7 +5086,7 @@
 
     body.modal-open .modal-backdrop {
         z-index: 4000 !important;
-        pointer-events: auto !important;
+        pointer-events: none !important;
         position: fixed !important;
         inset: 0 !important;
         width: 100vw !important;

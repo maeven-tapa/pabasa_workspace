@@ -185,6 +185,9 @@ var getStudentClassData = window.getStudentClassData = function() {
     }
 
     function cleanupModalBackdrops() {
+        if (document.querySelector('.modal.show')) {
+            return;
+        }
         document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
             if (backdrop && backdrop.isConnected) {
                 backdrop.remove();
@@ -197,7 +200,11 @@ var getStudentClassData = window.getStudentClassData = function() {
         }
     }
 
-    function cleanupOrphanModalState() {
+    function cleanupOrphanModalState(event) {
+        const activeTarget = event?.target instanceof Element ? event.target : null;
+        if (activeTarget && activeTarget.closest('.modal')) {
+            return;
+        }
         const hasVisibleModal = Boolean(document.querySelector('.modal.show'));
         const hasBackdrop = Boolean(document.querySelector('.modal-backdrop'));
         if (!hasVisibleModal && (hasBackdrop || document.body.classList.contains('modal-open'))) {
@@ -314,7 +321,12 @@ var getStudentClassData = window.getStudentClassData = function() {
         if (navigationPending) return;
 
         const clickTarget = event.target instanceof Element ? event.target : event.target?.parentElement;
-        const link = clickTarget?.closest("a[href]");
+        if (!clickTarget) return;
+
+        // Modal interactions should stay local to the modal and never trigger dashboard navigation.
+        if (clickTarget.closest(".modal")) return;
+
+        const link = clickTarget.closest("a[href]");
         if (!link) return;
 
         let targetUrl;

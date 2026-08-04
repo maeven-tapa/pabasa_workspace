@@ -278,6 +278,28 @@
             }
         }
 
+        function findClassCardByCode(classCode) {
+            if (!classList) return null;
+            return Array.from(classList.querySelectorAll('.class-card')).find(function (card) {
+                return card.getAttribute('data-code') === classCode;
+            }) || null;
+        }
+
+        function setClassCardDeletingState(classCode, isDeleting) {
+            const card = findClassCardByCode(classCode);
+            if (!card) return;
+
+            card.classList.toggle('is-deleting', isDeleting);
+            card.setAttribute('aria-busy', isDeleting ? 'true' : 'false');
+            card.style.pointerEvents = isDeleting ? 'none' : '';
+
+            const deleteButton = card.querySelector('.class-card-delete');
+            if (deleteButton) {
+                deleteButton.disabled = isDeleting;
+                deleteButton.setAttribute('aria-disabled', isDeleting ? 'true' : 'false');
+            }
+        }
+
         function createClassCard(name, header, description, code, subject, students, assessmentCount, practiceCount, teacherEmailArg) {
             const card = document.createElement("div");
             card.className = "class-card";
@@ -286,6 +308,7 @@
             card.setAttribute("data-code", code);
             card.setAttribute("data-header", header);
             card.setAttribute("data-description", description);
+            card.setAttribute("aria-busy", "false");
 
             const email = teacherEmailArg || window.PABASA_USER_EMAIL || localStorage.getItem("pabasaUserEmail") || "";
             card.setAttribute("data-teacher-email", email);
@@ -326,6 +349,17 @@
             head.appendChild(deleteBtn);
             card.appendChild(head);
             card.appendChild(meta);
+
+            const deletingOverlay = document.createElement("div");
+            deletingOverlay.className = "class-card-deleting-overlay";
+            deletingOverlay.setAttribute("aria-hidden", "true");
+            deletingOverlay.innerHTML = `
+                <div class="class-card-deleting-state">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>
+                    <span>Deleting...</span>
+                </div>
+            `;
+            card.appendChild(deletingOverlay);
 
             return card;
         }
@@ -455,11 +489,6 @@
         const classCreatedModalEl = document.getElementById("classCreatedModal");
         if (classCreatedModalEl) {
             classCreatedModalEl.addEventListener("hidden.bs.modal", function () {
-                document.querySelectorAll(".modal-backdrop").forEach(el => el.remove());
-                document.body.classList.remove("modal-open");
-                document.body.style.overflow = "";
-                document.body.style.paddingRight = "";
-                
                 loadSavedClasses();
             });
         }
@@ -599,6 +628,8 @@
         }
 
         function deleteTeacherClass(classCode) {
+            setClassCardDeletingState(classCode, true);
+
             // Call backend to delete the class
             fetch('/dashboard/teacher/delete-class/', {
                 method: 'POST',
@@ -611,8 +642,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    setClassCardDeletingState(classCode, false);
+
                     // Remove from classList DOM
-                    const cardToRemove = classList.querySelector(`[data-code="${classCode}"]`);
+                    const cardToRemove = findClassCardByCode(classCode);
                     if (cardToRemove) {
                         cardToRemove.remove();
                     }
@@ -679,6 +712,7 @@
             })
             .catch(error => {
                 console.error('Error deleting class:', error);
+                setClassCardDeletingState(classCode, false);
                 showToast('An error occurred while deleting the class.', 'error');
             });
         }

@@ -1796,21 +1796,20 @@
             height: 100vh !important;
             z-index: 4000 !important;
             background-color: rgba(0, 0, 0, 0.45) !important;
-            pointer-events: auto !important;
+            pointer-events: none !important;
         }
-        body.modal-open .modal,
         body.modal-open .modal.show {
             display: block !important;
             z-index: 4100 !important;
             pointer-events: auto !important;
         }
-        body.modal-open .modal .modal-dialog,
-        body.modal-open .modal.show .modal-dialog {
+        body.modal-open .modal.show .modal-dialog,
+        body.modal-open .modal.show .modal-content {
             z-index: 4110 !important;
             position: relative;
             pointer-events: auto !important;
         }
-        .modal {
+        .modal.show {
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
@@ -1818,7 +1817,7 @@
             z-index: 4100 !important;
             pointer-events: auto !important;
         }
-        .modal-dialog {
+        .modal.show .modal-dialog {
             z-index: 4110 !important;
             position: relative;
             pointer-events: auto !important;

@@ -876,12 +876,10 @@ body.modal-open .modal-backdrop.show {
     z-index: 4000 !important;
 }
 
-body.modal-open .modal,
 body.modal-open .modal.show {
     z-index: 4100 !important;
 }
 
-body.modal-open .modal .modal-dialog,
 body.modal-open .modal.show .modal-dialog {
     z-index: 4110 !important;
     position: relative;
