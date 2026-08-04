@@ -105,7 +105,10 @@ def _practice_selected_language(request, default="English"):
 
 def _get_practice_language_preference(user):
     preferences = _get_user_preference_dict(user)
-    return _practice_language_value(preferences.get(PRACTICE_LANGUAGE_PREFERENCE_KEY))
+    value = preferences.get(PRACTICE_LANGUAGE_PREFERENCE_KEY)
+    if value in (None, ""):
+        return ""
+    return _practice_language_value(value)
 
 
 def _set_practice_language_preference(user, language):

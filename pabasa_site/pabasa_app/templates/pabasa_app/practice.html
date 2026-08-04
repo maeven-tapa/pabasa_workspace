@@ -727,6 +727,88 @@
         color: #94a3b8;
     }
 
+    .practice-onboarding-modal .modal-content {
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(21, 94, 117, 0.14);
+        border-radius: 28px;
+        box-shadow: 0 24px 54px rgba(21, 94, 117, 0.18);
+        overflow: hidden;
+    }
+
+    .practice-onboarding-badge {
+        align-items: center;
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.14), rgba(255, 214, 57, 0.26));
+        border-radius: 999px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        height: 4rem;
+        justify-content: center;
+        width: 4rem;
+    }
+
+    .practice-onboarding-kicker {
+        color: var(--dash-primary);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.78rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+    }
+
+    .practice-onboarding-modal h2 {
+        color: var(--dash-text);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+    }
+
+    .practice-onboarding-modal p {
+        color: var(--dash-muted);
+        line-height: 1.65;
+    }
+
+    .practice-onboarding-modal .btn {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+    }
+
+    .practice-onboarding-modal .btn-outline-primary {
+        border-color: rgba(31, 111, 139, 0.18);
+        color: var(--dash-primary-deep);
+    }
+
+    .practice-onboarding-modal .btn-outline-primary:hover,
+    .practice-onboarding-modal .btn-outline-primary:focus-visible {
+        background: rgba(31, 111, 139, 0.07);
+        border-color: rgba(31, 111, 139, 0.24);
+        color: var(--dash-primary-deep);
+    }
+
+    body.dark-theme .practice-onboarding-modal .modal-content {
+        background: #1e293b;
+        border-color: #334155;
+        box-shadow: 0 24px 54px rgba(2, 6, 23, 0.5);
+    }
+
+    body.dark-theme .practice-onboarding-badge {
+        color: #f8fafc;
+    }
+
+    body.dark-theme .practice-onboarding-modal h2,
+    body.dark-theme .practice-onboarding-modal p {
+        color: #f8fafc !important;
+    }
+
+    body.dark-theme .practice-onboarding-modal .btn-outline-primary {
+        border-color: rgba(125, 211, 252, 0.26);
+        color: #dbeafe;
+    }
+
+    body.dark-theme .practice-onboarding-modal .btn-outline-primary:hover,
+    body.dark-theme .practice-onboarding-modal .btn-outline-primary:focus-visible {
+        background: rgba(56, 189, 248, 0.12);
+        border-color: rgba(125, 211, 252, 0.34);
+        color: #f8fafc;
+    }
+
     @media (max-width: 991.98px) {
         .practice-hero,
         .challenge-panel {
@@ -764,6 +846,29 @@
 
 {% block content %}
 <section class="practice-board">
+    {% if not has_practice_language_preference %}
+    <div class="modal fade practice-onboarding-modal" id="practiceLanguageOnboardingModal" tabindex="-1" aria-labelledby="practiceLanguageOnboardingLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body p-4 p-md-5 text-center">
+                    <div class="practice-onboarding-badge mb-3 mx-auto"><i class="bi bi-journal-text"></i></div>
+                    <div class="practice-onboarding-kicker">Welcome to Practice Mode</div>
+                    <h2 class="h4 fw-bold mb-3" id="practiceLanguageOnboardingLabel">Choose your first practice language</h2>
+                    <p class="mb-4">
+                        Pick the language you’d like to practice first. You can switch languages later from the Practice Mode page.
+                    </p>
+                    <form method="post" id="practiceLanguageOnboardingForm" class="d-grid gap-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="settings_action" value="save_practice_language">
+                        <input type="hidden" name="language" id="practiceLanguageOnboardingInput" value="{{ selected_practice_language|default:'English' }}">
+                        <button type="button" class="btn btn-primary btn-lg rounded-pill py-3 fw-bold practice-onboarding-choice" data-language="English">English</button>
+                        <button type="button" class="btn btn-outline-primary btn-lg rounded-pill py-3 fw-bold practice-onboarding-choice" data-language="Filipino">Filipino</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     <section class="hub-section challenge-panel">
         <div class="challenge-copy">
             <div class="challenge-tag">Challenge board</div>
@@ -802,6 +907,7 @@
 {{ game_progression_summary|json_script:"gameProgressionSummary" }}
 <script>
     (() => {
+        const hasPracticeLanguagePreference = {{ has_practice_language_preference|yesno:"true,false" }};
         const practiceMaterials = JSON.parse(document.getElementById("practiceMaterialsData")?.textContent || "[]");
         const authoritativeTotalStars = Number("{{ authoritative_total_stars_earned|default:0 }}") || 0;
         const gameModes = [
@@ -978,6 +1084,40 @@
         renderGameHub();
         window.addEventListener("storage", renderGameHub);
         window.addEventListener("pabasa:practice-progress-updated", renderGameHub);
+
+        const onboardingModalEl = document.getElementById("practiceLanguageOnboardingModal");
+        const onboardingInput = document.getElementById("practiceLanguageOnboardingInput");
+        const onboardingForm = document.getElementById("practiceLanguageOnboardingForm");
+        const onboardingButtons = document.querySelectorAll(".practice-onboarding-choice");
+
+        const showOnboardingModal = () => {
+            if (hasPracticeLanguagePreference || !onboardingModalEl || !window.bootstrap?.Modal) return;
+
+            const onboardingModal = new bootstrap.Modal(onboardingModalEl, {
+                backdrop: "static",
+                keyboard: false,
+                focus: true
+            });
+
+            onboardingButtons.forEach((button) => {
+                button.addEventListener("click", () => {
+                    if (onboardingInput) onboardingInput.value = button.dataset.language || "English";
+                    if (onboardingForm) onboardingForm.submit();
+                });
+            });
+
+            onboardingModalEl.addEventListener("shown.bs.modal", () => {
+                onboardingButtons[0]?.focus();
+            }, { once: true });
+
+            onboardingModal.show();
+        };
+
+        if (document.readyState === "loading") {
+            window.addEventListener("load", showOnboardingModal, { once: true });
+        } else {
+            showOnboardingModal();
+        }
     })();
 </script>
 {% endblock %}
