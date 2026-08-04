@@ -232,24 +232,6 @@
         margin-left: auto;
     }
 
-    .course-card-delete-btn {
-        align-items: center;
-        background: rgba(220, 38, 38, 0.12);
-        border: 1px solid rgba(220, 38, 38, 0.18);
-        border-radius: 999px;
-        color: #b91c1c;
-        display: inline-flex;
-        height: 32px;
-        justify-content: center;
-        width: 32px;
-        transition: background-color 0.2s ease, transform 0.2s ease;
-    }
-
-    .course-card-delete-btn:hover {
-        background: rgba(220, 38, 38, 0.18);
-        transform: translateY(-1px);
-    }
-
     .course-code-pill,
     .course-status-pill {
         align-items: center;
@@ -275,7 +257,47 @@
         background: rgba(22, 163, 74, 0.14);
         border: 1px solid rgba(22, 163, 74, 0.2);
         color: #15803d;
+        cursor: pointer;
         gap: 0.35rem;
+        min-width: 94px;
+        overflow: hidden;
+        position: relative;
+        transition: background-color 0.24s ease, border-color 0.24s ease, color 0.24s ease, transform 0.24s ease, box-shadow 0.24s ease;
+    }
+
+    .course-status-pill:hover {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(239, 68, 68, 0.24);
+        box-shadow: 0 10px 24px rgba(239, 68, 68, 0.14);
+        color: #b91c1c;
+        transform: translateY(-1px);
+    }
+
+    .course-status-pill:focus-visible {
+        outline: 2px solid rgba(31, 111, 139, 0.55);
+        outline-offset: 2px;
+    }
+
+    .course-status-pill-inner {
+        align-items: center;
+        display: inline-flex;
+        gap: 0.35rem;
+        justify-content: center;
+        position: relative;
+        width: 100%;
+    }
+
+    .course-status-icon {
+        align-items: center;
+        display: inline-flex;
+        justify-content: center;
+        position: relative;
+        width: 0.7rem;
+    }
+
+    .course-status-dot,
+    .course-status-trash-icon {
+        transition: opacity 0.24s ease, transform 0.24s ease;
     }
 
     .course-status-dot {
@@ -284,6 +306,55 @@
         box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
         height: 0.5rem;
         width: 0.5rem;
+    }
+
+    .course-status-trash-icon {
+        color: currentColor;
+        font-size: 0.72rem;
+        left: 0;
+        opacity: 0;
+        position: absolute;
+        transform: translateX(6px) scale(0.72);
+    }
+
+    .course-status-label,
+    .course-status-delete-label {
+        transition: opacity 0.24s ease, transform 0.24s ease, max-width 0.24s ease;
+    }
+
+    .course-status-label {
+        max-width: 100%;
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .course-status-delete-label {
+        max-width: 0;
+        opacity: 0;
+        overflow: hidden;
+        transform: translateX(8px);
+    }
+
+    .course-status-pill:hover .course-status-dot {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+
+    .course-status-pill:hover .course-status-trash-icon {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+
+    .course-status-pill:hover .course-status-label {
+        max-width: 0;
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+
+    .course-status-pill:hover .course-status-delete-label {
+        max-width: 100%;
+        opacity: 1;
+        transform: translateX(0);
     }
 
     .course-card-title {
@@ -515,25 +586,16 @@
         color: #86efac !important;
     }
 
+    body.dark-theme .course-status-pill:hover {
+        background: rgba(239, 68, 68, 0.16) !important;
+        border-color: rgba(248, 113, 113, 0.32) !important;
+        color: #fca5a5 !important;
+        box-shadow: 0 10px 24px rgba(239, 68, 68, 0.18) !important;
+    }
+
     body.dark-theme .course-status-dot {
         background: #22c55e !important;
         box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18) !important;
-    }
-
-    body.dark-theme .course-card-delete-btn,
-    body.dark-theme .class-card-delete-btn,
-    body.dark-theme .material-btn.delete {
-        background: rgba(239, 68, 68, 0.12) !important;
-        border-color: rgba(248, 113, 113, 0.22) !important;
-        color: #fca5a5 !important;
-    }
-
-    body.dark-theme .course-card-delete-btn:hover,
-    body.dark-theme .class-card-delete-btn:hover,
-    body.dark-theme .material-btn.delete:hover {
-        background: rgba(239, 68, 68, 0.2) !important;
-        border-color: rgba(248, 113, 113, 0.35) !important;
-        color: #fecaca !important;
     }
 
     body.dark-theme .course-card-metrics,
@@ -5867,10 +5929,16 @@
                     <div class="course-card-badges">
                         <span class="course-code-pill">{{ course.code }}</span>
                         <div class="course-card-header-actions">
-                            <button type="button" class="course-card-delete-btn" title="Delete Course" onclick="event.stopPropagation(); window.confirmDeleteCourse('{{ course.id }}')" aria-label="Delete Course">
-                                <i class="bi bi-trash3"></i>
+                            <button type="button" class="course-status-pill" title="Delete Course" onclick="event.stopPropagation(); window.confirmDeleteCourse('{{ course.id }}')" aria-label="Delete Course">
+                                <span class="course-status-pill-inner">
+                                    <span class="course-status-icon" aria-hidden="true">
+                                        <span class="course-status-dot"></span>
+                                        <i class="bi bi-trash3 course-status-trash-icon"></i>
+                                    </span>
+                                    <span class="course-status-label">Active</span>
+                                    <span class="course-status-delete-label">Delete</span>
+                                </span>
                             </button>
-                            <span class="course-status-pill"><span class="course-status-dot" aria-hidden="true"></span>Active</span>
                         </div>
                     </div>
 
@@ -7097,11 +7165,6 @@ body.dark-theme .course-status-pill {
     background: rgba(34, 197, 94, 0.14) !important;
     border-color: rgba(74, 222, 128, 0.32) !important;
     color: #bbf7d0 !important;
-}
-body.dark-theme .course-card-delete-btn {
-    background: rgba(239, 68, 68, 0.14) !important;
-    border-color: rgba(248, 113, 113, 0.34) !important;
-    color: #fecaca !important;
 }
 body.dark-theme .other-material-card,
 body.dark-theme .other-material-card .material-card-status,
@@ -9230,10 +9293,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     <div class="course-card-badges">
                         <span class="course-code-pill">${escapeHtml(course.code || 'Course')}</span>
                         <div class="course-card-header-actions">
-                            <button type="button" class="course-card-delete-btn" title="Delete Course" onclick="event.stopPropagation(); window.confirmDeleteCourse(${JSON.stringify(course.id)})" aria-label="Delete Course">
-                                <i class="bi bi-trash3"></i>
+                            <button type="button" class="course-status-pill" title="Delete Course" onclick="event.stopPropagation(); window.confirmDeleteCourse(${JSON.stringify(course.id)})" aria-label="Delete Course">
+                                <span class="course-status-pill-inner">
+                                    <span class="course-status-icon" aria-hidden="true">
+                                        <span class="course-status-dot"></span>
+                                        <i class="bi bi-trash3 course-status-trash-icon"></i>
+                                    </span>
+                                    <span class="course-status-label">Active</span>
+                                    <span class="course-status-delete-label">Delete</span>
+                                </span>
                             </button>
-                            <span class="course-status-pill"><span class="course-status-dot" aria-hidden="true"></span>Active</span>
                         </div>
                     </div>
 
