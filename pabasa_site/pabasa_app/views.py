@@ -277,23 +277,26 @@ def _material_school_year_label(material):
     return _current_school_year_bounds()[2]
 
 
-def _existing_crla_assessment_for_school_year():
+def _existing_crla_assessment_for_school_year(teacher_user=None):
     start_date, end_date, label = _current_school_year_bounds()
-    return Material.objects.filter(
+    qs = Material.objects.filter(
         type='assessment',
         assessment_kind='crla',
         created_at__date__gte=start_date,
         created_at__date__lte=end_date,
-    ).order_by('created_at', 'id').first(), label
+    )
+    if teacher_user and getattr(teacher_user, 'id', None):
+        qs = qs.filter(Q(teacher=teacher_user) | Q(section__teacher=teacher_user))
+    return qs.order_by('created_at', 'id').first(), label
 
 
-def _crla_creation_block_message(window=None):
+def _crla_creation_block_message(window=None, teacher_user=None):
     active_window = window or _assessment_window_choice()
     if active_window == 'mosy':
         return 'This school is currently in the Middle of School Year (MoSY) assessment window. New CRLA Assessments cannot be created during this period.'
-    existing, school_year = _existing_crla_assessment_for_school_year()
+    existing, school_year = _existing_crla_assessment_for_school_year(teacher_user)
     if existing:
-        return 'An official CRLA Assessment has already been created for the current school year. The same assessment will be reused for both the Beginning of School Year (Pre-Test) and End of School Year (Post-Test).'
+        return 'Your official CRLA Assessment has already been created for this school year. This same set will be reused for both the Beginning of School Year (Pre-Test) and End of School Year (Post-Test).'
     return ''
 
 
@@ -7316,12 +7319,13 @@ def course_teacher_view(request):
         return redirect('auth')
     context = _dashboard_context(request, 'teacher')
     window = _assessment_window_choice()
-    crla_existing, _school_year_label = _existing_crla_assessment_for_school_year()
+    teacher_user = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
+    crla_existing, _school_year_label = _existing_crla_assessment_for_school_year(teacher_user)
     context.update({
         'active_assessment_window': window,
         'active_assessment_window_label': _assessment_window_label(window),
         'crla_assessment_exists': bool(crla_existing),
-        'crla_assessment_status_message': _crla_creation_block_message(window) if window == 'mosy' or crla_existing else '',
+        'crla_assessment_status_message': _crla_creation_block_message(window, teacher_user) if window == 'mosy' or crla_existing else '',
     })
     return render(request, 'pabasa_app/courses.html', context)
 
@@ -11550,7 +11554,7 @@ def add_reading_material(request):
         if week_error:
             errors['assigned_week'] = week_error
         if assessment_kind == 'crla':
-            crla_block = _crla_creation_block_message()
+            crla_block = _crla_creation_block_message(teacher_user=teacher_user)
             if crla_block:
                 errors['assessment_kind'] = crla_block
 
@@ -11768,7 +11772,7 @@ def teacher_update_material(request):
             material.source_type = source_type
 
         if requested_assessment_kind == 'crla' and previous_assessment_kind != 'crla':
-            crla_block = _crla_creation_block_message()
+            crla_block = _crla_creation_block_message(teacher_user=teacher_user)
             if crla_block:
                 return JsonResponse({'success': False, 'error': crla_block}, status=400)
         material.assessment_kind = requested_assessment_kind
