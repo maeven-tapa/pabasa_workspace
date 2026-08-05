@@ -31,7 +31,7 @@ from .reading_stt import (
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -116,6 +116,100 @@ class AssessmentPageTemplateTests(TestCase):
 
         self.assertIn('const materialTypes = ["word", "sentence", "paragraph", "vowel"];', content)
         self.assertIn('vowel: "{% url \'reading_vowel_page\' %}"', content)
+
+    def test_assessment_page_start_link_passes_crla_payload_to_reader(self):
+        template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "assessment.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn('content={{ crla_assessment_content|urlencode }}', content)
+        self.assertIn('item_type=word', content)
+        self.assertIn('id={{ crla_material_id|default:\'\' }}', content)
+
+
+class AssessmentWorkflowStateTests(TestCase):
+    def test_sync_assessment_workflow_state_persists_crla_completion_and_aral_eligibility(self):
+        student = User.objects.create(
+            custom_id="STU-2001",
+            role="student",
+            first_name="Jamie",
+            last_name="Reader",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="jamie@example.com",
+            password_hash=make_password("student-password"),
+            preference={"reading_assessment_state": {}},
+        )
+        assessment = Assessment.objects.create(
+            title="CRLA Pre-Test",
+            assessment_kind='crla',
+            assessment_type='word',
+            teacher=student,
+            status='published',
+            is_active=True,
+        )
+
+        _sync_assessment_workflow_state(
+            student,
+            score_payload={
+                'crla_classification': 'Low Emerging Readers',
+                'adapted_reading_level': 'Low Emerging Readers',
+            },
+            assessment=assessment,
+        )
+
+        student.refresh_from_db()
+        state = student.preference.get("reading_assessment_state", {})
+        self.assertEqual(state["reader_classification"], "Low Emerging Readers")
+        self.assertTrue(state["aral_eligible"])
+        self.assertTrue(state["crla_pretest_completed"])
+        self.assertEqual(state["current_phase"], "materials")
+
+    def test_assessment_page_context_exposes_saved_student_profile_metrics(self):
+        student = User.objects.create(
+            custom_id="STU-2002",
+            role="student",
+            first_name="Alex",
+            last_name="Reader",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="alex@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "reader_classification": "Low Emerging Readers",
+                    "aral_eligible": True,
+                    "current_phase": "materials",
+                },
+                "student_profile": {
+                    "last_assessment_at": "2026-08-05T10:00:00+00:00",
+                    "total_score": 72,
+                },
+            },
+        )
+        session = self.client.session
+        session['user_id'] = student.id
+        session['user_role'] = 'student'
+        session['custom_id'] = student.custom_id
+        session['first_name'] = student.first_name
+        session['last_name'] = student.last_name
+        session['email'] = student.email
+        session.save()
+
+        response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['student_profile']['last_assessment_at'], "2026-08-05T10:00:00+00:00")
+        self.assertEqual(response.context['student_profile']['total_score'], 72)
+        self.assertEqual(response.context['stage'], "materials")
 
 
 class TeacherSignupTemplateTests(TestCase):

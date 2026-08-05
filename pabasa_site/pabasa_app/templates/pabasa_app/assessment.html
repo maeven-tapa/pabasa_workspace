@@ -990,7 +990,7 @@
                                                     <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
                                                     ${getMaterialLanguageBadgeHtml(m)}
                                                 </div>
-                                                <span>${labelMap[m.category]} • ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span>
+                                                <span>${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span>
                                                 ${timeScoreMarkup}
                                             </div>
                                         </div>

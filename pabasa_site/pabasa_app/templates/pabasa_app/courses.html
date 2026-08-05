@@ -7730,6 +7730,35 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 }
 @media (max-width: 575.98px) { #addMaterialModal .material-source-toggle { max-width: 100%; } }
 @media (max-width: 991.98px) { #addMaterialModal .modal-dialog { max-width: 100%; margin: 0 1rem; } #addMaterialModal .modal-body { padding: 1rem; } }
+
+.assessment-kind-toggle {
+    display: inline-flex;
+    width: 100%;
+    gap: 0.5rem;
+    padding: 0.35rem;
+    border-radius: 16px;
+    background: rgba(248, 250, 252, 0.96);
+    border: 1px solid rgba(31, 111, 139, 0.14);
+}
+
+.assessment-kind-option {
+    flex: 1 1 0;
+    border: 0;
+    border-radius: 12px;
+    min-height: 44px;
+    padding: 0.7rem 0.85rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #475569;
+    background: transparent;
+    transition: all 0.18s ease;
+}
+
+.assessment-kind-option.active {
+    background: linear-gradient(135deg, var(--dash-primary), #2f8fad);
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(31, 111, 139, 0.16);
+}
 </style>
 <div class="modal fade" id="addMaterialModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -7867,6 +7896,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     <i class="bi bi-lock-fill position-absolute top-50 end-0 translate-middle-y me-3 text-muted" style="font-size: 0.88rem; pointer-events: none;"></i>
                                 </div>
                                 <div class="form-text small text-muted">This assignment type is fixed and cannot be changed.</div>
+                            </div>
+
+                            <div class="teacher-field">
+                                <label class="form-label fw-bold small text-dark mb-1">Assessment</label>
+                                <input type="hidden" id="materialAssessmentKind" value="regular">
+                                <div class="assessment-kind-toggle" id="materialAssessmentKindToggle" role="group" aria-label="Assessment kind toggle">
+                                    <button type="button" class="assessment-kind-option active" data-kind="regular">Regular Reading Material</button>
+                                    <button type="button" class="assessment-kind-option" data-kind="crla">CRLA Assessment</button>
+                                </div>
+                                <div class="form-text small text-muted">Regular materials keep all existing workflows. CRLA materials follow the active assessment window.</div>
+                                {% if crla_assessment_status_message %}
+                                    <div class="alert alert-warning py-2 px-3 mt-2 mb-0 small" role="alert">
+                                        {{ crla_assessment_status_message }}
+                                    </div>
+                                {% endif %}
                             </div>
 
                             <div class="teacher-field">
@@ -8055,6 +8099,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         <select class="form-select" id="editMaterialUse">
                             <option value="assessment">Assessment Only</option>
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label d-block">Assessment</label>
+                        <input type="hidden" id="editMaterialAssessmentKind" value="regular">
+                        <div class="assessment-kind-toggle" id="editMaterialAssessmentKindToggle" role="group" aria-label="Assessment kind toggle">
+                            <button type="button" class="assessment-kind-option active" data-kind="regular">Regular Reading Material</button>
+                            <button type="button" class="assessment-kind-option" data-kind="crla">CRLA Assessment</button>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="editPublicationStatus">Publication Status</label>
@@ -13176,6 +13228,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const materialLanguageSelect = document.getElementById('materialLanguage');
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const randomizeOrderCheckbox = document.getElementById('randomizeOrderToggle');
+        const materialAssessmentKindInput = document.getElementById('materialAssessmentKind');
+        const materialAssessmentKindToggle = document.getElementById('materialAssessmentKindToggle');
         const addMaterialValidationError = document.getElementById('amValidationError');
         let editingItemIndex = null;
         const scheduleFieldDiv = document.getElementById('scheduleField');
@@ -13193,6 +13247,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const materialModePersonalBtn = document.getElementById('materialModePersonal');
         const materialModeOtherBtn = document.getElementById('materialModeOther');
         const addMaterialModeToggle = document.getElementById('addMaterialModeToggle');
+        const editMaterialAssessmentKindInput = document.getElementById('editMaterialAssessmentKind');
+        const editMaterialAssessmentKindToggle = document.getElementById('editMaterialAssessmentKindToggle');
         const otherMaterialPanel = document.getElementById('otherMaterialPanel');
         const otherMaterialSearchInput = document.getElementById('otherMaterialSearchInput');
         const otherMaterialAuthorSelect = document.getElementById('otherMaterialAuthorSelect');
@@ -13756,6 +13812,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (scheduleDateTimeInput) scheduleDateTimeInput.value = '';
             if (materialLanguageSelect) materialLanguageSelect.value = 'English';
             if (randomizeOrderCheckbox) randomizeOrderCheckbox.checked = false;
+            setAssessmentKind('regular');
             buildAssignedWeekOptions('assignedWeek', null);
             syncCourseMaterialDropdowns();
             window._pendingSharedMaterialOrigin = false;
@@ -13831,6 +13888,23 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     }
                 }
             }
+        }
+
+        function getSelectedAssessmentKind() {
+            const value = String(materialAssessmentKindInput?.value || 'regular').toLowerCase();
+            return value === 'crla' ? 'crla' : 'regular';
+        }
+
+        function setAssessmentKind(kind) {
+            const normalized = String(kind || 'regular').toLowerCase() === 'crla' ? 'crla' : 'regular';
+            if (materialAssessmentKindInput) materialAssessmentKindInput.value = normalized;
+            if (editMaterialAssessmentKindInput) editMaterialAssessmentKindInput.value = normalized;
+            [materialAssessmentKindToggle, editMaterialAssessmentKindToggle].forEach(toggle => {
+                if (!toggle) return;
+                toggle.querySelectorAll('.assessment-kind-option').forEach(button => {
+                    button.classList.toggle('active', button.dataset.kind === normalized);
+                });
+            });
         }
 
         function isAssessmentMaterial(item) {
@@ -14055,6 +14129,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const materialType = material.type || material.usage || material.usage_type || material.reading_type || 'assessment';
                 try { materialTypeSelect.value = materialType; } catch (e) { /* ignore */ }
             }
+            setAssessmentKind(material.assessment_kind || 'regular');
             if (publicationStatusSelect) {
                 publicationStatusSelect.value = (material.status || 'published').toString().toLowerCase();
                 syncCourseMaterialDropdown(publicationStatusSelect);
@@ -14154,11 +14229,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         }
 
+        function attachAssessmentKindHandlers() {
+            [materialAssessmentKindToggle, editMaterialAssessmentKindToggle].forEach(toggle => {
+                if (!toggle || toggle.dataset.bound) return;
+                toggle.dataset.bound = 'true';
+                toggle.addEventListener('click', function(event) {
+                    const button = event.target.closest('.assessment-kind-option');
+                    if (!button) return;
+                    setAssessmentKind(button.dataset.kind || 'regular');
+                });
+            });
+        }
+
         function openOtherMaterialModal() {
             /* removed: other materials now render inline */
         }
 
         attachOtherMaterialHandlers();
+        attachAssessmentKindHandlers();
 
         function excerptUploadedItems(text) {
             const cleaned = String(text || '')
@@ -14420,6 +14508,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 try { publicationStatusSelect.value = material.status || 'published'; } catch (e) { /* ignore */ }
                 if (publicationStatusSelect) syncCourseMaterialDropdown(publicationStatusSelect);
                 if (materialLanguageSelect) applyMaterialLanguageSelection(material);
+                setAssessmentKind(material.assessment_kind || 'regular');
                 if (randomizeOrderCheckbox) randomizeOrderCheckbox.checked = Boolean(material.content_json && material.content_json.randomize_order);
                 buildAssignedWeekOptions('assignedWeek', material.assigned_week || material.assignedWeek || null);
                 if ((material.status || '').toString().toLowerCase() === 'scheduled' && material.schedule) {
@@ -15297,7 +15386,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 content: newContent.trim(),
                                 status: editPublicationStatusSelect.value,
                                 usage_type: 'assessment',
-                                assigned_week: assignedWeekValue ? parseInt(assignedWeekValue, 10) : null
+                                assigned_week: assignedWeekValue ? parseInt(assignedWeekValue, 10) : null,
+                                assessment_kind: String(editMaterialAssessmentKindInput?.value || 'regular').toLowerCase() === 'crla' ? 'crla' : 'regular'
                             };
                             console.log('[submitEditMaterial] POST', endpoint, payload);
                             const response = await fetch(endpoint, {
@@ -15377,6 +15467,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         const sourceType = window._pendingSharedMaterialOrigin ? 'shared' : 'personal';
                         const language = materialLanguageSelect ? materialLanguageSelect.value : 'English';
                         const randomizeOrder = randomizeOrderCheckbox ? Boolean(randomizeOrderCheckbox.checked) : false;
+                        const assessmentKind = getSelectedAssessmentKind();
                         const assignedWeekEl = document.getElementById('assignedWeek');
                         const assignedWeekRaw = assignedWeekEl ? assignedWeekEl.value.trim() : '';
                         const assignedWeek = assignedWeekRaw ? parseInt(assignedWeekRaw, 10) : null;
@@ -15417,7 +15508,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         // ── Disable button / loading state ───────────────────────
                         submitMaterialBtn.disabled = true;
                         submitMaterialBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Creating...';
-                        console.log('[AddMaterial] Saving to database:', { title, reading_type: readingType, status, class_code: currentClassCode });
+                        console.log('[AddMaterial] Saving to database:', { title, reading_type: readingType, status, class_code: currentClassCode, assessment_kind: assessmentKind });
 
                         try { // Use readingType from modal select
                             // ── Step 1: Save to backend database via API ──────────
@@ -15452,7 +15543,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                                 'X-CSRFToken': csrfToken,
                                                 'X-Requested-With': 'XMLHttpRequest'
                                             },
-                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, class_code: currentClassCode, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder })
+                                            body: JSON.stringify({ material_id: editingMaterialId, title: title, reading_type: readingType, content: content, status: status, usage_type: usageType, class_code: currentClassCode, scheduled_at: schedule || null, assigned_week: assignedWeek, language: language, randomize_order: randomizeOrder, assessment_kind: assessmentKind })
                                         };
                                         apiResponse = await fetch('/dashboard/teacher/update-material/', opts);
                                         if (apiResponse.status === 403) {
@@ -15498,6 +15589,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                             assigned_week: assignedWeek,
                                             language: language,
                                             randomize_order: randomizeOrder,
+                                            assessment_kind: assessmentKind,
                                             source_type: sourceType,
                                             source_material_id: window._pendingSharedMaterialSourceId || null
                                         })

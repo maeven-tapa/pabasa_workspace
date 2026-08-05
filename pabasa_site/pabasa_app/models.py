@@ -875,6 +875,18 @@ class Material(models.Model):
         ("both", "Both"),
     ]
 
+    ASSESSMENT_SET_CHOICES = [
+        ("crla", "CRLA Assessment Set"),
+        ("word", "Word Assessment Set"),
+        ("sentence", "Sentence Assessment Set"),
+        ("paragraph", "Paragraph Assessment Set"),
+    ]
+
+    ASSESSMENT_KIND_CHOICES = [
+        ("regular", "Regular Reading Material"),
+        ("crla", "CRLA Assessment"),
+    ]
+
     # Materials are the assignable reading content. Assessment rows store
     # student result attempts and point back here through Assessment.material.
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, related_name="materials", null=True, blank=True)
@@ -887,6 +899,8 @@ class Material(models.Model):
     prompt_text = models.TextField(blank=True, default='')
     content_text = models.TextField(blank=True, default='')
     content_json = models.JSONField(default=dict, blank=True)
+    assessment_set = models.CharField(max_length=20, choices=ASSESSMENT_SET_CHOICES, blank=True, default="")
+    assessment_kind = models.CharField(max_length=20, choices=ASSESSMENT_KIND_CHOICES, default="regular")
     language = models.CharField(max_length=20, default="English", blank=True)
     type = models.CharField(max_length=20, choices=USAGE_TYPE_CHOICES, default='practice')
     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default='personal')
@@ -951,6 +965,9 @@ class Material(models.Model):
         parent = self.code or (self.section.class_code if self.section else 'UNLINKED')
         title_part = f" - {self.title}" if self.title else ''
         return f"{parent} - {self.item_type}{title_part}"
+
+    def is_assessment_content(self):
+        return str(self.type or "").strip().lower() in {"assessment", "both"} or bool(self.assessment_set)
 
     def save(self, *args, **kwargs):
         if not self.code:
@@ -1042,6 +1059,45 @@ class Material(models.Model):
         )
         result._apply_attempt_payload(result, attempt_data)
         return result._serialize_attempt()
+
+
+class AssessmentWindowSetting(models.Model):
+    WINDOW_CHOICES = [
+        ("bosy", "Beginning of School Year"),
+        ("mosy", "Middle of School Year"),
+        ("eosy", "End of School Year"),
+    ]
+
+    key = models.CharField(max_length=50, unique=True, default="assessment_window_active")
+    active_window = models.CharField(max_length=10, choices=WINDOW_CHOICES, default="bosy")
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="assessment_window_updates")
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "assessment_window_settings"
+
+    def __str__(self):
+        return f"{self.get_active_window_display()}"
+
+    @classmethod
+    def get_active(cls):
+        setting, _ = cls.objects.get_or_create(key="assessment_window_active", defaults={"active_window": "bosy"})
+        return setting
+
+    @classmethod
+    def get_active_window(cls):
+        return cls.get_active().active_window
+
+    @classmethod
+    def set_active_window(cls, window, updated_by=None):
+        setting = cls.get_active()
+        if window not in dict(cls.WINDOW_CHOICES):
+            window = "bosy"
+        setting.active_window = window
+        setting.updated_by = updated_by if getattr(updated_by, "id", None) else None
+        setting.save()
+        return setting
 
 
 # Assessment attempts are stored in the Assessment `attempts` JSONField.

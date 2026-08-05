@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate, login
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, OperationalError
 from django.db.models import Q
 from django.utils.text import slugify
 from functools import wraps
@@ -32,6 +32,7 @@ import uuid
 import zipfile
 import csv
 from io import BytesIO
+from datetime import date
 
 IMAGE_OCR_EMPTY_MESSAGE = (
     'No readable text could be recovered from that image. '
@@ -46,7 +47,7 @@ from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward
+from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, AssessmentWindowSetting
 from .reading_material_utils import format_assigned_week_display, parse_assigned_week
 from .reading_stt import (
     analyze_reading,
@@ -165,6 +166,146 @@ def _set_profile_dict(user, key, profile_dict):
         user.save(update_fields=['tags', 'preference', 'updated_at'])
     except Exception:
         user.save()
+
+
+def _get_user_state(user):
+    if not user:
+        return {}
+    preference = getattr(user, 'preference', None) or {}
+    if isinstance(preference, dict):
+        state = preference.get('reading_assessment_state') or {}
+        if isinstance(state, dict):
+            return state
+    return {}
+
+
+def _set_user_state(user, state):
+    if not user:
+        return
+    preference = dict(getattr(user, 'preference', None) or {})
+    preference['reading_assessment_state'] = state
+    user.preference = preference
+    user.save(update_fields=['preference', 'updated_at'])
+
+
+def _assessment_window_choice():
+    try:
+        return AssessmentWindowSetting.get_active_window()
+    except (OperationalError, Exception):
+        return "bosy"
+
+
+def _assessment_window_label(window):
+    return dict(AssessmentWindowSetting.WINDOW_CHOICES).get(window, "Beginning of School Year")
+
+
+def _aral_eligible_classification(label):
+    normalized = str(label or "").strip().lower()
+    return normalized in {
+        "low emerging readers",
+        "high emerging readers",
+        "low emerging",
+        "high emerging",
+    }
+
+
+def _reader_assessment_state(student):
+    state = _get_user_state(student)
+    classification = state.get('reader_classification') or getattr(student, 'reading_level', '') or ''
+    eligible = state.get('aral_eligible')
+    if eligible is None:
+        eligible = _aral_eligible_classification(classification)
+    return {
+        'reader_classification': classification,
+        'aral_eligible': bool(eligible),
+        'pre_test_completed': bool(state.get('crla_pretest_completed')),
+        'post_test_completed': bool(state.get('crla_posttest_completed')),
+        'current_phase': state.get('current_phase') or ('materials' if eligible else 'complete'),
+    }
+
+
+def _assessment_workflow_context(student):
+    window = _assessment_window_choice()
+    state = _reader_assessment_state(student)
+    completed_pretest = state['pre_test_completed']
+    completed_posttest = state['post_test_completed']
+    eligible = state['aral_eligible']
+
+    if window == 'bosy':
+        stage = 'pretest' if not completed_pretest else ('materials' if eligible else 'completed')
+    elif window == 'mosy':
+        stage = 'materials' if eligible and completed_pretest else ('completed' if completed_pretest and not eligible else 'pretest_locked')
+    else:
+        stage = 'posttest' if eligible and completed_pretest and not completed_posttest else ('materials' if eligible else 'completed')
+
+    return {
+        'active_window': window,
+        'active_window_label': _assessment_window_label(window),
+        'eligibility': state,
+        'stage': stage,
+        'can_take_pretest': window == 'bosy' and not completed_pretest,
+        'can_take_posttest': window == 'eosy' and eligible and completed_pretest and not completed_posttest,
+    }
+
+
+def _assessment_kind_value(material):
+    return str(getattr(material, 'assessment_kind', '') or 'regular').strip().lower() or 'regular'
+
+
+def _assessment_window_allows_crla(window=None):
+    return (window or _assessment_window_choice()) in {'bosy', 'eosy'}
+
+
+def _current_school_year_bounds(now=None):
+    current = now or timezone.localdate()
+    year = current.year
+    if current.month >= 6:
+        start_year = year
+        end_year = year + 1
+    else:
+        start_year = year - 1
+        end_year = year
+    start_date = date(start_year, 6, 1)
+    end_date = date(end_year, 5, 31)
+    return start_date, end_date, f"{start_year}-{end_year}"
+
+
+def _material_school_year_label(material):
+    created_at = getattr(material, 'created_at', None)
+    if created_at:
+        return _current_school_year_bounds(created_at.date())[2]
+    return _current_school_year_bounds()[2]
+
+
+def _existing_crla_assessment_for_school_year():
+    start_date, end_date, label = _current_school_year_bounds()
+    return Material.objects.filter(
+        type='assessment',
+        assessment_kind='crla',
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
+    ).order_by('created_at', 'id').first(), label
+
+
+def _crla_creation_block_message(window=None):
+    active_window = window or _assessment_window_choice()
+    if active_window == 'mosy':
+        return 'This school is currently in the Middle of School Year (MoSY) assessment window. New CRLA Assessments cannot be created during this period.'
+    existing, school_year = _existing_crla_assessment_for_school_year()
+    if existing:
+        return 'An official CRLA Assessment has already been created for the current school year. The same assessment will be reused for both the Beginning of School Year (Pre-Test) and End of School Year (Post-Test).'
+    return ''
+
+
+def _assessment_materials_for_student(student=None):
+    window = _assessment_window_choice()
+    kind_filters = Q(assessment_kind='regular')
+    if _assessment_window_allows_crla(window):
+        kind_filters |= Q(assessment_kind='crla')
+    return Material.objects.filter(
+        is_active=True,
+        type='assessment',
+    ).filter(kind_filters).order_by('created_at', 'id')
 
 def _parse_prefixed_id(val):
     """
@@ -1243,6 +1384,47 @@ def _update_student_reading_profile(student_user, score_payload):
         student_user.save(update_fields=['reading_level', 'updated_at'])
     except Exception:
         student_user.save()
+
+
+def _sync_assessment_workflow_state(student_user, score_payload=None, assessment=None, material=None):
+    if not student_user:
+        return
+
+    state = _get_user_state(student_user)
+    if not isinstance(state, dict):
+        state = {}
+
+    score_payload = dict(score_payload or {})
+    classification = (
+        score_payload.get('crla_classification')
+        or score_payload.get('classification')
+        or score_payload.get('adapted_reading_level')
+        or getattr(student_user, 'reading_level', '')
+        or state.get('reader_classification')
+        or ''
+    )
+    normalized_classification = str(classification or '').strip()
+
+    state['reader_classification'] = normalized_classification
+    state['aral_eligible'] = bool(_aral_eligible_classification(normalized_classification))
+
+    assessment_kind = ''
+    if assessment is not None:
+        assessment_kind = str(getattr(assessment, 'assessment_kind', '') or '').strip().lower()
+    if not assessment_kind and material is not None:
+        assessment_kind = str(getattr(material, 'assessment_kind', '') or '').strip().lower()
+    if not assessment_kind and material is not None:
+        assessment_kind = str(getattr(material, 'assessment_set', '') or '').strip().lower()
+
+    window = _assessment_window_choice()
+    if assessment_kind == 'crla':
+        if window == 'bosy':
+            state['crla_pretest_completed'] = True
+        elif window == 'eosy':
+            state['crla_posttest_completed'] = True
+
+    state['current_phase'] = 'materials' if state.get('aral_eligible') else 'complete'
+    _set_user_state(student_user, state)
 
 def _section_active_students(section):
     student_ids = [
@@ -4710,10 +4892,24 @@ def admin_settings(request):
             _set_profile_dict(user, 'notification_settings', notification_settings)
             context['settings_success'] = 'Push notification preferences saved.'
 
+        elif action == 'save_assessment_window':
+            window = str(request.POST.get('active_window') or '').strip().lower()
+            if window not in dict(AssessmentWindowSetting.WINDOW_CHOICES):
+                context['settings_error'] = 'Select a valid assessment window.'
+            else:
+                AssessmentWindowSetting.set_active_window(window, updated_by=user)
+                context['settings_success'] = f'Active assessment window set to {_assessment_window_label(window)}.'
+
         else:
             context['settings_error'] = 'Unknown settings action.'
 
     context['notification_settings'] = notification_settings
+    try:
+        context['assessment_window_setting'] = AssessmentWindowSetting.get_active()
+    except OperationalError:
+        context['assessment_window_setting'] = type('FallbackWindowSetting', (), {'active_window': 'bosy'})()
+        context['settings_error'] = context.get('settings_error') or 'Assessment window storage is not ready yet. Run database migrations to enable this feature.'
+    context['assessment_window_choices'] = AssessmentWindowSetting.WINDOW_CHOICES
     return render(request, 'pabasa_app/admin_settings.html', context)
 
 def courses(request):
@@ -4732,7 +4928,96 @@ def courses(request):
 def assessment(request):
     if not _check_auth(request):
         return redirect('auth')
-    return render(request, 'pabasa_app/assessment.html', _dashboard_context(request, 'student'))
+    user = User.objects.filter(id=request.session.get('user_id')).first()
+    workflow = _assessment_workflow_context(user)
+    student_profile = _get_profile_dict(user, 'student_profile') or {}
+    if not isinstance(student_profile, dict):
+        student_profile = {}
+
+    state = workflow.get('eligibility') or _reader_assessment_state(user)
+    window = workflow.get('active_window') or _assessment_window_choice()
+    completed_pretest = bool(state.get('pre_test_completed'))
+    completed_posttest = bool(state.get('post_test_completed'))
+    eligible = bool(state.get('aral_eligible'))
+
+    if window == 'bosy':
+        stage = 'pretest' if not completed_pretest else ('original' if eligible else 'not_eligible')
+    elif window == 'mosy':
+        stage = 'original' if eligible else ('not_eligible' if completed_pretest else 'original')
+    elif window == 'eosy':
+        if eligible:
+            stage = 'posttest' if completed_pretest and not completed_posttest else 'original'
+        else:
+            stage = 'not_eligible'
+    else:
+        stage = 'original'
+
+    workflow['stage'] = stage
+
+    materials = _assessment_materials_for_student(user)
+    material_map = {}
+    for material in materials:
+        key = str(material.assessment_set or material.item_type).strip().lower()
+        if key and key not in material_map:
+            material_map[key] = material
+        kind = _assessment_kind_value(material)
+        if kind and kind not in material_map:
+            material_map[kind] = material
+    crla_material = material_map.get('crla')
+    crla_items = 0
+    crla_duration = 'Not set'
+    crla_title = 'CRLA Assessment'
+    crla_content = ''
+    crla_material_id = ''
+    crla_material_code = ''
+    crla_material_language = ''
+    crla_material_item_type = 'word'
+    if crla_material:
+        crla_title = crla_material.title or crla_title
+        crla_material_id = crla_material.id
+        crla_material_code = getattr(crla_material, 'code', '') or 'CRLA'
+        crla_material_item_type = str(getattr(crla_material, 'item_type', '') or 'word').strip().lower() or 'word'
+        content_json = getattr(crla_material, 'content_json', None) or {}
+        if isinstance(content_json, dict):
+            crla_material_language = str(content_json.get('language') or '').strip()
+            items = content_json.get('items') if isinstance(content_json.get('items'), list) else []
+            if items:
+                crla_content = '\n'.join(str(item or '').strip() for item in items if str(item or '').strip())
+                crla_items = len([item for item in items if str(item or '').strip()])
+            elif content_json.get('content_text'):
+                crla_content = str(content_json.get('content_text') or '').strip()
+        if not crla_content:
+            crla_content = str(getattr(crla_material, 'content_text', '') or '').strip()
+        if crla_content and not crla_items:
+            crla_items = len([line for line in crla_content.splitlines() if line.strip()])
+        if crla_items:
+            estimated_minutes = max(5, min(30, round(crla_items * 0.5)))
+            crla_duration = f"{estimated_minutes} min"
+    context = _dashboard_context(request, 'student')
+    context.update(workflow)
+    context.update({
+        'student_profile': student_profile,
+        'crla_assessment_title': crla_title,
+        'crla_assessment_items_count': crla_items,
+        'crla_assessment_duration': crla_duration,
+        'crla_assessment_content': crla_content,
+        'crla_material_id': crla_material_id,
+        'crla_assessment_code': crla_material_code,
+        'crla_assessment_language': crla_material_language,
+        'crla_assessment_item_type': crla_material_item_type,
+    })
+    if stage == 'original':
+        return render(request, 'pabasa_app/assessment.html', context)
+
+    context['workflow_title'] = 'CRLA Pre-Test' if stage == 'pretest' else 'CRLA Post-Test' if stage == 'posttest' else 'Assessment Complete'
+    context['workflow_message'] = (
+        'Complete the official BoSY CRLA Pre-Test before returning to the regular Reading Assessment page.'
+        if stage == 'pretest'
+        else 'The learner will continue with the EoSY CRLA Post-Test using the same CRLA assessment materials.'
+        if stage == 'posttest'
+        else 'The learner successfully completed the BoSY CRLA assessment but is not eligible for the ARAL Program.'
+    )
+    return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
 
 @xframe_options_sameorigin
 def reading_word_page(request):
@@ -5467,6 +5752,7 @@ def _complete_assessment_for_student(student_user, data=None, request=None, live
             ).order_by('-completed_at', '-created_at').select_related('source_assessment').first()
         if not is_practice:
             _update_student_reading_profile(student_user, score_payload)
+            _sync_assessment_workflow_state(student_user, score_payload=score_payload, assessment=assessment, material=material)
         if live_session or data.get('live_session_id'):
             _trace_live_end_flow(
                 'complete_assessment_persisted',
@@ -7028,7 +7314,16 @@ def course_teacher_view(request):
         return redirect('auth')
     if request.session.get('user_role') not in ['teacher', 'admin']:
         return redirect('auth')
-    return render(request, 'pabasa_app/courses.html', _dashboard_context(request, 'teacher'))
+    context = _dashboard_context(request, 'teacher')
+    window = _assessment_window_choice()
+    crla_existing, _school_year_label = _existing_crla_assessment_for_school_year()
+    context.update({
+        'active_assessment_window': window,
+        'active_assessment_window_label': _assessment_window_label(window),
+        'crla_assessment_exists': bool(crla_existing),
+        'crla_assessment_status_message': _crla_creation_block_message(window) if window == 'mosy' or crla_existing else '',
+    })
+    return render(request, 'pabasa_app/courses.html', context)
 
 def course_student_view(request):
     return render(request, 'pabasa_app/course_student_view.html', _dashboard_context(request))
@@ -8521,6 +8816,7 @@ def get_teacher_courses_api(request):
                     'language': language_value,
                     'content_json': content_json,
                     'student_access': bool(getattr(m, 'student_access', False)),
+                    'assessment_kind': _assessment_kind_value(m),
                 })
 
             # Practices (normalized)
@@ -8732,6 +9028,7 @@ def get_teacher_assessments_api(request):
                     'status': m.status,
                     'is_active': m.is_active,
                     'student_access': bool(getattr(m, 'student_access', False)),
+                    'assessment_kind': _assessment_kind_value(a) if hasattr(a, 'assessment_kind') else 'regular',
                     'attempt_count': attempts_qs.count(),
                     'avg_accuracy': avg_list(accs),
                     'avg_wpm': avg_list(wpms),
@@ -11106,6 +11403,7 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'content_json': content_json,
         'randomize_order': bool(content_json.get('randomize_order')),
         'student_access': bool(getattr(material, 'student_access', False)),
+        'assessment_kind': _assessment_kind_value(material),
     }
 
 
@@ -11219,6 +11517,8 @@ def add_reading_material(request):
         source_type = requested_source_type if requested_source_type in ('personal', 'shared') else 'shared'
         class_code   = (data.get('class_code') or '').strip()
         language     = Material.normalize_language_value(data.get('language'))
+        requested_assessment_kind = str(data.get('assessment_kind') or 'regular').strip().lower()
+        assessment_kind = requested_assessment_kind if requested_assessment_kind in {'regular', 'crla'} else 'regular'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
         assigned_week, week_error = parse_assigned_week(assigned_week_raw)
@@ -11249,6 +11549,10 @@ def add_reading_material(request):
             errors['scheduled_at'] = 'Scheduled date & time is required.'
         if week_error:
             errors['assigned_week'] = week_error
+        if assessment_kind == 'crla':
+            crla_block = _crla_creation_block_message()
+            if crla_block:
+                errors['assessment_kind'] = crla_block
 
         if errors:
             logger.warning(f"add_reading_material validation failed: {errors}")
@@ -11372,10 +11676,11 @@ def add_reading_material(request):
                 content_text=content,
                 content_json={'items': tokens, 'language': language, 'randomize_order': randomize_order},
                 type=usage_type,
+                assessment_kind=assessment_kind,
                 source_type=source_type,
                 status=status,
                 scheduled_at=scheduled_at if status == 'scheduled' else None,
-                difficulty_level='', # This field is not set in this context, consider if it should be
+                difficulty_level='',
                 assigned_week=assigned_week,
                 student_access=student_access,
                 is_active=(status in ['published', 'scheduled'])
@@ -11450,6 +11755,9 @@ def teacher_update_material(request):
         language = Material.normalize_language_value(data.get('language'))
         material.status = data.get('status', material.status)
         material.type = 'assessment'
+        previous_assessment_kind = str(getattr(material, 'assessment_kind', 'regular') or 'regular').strip().lower()
+        requested_assessment_kind = str(data.get('assessment_kind') or previous_assessment_kind or 'regular').strip().lower()
+        requested_assessment_kind = requested_assessment_kind if requested_assessment_kind in {'regular', 'crla'} else 'regular'
         randomize_order_raw = data.get('randomize_order')
         randomize_order = str(randomize_order_raw).strip().lower() in ('1', 'true', 'yes', 'on') if randomize_order_raw is not None else None
         if 'student_access' in data:
@@ -11458,6 +11766,12 @@ def teacher_update_material(request):
         source_type = (data.get('source_type') or material.source_type).strip().lower()
         if source_type in ('personal', 'shared'):
             material.source_type = source_type
+
+        if requested_assessment_kind == 'crla' and previous_assessment_kind != 'crla':
+            crla_block = _crla_creation_block_message()
+            if crla_block:
+                return JsonResponse({'success': False, 'error': crla_block}, status=400)
+        material.assessment_kind = requested_assessment_kind
 
         if 'assigned_week' in data:
             assigned_week, week_error = parse_assigned_week(data.get('assigned_week'))

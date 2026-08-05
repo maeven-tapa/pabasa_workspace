@@ -1,0 +1,297 @@
+{% extends "pabasa_app/base_dashboard.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    .workflow-shell {
+        min-height: calc(100vh - 140px);
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+    }
+
+    .workflow-card {
+        width: min(800px, 100%);
+        background:
+            radial-gradient(circle at top right, rgba(247, 200, 106, 0.18), transparent 28%),
+            radial-gradient(circle at bottom left, rgba(124, 184, 200, 0.16), transparent 30%),
+            rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        border-radius: 30px;
+        box-shadow: 0 24px 64px rgba(21, 94, 117, 0.14);
+        padding: clamp(1.25rem, 2.5vw, 1.8rem);
+        display: grid;
+        gap: 1.1rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .workflow-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 6px;
+        background: linear-gradient(90deg, #7cb8c8, #cfe8ee, #f4d68f);
+    }
+
+    .workflow-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(31, 111, 139, 0.12);
+        color: var(--dash-primary-deep);
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
+    .workflow-center {
+        display: grid;
+        gap: 1rem;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .workflow-icon {
+        width: 84px;
+        height: 84px;
+        border-radius: 24px;
+        display: grid;
+        place-items: center;
+        background:
+            linear-gradient(145deg, rgba(31, 111, 139, 0.14), rgba(31, 111, 139, 0.05)),
+            #ffffff;
+        color: var(--dash-primary-deep);
+        font-size: 2rem;
+        box-shadow: inset 0 0 0 1px rgba(31, 111, 139, 0.08), 0 16px 30px rgba(31, 111, 139, 0.12);
+    }
+
+    .workflow-copy {
+        display: grid;
+        gap: 0.7rem;
+        justify-items: center;
+        max-width: 720px;
+    }
+
+    .workflow-subtitle {
+        margin: 0;
+        color: var(--dash-primary-deep);
+        font-weight: 800;
+        font-size: 0.92rem;
+        letter-spacing: 0.01em;
+    }
+
+    .workflow-card h1 {
+        margin: 0;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-weight: 900;
+        font-size: clamp(2rem, 4.5vw, 2.9rem);
+        line-height: 1.1;
+    }
+
+    .workflow-card p {
+        margin: 0;
+        color: var(--dash-muted);
+        line-height: 1.55;
+    }
+
+    .workflow-message {
+        font-size: 1rem;
+    }
+
+    .workflow-summary {
+        background: rgba(240, 248, 251, 0.9);
+        border: 1px solid rgba(31, 111, 139, 0.10);
+        border-radius: 20px;
+        padding: 0.95rem 1rem;
+        display: grid;
+        gap: 0.85rem;
+        width: min(720px, 100%);
+        margin-inline: auto;
+    }
+
+    .workflow-summary-title {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-weight: 900;
+        font-size: 0.92rem;
+        color: var(--dash-primary-deep);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .summary-grid {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.7rem 0.85rem;
+        border-radius: 14px;
+        background: #fff;
+        border: 1px solid rgba(31, 111, 139, 0.08);
+    }
+
+    .summary-label {
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--dash-muted);
+    }
+
+    .summary-value {
+        font-weight: 900;
+        color: var(--dash-primary-deep);
+        text-align: right;
+    }
+
+    .workflow-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .workflow-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        border-radius: 14px;
+        padding: 0.9rem 1.15rem;
+        font-weight: 800;
+        text-decoration: none;
+        min-height: 52px;
+    }
+
+    .workflow-button.primary {
+        min-width: min(240px, 100%);
+        font-size: 1rem;
+        box-shadow: 0 14px 28px rgba(31, 111, 139, 0.18);
+    }
+
+    .workflow-button.secondary {
+        border: 0;
+        background: transparent;
+        color: var(--dash-primary-deep);
+        padding-inline: 0.35rem;
+        min-width: 160px;
+    }
+
+    .workflow-button.secondary:hover {
+        background: rgba(31, 111, 139, 0.08);
+    }
+
+    .workflow-card.success {
+        background:
+            radial-gradient(circle at top right, rgba(247, 200, 106, 0.18), transparent 30%),
+            radial-gradient(circle at bottom left, rgba(124, 184, 200, 0.16), transparent 26%),
+            rgba(255, 255, 255, 0.96);
+    }
+
+    .success-accent {
+        color: #0f766e;
+        font-weight: 900;
+    }
+
+    @media (max-width: 575.98px) {
+        .workflow-card {
+            padding: 1.1rem;
+            border-radius: 22px;
+        }
+
+        .workflow-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+        }
+
+        .summary-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .summary-value {
+            text-align: left;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block header %}
+    {% include "pabasa_app/partials/_header.html" with page_title="Reading Assessment" page_date="" %}
+{% endblock %}
+
+{% block content %}
+<section class="workflow-shell">
+    <article class="workflow-card {% if stage == 'not_eligible' %}success{% endif %}">
+        {% if stage == "not_eligible" %}
+            <div class="workflow-center">
+                <span class="workflow-pill">BoSY CRLA Completed</span>
+                <span class="workflow-icon" aria-hidden="true"><i class="bi bi-trophy-fill"></i></span>
+                <div class="workflow-copy">
+                    <h1>Congratulations!</h1>
+                    <p class="workflow-message">
+                        Great job, reader! You finished the BoSY CRLA Reading Assessment. Your reading skills are doing well!
+                    </p>
+                    <p class="workflow-message">
+                        You do not need extra reading practice through the ARAL program for now. Keep reading and practicing every day. We’ll see you again at the EoSY CRLA Assessment!
+                    </p>
+                </div>
+            </div>
+
+            <section class="workflow-summary" aria-label="Assessment summary">
+                <div class="workflow-summary-title">Assessment Summary</div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Reader Classification</span>
+                        <span class="summary-value">{{ eligibility.reader_classification|default:"Pending" }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">ARAL Status</span>
+                        <span class="summary-value">Not Required</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">BoSY Pre-Test</span>
+                        <span class="summary-value">Completed &#10003;</span>
+                    </div>
+                </div>
+            </section>
+
+            <div class="workflow-actions">
+                <a class="btn btn-primary workflow-button primary" href="{% url 'dashboard' %}"><i class="bi bi-house-heart-fill"></i> Return to Dashboard</a>
+            </div>
+        {% else %}
+            <div class="workflow-center">
+                <span class="workflow-pill">{{ active_window_label }}</span>
+                <span class="workflow-icon" aria-hidden="true"><i class="bi bi-journal-check"></i></span>
+                <div class="workflow-copy">
+                    <p class="workflow-subtitle">Beginning of School Year reading assessment</p>
+                    <h1>{{ workflow_title }}</h1>
+                    <p class="workflow-message">{{ workflow_message }}</p>
+                </div>
+            </div>
+
+            <div class="workflow-actions">
+                {% if stage == "pretest" or stage == "posttest" %}
+                    <a class="btn btn-primary workflow-button primary" href="{% url 'reading_word_page' %}?test={{ crla_assessment_title|urlencode }}&code={{ crla_assessment_code|default:'CRLA'|urlencode }}&id={{ crla_material_id|default:'' }}&content={{ crla_assessment_content|urlencode }}&item_type={{ crla_assessment_item_type|default:'word' }}&language={{ crla_assessment_language|default:''|urlencode }}"><i class="bi bi-play-fill"></i> Start Assessment</a>
+                {% endif %}
+                <a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Return to Dashboard</a>
+            </div>
+
+            {% if stage == "pretest" %}
+                <section class="workflow-summary" aria-label="Pre-Test introduction">
+                    <div class="workflow-summary-title">What to do</div>
+                    <p class="workflow-message">Read the words and sentences carefully. Your results will help us know how to support your reading journey.</p>
+                </section>
+            {% endif %}
+        {% endif %}
+    </article>
+</section>
+{% endblock %}
