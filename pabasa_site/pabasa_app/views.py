@@ -388,6 +388,22 @@ def _is_aral_eligible_student(student_user):
     }
 
 
+def _has_completed_official_crla_pretest(student_user):
+    if not student_user:
+        return False
+    state = _reader_assessment_state(student_user)
+    completed_windows = state.get('crla_windows') if isinstance(state.get('crla_windows'), dict) else {}
+    return bool(state.get('crla_pretest_completed') or completed_windows)
+
+
+def _should_receive_assessment_material_notifications(student_user):
+    if not student_user:
+        return False
+    if not _has_completed_official_crla_pretest(student_user):
+        return True
+    return bool(_is_aral_eligible_student(student_user))
+
+
 def _assessment_materials_for_student(student=None):
     window = _assessment_window_choice()
     period, phase = _parse_assessment_window(window)
@@ -625,6 +641,30 @@ def _create_notification(recipient, title, message, notification_type='info', ac
         logger.error(f"Failed to send real-time notification email: {e}")
 
     return notification
+
+
+def _log_material_notification_gate(source_function, student_user, material=None, section=None):
+    student_name = getattr(student_user, 'get_full_name', lambda: '')().strip()
+    if not student_name:
+        student_name = f"{getattr(student_user, 'first_name', '')} {getattr(student_user, 'last_name', '')}".strip()
+    if not student_name:
+        student_name = getattr(student_user, 'custom_id', '') or f'user-{getattr(student_user, "id", "")}'
+
+    crla_completed = _has_completed_official_crla_pretest(student_user)
+    aral_eligible = _is_aral_eligible_student(student_user)
+    logger.debug(
+        'Material notification gate [%s]: student_id=%s student_name=%s material_id=%s material_title=%s section_id=%s section_name=%s crla_completed=%s aral_eligible=%s',
+        source_function,
+        getattr(student_user, 'id', None),
+        student_name,
+        getattr(material, 'id', None),
+        getattr(material, 'title', None),
+        getattr(section, 'id', None),
+        getattr(section, 'class_name', None),
+        crla_completed,
+        aral_eligible,
+    )
+    return crla_completed, aral_eligible
 
 def _notify_admins(title, message, notification_type='info', action_url='', created_by=None, send_email=True):
     for admin_user in _admin_users():
@@ -4367,6 +4407,8 @@ def admin_course_edit(request, material_id):
         if section:
             material.assigned_sections.add(section)
             for student_user in _section_active_students(section):
+                if not _should_receive_assessment_material_notifications(student_user):
+                    continue
                 _create_notification(
                     student_user,
                     'Assigned content updated',
@@ -4394,6 +4436,8 @@ def admin_course_archive(request, material_id):
         material.save(update_fields=['is_active', 'updated_at'])
         if material.section:
             for student_user in _section_active_students(material.section):
+                if not _should_receive_assessment_material_notifications(student_user):
+                    continue
                 _create_notification(
                     student_user,
                     'Assigned content removed',
@@ -8203,6 +8247,9 @@ def send_course_update(request):
         assessment_title = str(data.get('assessment_title') or 'Reading Assessment').strip() or 'Reading Assessment'
 
         for student in ordered_students:
+            if update_type in {'assessment', 'general', 'followup'} and not _should_receive_assessment_material_notifications(student):
+                skipped.append({'student_id': student.id, 'reason': 'crla_ineligible'})
+                continue
             result = _send_course_update_to_student(
                 course=course,
                 teacher_user=teacher_user,
@@ -11567,6 +11614,19 @@ def _queue_material_creation_followups(material, section, teacher_user, status, 
             if section is not None and status == 'published':
                 action_url = reverse('assessment')
                 for student_user in _section_active_students(section):
+                    crla_completed, aral_eligible = _log_material_notification_gate(
+                        '_queue_material_creation_followups',
+                        student_user,
+                        material=material,
+                        section=section,
+                    )
+                    if crla_completed and not aral_eligible:
+                        logger.debug(
+                            'Skipping teacher-created material notification for student_id=%s material_id=%s because CRLA learner is not ARAL eligible.',
+                            getattr(student_user, 'id', None),
+                            getattr(material, 'id', None),
+                        )
+                        continue
                     in_app_title = 'New Reading Material Available'
                     in_app_message = f'"{material.title}" is now available in {section.class_name}.'
                     email_subject = f'Start Reading: {material.title} Is Now Available'

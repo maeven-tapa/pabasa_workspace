@@ -31,7 +31,7 @@ from .reading_stt import (
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state
+from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state, _set_user_state
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -2478,6 +2478,80 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(material.content_json.get("language"), "Filipino")
         self.assertEqual(material.type, "assessment")
         self.assertEqual(material.source_type, "shared")
+
+    @patch("pabasa_app.views.transaction.on_commit", side_effect=lambda func: func())
+    @patch("pabasa_app.views.send_mail")
+    def test_add_reading_material_skips_non_aral_crla_students(self, mock_send_mail, mock_on_commit):
+        teacher = User.objects.create(
+            custom_id="TCH-CRLA-01",
+            role="teacher",
+            first_name="Teacher",
+            last_name="One",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="teacher-crla@example.com",
+            password_hash=make_password("teacher-password"),
+            teacher_role="Teacher",
+        )
+        student = User.objects.create(
+            custom_id="STD-CRLA-01",
+            role="student",
+            first_name="Learner",
+            last_name="One",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2012,
+            email="learner-crla@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 2",
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Class CRLA",
+            class_code="CRLA-001",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        _set_user_state(student, {
+            "crla_pretest_completed": True,
+            "reader_classification": "Needs Support",
+            "aral_eligible": False,
+        })
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Assessment material",
+                "content": "One\nTwo",
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "assessment",
+                "class_code": section.class_code,
+                "source_type": "personal",
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertFalse(Notification.objects.filter(recipient=student, title="New Reading Material Available").exists())
+        mock_send_mail.assert_not_called()
 
     def test_material_response_payload_preserves_saved_language(self):
         material = Material.objects.create(
