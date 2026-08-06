@@ -942,9 +942,9 @@ def _adapted_reading_level_label(level_score):
 def _display_reading_level(value=None, score_payload=None):
     if isinstance(score_payload, dict):
         explicit_level = (
-            score_payload.get('adapted_reading_level')
+            score_payload.get('crla_classification')
+            or score_payload.get('adapted_reading_level')
             or score_payload.get('reading_level')
-            or score_payload.get('crla_classification')
             or score_payload.get('classification')
         )
         if explicit_level:
@@ -1496,9 +1496,9 @@ def _update_student_reading_profile(student_user, score_payload):
     profile = _get_profile_dict(student_user, 'student_profile')
     if not isinstance(profile, dict):
         profile = {}
-    adapted_level = score_payload.get('adapted_reading_level') or score_payload.get('crla_classification')
+    display_level = score_payload.get('crla_classification') or score_payload.get('adapted_reading_level')
     profile.update({
-        'reading_level': adapted_level,
+        'reading_level': display_level,
         'accuracy': str(round(score_payload['accuracy'])),
         'wpm': str(round(score_payload['wpm'])),
         'fluency_score': score_payload['fluency_score'],
@@ -1507,11 +1507,11 @@ def _update_student_reading_profile(student_user, score_payload):
         'total_score': score_payload['total_score'],
         'crla_classification': score_payload['crla_classification'],
         'adapted_level_score': score_payload.get('adapted_level_score'),
-        'adapted_reading_level': adapted_level,
+        'adapted_reading_level': display_level,
         'adapted_reading_level_disclaimer': score_payload.get('adapted_reading_level_disclaimer') or ADAPTED_READING_LEVEL_DISCLAIMER,
         'last_assessment_at': timezone.now().isoformat(),
     })
-    student_user.reading_level = adapted_level
+    student_user.reading_level = display_level
     _set_profile_dict(student_user, 'student_profile', profile)
     try:
         student_user.save(update_fields=['reading_level', 'updated_at'])

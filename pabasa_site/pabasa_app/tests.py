@@ -5495,6 +5495,42 @@ class TeacherStudentsDirectoryTests(TestCase):
         self.assertEqual(data["students"][0]["level"], "Transitioning Readers")
         self.assertTrue(data["students"][0]["has_completed_assessment"])
 
+    def test_teacher_students_api_prefers_saved_crla_classification_over_stale_reading_level(self):
+        profile = dict(self.student.preference or {})
+        profile["student_profile"] = {
+            "reading_level": "Low Emerging Readers",
+            "crla_classification": "Low Emerging Readers",
+        }
+        self.student.preference = profile
+        self.student.reading_level = "Low Emerging Readers"
+        self.student.save(update_fields=["preference", "reading_level", "updated_at"])
+
+        assessment = Assessment.objects.create(
+            teacher=self.teacher,
+            section=self.section_a,
+            title="CRLA Pre-Test",
+            code="ASM-CRLA-001",
+            assessment_type="crla",
+            status="published",
+            is_active=True,
+        )
+        assessment.record_attempt(
+            self.student,
+            status="completed",
+            completed_at="2026-06-01T09:00:00+00:00",
+            total_score=95,
+            crla_classification="Readers at Grade Level",
+            classification="Readers at Grade Level",
+        )
+
+        response = self.client.get(reverse("get_teacher_students_api"))
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["students"][0]["level"], "Readers at Grade Level")
+        self.assertEqual(data["students"][0]["reading_level"], "Readers at Grade Level")
+        self.assertEqual(data["students"][0]["adapted_reading_level"], "Readers at Grade Level")
+
     def test_teacher_students_api_uses_adapted_level_from_attempt_history(self):
         word_assessment = Assessment.objects.create(
             teacher=self.teacher,
