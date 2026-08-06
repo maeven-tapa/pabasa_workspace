@@ -173,6 +173,30 @@
         max-width: 100%;
     }
 
+    .chart-empty-state {
+        align-items: center;
+        color: var(--dash-muted);
+        display: none;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1rem;
+        font-weight: 800;
+        inset: 0;
+        justify-content: center;
+        line-height: 1.35;
+        padding: 1rem;
+        position: absolute;
+        text-align: center;
+        z-index: 2;
+    }
+
+    .chart-empty-state.is-visible {
+        display: flex;
+    }
+
+    .chart-empty-state span {
+        max-width: 14rem;
+    }
+
     .students-secondary-metrics {
         display: grid;
         gap: 1rem;
@@ -1076,6 +1100,9 @@
             </div>
             <div class="chart-container">
                 <canvas id="readingLevelChart"></canvas>
+                <div class="chart-empty-state" id="readingLevelChartEmptyState" aria-live="polite">
+                    <span>No data available to display</span>
+                </div>
             </div>
         </article>
     </div>
@@ -1363,6 +1390,24 @@ function resolveStudentReadingLevel(student) {
     return 'Pending';
 }
 
+function hasCompletedAssessmentData(student) {
+    if (!student || typeof student !== 'object') return false;
+
+    const completedAt = String(student.completed_at || student.last_assessment_at || '').trim();
+    const hasCompletedTimestamp = Boolean(completedAt) && !Number.isNaN(Date.parse(completedAt));
+    const hasAssessmentScore = [
+        student.final_score,
+        student.total_score,
+        student.latest_score,
+    ].some(value => value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value)));
+    const hasAssessmentMetadata = Boolean(
+        String(student.assessment_title || student.assessment_type || '').trim()
+    );
+    const explicitlyCompleted = student.has_completed_assessment === true || student.assessment_completed === true;
+
+    return explicitlyCompleted || (hasCompletedTimestamp && hasAssessmentScore && hasAssessmentMetadata);
+}
+
 function getStudentIdentityKeys(student) {
     const keys = [];
     const values = [
@@ -1492,14 +1537,16 @@ function updateStudentStatistics(sourceStudents, providedLevelCounts = null, pro
     document.getElementById("gradeLevelReadyPercent").textContent = gradeLevelReadyPercent + "% of cohort";
     
     // Update secondary metrics with real logic
-    let topStudentName = "—";
+    let topStudentName = "No data yet";
     let highestScore = -1;
     let activeThisWeekCount = 0;
     const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
 
     students.forEach(student => {
-        // Calculate performance score: WPM * Accuracy
-        const score = (parseInt(student.wpm) || 0) * (parseInt(student.accuracy) || 0);
+        const hasCompletedAssessment = hasCompletedAssessmentData(student);
+        const score = hasCompletedAssessment
+            ? Number(student.final_score ?? student.total_score ?? student.latest_score)
+            : 0;
         if (score > highestScore && score > 0) {
             highestScore = score;
             topStudentName = student.name;
@@ -1518,7 +1565,7 @@ function updateStudentStatistics(sourceStudents, providedLevelCounts = null, pro
 
     document.getElementById("avgImprovement").textContent = totalStudents > 0 ? `+${avgImprovementMetric}%` : "—";
     document.getElementById("activeThisWeek").textContent = totalStudents > 0 ? activeThisWeekCount : "0";
-    document.getElementById("topPerformer").textContent = topStudentName;
+    document.getElementById("topPerformer").textContent = highestScore > 0 ? topStudentName : "No data yet";
     
     // Update reading level distribution
     document.getElementById("distLowCount").textContent = levelCounts["Low Emerging Readers"] + " (" + 
@@ -1555,6 +1602,7 @@ function updateStudentStatistics(sourceStudents, providedLevelCounts = null, pro
 // Initialize reading level distribution pie chart with dynamic data
 function updateReadingLevelChart(levelCounts) {
     const chartCanvas = document.getElementById("readingLevelChart");
+    const emptyState = document.getElementById("readingLevelChartEmptyState");
     if (!chartCanvas || !window.Chart) return;
     
     const total = Object.values(levelCounts).reduce((a, b) => a + b, 0);
@@ -1567,11 +1615,17 @@ function updateReadingLevelChart(levelCounts) {
     }
 
     if (total === 0) {
-        chartCtx.font = "14px Sora";
-        chartCtx.textAlign = "center";
-        chartCtx.fillText("No data available to display", chartCanvas.width/2, chartCanvas.height/2);
+        if (emptyState) {
+            emptyState.classList.add('is-visible');
+        }
+        chartCanvas.style.display = 'none';
         return;
     }
+
+    if (emptyState) {
+        emptyState.classList.remove('is-visible');
+    }
+    chartCanvas.style.display = '';
     
     chartCanvas.chart = new Chart(chartCtx, {
         type: "doughnut",
