@@ -8,6 +8,8 @@ from .models import (
 	Note,
 	Notification,
 	Course,
+	SchoolCalendar,
+	CalendarEvent,
 )
 
 
@@ -147,3 +149,26 @@ class CourseAdmin(admin.ModelAdmin):
 	list_filter = ("is_active", "created_at")
 	search_fields = ("code", "title", "teacher__custom_id")
 	ordering = ("-created_at",)
+
+
+@admin.register(SchoolCalendar)
+class SchoolCalendarAdmin(admin.ModelAdmin):
+	list_display = ("school_year", "current_term", "is_active", "created_at", "updated_at")
+	list_filter = ("current_term", "is_active", "created_at")
+	search_fields = ("school_year",)
+	ordering = ("-is_active", "-created_at")
+
+
+@admin.register(CalendarEvent)
+class CalendarEventAdmin(admin.ModelAdmin):
+	list_display = (
+		"school_calendar",
+		"event_type",
+		"start_date",
+		"end_date",
+		"is_published",
+		"created_at",
+	)
+	list_filter = ("event_type", "is_published", "start_date", "end_date")
+	search_fields = ("school_calendar__school_year", "description")
+	ordering = ("start_date", "end_date")

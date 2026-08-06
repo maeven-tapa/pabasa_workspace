@@ -1180,6 +1180,53 @@ class AssessmentWindowSetting(models.Model):
 # Assessment attempts are stored in the Assessment `attempts` JSONField.
 
 
+class SchoolCalendar(models.Model):
+    school_year = models.CharField(max_length=20, unique=True)
+    current_term = models.PositiveSmallIntegerField(
+        choices=[(1, "Term 1"), (2, "Term 2"), (3, "Term 3")]
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "school_calendars"
+        ordering = ["-is_active", "-created_at"]
+
+    def __str__(self):
+        return f"{self.school_year} - Term {self.current_term}"
+
+
+class CalendarEvent(models.Model):
+    EVENT_TYPE_CHOICES = [
+        ("pre_assessment", "Pre-Assessment"),
+        ("post_assessment", "Post-Assessment"),
+        ("holiday", "Holiday"),
+        ("examination", "Examination"),
+        ("other", "Other"),
+    ]
+
+    school_calendar = models.ForeignKey(
+        SchoolCalendar,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    event_type = models.CharField(max_length=30, choices=EVENT_TYPE_CHOICES)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    description = models.TextField(blank=True)
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "calendar_events"
+        ordering = ["start_date", "end_date"]
+
+    def __str__(self):
+        return f"{self.school_calendar.school_year} - {self.get_event_type_display()}"
+
+
 class Course(models.Model):
     """
     Courses group assessments and materials and allow per-section scheduling/tracking.
