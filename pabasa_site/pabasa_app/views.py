@@ -4365,6 +4365,121 @@ def admin_course_archive(request, material_id):
 def admin_practice_assessment(request):
     return render(request, 'pabasa_app/admin_practice_assessment.html', _admin_practice_context(request, 'Practice'))
 
+
+def _official_reading_materials_queryset():
+    return Material.objects.filter(is_official_reading=True).order_by('official_term', '-updated_at')
+
+
+def _official_reading_material_for_term(term):
+    return _official_reading_materials_queryset().filter(official_term=term).first()
+
+
+def _official_reading_material_payload(material):
+    content_json = getattr(material, 'content_json', None) or {}
+    return {
+        'id': material.id,
+        'title': material.title or '',
+        'language': material.language or 'English',
+        'instructions': content_json.get('instructions', ''),
+        'source_mode': content_json.get('source_mode', 'text'),
+        'status': material.status or 'draft',
+        'content_text': material.content_text or '',
+        'has_pdf': bool(getattr(material, 'official_pdf', None)),
+        'pdf_url': material.official_pdf.url if getattr(material, 'official_pdf', None) else '',
+        'updated_at': material.updated_at,
+    }
+
+
+def _official_reading_material_context(request):
+    materials_by_term = {term: _official_reading_material_for_term(term) for term in (1, 2, 3)}
+    official_terms = []
+    for term, label in ((1, 'Term 1'), (2, 'Term 2'), (3, 'Term 3')):
+        material = materials_by_term[term]
+        official_terms.append({
+            'term': term,
+            'label': label,
+            'item': _official_reading_material_payload(material) if material else None,
+        })
+    return {
+        'page_title': 'Official Reading Assessments',
+        'admin_username': request.session.get('custom_id', ''),
+        'first_name': request.session.get('first_name', ''),
+        'last_name': request.session.get('last_name', ''),
+        'selected_term': int(request.GET.get('term', 1) or 1) if str(request.GET.get('term', 1) or '1').isdigit() else 1,
+        'school_year_value': request.GET.get('school_year', '').strip(),
+        'term_options': [(1, 'Term 1'), (2, 'Term 2'), (3, 'Term 3')],
+        'official_terms': official_terms,
+        'materials_by_term': materials_by_term,
+        'materials_by_term_json': json.dumps({term: _official_reading_material_payload(material) if material else None for term, material in materials_by_term.items()}, default=str),
+        'language_options': [('English', 'English'), ('Filipino', 'Filipino')],
+    }
+
+
+@admin_required
+@csrf_protect
+def admin_official_reading_assessments(request):
+    if request.method == 'POST':
+        term_raw = request.POST.get('term')
+        try:
+            term = int(term_raw)
+        except (TypeError, ValueError):
+            term = 0
+        if term not in {1, 2, 3}:
+            return HttpResponseForbidden("Invalid term.")
+
+        title = (request.POST.get('title') or '').strip()
+        language = Material.normalize_language_value(request.POST.get('language'))
+        instructions = (request.POST.get('instructions') or '').strip()
+        status = (request.POST.get('status') or 'draft').strip().lower()
+        source_mode = (request.POST.get('source_mode') or 'text').strip().lower()
+        content_text = (request.POST.get('content_text') or '').strip()
+        uploaded_pdf = request.FILES.get('official_pdf')
+
+        if status not in {'draft', 'published', 'archived'}:
+            status = 'draft'
+        if source_mode not in {'text', 'pdf'}:
+            source_mode = 'text'
+        if not title:
+            return HttpResponseForbidden("Title is required.")
+        if source_mode == 'text' and not content_text:
+            return HttpResponseForbidden("Manual text content is required.")
+        if source_mode == 'pdf' and not uploaded_pdf:
+            return HttpResponseForbidden("Upload a PDF file or switch to manual text.")
+
+        with transaction.atomic():
+            material = _official_reading_material_for_term(term) or Material()
+            material.is_official_reading = True
+            material.official_term = term
+            material.title = title
+            material.language = language
+            material.type = 'assessment'
+            material.assessment_kind = 'regular'
+            material.source_type = 'personal'
+            material.is_active = True
+            material.content_text = content_text if source_mode == 'text' else ''
+            material.content_json = {
+                'official_reading': True,
+                'term': term,
+                'source_mode': source_mode,
+                'instructions': instructions,
+            }
+            if uploaded_pdf:
+                material.official_pdf = uploaded_pdf
+            if status == 'published':
+                Material.objects.filter(is_official_reading=True, official_term=term, status='published').exclude(pk=material.pk).update(status='archived', is_active=False)
+                material.status = 'published'
+            elif status == 'archived':
+                material.status = 'archived'
+                material.is_active = False
+            else:
+                material.status = 'draft'
+                material.is_active = True
+            material.save()
+
+        return redirect(f"{reverse('admin_official_reading_assessments')}?term={term}")
+
+    return render(request, 'pabasa_app/admin_official_reading_assessments.html', _official_reading_material_context(request))
+
 def _practice_difficulty_values():
     return [value for value, _label in AdminPracticeMaterialForm.DIFFICULTY_CHOICES]
 

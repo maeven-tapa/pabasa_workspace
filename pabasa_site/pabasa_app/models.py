@@ -288,6 +288,7 @@ class Assessment(models.Model):
     STATUS_CHOICES = [
         ("published", "Published"),
         ("draft", "Draft"),
+        ("archived", "Archived"),
         ("scheduled", "Scheduled"),
     ]
 
@@ -919,6 +920,9 @@ class Material(models.Model):
     type = models.CharField(max_length=20, choices=USAGE_TYPE_CHOICES, default='practice')
     source_type = models.CharField(max_length=20, choices=SOURCE_TYPE_CHOICES, default='personal')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
+    is_official_reading = models.BooleanField(default=False)
+    official_term = models.PositiveSmallIntegerField(null=True, blank=True)
+    official_pdf = models.FileField(upload_to="official_readings/", null=True, blank=True)
     scheduled_at = models.DateTimeField(null=True, blank=True)
     difficulty_level = models.CharField(max_length=50, blank=True)
     source_type = models.CharField(

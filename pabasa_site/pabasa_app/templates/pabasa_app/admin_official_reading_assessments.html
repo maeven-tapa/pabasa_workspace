@@ -1,0 +1,354 @@
+{% extends "pabasa_app/admin_base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+    .official-assessments-page {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    .official-assessments-hero {
+        padding: 1.35rem 1.4rem;
+        border-radius: 24px;
+        background: linear-gradient(135deg, rgba(16, 70, 110, 0.08), rgba(46, 168, 229, 0.05), #ffffff);
+        border: 1px solid rgba(16, 70, 110, 0.08);
+        box-shadow: 0 16px 38px rgba(16, 70, 110, 0.08);
+    }
+
+    .official-assessments-title {
+        margin: 0;
+        color: #10466E;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: clamp(1.5rem, 2vw, 2rem);
+        font-weight: 900;
+    }
+
+    .official-assessments-subtitle {
+        margin: 0.4rem 0 0;
+        color: #5d7288;
+        max-width: 62rem;
+    }
+
+    .official-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .official-meta-card {
+        padding: 1rem 1.05rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(16, 70, 110, 0.08);
+    }
+
+    .official-meta-label {
+        display: block;
+        color: #6c8098;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .official-meta-value {
+        color: #10466E;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.06rem;
+        font-weight: 900;
+    }
+
+    .term-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .term-card {
+        border-radius: 24px;
+        border: 1px solid rgba(16, 70, 110, 0.10);
+        background: #fff;
+        box-shadow: 0 16px 38px rgba(16, 70, 110, 0.08);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+    }
+
+    .term-card.is-hidden {
+        display: none;
+    }
+
+    .term-card-header {
+        padding: 1rem 1.1rem;
+        background: linear-gradient(135deg, rgba(16, 70, 110, 0.08), rgba(46, 168, 229, 0.05));
+        border-bottom: 1px solid rgba(16, 70, 110, 0.08);
+    }
+
+    .term-card-header h2 {
+        margin: 0;
+        color: #10466E;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.25rem;
+        font-weight: 900;
+    }
+
+    .term-card-header p {
+        margin: 0.2rem 0 0;
+        color: #5d7288;
+    }
+
+    .term-card-body {
+        padding: 1.1rem;
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    .term-status-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+    }
+
+    .status-option {
+        flex: 1 1 0;
+        min-width: 110px;
+        border-radius: 16px;
+        border: 1px solid rgba(16, 70, 110, 0.12);
+        padding: 0.7rem 0.8rem;
+        background: #f9fcff;
+    }
+
+    .status-option input {
+        margin-right: 0.45rem;
+    }
+
+    .status-option strong {
+        display: block;
+        color: #10466E;
+    }
+
+    .material-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(16, 70, 110, 0.08);
+        color: #10466E;
+        font-size: 0.8rem;
+        font-weight: 800;
+    }
+
+    .status-published { background: rgba(34, 197, 94, 0.12); color: #166534; }
+    .status-draft { background: rgba(245, 158, 11, 0.12); color: #92400e; }
+    .status-archived { background: rgba(107, 114, 128, 0.12); color: #374151; }
+
+    .term-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: auto;
+        padding-top: 0.25rem;
+    }
+
+    .term-preview {
+        font-size: 0.9rem;
+        color: #60748b;
+    }
+
+    .term-preview a {
+        color: #10466E;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .source-toggle {
+        display: inline-flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .source-toggle .btn {
+        border-radius: 999px;
+        font-weight: 800;
+    }
+
+    .source-panel {
+        display: none;
+    }
+
+    .source-panel.is-active {
+        display: grid;
+        gap: 0.9rem;
+    }
+
+    @media (max-width: 1199.98px) {}
+
+    @media (max-width: 767.98px) {
+        .official-meta-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="official-assessments-page">
+    <section class="official-assessments-hero">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <p class="text-uppercase fw-bold small text-secondary mb-1">Admin Assessment Module</p>
+                <h1 class="official-assessments-title">Official Reading Assessments</h1>
+                <p class="official-assessments-subtitle">Phase 1 keeps official reading materials under admin control only. Each term can hold one published version, with older published copies archived automatically.</p>
+            </div>
+            <div class="text-end">
+                <span class="material-status-pill">Admin owned</span>
+            </div>
+        </div>
+
+        <div class="official-meta-grid">
+            <div class="official-meta-card">
+                <span class="official-meta-label">School Year</span>
+                <div class="official-meta-value">{% if school_year_value %}{{ school_year_value }}{% else %}Current school year{% endif %}</div>
+            </div>
+            <div class="official-meta-card">
+                <span class="official-meta-label">Current Term</span>
+                <div class="official-meta-value">
+                    <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+                        <select class="form-select form-select-sm" name="term" id="termSelector" style="max-width: 180px;">
+                            {% for value, label in term_options %}
+                            <option value="{{ value }}" {% if selected_term == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-sm btn-outline-primary" type="submit">View</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="term-grid" aria-label="Official reading materials by term">
+        {% for term_data in official_terms %}
+        <article class="term-card {% if selected_term != term_data.term %}is-hidden{% endif %}" data-term-card="{{ term_data.term }}">
+            <div class="term-card-header">
+                <h2>{{ term_data.label }}</h2>
+                <p>Official Reading Material</p>
+            </div>
+            <form method="post" enctype="multipart/form-data" class="term-card-body">
+                {% csrf_token %}
+                <input type="hidden" name="term" value="{{ term_data.term }}">
+
+                <div>
+                    <label class="form-label small fw-bold text-secondary" for="title-{{ term_data.term }}">Title</label>
+                    <input class="form-control" id="title-{{ term_data.term }}" name="title" type="text" value="{% if term_data.item %}{{ term_data.item.title }}{% endif %}" required>
+                </div>
+
+                <div>
+                    <label class="form-label small fw-bold text-secondary" for="language-{{ term_data.term }}">Language</label>
+                    <select class="form-select" id="language-{{ term_data.term }}" name="language">
+                        {% for value, label in language_options %}
+                        <option value="{{ value }}" {% if term_data.item and term_data.item.language == value %}selected{% elif not term_data.item and value == "English" %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label small fw-bold text-secondary" for="instructions-{{ term_data.term }}">Instructions</label>
+                    <textarea class="form-control" id="instructions-{{ term_data.term }}" name="instructions" rows="3" placeholder="Optional">{% if term_data.item %}{{ term_data.item.instructions }}{% endif %}</textarea>
+                </div>
+
+                <div>
+                    <label class="form-label small fw-bold text-secondary">Source</label>
+                    <div class="source-toggle" role="tablist" aria-label="Source mode">
+                        <input type="radio" class="btn-check" name="source_mode" id="source-text-{{ term_data.term }}" value="text" {% if not term_data.item or term_data.item.source_mode == 'text' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary btn-sm" for="source-text-{{ term_data.term }}">Manual Text Editor</label>
+                        <input type="radio" class="btn-check" name="source_mode" id="source-pdf-{{ term_data.term }}" value="pdf" {% if term_data.item and term_data.item.source_mode == 'pdf' %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary btn-sm" for="source-pdf-{{ term_data.term }}">Upload PDF</label>
+                    </div>
+                </div>
+
+                <div class="source-panel {% if not term_data.item or term_data.item.source_mode == 'text' %}is-active{% endif %}" data-source-panel="text">
+                    <div>
+                        <label class="form-label small fw-bold text-secondary" for="content-{{ term_data.term }}">Manual Text Editor</label>
+                        <textarea class="form-control" id="content-{{ term_data.term }}" name="content_text" rows="7" placeholder="Paste or type the official reading material here">{% if term_data.item %}{{ term_data.item.content_text }}{% endif %}</textarea>
+                    </div>
+                </div>
+
+                <div class="source-panel {% if term_data.item and term_data.item.source_mode == 'pdf' %}is-active{% endif %}" data-source-panel="pdf">
+                    <div>
+                        <label class="form-label small fw-bold text-secondary" for="pdf-{{ term_data.term }}">Upload PDF</label>
+                        <input class="form-control" id="pdf-{{ term_data.term }}" name="official_pdf" type="file" accept="application/pdf">
+                        {% if term_data.item and term_data.item.has_pdf %}
+                        <div class="term-preview mt-2">Current file: <a href="{{ term_data.item.pdf_url }}" target="_blank" rel="noopener">Open PDF</a></div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label small fw-bold text-secondary">Status</label>
+                    <div class="term-status-row">
+                        <label class="status-option">
+                            <input type="radio" name="status" value="draft" {% if not term_data.item or term_data.item.status == 'draft' %}checked{% endif %}>
+                            <strong>Draft</strong>
+                        </label>
+                        <label class="status-option">
+                            <input type="radio" name="status" value="published" {% if term_data.item and term_data.item.status == 'published' %}checked{% endif %}>
+                            <strong>Published</strong>
+                        </label>
+                        <label class="status-option">
+                            <input type="radio" name="status" value="archived" {% if term_data.item and term_data.item.status == 'archived' %}checked{% endif %}>
+                            <strong>Archived</strong>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="term-footer">
+                    <div class="term-preview">
+                        {% if term_data.item %}
+                            {% if term_data.item.status == 'published' %}
+                                <span class="material-status-pill status-published">Published</span>
+                            {% elif term_data.item.status == 'archived' %}
+                                <span class="material-status-pill status-archived">Archived</span>
+                            {% else %}
+                                <span class="material-status-pill status-draft">Draft</span>
+                            {% endif %}
+                            <span class="ms-2">Last updated {{ term_data.item.updated_at|date:"M d, Y" }}</span>
+                        {% else %}
+                            No official reading material yet for this term.
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </article>
+        {% endfor %}
+    </section>
+</div>
+
+<script>
+    const termSelector = document.getElementById('termSelector');
+    termSelector?.addEventListener('change', () => {
+        termSelector.form?.submit();
+    });
+
+    document.querySelectorAll('.term-card').forEach((card) => {
+        const textRadio = card.querySelector('input[value="text"]');
+        const pdfRadio = card.querySelector('input[value="pdf"]');
+        const textPanel = card.querySelector('[data-source-panel="text"]');
+        const pdfPanel = card.querySelector('[data-source-panel="pdf"]');
+
+        const syncPanels = () => {
+            const useText = textRadio && textRadio.checked;
+            textPanel?.classList.toggle('is-active', useText);
+            pdfPanel?.classList.toggle('is-active', !useText);
+        };
+
+        textRadio?.addEventListener('change', syncPanels);
+        pdfRadio?.addEventListener('change', syncPanels);
+        syncPanels();
+    });
+</script>
+{% endblock %}
