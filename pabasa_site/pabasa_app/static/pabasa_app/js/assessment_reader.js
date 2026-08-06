@@ -770,6 +770,20 @@
             return fallback;
         }
 
+        function isAralEligibleClassification(classification) {
+            const normalized = String(classification || "").trim().toLowerCase();
+            return [
+                "low emerging readers",
+                "high emerging readers",
+                "developing readers",
+                "transitioning readers",
+                "low emerging",
+                "high emerging",
+                "developing",
+                "transitioning",
+            ].includes(normalized);
+        }
+
         function normalizeCompletionScores(scores, fallback = {}) {
             const source = { ...(fallback || {}), ...(scores || {}) };
             return {
@@ -877,6 +891,15 @@
                 tile.dataset.scoreTile = "true";
                 const strong = document.createElement("strong");
                 strong.textContent = value;
+                if (label === "reading classification" && isAralEligibleClassification(value)) {
+                    const badge = document.createElement("span");
+                    badge.className = "badge bg-danger ms-2";
+                    badge.style.color = "#fff";
+                    badge.textContent = "ARAL";
+                    badge.title = "Eligible for ARAL Reading Intervention";
+                    badge.setAttribute("aria-label", "Eligible for ARAL Reading Intervention");
+                    strong.appendChild(badge);
+                }
                 const span = document.createElement("span");
                 span.textContent = label;
                 tile.append(strong, span);

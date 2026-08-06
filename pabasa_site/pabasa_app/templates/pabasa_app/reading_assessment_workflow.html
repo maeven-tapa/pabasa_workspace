@@ -271,10 +271,10 @@
             </div>
         {% else %}
             <div class="workflow-center">
-                <span class="workflow-pill">{{ active_window_label }}</span>
+                <span class="workflow-pill">{% if stage == "no_assessment" %}Reading Assessment{% else %}{{ active_window_label }}{% endif %}</span>
                 <span class="workflow-icon" aria-hidden="true"><i class="bi bi-journal-check"></i></span>
                 <div class="workflow-copy">
-                    <p class="workflow-subtitle">Beginning of School Year reading assessment</p>
+                    {% if stage != "no_assessment" %}<p class="workflow-subtitle">Beginning of School Year reading assessment</p>{% endif %}
                     <h1>{{ workflow_title }}</h1>
                     <p class="workflow-message">{{ workflow_message }}</p>
                 </div>

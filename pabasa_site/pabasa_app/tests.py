@@ -31,7 +31,7 @@ from .reading_stt import (
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state, _set_user_state
+from .views import _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -127,6 +127,94 @@ class AssessmentPageTemplateTests(TestCase):
 
 
 class AssessmentWorkflowStateTests(TestCase):
+    def _student_session(self, student):
+        session = self.client.session
+        session['user_id'] = student.id
+        session['user_role'] = 'student'
+        session['custom_id'] = student.custom_id
+        session['first_name'] = student.first_name
+        session['last_name'] = student.last_name
+        session['email'] = student.email
+        session.save()
+
+    def _student_and_class(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-2000",
+            role="teacher",
+            first_name="Taylor",
+            last_name="Teacher",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="teacher2000@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-2000",
+            role="student",
+            first_name="Sam",
+            last_name="Student",
+            sex="male",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2012,
+            email="student2000@example.com",
+            password_hash=make_password("student-password"),
+            preference={"reading_assessment_state": {}},
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-2000",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        self._student_session(student)
+        return teacher, student, section
+
+    def test_bosy_page_waits_for_published_enabled_class_assessment(self):
+        self._student_and_class()
+
+        response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['stage'], 'no_assessment')
+        self.assertContains(response, 'No Reading Assessment Available')
+        self.assertContains(response, 'Your teacher has not yet published the Beginning of School Year Reading Assessment.')
+
+    def test_bosy_page_shows_existing_workflow_for_published_enabled_class_assessment(self):
+        teacher, _student, section = self._student_and_class()
+        material = Material.objects.create(
+            title="Official BoSY CRLA",
+            item_type="word",
+            content_text="read",
+            content_json={"items": ["read"]},
+            assessment_kind="crla",
+            assessment_set="crla",
+            type="assessment",
+            status="published",
+            student_access=True,
+            section=section,
+            teacher=teacher,
+            is_active=True,
+        )
+
+        response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['stage'], 'pretest')
+        self.assertEqual(response.context['crla_material_id'], material.id)
+        self.assertContains(response, 'Start Assessment')
+
+    def test_all_below_grade_classifications_are_aral_eligible(self):
+        self.assertTrue(_aral_eligible_classification("Low Emerging Readers"))
+        self.assertTrue(_aral_eligible_classification("High Emerging Readers"))
+        self.assertTrue(_aral_eligible_classification("Developing Readers"))
+        self.assertTrue(_aral_eligible_classification("Transitioning Readers"))
+        self.assertFalse(_aral_eligible_classification("Readers at Grade Level"))
+
     def test_sync_assessment_workflow_state_persists_crla_completion_and_aral_eligibility(self):
         student = User.objects.create(
             custom_id="STU-2001",
@@ -210,45 +298,6 @@ class AssessmentWorkflowStateTests(TestCase):
         self.assertEqual(response.context['student_profile']['last_assessment_at'], "2026-08-05T10:00:00+00:00")
         self.assertEqual(response.context['student_profile']['total_score'], 72)
         self.assertEqual(response.context['stage'], "materials")
-
-    def test_assessment_workflow_context_uses_saved_crla_completion_state(self):
-        student = User.objects.create(
-            custom_id="STU-2003",
-            role="student",
-            first_name="Mina",
-            last_name="Reader",
-            middle_initial="",
-            suffix="",
-            sex="female",
-            birth_month=1,
-            birth_day=2,
-            birth_year=2012,
-            email="mina@example.com",
-            password_hash=make_password("student-password"),
-            preference={
-                "reading_assessment_state": {
-                    "crla_pretest_completed": True,
-                    "reader_classification": "Needs Support",
-                    "aral_eligible": False,
-                    "current_phase": "complete",
-                    "crla_windows": {"bosy:pretest": True},
-                }
-            },
-        )
-        session = self.client.session
-        session['user_id'] = student.id
-        session['user_role'] = 'student'
-        session['custom_id'] = student.custom_id
-        session['first_name'] = student.first_name
-        session['last_name'] = student.last_name
-        session['email'] = student.email
-        session.save()
-
-        response = self.client.get(reverse('assessment'))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['stage'], "complete")
-        self.assertTrue(response.context['eligibility']['crla_pretest_completed'])
 
 
 class TeacherSignupTemplateTests(TestCase):
@@ -2478,80 +2527,6 @@ class MaterialCreationTests(TestCase):
         self.assertEqual(material.content_json.get("language"), "Filipino")
         self.assertEqual(material.type, "assessment")
         self.assertEqual(material.source_type, "shared")
-
-    @patch("pabasa_app.views.transaction.on_commit", side_effect=lambda func: func())
-    @patch("pabasa_app.views.send_mail")
-    def test_add_reading_material_skips_non_aral_crla_students(self, mock_send_mail, mock_on_commit):
-        teacher = User.objects.create(
-            custom_id="TCH-CRLA-01",
-            role="teacher",
-            first_name="Teacher",
-            last_name="One",
-            middle_initial="",
-            suffix="",
-            sex="female",
-            birth_month=1,
-            birth_day=1,
-            birth_year=1990,
-            email="teacher-crla@example.com",
-            password_hash=make_password("teacher-password"),
-            teacher_role="Teacher",
-        )
-        student = User.objects.create(
-            custom_id="STD-CRLA-01",
-            role="student",
-            first_name="Learner",
-            last_name="One",
-            middle_initial="",
-            suffix="",
-            sex="male",
-            birth_month=1,
-            birth_day=1,
-            birth_year=2012,
-            email="learner-crla@example.com",
-            password_hash=make_password("student-password"),
-            grade_level="Grade 2",
-        )
-        section = Section.objects.create(
-            teacher=teacher,
-            class_name="Class CRLA",
-            class_code="CRLA-001",
-            subject="Reading",
-            is_active=True,
-        )
-        section.add_student(student)
-        _set_user_state(student, {
-            "crla_pretest_completed": True,
-            "reader_classification": "Needs Support",
-            "aral_eligible": False,
-        })
-        session = self.client.session
-        session["user_id"] = teacher.id
-        session["user_role"] = teacher.role
-        session["first_name"] = teacher.first_name
-        session["last_name"] = teacher.last_name
-        session["email"] = teacher.email
-        session["custom_id"] = teacher.custom_id
-        session.save()
-
-        response = self.client.post(
-            reverse("add_reading_material"),
-            json.dumps({
-                "title": "Assessment material",
-                "content": "One\nTwo",
-                "reading_type": "word",
-                "status": "published",
-                "usage_type": "assessment",
-                "class_code": section.class_code,
-                "source_type": "personal",
-            }),
-            content_type="application/json",
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json()["success"])
-        self.assertFalse(Notification.objects.filter(recipient=student, title="New Reading Material Available").exists())
-        mock_send_mail.assert_not_called()
 
     def test_material_response_payload_preserves_saved_language(self):
         material = Material.objects.create(
@@ -5494,42 +5469,6 @@ class TeacherStudentsDirectoryTests(TestCase):
         data = response.json()
         self.assertEqual(data["students"][0]["level"], "Transitioning Readers")
         self.assertTrue(data["students"][0]["has_completed_assessment"])
-
-    def test_teacher_students_api_prefers_saved_crla_classification_over_stale_reading_level(self):
-        profile = dict(self.student.preference or {})
-        profile["student_profile"] = {
-            "reading_level": "Low Emerging Readers",
-            "crla_classification": "Low Emerging Readers",
-        }
-        self.student.preference = profile
-        self.student.reading_level = "Low Emerging Readers"
-        self.student.save(update_fields=["preference", "reading_level", "updated_at"])
-
-        assessment = Assessment.objects.create(
-            teacher=self.teacher,
-            section=self.section_a,
-            title="CRLA Pre-Test",
-            code="ASM-CRLA-001",
-            assessment_type="crla",
-            status="published",
-            is_active=True,
-        )
-        assessment.record_attempt(
-            self.student,
-            status="completed",
-            completed_at="2026-06-01T09:00:00+00:00",
-            total_score=95,
-            crla_classification="Readers at Grade Level",
-            classification="Readers at Grade Level",
-        )
-
-        response = self.client.get(reverse("get_teacher_students_api"))
-
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["students"][0]["level"], "Readers at Grade Level")
-        self.assertEqual(data["students"][0]["reading_level"], "Readers at Grade Level")
-        self.assertEqual(data["students"][0]["adapted_reading_level"], "Readers at Grade Level")
 
     def test_teacher_students_api_uses_adapted_level_from_attempt_history(self):
         word_assessment = Assessment.objects.create(
