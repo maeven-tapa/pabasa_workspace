@@ -1203,8 +1203,8 @@ class SchoolCalendar(models.Model):
 
 class CalendarEvent(models.Model):
     EVENT_TYPE_CHOICES = [
-        ("school_opening", "School Opening"),
-        ("school_closing", "School Closing"),
+        ("school_opening", "Opening Block"),
+        ("school_closing", "End-of-Term Block"),
         ("pre_assessment", "Pre-Assessment Week"),
         ("post_assessment", "Post-Assessment Week"),
         ("holiday", "Holiday"),
@@ -1216,6 +1216,10 @@ class CalendarEvent(models.Model):
         SchoolCalendar,
         on_delete=models.CASCADE,
         related_name="events",
+    )
+    term = models.PositiveSmallIntegerField(
+        choices=[(1, "Term 1"), (2, "Term 2"), (3, "Term 3")],
+        default=1,
     )
     title = models.CharField(max_length=150)
     event_type = models.CharField(max_length=30, choices=EVENT_TYPE_CHOICES)
