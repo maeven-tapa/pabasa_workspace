@@ -211,6 +211,45 @@ class AssessmentWorkflowStateTests(TestCase):
         self.assertEqual(response.context['student_profile']['total_score'], 72)
         self.assertEqual(response.context['stage'], "materials")
 
+    def test_assessment_workflow_context_uses_saved_crla_completion_state(self):
+        student = User.objects.create(
+            custom_id="STU-2003",
+            role="student",
+            first_name="Mina",
+            last_name="Reader",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="mina@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "reader_classification": "Needs Support",
+                    "aral_eligible": False,
+                    "current_phase": "complete",
+                    "crla_windows": {"bosy:pretest": True},
+                }
+            },
+        )
+        session = self.client.session
+        session['user_id'] = student.id
+        session['user_role'] = 'student'
+        session['custom_id'] = student.custom_id
+        session['first_name'] = student.first_name
+        session['last_name'] = student.last_name
+        session['email'] = student.email
+        session.save()
+
+        response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['stage'], "complete")
+        self.assertTrue(response.context['eligibility']['crla_pretest_completed'])
+
 
 class TeacherSignupTemplateTests(TestCase):
     def test_teacher_signup_template_includes_privacy_step_and_consent_controls(self):

@@ -7914,16 +7914,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             <div class="teacher-field">
                                 <label class="form-label fw-bold small text-dark mb-1">Assessment</label>
                                 <input type="hidden" id="materialAssessmentKind" value="regular">
-                                <div class="assessment-kind-toggle {% if crla_assessment_exists %}is-locked{% endif %}" id="materialAssessmentKindToggle" role="group" aria-label="Assessment kind toggle" data-crla-locked="{{ crla_assessment_exists|yesno:'true,false' }}">
-                                    <button type="button" class="assessment-kind-option active" data-kind="regular">Regular Reading Material</button>
-                                    <button type="button" class="assessment-kind-option {% if crla_assessment_exists %}is-disabled{% endif %}" data-kind="crla" {% if crla_assessment_exists %}disabled aria-disabled="true" title="The official CRLA Assessment is already set for this school year."{% endif %}>CRLA Assessment</button>
-                                </div>
-                                <div class="form-text small text-muted">Regular materials keep all existing workflows. CRLA materials follow the active assessment window.</div>
-                                {% if crla_assessment_status_message %}
-                                    <div class="alert alert-info py-2 px-3 mt-2 mb-0 small" role="alert">
-                                        {{ crla_assessment_status_message }}
-                                    </div>
-                                {% endif %}
+                                <div class="form-text small text-muted">Regular materials keep all existing workflows. Official CRLA assessments are managed automatically by the system.</div>
                             </div>
 
                             <div class="teacher-field">
@@ -8116,10 +8107,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     <div class="mb-3">
                         <label class="form-label d-block">Assessment</label>
                         <input type="hidden" id="editMaterialAssessmentKind" value="regular">
-                        <div class="assessment-kind-toggle {% if crla_assessment_exists %}is-locked{% endif %}" id="editMaterialAssessmentKindToggle" role="group" aria-label="Assessment kind toggle" data-crla-locked="{{ crla_assessment_exists|yesno:'true,false' }}">
-                            <button type="button" class="assessment-kind-option active" data-kind="regular">Regular Reading Material</button>
-                            <button type="button" class="assessment-kind-option {% if crla_assessment_exists %}is-disabled{% endif %}" data-kind="crla" {% if crla_assessment_exists %}disabled aria-disabled="true" title="The official CRLA Assessment is already set for this school year."{% endif %}>CRLA Assessment</button>
-                        </div>
+                        <div class="form-text small text-muted">Assessment materials are saved as regular teacher-created content. Official CRLA assessments are system-managed and do not appear here.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="editPublicationStatus">Publication Status</label>
@@ -13242,7 +13230,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const publicationStatusSelect = document.getElementById('publicationStatus');
         const randomizeOrderCheckbox = document.getElementById('randomizeOrderToggle');
         const materialAssessmentKindInput = document.getElementById('materialAssessmentKind');
-        const materialAssessmentKindToggle = document.getElementById('materialAssessmentKindToggle');
         const addMaterialValidationError = document.getElementById('amValidationError');
         let editingItemIndex = null;
         const scheduleFieldDiv = document.getElementById('scheduleField');
@@ -13261,8 +13248,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const materialModeOtherBtn = document.getElementById('materialModeOther');
         const addMaterialModeToggle = document.getElementById('addMaterialModeToggle');
         const editMaterialAssessmentKindInput = document.getElementById('editMaterialAssessmentKind');
-        const editMaterialAssessmentKindToggle = document.getElementById('editMaterialAssessmentKindToggle');
-        const crlaAssessmentLocked = String(materialAssessmentKindToggle?.dataset?.crlaLocked || editMaterialAssessmentKindToggle?.dataset?.crlaLocked || '').toLowerCase() === 'true';
         const otherMaterialPanel = document.getElementById('otherMaterialPanel');
         const otherMaterialSearchInput = document.getElementById('otherMaterialSearchInput');
         const otherMaterialAuthorSelect = document.getElementById('otherMaterialAuthorSelect');
@@ -13905,26 +13890,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function getSelectedAssessmentKind() {
-            const value = String(materialAssessmentKindInput?.value || 'regular').toLowerCase();
-            return value === 'crla' ? 'crla' : 'regular';
+            return 'regular';
         }
 
         function setAssessmentKind(kind) {
-            const normalized = String(kind || 'regular').toLowerCase() === 'crla' ? 'crla' : 'regular';
-            const effectiveKind = crlaAssessmentLocked && normalized === 'crla' ? 'regular' : normalized;
-            if (materialAssessmentKindInput) materialAssessmentKindInput.value = effectiveKind;
-            if (editMaterialAssessmentKindInput) editMaterialAssessmentKindInput.value = effectiveKind;
-            [materialAssessmentKindToggle, editMaterialAssessmentKindToggle].forEach(toggle => {
-                if (!toggle) return;
-                toggle.querySelectorAll('.assessment-kind-option').forEach(button => {
-                    const buttonKind = String(button.dataset.kind || '').toLowerCase();
-                    const isLocked = crlaAssessmentLocked && buttonKind === 'crla';
-                    button.classList.toggle('active', buttonKind === effectiveKind);
-                    button.classList.toggle('is-disabled', isLocked);
-                    button.toggleAttribute('disabled', isLocked);
-                    button.setAttribute('aria-disabled', isLocked ? 'true' : 'false');
-                });
-            });
+            if (materialAssessmentKindInput) materialAssessmentKindInput.value = 'regular';
+            if (editMaterialAssessmentKindInput) editMaterialAssessmentKindInput.value = 'regular';
         }
 
         function isAssessmentMaterial(item) {
@@ -14249,28 +14220,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         }
 
-        function attachAssessmentKindHandlers() {
-            [materialAssessmentKindToggle, editMaterialAssessmentKindToggle].forEach(toggle => {
-                if (!toggle || toggle.dataset.bound) return;
-                toggle.dataset.bound = 'true';
-                toggle.addEventListener('click', function(event) {
-                    const button = event.target.closest('.assessment-kind-option');
-                    if (!button) return;
-                    if (crlaAssessmentLocked && String(button.dataset.kind || '').toLowerCase() === 'crla') {
-                        event.preventDefault();
-                        return;
-                    }
-                    setAssessmentKind(button.dataset.kind || 'regular');
-                });
-            });
-        }
-
         function openOtherMaterialModal() {
             /* removed: other materials now render inline */
         }
 
         attachOtherMaterialHandlers();
-        attachAssessmentKindHandlers();
 
         function excerptUploadedItems(text) {
             const cleaned = String(text || '')

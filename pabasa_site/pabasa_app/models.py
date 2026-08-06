@@ -272,6 +272,12 @@ class Section(models.Model):
         return changed
 
 class Assessment(models.Model):
+    SYSTEM_ASSESSMENT_CHOICES = [
+        ("", "Teacher Owned"),
+        ("bosy_crla_pretest", "BoSY CRLA Pre-Test"),
+        ("eosy_crla_posttest", "EoSY CRLA Post-Test"),
+    ]
+
     ASSESSMENT_TYPE_CHOICES = [
         ("word", "Word"),
         ("vowel", "Vowel"),
@@ -287,6 +293,10 @@ class Assessment(models.Model):
 
     title = models.CharField(max_length=150)
     code = models.CharField(max_length=30, unique=True)
+    is_system_owned = models.BooleanField(default=False)
+    system_assessment_key = models.CharField(max_length=40, choices=SYSTEM_ASSESSMENT_CHOICES, blank=True, default="")
+    system_assessment_period = models.CharField(max_length=10, blank=True, default="")
+    system_assessment_phase = models.CharField(max_length=10, blank=True, default="")
     assessment_type = models.CharField(max_length=20, choices=ASSESSMENT_TYPE_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     scheduled_at = models.DateTimeField(null=True, blank=True)  # When assessment becomes published
@@ -893,6 +903,10 @@ class Material(models.Model):
     section = models.ForeignKey("Section", on_delete=models.SET_NULL, related_name="materials", null=True, blank=True)
     assigned_sections = models.ManyToManyField("Section", related_name="assigned_materials", blank=True)
     code = models.CharField(max_length=30, unique=True, blank=True, default="")
+    is_system_owned = models.BooleanField(default=False)
+    system_assessment_key = models.CharField(max_length=40, blank=True, default=None, unique=True, null=True)
+    system_assessment_period = models.CharField(max_length=10, blank=True, default="")
+    system_assessment_phase = models.CharField(max_length=10, blank=True, default="")
     teacher = models.ForeignKey(User, on_delete=models.SET_NULL, related_name="materials", null=True, blank=True)
     title = models.CharField(max_length=150, blank=True, default='')
     item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES)
@@ -969,6 +983,9 @@ class Material(models.Model):
     def is_assessment_content(self):
         return str(self.type or "").strip().lower() in {"assessment", "both"} or bool(self.assessment_set)
 
+    def is_protected_system_assessment(self):
+        return bool(self.is_system_owned or (self.system_assessment_key or "").strip())
+
     def save(self, *args, **kwargs):
         if not self.code:
             self.code = self._generate_code()
@@ -1014,6 +1031,38 @@ class Material(models.Model):
             started_at_value = timezone.now()
 
         teacher = self.teacher or (self.section.teacher if self.section_id and self.section else None)
+        if teacher is None and student is not None:
+            try:
+                student_section = next(
+                    (
+                        section for section in Section.objects.filter(is_active=True).select_related('teacher')
+                        if section.has_student(student, active_only=True)
+                    ),
+                    None,
+                )
+                if student_section and getattr(student_section, 'teacher', None):
+                    teacher = student_section.teacher
+            except Exception:
+                teacher = teacher
+        if teacher is None:
+            teacher = User.objects.filter(role='teacher', is_archived=False).order_by('id').first()
+        if teacher is None:
+            teacher = User.objects.filter(role__in=['teacher', 'admin'], is_archived=False).order_by('id').first()
+        if teacher is None:
+            teacher = User.objects.filter(is_archived=False).order_by('id').first()
+        if teacher is None:
+            raise ValueError("Unable to resolve a teacher for assessment result recording.")
+
+        system_assessment_period = str(getattr(self, "system_assessment_period", "") or "").strip().lower()
+        system_assessment_phase = str(getattr(self, "system_assessment_phase", "") or "").strip().lower()
+        if self.is_system_owned and not system_assessment_period:
+            system_assessment_period = str(self.system_assessment_key or "").strip().lower().split("_", 1)[0] if self.system_assessment_key else ""
+        if self.is_system_owned and not system_assessment_phase:
+            system_assessment_phase = str(self.system_assessment_key or "").strip().lower().split("_", 1)[1] if "_" in str(self.system_assessment_key or "") else ""
+        if self.is_system_owned and not system_assessment_period:
+            system_assessment_period = "bosy"
+        if self.is_system_owned and not system_assessment_phase:
+            system_assessment_phase = "pretest"
         
         # Ensure parent assessment exists for this material
         parent_assessment = self.assessment
@@ -1027,6 +1076,10 @@ class Material(models.Model):
             parent_assessment = Assessment.objects.create(
                 title=self.title or self.prompt_text or "Assessment",
                 code=candidate_code,
+                is_system_owned=bool(self.is_system_owned),
+                system_assessment_key=self.system_assessment_key or "",
+                system_assessment_period=system_assessment_period,
+                system_assessment_phase=system_assessment_phase,
                 assessment_type=self.item_type,
                 status=self.status,
                 scheduled_at=self.scheduled_at if self.status == "scheduled" else None,
@@ -1042,6 +1095,10 @@ class Material(models.Model):
         result = Assessment.objects.create(
             title=self.title or self.prompt_text or "Assessment Result",
             code=self._build_result_code(attempt_number),
+            is_system_owned=bool(self.is_system_owned),
+            system_assessment_key=self.system_assessment_key or "",
+            system_assessment_period=system_assessment_period,
+            system_assessment_phase=system_assessment_phase,
             assessment_type=self.item_type,
             status=self.status,
             scheduled_at=self.scheduled_at if self.status == "scheduled" else None,
@@ -1062,14 +1119,19 @@ class Material(models.Model):
 
 
 class AssessmentWindowSetting(models.Model):
-    WINDOW_CHOICES = [
+    PERIOD_CHOICES = [
         ("bosy", "Beginning of School Year"),
         ("mosy", "Middle of School Year"),
         ("eosy", "End of School Year"),
     ]
+    PHASE_CHOICES = [
+        ("pretest", "Pre-Test"),
+        ("posttest", "Post-Test"),
+    ]
 
     key = models.CharField(max_length=50, unique=True, default="assessment_window_active")
-    active_window = models.CharField(max_length=10, choices=WINDOW_CHOICES, default="bosy")
+    active_period = models.CharField(max_length=10, choices=PERIOD_CHOICES, default="bosy")
+    active_phase = models.CharField(max_length=10, choices=PHASE_CHOICES, default="pretest")
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="assessment_window_updates")
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1078,23 +1140,38 @@ class AssessmentWindowSetting(models.Model):
         db_table = "assessment_window_settings"
 
     def __str__(self):
-        return f"{self.get_active_window_display()}"
+        return f"{self.get_active_period_display()} {self.get_active_phase_display()}"
+
+    @property
+    def active_window(self):
+        return f"{self.active_period}:{self.active_phase}"
+
+    @active_window.setter
+    def active_window(self, value):
+        period, phase = str(value or "").split(":", 1) if ":" in str(value or "") else (value, "pretest")
+        self.active_period = period or "bosy"
+        self.active_phase = phase or "pretest"
 
     @classmethod
     def get_active(cls):
-        setting, _ = cls.objects.get_or_create(key="assessment_window_active", defaults={"active_window": "bosy"})
+        setting, _ = cls.objects.get_or_create(key="assessment_window_active", defaults={"active_period": "bosy", "active_phase": "pretest"})
         return setting
 
     @classmethod
     def get_active_window(cls):
-        return cls.get_active().active_window
+        active = cls.get_active()
+        return f"{active.active_period}:{active.active_phase}"
 
     @classmethod
     def set_active_window(cls, window, updated_by=None):
         setting = cls.get_active()
-        if window not in dict(cls.WINDOW_CHOICES):
-            window = "bosy"
-        setting.active_window = window
+        period, phase = (window or "").split(":", 1) if ":" in str(window or "") else (window, "pretest")
+        if period not in dict(cls.PERIOD_CHOICES):
+            period = "bosy"
+        if phase not in dict(cls.PHASE_CHOICES):
+            phase = "pretest"
+        setting.active_period = period
+        setting.active_phase = phase
         setting.updated_by = updated_by if getattr(updated_by, "id", None) else None
         setting.save()
         return setting

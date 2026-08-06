@@ -43,11 +43,22 @@
                 <input type="hidden" name="settings_action" value="save_assessment_window">
                 <div>
                     <label class="form-label small" for="activeWindow">Active Assessment Window</label>
-                    <select class="form-select" id="activeWindow" name="active_window" required>
-                        {% for value, label in assessment_window_choices %}
-                            <option value="{{ value }}" {% if assessment_window_setting.active_window == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">
+                            <select class="form-select" id="activePeriod" name="active_period" required>
+                                {% for value, label in assessment_window_period_choices %}
+                                    <option value="{{ value }}" {% if assessment_window_setting.active_period == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <select class="form-select" id="activePhase" name="active_phase" required>
+                                {% for value, label in assessment_window_phase_choices %}
+                                    <option value="{{ value }}" {% if assessment_window_setting.active_phase == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <p class="text-muted small mb-0">All Reading Assessment pages automatically follow this setting. Students and teachers do not switch windows manually.</p>
 

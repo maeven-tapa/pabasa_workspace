@@ -84,7 +84,11 @@
         }
 
         let items = [];
+        let itemTypes = [];
+        let itemPages = [];
+        let pageCorrectWordCounts = [];
         let currentIndex = 0;
+        let currentPageIndex = 0;
         let isRecording = false;
         let isMuted = false;
         let startTime = null;
@@ -167,10 +171,16 @@
         // Keep fast feedback for word/vowel assessments, but allow longer
         // recordings for continuous reading while remaining below Google's
         // 12-second transcription timeout.
-        const speechChunkMs = ["sentence", "paragraph"].includes(mode) ? 10000 : 2400;
+        let speechChunkMs = ["sentence", "paragraph"].includes(mode) ? 10000 : 2400;
         const speechLevelThreshold = 0.014;
         const speechNoiseMultiplier = 3.2;
         let micDeviceOptionButtons = [];
+
+        function setCurrentItemMode(nextMode) {
+            const normalized = String(nextMode || mode || "word").toLowerCase();
+            mode = normalized;
+            speechChunkMs = ["sentence", "paragraph"].includes(mode) ? 10000 : 2400;
+        }
 
         function setSpeechDebugPanelVisible(isVisible) {
             const enabled = Boolean(isVisible);
@@ -364,9 +374,159 @@
             return source.match(/\b[\w']+\b/g) || [];
         }
 
+        function parsePersistedAssessmentItems(raw) {
+            if (!Array.isArray(raw)) return [];
+            return raw.map((item) => {
+                if (item && typeof item === 'object') {
+                    return {
+                        text: String(item.text || item.content || '').trim(),
+                        type: String(item.type || 'word').trim().toLowerCase() || 'word',
+                        title: String(item.title || '').trim(),
+                    };
+                }
+                return { text: String(item || '').trim(), type: 'word', title: '' };
+            }).filter((item) => item.text);
+        }
+
+        function splitTextIntoDisplayPages(text, itemType = mode) {
+            const source = String(text || "").trim();
+            if (!source) return [""];
+            const normalizedType = String(itemType || "").trim().toLowerCase();
+            if (normalizedType !== "paragraph") {
+                return [source];
+            }
+
+            const hardParagraphs = source.split(/\n{2,}/).map(part => part.trim()).filter(Boolean);
+            const chunks = hardParagraphs.length > 1 ? hardParagraphs : [source];
+            const pages = [];
+            const maxCharsPerPage = 260;
+            const maxSentencesPerPage = 2;
+
+            const sentenceGroups = (paragraph) => {
+                const sentences = paragraph.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map(part => part.trim()).filter(Boolean) || [paragraph];
+                let buffer = [];
+                let bufferLength = 0;
+                sentences.forEach((sentence) => {
+                    const nextLength = bufferLength ? bufferLength + 1 + sentence.length : sentence.length;
+                    if (buffer.length && (buffer.length >= maxSentencesPerPage || nextLength > maxCharsPerPage)) {
+                        pages.push(buffer.join(" "));
+                        buffer = [sentence];
+                        bufferLength = sentence.length;
+                    } else {
+                        buffer.push(sentence);
+                        bufferLength = nextLength;
+                    }
+                });
+                if (buffer.length) {
+                    pages.push(buffer.join(" "));
+                }
+            };
+
+            chunks.forEach((paragraph) => {
+                if (paragraph.length > maxCharsPerPage) {
+                    sentenceGroups(paragraph);
+                } else {
+                    pages.push(paragraph);
+                }
+            });
+
+            return pages.length ? pages : [source];
+        }
+
+        function buildItemPages(sourceItems, sourceTypes) {
+            return sourceItems.map((text, index) => splitTextIntoDisplayPages(text, sourceTypes[index] || mode));
+        }
+
+        function getCurrentItemPages() {
+            return itemPages[currentIndex] || [items[currentIndex] || ""];
+        }
+
+        function getCurrentDisplayText() {
+            const pages = getCurrentItemPages();
+            return pages[Math.min(currentPageIndex, Math.max(0, pages.length - 1))] || "";
+        }
+
+        function isCurrentItemPaged() {
+            return getCurrentItemPages().length > 1;
+        }
+
+        function getCurrentPageCount() {
+            return Math.max(1, getCurrentItemPages().length);
+        }
+
+        function getCurrentPageLabel() {
+            const totalPages = getCurrentPageCount();
+            if (totalPages <= 1) return "";
+            return `Page ${currentPageIndex + 1} of ${totalPages}`;
+        }
+
+        function goToPreviousPageOrItem() {
+            const pages = getCurrentItemPages();
+            if (currentPageIndex > 0) {
+                currentPageIndex -= 1;
+                updateUI();
+                animateCurrentItem();
+                return;
+            }
+            if (currentIndex > 0) {
+                transitionToItem(currentIndex - 1);
+            }
+        }
+
+        function goToNextPageOrItem() {
+            const pages = getCurrentItemPages();
+            if (currentPageIndex < pages.length - 1) {
+                currentPageIndex += 1;
+                updateUI();
+                animateCurrentItem();
+                return;
+            }
+            if (currentIndex < items.length - 1) {
+                transitionToItem(currentIndex + 1, "Next item loaded.", "Keep reading clearly.");
+            } else if (!isReviewMode) {
+                showCompletion(true);
+            }
+        }
+
+        function syncItemCorrectWordCount(itemIndex) {
+            const counts = pageCorrectWordCounts[itemIndex] || [];
+            const total = counts.reduce((sum, count) => sum + Number(count || 0), 0);
+            correctWordCounts[itemIndex] = Math.min(total, readableWordCount(items[itemIndex]));
+        }
+
+        function syncAllItemCorrectWordCounts() {
+            items.forEach((_, index) => syncItemCorrectWordCount(index));
+        }
+
         function loadItems() {
+            const persistedRaw = sessionStorage.getItem('pabasa_crla_assessment_items');
+            if (persistedRaw) {
+                try {
+                    const persistedItems = parsePersistedAssessmentItems(JSON.parse(persistedRaw));
+                    if (persistedItems.length > 0) {
+                        items = persistedItems.map(item => item.text);
+                        itemTypes = persistedItems.map(item => item.type || mode);
+                        itemPages = buildItemPages(items, itemTypes);
+                        pageCorrectWordCounts = items.map(() => []);
+                        setCurrentItemMode(itemTypes[0] || mode);
+                        currentMaterialLanguage = liveLanguage || "";
+                        correctWordCounts = new Array(items.length).fill(0);
+                        currentIndex = 0;
+                        currentPageIndex = 0;
+                        updateUI();
+                        animateCurrentItem();
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('PABASA: Unable to parse persisted assessment items', error);
+                }
+            }
+
             if (liveContent) {
                 items = parseLiveContent(liveContent, liveItemType || mode);
+                itemTypes = new Array(items.length).fill(String(liveItemType || mode || 'word').toLowerCase());
+                itemPages = buildItemPages(items, itemTypes);
+                pageCorrectWordCounts = items.map(() => []);
                 currentMaterialLanguage = liveLanguage || "";
                 correctWordCounts = new Array(items.length).fill(0);
                 if (items.length === 0) {
@@ -375,6 +535,7 @@
                     return;
                 }
                 currentIndex = 0;
+                currentPageIndex = 0;
                 updateUI();
                 animateCurrentItem();
                 return;
@@ -391,6 +552,7 @@
             Object.keys(readings).forEach(key => readingsMap[key.toUpperCase()] = readings[key]);
 
             let aggregatedItems = [];
+            let aggregatedTypes = [];
             currentMaterialLanguage = "";
             codes.forEach(code => {
                 const upperCode = String(code).toUpperCase();
@@ -408,7 +570,9 @@
                             const matchesTarget = (materialId && mId === String(materialId).trim()) || (testTitle && material.title === testTitle);
                             
                             if (isAssessment && (matchesTarget || (!testTitle && !materialId && aggregatedItems.length === 0))) {
-                                aggregatedItems = aggregatedItems.concat(parseItems(material, mode));
+                                const parsedItems = parseItems(material, mode);
+                                aggregatedItems = aggregatedItems.concat(parsedItems);
+                                aggregatedTypes = aggregatedTypes.concat(new Array(parsedItems.length).fill(String(material.item_type || mode || 'word').toLowerCase()));
                                 if (!currentMaterialLanguage && material.language) {
                                     currentMaterialLanguage = material.language;
                                 }
@@ -420,6 +584,9 @@
             });
 
             items = aggregatedItems;
+            itemTypes = aggregatedTypes.length ? aggregatedTypes : new Array(items.length).fill(mode);
+            itemPages = buildItemPages(items, itemTypes);
+            pageCorrectWordCounts = items.map(() => []);
             correctWordCounts = new Array(items.length).fill(0);
             if (items.length === 0) {
                 if (readingWord) readingWord.textContent = "No assessment items assigned.";
@@ -427,6 +594,7 @@
                 return;
             }
             currentIndex = 0;
+            currentPageIndex = 0;
             updateUI();
             animateCurrentItem();
         }
@@ -539,6 +707,7 @@
         }
 
         function correctWordsRead() {
+            syncAllItemCorrectWordCounts();
             return correctWordCounts.reduce((sum, count) => sum + Number(count || 0), 0);
         }
 
@@ -974,7 +1143,7 @@
         function currentSpeechContext() {
             return {
                 index: currentIndex,
-                itemText: items[currentIndex] || "",
+                itemText: getCurrentDisplayText() || items[currentIndex] || "",
                 syllableIndex: currentSyllableIndex,
                 version: itemResultVersion,
             };
@@ -984,7 +1153,7 @@
             return Boolean(
                 context
                 && context.index === currentIndex
-                && context.itemText === items[currentIndex]
+                && context.itemText === (getCurrentDisplayText() || items[currentIndex])
                 && context.version === itemResultVersion
                 && !isAdvancingItem
             );
@@ -1121,10 +1290,13 @@
                 previousCorrectWords,
                 proposedCorrectWords
             );
-            correctWordCounts[currentIndex] = Math.min(itemCorrectWords, readableWordCount(items[currentIndex]));
+            const pageCounts = pageCorrectWordCounts[currentIndex] || [];
+            pageCounts[currentPageIndex] = Math.min(itemCorrectWords, readableWordCount(getCurrentDisplayText() || items[currentIndex]));
+            pageCorrectWordCounts[currentIndex] = pageCounts;
+            syncItemCorrectWordCount(currentIndex);
             const speechDetail = appendPunctuationHelper(
                 transcript ? `Words: ${transcript}` : "No words recognized yet. Keep reading clearly.",
-                correctWordCounts[currentIndex]
+                correctWordsRead()
             );
             currentSyllableIndex = Math.max(currentSyllableIndex, proposedSyllableIndex);
             if (transcript || Number(data.matched || 0) > 0) {
@@ -1164,7 +1336,7 @@
 
             if (Number(data.matched || 0) > 0) {
                 setSpeechStatus(
-                    `Matched ${correctWordCounts[currentIndex]} word${Number(correctWordCounts[currentIndex]) === 1 ? "" : "s"}.`,
+                    `Matched ${correctWordsRead()} word${Number(correctWordsRead()) === 1 ? "" : "s"}.`,
                     `${speechDetail}${data.formatted_syllables ? " | Syllables: " + data.formatted_syllables : ""}`,
                     true
                 );
@@ -1234,20 +1406,37 @@
         function updateUI() {
             if (!items.length) return;
             stopReadAloud();
-            if (readingWord) readingWord.textContent = items[currentIndex];
+            setCurrentItemMode(itemTypes[currentIndex] || mode);
+            const displayText = getCurrentDisplayText();
+            if (readingWord) readingWord.textContent = displayText;
             currentSyllableIndex = 0;
             resetSyllableStitching();
             pendingAudioChunk = null;
             isAdvancingItem = false;
             itemResultVersion += 1;
             const label = mode.charAt(0).toUpperCase() + mode.slice(1);
-            if (counter) counter.textContent = `${label} ${currentIndex + 1}/${items.length}`;
+            if (counter) {
+                const pageLabel = getCurrentPageLabel();
+                counter.textContent = pageLabel ? `${label} ${currentIndex + 1}/${items.length} · ${pageLabel}` : `${label} ${currentIndex + 1}/${items.length}`;
+            }
             if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
             
-            if (prevBtn) prevBtn.disabled = isReviewMode ? currentIndex === 0 : (!isRecording || (currentIndex === 0));
+            if (prevBtn) {
+                const hasPreviousPage = currentPageIndex > 0;
+                const hasPreviousItem = currentIndex > 0;
+                prevBtn.disabled = isReviewMode ? !(hasPreviousPage || hasPreviousItem) : (!isRecording || !(hasPreviousPage || hasPreviousItem));
+            }
             if (nextBtn) {
-                nextBtn.disabled = isReviewMode ? currentIndex === items.length - 1 : (!isRecording || (currentIndex === items.length - 1));
-                nextBtn.textContent = isReviewMode && currentIndex === items.length - 1 ? "Done" : "Next";
+                const isLastPage = currentPageIndex >= getCurrentPageCount() - 1;
+                const onLastItem = currentIndex === items.length - 1;
+                nextBtn.disabled = isReviewMode ? (onLastItem && isLastPage) : (!isRecording || (onLastItem && isLastPage));
+                if (isReviewMode && onLastItem && isLastPage) {
+                    nextBtn.textContent = "Done";
+                } else if (isLastPage && getCurrentPageCount() > 1) {
+                    nextBtn.textContent = onLastItem ? "Finish Passage" : "Next";
+                } else {
+                    nextBtn.textContent = "Next";
+                }
             }
         }
 
@@ -1262,7 +1451,9 @@
         function transitionToItem(nextIndex, statusMessage = "", detail = "") {
             if (nextIndex < 0 || nextIndex >= items.length || nextIndex === currentIndex) return;
             currentIndex = nextIndex;
+            currentPageIndex = 0;
             currentSyllableIndex = 0;
+            setCurrentItemMode(itemTypes[currentIndex] || mode);
             updateUI();
             animateCurrentItem();
             if (isCurrentLiveAssessment()) {
@@ -2432,16 +2623,11 @@
         }
 
         prevBtn?.addEventListener("click", () => { 
-            if (currentIndex > 0) { 
-                transitionToItem(currentIndex - 1);
-            } 
+            goToPreviousPageOrItem();
         });
 
         nextBtn?.addEventListener("click", () => {
-            if (currentIndex < items.length - 1) { 
-                transitionToItem(currentIndex + 1);
-            } 
-            else if (!isReviewMode) { showCompletion(true); }
+            goToNextPageOrItem();
         });
 
         function isInteractiveElement(element) {
