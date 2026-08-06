@@ -192,11 +192,24 @@ def _assessment_window_choice():
     try:
         return AssessmentWindowSetting.get_active_window()
     except (OperationalError, Exception):
-        return "bosy"
+        return "bosy:pretest"
+
+
+def _assessment_window_parts(window=None):
+    raw_window = str(window or _assessment_window_choice() or "").strip().lower()
+    period, phase = raw_window.split(":", 1) if ":" in raw_window else (raw_window, "pretest")
+    if period not in dict(AssessmentWindowSetting.PERIOD_CHOICES):
+        period = "bosy"
+    if phase not in dict(AssessmentWindowSetting.PHASE_CHOICES):
+        phase = "pretest"
+    return period, phase
 
 
 def _assessment_window_label(window):
-    return dict(AssessmentWindowSetting.WINDOW_CHOICES).get(window, "Beginning of School Year")
+    period, phase = _assessment_window_parts(window)
+    period_label = dict(AssessmentWindowSetting.PERIOD_CHOICES).get(period, "Beginning of School Year")
+    phase_label = dict(AssessmentWindowSetting.PHASE_CHOICES).get(phase, "Pre-Test")
+    return f"{period_label} {phase_label}"
 
 
 def _aral_eligible_classification(label):
@@ -230,14 +243,15 @@ def _reader_assessment_state(student):
 
 def _assessment_workflow_context(student):
     window = _assessment_window_choice()
+    period, phase = _assessment_window_parts(window)
     state = _reader_assessment_state(student)
     completed_pretest = state['pre_test_completed']
     completed_posttest = state['post_test_completed']
     eligible = state['aral_eligible']
 
-    if window == 'bosy':
+    if period == 'bosy':
         stage = 'pretest' if not completed_pretest else ('materials' if eligible else 'completed')
-    elif window == 'mosy':
+    elif period == 'mosy':
         stage = 'materials' if eligible and completed_pretest else ('completed' if completed_pretest and not eligible else 'pretest_locked')
     else:
         stage = 'posttest' if eligible and completed_pretest and not completed_posttest else ('materials' if eligible else 'completed')
@@ -245,10 +259,12 @@ def _assessment_workflow_context(student):
     return {
         'active_window': window,
         'active_window_label': _assessment_window_label(window),
+        'active_period': period,
+        'active_phase': phase,
         'eligibility': state,
         'stage': stage,
-        'can_take_pretest': window == 'bosy' and not completed_pretest,
-        'can_take_posttest': window == 'eosy' and eligible and completed_pretest and not completed_posttest,
+        'can_take_pretest': period == 'bosy' and phase == 'pretest' and not completed_pretest,
+        'can_take_posttest': period == 'eosy' and phase == 'posttest' and eligible and completed_pretest and not completed_posttest,
     }
 
 
@@ -257,7 +273,8 @@ def _assessment_kind_value(material):
 
 
 def _assessment_window_allows_crla(window=None):
-    return (window or _assessment_window_choice()) in {'bosy', 'eosy'}
+    period, _phase = _assessment_window_parts(window)
+    return period in {'bosy', 'eosy'}
 
 
 def _current_school_year_bounds(now=None):
@@ -295,8 +312,8 @@ def _existing_crla_assessment_for_school_year(teacher_user=None):
 
 
 def _crla_creation_block_message(window=None, teacher_user=None):
-    active_window = window or _assessment_window_choice()
-    if active_window == 'mosy':
+    active_period, _active_phase = _assessment_window_parts(window)
+    if active_period == 'mosy':
         return 'This school is currently in the Middle of School Year (MoSY) assessment window. New CRLA Assessments cannot be created during this period.'
     existing, school_year = _existing_crla_assessment_for_school_year(teacher_user)
     if existing:
@@ -1448,10 +1465,11 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
         assessment_kind = str(getattr(material, 'assessment_set', '') or '').strip().lower()
 
     window = _assessment_window_choice()
+    period, _phase = _assessment_window_parts(window)
     if assessment_kind == 'crla':
-        if window == 'bosy':
+        if period == 'bosy':
             state['crla_pretest_completed'] = True
-        elif window == 'eosy':
+        elif period == 'eosy':
             state['crla_posttest_completed'] = True
 
     state['current_phase'] = 'materials' if state.get('aral_eligible') else 'complete'
@@ -4924,10 +4942,12 @@ def admin_settings(request):
             context['settings_success'] = 'Push notification preferences saved.'
 
         elif action == 'save_assessment_window':
-            window = str(request.POST.get('active_window') or '').strip().lower()
-            if window not in dict(AssessmentWindowSetting.WINDOW_CHOICES):
+            period = str(request.POST.get('active_period') or '').strip().lower()
+            phase = str(request.POST.get('active_phase') or '').strip().lower()
+            if period not in dict(AssessmentWindowSetting.PERIOD_CHOICES) or phase not in dict(AssessmentWindowSetting.PHASE_CHOICES):
                 context['settings_error'] = 'Select a valid assessment window.'
             else:
+                window = f'{period}:{phase}'
                 AssessmentWindowSetting.set_active_window(window, updated_by=user)
                 context['settings_success'] = f'Active assessment window set to {_assessment_window_label(window)}.'
 
@@ -4938,9 +4958,10 @@ def admin_settings(request):
     try:
         context['assessment_window_setting'] = AssessmentWindowSetting.get_active()
     except OperationalError:
-        context['assessment_window_setting'] = type('FallbackWindowSetting', (), {'active_window': 'bosy'})()
+        context['assessment_window_setting'] = type('FallbackWindowSetting', (), {'active_period': 'bosy', 'active_phase': 'pretest', 'active_window': 'bosy:pretest'})()
         context['settings_error'] = context.get('settings_error') or 'Assessment window storage is not ready yet. Run database migrations to enable this feature.'
-    context['assessment_window_choices'] = AssessmentWindowSetting.WINDOW_CHOICES
+    context['assessment_window_period_choices'] = AssessmentWindowSetting.PERIOD_CHOICES
+    context['assessment_window_phase_choices'] = AssessmentWindowSetting.PHASE_CHOICES
     return render(request, 'pabasa_app/admin_settings.html', context)
 
 def courses(request):
@@ -4967,15 +4988,16 @@ def assessment(request):
 
     state = workflow.get('eligibility') or _reader_assessment_state(user)
     window = workflow.get('active_window') or _assessment_window_choice()
+    period = workflow.get('active_period') or _assessment_window_parts(window)[0]
     completed_pretest = bool(state.get('pre_test_completed'))
     completed_posttest = bool(state.get('post_test_completed'))
     eligible = bool(state.get('aral_eligible'))
 
-    if window == 'bosy':
-        stage = 'pretest' if not completed_pretest else ('original' if eligible else 'not_eligible')
-    elif window == 'mosy':
+    if period == 'bosy':
+        stage = 'assessment' if not completed_pretest else 'complete'
+    elif period == 'mosy':
         stage = 'original' if eligible else ('not_eligible' if completed_pretest else 'original')
-    elif window == 'eosy':
+    elif period == 'eosy':
         if eligible:
             stage = 'posttest' if completed_pretest and not completed_posttest else 'original'
         else:
@@ -4986,8 +5008,8 @@ def assessment(request):
     workflow['stage'] = stage
 
     published_crla_material = _published_crla_material_for_student(user)
-    if window == 'bosy' and not completed_pretest and published_crla_material is None:
-        stage = 'no_assessment'
+    if period == 'bosy' and not completed_pretest:
+        stage = 'assessment' if published_crla_material is not None else 'no_assessment'
         workflow['stage'] = stage
 
     materials = _assessment_materials_for_student(user)
@@ -5004,6 +5026,7 @@ def assessment(request):
     crla_duration = 'Not set'
     crla_title = 'CRLA Assessment'
     crla_content = ''
+    crla_items_json = []
     crla_material_id = ''
     crla_material_code = ''
     crla_material_language = ''
@@ -5018,14 +5041,16 @@ def assessment(request):
             crla_material_language = str(content_json.get('language') or '').strip()
             items = content_json.get('items') if isinstance(content_json.get('items'), list) else []
             if items:
+                crla_items_json = [str(item or '').strip() for item in items if str(item or '').strip()]
                 crla_content = '\n'.join(str(item or '').strip() for item in items if str(item or '').strip())
-                crla_items = len([item for item in items if str(item or '').strip()])
+                crla_items = len(crla_items_json)
             elif content_json.get('content_text'):
                 crla_content = str(content_json.get('content_text') or '').strip()
         if not crla_content:
             crla_content = str(getattr(crla_material, 'content_text', '') or '').strip()
         if crla_content and not crla_items:
-            crla_items = len([line for line in crla_content.splitlines() if line.strip()])
+            crla_items_json = [line.strip() for line in crla_content.splitlines() if line.strip()]
+            crla_items = len(crla_items_json)
         if crla_items:
             estimated_minutes = max(5, min(30, round(crla_items * 0.5)))
             crla_duration = f"{estimated_minutes} min"
@@ -5037,6 +5062,7 @@ def assessment(request):
         'crla_assessment_items_count': crla_items,
         'crla_assessment_duration': crla_duration,
         'crla_assessment_content': crla_content,
+        'crla_assessment_items_json': crla_items_json,
         'crla_material_id': crla_material_id,
         'crla_assessment_code': crla_material_code,
         'crla_assessment_language': crla_material_language,
@@ -5048,8 +5074,8 @@ def assessment(request):
     context['workflow_title'] = (
         'No Reading Assessment Available'
         if stage == 'no_assessment'
-        else 'CRLA Pre-Test'
-        if stage == 'pretest'
+        else 'Beginning of School Year Reading Assessment'
+        if stage == 'assessment'
         else 'CRLA Post-Test'
         if stage == 'posttest'
         else 'Assessment Complete'
@@ -5057,8 +5083,8 @@ def assessment(request):
     context['workflow_message'] = (
         'Your teacher has not yet published the Beginning of School Year Reading Assessment. Please wait until your teacher makes it available.'
         if stage == 'no_assessment'
-        else 'Complete the official BoSY CRLA Pre-Test before returning to the regular Reading Assessment page.'
-        if stage == 'pretest'
+        else 'Complete the official BoSY CRLA Assessment prepared by your teacher.'
+        if stage == 'assessment'
         else 'The learner will continue with the EoSY CRLA Post-Test using the same CRLA assessment materials.'
         if stage == 'posttest'
         else 'The learner successfully completed the BoSY CRLA assessment but is not eligible for the ARAL Program.'
@@ -7362,13 +7388,16 @@ def course_teacher_view(request):
         return redirect('auth')
     context = _dashboard_context(request, 'teacher')
     window = _assessment_window_choice()
+    period, phase = _assessment_window_parts(window)
     teacher_user = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
     crla_existing, _school_year_label = _existing_crla_assessment_for_school_year(teacher_user)
     context.update({
         'active_assessment_window': window,
         'active_assessment_window_label': _assessment_window_label(window),
+        'active_assessment_period': period,
+        'active_assessment_phase': phase,
         'crla_assessment_exists': bool(crla_existing),
-        'crla_assessment_status_message': _crla_creation_block_message(window, teacher_user) if window == 'mosy' or crla_existing else '',
+        'crla_assessment_status_message': _crla_creation_block_message(window, teacher_user) if period == 'mosy' or crla_existing else '',
     })
     return render(request, 'pabasa_app/courses.html', context)
 
