@@ -47,7 +47,7 @@ from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, AssessmentWindowSetting
+from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, AssessmentWindowSetting, SchoolCalendar, CalendarEvent
 from .reading_material_utils import format_assigned_week_display, parse_assigned_week
 from .reading_stt import (
     analyze_reading,
@@ -4364,6 +4364,132 @@ def admin_course_archive(request, material_id):
 @admin_required
 def admin_practice_assessment(request):
     return render(request, 'pabasa_app/admin_practice_assessment.html', _admin_practice_context(request, 'Practice'))
+
+
+def _calendar_event_payload(event):
+    return {
+        'id': event.id,
+        'title': event.title,
+        'event_type': event.event_type,
+        'start': event.start_date.isoformat(),
+        'end': event.end_date.isoformat(),
+        'description': event.description or '',
+        'school_calendar_id': event.school_calendar_id,
+    }
+
+
+def _calendar_context(request):
+    calendars = list(SchoolCalendar.objects.all().order_by('-is_active', '-created_at'))
+    active_calendar = SchoolCalendar.objects.filter(is_active=True).order_by('-updated_at', '-created_at').first()
+    selected_calendar_id = request.GET.get('calendar_id')
+    selected_calendar = None
+    if selected_calendar_id and str(selected_calendar_id).isdigit():
+        selected_calendar = SchoolCalendar.objects.filter(id=int(selected_calendar_id)).first()
+    if not selected_calendar:
+        selected_calendar = active_calendar or (calendars[0] if calendars else None)
+
+    selected_term = int(request.GET.get('term', selected_calendar.current_term if selected_calendar else 1) or 1)
+    if selected_term not in {1, 2, 3}:
+        selected_term = 1
+
+    if not selected_calendar:
+        selected_calendar = SchoolCalendar.objects.create(school_year='2026-2027', current_term=selected_term, is_active=True)
+        calendars = list(SchoolCalendar.objects.all().order_by('-is_active', '-created_at'))
+        active_calendar = selected_calendar
+
+    events = CalendarEvent.objects.filter(school_calendar=selected_calendar).order_by('start_date', 'end_date', 'created_at')
+    return {
+        'page_title': 'School Calendar',
+        'admin_username': request.session.get('custom_id', ''),
+        'first_name': request.session.get('first_name', ''),
+        'last_name': request.session.get('last_name', ''),
+        'school_calendars': calendars,
+        'active_calendar': active_calendar,
+        'selected_calendar': selected_calendar,
+        'selected_term': selected_term,
+        'calendar_events': events,
+        'calendar_events_json': json.dumps([_calendar_event_payload(event) for event in events]),
+        'term_options': [(1, 'Term 1'), (2, 'Term 2'), (3, 'Term 3')],
+        'event_type_options': CalendarEvent.EVENT_TYPE_CHOICES,
+    }
+
+
+@admin_required
+@csrf_protect
+def admin_school_calendar(request):
+    def wants_json():
+        return request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in (request.headers.get('accept') or '')
+
+    if request.method == 'POST':
+        action = (request.POST.get('action') or '').strip().lower()
+        calendar_id = request.POST.get('calendar_id')
+        selected_calendar = SchoolCalendar.objects.filter(id=calendar_id).first() if str(calendar_id or '').isdigit() else None
+
+        if action == 'save_calendar':
+            school_year = (request.POST.get('school_year') or '').strip()
+            current_term = request.POST.get('current_term')
+            try:
+                current_term = int(current_term)
+            except (TypeError, ValueError):
+                current_term = 1
+            if current_term not in {1, 2, 3}:
+                current_term = 1
+            if not school_year:
+                school_year = '2026-2027'
+
+            if selected_calendar:
+                selected_calendar.school_year = school_year
+                selected_calendar.current_term = current_term
+                selected_calendar.is_active = True
+                selected_calendar.save(update_fields=['school_year', 'current_term', 'is_active', 'updated_at'])
+            else:
+                SchoolCalendar.objects.filter(is_active=True).update(is_active=False)
+                selected_calendar = SchoolCalendar.objects.create(
+                    school_year=school_year,
+                    current_term=current_term,
+                    is_active=True,
+                )
+            SchoolCalendar.objects.exclude(id=selected_calendar.id).update(is_active=False)
+            if wants_json():
+                return JsonResponse({'success': True, 'calendar_id': selected_calendar.id, 'current_term': selected_calendar.current_term})
+            return redirect(f"{reverse('admin_school_calendar')}?calendar_id={selected_calendar.id}&term={selected_calendar.current_term}")
+
+        if action == 'save_event':
+            if not selected_calendar:
+                return HttpResponseForbidden('Create a school calendar first.')
+            event_id = request.POST.get('event_id')
+            title = (request.POST.get('title') or '').strip()
+            event_type = (request.POST.get('event_type') or '').strip()
+            start_date = (request.POST.get('start_date') or '').strip()
+            end_date = (request.POST.get('end_date') or '').strip()
+            description = (request.POST.get('description') or '').strip()
+            valid_types = {value for value, _label in CalendarEvent.EVENT_TYPE_CHOICES}
+            if not title or event_type not in valid_types or not start_date or not end_date:
+                return HttpResponseForbidden('Invalid event data.')
+            event = CalendarEvent.objects.filter(id=event_id, school_calendar=selected_calendar).first() if str(event_id or '').isdigit() else None
+            if not event:
+                event = CalendarEvent(school_calendar=selected_calendar)
+            event.title = title
+            event.event_type = event_type
+            event.start_date = start_date
+            event.end_date = end_date
+            event.description = description
+            event.save()
+            if wants_json():
+                return JsonResponse({'success': True, 'event': _calendar_event_payload(event)})
+            return redirect(f"{reverse('admin_school_calendar')}?calendar_id={selected_calendar.id}&term={selected_calendar.current_term}")
+
+        if action == 'delete_event':
+            if not selected_calendar:
+                return HttpResponseForbidden('Create a school calendar first.')
+            event_id = request.POST.get('event_id')
+            if str(event_id or '').isdigit():
+                CalendarEvent.objects.filter(id=event_id, school_calendar=selected_calendar).delete()
+            if wants_json():
+                return JsonResponse({'success': True, 'event_id': event_id})
+            return redirect(f"{reverse('admin_school_calendar')}?calendar_id={selected_calendar.id}&term={selected_calendar.current_term}")
+
+    return render(request, 'pabasa_app/admin_school_calendar.html', _calendar_context(request))
 
 
 def _official_reading_materials_queryset():

@@ -1203,11 +1203,13 @@ class SchoolCalendar(models.Model):
 
 class CalendarEvent(models.Model):
     EVENT_TYPE_CHOICES = [
-        ("pre_assessment", "Pre-Assessment"),
-        ("post_assessment", "Post-Assessment"),
+        ("school_opening", "School Opening"),
+        ("school_closing", "School Closing"),
+        ("pre_assessment", "Pre-Assessment Week"),
+        ("post_assessment", "Post-Assessment Week"),
         ("holiday", "Holiday"),
-        ("examination", "Examination"),
-        ("other", "Other"),
+        ("examination", "Examination Week"),
+        ("other", "Other Activity"),
     ]
 
     school_calendar = models.ForeignKey(
@@ -1215,6 +1217,7 @@ class CalendarEvent(models.Model):
         on_delete=models.CASCADE,
         related_name="events",
     )
+    title = models.CharField(max_length=150)
     event_type = models.CharField(max_length=30, choices=EVENT_TYPE_CHOICES)
     start_date = models.DateField()
     end_date = models.DateField()

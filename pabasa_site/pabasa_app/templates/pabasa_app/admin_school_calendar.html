@@ -1,0 +1,340 @@
+{% extends "pabasa_app/admin_base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/index.global.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.15/index.global.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.15/index.global.min.css">
+<style>
+    .calendar-page { display: grid; gap: 1rem; }
+    .calendar-top { display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; }
+    .calendar-card { background: #fff; border: 1px solid rgba(16, 70, 110, 0.10); border-radius: 22px; box-shadow: 0 18px 42px rgba(16, 70, 110, 0.08); }
+    .calendar-card-inner { padding: 1rem 1.1rem; }
+    .calendar-label { color: #6b7f95; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.35rem; }
+    .calendar-value { color: #10466E; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1.05rem; font-weight: 900; }
+    .calendar-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; align-items: center; margin-bottom: 0.9rem; }
+    .calendar-toolbar-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .calendar-toolbar .btn { border-radius: 999px; font-weight: 800; }
+    .calendar-stage { min-height: calc(100dvh - 17rem); padding: 1rem; }
+    #calendar { min-height: 42rem; }
+    .fc .fc-toolbar { display: none; }
+    .fc .fc-button { border-radius: 999px !important; box-shadow: none !important; font-family: "Nunito", "Segoe UI", sans-serif; font-weight: 800; }
+    .fc .fc-col-header-cell-cushion { padding: 0.75rem 0.25rem; font-weight: 800; color: #62809a; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.04em; }
+    .fc .fc-daygrid-day-frame { min-height: 8.5rem; padding: 0.55rem; }
+    .fc .fc-daygrid-day.fc-day-today { background: linear-gradient(180deg, rgba(46,168,229,0.08), rgba(46,168,229,0.03)) !important; }
+    .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number { background: #2ea8e5; color: #fff; border-radius: 999px; min-width: 2rem; min-height: 2rem; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(46,168,229,0.20); }
+    .fc .fc-daygrid-day-number { color: #557089; font-size: 0.85rem; font-weight: 800; text-decoration: none; }
+    .fc .fc-daygrid-event, .fc .fc-timegrid-event { border: 0; border-radius: 14px; padding: 0.18rem 0.45rem; font-weight: 700; box-shadow: 0 8px 18px rgba(16, 70, 110, 0.12); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+    .fc .fc-daygrid-event:hover, .fc .fc-timegrid-event:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(16, 70, 110, 0.16); }
+    .fc .fc-daygrid-more-link { color: #10466E; font-weight: 800; }
+    .event-pill { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .65rem; border-radius: 999px; color: #fff; font-size: .8rem; font-weight: 800; }
+    .event-dot { width: .55rem; height: .55rem; border-radius: 999px; background: rgba(255,255,255,.92); }
+    .calendar-empty { display: none; padding: .9rem 1rem; margin-bottom: .9rem; border-radius: 16px; background: rgba(16,70,110,0.04); color: #5d7288; font-weight: 700; }
+    .calendar-empty.is-visible { display: block; }
+    .modal-content { border: 1px solid rgba(16, 70, 110, 0.10); border-radius: 22px; box-shadow: 0 24px 70px rgba(6, 23, 38, 0.18); overflow: hidden; }
+    .modal-header, .modal-footer { border-color: rgba(16, 70, 110, 0.10); }
+    @media (max-width: 991.98px) { .calendar-top { grid-template-columns: 1fr; } .calendar-stage { min-height: 32rem; } }
+</style>
+
+<div class="calendar-page">
+    <div class="calendar-top">
+        <div class="calendar-card calendar-card-inner">
+            <div class="calendar-label">School Year</div>
+            <form method="get" class="d-flex gap-2 flex-wrap align-items-end">
+                <div class="flex-grow-1">
+                    <select class="form-select" name="calendar_id" id="calendarSelector">
+                        {% for calendar in school_calendars %}
+                        <option value="{{ calendar.id }}" {% if selected_calendar and selected_calendar.id == calendar.id %}selected{% endif %}>{{ calendar.school_year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="btn btn-outline-primary" type="submit">Load</button>
+            </form>
+        </div>
+
+        <div class="calendar-card calendar-card-inner">
+            <div class="calendar-label">Current Term</div>
+            <form method="post" class="d-flex gap-2 flex-wrap align-items-end">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_calendar">
+                <input type="hidden" name="calendar_id" value="{% if selected_calendar %}{{ selected_calendar.id }}{% endif %}">
+                <div class="flex-grow-1">
+                    <select class="form-select" name="current_term">
+                        {% for value, label in term_options %}
+                        <option value="{{ value }}" {% if selected_term == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="btn btn-outline-primary" type="submit">Update</button>
+            </form>
+            <div class="calendar-value mt-2">{% if selected_calendar %}{{ selected_calendar.school_year }}{% else %}No school year selected{% endif %}</div>
+        </div>
+
+        <div class="d-flex justify-content-end">
+            <button type="button" class="btn btn-primary px-4" id="addEventBtn">+ Add Event</button>
+        </div>
+    </div>
+
+    <div class="calendar-card calendar-stage">
+        <div class="calendar-toolbar">
+            <div class="calendar-toolbar-group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarPrevBtn">Previous</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarTodayBtn">Today</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarNextBtn">Next</button>
+            </div>
+            <div class="calendar-toolbar-group">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarMonthBtn">Month View</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="calendarWeekBtn">Week View</button>
+                <span class="btn btn-outline-primary btn-sm disabled" id="calendarMonthTitle">Month</span>
+            </div>
+        </div>
+        <div id="calendarEmpty" class="calendar-empty">No events scheduled for this month.</div>
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<div class="modal fade" id="calendarEventModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="calendarEventModalTitle">Add Event</h5>
+                    <div class="text-secondary small">Manage school calendar events.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="calendarEventForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="save_event">
+                    <input type="hidden" name="event_id" id="eventId">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary" for="eventTitle">Title</label>
+                            <input class="form-control" id="eventTitle" name="title" type="text" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary" for="eventType">Event Type</label>
+                            <select class="form-select" id="eventType" name="event_type" required>
+                                {% for value, label in event_type_options %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary" for="eventStart">Start Date</label>
+                            <input class="form-control" id="eventStart" name="start_date" type="date" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary" for="eventEnd">End Date</label>
+                            <input class="form-control" id="eventEnd" name="end_date" type="date" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary" for="eventDescription">Description</label>
+                            <textarea class="form-control" id="eventDescription" name="description" rows="4" placeholder="Optional"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-danger d-none" id="deleteEventBtn">Delete</button>
+                    <div class="ms-auto d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.15/index.global.min.js"></script>
+<script>
+    window.PABASA_CALENDAR_EVENTS = {{ calendar_events_json|safe }};
+    window.PABASA_CALENDAR_URL = "{% url 'admin_school_calendar' %}";
+</script>
+<script>
+(() => {
+    const calendarEl = document.getElementById('calendar');
+    const emptyEl = document.getElementById('calendarEmpty');
+    const modalEl = document.getElementById('calendarEventModal');
+    const modal = window.bootstrap ? new bootstrap.Modal(modalEl) : null;
+    const eventForm = document.getElementById('calendarEventForm');
+    const eventIdInput = document.getElementById('eventId');
+    const eventTitleInput = document.getElementById('eventTitle');
+    const eventTypeInput = document.getElementById('eventType');
+    const eventStartInput = document.getElementById('eventStart');
+    const eventEndInput = document.getElementById('eventEnd');
+    const eventDescriptionInput = document.getElementById('eventDescription');
+    const addEventBtn = document.getElementById('addEventBtn');
+    const deleteEventBtn = document.getElementById('deleteEventBtn');
+    const calendarPrevBtn = document.getElementById('calendarPrevBtn');
+    const calendarTodayBtn = document.getElementById('calendarTodayBtn');
+    const calendarNextBtn = document.getElementById('calendarNextBtn');
+    const calendarMonthBtn = document.getElementById('calendarMonthBtn');
+    const calendarWeekBtn = document.getElementById('calendarWeekBtn');
+    const calendarMonthTitle = document.getElementById('calendarMonthTitle');
+    const csrfToken = eventForm.querySelector('[name="csrfmiddlewaretoken"]').value;
+    let calendar;
+
+    const colors = {
+        school_opening: '#22c55e',
+        school_closing: '#ef4444',
+        pre_assessment: '#3b82f6',
+        post_assessment: '#a855f7',
+        holiday: '#f59e0b',
+        examination: '#f97316',
+        other: '#6b7280',
+    };
+
+    function eventToForm(eventData) {
+        const start = eventData?.start || '';
+        const end = eventData?.end || start;
+        return {
+            id: eventData?.id || '',
+            title: eventData?.title || '',
+            event_type: eventData?.event_type || 'other',
+            start_date: start,
+            end_date: end,
+            description: eventData?.description || '',
+        };
+    }
+
+    function openEventModal(eventData) {
+        const payload = eventToForm(eventData);
+        eventIdInput.value = payload.id;
+        eventTitleInput.value = payload.title;
+        eventTypeInput.value = payload.event_type;
+        eventStartInput.value = payload.start_date;
+        eventEndInput.value = payload.end_date;
+        eventDescriptionInput.value = payload.description;
+        deleteEventBtn.classList.toggle('d-none', !payload.id);
+        document.getElementById('calendarEventModalTitle').textContent = payload.id ? 'Edit Event' : 'Add Event';
+        modal?.show();
+    }
+
+    function formatMonthTitle(date) {
+        return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
+    }
+
+    function updateEmptyState() {
+        const hasEvents = (calendar.getEvents() || []).some((event) => {
+            const currentStart = calendar.view.currentStart;
+            const currentEnd = calendar.view.currentEnd;
+            const eventStart = event.start;
+            const eventEnd = event.end || event.start;
+            return eventStart < currentEnd && eventEnd >= currentStart;
+        });
+        emptyEl.classList.toggle('is-visible', !hasEvents && calendar.view.type === 'dayGridMonth');
+    }
+
+    function refreshCalendar() {
+        calendar.removeAllEvents();
+        (window.PABASA_CALENDAR_EVENTS || []).forEach((event) => calendar.addEvent(event));
+        updateEmptyState();
+    }
+
+    function setView(viewName) {
+        calendar.changeView(viewName);
+        calendarMonthBtn.classList.toggle('btn-primary', viewName === 'dayGridMonth');
+        calendarWeekBtn.classList.toggle('btn-primary', viewName === 'timeGridWeek');
+    }
+
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        headerToolbar: false,
+        dayMaxEvents: true,
+        nowIndicator: true,
+        selectable: true,
+        events: window.PABASA_CALENDAR_EVENTS || [],
+        eventContent: (arg) => ({
+            html: `<div class="event-pill" style="background:${colors[arg.event.extendedProps.event_type] || colors.other};"><span class="event-dot"></span><span>${arg.event.title}</span></div>`
+        }),
+        datesSet: (info) => {
+            calendarMonthTitle.textContent = formatMonthTitle(info.view.currentStart);
+            updateEmptyState();
+        },
+        dateClick: (info) => {
+            openEventModal({
+                start: info.dateStr,
+                end: info.dateStr,
+                event_type: 'other',
+            });
+        },
+        eventClick: (info) => {
+            openEventModal({
+                id: info.event.id,
+                title: info.event.title,
+                event_type: info.event.extendedProps.event_type,
+                start: info.event.start ? info.event.start.toISOString().slice(0, 10) : '',
+                end: info.event.end ? info.event.end.toISOString().slice(0, 10) : (info.event.start ? info.event.start.toISOString().slice(0, 10) : ''),
+                description: info.event.extendedProps.description || '',
+            });
+        }
+    });
+
+    calendar.render();
+    refreshCalendar();
+    setView('dayGridMonth');
+
+    addEventBtn?.addEventListener('click', () => openEventModal());
+    calendarPrevBtn?.addEventListener('click', () => calendar.prev());
+    calendarTodayBtn?.addEventListener('click', () => calendar.today());
+    calendarNextBtn?.addEventListener('click', () => calendar.next());
+    calendarMonthBtn?.addEventListener('click', () => setView('dayGridMonth'));
+    calendarWeekBtn?.addEventListener('click', () => setView('timeGridWeek'));
+
+    async function postCalendarForm(formData) {
+        const response = await fetch(window.PABASA_CALENDAR_URL, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            },
+            body: formData,
+        });
+        return response.json();
+    }
+
+    eventForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const data = await postCalendarForm(new FormData(eventForm));
+        if (!data.success) return;
+        const existing = calendar.getEventById(String(data.event.id));
+        if (existing) {
+            existing.remove();
+        }
+        calendar.addEvent(data.event);
+        window.PABASA_CALENDAR_EVENTS = calendar.getEvents().map((item) => ({
+            id: item.id,
+            title: item.title,
+            event_type: item.extendedProps.event_type,
+            start: item.start ? item.start.toISOString().slice(0, 10) : '',
+            end: item.end ? item.end.toISOString().slice(0, 10) : (item.start ? item.start.toISOString().slice(0, 10) : ''),
+            description: item.extendedProps.description || '',
+        }));
+        updateEmptyState();
+        modal?.hide();
+    });
+
+    deleteEventBtn.addEventListener('click', async () => {
+        if (!eventIdInput.value) return;
+        const formData = new FormData();
+        formData.append('action', 'delete_event');
+        formData.append('event_id', eventIdInput.value);
+        formData.append('calendar_id', '{% if selected_calendar %}{{ selected_calendar.id }}{% endif %}');
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        const data = await postCalendarForm(formData);
+        if (!data.success) return;
+        const existing = calendar.getEventById(String(data.event_id));
+        if (existing) existing.remove();
+        updateEmptyState();
+        modal?.hide();
+    });
+})();
+</script>
+{% endblock %}
