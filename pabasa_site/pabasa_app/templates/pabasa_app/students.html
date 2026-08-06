@@ -1755,6 +1755,62 @@ function getReadingLevelChipClass(level) {
     return classMap[normalized] || 'level-pending';
 }
 
+function getStudentRemarks(student) {
+    const normalizeText = (value) => String(value || '').trim().toLowerCase();
+    const classification = normalizeStudentLevel(
+        student?.level
+        || student?.reading_level
+        || student?.adapted_reading_level
+        || student?.classification
+        || student?.crla_classification
+        || ''
+    );
+    const assessmentType = normalizeText(
+        student?.assessment_type
+        || student?.latest_assessment_type
+        || student?.assessment_kind
+        || student?.crla_assessment_type
+    );
+    const assessmentTitle = normalizeText(
+        student?.assessment_title
+        || student?.latest_assessment_title
+        || student?.title
+    );
+    const hasCrlaPretestResult = Boolean(
+        student?.crla_pretest_completed
+        || student?.assessment_completed
+        || assessmentType.includes('crla')
+        || assessmentTitle.includes('crla')
+        || assessmentTitle.includes('pre-test')
+        || assessmentTitle.includes('pretest')
+    );
+    const completedPretest = Boolean(
+        student?.crla_pretest_completed
+        || student?.assessment_completed
+        || student?.has_completed_assessment
+        || hasCrlaPretestResult
+    );
+
+    if (!completedPretest) {
+        return 'Pending Pre-Test';
+    }
+
+    return classification === 'Readers at Grade Level'
+        ? (
+            student?.aral_completed
+            || student?.aral_intervention_completed
+            || student?.intervention_completed
+            || student?.current_phase === 'complete'
+            || assessmentType.includes('aral')
+            || assessmentTitle.includes('aral')
+            || assessmentTitle.includes('post-test')
+            || assessmentTitle.includes('posttest')
+            ? 'ARAL Completed - Reached Grade Level'
+            : 'Pre-Test Successful - No ARAL Needed'
+        )
+        : 'ARAL Intervention Required';
+}
+
 function exportVisibleStudentsWorkbook() {
     const rows = Array.isArray(window.filteredStudentDirectoryRows) ? window.filteredStudentDirectoryRows : [];
     if (!rows.length) return;
@@ -1765,14 +1821,15 @@ function exportVisibleStudentsWorkbook() {
 
     const workbook = XLSX.utils.book_new();
     const data = [
-        ['Name', 'LRN', 'Email', 'Accuracy', 'WPM', 'Reading Level'],
+        ['Name', 'LRN', 'Email', 'Accuracy', 'WPM', 'Reading Level', 'Remarks'],
         ...rows.map(student => [
             student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unnamed Student',
             student.lrn || '',
             student.email || '',
             formatStudentMetric(student.accuracy, '%'),
             formatStudentMetric(student.wpm),
-            resolveStudentReadingLevel(student)
+            resolveStudentReadingLevel(student),
+            getStudentRemarks(student)
         ])
     ];
     const worksheet = XLSX.utils.aoa_to_sheet(data);
@@ -1784,9 +1841,10 @@ function exportVisibleStudentsWorkbook() {
         { wch: 16 },
         { wch: 14 },
         { wch: 24 },
+        { wch: 28 },
     ];
 
-    ['A1', 'B1', 'C1', 'D1', 'E1', 'F1'].forEach((cellRef) => {
+    ['A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1'].forEach((cellRef) => {
         if (worksheet[cellRef]) {
             worksheet[cellRef].s = {
                 font: { bold: true, color: { rgb: 'FFFFFF' } },
