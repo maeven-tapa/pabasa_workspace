@@ -12,6 +12,15 @@
     .calendar-card-inner { padding: 1rem 1.1rem; }
     .calendar-label { color: #6b7f95; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.35rem; }
     .calendar-value { color: #10466E; font-family: "Nunito", "Segoe UI", sans-serif; font-size: 1.05rem; font-weight: 900; }
+    .calendar-value-inline { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+    .calendar-change-link { border: 0; background: transparent; padding: 0; color: #2ea8e5; font-size: .86rem; font-weight: 900; text-decoration: none; }
+    .calendar-change-link:hover { color: #10466E; text-decoration: underline; }
+    .calendar-switch-wrap { position: relative; display: inline-flex; align-items: center; }
+    .calendar-switch-menu { position: absolute; top: calc(100% + .45rem); left: 0; z-index: 1050; min-width: 15rem; padding: .45rem; border: 1px solid rgba(16, 70, 110, 0.12); border-radius: 16px; background: #fff; box-shadow: 0 18px 34px rgba(16, 70, 110, 0.16); display: none; }
+    .calendar-switch-menu.is-open { display: grid; gap: .25rem; }
+    .calendar-switch-item { width: 100%; border: 0; background: transparent; text-align: left; padding: .65rem .75rem; border-radius: 12px; color: #10466E; font-weight: 800; }
+    .calendar-switch-item:hover { background: rgba(46,168,229,0.08); }
+    .calendar-switch-item.is-active { background: rgba(46,168,229,0.12); }
     .calendar-top-action { display: flex; align-items: stretch; }
     .calendar-top-action .btn { border-radius: 18px; font-weight: 800; min-width: 120px; }
     .calendar-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; align-items: center; margin-bottom: 0.9rem; }
@@ -51,12 +60,22 @@
     <div class="calendar-top">
         <div class="calendar-card calendar-card-inner">
             <div class="calendar-label">School Year</div>
-            <div class="calendar-value">{{ school_year_label }}</div>
+            <div class="calendar-value calendar-value-inline">
+                <span>{{ school_year_label }}</span>
+                <span class="calendar-switch-wrap">
+                    <button type="button" class="calendar-change-link" id="changeSchoolYearBtn" aria-haspopup="true" aria-expanded="false">Switch</button>
+                    <div class="calendar-switch-menu" id="schoolYearSwitchMenu" role="menu" aria-label="Switch school year">
+                        {% for school_calendar in school_calendars %}
+                        <button type="button" class="calendar-switch-item{% if selected_calendar and selected_calendar.id == school_calendar.id %} is-active{% endif %}" data-calendar-id="{{ school_calendar.id }}" role="menuitem">{{ school_calendar.school_year }}</button>
+                        {% endfor %}
+                    </div>
+                </span>
+            </div>
         </div>
 
         <div class="calendar-card calendar-card-inner">
             <div class="calendar-label">Current Term</div>
-            <div class="calendar-value">Term {{ selected_term }}</div>
+            <div class="calendar-value">{{ selected_term_label }}</div>
         </div>
 
         <div class="calendar-top-action justify-content-end">
@@ -168,14 +187,14 @@
             <form id="schoolYearForm">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="mb-3">
+                    <div class="mb-0">
                         <label class="form-label small fw-bold text-secondary" for="newSchoolYear">School Year</label>
-                        <input class="form-control" id="newSchoolYear" name="school_year" type="text" placeholder="2026-2027" inputmode="numeric" pattern="[0-9]{4}-[0-9]{4}" autocomplete="off" required>
+                        <input class="form-control" id="newSchoolYear" name="school_year" type="text" placeholder="2026-2027" inputmode="numeric" pattern="[0-9]{4}-[0-9]{4}" autocomplete="off">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="submit" class="btn btn-primary">Apply</button>
                 </div>
             </form>
         </div>
@@ -199,13 +218,15 @@
         const modal = window.bootstrap ? new bootstrap.Modal(modalEl) : null;
         const schoolYearModalEl = document.getElementById('schoolYearModal');
         const schoolYearModal = window.bootstrap ? new bootstrap.Modal(schoolYearModalEl) : null;
-    const eventForm = document.getElementById('calendarEventForm');
-    const eventIdInput = document.getElementById('eventId');
-    const calendarIdInput = eventForm.querySelector('[name="calendar_id"]');
-    const eventCalendarInput = document.getElementById('eventCalendar');
-    const schoolYearForm = document.getElementById('schoolYearForm');
-    const newSchoolYearInput = document.getElementById('newSchoolYear');
-    const currentCalendarId = calendarIdInput?.value || '';
+        const changeSchoolYearBtn = document.getElementById('changeSchoolYearBtn');
+        const schoolYearSwitchMenu = document.getElementById('schoolYearSwitchMenu');
+        const eventForm = document.getElementById('calendarEventForm');
+        const eventIdInput = document.getElementById('eventId');
+        const calendarIdInput = eventForm.querySelector('[name="calendar_id"]');
+        const eventCalendarInput = document.getElementById('eventCalendar');
+        const schoolYearForm = document.getElementById('schoolYearForm');
+        const newSchoolYearInput = document.getElementById('newSchoolYear');
+        const currentCalendarId = calendarIdInput?.value || '';
         const eventTitleInput = document.getElementById('eventTitle');
         const eventTitleWrap = document.getElementById('eventTitleWrap');
         const eventTypeInput = document.getElementById('eventType');
@@ -262,19 +283,19 @@
         }
 
         function eventToForm(eventData) {
-        const start = eventData?.start || '';
-        const end = eventData?.end_date || eventData?.end || start;
-        return {
-            id: eventData?.id || '',
-            school_calendar_id: eventData?.school_calendar_id || calendarIdInput?.value || '',
-            title: eventData?.title || '',
-            event_type: eventData?.event_type || '',
-            term: String(eventData?.term || '{{ selected_term }}'),
-            start_date: start,
-            end_date: end,
-            description: eventData?.description || '',
-        };
-    }
+            const start = eventData?.start || '';
+            const end = eventData?.end_date || eventData?.end || start;
+            return {
+                id: eventData?.id || '',
+                school_calendar_id: eventData?.school_calendar_id || calendarIdInput?.value || '',
+                title: eventData?.title || '',
+                event_type: eventData?.event_type || '',
+                term: String(eventData?.term || '{% if selected_term %}{{ selected_term }}{% else %}1{% endif %}'),
+                start_date: start,
+                end_date: end,
+                description: eventData?.description || '',
+            };
+        }
 
         function validateSchoolYearFormat(value) {
             const raw = String(value || '').trim();
@@ -322,6 +343,30 @@
             }
         }
 
+        function openCreateSchoolYearModal() {
+            if (newSchoolYearInput) {
+                newSchoolYearInput.value = '';
+                newSchoolYearInput.setCustomValidity('');
+            }
+            schoolYearModal?.show();
+        }
+
+        function closeSchoolYearSwitchMenu() {
+            schoolYearSwitchMenu?.classList.remove('is-open');
+            changeSchoolYearBtn?.setAttribute('aria-expanded', 'false');
+        }
+
+        function toggleSchoolYearSwitchMenu() {
+            if (!schoolYearSwitchMenu) return;
+            const willOpen = !schoolYearSwitchMenu.classList.contains('is-open');
+            if (willOpen) {
+                schoolYearSwitchMenu.classList.add('is-open');
+                changeSchoolYearBtn?.setAttribute('aria-expanded', 'true');
+            } else {
+                closeSchoolYearSwitchMenu();
+            }
+        }
+
         function getInitialCalendarDate() {
             const events = window.PABASA_CALENDAR_EVENTS || [];
             for (const event of events) {
@@ -333,146 +378,144 @@
         }
 
         function openEventModal(eventData) {
-        eventForm.reset();
-        const payload = eventToForm(eventData);
-        eventIdInput.value = payload.id ? String(payload.id) : '';
-        if (eventCalendarInput && payload.school_calendar_id) {
-            eventCalendarInput.value = String(payload.school_calendar_id);
+            eventForm.reset();
+            const payload = eventToForm(eventData);
+            eventIdInput.value = payload.id ? String(payload.id) : '';
+            if (eventCalendarInput && payload.school_calendar_id) {
+                eventCalendarInput.value = String(payload.school_calendar_id);
+            }
+            if (calendarIdInput && eventCalendarInput?.value) {
+                calendarIdInput.value = eventCalendarInput.value;
+            }
+            eventTitleInput.value = payload.title;
+            eventTypeInput.value = payload.event_type;
+            eventTermInput.value = payload.term;
+            eventStartInput.value = payload.start_date;
+            eventEndInput.value = payload.end_date;
+            eventDescriptionInput.value = payload.description;
+            deleteEventBtn.classList.toggle('d-none', !payload.id);
+            document.getElementById('calendarEventModalTitle').textContent = payload.id ? 'Edit Event' : 'Add Event';
+            syncTitleField();
+            modal?.show();
         }
-        if (calendarIdInput && eventCalendarInput?.value) {
-            calendarIdInput.value = eventCalendarInput.value;
-        }
-        eventTitleInput.value = payload.title;
-        eventTypeInput.value = payload.event_type;
-        eventTermInput.value = payload.term;
-        eventStartInput.value = payload.start_date;
-        eventEndInput.value = payload.end_date;
-        eventDescriptionInput.value = payload.description;
-        deleteEventBtn.classList.toggle('d-none', !payload.id);
-        document.getElementById('calendarEventModalTitle').textContent = payload.id ? 'Edit Event' : 'Add Event';
-        syncTitleField();
-        console.log("1. Modal opened:", eventTermInput.value);
-        console.log("2. After eventForm.reset():", eventTermInput.value);
-        modal?.show();
-    }
 
         function syncTitleField() {
-        const hideTitle = ['school_opening', 'school_closing', 'pre_assessment', 'post_assessment', 'examination'].includes(eventTypeInput.value);
-        const titleRequired = ['holiday', 'other'].includes(eventTypeInput.value);
-        eventTitleWrap.classList.toggle('d-none', hideTitle);
-        eventTitleWrap.hidden = hideTitle;
-        eventTitleInput.required = titleRequired;
-        if (titleRequired) {
-            eventTitleInput.setAttribute('required', 'required');
-        } else {
-            eventTitleInput.removeAttribute('required');
-            eventTitleInput.setCustomValidity('');
+            const hideTitle = ['school_opening', 'school_closing', 'pre_assessment', 'post_assessment', 'examination'].includes(eventTypeInput.value);
+            const titleRequired = ['holiday', 'other'].includes(eventTypeInput.value);
+            eventTitleWrap.classList.toggle('d-none', hideTitle);
+            eventTitleWrap.hidden = hideTitle;
+            eventTitleInput.required = titleRequired;
+            if (titleRequired) {
+                eventTitleInput.setAttribute('required', 'required');
+            } else {
+                eventTitleInput.removeAttribute('required');
+                eventTitleInput.setCustomValidity('');
+            }
+            eventTitleInput.readOnly = hideTitle || !titleRequired;
+            if (hideTitle) {
+                eventTitleInput.value = '';
+                eventTitleInput.placeholder = 'Fixed title will be used automatically';
+            } else if (!titleRequired) {
+                eventTitleInput.value = '';
+                eventTitleInput.placeholder = 'Fixed title will be used automatically';
+            } else {
+                eventTitleInput.placeholder = '';
+            }
         }
-        eventTitleInput.readOnly = hideTitle || !titleRequired;
-        if (hideTitle) {
-            eventTitleInput.value = '';
-            eventTitleInput.placeholder = 'Fixed title will be used automatically';
-        } else if (!titleRequired) {
-            eventTitleInput.value = '';
-            eventTitleInput.placeholder = 'Fixed title will be used automatically';
-        } else {
-            eventTitleInput.placeholder = '';
-        }
-    }
 
         eventForm.addEventListener('reset', () => {
-        window.setTimeout(() => {
-            eventTitleInput.value = '';
-            syncTitleField();
-        }, 0);
-    });
+            window.setTimeout(() => {
+                eventTitleInput.value = '';
+                syncTitleField();
+            }, 0);
+        });
 
         function formatMonthTitle(date) {
-        return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
-    }
+            return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
+        }
 
         function updateEmptyState() {
-        const hasEvents = (calendar.getEvents() || []).some((event) => {
-            const currentStart = calendar.view.currentStart;
-            const currentEnd = calendar.view.currentEnd;
-            const eventStart = event.start;
-            const eventEnd = event.end || event.start;
-            return eventStart < currentEnd && eventEnd >= currentStart;
-        });
-        emptyEl.classList.toggle('is-visible', !hasEvents && calendar.view.type === 'dayGridMonth');
-    }
+            const hasEvents = (calendar.getEvents() || []).some((event) => {
+                const currentStart = calendar.view.currentStart;
+                const currentEnd = calendar.view.currentEnd;
+                const eventStart = event.start;
+                const eventEnd = event.end || event.start;
+                return eventStart < currentEnd && eventEnd >= currentStart;
+            });
+            emptyEl.classList.toggle('is-visible', !hasEvents && calendar.view.type === 'dayGridMonth');
+        }
 
         function refreshCalendar() {
-        calendar.removeAllEvents();
-        (window.PABASA_CALENDAR_EVENTS || []).forEach((event) => calendar.addEvent(event));
-        updateEmptyState();
-    }
+            calendar.removeAllEvents();
+            (window.PABASA_CALENDAR_EVENTS || []).forEach((event) => calendar.addEvent(event));
+            updateEmptyState();
+        }
 
         function setView(viewName) {
-        calendar.changeView(viewName);
-        calendarMonthBtn.classList.toggle('btn-primary', viewName === 'dayGridMonth');
-        calendarWeekBtn.classList.toggle('btn-primary', viewName === 'timeGridWeek');
-    }
+            calendar.changeView(viewName);
+            calendarMonthBtn.classList.toggle('btn-primary', viewName === 'dayGridMonth');
+            calendarWeekBtn.classList.toggle('btn-primary', viewName === 'timeGridWeek');
+        }
 
         calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        initialDate: getInitialCalendarDate() || undefined,
-        height: 'auto',
-        headerToolbar: false,
-        dayMaxEvents: true,
-        nowIndicator: true,
-        selectable: true,
-        events: window.PABASA_CALENDAR_EVENTS || [],
-        eventContent: (arg) => ({
-            html: `<div class="event-pill" style="background:${colors[arg.event.extendedProps.event_type] || colors.other};"><span class="event-dot"></span><span>${arg.event.title}</span></div>`
-        }),
-        eventDidMount: (info) => {
-            const color = colors[info.event.extendedProps.event_type] || colors.other;
-            info.el.style.backgroundColor = 'transparent';
-            info.el.style.borderColor = 'transparent';
-            info.el.style.boxShadow = 'none';
-            info.el.style.padding = '0';
-            info.el.style.margin = '0';
-            const main = info.el.querySelector('.fc-event-main');
-            if (main) {
-                main.style.overflow = 'hidden';
-                main.style.width = '100%';
+            initialView: 'dayGridMonth',
+            initialDate: getInitialCalendarDate() || undefined,
+            height: 'auto',
+            headerToolbar: false,
+            dayMaxEvents: true,
+            nowIndicator: true,
+            selectable: true,
+            events: window.PABASA_CALENDAR_EVENTS || [],
+            eventContent: (arg) => ({
+                html: `<div class="event-pill" style="background:${colors[arg.event.extendedProps.event_type] || colors.other};"><span class="event-dot"></span><span>${arg.event.title}</span></div>`
+            }),
+            eventDidMount: (info) => {
+                const color = colors[info.event.extendedProps.event_type] || colors.other;
+                info.el.style.backgroundColor = 'transparent';
+                info.el.style.borderColor = 'transparent';
+                info.el.style.boxShadow = 'none';
+                info.el.style.padding = '0';
+                info.el.style.margin = '0';
+                const main = info.el.querySelector('.fc-event-main');
+                if (main) {
+                    main.style.overflow = 'hidden';
+                    main.style.width = '100%';
+                }
+                const frame = info.el.querySelector('.fc-event-main-frame');
+                if (frame) {
+                    frame.style.width = '100%';
+                }
+                const pill = info.el.querySelector('.event-pill');
+                if (pill) {
+                    pill.style.background = color;
+                }
+            },
+            datesSet: (info) => {
+                calendarMonthTitle.textContent = formatMonthTitle(info.view.currentStart);
+                updateEmptyState();
+            },
+            dateClick: (info) => {
+                openEventModal({
+                    start: info.dateStr,
+                    end: info.dateStr,
+                    event_type: 'other',
+                    term: '{% if selected_term %}{{ selected_term }}{% else %}1{% endif %}',
+                });
+            },
+            eventClick: (info) => {
+                if (info.event.extendedProps.is_generated) return;
+                openEventModal({
+                    id: info.event.id,
+                    title: info.event.title,
+                    event_type: info.event.extendedProps.event_type,
+                    term: info.event.extendedProps.term,
+                    start: info.event.startStr || '',
+                    end: info.event.extendedProps.end_date || info.event.endStr || info.event.startStr || '',
+                    end_date: info.event.extendedProps.end_date || '',
+                    description: info.event.extendedProps.description || '',
+                });
             }
-            const frame = info.el.querySelector('.fc-event-main-frame');
-            if (frame) {
-                frame.style.width = '100%';
-            }
-            const pill = info.el.querySelector('.event-pill');
-            if (pill) {
-                pill.style.background = color;
-            }
-        },
-        datesSet: (info) => {
-            calendarMonthTitle.textContent = formatMonthTitle(info.view.currentStart);
-            updateEmptyState();
-        },
-        dateClick: (info) => {
-            openEventModal({
-                start: info.dateStr,
-                end: info.dateStr,
-                event_type: 'other',
-                term: '{{ selected_term }}',
-            });
-        },
-        eventClick: (info) => {
-            if (info.event.extendedProps.is_generated) return;
-            openEventModal({
-                id: info.event.id,
-                title: info.event.title,
-                event_type: info.event.extendedProps.event_type,
-                term: info.event.extendedProps.term,
-                start: info.event.startStr || '',
-                end: info.event.extendedProps.end_date || info.event.endStr || info.event.startStr || '',
-                end_date: info.event.extendedProps.end_date || '',
-                description: info.event.extendedProps.description || '',
-            });
-        }
-    });
+        });
 
         calendar.render();
         setView('dayGridMonth');
@@ -489,14 +532,32 @@
         eventCalendarInput?.addEventListener('change', () => {
             if (eventCalendarInput.value === '__new_school_year__') {
                 eventCalendarInput.value = calendarIdInput?.value || '';
-                schoolYearForm?.reset();
-                newSchoolYearInput.value = '';
-                schoolYearModal?.show();
+                openCreateSchoolYearModal();
                 return;
             }
             if (calendarIdInput) {
                 calendarIdInput.value = eventCalendarInput.value;
             }
+        });
+        changeSchoolYearBtn?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            toggleSchoolYearSwitchMenu();
+        });
+        schoolYearSwitchMenu?.addEventListener('click', (event) => {
+            const target = event.target.closest('[data-calendar-id]');
+            if (!target) return;
+            const calendarId = target.getAttribute('data-calendar-id');
+            closeSchoolYearSwitchMenu();
+            if (calendarId && String(calendarId) !== String(currentCalendarId || '')) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('calendar_id', calendarId);
+                window.location.href = url.toString();
+            }
+        });
+        document.addEventListener('click', (event) => {
+            if (!schoolYearSwitchMenu || !changeSchoolYearBtn) return;
+            if (schoolYearSwitchMenu.contains(event.target) || changeSchoolYearBtn.contains(event.target)) return;
+            closeSchoolYearSwitchMenu();
         });
         newSchoolYearInput?.addEventListener('input', () => {
             syncSchoolYearMask();
@@ -546,28 +607,18 @@
         });
         schoolYearForm?.addEventListener('submit', async (event) => {
             event.preventDefault();
+            const rawSchoolYear = String(newSchoolYearInput?.value || '').trim();
             syncSchoolYearMask();
-            const schoolYearValue = newSchoolYearInput.value;
-            const validationError = validateSchoolYearFormat(schoolYearValue);
+            const validationError = validateSchoolYearFormat(rawSchoolYear);
             if (validationError) {
                 newSchoolYearInput.setCustomValidity(validationError);
                 newSchoolYearInput.reportValidity();
                 return;
             }
             newSchoolYearInput.setCustomValidity('');
-            const eventDraft = {
-                id: eventIdInput.value,
-                school_calendar_id: eventCalendarInput?.value || '',
-                title: eventTitleInput.value,
-                event_type: eventTypeInput.value,
-                term: eventTermInput.value,
-                start_date: eventStartInput.value,
-                end_date: eventEndInput.value,
-                description: eventDescriptionInput.value,
-            };
             const formData = new FormData();
             formData.append('action', 'save_calendar');
-            formData.append('school_year', schoolYearValue.trim());
+            formData.append('school_year', rawSchoolYear);
             formData.append('current_term', '1');
             const response = await fetch(window.PABASA_CALENDAR_URL, {
                 method: 'POST',
@@ -584,68 +635,42 @@
                 window.alert(data.error || 'Unable to create school year.');
                 return;
             }
-            const updatedCalendarId = String(data.calendar_id);
-            const option = document.createElement('option');
-            option.value = updatedCalendarId;
-            option.textContent = schoolYearValue.trim();
-            eventCalendarInput.appendChild(option);
-            eventCalendarInput.value = updatedCalendarId;
-            if (calendarIdInput) {
-                calendarIdInput.value = updatedCalendarId;
-            }
-            schoolYearModal?.hide();
-            openEventModal(eventDraft);
-            eventCalendarInput.value = updatedCalendarId;
-            if (calendarIdInput) {
-                calendarIdInput.value = updatedCalendarId;
-            }
+            const url = new URL(window.location.href);
+            url.searchParams.set('calendar_id', String(data.calendar_id));
+            window.location.href = url.toString();
         });
 
         eventForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        if (!eventTypeInput.value) {
-            eventTypeInput.setCustomValidity('Please select an event type.');
-            eventTypeInput.reportValidity();
-            return;
-        }
-        eventTypeInput.setCustomValidity('');
-        console.log("3. Before FormData:", eventTermInput.value);
-        const selectedEventType = eventTypeInput.value;
-        const selectedTerm = eventTermInput.value;
-        const startValue = eventStartInput.value;
-        const endValue = eventEndInput.value || eventStartInput.value;
-        if (['pre_assessment', 'post_assessment', 'examination'].includes(selectedEventType)) {
-            const { opening, closing } = getTermWindow(selectedTerm);
-            const startTime = dateToComparable(startValue);
-            const endTime = dateToComparable(endValue);
-            const openingStart = dateToComparable(opening?.start);
-            const closingEnd = dateToComparable(closing?.end_date || closing?.end || closing?.start);
-            if (!opening || !closing || startTime === null || endTime === null || openingStart === null || closingEnd === null) {
-                window.alert('The selected term must have both an Opening Block and School Closing Block before creating assessment events.');
+            event.preventDefault();
+            if (!eventTypeInput.value) {
+                eventTypeInput.setCustomValidity('Please select an event type.');
+                eventTypeInput.reportValidity();
                 return;
             }
-            if (startTime < openingStart || endTime > closingEnd) {
-                window.alert('Assessment dates must fall within the selected term opening and closing blocks.');
-                return;
+            eventTypeInput.setCustomValidity('');
+            const selectedEventType = eventTypeInput.value;
+            const selectedTerm = eventTermInput.value;
+            const startValue = eventStartInput.value;
+            const endValue = eventEndInput.value || eventStartInput.value;
+            if (['pre_assessment', 'post_assessment', 'examination'].includes(selectedEventType)) {
+                const { opening, closing } = getTermWindow(selectedTerm);
+                const startTime = dateToComparable(startValue);
+                const endTime = dateToComparable(endValue);
+                const openingStart = dateToComparable(opening?.start);
+                const closingEnd = dateToComparable(closing?.end_date || closing?.end || closing?.start);
+                if (!opening || !closing || startTime === null || endTime === null || openingStart === null || closingEnd === null) {
+                    window.alert('The selected term must have both an Opening Block and School Closing Block before creating assessment events.');
+                    return;
+                }
+                if (startTime < openingStart || endTime > closingEnd) {
+                    window.alert('Assessment dates must fall within the selected term opening and closing blocks.');
+                    return;
+                }
             }
-        }
-        const formData = new FormData(eventForm);
-        if (eventCalendarInput?.value) formData.set('calendar_id', eventCalendarInput.value);
-        formData.set('event_id', eventIdInput.value || '');
-        formData.set('term', eventTermInput.value);
-        console.log("4. FormData term:", formData.get("term"));
-        console.log("=== CALENDAR POST PAYLOAD ===");
-        console.log({
-            action: formData.get('action'),
-            calendar_id: formData.get('calendar_id'),
-            event_id: formData.get('event_id'),
-            event_type: formData.get('event_type'),
-            term: formData.get('term'),
-            start_date: formData.get('start_date'),
-            end_date: formData.get('end_date'),
-            title: formData.get('title'),
-        });
-        console.log("==============================");
+            const formData = new FormData(eventForm);
+            if (eventCalendarInput?.value) formData.set('calendar_id', eventCalendarInput.value);
+            formData.set('event_id', eventIdInput.value || '');
+            formData.set('term', eventTermInput.value);
         const response = await fetch(window.PABASA_CALENDAR_URL, {
             method: 'POST',
             headers: {

@@ -4428,9 +4428,10 @@ def _calendar_current_term(calendar):
     for term, block in _calendar_term_blocks(calendar).items():
         opening = block.get('opening')
         closing = block.get('closing')
-        if opening and closing and opening.start_date <= today <= closing.end_date:
+        closing_end = getattr(closing, 'end_date', None) or getattr(closing, 'start_date', None)
+        if opening and closing and opening.start_date <= today <= closing_end:
             return term
-    return calendar.current_term if calendar else 1
+    return None
 
 
 def _calendar_instructional_events(calendar, base_events):
@@ -4449,12 +4450,8 @@ def _calendar_context(request):
     if not selected_calendar:
         selected_calendar = calendars[0] if calendars else None
 
-    selected_term = int(request.GET.get('term', selected_calendar.current_term if selected_calendar else 1) or 1)
-    if selected_term not in {1, 2, 3, 4}:
-        selected_term = 1
-
     if not selected_calendar:
-        selected_calendar = SchoolCalendar.objects.create(school_year='2026-2027', current_term=selected_term, is_active=True)
+        selected_calendar = SchoolCalendar.objects.create(school_year='2026-2027', current_term=1, is_active=True)
         calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
         active_calendar = selected_calendar
 
@@ -4477,7 +4474,7 @@ def _calendar_context(request):
         'active_calendar': active_calendar,
         'selected_calendar': selected_calendar,
         'selected_term': current_term,
-        'selected_term_label': f'Term {current_term}',
+        'selected_term_label': f'Term {current_term}' if current_term else 'No Active Term',
         'school_year_label': selected_calendar.school_year if selected_calendar else 'Not set',
         'calendar_events': events,
         'calendar_events_json': json.dumps(calendar_events_json),
