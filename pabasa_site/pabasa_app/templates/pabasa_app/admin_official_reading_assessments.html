@@ -1,354 +1,222 @@
 {% extends "pabasa_app/admin_base.html" %}
-{% load static %}
-
 {% block content %}
 <style>
-    .official-assessments-page {
-        display: grid;
-        gap: 1.25rem;
-    }
-
-    .official-assessments-hero {
-        padding: 1.35rem 1.4rem;
-        border-radius: 24px;
-        background: linear-gradient(135deg, rgba(16, 70, 110, 0.08), rgba(46, 168, 229, 0.05), #ffffff);
-        border: 1px solid rgba(16, 70, 110, 0.08);
-        box-shadow: 0 16px 38px rgba(16, 70, 110, 0.08);
-    }
-
-    .official-assessments-title {
-        margin: 0;
-        color: #10466E;
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: clamp(1.5rem, 2vw, 2rem);
-        font-weight: 900;
-    }
-
-    .official-assessments-subtitle {
-        margin: 0.4rem 0 0;
-        color: #5d7288;
-        max-width: 62rem;
-    }
-
-    .official-meta-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1rem;
-        margin-top: 1rem;
-    }
-
-    .official-meta-card {
-        padding: 1rem 1.05rem;
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.88);
-        border: 1px solid rgba(16, 70, 110, 0.08);
-    }
-
-    .official-meta-label {
-        display: block;
-        color: #6c8098;
-        font-size: 0.74rem;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        margin-bottom: 0.25rem;
-    }
-
-    .official-meta-value {
-        color: #10466E;
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1.06rem;
-        font-weight: 900;
-    }
-
-    .term-grid {
-        display: grid;
-        gap: 1rem;
-    }
-
-    .term-card {
-        border-radius: 24px;
-        border: 1px solid rgba(16, 70, 110, 0.10);
-        background: #fff;
-        box-shadow: 0 16px 38px rgba(16, 70, 110, 0.08);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        min-height: 100%;
-    }
-
-    .term-card.is-hidden {
-        display: none;
-    }
-
-    .term-card-header {
-        padding: 1rem 1.1rem;
-        background: linear-gradient(135deg, rgba(16, 70, 110, 0.08), rgba(46, 168, 229, 0.05));
-        border-bottom: 1px solid rgba(16, 70, 110, 0.08);
-    }
-
-    .term-card-header h2 {
-        margin: 0;
-        color: #10466E;
-        font-family: "Nunito", "Segoe UI", sans-serif;
-        font-size: 1.25rem;
-        font-weight: 900;
-    }
-
-    .term-card-header p {
-        margin: 0.2rem 0 0;
-        color: #5d7288;
-    }
-
-    .term-card-body {
-        padding: 1.1rem;
-        display: grid;
-        gap: 0.9rem;
-    }
-
-    .term-status-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-    }
-
-    .status-option {
-        flex: 1 1 0;
-        min-width: 110px;
-        border-radius: 16px;
-        border: 1px solid rgba(16, 70, 110, 0.12);
-        padding: 0.7rem 0.8rem;
-        background: #f9fcff;
-    }
-
-    .status-option input {
-        margin-right: 0.45rem;
-    }
-
-    .status-option strong {
-        display: block;
-        color: #10466E;
-    }
-
-    .material-status-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.35rem 0.65rem;
-        border-radius: 999px;
-        background: rgba(16, 70, 110, 0.08);
-        color: #10466E;
-        font-size: 0.8rem;
-        font-weight: 800;
-    }
-
-    .status-published { background: rgba(34, 197, 94, 0.12); color: #166534; }
-    .status-draft { background: rgba(245, 158, 11, 0.12); color: #92400e; }
-    .status-archived { background: rgba(107, 114, 128, 0.12); color: #374151; }
-
-    .term-footer {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.75rem;
-        align-items: center;
-        flex-wrap: wrap;
-        margin-top: auto;
-        padding-top: 0.25rem;
-    }
-
-    .term-preview {
-        font-size: 0.9rem;
-        color: #60748b;
-    }
-
-    .term-preview a {
-        color: #10466E;
-        font-weight: 800;
-        text-decoration: none;
-    }
-
-    .source-toggle {
-        display: inline-flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-
-    .source-toggle .btn {
-        border-radius: 999px;
-        font-weight: 800;
-    }
-
-    .source-panel {
-        display: none;
-    }
-
-    .source-panel.is-active {
-        display: grid;
-        gap: 0.9rem;
-    }
-
-    @media (max-width: 1199.98px) {}
-
-    @media (max-width: 767.98px) {
-        .official-meta-grid {
-            grid-template-columns: 1fr;
-        }
-    }
+  .ora-wrap{display:grid;gap:1rem}
+  .ora-hero,.ora-panel,.ora-card{background:#fff;border:1px solid rgba(16,70,110,.08);border-radius:24px;box-shadow:0 16px 38px rgba(16,70,110,.08)}
+  .ora-hero{padding:1rem 1.15rem 1.15rem}
+  .ora-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+  .ora-mini{padding:1rem 1.05rem;min-height:118px}
+  .ora-label{font-size:.72rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#6c8098}
+  .ora-value{font-weight:900;color:#10466E;font-size:1.08rem;line-height:1.25}
+  .ora-value-inline{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem}
+  .ora-muted{color:#6c8098}
+  .ora-tabs{display:inline-flex;gap:.35rem;padding:.35rem;background:#f3f7fb;border-radius:999px}
+  .ora-tab{border:0;background:transparent;padding:.72rem 1rem;border-radius:999px;font-weight:800;color:#40556f;line-height:1}
+  .ora-tab.active{background:#2f6fd1;color:#fff;box-shadow:0 10px 18px rgba(47,111,209,.22)}
+  .ora-note{padding:1rem 1.1rem;background:linear-gradient(180deg, rgba(46,168,229,.10), rgba(46,168,229,.05));border:1px solid rgba(46,168,229,.26);border-radius:18px;color:#274b7c}
+  .ora-note .bi{font-size:1.1rem}
+  .ora-table-wrap{border:1px solid rgba(16,70,110,.08);border-radius:18px;overflow:hidden;background:#fff}
+  .ora-table{width:100%;border-collapse:collapse}
+  .ora-table thead th{background:#fff;padding:1rem 1rem .95rem;border-bottom:1px solid rgba(16,70,110,.08);font-size:.74rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#6c8098}
+  .ora-table tbody td{padding:1.1rem 1rem;border-top:1px solid rgba(16,70,110,.08);vertical-align:middle}
+  .ora-table tbody tr:first-child td{border-top:0}
+  .ora-term{font-weight:900;color:#172b4d}
+  .ora-term-sub{font-size:.82rem;color:#6c8098}
+  .ora-title{font-weight:900;color:#102f57}
+  .ora-title-sub{font-size:.86rem;color:#6c8098}
+  .ora-badge{display:inline-flex;align-items:center;padding:.34rem .68rem;border-radius:999px;font-size:.78rem;font-weight:900;line-height:1}
+  .b-active{background:rgba(34,197,94,.12);color:#166534}
+  .b-upcoming{background:rgba(148,163,184,.18);color:#475569}
+  .b-scheduled{background:rgba(59,130,246,.12);color:#1d4ed8}
+  .b-closed{background:rgba(239,68,68,.12);color:#b91c1c}
+  .b-not{background:rgba(245,158,11,.12);color:#b45309}
+  .ora-window{color:#102f57;font-weight:700}
+  .ora-window small{display:block;color:#64748b;font-weight:700}
+  .ora-actions{display:flex;justify-content:center;align-items:center;gap:.45rem;position:relative;z-index:2}
+  .icon-btn{width:40px;height:40px;border:1px solid rgba(16,70,110,.16);background:#fff;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#395a7a;box-shadow:0 6px 14px rgba(16,70,110,.06);cursor:pointer;pointer-events:auto;position:relative;z-index:2}
+  .icon-btn:hover{background:#f8fbff;color:#10466E;border-color:rgba(16,70,110,.24)}
+  .icon-btn i{font-size:1.02rem}
+  .delete-btn{color:#b42318}
+  .delete-btn:hover{color:#b42318;background:rgba(180,35,24,.06);border-color:rgba(180,35,24,.22)}
+  .delete-btn:disabled{opacity:.45;cursor:not-allowed;background:#fff;color:#94a3b8}
+  .ora-footer{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:1rem 0 .1rem;color:#64748b}
+  .ora-footer .bi{font-size:1rem}
+  @media (max-width: 992px){.ora-grid{grid-template-columns:1fr}}
 </style>
-
-<div class="official-assessments-page">
-    <section class="official-assessments-hero">
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-            <div>
-                <p class="text-uppercase fw-bold small text-secondary mb-1">Admin Assessment Module</p>
-                <h1 class="official-assessments-title">Official Reading Assessments</h1>
-                <p class="official-assessments-subtitle">Phase 1 keeps official reading materials under admin control only. Each term can hold one published version, with older published copies archived automatically.</p>
-            </div>
-            <div class="text-end">
-                <span class="material-status-pill">Admin owned</span>
-            </div>
+<div class="ora-wrap">
+  <section class="ora-hero">
+    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
+      <div>
+        <h1 class="h3 fw-black mb-1">Official Reading Assessments</h1>
+        <div class="text-secondary">Official Reading Assessment availability is controlled automatically by the School Calendar.</div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge rounded-pill text-bg-primary px-3 py-2">{{ assessment_window_status }}</span>
+      </div>
+    </div>
+    <div class="ora-grid mt-3">
+      <div class="ora-card ora-mini">
+        <div class="ora-label">School Year</div>
+        <div class="ora-value ora-value-inline">
+          {% if school_calendars|length > 1 %}
+          <select class="form-select form-select-sm w-auto" id="officialSchoolYearSelect" aria-label="Switch school year">
+            {% for school_calendar in school_calendars %}
+            <option value="{{ school_calendar.id }}" {% if selected_calendar and selected_calendar.id == school_calendar.id %}selected{% endif %}>{{ school_calendar.school_year }}</option>
+            {% endfor %}
+          </select>
+          {% else %}
+          <span>{{ school_year_value|default:"Current school year" }}</span>
+          {% endif %}
         </div>
-
-        <div class="official-meta-grid">
-            <div class="official-meta-card">
-                <span class="official-meta-label">School Year</span>
-                <div class="official-meta-value">{% if school_year_value %}{{ school_year_value }}{% else %}Current school year{% endif %}</div>
-            </div>
-            <div class="official-meta-card">
-                <span class="official-meta-label">Current Term</span>
-                <div class="official-meta-value">
-                    <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
-                        <select class="form-select form-select-sm" name="term" id="termSelector" style="max-width: 180px;">
-                            {% for value, label in term_options %}
-                            <option value="{{ value }}" {% if selected_term == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                        <button class="btn btn-sm btn-outline-primary" type="submit">View</button>
-                    </form>
-                </div>
-            </div>
+      </div>
+      <div class="ora-card ora-mini">
+        <div class="ora-label">Current Term</div>
+        <div class="ora-value">{{ current_term_label }}</div>
+        <div class="ora-muted small">Automatic (based on calendar)</div>
+      </div>
+      <div class="ora-card ora-mini">
+        <div class="ora-label">Pre-/Post-Assessment Window</div>
+        <div class="ora-value">
+          {% if assessment_window_label == 'Pre-Assessment' %}
+            Pre-Assessment
+          {% elif assessment_window_label == 'Post-Assessment' %}
+            Post-Assessment
+          {% else %}
+            No Active Assessment Window
+          {% endif %}
         </div>
-    </section>
+        <div class="small fw-bold {% if assessment_window_status == 'Active' %}text-success{% elif assessment_window_status == 'Upcoming' %}text-secondary{% else %}text-secondary{% endif %}">{{ assessment_window_status }}</div>
+      </div>
+    </div>
+  </section>
 
-    <section class="term-grid" aria-label="Official reading materials by term">
-        {% for term_data in official_terms %}
-        <article class="term-card {% if selected_term != term_data.term %}is-hidden{% endif %}" data-term-card="{{ term_data.term }}">
-            <div class="term-card-header">
-                <h2>{{ term_data.label }}</h2>
-                <p>Official Reading Material</p>
-            </div>
-            <form method="post" enctype="multipart/form-data" class="term-card-body">
-                {% csrf_token %}
-                <input type="hidden" name="term" value="{{ term_data.term }}">
+  <section class="ora-panel p-3 p-md-4">
+    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-3">
+      <div>
+        <div class="text-secondary">Manage official pre- and post-assessments for the selected school year.</div>
+      </div>
+      <a class="btn btn-primary" href="{% url 'admin_official_reading_assessment_add' %}{% if selected_calendar %}?calendar_id={{ selected_calendar.id }}{% endif %}"><i class="bi bi-plus-lg me-1"></i>Add Assessment</a>
+    </div>
+    <div class="ora-tabs mb-3">
+      <button class="ora-tab active" type="button">Pre-Assessment</button>
+      <button class="ora-tab" type="button">Post-Assessment</button>
+    </div>
+    <div class="ora-note mb-3">Official Reading Assessment availability is controlled automatically by the School Calendar.</div>
+    <div class="table-responsive ora-table-wrap">
+      <table class="ora-table">
+        <thead>
+          <tr>
+            <th>Term</th><th>Title</th><th>Language</th><th>Material Items</th><th>Availability</th><th>Assessment Window</th><th>Last Updated</th><th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if official_tabs %}
+          {% for tab in official_tabs %}
+          <tr>
+            <td>
+              <div class="ora-term">Term {{ tab.term }}</div>
+              <div class="ora-term-sub">{{ tab.label }}</div>
+            </td>
+            <td>
+              <div class="ora-title">{{ tab.material.title }}</div>
+              <div class="ora-title-sub">{{ tab.material.content_json.assessment_type|default:tab.key|cut:"_assessment"|title }}</div>
+            </td>
+            <td>{{ tab.material.language }}</td>
+            <td>{{ tab.reading_items_count }} items</td>
+            <td>
+              <span class="ora-badge {% if tab.availability_status == 'Active' %}b-active{% elif tab.availability_status == 'Upcoming' %}b-upcoming{% elif tab.availability_status == 'Scheduled' %}b-scheduled{% elif tab.availability_status == 'Closed' %}b-closed{% else %}b-not{% endif %}">{{ tab.availability_status }}</span>
+            </td>
+            <td class="ora-window">{% if tab.window_label %}{{ tab.window_label|linebreaksbr }}{% endif %}</td>
+            <td>{{ tab.material.updated_at|date:"M d, Y" }}</td>
+            <td class="ora-actions-cell">
+              {% if tab.material_obj %}
+              <div class="ora-actions">
+                <a class="icon-btn" href="{% url 'admin_official_reading_assessment_edit' tab.material_obj.id %}" aria-label="Edit" data-edit-official-assessment="{{ tab.material_obj.id }}"><i class="bi bi-pencil"></i></a>
+                <form method="post" action="{% url 'admin_official_reading_assessment_delete' tab.material_obj.id %}" class="d-inline" data-delete-official-assessment-form>
+                  {% csrf_token %}
+                  <button class="icon-btn delete-btn" type="submit" aria-label="Delete" data-delete-official-assessment-trigger="true"><i class="bi bi-trash"></i></button>
+                </form>
+              </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="8">
+              <div class="py-5 text-center">
+                <div class="fw-bold text-secondary mb-2">No official reading assessments have been created yet.</div>
+                <a class="btn btn-primary" href="{% url 'admin_official_reading_assessment_add' %}{% if selected_calendar %}?calendar_id={{ selected_calendar.id }}{% endif %}"><i class="bi bi-plus-lg me-1"></i>Add Assessment</a>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-                <div>
-                    <label class="form-label small fw-bold text-secondary" for="title-{{ term_data.term }}">Title</label>
-                    <input class="form-control" id="title-{{ term_data.term }}" name="title" type="text" value="{% if term_data.item %}{{ term_data.item.title }}{% endif %}" required>
-                </div>
-
-                <div>
-                    <label class="form-label small fw-bold text-secondary" for="language-{{ term_data.term }}">Language</label>
-                    <select class="form-select" id="language-{{ term_data.term }}" name="language">
-                        {% for value, label in language_options %}
-                        <option value="{{ value }}" {% if term_data.item and term_data.item.language == value %}selected{% elif not term_data.item and value == "English" %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div>
-                    <label class="form-label small fw-bold text-secondary" for="instructions-{{ term_data.term }}">Instructions</label>
-                    <textarea class="form-control" id="instructions-{{ term_data.term }}" name="instructions" rows="3" placeholder="Optional">{% if term_data.item %}{{ term_data.item.instructions }}{% endif %}</textarea>
-                </div>
-
-                <div>
-                    <label class="form-label small fw-bold text-secondary">Source</label>
-                    <div class="source-toggle" role="tablist" aria-label="Source mode">
-                        <input type="radio" class="btn-check" name="source_mode" id="source-text-{{ term_data.term }}" value="text" {% if not term_data.item or term_data.item.source_mode == 'text' %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary btn-sm" for="source-text-{{ term_data.term }}">Manual Text Editor</label>
-                        <input type="radio" class="btn-check" name="source_mode" id="source-pdf-{{ term_data.term }}" value="pdf" {% if term_data.item and term_data.item.source_mode == 'pdf' %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary btn-sm" for="source-pdf-{{ term_data.term }}">Upload PDF</label>
-                    </div>
-                </div>
-
-                <div class="source-panel {% if not term_data.item or term_data.item.source_mode == 'text' %}is-active{% endif %}" data-source-panel="text">
-                    <div>
-                        <label class="form-label small fw-bold text-secondary" for="content-{{ term_data.term }}">Manual Text Editor</label>
-                        <textarea class="form-control" id="content-{{ term_data.term }}" name="content_text" rows="7" placeholder="Paste or type the official reading material here">{% if term_data.item %}{{ term_data.item.content_text }}{% endif %}</textarea>
-                    </div>
-                </div>
-
-                <div class="source-panel {% if term_data.item and term_data.item.source_mode == 'pdf' %}is-active{% endif %}" data-source-panel="pdf">
-                    <div>
-                        <label class="form-label small fw-bold text-secondary" for="pdf-{{ term_data.term }}">Upload PDF</label>
-                        <input class="form-control" id="pdf-{{ term_data.term }}" name="official_pdf" type="file" accept="application/pdf">
-                        {% if term_data.item and term_data.item.has_pdf %}
-                        <div class="term-preview mt-2">Current file: <a href="{{ term_data.item.pdf_url }}" target="_blank" rel="noopener">Open PDF</a></div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div>
-                    <label class="form-label small fw-bold text-secondary">Status</label>
-                    <div class="term-status-row">
-                        <label class="status-option">
-                            <input type="radio" name="status" value="draft" {% if not term_data.item or term_data.item.status == 'draft' %}checked{% endif %}>
-                            <strong>Draft</strong>
-                        </label>
-                        <label class="status-option">
-                            <input type="radio" name="status" value="published" {% if term_data.item and term_data.item.status == 'published' %}checked{% endif %}>
-                            <strong>Published</strong>
-                        </label>
-                        <label class="status-option">
-                            <input type="radio" name="status" value="archived" {% if term_data.item and term_data.item.status == 'archived' %}checked{% endif %}>
-                            <strong>Archived</strong>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="term-footer">
-                    <div class="term-preview">
-                        {% if term_data.item %}
-                            {% if term_data.item.status == 'published' %}
-                                <span class="material-status-pill status-published">Published</span>
-                            {% elif term_data.item.status == 'archived' %}
-                                <span class="material-status-pill status-archived">Archived</span>
-                            {% else %}
-                                <span class="material-status-pill status-draft">Draft</span>
-                            {% endif %}
-                            <span class="ms-2">Last updated {{ term_data.item.updated_at|date:"M d, Y" }}</span>
-                        {% else %}
-                            No official reading material yet for this term.
-                        {% endif %}
-                    </div>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-        </article>
-        {% endfor %}
-    </section>
+  <div class="ora-footer px-1">
+    <div><i class="bi bi-lock me-1"></i>Official assessment availability is based on the School Calendar.<br>Teachers cannot manually publish or unpublish official assessments.</div>
+    <div>Showing 1 to 3 of 3 assessments</div>
+  </div>
 </div>
-
+<div class="modal fade" id="deleteOfficialAssessmentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 rounded-4 shadow">
+      <div class="modal-header border-0">
+        <div>
+          <h5 class="modal-title fw-bold mb-1">Delete Official Reading Assessment?</h5>
+          <div class="text-secondary small">This action cannot be undone.</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" id="deleteOfficialAssessmentForm">
+        {% csrf_token %}
+        <div class="modal-body pt-0">
+          <p class="mb-0">This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteOfficialAssessment">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 <script>
-    const termSelector = document.getElementById('termSelector');
-    termSelector?.addEventListener('change', () => {
-        termSelector.form?.submit();
+(() => {
+  const schoolYearSelect = document.getElementById('officialSchoolYearSelect');
+  schoolYearSelect?.addEventListener('change', () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('calendar_id', schoolYearSelect.value);
+    window.location.href = url.toString();
+  });
+
+  const deleteModalEl = document.getElementById('deleteOfficialAssessmentModal');
+  const deleteModal = window.bootstrap && deleteModalEl ? new bootstrap.Modal(deleteModalEl) : null;
+  const deleteForm = document.getElementById('deleteOfficialAssessmentForm');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteOfficialAssessment');
+  let pendingDeleteForm = null;
+
+  document.querySelectorAll('[data-delete-official-assessment-trigger="true"]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      const form = button.closest('form[data-delete-official-assessment-form]');
+      if (!form || !deleteForm) return;
+      event.preventDefault();
+      pendingDeleteForm = form;
+      deleteForm.action = form.action;
+      deleteModal?.show();
     });
+  });
 
-    document.querySelectorAll('.term-card').forEach((card) => {
-        const textRadio = card.querySelector('input[value="text"]');
-        const pdfRadio = card.querySelector('input[value="pdf"]');
-        const textPanel = card.querySelector('[data-source-panel="text"]');
-        const pdfPanel = card.querySelector('[data-source-panel="pdf"]');
-
-        const syncPanels = () => {
-            const useText = textRadio && textRadio.checked;
-            textPanel?.classList.toggle('is-active', useText);
-            pdfPanel?.classList.toggle('is-active', !useText);
-        };
-
-        textRadio?.addEventListener('change', syncPanels);
-        pdfRadio?.addEventListener('change', syncPanels);
-        syncPanels();
-    });
+  confirmDeleteBtn?.addEventListener('click', () => {
+    if (!pendingDeleteForm) return;
+    const form = pendingDeleteForm;
+    pendingDeleteForm = null;
+    deleteModal?.hide();
+    form.submit();
+  });
+})();
 </script>
 {% endblock %}
