@@ -84,6 +84,7 @@
     .level-card.is-completed { border-color: rgba(16,185,129,0.32); box-shadow: 0 4px 12px rgba(16,185,129,0.1), inset 0 1px 0 rgba(255,255,255,0.4); }
     .level-card:hover { border-color: rgba(31,111,139,0.24); box-shadow: 0 6px 16px rgba(31,111,139,0.1), inset 0 1px 0 rgba(255,255,255,0.4); transform: translateY(-2px); }
     .level-card .level-title-row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+    .level-card .level-meta { color: var(--dash-muted); font-size: 0.82rem; font-weight: 700; line-height: 1.4; margin-top: 0.2rem; }
     .level-status { font-size: 0.9rem; font-weight: 800; }
     .level-status.is-unlocked { color: #0f766e; }
     .level-status.is-completed { color: #047857; }
@@ -157,6 +158,7 @@
     .level-card { gap: 0.55rem; }
     .level-card .level-title-row { align-items: flex-start; }
     .level-card strong { display: block; font-size: 1rem; font-weight: 900; line-height: 1.18; letter-spacing: -0.01em; color: var(--dash-text); }
+    .level-card .level-meta { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.01em; }
     .level-card .small.text-muted { font-size: 0.82rem; line-height: 1.45; }
     .level-status { font-size: 0.76rem; font-weight: 900; letter-spacing: 0.05em; line-height: 1.1; text-transform: uppercase; }
     .level-play-btn { font-size: 0.8rem; font-weight: 900; letter-spacing: 0.02em; }
@@ -701,13 +703,12 @@
                             <div class="level-title-row">
                                 <div>
                                     <strong>{{ level.level_label }}</strong>
-                                    <div class="small text-muted">{{ level.title }}</div>
+                                    <div class="level-meta">{{ level.subtitle_label }}</div>
                                 </div>
                                 <span class="level-status {% if level.state == 'completed' %}is-completed{% elif level.state == 'unlocked' %}is-unlocked{% elif level.state == 'content_unavailable' %}is-unavailable{% else %}is-locked{% endif %}">
                                     {% if level.state == 'completed' %}Finished!{% elif level.state == 'unlocked' %}Unlocked{% elif level.state == 'content_unavailable' %}Content unavailable{% else %}Locked{% endif %}
                                 </span>
                             </div>
-                            <div class="small text-muted difficulty-note">{{ level.difficulty_label }}</div>
                             <div class="small text-muted difficulty-note">{% if level.state == 'completed' %}Stars: {{ level.stars_earned }}{% elif level.state == 'locked' %}{{ level.locked_reason }}{% elif level.state == 'content_unavailable' %}No practice content uploaded for this level yet.{% else %}Ready to play{% endif %}</div>
                             <a class="level-play-btn {% if level.state == 'locked' %}is-locked{% elif level.state == 'content_unavailable' %}is-unavailable{% elif level.state == 'completed' %}is-completed{% endif %}" href="{% if level.state == 'unlocked' or level.state == 'completed' %}{% if level.material_exists %}{{ level.play_url }}&id={{ level.material_id }}&game={{ selected_game_mode }}&difficulty={{ level.difficulty }}&level={{ level.level }}{% else %}#{% endif %}{% else %}#{% endif %}" {% if level.state == 'locked' or level.state == 'content_unavailable' %}aria-disabled="true" tabindex="-1"{% endif %}>
                                 {% if level.state == 'completed' %}<i class="bi bi-arrow-repeat"></i>{% elif level.state == 'unlocked' %}<i class="bi bi-play-fill"></i>{% elif level.state == 'content_unavailable' %}<i class="bi bi-slash-circle"></i>{% else %}<i class="bi bi-lock-fill"></i>{% endif %}

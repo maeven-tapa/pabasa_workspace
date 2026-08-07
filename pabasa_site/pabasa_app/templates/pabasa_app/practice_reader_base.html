@@ -5647,6 +5647,299 @@
             }
         }
 
+        @media (max-width: 540px) {
+            .practice-scrolls-shell {
+                padding: 0.28rem 0.28rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell.scrolls-mobile-scroll {
+                padding-top: 0.28rem;
+            }
+
+            .practice-scrolls-shell .scrolls-phone-device {
+                height: calc(100dvh - 0.28rem - 0.35rem - env(safe-area-inset-bottom, 0px)) !important;
+                max-height: calc(100dvh - 0.28rem - 0.35rem - env(safe-area-inset-bottom, 0px)) !important;
+            }
+
+            .practice-scrolls-shell .scrolls-screen {
+                gap: 0.36rem;
+                padding: 0.44rem 0.44rem calc(0.44rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell .scrolls-phone-header {
+                gap: 0.16rem 0.28rem;
+                grid-template-columns: minmax(30px, auto) minmax(0, 1fr) minmax(30px, auto);
+                padding: 0.26rem 0.34rem;
+            }
+
+            .practice-scrolls-shell .scrolls-phone-header .back-link {
+                min-height: 30px;
+                min-width: 30px;
+            }
+
+            .practice-scrolls-shell .scrolls-header-copy h1 {
+                font-size: clamp(0.92rem, 3.4vw, 1.03rem);
+            }
+
+            .practice-scrolls-shell .scrolls-header-meta {
+                gap: 0.14rem;
+                margin-top: 0.06rem;
+            }
+
+            .practice-scrolls-shell .scrolls-meta-pill,
+            .practice-scrolls-shell .scrolls-status-pill {
+                font-size: 0.58rem;
+                padding: 0.16rem 0.34rem;
+            }
+
+            .practice-scrolls-shell .scrolls-progress-pill {
+                max-width: 100%;
+                white-space: nowrap;
+            }
+
+            .practice-scrolls-shell .scrolls-card {
+                gap: 0.42rem;
+                padding: 0.5rem 0.5rem 0.56rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
+                font-size: clamp(2.75rem, 7.2vw, 4.4rem);
+                letter-spacing: 0.04em;
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-sentence .scrolls-card-text {
+                font-size: clamp(0.9rem, 2.45vw, 1.45rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-paragraph .scrolls-card-text {
+                font-size: clamp(0.98rem, 1.75vw, 1.25rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card-note,
+            .practice-scrolls-shell .scrolls-hint,
+            .practice-scrolls-shell .scrolls-progress-meta,
+            .practice-scrolls-shell .scrolls-feedback {
+                font-size: 0.66rem;
+                line-height: 1.18;
+            }
+
+            .practice-scrolls-shell .scrolls-progress-bar {
+                height: 7px;
+            }
+
+            .practice-scrolls-shell .scrolls-dots {
+                gap: 0.28rem;
+            }
+
+            .practice-scrolls-shell .scrolls-dots span {
+                height: 6px;
+                width: 6px;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions {
+                gap: 0.45rem;
+                max-width: 100%;
+                padding-inline: 0.1rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-skip-btn,
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                font-size: 0.76rem;
+                min-height: 42px;
+                padding: 0.56rem 0.5rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                flex-grow: 1.18;
+            }
+        }
+
+        @media (max-width: 375px) {
+            .practice-scrolls-shell {
+                padding: 0.22rem 0.22rem calc(0.28rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell .scrolls-phone-device {
+                height: calc(100dvh - 0.22rem - 0.28rem - env(safe-area-inset-bottom, 0px)) !important;
+                max-height: calc(100dvh - 0.22rem - 0.28rem - env(safe-area-inset-bottom, 0px)) !important;
+            }
+
+            .practice-scrolls-shell .scrolls-screen {
+                gap: 0.3rem;
+                padding: 0.38rem 0.38rem calc(0.38rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell .scrolls-phone-header {
+                gap: 0.12rem 0.24rem;
+                padding: 0.22rem 0.28rem;
+            }
+
+            .practice-scrolls-shell .scrolls-phone-header .back-link {
+                min-height: 28px;
+                min-width: 28px;
+            }
+
+            .practice-scrolls-shell .scrolls-header-copy h1 {
+                font-size: clamp(0.88rem, 3.2vw, 0.98rem);
+            }
+
+            .practice-scrolls-shell .scrolls-meta-pill,
+            .practice-scrolls-shell .scrolls-status-pill {
+                font-size: 0.54rem;
+                padding: 0.14rem 0.3rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card {
+                gap: 0.35rem;
+                padding: 0.44rem 0.42rem 0.48rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
+                font-size: clamp(2.4rem, 6.8vw, 3.8rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-sentence .scrolls-card-text {
+                font-size: clamp(0.84rem, 2.2vw, 1.25rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-paragraph .scrolls-card-text {
+                font-size: clamp(0.9rem, 1.6vw, 1.12rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions {
+                gap: 0.38rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-skip-btn,
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                font-size: 0.72rem;
+                min-height: 40px;
+                padding: 0.5rem 0.42rem;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .practice-scrolls-shell {
+                padding: 0.18rem 0.18rem calc(0.24rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell .scrolls-phone-device {
+                height: calc(100dvh - 0.18rem - 0.24rem - env(safe-area-inset-bottom, 0px)) !important;
+                max-height: calc(100dvh - 0.18rem - 0.24rem - env(safe-area-inset-bottom, 0px)) !important;
+            }
+
+            .practice-scrolls-shell .scrolls-screen {
+                gap: 0.26rem;
+                padding: 0.34rem 0.34rem calc(0.34rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell .scrolls-phone-header {
+                gap: 0.1rem 0.2rem;
+                padding: 0.2rem 0.24rem;
+            }
+
+            .practice-scrolls-shell .scrolls-header-copy h1 {
+                font-size: clamp(0.84rem, 3vw, 0.94rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card {
+                gap: 0.3rem;
+                padding: 0.4rem 0.38rem 0.44rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
+                font-size: clamp(2.15rem, 6.4vw, 3.4rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-skip-btn,
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                font-size: 0.69rem;
+                min-height: 38px;
+                padding: 0.46rem 0.38rem;
+            }
+        }
+
+        @media (max-width: 344px) {
+            .practice-scrolls-shell {
+                padding: 0.16rem 0.16rem calc(0.2rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell .scrolls-phone-device {
+                height: calc(100dvh - 0.16rem - 0.2rem - env(safe-area-inset-bottom, 0px)) !important;
+                max-height: calc(100dvh - 0.16rem - 0.2rem - env(safe-area-inset-bottom, 0px)) !important;
+            }
+
+            .practice-scrolls-shell .scrolls-screen {
+                gap: 0.24rem;
+                padding: 0.3rem 0.3rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
+            }
+
+            .practice-scrolls-shell .scrolls-phone-header {
+                gap: 0.08rem 0.18rem;
+                padding: 0.18rem 0.2rem;
+            }
+
+            .practice-scrolls-shell .scrolls-phone-header .back-link {
+                min-height: 26px;
+                min-width: 26px;
+            }
+
+            .practice-scrolls-shell .scrolls-header-copy h1 {
+                font-size: 0.8rem;
+                line-height: 1.04;
+            }
+
+            .practice-scrolls-shell .scrolls-header-meta {
+                gap: 0.1rem;
+            }
+
+            .practice-scrolls-shell .scrolls-meta-pill,
+            .practice-scrolls-shell .scrolls-status-pill {
+                font-size: 0.5rem;
+                padding: 0.12rem 0.26rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card {
+                gap: 0.26rem;
+                padding: 0.34rem 0.34rem 0.38rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-word .scrolls-card-text {
+                font-size: clamp(2rem, 6vw, 3rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-sentence .scrolls-card-text {
+                font-size: clamp(0.8rem, 2vw, 1.1rem);
+            }
+
+            .practice-scrolls-shell .scrolls-card.practice-paragraph .scrolls-card-text {
+                font-size: clamp(0.86rem, 1.45vw, 1rem);
+            }
+
+            .practice-scrolls-shell .scrolls-progress-bar {
+                height: 6px;
+            }
+
+            .practice-scrolls-shell .scrolls-progress-meta,
+            .practice-scrolls-shell .scrolls-feedback,
+            .practice-scrolls-shell .scrolls-card-note,
+            .practice-scrolls-shell .scrolls-hint {
+                font-size: 0.62rem;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.32rem;
+                max-width: 100%;
+            }
+
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-skip-btn,
+            .practice-scrolls-shell .scrolls-card-actions .scrolls-record-btn {
+                width: 100%;
+            }
+        }
+
         /* Final Hunt polish: balanced reader card and a fully visible action dock. */
         .practice-hunt-shell .hunt-main {
             inset: 46px 0 104px;
@@ -5827,24 +6120,122 @@
             position:absolute;
             z-index:0;
         }
-        body.dark-theme .practice-hunt-shell {background:#0f172a !important}
+        body.dark-theme .practice-hunt-shell {
+            background: linear-gradient(180deg, #08111f 0%, #0a1626 48%, #0f172a 100%) !important;
+        }
         body.dark-theme .practice-hunt-shell .hunt-card {
-            background-color:#806b3f !important;
-            background-image:none !important;
-            border-color:#64748b !important;box-shadow:0 16px 36px rgba(0,0,0,.38) !important;
+            background-color:#121c2f !important;
+            border-color:rgba(148,163,184,.36) !important;
+            box-shadow:0 12px 28px rgba(0,0,0,.2) !important;
         }
-        body.dark-theme .practice-hunt-shell .hunt-map-art {filter:brightness(.7) contrast(1.12) saturate(.78);opacity:.82}
-        body.dark-theme .practice-hunt-shell .hunt-card::after {background:linear-gradient(180deg,rgba(15,23,42,.08),rgba(15,23,42,.24));filter:none}
-        body.dark-theme .practice-hunt-shell :is(.hunt-word-area,.hunt-actions) {
-            background:linear-gradient(145deg,rgba(30,41,59,.98),rgba(15,23,42,.98)) !important;
-            border-color:rgba(125,211,252,.34) !important;color:#f8fafc !important;
+        body.dark-theme .practice-hunt-shell .hunt-map-art {
+            filter:brightness(.72) contrast(1.04) saturate(.72);
+            opacity:.72;
         }
-        body.dark-theme .practice-hunt-shell :is(.hunt-word-area .practice-text,.hunt-speech-status,.hunt-raw-mic strong) {color:#f8fafc !important}
-        body.dark-theme .practice-hunt-shell :is(.hunt-word-instruction,.hunt-speech-transcript,.hunt-actions .practice-feedback) {color:#cbd5e1 !important}
-        body.dark-theme .practice-hunt-shell :is(.hunt-speech-panel,.hunt-raw-mic) {
-            background:rgba(15,23,42,.9) !important;border-color:rgba(125,211,252,.24) !important;
+        body.dark-theme .practice-hunt-shell .hunt-card::after {
+            background:linear-gradient(180deg,rgba(15,23,42,.05),rgba(15,23,42,.16));
         }
-        body.dark-theme .practice-hunt-shell .hunt-raw-mic code {color:#e2e8f0 !important}
+        body.dark-theme .practice-hunt-shell .hunt-back,
+        body.dark-theme .practice-hunt-shell .hunt-stars {
+            background:#172235 !important;
+            border-color:rgba(148,163,184,.22) !important;
+            color:#e2e8f0 !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-heading p {
+            color:#7dd3fc !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-heading h1 {
+            color:#f8fafc !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-flight-meta,
+        body.dark-theme .practice-hunt-shell .hunt-meta-row,
+        body.dark-theme .practice-hunt-shell #huntProgressLabel {
+            color:#e2e8f0 !important;
+        }
+        body.dark-theme .practice-hunt-shell #huntProgressLabel {
+            background:rgba(15,23,42,.78) !important;
+            border:1px solid rgba(148,163,184,.18) !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-word-area {
+            background: linear-gradient(145deg, rgba(17, 24, 39, 0.96), rgba(30, 41, 59, 0.96)) !important;
+            border-color: rgba(148,163,184,.24) !important;
+            box-shadow: 0 16px 30px rgba(0,0,0,.18) !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-word-area::before {
+            color: rgba(125,211,252,.12) !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-word-area .practice-text {
+            color:#f8fafc !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-word-position {
+            color:#cbd5e1 !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-word-instruction {
+            color:#cbd5e1 !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-speech-panel {
+            background:#0f172a !important;
+            border-color:rgba(148,163,184,.2) !important;
+            box-shadow:none !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-speech-status {
+            color:#f8fafc !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-speech-transcript {
+            color:#cbd5e1 !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-raw-mic {
+            background:#111827 !important;
+            border-color:rgba(148,163,184,.2) !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-raw-mic strong {
+            color:#7dd3fc !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-raw-mic code {
+            color:#e2e8f0 !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-actions {
+            background:#0f172a !important;
+            border-color:rgba(148,163,184,.16) !important;
+            box-shadow:0 -5px 18px rgba(0,0,0,.12) !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-actions .practice-feedback {
+            background:#111827 !important;
+            border-color:rgba(148,163,184,.16) !important;
+            color:#cbd5e1 !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-actions .practice-controls button {
+            box-shadow:none;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-actions .skip-btn {
+            background:#111827 !important;
+            border-color:rgba(148,163,184,.2) !important;
+            color:#e2e8f0 !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-actions .record-btn {
+            background:linear-gradient(135deg,#f59e0b,#ea580c) !important;
+            color:#fff7ed !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-actions .next-btn {
+            background:linear-gradient(135deg,#fb923c,#f97316) !important;
+            color:#fff7ed !important;
+        }
+        body.dark-theme .practice-hunt-shell .hunt-map-dot {
+            box-shadow:0 3px 8px rgba(0,0,0,.18);
+        }
+        body.dark-theme .practice-hunt-shell .hunt-map-dot.is-active {
+            box-shadow:0 0 0 7px rgba(255,255,255,.14);
+        }
+        body.dark-theme .practice-hunt-shell :is(.hunt-map-dot,.hunt-checkpoint) {
+            filter:brightness(1);
+        }
+        body.dark-theme .practice-hunt-shell .hunt-destination {
+            color:#fca5a5 !important;
+            text-shadow:0 2px rgba(15,23,42,.35);
+        }
+        body.dark-theme .practice-hunt-shell .hunt-map-bird {
+            box-shadow:0 4px 10px rgba(0,0,0,.24);
+        }
 
         /* Forest is the only theme allowed to use the green Hunt treatment. */
         body.dark-theme[data-student-theme="forest"] .practice-hunt-shell {background:#071f1a !important}
@@ -5859,9 +6250,34 @@
             background:linear-gradient(145deg,rgba(24,61,43,.97),rgba(15,46,34,.98)) !important;
             border-color:rgba(190,170,96,.5) !important;color:#f2efd0 !important;
         }
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-back,
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-stars {
+            background:#163127 !important;
+            border-color:rgba(177,196,111,.28) !important;
+            color:#edf7d8 !important;
+        }
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-heading p {color:#a7f3d0 !important}
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-heading h1 {color:#f4f1d2 !important}
         body.dark-theme[data-student-theme="forest"] .practice-hunt-shell :is(.hunt-word-area .practice-text,.hunt-speech-status,.hunt-raw-mic strong) {color:#f4f1d2 !important}
         body.dark-theme[data-student-theme="forest"] .practice-hunt-shell :is(.hunt-word-instruction,.hunt-speech-transcript,.hunt-actions .practice-feedback) {color:#bdc9ad !important}
         body.dark-theme[data-student-theme="forest"] .practice-hunt-shell :is(.hunt-speech-panel,.hunt-raw-mic) {background:rgba(8,38,29,.88) !important;border-color:rgba(177,196,111,.3) !important}
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-actions {
+            background:rgba(8,38,29,.95) !important;
+            border-color:rgba(177,196,111,.24) !important;
+        }
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-actions .skip-btn {
+            background:#163127 !important;
+            border-color:rgba(177,196,111,.24) !important;
+            color:#edf7d8 !important;
+        }
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-actions .record-btn {
+            background:linear-gradient(135deg,#84cc16,#65a30d) !important;
+            color:#f7fee7 !important;
+        }
+        body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-actions .next-btn {
+            background:linear-gradient(135deg,#eab308,#ca8a04) !important;
+            color:#fffbeb !important;
+        }
         body.dark-theme[data-student-theme="forest"] .practice-hunt-shell .hunt-raw-mic code {color:#edf1d0 !important}
 
         /* Treasure-map UI polish. */

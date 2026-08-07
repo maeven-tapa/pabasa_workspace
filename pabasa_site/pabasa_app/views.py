@@ -4824,6 +4824,33 @@ def _material_level_completion(material, student_user):
     return completion if isinstance(completion, dict) else None
 
 
+def _practice_unlock_requirement_label(difficulty, level_key, level_keys=None, difficulty_keys=None):
+    level_keys = list(level_keys or _practice_progression_level_keys())
+    difficulty_keys = list(difficulty_keys or _practice_progression_difficulty_keys())
+    normalized_difficulty = (difficulty or '').strip().lower()
+    normalized_level = (level_key or '').strip().lower()
+
+    if normalized_difficulty not in difficulty_keys or normalized_level not in level_keys:
+        return ''
+
+    difficulty_label = _practice_config_label(normalized_difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES)
+    if normalized_level != level_keys[0]:
+        previous_index = level_keys.index(normalized_level) - 1
+        previous_level_label = _practice_config_label(level_keys[previous_index], AdminPracticeMaterialForm.LEVEL_CHOICES)
+        return f'Complete {difficulty_label} {previous_level_label} to unlock this level.'
+
+    previous_difficulty = None
+    difficulty_index = difficulty_keys.index(normalized_difficulty)
+    if difficulty_index > 0:
+        previous_difficulty = difficulty_keys[difficulty_index - 1]
+
+    if previous_difficulty:
+        previous_difficulty_label = _practice_config_label(previous_difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES)
+        return f'Complete all {previous_difficulty_label} levels to unlock this difficulty.'
+
+    return ''
+
+
 def _apply_progression_unlock_override(progression, unlock_target):
     normalized_target = (unlock_target or '').strip().lower().replace('-', '_')
     if not normalized_target:
@@ -4961,6 +4988,8 @@ def _practice_game_progression(mode, student_user=None, language=None):
             level_payloads.append({
                 'difficulty': difficulty,
                 'difficulty_label': _practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
+                'mode_label': _practice_progression_mode_title(normalized_mode),
+                'subtitle_label': f"{_practice_progression_mode_title(normalized_mode)} • {_practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES)}",
                 'level': level_key,
                 'level_label': _practice_config_label(level_key, AdminPracticeMaterialForm.LEVEL_CHOICES),
                 'title': material.title if material else 'Coming soon',
@@ -4981,7 +5010,7 @@ def _practice_game_progression(mode, student_user=None, language=None):
                 ),
                 'material_id': f"practice-{material.id}" if material else None,
                 'completion': completion,
-                'locked_reason': 'Complete Level 1 to unlock this level.' if level_key != 'level_1' and state == 'locked' else 'Complete all previous difficulty levels to unlock this section.' if state == 'locked' and difficulty != 'easy' else '',
+                'locked_reason': _practice_unlock_requirement_label(difficulty, level_key, level_keys, difficulty_keys) if state == 'locked' else '',
             })
 
         section_payloads.append({
@@ -4989,7 +5018,7 @@ def _practice_game_progression(mode, student_user=None, language=None):
             'difficulty_label': _practice_config_label(difficulty, AdminPracticeMaterialForm.DIFFICULTY_CHOICES),
             'unlocked': difficulty_unlocked,
             'levels': level_payloads,
-            'locked_reason': 'Complete all previous difficulty levels to unlock this section.' if difficulty != 'easy' and not difficulty_unlocked else '',
+            'locked_reason': _practice_unlock_requirement_label(difficulty, level_keys[0], level_keys, difficulty_keys) if difficulty != 'easy' and not difficulty_unlocked else '',
         })
 
         if next_challenge is None:

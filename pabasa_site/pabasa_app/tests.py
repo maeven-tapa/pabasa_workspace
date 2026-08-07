@@ -3869,7 +3869,65 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, "Free Mode Adventure")
         self.assertContains(response, "Level 1")
         self.assertContains(response, "Level 2")
-        self.assertContains(response, "Complete Level 1 to unlock this level.")
+        self.assertContains(response, "Free Mode • Easy")
+        self.assertContains(response, "Complete Easy Level 1 to unlock this level.")
+
+    def test_progression_page_uses_dynamic_unlock_copy_across_difficulties(self):
+        Material.objects.create(
+            title="Free Medium Level 1",
+            item_type="word",
+            content_text="sun",
+            content_json={
+                "mode": "free",
+                "difficulty": "medium",
+                "level": "level_1",
+                "items": ["sun"],
+            },
+            type="practice",
+            status="published",
+            difficulty_level="medium",
+            is_active=True,
+        )
+        Material.objects.create(
+            title="Free Medium Level 2",
+            item_type="word",
+            content_text="moon",
+            content_json={
+                "mode": "free",
+                "difficulty": "medium",
+                "level": "level_2",
+                "items": ["moon"],
+            },
+            type="practice",
+            status="published",
+            difficulty_level="medium",
+            is_active=True,
+        )
+        Material.objects.create(
+            title="Free Hard Level 1",
+            item_type="word",
+            content_text="star",
+            content_json={
+                "mode": "free",
+                "difficulty": "hard",
+                "level": "level_1",
+                "items": ["star"],
+            },
+            type="practice",
+            status="published",
+            difficulty_level="hard",
+            is_active=True,
+        )
+
+        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Free Mode • Medium")
+        self.assertContains(response, "Free Mode • Hard")
+        self.assertContains(response, "Complete Easy Level 1 to unlock this level.")
+        self.assertContains(response, "Complete Medium Level 1 to unlock this level.")
+        self.assertContains(response, "Complete all Easy levels to unlock this difficulty.")
+        self.assertContains(response, "Complete all Medium levels to unlock this difficulty.")
 
     def test_progression_page_marks_levels_without_content_as_unavailable(self):
         response = self.client.get(reverse("practice_game_progression", args=["free"]))
