@@ -3943,6 +3943,29 @@ class PracticeReaderMaterialTests(TestCase):
         self.assertContains(response, "Welcome to Free Mode! Read the word aloud.")
         self.assertContains(response, 'data-tutorial-mode="free"')
 
+    def test_progression_page_prefers_active_session_for_current_challenge(self):
+        for difficulty, level, expected in [
+            ("easy", "level_4", "Easy • Level 4"),
+            ("medium", "level_2", "Medium • Level 2"),
+            ("hard", "level_3", "Hard • Level 3"),
+        ]:
+            session = self.client.session
+            session["practice_active_session"] = {"game": "free", "difficulty": difficulty, "level": level}
+            session.save()
+
+            response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.context["game_progression_summary"]["current_challenge_label"], expected)
+            self.assertEqual(response.context["game_progression_summary"]["current_difficulty"], difficulty.title())
+            self.assertEqual(response.context["game_progression_summary"]["current_level"], f"Level {level.split('_', 1)[1]}")
+
+    def test_progression_page_falls_back_to_summary_when_active_session_is_missing(self):
+        response = self.client.get(reverse("practice_game_progression", args=["free"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["game_progression_summary"]["current_challenge_label"], "Easy • Level 1")
+
     def test_student_theme_shop_renders_ui_only_catalog(self):
         response = self.client.get(reverse("theme_shop"))
 

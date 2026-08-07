@@ -88,6 +88,7 @@ PRACTICE_LANGUAGE_CHOICES = [
 ]
 PRACTICE_LANGUAGE_SESSION_KEY = "practice_mode_language"
 PRACTICE_LANGUAGE_PREFERENCE_KEY = "practice_mode_language"
+PRACTICE_ACTIVE_SESSION_KEY = "practice_active_session"
 
 
 def _practice_language_value(value):
@@ -120,6 +121,31 @@ def _set_practice_language_preference(user, language):
     preferences[PRACTICE_LANGUAGE_PREFERENCE_KEY] = _practice_language_value(language)
     user.preference = preferences
     user.save(update_fields=['preference', 'updated_at'])
+
+
+def _practice_active_session_data(request):
+    session_data = request.session.get(PRACTICE_ACTIVE_SESSION_KEY)
+    if not isinstance(session_data, dict):
+        return {}
+    game = str(session_data.get('game') or '').strip().lower()
+    difficulty = str(session_data.get('difficulty') or '').strip().lower()
+    level = str(session_data.get('level') or '').strip().lower()
+    if game not in {'free', 'color', 'hunt'}:
+        return {}
+    if difficulty not in {'easy', 'medium', 'hard'}:
+        return {}
+    if not level:
+        return {}
+    return {'game': game, 'difficulty': difficulty, 'level': level}
+
+
+def _set_practice_active_session(request, game, difficulty, level):
+    request.session[PRACTICE_ACTIVE_SESSION_KEY] = {
+        'game': (game or '').strip().lower(),
+        'difficulty': (difficulty or '').strip().lower(),
+        'level': (level or '').strip().lower(),
+    }
+    request.session.modified = True
 
 # Utilities for profile-like data now stored on `User.tags` (JSONField)
 def _get_profile_dict(user, key):
@@ -7777,8 +7803,10 @@ def practice_word_page(request):
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     game_mode = (request.GET.get('game') or 'free').strip().lower()
     difficulty = (request.GET.get('difficulty') or 'easy').strip().lower()
+    level = (request.GET.get('level') or 'level_1').strip().lower()
     if not _practice_difficulty_is_accessible(game_mode, difficulty, student_user):
         return redirect('practice_game_progression', mode=game_mode)
+    _set_practice_active_session(request, game_mode, difficulty, level)
     return render(request, 'pabasa_app/practice_word_page.html', _student_practice_context(request, 'word'))
 
 @never_cache
@@ -7787,8 +7815,10 @@ def practice_sentence_page(request):
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     game_mode = (request.GET.get('game') or 'free').strip().lower()
     difficulty = (request.GET.get('difficulty') or 'medium').strip().lower()
+    level = (request.GET.get('level') or 'level_1').strip().lower()
     if not _practice_difficulty_is_accessible(game_mode, difficulty, student_user):
         return redirect('practice_game_progression', mode=game_mode)
+    _set_practice_active_session(request, game_mode, difficulty, level)
     return render(request, 'pabasa_app/practice_sentence_page.html', _student_practice_context(request, 'sentence'))
 
 @never_cache
@@ -7797,8 +7827,10 @@ def practice_para_page(request):
     student_user = User.objects.filter(id=request.session.get('user_id')).first()
     game_mode = (request.GET.get('game') or 'free').strip().lower()
     difficulty = (request.GET.get('difficulty') or 'hard').strip().lower()
+    level = (request.GET.get('level') or 'level_1').strip().lower()
     if not _practice_difficulty_is_accessible(game_mode, difficulty, student_user):
         return redirect('practice_game_progression', mode=game_mode)
+    _set_practice_active_session(request, game_mode, difficulty, level)
     return render(request, 'pabasa_app/practice_para_page.html', _student_practice_context(request, 'paragraph'))
 
 # REPLACE the entire course_teacher_view function:
@@ -8120,6 +8152,13 @@ def practice_game_progression(request, mode):
     selected_language = _practice_selected_language(request, _get_practice_language_preference(student_user) or "English")
     progression = _practice_game_progression(normalized_mode, student_user, selected_language)
     progression = _apply_progression_unlock_override(progression, request.GET.get('unlock', ''))
+    active_session = _practice_active_session_data(request)
+    if active_session and active_session.get('game') == normalized_mode:
+        summary = dict(progression.get('summary') or {})
+        summary['current_difficulty'] = _practice_config_label(active_session['difficulty'], AdminPracticeMaterialForm.DIFFICULTY_CHOICES)
+        summary['current_level'] = _practice_config_label(active_session['level'], AdminPracticeMaterialForm.LEVEL_CHOICES)
+        summary['current_challenge_label'] = f"{summary['current_difficulty']} \u2022 {summary['current_level']}"
+        progression['summary'] = summary
     flag_key = _practice_tutorial_flag_key(normalized_mode)
     show_tutorial = not _has_seen_practice_tutorial(request, student_user, flag_key)
     if show_tutorial:
