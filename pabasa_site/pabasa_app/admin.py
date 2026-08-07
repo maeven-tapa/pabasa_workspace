@@ -175,9 +175,7 @@ class CalendarEventAdmin(admin.ModelAdmin):
 	ordering = ("start_date", "end_date")
 
 	def school_calendar_display(self, obj):
-		if hasattr(obj, "get_term_display"):
-			return f"{obj.school_calendar.school_year} - {obj.get_term_display()}"
-		return f"{obj.school_calendar.school_year} - Term {obj.term}"
+		return obj.school_calendar.school_year
 
 	school_calendar_display.short_description = "School Calendar"
 

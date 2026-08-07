@@ -100,6 +100,18 @@
                     <input type="hidden" name="event_id" id="eventId">
                     <div class="row g-3">
                         <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary" for="eventCalendar">School Year</label>
+                            <select class="form-select" id="eventCalendar" name="event_calendar_id" required>
+                                <optgroup label="School Years">
+                                    {% for school_calendar in school_calendars %}
+                                    <option value="{{ school_calendar.id }}" {% if selected_calendar and selected_calendar.id == school_calendar.id %}selected{% endif %}>{{ school_calendar.school_year }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                                <option value="" disabled>-----------------</option>
+                                <option value="__new_school_year__">+ New School Year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary" for="eventType">Event Type</label>
                             <select class="form-select" id="eventType" name="event_type" required>
                                 <option value="" selected>Select Event Type</option>
@@ -146,6 +158,30 @@
     </div>
 </div>
 
+<div class="modal fade" id="schoolYearModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title mb-0">Create School Year</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="schoolYearForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary" for="newSchoolYear">School Year</label>
+                        <input class="form-control" id="newSchoolYear" name="school_year" type="text" placeholder="2026-2027" inputmode="numeric" pattern="[0-9]{4}-[0-9]{4}" autocomplete="off" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.15/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.15/index.global.min.js"></script>
@@ -161,9 +197,15 @@
         const emptyEl = document.getElementById('calendarEmpty');
         const modalEl = document.getElementById('calendarEventModal');
         const modal = window.bootstrap ? new bootstrap.Modal(modalEl) : null;
+        const schoolYearModalEl = document.getElementById('schoolYearModal');
+        const schoolYearModal = window.bootstrap ? new bootstrap.Modal(schoolYearModalEl) : null;
     const eventForm = document.getElementById('calendarEventForm');
     const eventIdInput = document.getElementById('eventId');
     const calendarIdInput = eventForm.querySelector('[name="calendar_id"]');
+    const eventCalendarInput = document.getElementById('eventCalendar');
+    const schoolYearForm = document.getElementById('schoolYearForm');
+    const newSchoolYearInput = document.getElementById('newSchoolYear');
+    const currentCalendarId = calendarIdInput?.value || '';
         const eventTitleInput = document.getElementById('eventTitle');
         const eventTitleWrap = document.getElementById('eventTitleWrap');
         const eventTypeInput = document.getElementById('eventType');
@@ -224,6 +266,7 @@
         const end = eventData?.end_date || eventData?.end || start;
         return {
             id: eventData?.id || '',
+            school_calendar_id: eventData?.school_calendar_id || calendarIdInput?.value || '',
             title: eventData?.title || '',
             event_type: eventData?.event_type || '',
             term: String(eventData?.term || '{{ selected_term }}'),
@@ -233,10 +276,72 @@
         };
     }
 
+        function validateSchoolYearFormat(value) {
+            const raw = String(value || '').trim();
+            if (!/^\d{4}-\d{4}$/.test(raw)) {
+                return 'School Year must be in the format YYYY-YYYY.';
+            }
+            const startYear = Number(raw.slice(0, 4));
+            const endYear = Number(raw.slice(5));
+            if (endYear !== startYear + 1) {
+                return 'The ending year must be exactly one year after the starting year.';
+            }
+            return '';
+        }
+
+        function formatSchoolYearMask(value) {
+            const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
+            const first = digits.slice(0, 4);
+            const second = digits.slice(4, 8);
+            return second ? `${first}-${second}` : first + (first.length === 4 ? '-' : '');
+        }
+
+        function syncSchoolYearMask() {
+            const raw = String(newSchoolYearInput.value || '');
+            const formatted = formatSchoolYearMask(raw);
+            if (newSchoolYearInput.value !== formatted) {
+                newSchoolYearInput.value = formatted;
+            }
+        }
+
+        function setSchoolYearValidity() {
+            const message = validateSchoolYearFormat(newSchoolYearInput.value);
+            newSchoolYearInput.setCustomValidity(message);
+            return message;
+        }
+
+        function refreshSchoolYearDropdown(selectedId) {
+            const currentValue = String(selectedId || '');
+            if (!eventCalendarInput) return;
+            if (currentValue && !Array.from(eventCalendarInput.options).some((option) => option.value === currentValue)) {
+                return;
+            }
+            eventCalendarInput.value = currentValue || eventCalendarInput.value;
+            if (calendarIdInput && eventCalendarInput.value) {
+                calendarIdInput.value = eventCalendarInput.value;
+            }
+        }
+
+        function getInitialCalendarDate() {
+            const events = window.PABASA_CALENDAR_EVENTS || [];
+            for (const event of events) {
+                if (event?.start) {
+                    return event.start;
+                }
+            }
+            return null;
+        }
+
         function openEventModal(eventData) {
         eventForm.reset();
         const payload = eventToForm(eventData);
         eventIdInput.value = payload.id ? String(payload.id) : '';
+        if (eventCalendarInput && payload.school_calendar_id) {
+            eventCalendarInput.value = String(payload.school_calendar_id);
+        }
+        if (calendarIdInput && eventCalendarInput?.value) {
+            calendarIdInput.value = eventCalendarInput.value;
+        }
         eventTitleInput.value = payload.title;
         eventTypeInput.value = payload.event_type;
         eventTermInput.value = payload.term;
@@ -311,6 +416,7 @@
 
         calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
+        initialDate: getInitialCalendarDate() || undefined,
         height: 'auto',
         headerToolbar: false,
         dayMaxEvents: true,
@@ -369,7 +475,6 @@
     });
 
         calendar.render();
-        refreshCalendar();
         setView('dayGridMonth');
 
         addEventBtn?.addEventListener('click', () => openEventModal());
@@ -380,6 +485,120 @@
         calendarWeekBtn?.addEventListener('click', () => setView('timeGridWeek'));
         eventTypeInput.addEventListener('change', () => {
             syncTitleField();
+        });
+        eventCalendarInput?.addEventListener('change', () => {
+            if (eventCalendarInput.value === '__new_school_year__') {
+                eventCalendarInput.value = calendarIdInput?.value || '';
+                schoolYearForm?.reset();
+                newSchoolYearInput.value = '';
+                schoolYearModal?.show();
+                return;
+            }
+            if (calendarIdInput) {
+                calendarIdInput.value = eventCalendarInput.value;
+            }
+        });
+        newSchoolYearInput?.addEventListener('input', () => {
+            syncSchoolYearMask();
+            setSchoolYearValidity();
+        });
+        newSchoolYearInput?.addEventListener('keydown', (event) => {
+            const allowedKeys = new Set([
+                'Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', 'Escape',
+            ]);
+            if (allowedKeys.has(event.key) || event.ctrlKey || event.metaKey) {
+                return;
+            }
+            if (!/^\d$/.test(event.key)) {
+                event.preventDefault();
+                return;
+            }
+            const raw = newSchoolYearInput.value || '';
+            const digits = raw.replace(/\D/g, '');
+            const selectionStart = newSchoolYearInput.selectionStart ?? raw.length;
+            const selectionEnd = newSchoolYearInput.selectionEnd ?? raw.length;
+            const selectedDigits = raw.slice(selectionStart, selectionEnd).replace(/\D/g, '').length;
+            if (digits.length - selectedDigits >= 8 && selectionStart === selectionEnd) {
+                event.preventDefault();
+                return;
+            }
+            const digitsBeforeCaret = raw.slice(0, selectionStart).replace(/\D/g, '').length;
+            if (digitsBeforeCaret < 4 && digits.length >= 4 && !raw.includes('-')) {
+                return;
+            }
+            if (digitsBeforeCaret >= 4 && digits.length >= 8 && selectionStart === selectionEnd) {
+                event.preventDefault();
+            }
+        });
+        newSchoolYearInput?.addEventListener('paste', (event) => {
+            const pasted = event.clipboardData?.getData('text') || '';
+            const cleaned = pasted.trim();
+            if (!/^\d{8}$/.test(cleaned) && !/^\d{4}-\d{4}$/.test(cleaned)) {
+                event.preventDefault();
+                newSchoolYearInput.setCustomValidity('School Year must be in the format YYYY-YYYY.');
+                newSchoolYearInput.reportValidity();
+                return;
+            }
+            event.preventDefault();
+            newSchoolYearInput.value = cleaned.includes('-') ? cleaned : `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
+            syncSchoolYearMask();
+            setSchoolYearValidity();
+        });
+        schoolYearForm?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            syncSchoolYearMask();
+            const schoolYearValue = newSchoolYearInput.value;
+            const validationError = validateSchoolYearFormat(schoolYearValue);
+            if (validationError) {
+                newSchoolYearInput.setCustomValidity(validationError);
+                newSchoolYearInput.reportValidity();
+                return;
+            }
+            newSchoolYearInput.setCustomValidity('');
+            const eventDraft = {
+                id: eventIdInput.value,
+                school_calendar_id: eventCalendarInput?.value || '',
+                title: eventTitleInput.value,
+                event_type: eventTypeInput.value,
+                term: eventTermInput.value,
+                start_date: eventStartInput.value,
+                end_date: eventEndInput.value,
+                description: eventDescriptionInput.value,
+            };
+            const formData = new FormData();
+            formData.append('action', 'save_calendar');
+            formData.append('school_year', schoolYearValue.trim());
+            formData.append('current_term', '1');
+            const response = await fetch(window.PABASA_CALENDAR_URL, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: formData,
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                window.alert(data.error || 'Unable to create school year.');
+                return;
+            }
+            const updatedCalendarId = String(data.calendar_id);
+            const option = document.createElement('option');
+            option.value = updatedCalendarId;
+            option.textContent = schoolYearValue.trim();
+            eventCalendarInput.appendChild(option);
+            eventCalendarInput.value = updatedCalendarId;
+            if (calendarIdInput) {
+                calendarIdInput.value = updatedCalendarId;
+            }
+            schoolYearModal?.hide();
+            openEventModal(eventDraft);
+            eventCalendarInput.value = updatedCalendarId;
+            if (calendarIdInput) {
+                calendarIdInput.value = updatedCalendarId;
+            }
         });
 
         eventForm.addEventListener('submit', async (event) => {
@@ -402,7 +621,7 @@
             const openingStart = dateToComparable(opening?.start);
             const closingEnd = dateToComparable(closing?.end_date || closing?.end || closing?.start);
             if (!opening || !closing || startTime === null || endTime === null || openingStart === null || closingEnd === null) {
-                window.alert('Please make sure the selected term has both an Opening Block and School Closing block before saving assessment events.');
+                window.alert('The selected term must have both an Opening Block and School Closing Block before creating assessment events.');
                 return;
             }
             if (startTime < openingStart || endTime > closingEnd) {
@@ -411,7 +630,7 @@
             }
         }
         const formData = new FormData(eventForm);
-        if (calendarIdInput?.value) formData.set('calendar_id', calendarIdInput.value);
+        if (eventCalendarInput?.value) formData.set('calendar_id', eventCalendarInput.value);
         formData.set('event_id', eventIdInput.value || '');
         formData.set('term', eventTermInput.value);
         console.log("4. FormData term:", formData.get("term"));
@@ -449,17 +668,32 @@
         if (existing) {
             existing.remove();
         }
-        calendar.addEvent(data.event);
-        window.PABASA_CALENDAR_EVENTS = calendar.getEvents().map((item) => ({
-            id: item.id,
-            title: item.title,
-            event_type: item.extendedProps.event_type,
-            term: item.extendedProps.term,
-            start: item.startStr || '',
-            end: item.endStr || item.startStr || '',
-            description: item.extendedProps.description || '',
-            is_generated: item.extendedProps.is_generated || false,
-        }));
+        if (String(data.event.school_calendar_id || '') === String(currentCalendarId || '')) {
+            calendar.addEvent(data.event);
+            window.PABASA_CALENDAR_EVENTS = calendar.getEvents().map((item) => ({
+                id: item.id,
+                title: item.title,
+                event_type: item.extendedProps.event_type,
+                term: item.extendedProps.term,
+                start: item.startStr || '',
+                end: item.endStr || item.startStr || '',
+                description: item.extendedProps.description || '',
+                school_calendar_id: item.extendedProps.school_calendar_id || eventCalendarInput?.value || calendarIdInput?.value || '',
+                is_generated: item.extendedProps.is_generated || false,
+            }));
+        } else {
+            window.PABASA_CALENDAR_EVENTS = calendar.getEvents().map((item) => ({
+                id: item.id,
+                title: item.title,
+                event_type: item.extendedProps.event_type,
+                term: item.extendedProps.term,
+                start: item.startStr || '',
+                end: item.endStr || item.startStr || '',
+                description: item.extendedProps.description || '',
+                school_calendar_id: item.extendedProps.school_calendar_id || eventCalendarInput?.value || calendarIdInput?.value || '',
+                is_generated: item.extendedProps.is_generated || false,
+            }));
+        }
         updateEmptyState();
         modal?.hide();
     });
@@ -469,7 +703,7 @@
         const formData = new FormData();
         formData.append('action', 'delete_event');
         formData.append('event_id', eventIdInput.value);
-        formData.set('calendar_id', calendarIdInput?.value || '{% if selected_calendar %}{{ selected_calendar.id }}{% endif %}');
+        formData.set('calendar_id', eventCalendarInput?.value || calendarIdInput?.value || '{% if selected_calendar %}{{ selected_calendar.id }}{% endif %}');
         const response = await fetch(window.PABASA_CALENDAR_URL, {
             method: 'POST',
             headers: {

@@ -1185,9 +1185,11 @@ class AssessmentWindowSetting(models.Model):
 
 
 class SchoolCalendar(models.Model):
+    TERM_CHOICES = [(1, "Term 1"), (2, "Term 2"), (3, "Term 3"), (4, "Term 4")]
+
     school_year = models.CharField(max_length=20, unique=True)
     current_term = models.PositiveSmallIntegerField(
-        choices=[(1, "Term 1"), (2, "Term 2"), (3, "Term 3")]
+        choices=TERM_CHOICES
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1198,7 +1200,7 @@ class SchoolCalendar(models.Model):
         ordering = ["-is_active", "-created_at"]
 
     def __str__(self):
-        return f"{self.school_year} - Term {self.current_term}"
+        return self.school_year
 
 
 class CalendarEvent(models.Model):
@@ -1218,7 +1220,7 @@ class CalendarEvent(models.Model):
         related_name="events",
     )
     term = models.PositiveSmallIntegerField(
-        choices=[(1, "Term 1"), (2, "Term 2"), (3, "Term 3")],
+        choices=SchoolCalendar.TERM_CHOICES,
         default=1,
     )
     title = models.CharField(max_length=150)

@@ -21,6 +21,7 @@ import json
 import os
 import shutil
 import math
+import re
 from pathlib import Path
 from html import escape
 import random
@@ -4398,11 +4399,22 @@ def _calendar_event_type_label(event_type):
     return dict(CalendarEvent.EVENT_TYPE_CHOICES).get(event_type, 'Other Activity')
 
 
+def _normalize_school_year_value(value):
+    raw = (value or '').strip()
+    if not re.fullmatch(r'\d{4}-\d{4}', raw):
+        return None, 'School Year must be in the format YYYY-YYYY.'
+    start_year = int(raw[:4])
+    end_year = int(raw[5:])
+    if end_year != start_year + 1:
+        return None, 'The ending year must be exactly one year after the starting year.'
+    return f'{start_year:04d}-{end_year:04d}', None
+
+
 def _calendar_term_blocks(calendar):
     blocks = {}
     if not calendar:
         return blocks
-    for term in (1, 2, 3):
+    for term in (1, 2, 3, 4):
         opening = calendar.events.filter(term=term, event_type='school_opening').order_by('start_date', 'created_at').first()
         closing = calendar.events.filter(term=term, event_type='school_closing').order_by('start_date', 'created_at').first()
         blocks[term] = {'opening': opening, 'closing': closing}
@@ -4426,22 +4438,24 @@ def _calendar_instructional_events(calendar, base_events):
 
 
 def _calendar_context(request):
-    calendars = list(SchoolCalendar.objects.all().order_by('-is_active', '-created_at'))
+    calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
     active_calendar = SchoolCalendar.objects.filter(is_active=True).order_by('-updated_at', '-created_at').first()
+    _, _, current_school_year_label = _current_school_year_bounds()
+    current_school_year_calendar = SchoolCalendar.objects.filter(school_year=current_school_year_label).first()
     selected_calendar_id = request.GET.get('calendar_id')
-    selected_calendar = active_calendar
+    selected_calendar = current_school_year_calendar or active_calendar
     if selected_calendar_id and str(selected_calendar_id).isdigit():
         selected_calendar = SchoolCalendar.objects.filter(id=int(selected_calendar_id)).first() or active_calendar
     if not selected_calendar:
         selected_calendar = calendars[0] if calendars else None
 
     selected_term = int(request.GET.get('term', selected_calendar.current_term if selected_calendar else 1) or 1)
-    if selected_term not in {1, 2, 3}:
+    if selected_term not in {1, 2, 3, 4}:
         selected_term = 1
 
     if not selected_calendar:
         selected_calendar = SchoolCalendar.objects.create(school_year='2026-2027', current_term=selected_term, is_active=True)
-        calendars = list(SchoolCalendar.objects.all().order_by('-is_active', '-created_at'))
+        calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
         active_calendar = selected_calendar
 
     events = CalendarEvent.objects.filter(school_calendar=selected_calendar).order_by('start_date', 'end_date', 'created_at')
@@ -4484,16 +4498,28 @@ def admin_school_calendar(request):
         selected_calendar = SchoolCalendar.objects.filter(id=calendar_id).first() if str(calendar_id or '').isdigit() else None
 
         if action == 'save_calendar':
-            school_year = (request.POST.get('school_year') or '').strip()
+            school_year, school_year_error = _normalize_school_year_value(request.POST.get('school_year'))
+            if school_year_error:
+                if wants_json():
+                    return JsonResponse({'success': False, 'error': school_year_error}, status=400)
+                return HttpResponseForbidden(school_year_error)
             current_term = request.POST.get('current_term')
             try:
                 current_term = int(current_term)
             except (TypeError, ValueError):
                 current_term = 1
-            if current_term not in {1, 2, 3}:
+            if current_term not in {1, 2, 3, 4}:
                 current_term = 1
-            if not school_year:
-                school_year = '2026-2027'
+
+            if selected_calendar:
+                duplicate_calendar = SchoolCalendar.objects.filter(school_year=school_year).exclude(id=selected_calendar.id).exists()
+            else:
+                duplicate_calendar = SchoolCalendar.objects.filter(school_year=school_year).exists()
+            if duplicate_calendar:
+                error_message = 'A School Calendar for this School Year already exists.'
+                if wants_json():
+                    return JsonResponse({'success': False, 'error': error_message}, status=400)
+                return HttpResponseForbidden(error_message)
 
             if selected_calendar:
                 selected_calendar.school_year = school_year
@@ -4530,7 +4556,7 @@ def admin_school_calendar(request):
                 term = int(term)
             except (TypeError, ValueError):
                 term = 0
-            if term not in {1, 2, 3}:
+            if term not in {1, 2, 3, 4}:
                 print("403 #2 - Invalid term")
                 print({"action": action, "calendar_id": calendar_id, "event_type": event_type, "term": term, "title": title, "start_date": start_date, "end_date": end_date})
                 return HttpResponseForbidden('Invalid term.')
@@ -4588,9 +4614,13 @@ def admin_school_calendar(request):
                         print("403 #9 - Assessment outside term (single day)")
                         print({"action": action, "calendar_id": calendar_id, "event_type": event_type, "term": term, "title": title, "start_date": start_date_value, "end_date": end_date_value, "opening_start": getattr(opening, "start_date", None), "opening_end": getattr(opening, "end_date", None), "closing_start": getattr(closing, "start_date", None), "closing_end": getattr(closing, "end_date", None)})
                         return HttpResponseForbidden('The selected assessment period must be within the Opening Block and School Closing dates of the selected term.')
-            event = CalendarEvent.objects.filter(id=event_id, school_calendar=selected_calendar).first() if str(event_id or '').isdigit() else None
+                else:
+                    return HttpResponseForbidden('The selected term must have both an Opening Block and School Closing Block before creating assessment events.')
+            event = CalendarEvent.objects.filter(id=event_id).first() if str(event_id or '').isdigit() else None
             if not event:
                 event = CalendarEvent(school_calendar=selected_calendar)
+            else:
+                event.school_calendar = selected_calendar
             event.title = title
             event.event_type = event_type
             event.term = term
