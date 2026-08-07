@@ -253,6 +253,8 @@
         let calendar;
 
         const colors = {
+        start_of_classes: '#0ea5e9',
+        end_of_classes: '#7c3aed',
         school_opening: '#22c55e',
         school_closing: '#ef4444',
         pre_assessment: '#3b82f6',
@@ -400,7 +402,7 @@
         }
 
         function syncTitleField() {
-            const hideTitle = ['school_opening', 'school_closing', 'pre_assessment', 'post_assessment', 'examination'].includes(eventTypeInput.value);
+            const hideTitle = ['start_of_classes', 'end_of_classes', 'school_opening', 'school_closing', 'pre_assessment', 'post_assessment', 'examination'].includes(eventTypeInput.value);
             const titleRequired = ['holiday', 'other'].includes(eventTypeInput.value);
             eventTitleWrap.classList.toggle('d-none', hideTitle);
             eventTitleWrap.hidden = hideTitle;

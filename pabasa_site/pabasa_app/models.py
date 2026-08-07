@@ -1205,6 +1205,8 @@ class SchoolCalendar(models.Model):
 
 class CalendarEvent(models.Model):
     EVENT_TYPE_CHOICES = [
+        ("start_of_classes", "Start of Classes"),
+        ("end_of_classes", "End of Classes"),
         ("school_opening", "Opening Block"),
         ("school_closing", "End-of-Term Block"),
         ("pre_assessment", "Pre-Assessment Week"),

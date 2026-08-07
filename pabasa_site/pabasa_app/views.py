@@ -21,6 +21,7 @@ import json
 import os
 import shutil
 import math
+import calendar as py_calendar
 import re
 from pathlib import Path
 from html import escape
@@ -304,25 +305,49 @@ def _assessment_window_allows_crla(window=None):
     return period in {'bosy', 'eosy'}
 
 
+def _school_year_events(school_calendar):
+    if not school_calendar:
+        return {}
+    events = {}
+    for event_type in {'start_of_classes', 'end_of_classes', 'school_opening', 'school_closing'}:
+        events[event_type] = school_calendar.events.filter(event_type=event_type).order_by('start_date', 'created_at').first()
+    return events
+
+
+def _school_year_bounds(school_calendar):
+    events = _school_year_events(school_calendar)
+    start_event = events.get('start_of_classes')
+    end_event = events.get('end_of_classes')
+    return start_event, end_event
+
+
+def _calendar_school_year_label(school_calendar):
+    if school_calendar and getattr(school_calendar, 'school_year', None):
+        return school_calendar.school_year
+    return 'Not set'
+
+
 def _current_school_year_bounds(now=None):
     current = now or timezone.localdate()
-    year = current.year
-    if current.month >= 6:
-        start_year = year
-        end_year = year + 1
-    else:
-        start_year = year - 1
-        end_year = year
-    start_date = date(start_year, 6, 1)
-    end_date = date(end_year, 5, 31)
-    return start_date, end_date, f"{start_year}-{end_year}"
+    active_calendar = _active_school_calendar(current)
+    if active_calendar:
+        start_event, end_event = _school_year_bounds(active_calendar)
+        if start_event and end_event:
+            return start_event.start_date, end_event.end_date, _calendar_school_year_label(active_calendar)
+    fallback_calendar = SchoolCalendar.objects.order_by('-updated_at', '-created_at').first()
+    if fallback_calendar:
+        start_event, end_event = _school_year_bounds(fallback_calendar)
+        if start_event and end_event:
+            return start_event.start_date, end_event.end_date, _calendar_school_year_label(fallback_calendar)
+    return None, None, 'Not set'
 
 
 def _material_school_year_label(material):
     created_at = getattr(material, 'created_at', None)
     if created_at:
-        return _current_school_year_bounds(created_at.date())[2]
-    return _current_school_year_bounds()[2]
+        active_calendar = _active_school_calendar(created_at.date())
+        return _calendar_school_year_label(active_calendar)
+    return _calendar_school_year_label(_active_school_calendar())
 
 
 def _existing_crla_assessment_for_school_year(teacher_user=None):
@@ -3396,6 +3421,28 @@ def _dashboard_context(request, nav_role=None, extra=None):
             else 'sky'
         ),
     })
+    if nav_role == 'student':
+        active_school_calendar, _, _ = _selected_school_calendar(request)
+        current_term = _calendar_current_term(active_school_calendar) if active_school_calendar else None
+        calendar_widget = _calendar_month_view(active_school_calendar)
+        student_calendar_events = []
+        if active_school_calendar:
+            student_calendar_events = [
+                _calendar_event_payload(event) | {
+                    'title': _calendar_fixed_title(event.event_type, event.title),
+                    'event_type_label': _calendar_event_type_label(event.event_type),
+                }
+                for event in CalendarEvent.objects.filter(school_calendar=active_school_calendar).order_by('start_date', 'end_date', 'created_at')
+            ]
+        context.update({
+            'active_school_calendar': active_school_calendar,
+            'student_calendar_school_year': _calendar_school_year_label(active_school_calendar),
+            'student_calendar_current_term': f"Term {current_term}" if current_term else (
+                f"Term {active_school_calendar.current_term}" if active_school_calendar and active_school_calendar.current_term else 'Not set'
+            ),
+            'student_calendar_events_json': json.dumps(student_calendar_events),
+            **calendar_widget,
+        })
     if extra:
         context.update(extra)
     return context
@@ -4412,6 +4459,8 @@ def _calendar_event_payload(event):
 
 def _calendar_fixed_title(event_type, fallback=''):
     fixed_titles = {
+        'start_of_classes': 'Start of Classes',
+        'end_of_classes': 'End of Classes',
         'school_opening': 'Opening Block',
         'school_closing': 'End-of-Term Block',
         'pre_assessment': 'Pre-Assessment Week',
@@ -4425,6 +4474,10 @@ def _calendar_event_type_label(event_type):
     return dict(CalendarEvent.EVENT_TYPE_CHOICES).get(event_type, 'Other Activity')
 
 
+def _school_year_event_types():
+    return {'start_of_classes', 'end_of_classes'}
+
+
 def _normalize_school_year_value(value):
     raw = (value or '').strip()
     if not re.fullmatch(r'\d{4}-\d{4}', raw):
@@ -4436,22 +4489,22 @@ def _normalize_school_year_value(value):
     return f'{start_year:04d}-{end_year:04d}', None
 
 
-def _calendar_term_blocks(calendar):
+def _calendar_term_blocks(school_calendar):
     blocks = {}
-    if not calendar:
+    if not school_calendar:
         return blocks
     for term in (1, 2, 3, 4):
-        opening = calendar.events.filter(term=term, event_type='school_opening').order_by('start_date', 'created_at').first()
-        closing = calendar.events.filter(term=term, event_type='school_closing').order_by('start_date', 'created_at').first()
+        opening = school_calendar.events.filter(term=term, event_type='school_opening').order_by('start_date', 'created_at').first()
+        closing = school_calendar.events.filter(term=term, event_type='school_closing').order_by('start_date', 'created_at').first()
         blocks[term] = {'opening': opening, 'closing': closing}
     return blocks
 
 
-def _calendar_current_term(calendar):
+def _calendar_current_term(school_calendar):
     from datetime import date as _date
 
     today = _date.today()
-    for term, block in _calendar_term_blocks(calendar).items():
+    for term, block in _calendar_term_blocks(school_calendar).items():
         opening = block.get('opening')
         closing = block.get('closing')
         closing_end = getattr(closing, 'end_date', None) or getattr(closing, 'start_date', None)
@@ -4460,25 +4513,49 @@ def _calendar_current_term(calendar):
     return None
 
 
-def _calendar_instructional_events(calendar, base_events):
+def _calendar_instructional_events(school_calendar, base_events):
     return []
 
 
-def _active_school_calendar():
-    return SchoolCalendar.objects.filter(is_active=True).order_by('-updated_at', '-created_at').first()
-
-
-def _calendar_preassessment_block(calendar, term):
-    if not calendar or term not in {1, 2, 3, 4}:
-        return None
-    return calendar.events.filter(term=term, event_type='pre_assessment').order_by('start_date', 'created_at').first()
-
-
-def _calendar_is_in_preassessment_window(calendar, term, on_date=None):
+def _active_school_calendar(on_date=None):
     from datetime import date as _date
 
     check_date = on_date or _date.today()
-    block = _calendar_preassessment_block(calendar, term)
+    calendars = SchoolCalendar.objects.all().order_by('-updated_at', '-created_at')
+    active = None
+    best_start = None
+    for school_calendar in calendars:
+        start_event, end_event = _school_year_bounds(school_calendar)
+        if not start_event or not end_event:
+            continue
+        if start_event.start_date <= check_date <= end_event.end_date:
+            if not active or start_event.start_date > best_start:
+                active = school_calendar
+                best_start = start_event.start_date
+    if active:
+        return active
+    upcoming = []
+    for school_calendar in calendars:
+        start_event, end_event = _school_year_bounds(school_calendar)
+        if start_event and end_event and start_event.start_date <= check_date:
+            upcoming.append((start_event.start_date, school_calendar))
+    if upcoming:
+        upcoming.sort(key=lambda item: item[0], reverse=True)
+        return upcoming[0][1]
+    return None
+
+
+def _calendar_preassessment_block(school_calendar, term):
+    if not school_calendar or term not in {1, 2, 3, 4}:
+        return None
+    return school_calendar.events.filter(term=term, event_type='pre_assessment').order_by('start_date', 'created_at').first()
+
+
+def _calendar_is_in_preassessment_window(school_calendar, term, on_date=None):
+    from datetime import date as _date
+
+    check_date = on_date or _date.today()
+    block = _calendar_preassessment_block(school_calendar, term)
     if not block:
         return False
     return block.start_date <= check_date <= block.end_date
@@ -4493,9 +4570,7 @@ def _format_calendar_date(value):
 def _selected_school_calendar(request=None):
     calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
     active_calendar = _active_school_calendar()
-    _, _, current_school_year_label = _current_school_year_bounds()
-    current_school_year_calendar = SchoolCalendar.objects.filter(school_year=current_school_year_label).first()
-    selected_calendar = current_school_year_calendar or active_calendar
+    selected_calendar = active_calendar
     selected_calendar_id = request.GET.get('calendar_id') if request else None
     if selected_calendar_id and str(selected_calendar_id).isdigit():
         selected_calendar = SchoolCalendar.objects.filter(id=int(selected_calendar_id)).first() or active_calendar
@@ -4531,11 +4606,77 @@ def _calendar_context(request):
         'selected_calendar': selected_calendar,
         'selected_term': current_term,
         'selected_term_label': f'Term {current_term}' if current_term else 'No Active Term',
-        'school_year_label': selected_calendar.school_year if selected_calendar else 'Not set',
+        'school_year_label': _calendar_school_year_label(selected_calendar),
         'calendar_events': events,
         'calendar_events_json': json.dumps(calendar_events_json),
         'term_options': [(1, 'Term 1'), (2, 'Term 2'), (3, 'Term 3')],
         'event_type_options': CalendarEvent.EVENT_TYPE_CHOICES,
+    }
+
+
+def _calendar_month_view(school_calendar):
+    from datetime import date as _date
+    from datetime import timedelta as _timedelta
+
+    today = _date.today()
+    month_matrix = py_calendar.monthcalendar(today.year, today.month)
+    month_event_map = {}
+    if school_calendar:
+        for event in CalendarEvent.objects.filter(school_calendar=school_calendar):
+            current = event.start_date
+            while current <= event.end_date:
+                if current.year == today.year and current.month == today.month:
+                    month_event_map.setdefault(current.day, []).append(event)
+                    current += _timedelta(days=1)
+
+    weeks = []
+    for week in month_matrix:
+        days = []
+        for day in week:
+            if day == 0:
+                days.append({'day': None, 'events': []})
+                continue
+            day_events = month_event_map.get(day, [])
+            days.append({
+                'day': day,
+                'events': [
+                    {
+                        'id': event.id,
+                        'title': _calendar_fixed_title(event.event_type, event.title),
+                        'event_type': event.event_type,
+                        'event_type_label': _calendar_event_type_label(event.event_type),
+                        'start_date': event.start_date.isoformat(),
+                        'end_date': event.end_date.isoformat(),
+                        'description': event.description or '',
+                    }
+                    for event in day_events
+                ],
+            })
+        weeks.append(days)
+
+    events = list(CalendarEvent.objects.filter(school_calendar=school_calendar).order_by('start_date', 'end_date', 'created_at')) if school_calendar else []
+    grouped_events = {}
+    for event in events:
+        grouped_events.setdefault(event.event_type, []).append(event)
+
+    return {
+        'month_name': today.strftime('%B'),
+        'month_year_label': today.strftime('%B %Y'),
+        'today': today,
+        'month_weeks': weeks,
+        'calendar_legend': [
+            ('start_of_classes', 'Start of Classes'),
+            ('end_of_classes', 'End of Classes'),
+            ('pre_assessment', 'Pre-Assessment Week'),
+            ('post_assessment', 'Post-Assessment Week'),
+            ('examination', 'Examination Week'),
+            ('holiday', 'Holiday'),
+            ('school_opening', 'Opening Block'),
+            ('school_closing', 'End-of-Term Block'),
+            ('other', 'Other Activities'),
+        ],
+        'calendar_events_by_type': grouped_events,
+        'calendar_event_count': len(events),
     }
 
 
@@ -4629,6 +4770,8 @@ def admin_school_calendar(request):
                 print({"action": action, "calendar_id": calendar_id, "event_type": event_type, "term": term, "title": title, "start_date": start_date, "end_date": end_date})
                 return HttpResponseForbidden('Title is required for this event type.')
             fixed_titles = {
+                'start_of_classes': 'Start of Classes',
+                'end_of_classes': 'End of Classes',
                 'school_opening': 'School Opening',
                 'school_closing': 'School Closing',
                 'pre_assessment': 'Pre-Assessment Week',
@@ -4636,6 +4779,16 @@ def admin_school_calendar(request):
                 'examination': 'Examination Week',
             }
             title = fixed_titles.get(event_type, title)
+            existing_start = CalendarEvent.objects.filter(
+                school_calendar=selected_calendar, event_type='start_of_classes'
+            )
+            existing_start = existing_start.exclude(id=event_id) if str(event_id or '').isdigit() else existing_start
+            existing_start = existing_start.exists()
+            existing_end = CalendarEvent.objects.filter(
+                school_calendar=selected_calendar, event_type='end_of_classes'
+            )
+            existing_end = existing_end.exclude(id=event_id) if str(event_id or '').isdigit() else existing_end
+            existing_end = existing_end.exists()
             existing_opening = CalendarEvent.objects.filter(
                 school_calendar=selected_calendar, term=term, event_type='school_opening'
             )
@@ -4646,6 +4799,18 @@ def admin_school_calendar(request):
             )
             existing_closing = existing_closing.exclude(id=event_id) if str(event_id or '').isdigit() else existing_closing
             existing_closing = existing_closing.exists()
+            if event_type == 'start_of_classes' and existing_start:
+                return HttpResponseForbidden('Only one Start of Classes event is allowed per school year.')
+            if event_type == 'end_of_classes' and existing_end:
+                return HttpResponseForbidden('Only one End of Classes event is allowed per school year.')
+            if event_type in {'start_of_classes', 'end_of_classes'}:
+                other_type = 'end_of_classes' if event_type == 'start_of_classes' else 'start_of_classes'
+                other_event = CalendarEvent.objects.filter(school_calendar=selected_calendar, event_type=other_type).exclude(id=event_id).order_by('start_date', 'created_at').first()
+                if other_event:
+                    if event_type == 'start_of_classes' and start_date_value >= other_event.start_date:
+                        return HttpResponseForbidden('Start of Classes must be before End of Classes.')
+                    if event_type == 'end_of_classes' and start_date_value <= other_event.start_date:
+                        return HttpResponseForbidden('End of Classes must be after Start of Classes.')
             if event_type == 'school_opening' and existing_opening:
                 print("403 #6 - Duplicate opening block")
                 print({"action": action, "calendar_id": calendar_id, "event_type": event_type, "term": term, "title": title, "start_date": start_date, "end_date": end_date})
@@ -4725,8 +4890,8 @@ def _official_reading_material_for_term(term):
     return _official_reading_materials_queryset().filter(official_term=term).first()
 
 
-def _official_reading_material_available_now(term, calendar=None, on_date=None):
-    active_calendar = calendar or _active_school_calendar()
+def _official_reading_material_available_now(term, school_calendar=None, on_date=None):
+    active_calendar = school_calendar or _active_school_calendar()
     current_term = _calendar_current_term(active_calendar) if active_calendar else None
     if current_term != term:
         return False
@@ -8160,7 +8325,7 @@ def students(request):
 def student_detail(request):
     return render(request, 'pabasa_app/student_detail.html')
 
-def calendar(request):
+def school_calendar_page(request):
     return render(request, 'pabasa_app/calendar.html', _dashboard_context(request))
 
 @csrf_protect

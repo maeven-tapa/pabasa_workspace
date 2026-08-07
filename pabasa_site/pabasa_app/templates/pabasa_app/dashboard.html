@@ -385,6 +385,390 @@
         box-shadow: 0 10px 24px rgba(15, 182, 255, 0.1);
     }
 
+    .student-calendar-widget {
+        display: grid;
+        gap: 0.9rem;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(10px) saturate(120%);
+        -webkit-backdrop-filter: blur(10px) saturate(120%);
+        border: 1px solid rgba(31, 182, 255, 0.12);
+        border-radius: 24px;
+        box-shadow: 0 10px 24px rgba(15, 182, 255, 0.08);
+        padding: 1.15rem;
+        min-width: 0;
+    }
+
+    .student-calendar-expand-btn {
+        align-items: center;
+        background: linear-gradient(135deg, #1FB6FF, #0EA5E9);
+        border: 0;
+        border-radius: 14px;
+        color: #fff;
+        display: inline-flex;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.88rem;
+        font-weight: 900;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0.7rem 1rem;
+        width: 100%;
+        box-shadow: 0 12px 20px rgba(31, 182, 255, 0.2);
+    }
+
+    .student-calendar-expand-btn:hover,
+    .student-calendar-expand-btn:focus {
+        background: linear-gradient(135deg, #0EA5E9, #0284C7);
+        color: #fff;
+    }
+
+    body.dark-theme .student-calendar-widget {
+        background: rgba(30, 41, 59, 0.42) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .student-calendar-head {
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .student-calendar-head h3 {
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.05rem;
+        font-weight: 900;
+        color: #0F172A;
+        margin: 0;
+    }
+
+    body.dark-theme .student-calendar-head h3,
+    body.dark-theme .student-calendar-meta,
+    body.dark-theme .student-calendar-legend span,
+    body.dark-theme .student-calendar-weekday,
+    body.dark-theme .student-calendar-day-number,
+    body.dark-theme .student-calendar-event {
+        color: #F8FAFC !important;
+    }
+
+    .student-calendar-meta {
+        color: #475569;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+
+    .student-calendar-meta strong {
+        color: #0F172A;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-weight: 900;
+    }
+
+    .student-calendar-grid {
+        display: grid;
+        gap: 0.35rem;
+        min-width: 0;
+    }
+
+    .student-calendar-weekdays,
+    .student-calendar-week {
+        display: grid;
+        gap: 0.3rem;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    .student-calendar-weekday,
+    .student-calendar-day {
+        border-radius: 14px;
+        min-width: 0;
+    }
+
+    .student-calendar-weekday {
+        color: #475569;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.68rem;
+        font-weight: 900;
+        letter-spacing: 0.07em;
+        padding: 0.2rem 0.15rem;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .student-calendar-day {
+        background: rgba(248, 250, 252, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        min-height: 72px;
+        padding: 0.45rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    body.dark-theme .student-calendar-day {
+        background: rgba(15, 23, 42, 0.46) !important;
+        border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    .student-calendar-day.is-empty {
+        background: transparent;
+        border-color: transparent;
+    }
+
+    .student-calendar-day.is-today {
+        border-color: rgba(31, 182, 255, 0.42);
+        box-shadow: inset 0 0 0 1px rgba(31, 182, 255, 0.2);
+    }
+
+    .student-calendar-day-number {
+        color: #0F172A;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.8rem;
+        font-weight: 900;
+        line-height: 1;
+        margin-bottom: 0.3rem;
+    }
+
+    .student-calendar-events {
+        display: grid;
+        gap: 0.28rem;
+    }
+
+    .student-calendar-event {
+        border-radius: 999px;
+        color: #0F172A;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.68rem;
+        font-weight: 700;
+        line-height: 1.2;
+        overflow: hidden;
+        padding: 0.22rem 0.45rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .student-calendar-event[data-event-type="start_of_classes"] { background: rgba(14, 165, 233, 0.16); }
+    .student-calendar-event[data-event-type="end_of_classes"] { background: rgba(124, 58, 237, 0.16); }
+    .student-calendar-event[data-event-type="pre_assessment"] { background: rgba(59, 130, 246, 0.16); }
+    .student-calendar-event[data-event-type="post_assessment"] { background: rgba(20, 184, 166, 0.16); }
+    .student-calendar-event[data-event-type="examination"] { background: rgba(248, 113, 113, 0.16); }
+    .student-calendar-event[data-event-type="holiday"] { background: rgba(251, 191, 36, 0.2); }
+    .student-calendar-event[data-event-type="school_opening"] { background: rgba(34, 197, 94, 0.16); }
+    .student-calendar-event[data-event-type="school_closing"] { background: rgba(168, 85, 247, 0.16); }
+    .student-calendar-event[data-event-type="other"] { background: rgba(148, 163, 184, 0.18); }
+
+    .student-calendar-swatch {
+        border-radius: 999px;
+        display: inline-block;
+        height: 0.55rem;
+        width: 0.55rem;
+    }
+
+    .student-calendar-swatch[data-event-type="start_of_classes"] { background: rgba(14, 165, 233, 0.9); }
+    .student-calendar-swatch[data-event-type="end_of_classes"] { background: rgba(124, 58, 237, 0.9); }
+    .student-calendar-swatch[data-event-type="pre_assessment"] { background: rgba(59, 130, 246, 0.9); }
+    .student-calendar-swatch[data-event-type="post_assessment"] { background: rgba(20, 184, 166, 0.9); }
+    .student-calendar-swatch[data-event-type="examination"] { background: rgba(248, 113, 113, 0.9); }
+    .student-calendar-swatch[data-event-type="holiday"] { background: rgba(251, 191, 36, 0.95); }
+    .student-calendar-swatch[data-event-type="school_opening"] { background: rgba(34, 197, 94, 0.9); }
+    .student-calendar-swatch[data-event-type="school_closing"] { background: rgba(168, 85, 247, 0.9); }
+    .student-calendar-swatch[data-event-type="other"] { background: rgba(148, 163, 184, 0.95); }
+
+    .student-calendar-empty {
+        color: #64748b;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .student-calendar-modal .modal-dialog {
+        max-width: min(1180px, calc(100vw - 1.5rem));
+    }
+
+    .student-calendar-modal .modal-content {
+        border: 1px solid rgba(31, 182, 255, 0.12);
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(16, 70, 110, 0.18);
+        overflow: hidden;
+    }
+
+    .student-calendar-modal .modal-header,
+    .student-calendar-modal .modal-footer {
+        border-color: rgba(16, 70, 110, 0.08);
+    }
+
+    .student-calendar-modal .modal-header {
+        background: linear-gradient(135deg, rgba(16, 70, 110, 0.05), rgba(46, 168, 229, 0.03));
+        padding: 1rem 1.1rem;
+    }
+
+    .student-calendar-modal .modal-body {
+        background: linear-gradient(180deg, #fbfdff 0%, #f5fbff 100%);
+        padding: 1.1rem;
+    }
+
+    .student-calendar-modal-shell {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .student-calendar-expanded-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .student-calendar-expanded-meta {
+        display: grid;
+        gap: 0.25rem;
+    }
+
+    .student-calendar-nav {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        justify-content: flex-end;
+    }
+
+    .student-calendar-nav .btn {
+        border-radius: 999px;
+        font-weight: 800;
+    }
+
+    .student-calendar-close-btn {
+        align-items: center;
+        background: rgba(15, 23, 42, 0.06);
+        border: 0;
+        border-radius: 999px;
+        color: #0F172A;
+        display: inline-flex;
+        height: 2.5rem;
+        justify-content: center;
+        width: 2.5rem;
+    }
+
+    .student-calendar-close-btn:hover {
+        background: rgba(15, 23, 42, 0.1);
+    }
+
+    .student-calendar-expanded-grid {
+        display: grid;
+        gap: 0.55rem;
+        min-width: 0;
+    }
+
+    .student-calendar-expanded-calendar {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .student-calendar-footer {
+        border-top: 1px solid rgba(16, 70, 110, 0.08);
+        padding-top: 0.9rem;
+    }
+
+    .student-calendar-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .student-calendar-legend-item {
+        align-items: center;
+        background: rgba(248, 250, 252, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 999px;
+        display: inline-flex;
+        gap: 0.35rem;
+        padding: 0.32rem 0.55rem;
+    }
+
+    body.dark-theme .student-calendar-legend-item {
+        background: rgba(15, 23, 42, 0.46) !important;
+        border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    .student-calendar-expanded-grid .student-calendar-day {
+        min-height: 104px;
+    }
+
+    .student-calendar-expanded-grid .student-calendar-event {
+        font-size: 0.7rem;
+        padding: 0.24rem 0.5rem;
+    }
+
+    .student-calendar-expand-btn {
+        align-items: center;
+        background: linear-gradient(135deg, #1FB6FF, #0EA5E9);
+        border: 0;
+        border-radius: 14px;
+        color: #fff;
+        display: inline-flex;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.88rem;
+        font-weight: 900;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0.7rem 1rem;
+        width: 100%;
+        box-shadow: 0 12px 20px rgba(31, 182, 255, 0.2);
+    }
+
+    .student-calendar-expand-btn:hover,
+    .student-calendar-expand-btn:focus {
+        background: linear-gradient(135deg, #0EA5E9, #0284C7);
+        color: #fff;
+    }
+
+    .student-calendar-modal .modal-dialog {
+        max-width: min(1180px, calc(100vw - 1.5rem));
+    }
+
+    .student-calendar-modal .modal-content {
+        border-radius: 28px;
+        overflow: hidden;
+    }
+
+    .student-calendar-modal .modal-body {
+        background: linear-gradient(180deg, #fbfdff 0%, #f5fbff 100%);
+        padding: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    .student-calendar-modal-shell {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .student-calendar-expanded-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: space-between;
+        width: 100%;
+    }
+
+    .student-calendar-expanded-meta {
+        display: grid;
+        gap: 0.25rem;
+    }
+
+    .student-calendar-close-btn {
+        align-items: center;
+        background: rgba(15, 23, 42, 0.06);
+        border: 0;
+        border-radius: 999px;
+        color: #0F172A;
+        display: inline-flex;
+        height: 2.5rem;
+        justify-content: center;
+        width: 2.5rem;
+    }
+
+    .student-calendar-close-btn:hover {
+        background: rgba(15, 23, 42, 0.1);
+    }
+
     body.dark-theme .my-classes-section {
         background: rgba(30, 41, 59, 0.4) !important;
         border-color: rgba(255, 255, 255, 0.08) !important;
@@ -1468,8 +1852,55 @@
             <div class="class-list" data-class-list aria-live="polite"></div>
         </div>
 
-        <!-- Right Column: Progress and Achievements -->
+        <!-- Right Column: Calendar, Progress and Achievements -->
         <div class="right-column">
+            <article class="student-calendar-widget">
+                <div class="student-calendar-head">
+                    <span class="dash-pill"><i class="bi bi-calendar3"></i> School Calendar</span>
+                    <h3>{{ month_year_label|default:"Current Month" }}</h3>
+                    <div class="student-calendar-meta">
+                        <div>School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong></div>
+                        <div>Current Term: <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
+                    </div>
+                </div>
+
+                <div class="student-calendar-grid" aria-label="Current month calendar" aria-readonly="true">
+                    <div class="student-calendar-weekdays" aria-hidden="true">
+                        <div class="student-calendar-weekday">Sun</div>
+                        <div class="student-calendar-weekday">Mon</div>
+                        <div class="student-calendar-weekday">Tue</div>
+                        <div class="student-calendar-weekday">Wed</div>
+                        <div class="student-calendar-weekday">Thu</div>
+                        <div class="student-calendar-weekday">Fri</div>
+                        <div class="student-calendar-weekday">Sat</div>
+                    </div>
+                    {% if month_weeks %}
+                        {% for week in month_weeks %}
+                            <div class="student-calendar-week">
+                                {% for day in week %}
+                                    <div class="student-calendar-day{% if not day.day %} is-empty{% endif %}{% if day.day == today.day and day.day %} is-today{% endif %}">
+                                        {% if day.day %}
+                                            <div class="student-calendar-day-number">{{ day.day }}</div>
+                                            <div class="student-calendar-events">
+                                                {% for event in day.events %}
+                                                    <div class="student-calendar-event" data-event-type="{{ event.event_type }}" title="{{ event.title }} ({{ event.start_date }} - {{ event.end_date }})">{{ event.title }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="student-calendar-empty">No active school calendar is available yet.</p>
+                    {% endif %}
+                </div>
+
+                <button type="button" class="student-calendar-expand-btn" data-expand-calendar>
+                    <i class="bi bi-arrows-fullscreen me-2"></i>Expand Calendar
+                </button>
+            </article>
+
             <!-- My Reading Journey -->
             <div class="my-reading-journey" data-reading-journey>
                 <h3 class="section-title">
@@ -1519,6 +1950,50 @@
                 </div>
                 <h5 class="fw-bold mb-1" id="loadingModalLabel">Joining Class...</h5>
                 <p class="text-muted small mb-0">Please wait while we process your request.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade student-calendar-modal" id="studentCalendarModal" tabindex="-1" aria-labelledby="studentCalendarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="student-calendar-expanded-head">
+                    <div class="student-calendar-expanded-meta">
+                        <span class="dash-pill"><i class="bi bi-calendar3"></i> School Calendar</span>
+                        <h4 class="mb-0" id="studentCalendarModalLabel">{{ month_year_label|default:"Current Month" }}</h4>
+                        <div class="student-calendar-meta">
+                            <div>School Year: <strong>{{ student_calendar_school_year|default:"Not set" }}</strong></div>
+                            <div>Current Term: <strong>{{ student_calendar_current_term|default:"Not set" }}</strong></div>
+                        </div>
+                    </div>
+                    <div class="student-calendar-nav">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-calendar-nav="prev">Previous</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-calendar-nav="today">Today</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-calendar-nav="next">Next</button>
+                        <button type="button" class="student-calendar-close-btn" data-bs-dismiss="modal" aria-label="Close">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="student-calendar-modal-shell">
+                    <div class="student-calendar-expanded-grid">
+                        <div class="student-calendar-expanded-calendar" data-student-calendar-expanded aria-label="Expanded current month calendar" aria-readonly="true"></div>
+                    </div>
+                    <div class="student-calendar-footer">
+                        <div class="student-calendar-legend" aria-label="Calendar legend">
+                            {% for event_type, label in calendar_legend %}
+                                <span class="student-calendar-legend-item">
+                                    <span class="student-calendar-swatch" data-event-type="{{ event_type }}"></span>
+                                    <span>{{ label }}</span>
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1578,6 +2053,7 @@
 <script>
     window.PABASA_USER_EMAIL = "{{ email|escapejs }}";
     window.PABASA_DASHBOARD_GREETING_NAME = "{{ dashboard_greeting_name|default:'Student'|escapejs }}";
+    window.PABASA_STUDENT_CALENDAR_EVENTS = {{ student_calendar_events_json|default:"[]"|safe }};
 </script>
 
 <script>
@@ -1598,12 +2074,16 @@
         const confirmUnenrollButton = document.querySelector("[data-confirm-unenroll]");
         const invalidClassCodeModalElement = document.getElementById("invalidClassCodeModal");
         const unenrollingModalElement = document.getElementById("unenrollingModal");
+        const studentCalendarModalElement = document.getElementById("studentCalendarModal");
+        const studentCalendarExpanded = document.querySelector("[data-student-calendar-expanded]");
         const classJoinedKey = "pabasaStudentClassJoined";
         const classCodesKey = "pabasaStudentClassCodes";
         const legacyClassCodeKey = "pabasaStudentClassCode";
         const teacherClassesKey = null;
 
         const loadingModalElement = document.getElementById('loadingModal');
+        const expandCalendarBtn = document.querySelector("[data-expand-calendar]");
+        const calendarMonthTitle = document.getElementById("studentCalendarModalLabel");
         let pendingUnenrollCode = "";
 
         const setGreeting = () => {
@@ -1638,6 +2118,138 @@
         // Ensure toast helpers exist to avoid ReferenceErrors in pages that don't include them
         window.showSuccessToast = window.showSuccessToast || function(msg){ if (typeof showToast === 'function') return showToast(msg, 'success'); try{ alert(msg); }catch(e){} };
         window.showErrorToast = window.showErrorToast || function(msg){ if (typeof showToast === 'function') return showToast(msg, 'error'); try{ alert(msg); }catch(e){} };
+
+        const studentCalendarModal = studentCalendarModalElement && window.bootstrap
+            ? bootstrap.Modal.getOrCreateInstance(studentCalendarModalElement)
+            : null;
+
+        const studentCalendarEvents = Array.isArray(window.PABASA_STUDENT_CALENDAR_EVENTS) ? window.PABASA_STUDENT_CALENDAR_EVENTS : [];
+        const calendarMeta = {
+            schoolYear: "{{ student_calendar_school_year|default:'Not set'|escapejs }}",
+            currentTerm: "{{ student_calendar_current_term|default:'Not set'|escapejs }}",
+        };
+        const currentMonthDate = (() => {
+            const now = new Date();
+            return new Date(now.getFullYear(), now.getMonth(), 1);
+        })();
+
+        const eventColors = {
+            start_of_classes: { bg: "rgba(14, 165, 233, 0.16)", swatch: "rgba(14, 165, 233, 0.9)" },
+            end_of_classes: { bg: "rgba(124, 58, 237, 0.16)", swatch: "rgba(124, 58, 237, 0.9)" },
+            pre_assessment: { bg: "rgba(59, 130, 246, 0.16)", swatch: "rgba(59, 130, 246, 0.9)" },
+            post_assessment: { bg: "rgba(20, 184, 166, 0.16)", swatch: "rgba(20, 184, 166, 0.9)" },
+            examination: { bg: "rgba(248, 113, 113, 0.16)", swatch: "rgba(248, 113, 113, 0.9)" },
+            holiday: { bg: "rgba(251, 191, 36, 0.2)", swatch: "rgba(251, 191, 36, 0.95)" },
+            school_opening: { bg: "rgba(34, 197, 94, 0.16)", swatch: "rgba(34, 197, 94, 0.9)" },
+            school_closing: { bg: "rgba(168, 85, 247, 0.16)", swatch: "rgba(168, 85, 247, 0.9)" },
+            other: { bg: "rgba(148, 163, 184, 0.18)", swatch: "rgba(148, 163, 184, 0.95)" },
+        };
+
+        const formatMonthLabel = (date) => new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
+
+        const parseIsoDate = (value) => {
+            if (!value) return null;
+            const parsed = new Date(`${value}T00:00:00`);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+
+        const buildMonthGrid = (date) => {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const startOffset = firstDay.getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const cells = [];
+            for (let i = 0; i < startOffset; i += 1) cells.push(null);
+            for (let day = 1; day <= daysInMonth; day += 1) cells.push(new Date(year, month, day));
+            while (cells.length % 7 !== 0) cells.push(null);
+            const weeks = [];
+            for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+            return weeks;
+        };
+
+        const getEventsForDay = (date) => {
+            const iso = date.toISOString().slice(0, 10);
+            return studentCalendarEvents.filter((event) => {
+                const start = parseIsoDate(event.start);
+                const end = parseIsoDate(event.end_date || event.end || event.start);
+                if (!start || !end) return false;
+                const current = parseIsoDate(iso);
+                return current >= start && current <= end;
+            });
+        };
+
+        const renderExpandedCalendar = (date) => {
+            if (!studentCalendarExpanded) return;
+            const monthLabel = formatMonthLabel(date);
+            if (calendarMonthTitle) {
+                calendarMonthTitle.textContent = monthLabel;
+            }
+            const weeks = buildMonthGrid(date);
+            const today = new Date();
+            const todayIso = today.toISOString().slice(0, 10);
+            studentCalendarExpanded.innerHTML = `
+                <div class="student-calendar-weekdays" aria-hidden="true">
+                    <div class="student-calendar-weekday">Sun</div>
+                    <div class="student-calendar-weekday">Mon</div>
+                    <div class="student-calendar-weekday">Tue</div>
+                    <div class="student-calendar-weekday">Wed</div>
+                    <div class="student-calendar-weekday">Thu</div>
+                    <div class="student-calendar-weekday">Fri</div>
+                    <div class="student-calendar-weekday">Sat</div>
+                </div>
+                ${weeks.map((week) => `
+                    <div class="student-calendar-week">
+                        ${week.map((day) => {
+                            if (!day) {
+                                return '<div class="student-calendar-day is-empty"></div>';
+                            }
+                            const iso = day.toISOString().slice(0, 10);
+                            const dayEvents = getEventsForDay(day);
+                            return `
+                                <div class="student-calendar-day${iso === todayIso ? ' is-today' : ''}">
+                                    <div class="student-calendar-day-number">${day.getDate()}</div>
+                                    <div class="student-calendar-events">
+                                        ${dayEvents.map((event) => {
+                                            const color = eventColors[event.event_type] || eventColors.other;
+                                            return `<div class="student-calendar-event" data-event-type="${event.event_type}" title="${escapeHtml(`${event.title} (${event.start_date} - ${event.end_date})`)}" style="background:${color.bg};">${escapeHtml(event.title)}</div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `).join('')}
+            `;
+        };
+
+        const shiftExpandedMonth = (delta) => {
+            currentMonthDate.setMonth(currentMonthDate.getMonth() + delta);
+            renderExpandedCalendar(currentMonthDate);
+        };
+
+        const resetExpandedMonth = () => {
+            const now = new Date();
+            currentMonthDate.setFullYear(now.getFullYear(), now.getMonth(), 1);
+            renderExpandedCalendar(currentMonthDate);
+        };
+
+        studentCalendarModalElement?.addEventListener('show.bs.modal', () => {
+            renderExpandedCalendar(currentMonthDate);
+        });
+
+        studentCalendarModalElement?.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-calendar-nav]');
+            if (!button) return;
+            const action = button.getAttribute('data-calendar-nav');
+            if (action === 'prev') shiftExpandedMonth(-1);
+            if (action === 'next') shiftExpandedMonth(1);
+            if (action === 'today') resetExpandedMonth();
+        });
+
+        expandCalendarBtn?.addEventListener('click', () => {
+            studentCalendarModal?.show();
+        });
 
         setGreeting();
         if (classCodeInput) {
