@@ -536,532 +536,112 @@
     <div class="assessment-stage">
         <div>
             <span class="dash-pill mb-3">Main reading check</span>
-            <h2>Choose the reading route your teacher assigned.</h2>
-            <p>Each route opens a focused assessment screen. Start only when your room is quiet and your microphone is ready.</p>
+            <h2>Official reading assessments appear here when the School Calendar opens them.</h2>
+            <p>Each card shows the assessment that matches your class subject and the current official window.</p>
         </div>
         <aside class="status-ticket">
             <span class="ticket-label">Class status</span>
-            <strong id="classStatusTitle">Waiting for class</strong>
-            <div id="classStatusText" class="small mb-0" style="color: var(--dash-muted);">Join a class from the dashboard to receive assigned tests.</div>
+            <strong id="classStatusTitle">
+                {% if not joined_sections_count %}
+                    Waiting for class
+                {% elif official_assessment_available %}
+                    Official assessment available
+                {% else %}
+                    No official assessment
+                {% endif %}
+            </strong>
+            <div id="classStatusText" class="small mb-0" style="color: var(--dash-muted);">
+                {% if not joined_sections_count %}
+                    Join a class to access official reading assessments.
+                {% elif official_assessment_available %}
+                    {{ official_assessment_type|default:"pretest"|capfirst|cut:"test" }} assessment is ready for your enrolled subject.
+                {% else %}
+                    No official reading assessment is currently available. Assessment schedules follow the School Calendar.
+                {% endif %}
+            </div>
         </aside>
     </div>
 
-    <div class="subject-grid" id="subjectGrid"></div>
-
-</section>
-
-<script>
-    // --- Assessment click tracking and recent class order logic ---
-
-    function handleAssessmentClick(e) {
-        const link = e.target.closest('.assessment-type-link');
-        if (!link) return;
-
-        const classCode = link.getAttribute('data-class-code');
-        const subjectGrid = document.getElementById('subjectGrid');
-        if (classCode && subjectGrid) {
-            const orderKey = 'pabasa_recently_accessed_class_codes';
-            try {
-                const current = JSON.parse(localStorage.getItem(orderKey) || '[]');
-                const normalized = String(classCode).toUpperCase();
-                const filtered = current.filter((code) => String(code).toUpperCase() !== normalized);
-                filtered.push(normalized);
-                localStorage.setItem(orderKey, JSON.stringify(filtered));
-            } catch (error) {
-                console.warn('Unable to update recent class order:', error);
-            }
-
-            const subjectCard = link.closest('.subject-card');
-            if (subjectCard && subjectCard.parentElement === subjectGrid) {
-                subjectGrid.prepend(subjectCard);
-            }
-        }
-    }
-
-    // Event delegation for subject grid cards
-    const subjectGrid = document.getElementById('subjectGrid');
-    if (subjectGrid) {
-        subjectGrid.addEventListener('click', handleAssessmentClick);
-    }
-
-    (async () => {
-        const studentClassCodesKey = "pabasaStudentClassCodes";
-        const legacyStudentClassCodeKey = "pabasaStudentClassCode";
-        const teacherClassesKey = "pabasa_teacher_classes";
-        const studentClassesKey = "pabasa_student_joined_classes";
-        const readingsStorageKey = "pabasa_class_readings";
-        const completedAssessmentIdsKey = "pabasa_completed_assessment_ids";
-        const materialTypes = ["word", "sentence", "paragraph", "vowel"];
-        const selectedClassCode = (new URLSearchParams(window.location.search).get("code") || "").trim().toUpperCase();
-
-        const escapeHtml = (value) => {
-            const div = document.createElement("div");
-            div.textContent = value == null ? "" : String(value);
-            return div.innerHTML;
-        };
-
-        const getMaterialLanguageLabel = (material) => {
-            const rawLanguage = material?.language
-                || (material?.content_json && typeof material.content_json === 'object' ? material.content_json.language : '')
-                || (material?.metadata && typeof material.metadata === 'object' ? material.metadata.language : '')
-                || '';
-            const normalized = String(rawLanguage || '').trim();
-            return normalized || 'Unknown';
-        };
-
-        const getMaterialLanguageBadgeHtml = (material) => {
-            const label = getMaterialLanguageLabel(material);
-            const isUnknown = label === 'Unknown';
-            const styles = isUnknown
-                ? 'background: rgba(148, 163, 184, 0.14); color: #64748b; border: 1px solid rgba(148, 163, 184, 0.22);'
-                : 'background: rgba(31, 111, 139, 0.08); color: var(--dash-primary); border: 1px solid rgba(31, 111, 139, 0.2);';
-            return `<span class="badge rounded-pill px-2 py-1" style="${styles} font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em;">${escapeHtml(label)}</span>`;
-        };
-
-        const getStoredArray = (key) => {
-            try {
-                const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (error) { return []; }
-        };
-
-        const getStoredObject = (key) => {
-            try {
-                const parsed = JSON.parse(window.localStorage.getItem(key) || "{}");
-                return (parsed && typeof parsed === "object") ? parsed : {};
-            } catch (error) { return {}; }
-        };
-
-        const fetchMaterialsFromDatabase = async (classCode) => {
-            try {
-                const response = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(classCode)}`);
-                const data = await response.json();
-                if (data.success) {
-                    // Sync to localStorage for components like sidebar badges
-                    const readings = getStoredObject(readingsStorageKey);
-                    readings[classCode.toUpperCase()] = data.materials;
-                    localStorage.setItem(readingsStorageKey, JSON.stringify(readings));
-
-                    // Store class metadata to ensure titles match what the teacher set
-                    const metadata = getStoredObject("pabasa_class_metadata");
-                    metadata[classCode.toUpperCase()] = { 
-                        name: data.class_name || "Reading Class", 
-                        subject: data.subject || "Reading" 
-                    };
-                    localStorage.setItem("pabasa_class_metadata", JSON.stringify(metadata));
-                    
-                    return data.materials;
-                }
-            } catch (error) {
-                console.error(`Error syncing materials for ${classCode}:`, error);
-            }
-            return null;
-        };
-
-        const getJoinedCodes = () => {
-            const codes = getStoredArray(studentClassCodesKey).filter(Boolean);
-            const legacyCode = window.localStorage.getItem(legacyStudentClassCodeKey);
-            if (!codes.length && legacyCode) {
-                codes.push(legacyCode);
-            }
-            const normalizedCodes = codes.map((code) => String(code).toUpperCase());
-            if (selectedClassCode && normalizedCodes.includes(selectedClassCode)) {
-                return [selectedClassCode];
-            }
-            if (selectedClassCode) {
-                return [];
-            }
-            return normalizedCodes;
-        };
-
-            const getAssessmentMaterials = async () => {
-            const joinedCodes = getJoinedCodes();
-            
-            // Autoritative sync: Fetch materials from DB for each joined class
-            for (const code of joinedCodes) {
-                await fetchMaterialsFromDatabase(code);
-            }
-
-            const teacherClasses = getStoredArray(teacherClassesKey);
-            const studentClasses = getStoredArray(studentClassesKey);
-            const allKnownClasses = [...teacherClasses, ...studentClasses];
-            const metadataMap = getStoredObject("pabasa_class_metadata");
-
-            const readingsByClass = getStoredObject(readingsStorageKey);
-
-            const readingsMap = {};
-            Object.keys(readingsByClass).forEach(key => {
-                readingsMap[key.toUpperCase()] = readingsByClass[key];
-            });
-
-            return joinedCodes.map((code) => {
-                const upperCode = String(code).toUpperCase();
-                const meta = metadataMap[upperCode] || {};
-                
-                // Find the class details from synchronized joined classes or cached metadata
-                const foundClass = allKnownClasses.find((item) => String(item.code || "").toUpperCase() === upperCode);
-                const classData = foundClass || { 
-                    code: upperCode, 
-                    name: meta.name || "Reading Class", 
-                    subject: meta.subject || "Reading" 
-                };
-                
-                const readings = readingsMap[upperCode] || {};
-                const materials = {};
-
-                materialTypes.forEach((type) => {
-                    // Support both singular and plural forms (word/words) for broader compatibility
-                    const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
-                    materials[type] = list
-                        .filter((material) => material && material.type && (material.type.toLowerCase() === "assessment" || material.type.toLowerCase() === "both"))
-                        .filter((material) => {
-                            // Check if material is live (published or scheduled time passed)
-                            if (!material.status || material.status === 'published') return true;
-                            if (material.status === 'scheduled' && material.schedule) {
-                                return new Date(material.schedule).getTime() <= Date.now();
-                            }
-                            return false;
-                        });
-                });
-                return { classData, materials };
-            });
-        };
-
-        async function updateClassStatus() {
-            const title = document.getElementById("classStatusTitle");
-            const text = document.getElementById("classStatusText");
-
-            if (!title || !text) return;
-
-            const joinedCodes = getJoinedCodes();
-
-            if (!joinedCodes.length) {
-                title.textContent = "Waiting for class";
-                text.innerHTML = "Join a class from the dashboard to receive assigned tests.";
-                return;
-            }
-
-            const readingsByClass = getStoredObject(readingsStorageKey);
-            const readingsMap = {};
-            Object.keys(readingsByClass).forEach(key => {
-                readingsMap[key.toUpperCase()] = readingsByClass[key];
-            });
-
-            let totalAssigned = 0;
-            let totalCompleted = 0;
-
-            joinedCodes.forEach(code => {
-                const readings = readingsMap[code] || {};
-                materialTypes.forEach(type => {
-                    const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
-                    list.forEach(m => {
-                        if (m && m.type && (m.type.toLowerCase() === "assessment" || m.type.toLowerCase() === "both")) {
-                             let isLive = !m.status || m.status === 'published';
-                             if (m.status === 'scheduled' && m.schedule) {
-                                 isLive = new Date(m.schedule).getTime() <= Date.now();
-                             }
-                             if (isLive) {
-                                 totalAssigned++;
-                                 const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
-                                 if (isAssessmentCompleted(m, mId)) {
-                                     totalCompleted++;
-                                 }
-                             }
-                        }
-                    });
-                });
-            });
-
-            const progress = totalAssigned > 0 ? Math.round((totalCompleted / totalAssigned) * 100) : 0;
-            const remaining = Math.max(0, totalAssigned - totalCompleted);
-
-            title.textContent = joinedCodes.length === 1 ? "Classroom Active" : "Classrooms Active";
-            
-            text.innerHTML = `
-                <div class="ticket-progress">
-                    <div class="ticket-progress-bar" style="width: ${progress}%"></div>
-                </div>
-                <div class="ticket-metrics mb-2">
-                    <span><span class="highlight">${progress}%</span> Progress</span>
-                    <span><span class="highlight">${totalCompleted}/${totalAssigned}</span> Completed</span>
-                </div>
-                <p class="small mb-0" style="color: var(--dash-muted); line-height: 1.4;">
-                    ${totalAssigned === 0 
-                        ? "No assessments assigned yet." 
-                        : (remaining === 0 
-                            ? "<strong>Mission Accomplished!</strong> All assessments are finished." 
-                            : `You have <strong>${remaining}</strong> assessment${remaining === 1 ? "" : "s"} left to complete.`)}
-                </p>
-            `;
-        }
-
-            // Helper: completion is explicit, either from the server or from a
-            // local completion written only after the student finishes the reader.
-            const completedIncludes = (mid) => {
-                if (!mid) return false;
-                const m = String(mid).trim();
-                const storedCompletedIds = JSON.parse(localStorage.getItem(completedAssessmentIdsKey) || "[]").map(id => String(id).trim());
-                return storedCompletedIds.includes(m);
-            };
-
-            const isAssessmentCompleted = (material, materialId) => {
-                return Boolean(
-                    material &&
-                    (
-                        material.student_has_completed === true ||
-                        Number(material.completed_attempt_count || 0) > 0 ||
-                        completedIncludes(materialId)
-                    )
-                );
-            };
-
-            function formatAssignedWeek(week) {
-                if (week === null || week === undefined || week === '' || week === 'Unassigned') {
-                    return 'Unassigned';
-                }
-                const num = parseInt(week, 10);
-                if (!Number.isNaN(num) && num >= 1 && num <= 99) {
-                    return `Week ${num}`;
-                }
-                return 'Unassigned';
-            }
-
-            function formatAssessmentDuration(seconds) {
-                const totalSeconds = Math.max(0, Math.round(Number(seconds || 0)));
-                const hours = Math.floor(totalSeconds / 3600);
-                const minutes = Math.floor((totalSeconds % 3600) / 60);
-                const remainingSeconds = totalSeconds % 60;
-                if (hours > 0) {
-                    return `Time ${hours}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-                }
-                return `Time ${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-            }
-
-            function assignedWeekSortValue(week) {
-                if (week === 'Unassigned') {
-                    return 1000;
-                }
-                if (typeof week === 'string' && week.startsWith('Week ')) {
-                    const parsed = parseInt(week.replace('Week ', ''), 10);
-                    return Number.isNaN(parsed) ? 1000 : parsed;
-                }
-                const label = formatAssignedWeek(week);
-                return label === 'Unassigned' ? 1000 : parseInt(label.replace('Week ', ''), 10);
-            }
-
-            function getWeekColumnMinWidth() {
-                if (window.innerWidth <= 767.98) {
-                    return 0;
-                }
-                if (window.innerWidth <= 991.98) {
-                    return 240;
-                }
-                return 280;
-            }
-
-            function getWeekColumnsPerRow(containerWidth) {
-                const minWidth = getWeekColumnMinWidth();
-                if (!minWidth) {
-                    return 1;
-                }
-                const gap = 12;
-                const safeWidth = Math.max(minWidth, Number(containerWidth) || 0);
-                return Math.max(1, Math.floor((safeWidth + gap) / (minWidth + gap)));
-            }
-
-            function chunkWeeksByRow(weeks, containerWidth) {
-                const columnsPerRow = getWeekColumnsPerRow(containerWidth);
-                const rows = [];
-                for (let index = 0; index < weeks.length; index += columnsPerRow) {
-                    rows.push(weeks.slice(index, index + columnsPerRow));
-                }
-                return rows;
-            }
-
-            const getRecentClassOrder = () => {
-                try {
-                    return JSON.parse(localStorage.getItem('pabasa_recently_accessed_class_codes') || '[]');
-                } catch (error) {
-                    return [];
-                }
-            };
-
-            const getClassSortPriority = (classCode) => {
-                const normalizedClassCode = String(classCode || '').toUpperCase();
-                if (selectedClassCode && normalizedClassCode === selectedClassCode) {
-                    return -1;
-                }
-                const recentOrder = getRecentClassOrder();
-                const index = recentOrder.findIndex((code) => String(code).toUpperCase() === normalizedClassCode);
-                return index >= 0 ? index : Number.MAX_SAFE_INTEGER;
-            };
-
-            async function updateAssessmentHub() {
-            const grid = document.getElementById("subjectGrid");
-            if (!grid) return;
-
-            const classMaterials = await getAssessmentMaterials();
-            if (!classMaterials.length) {
-                const emptyTitle = selectedClassCode ? "Class not available" : "No classes joined yet";
-                const emptyMessage = selectedClassCode
-                    ? "This class is not currently joined on your dashboard."
-                    : "Join a class from your dashboard to start your reading assessments.";
-                grid.innerHTML = `
-                    <div class="assessment-empty-state">
-                        <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
-                        <h3>${emptyTitle}</h3>
-                        <p>${emptyMessage}</p>
-                    </div>`;
-                return;
-            }
-
-            const orderedClassMaterials = [...classMaterials].sort((a, b) => {
-                const aPriority = getClassSortPriority(a.classData?.code);
-                const bPriority = getClassSortPriority(b.classData?.code);
-                return aPriority - bPriority;
-            });
-
-            grid.innerHTML = orderedClassMaterials.map(({ classData, materials }) => {
-                const itemsToRender = [];
-                materialTypes.forEach(type => {
-                    materials[type].forEach(m => {
-                        itemsToRender.push({ ...m, category: type });
-                    });
-                });
-
-                const groups = itemsToRender.reduce((acc, m) => {
-                    const week = m.assigned_week_display || formatAssignedWeek(m.assigned_week);
-                    if (!acc[week]) acc[week] = [];
-                    acc[week].push(m);
-                    return acc;
-                }, {});
-
-                const sortedWeeks = Object.keys(groups).sort((a, b) => assignedWeekSortValue(a) - assignedWeekSortValue(b));
-
-                const contentHtml = (() => {
-                    const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}", vowel: "{% url 'reading_vowel_page' %}" };
-                    const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text', vowel: 'bi-soundwave' };
-                    const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading', vowel: 'Vowel Reading' };
-                    const rowWeekGroups = chunkWeeksByRow(sortedWeeks, grid.clientWidth || grid.offsetWidth || window.innerWidth || 0);
-                    const renderedRowGroups = rowWeekGroups.map((weekGroup) => {
-                        const maxRows = weekGroup.reduce((max, week) => Math.max(max, groups[week].length), 0);
-                        const renderedColumns = weekGroup.map((week) => {
-                        const weekItems = groups[week];
-                        const renderedRows = [];
-
-                        for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
-                            const m = weekItems[rowIndex];
-                            if (!m) {
-                                renderedRows.push(`
-                                    <div class="assessment-card-shell is-placeholder" aria-hidden="true">
-                                        <a class="assessment-type-link" tabindex="-1">
-                                            <div class="type-meta">
-                                                <span class="type-icon"></span>
-                                                <div class="type-info">
-                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                        <strong>&nbsp;</strong>
-                                                    </div>
-                                                    <span>&nbsp;</span>
-                                                </div>
-                                            </div>
-                                            <i class="bi bi-play-circle-fill text-primary"></i>
-                                        </a>
-                                    </div>
-                                `);
-                                continue;
-                            }
-
-                            const mId = (m.id !== undefined && m.id !== null) ? String(m.id).trim() : null;
-                            const isDone = isAssessmentCompleted(m, mId);
-                            const isLocked = !Boolean(m.student_access);
-                            const latestAttemptSummary = m.latest_attempt_summary || {};
-                            const completionSeconds = latestAttemptSummary.duration_seconds != null && latestAttemptSummary.duration_seconds !== '' ? Number(latestAttemptSummary.duration_seconds) : null;
-                            const timeScoreMarkup = isDone && completionSeconds != null && !Number.isNaN(completionSeconds) && completionSeconds > 0
-                                ? `<span class="assessment-time-score-badge"><i class="bi bi-stopwatch"></i> ${formatAssessmentDuration(completionSeconds)}</span>`
-                                : '';
-
-                            renderedRows.push(`
-                                <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}">
-                                    <a href="${isLocked ? '#' : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${classData.code}&id=${m.id}`}" class="assessment-type-link type-${m.category} ${isDone ? 'is-done' : ''} ${isLocked ? 'is-disabled is-locked' : ''}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
-                                        <div class="type-meta">
-                                            <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
-                                            <div class="type-info">
-                                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                    <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
-                                                    ${getMaterialLanguageBadgeHtml(m)}
-                                                </div>
-                                                <span>${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span>
-                                                ${timeScoreMarkup}
-                                            </div>
-                                        </div>
-                                        <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-play-circle-fill text-primary'}"></i>
-                                    </a>
-                                    ${isLocked ? `
-                                        <div class="assessment-lock-overlay" aria-hidden="true">
-                                            <div class="assessment-lock-title">
-                                                <i class="bi bi-lock-fill"></i>
-                                                <strong>Assessment Locked</strong>
-                                            </div>
-                                            <span>This assessment is currently unavailable. Please wait for your teacher to enable student access.</span>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `);
-                        }
-
-                            return `
-                                <div class="assessment-week-column">
-                                    <div class="assessment-week-chip">${escapeHtml(week)}</div>
-                                    <div class="assessment-week-cards">
-                                        ${renderedRows.join("")}
-                                    </div>
-                                </div>
-                            `;
-                        });
-
-                        return `<div class="assessment-grid">${renderedColumns.join("")}</div>`;
-                    });
-
-                    return `<div class="assessment-grid-stack">${renderedRowGroups.join("")}</div>`;
-                })();
-
-                return `
-                <div class="subject-card" data-class-code="${escapeHtml(classData.code)}">
+    <div class="subject-grid" id="subjectGrid">
+        {% if not joined_sections_count %}
+            <div class="assessment-empty-state">
+                <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
+                <h3>Join a class first</h3>
+                <p>Join a class to access official reading assessments.</p>
+            </div>
+        {% elif not official_assessment_available %}
+            <div class="assessment-empty-state">
+                <i class="bi bi-calendar-x" style="font-size: 3rem; opacity: 0.3;"></i>
+                <h3>No official assessment available</h3>
+                <p>No official reading assessment is currently available. Assessment schedules follow the School Calendar.</p>
+            </div>
+        {% elif official_assessment_has_pending %}
+            {% for assessment in official_reading_assessments %}
+                <div class="subject-card">
                     <div class="subject-info">
                         <div>
-                            <h3>${escapeHtml(classData.name)}</h3>
-                            <p class="small text-secondary mb-0">${escapeHtml(classData.subject || "Reading")}</p>
+                            <h3>{{ assessment.subject|default:assessment.language|default:"Official Reading Assessment" }}</h3>
+                            <p class="small text-secondary mb-0">{{ assessment.language|default:"Unknown" }}</p>
                         </div>
-                        <span class="subject-code">${escapeHtml(classData.code)}</span>
+                        <span class="subject-code">{{ assessment.language|default:"Official" }}</span>
                     </div>
-                    
-                    ${contentHtml || '<p class="text-center text-muted small my-3">No assessments assigned for this class.</p>'}
-                </div>`;
-            }).join("");
-        }
 
-        await updateAssessmentHub();
-        updateClassStatus();
-        window.addEventListener("pabasa:student-class-updated", () => {
-            updateAssessmentHub();
-            updateClassStatus();
-        });
-        window.addEventListener("storage", (event) => {
-            if ([studentClassCodesKey, legacyStudentClassCodeKey, teacherClassesKey, readingsStorageKey, completedAssessmentIdsKey].includes(event.key)) {
-                updateAssessmentHub();
-                updateClassStatus();
-            }
-        });
-        let assessmentHubResizeFrame = null;
-        window.addEventListener("resize", () => {
-            if (assessmentHubResizeFrame) {
-                window.cancelAnimationFrame(assessmentHubResizeFrame);
-            }
-            assessmentHubResizeFrame = window.requestAnimationFrame(() => {
-                assessmentHubResizeFrame = null;
-                updateAssessmentHub();
-            });
-        });
-    })();
-</script>
+                    <div class="assessment-grid-stack">
+                        <div class="assessment-card-shell">
+                            <div class="assessment-type-link type-word {% if assessment.completed %}is-done{% endif %}">
+                                <div class="type-meta">
+                                    <span class="type-icon"><i class="bi bi-journal-text"></i></span>
+                                    <div class="type-info">
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <strong>{{ assessment.subject|default:assessment.language|default:"Official Reading" }}</strong>
+                                            {% if assessment.completed %}
+                                                <span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">COMPLETED</span>
+                                            {% endif %}
+                                        </div>
+                                        <span>
+                                            {% if official_assessment_type == "posttest" %}Post-Assessment{% else %}Pre-Assessment{% endif %}
+                                            · School Year {{ active_school_calendar.school_year|default:"Not set" }}
+                                            · Term {{ selected_term|default:active_school_calendar.current_term|default:"Not set" }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if assessment.completed %}
+                                        <span class="badge rounded-pill assessment-done-pill px-3 py-2">Completed ✓</span>
+                                    {% else %}
+                                        <a
+                                            class="btn btn-primary btn-sm workflow-button primary"
+                                            href="{{ assessment.launch_url }}"
+                                        >
+                                            <i class="bi bi-play-fill"></i> Start Assessment
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="small text-secondary">
+                            <div><strong>Subject / Language:</strong> {{ assessment.subject|default:assessment.language|default:"Unknown" }}</div>
+                            <div><strong>Assessment Type:</strong> {% if official_assessment_type == "posttest" %}Post-Assessment{% else %}Pre-Assessment{% endif %}</div>
+                            <div><strong>School Year:</strong> {{ active_school_calendar.school_year|default:"Not set" }}</div>
+                            <div><strong>Current Term:</strong> Term {{ selected_term|default:active_school_calendar.current_term|default:"Not set" }}</div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="assessment-empty-state">
+                    <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <h3>No matching official assessment</h3>
+                    <p>No official reading assessment matched your enrolled subject or language.</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="assessment-empty-state">
+                <i class="bi bi-check2-circle" style="font-size: 3rem; opacity: 0.3;"></i>
+                <h3>All official assessments completed</h3>
+                <p>You have finished every official assessment in this window. Regular reading assessments are available again on the main assessment page.</p>
+            </div>
+        {% endif %}
+    </div>
+
+</section>
 {% endblock %}

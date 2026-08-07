@@ -66,11 +66,12 @@
         const liveContent = urlParams.get("content") || "";
         const liveItemType = (urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
         const liveLanguage = urlParams.get("language") || "";
+        const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         const isReviewMode = viewMode === "view";
         const isRetakeMode = viewMode === "retake";
         const isPractice = false;
         const updateAssessmentLanguageLabel = (language) => {
-            const displayLanguage = /tagalog|filipino|fil\b/i.test(String(language || "")) ? "Tagalog" : "English";
+            const displayLanguage = /filipino|fil\b/i.test(String(language || "")) ? "Filipino" : "English";
             if (testMeta) testMeta.textContent = `${testTitle} - ${testCode} · Language: ${displayLanguage}`;
         };
         updateAssessmentLanguageLabel(liveLanguage);
@@ -499,30 +500,8 @@
         }
 
         function loadItems() {
-            const persistedRaw = sessionStorage.getItem('pabasa_crla_assessment_items');
-            if (persistedRaw) {
-                try {
-                    const persistedItems = parsePersistedAssessmentItems(JSON.parse(persistedRaw));
-                    if (persistedItems.length > 0) {
-                        items = persistedItems.map(item => item.text);
-                        itemTypes = persistedItems.map(item => item.type || mode);
-                        itemPages = buildItemPages(items, itemTypes);
-                        pageCorrectWordCounts = items.map(() => []);
-                        setCurrentItemMode(itemTypes[0] || mode);
-                        currentMaterialLanguage = liveLanguage || "";
-                        correctWordCounts = new Array(items.length).fill(0);
-                        currentIndex = 0;
-                        currentPageIndex = 0;
-                        updateUI();
-                        animateCurrentItem();
-                        return;
-                    }
-                } catch (error) {
-                    console.warn('PABASA: Unable to parse persisted assessment items', error);
-                }
-            }
-
-            if (liveContent) {
+            const isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
+            if (isOfficialAssessmentLaunch && liveContent) {
                 items = parseLiveContent(liveContent, liveItemType || mode);
                 itemTypes = new Array(items.length).fill(String(liveItemType || mode || 'word').toLowerCase());
                 itemPages = buildItemPages(items, itemTypes);
@@ -539,6 +518,50 @@
                 updateUI();
                 animateCurrentItem();
                 return;
+            }
+
+            if (!isOfficialAssessmentLaunch) {
+                const persistedRaw = sessionStorage.getItem('pabasa_crla_assessment_items');
+                if (persistedRaw) {
+                    try {
+                        const persistedItems = parsePersistedAssessmentItems(JSON.parse(persistedRaw));
+                        if (persistedItems.length > 0) {
+                            items = persistedItems.map(item => item.text);
+                            itemTypes = persistedItems.map(item => item.type || mode);
+                            itemPages = buildItemPages(items, itemTypes);
+                            pageCorrectWordCounts = items.map(() => []);
+                            setCurrentItemMode(itemTypes[0] || mode);
+                            currentMaterialLanguage = liveLanguage || "";
+                            correctWordCounts = new Array(items.length).fill(0);
+                            currentIndex = 0;
+                            currentPageIndex = 0;
+                            updateUI();
+                            animateCurrentItem();
+                            return;
+                        }
+                    } catch (error) {
+                        console.warn('PABASA: Unable to parse persisted assessment items', error);
+                    }
+                }
+
+                if (liveContent) {
+                    items = parseLiveContent(liveContent, liveItemType || mode);
+                    itemTypes = new Array(items.length).fill(String(liveItemType || mode || 'word').toLowerCase());
+                    itemPages = buildItemPages(items, itemTypes);
+                    pageCorrectWordCounts = items.map(() => []);
+                    currentMaterialLanguage = liveLanguage || "";
+                    correctWordCounts = new Array(items.length).fill(0);
+                    if (items.length === 0) {
+                        if (readingWord) readingWord.textContent = "No assessment items assigned.";
+                        if (nextBtn) nextBtn.disabled = true;
+                        return;
+                    }
+                    currentIndex = 0;
+                    currentPageIndex = 0;
+                    updateUI();
+                    animateCurrentItem();
+                    return;
+                }
             }
 
             // Prioritize the specific class code from the URL to prevent mixing materials from other classes

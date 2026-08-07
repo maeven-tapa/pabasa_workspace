@@ -94,8 +94,6 @@ PRACTICE_ACTIVE_SESSION_KEY = "practice_active_session"
 
 def _practice_language_value(value):
     normalized = Material.normalize_language_value(value)
-    if normalized == "Tagalog":
-        return "Filipino"
     return normalized
 
 
@@ -352,6 +350,8 @@ def _material_school_year_label(material):
 
 def _existing_crla_assessment_for_school_year(teacher_user=None):
     start_date, end_date, label = _current_school_year_bounds()
+    if start_date is None or end_date is None:
+        return None, label
     qs = Material.objects.filter(
         type='assessment',
         assessment_kind='crla',
@@ -4551,11 +4551,27 @@ def _calendar_preassessment_block(school_calendar, term):
     return school_calendar.events.filter(term=term, event_type='pre_assessment').order_by('start_date', 'created_at').first()
 
 
+def _calendar_postassessment_block(school_calendar, term):
+    if not school_calendar or term not in {1, 2, 3, 4}:
+        return None
+    return school_calendar.events.filter(term=term, event_type='post_assessment').order_by('start_date', 'created_at').first()
+
+
 def _calendar_is_in_preassessment_window(school_calendar, term, on_date=None):
     from datetime import date as _date
 
     check_date = on_date or _date.today()
     block = _calendar_preassessment_block(school_calendar, term)
+    if not block:
+        return False
+    return block.start_date <= check_date <= block.end_date
+
+
+def _calendar_is_in_postassessment_window(school_calendar, term, on_date=None):
+    from datetime import date as _date
+
+    check_date = on_date or _date.today()
+    block = _calendar_postassessment_block(school_calendar, term)
     if not block:
         return False
     return block.start_date <= check_date <= block.end_date
@@ -4898,62 +4914,215 @@ def _official_reading_material_available_now(term, school_calendar=None, on_date
     return _calendar_is_in_preassessment_window(active_calendar, term, on_date=on_date)
 
 
-def _official_reading_material_for_student(student):
+def _official_assessment_availability_for_student(student, request=None):
     if not student or getattr(student, 'role', '') != 'student':
-        return None, None
+        return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
 
-    active_calendar = _active_school_calendar()
+    selected_calendar, _, active_calendar = _selected_school_calendar(request)
+    active_calendar = selected_calendar or active_calendar
     if not active_calendar:
-        return None, None
+        return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
 
     current_term = _calendar_current_term(active_calendar) or getattr(active_calendar, 'current_term', None)
     if current_term not in {1, 2, 3, 4}:
-        return None, None
+        return {'available': False, 'assessment_type': None, 'school_year': active_calendar.school_year, 'current_term': None, 'active_window': _assessment_window_choice()}
 
-    if not _calendar_is_in_preassessment_window(active_calendar, current_term):
-        return None, None
-
-    sections = [
+    joined_sections = [
         section
-        for section in Section.objects.filter(is_active=True).select_related('teacher')
+        for section in Section.objects.filter(is_active=True).only('id', 'students')
         if section.has_student(student, active_only=True)
     ]
-    if not sections:
-        return None, None
+    if not joined_sections:
+        return {
+            'available': False,
+            'assessment_type': None,
+            'school_year': active_calendar.school_year,
+            'current_term': current_term,
+            'active_window': _assessment_window_choice(),
+        }
 
-    student_subjects = {
-        str(getattr(section, 'subject', '') or '').strip().title()
-        for section in sections
-        if str(getattr(section, 'subject', '') or '').strip()
+    active_window = _assessment_window_choice()
+    period, phase = _assessment_window_parts(active_window)
+    if phase == 'pretest':
+        in_window = _calendar_is_in_preassessment_window(active_calendar, current_term)
+        assessment_type = 'pretest'
+    else:
+        in_window = _calendar_is_in_postassessment_window(active_calendar, current_term)
+        assessment_type = 'posttest'
+
+    return {
+        'available': bool(in_window),
+        'assessment_type': assessment_type if in_window else None,
+        'school_year': active_calendar.school_year,
+        'current_term': current_term,
+        'active_window': active_window,
     }
-    if not student_subjects:
-        student_subjects = {'English'}
-
-    material = (
-        Material.objects.filter(
-            is_official_reading=True,
-            official_term=current_term,
-            is_active=True,
-        )
-        .order_by('-updated_at', '-created_at')
-    )
-    material = next((item for item in material if _official_reading_subject(item) in student_subjects), None)
-
-    if not material or material.has_student_completed(student):
-        return None, None
-
-    return material, active_calendar
 
 
 def _official_reading_material_payload(material):
     content_json = getattr(material, 'content_json', None) or {}
+    items = content_json.get('items') if isinstance(content_json.get('items'), list) else []
+    content_text = content_json.get('content_text') or getattr(material, 'content_text', '') or ''
     return {
         'id': material.id,
         'title': material.title or '',
         'language': material.language or 'English',
         'instructions': content_json.get('instructions', ''),
+        'items': [str(item).strip() for item in items if str(item).strip()],
+        'content': content_text,
+        'code': getattr(material, 'code', '') or '',
+        'item_type': getattr(material, 'item_type', '') or 'word',
         'status': material.status or 'draft',
         'updated_at': material.updated_at,
+    }
+
+
+def _official_reading_assessments_for_student(student, availability):
+    if not availability or not availability.get('available'):
+        return []
+
+    active_calendar = _active_school_calendar()
+    school_year_value = availability.get('school_year') or (active_calendar.school_year if active_calendar else '')
+    current_term = availability.get('current_term')
+    assessment_type = str(availability.get('assessment_type') or '').strip().lower()
+    if assessment_type not in {'pretest', 'posttest'}:
+        return []
+
+    if not active_calendar or not school_year_value or len(school_year_value) < 9:
+        return []
+
+    start_year = int(school_year_value[:4])
+    end_year = int(school_year_value[5:])
+    school_year_materials = _official_reading_materials_queryset().filter(
+        created_at__date__gte=date(start_year, 6, 1),
+        created_at__date__lte=date(end_year, 5, 31),
+        official_term=current_term,
+    )
+    if assessment_type == 'pretest':
+        school_year_materials = school_year_materials.filter(content_json__assessment_type='pre_assessment')
+    else:
+        school_year_materials = school_year_materials.filter(content_json__assessment_type='post_assessment')
+
+    subject_materials = {}
+    for material in school_year_materials:
+        key = _official_reading_subject(material)
+        if key and key not in subject_materials:
+            subject_materials[key] = material
+
+    joined_sections = [
+        section
+        for section in Section.objects.filter(is_active=True).only('id', 'students', 'subject')
+        if section.has_student(student, active_only=True)
+    ]
+    if not joined_sections:
+        return []
+
+    student_subjects = []
+    seen_subjects = set()
+    for section in joined_sections:
+        subject = str(getattr(section, 'subject', '') or '').strip()
+        normalized_subject = 'Filipino' if subject.lower() == 'filipino' else 'English'
+        if normalized_subject not in seen_subjects:
+            seen_subjects.add(normalized_subject)
+            student_subjects.append(normalized_subject)
+
+    if not student_subjects:
+        student_subjects = ['English']
+
+    matching_assessments = []
+    for subject in student_subjects:
+        material = subject_materials.get(subject)
+        if not material:
+            continue
+        payload = _official_reading_material_payload(material)
+        payload['subject'] = subject
+        payload['assessment_type'] = 'Pre-Assessment' if assessment_type == 'pretest' else 'Post-Assessment'
+        payload['assessment_type_key'] = assessment_type
+        payload['launch_url'] = (
+            f"{reverse('reading_word_page')}?test={quote(payload['title'])}"
+            f"&code={quote(payload['code'] or 'OFFICIAL')}"
+            f"&id={payload['id']}"
+            f"&content={quote(payload['content'] or '')}"
+            f"&item_type={quote(payload['item_type'] or 'word')}"
+            f"&language={quote(payload['language'] or '')}"
+            f"&instructions={quote(payload['instructions'] or '')}"
+        )
+        matching_assessments.append(payload)
+
+    return matching_assessments
+
+
+def _official_reading_completion_for_assessment(student, assessment_payload, school_year_value):
+    material_id = assessment_payload.get('id')
+    if not student or not material_id:
+        return {
+            'completed': False,
+            'completed_at': None,
+            'existing_record': None,
+        }
+
+    material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+    if not material:
+        return {
+            'completed': False,
+            'completed_at': None,
+            'existing_record': None,
+        }
+
+    term_value = getattr(material, 'official_term', None)
+    assessment_type_value = str(assessment_payload.get('assessment_type') or _official_reading_assessment_type(material) or '').strip().lower()
+    subject_value = str(assessment_payload.get('subject') or _official_reading_subject(material) or '').strip().lower()
+    language_value = str(assessment_payload.get('language') or getattr(material, 'language', '') or '').strip().lower()
+
+    if not school_year_value or len(str(school_year_value)) < 9:
+        return {
+            'completed': False,
+            'completed_at': None,
+            'existing_record': None,
+        }
+
+    start_year = int(str(school_year_value)[:4])
+    end_year = int(str(school_year_value)[5:])
+    year_start = date(start_year, 6, 1)
+    year_end = date(end_year, 5, 31)
+
+    completed_record = material.assessment_results.filter(
+        student=student,
+        attempt_status='completed',
+        completed_at__date__gte=year_start,
+        completed_at__date__lte=year_end,
+    )
+
+    if hasattr(completed_record, 'select_related'):
+        completed_record = completed_record.select_related('source_assessment').order_by('-completed_at', '-updated_at', '-created_at', '-id')
+    existing_record = None
+    for record in completed_record:
+        record_type = str(
+            getattr(record, 'assessment_type', '') or
+            getattr(getattr(record, 'source_assessment', None), 'assessment_type', '') or
+            ''
+        ).strip().lower()
+        record_subject = str(
+            getattr(record, 'material', None) and _official_reading_subject(record.material) or
+            _official_reading_subject(material)
+        ).strip().lower()
+        record_language = str(
+            getattr(record, 'material', None) and getattr(record.material, 'language', '') or
+            getattr(material, 'language', '') or ''
+        ).strip().lower()
+        record_term = getattr(record.material, 'official_term', None) if getattr(record, 'material', None) else None
+        if record_type == assessment_type_value and record_subject == subject_value and record_language == language_value and record_term == term_value:
+            existing_record = record
+            break
+
+    completed_at = None
+    if existing_record is not None:
+        completed_at = existing_record.completed_at.isoformat() if getattr(existing_record, 'completed_at', None) else None
+
+    return {
+        'completed': existing_record is not None,
+        'completed_at': completed_at,
+        'existing_record': existing_record,
     }
 
 
@@ -5904,12 +6073,9 @@ def assessment(request):
     workflow['stage'] = stage
 
     official_calendar = _active_school_calendar()
-    official_material, official_calendar = _official_reading_material_for_student(user)
+    official_availability = _official_assessment_availability_for_student(user, request)
     if period == 'bosy' and not completed_pretest:
-        if not joined_sections:
-            stage = 'no_assessment'
-            workflow['stage'] = stage
-        elif official_material is not None:
+        if official_availability.get('available'):
             stage = 'assessment'
             workflow['stage'] = stage
         else:
@@ -5925,7 +6091,7 @@ def assessment(request):
         kind = _assessment_kind_value(material)
         if kind and kind not in material_map:
             material_map[kind] = material
-    crla_material = official_material or material_map.get('crla')
+    crla_material = material_map.get('crla')
     crla_items = 0
     crla_duration = 'Not set'
     crla_title = 'CRLA Assessment'
@@ -5960,6 +6126,21 @@ def assessment(request):
             crla_duration = f"{estimated_minutes} min"
     context = _dashboard_context(request, 'student')
     context.update(workflow)
+    context.update({
+        'official_assessment_available': bool(official_availability.get('available')),
+        'official_assessment_type': official_availability.get('assessment_type') or '',
+    })
+    official_assessments = _official_reading_assessments_for_student(user, official_availability)
+    school_year_value = official_availability.get('school_year') or (official_calendar.school_year if official_calendar else '')
+    enriched_official_assessments = []
+    for assessment_payload in official_assessments:
+        completion = _official_reading_completion_for_assessment(user, assessment_payload, school_year_value)
+        enriched_payload = dict(assessment_payload)
+        enriched_payload.update(completion)
+        enriched_official_assessments.append(enriched_payload)
+    official_assessments = enriched_official_assessments
+    context['official_reading_assessments'] = official_assessments
+    context['official_assessment_has_pending'] = any(not item.get('completed') for item in official_assessments)
     context.update({
         'student_profile': student_profile,
         'crla_assessment_title': crla_title,
@@ -10082,7 +10263,7 @@ def _teacher_can_access_material(teacher_user, material):
 
 @require_http_methods(["GET"])
 def export_crla_assessment(request, assessment_id):
-    """Download an assessment using the official Grade 2 Tagalog CRLA template."""
+    """Download an assessment using the official Grade 2 Filipino CRLA template."""
     if not _check_auth(request):
         return redirect("auth")
 

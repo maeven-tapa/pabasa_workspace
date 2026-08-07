@@ -8483,7 +8483,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         const normalized = foundValue.toLowerCase();
         if (normalized === 'english' || normalized === 'en') return 'English';
-        if (normalized === 'tagalog' || normalized === 'tl' || normalized.includes('tagalog') || normalized.includes('filipino') || normalized.includes('fil')) return 'Filipino';
+        if (normalized === 'filipino' || normalized === 'fil') return 'Filipino';
         return foundValue;
     }
 
@@ -13555,7 +13555,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getMaterialLanguageSelectionValue(material) {
             const resolved = getMaterialLanguageDisplayValue(material, 'English');
-            if (resolved === 'Filipino' || resolved === 'Tagalog') return 'Filipino';
+            if (resolved === 'Filipino') return 'Filipino';
             if (resolved === 'English') return 'English';
             return resolved || 'English';
         }
