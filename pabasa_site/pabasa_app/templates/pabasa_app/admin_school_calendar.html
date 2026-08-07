@@ -200,6 +200,25 @@
         other: '#6b7280',
     };
 
+        function getTermWindow(termValue) {
+            const term = String(termValue || '');
+            const events = window.PABASA_CALENDAR_EVENTS || [];
+            const opening = events.find((item) => String(item.term) === term && item.event_type === 'school_opening');
+            const closing = events.find((item) => String(item.term) === term && item.event_type === 'school_closing');
+            return { opening, closing };
+        }
+
+        function parseDateInput(value) {
+            if (!value) return null;
+            const parsed = new Date(`${value}T00:00:00`);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function dateToComparable(value) {
+            const parsed = parseDateInput(value);
+            return parsed ? parsed.getTime() : null;
+        }
+
         function eventToForm(eventData) {
         const start = eventData?.start || '';
         const end = eventData?.end_date || eventData?.end || start;
@@ -217,7 +236,7 @@
         function openEventModal(eventData) {
         eventForm.reset();
         const payload = eventToForm(eventData);
-        eventIdInput.value = payload.id;
+        eventIdInput.value = payload.id ? String(payload.id) : '';
         eventTitleInput.value = payload.title;
         eventTypeInput.value = payload.event_type;
         eventTermInput.value = payload.term;
@@ -372,14 +391,35 @@
         }
         eventTypeInput.setCustomValidity('');
         console.log("3. Before FormData:", eventTermInput.value);
+        const selectedEventType = eventTypeInput.value;
+        const selectedTerm = eventTermInput.value;
+        const startValue = eventStartInput.value;
+        const endValue = eventEndInput.value || eventStartInput.value;
+        if (['pre_assessment', 'post_assessment', 'examination'].includes(selectedEventType)) {
+            const { opening, closing } = getTermWindow(selectedTerm);
+            const startTime = dateToComparable(startValue);
+            const endTime = dateToComparable(endValue);
+            const openingStart = dateToComparable(opening?.start);
+            const closingEnd = dateToComparable(closing?.end_date || closing?.end || closing?.start);
+            if (!opening || !closing || startTime === null || endTime === null || openingStart === null || closingEnd === null) {
+                window.alert('Please make sure the selected term has both an Opening Block and School Closing block before saving assessment events.');
+                return;
+            }
+            if (startTime < openingStart || endTime > closingEnd) {
+                window.alert('Assessment dates must fall within the selected term opening and closing blocks.');
+                return;
+            }
+        }
         const formData = new FormData(eventForm);
         if (calendarIdInput?.value) formData.set('calendar_id', calendarIdInput.value);
+        formData.set('event_id', eventIdInput.value || '');
         formData.set('term', eventTermInput.value);
         console.log("4. FormData term:", formData.get("term"));
         console.log("=== CALENDAR POST PAYLOAD ===");
         console.log({
             action: formData.get('action'),
             calendar_id: formData.get('calendar_id'),
+            event_id: formData.get('event_id'),
             event_type: formData.get('event_type'),
             term: formData.get('term'),
             start_date: formData.get('start_date'),
@@ -397,6 +437,12 @@
             credentials: 'same-origin',
             body: formData,
         });
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Calendar save failed:', response.status, errorText);
+            window.alert(errorText || 'Unable to save event.');
+            return;
+        }
         const data = await response.json();
         if (!data.success) return;
         const existing = calendar.getEventById(String(data.event.id));

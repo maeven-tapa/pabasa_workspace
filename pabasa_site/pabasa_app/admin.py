@@ -162,7 +162,8 @@ class SchoolCalendarAdmin(admin.ModelAdmin):
 @admin.register(CalendarEvent)
 class CalendarEventAdmin(admin.ModelAdmin):
 	list_display = (
-		"school_calendar",
+		"school_calendar_display",
+		"event_term",
 		"event_type",
 		"start_date",
 		"end_date",
@@ -172,3 +173,15 @@ class CalendarEventAdmin(admin.ModelAdmin):
 	list_filter = ("event_type", "is_published", "start_date", "end_date")
 	search_fields = ("school_calendar__school_year", "description")
 	ordering = ("start_date", "end_date")
+
+	def school_calendar_display(self, obj):
+		if hasattr(obj, "get_term_display"):
+			return f"{obj.school_calendar.school_year} - {obj.get_term_display()}"
+		return f"{obj.school_calendar.school_year} - Term {obj.term}"
+
+	school_calendar_display.short_description = "School Calendar"
+
+	def event_term(self, obj):
+		return obj.get_term_display() if hasattr(obj, "get_term_display") else obj.term
+
+	event_term.short_description = "Event Term"
