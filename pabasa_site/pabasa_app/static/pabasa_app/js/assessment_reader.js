@@ -68,6 +68,7 @@
         const liveLanguage = urlParams.get("language") || "";
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         let officialAssessmentData = null;
+        let isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
         try {
             const rawOfficialData = urlParams.get("official_assessment_data") || "";
             if (rawOfficialData) officialAssessmentData = JSON.parse(rawOfficialData);
@@ -1554,6 +1555,32 @@
             return String(word || "").toLowerCase().replace(/[^a-z0-9']/g, "");
         }
 
+        function getCurrentSectionLabel(type = mode) {
+            const normalizedType = String(type || mode || "word").toLowerCase();
+            if (normalizedType === "sentence") return "Sentence";
+            if (normalizedType === "paragraph" || normalizedType === "para" || normalizedType === "story") return "Story/Paragraph";
+            if (normalizedType === "vowel") return "Vowel";
+            return "Word";
+        }
+
+        function getCurrentHeaderLabel(type = mode) {
+            const sectionLabel = getCurrentSectionLabel(type);
+            if (sectionLabel === "Sentence") return "Sentence Reading Assessment";
+            if (sectionLabel === "Story/Paragraph") return "Story/Paragraph Reading Assessment";
+            if (sectionLabel === "Vowel") return "Vowel Reading Assessment";
+            return "Word Reading Assessment";
+        }
+
+        function updateAssessmentHeaderLabel() {
+            if (!isOfficialAssessmentLaunch) return;
+            const eyebrow = document.querySelector(".reader-top .eyebrow");
+            if (!eyebrow) return;
+            if (!eyebrow.dataset.baseText) {
+                eyebrow.dataset.baseText = eyebrow.textContent || "";
+            }
+            eyebrow.textContent = getCurrentHeaderLabel();
+        }
+
         function isDisplayListMarker(word) {
             const raw = String(word || "").trim();
             const normalized = normalizeDisplayWord(raw);
@@ -1578,11 +1605,12 @@
             pendingAudioChunk = null;
             isAdvancingItem = false;
             itemResultVersion += 1;
-            const label = mode.charAt(0).toUpperCase() + mode.slice(1);
+            const label = getCurrentSectionLabel();
             if (counter) {
                 const pageLabel = getCurrentPageLabel();
                 counter.textContent = pageLabel ? `${label} ${currentIndex + 1}/${items.length} · ${pageLabel}` : `${label} ${currentIndex + 1}/${items.length}`;
             }
+            updateAssessmentHeaderLabel();
             if (progressFill) progressFill.style.width = `${((currentIndex + 1) / items.length) * 100}%`;
             
             if (prevBtn) {
