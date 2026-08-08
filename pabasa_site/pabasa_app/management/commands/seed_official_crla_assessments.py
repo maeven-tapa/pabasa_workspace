@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from pabasa_app.models import Material
+from pabasa_app.models import Material, User
 
 
 OFFICIAL_CRLA_CONTENT = {
@@ -18,11 +18,16 @@ OFFICIAL_CRLA_CONTENT = {
             "Naglalaba si Tatay sa palanggana.",
             "Magpapalit ako ng kamiseta mamaya.",
             "Nilinis nila ang agiw rito.",
+            "Bumili kami ng bagong suklay.",
         ],
         "passages": [
             {
                 "title": "Isang Kakaibang Araw",
                 "content": "Iba't ibang tao ang sumasakay sa jeepney ni Tatay. May mga estudyanteng papasok ng eskuwela. May aleng mamamalengke. May nanay na may kasamang anak.\n\nPero may isang taong sumakay na bukod-tangi. Ang suot niya'y makulay at maluwang na damit. Napakalaki ng sapatos niyang pula! Pula rin ang ilong niya. Puting-puti ang mukha niya at asul ang kulot niyang buhok.\n\nHindi ko siya mapigilang tingnan. Tinititigan din siya ng katabi niya.\n\nNgumiti siya sabay-labas ng limang bola mula sa kaniyang bulsa. Isa-isa niyang itinapon ang mga bola pataas at sinalo. Paulit-ulit niya itong ginawa. Napapalakpak kaming lahat!",
+            },
+            {
+                "title": "Ang Pagong at ang Kuneho",
+                "content": "\"Ako ang pinakamabilis tumakbo,\" sabi ni Kuneho. \"Wala nang bibilis pa sa akin!\"\n\n\"Naku, Kuneho, wala ka nang ibang sinabi kung hindi gaano ka kabilis tumakbo,\" sabi ni Pagong. \"Hinahamon kita sa isang paligsahan.\"\n\n\"Hindi mo ako matatalo!\" sabi ni Kuneho. \"Dahil mas mabilis akong tumakbo!\"\n\n\"Malalaman natin 'yan bukas ng umaga,\" sabi naman ni Pagong.\n\n\"Kapana-panabik ito!\" sabi ni Buwaya.\n\n\"Kawawa naman si Pagong kasi ang bagal niyang gumalaw,\" sabi naman ni Elepante.\n\n\"Kahit mabagal siya ay hindi naman siya tumitigil,\" sabi ni Unggoy.\n\nKinabukasan, dumating ang lahat ng hayop upang manood ng paligsahan.",
             }
         ],
     },
@@ -39,11 +44,16 @@ OFFICIAL_CRLA_CONTENT = {
             "Naglalaba si Tatay sa palanggana.",
             "Magpapalit ako ng kamiseta mamaya.",
             "Nilinis nila ang agiw rito.",
+            "Bumili kami ng bagong suklay.",
         ],
         "passages": [
             {
                 "title": "Ang Pagong at ang Kuneho",
                 "content": "\"Ako ang pinakamabilis tumakbo,\" sabi ni Kuneho. \"Wala nang bibilis pa sa akin!\"\n\n\"Naku, Kuneho, wala ka nang ibang sinabi kung hindi gaano ka kabilis tumakbo,\" sabi ni Pagong. \"Hinahamon kita sa isang paligsahan.\"\n\n\"Hindi mo ako matatalo!\" sabi ni Kuneho. \"Dahil mas mabilis akong tumakbo!\"\n\n\"Malalaman natin 'yan bukas ng umaga,\" sabi naman ni Pagong.\n\n\"Kapana-panabik ito!\" sabi ni Buwaya.\n\n\"Kawawa naman si Pagong kasi ang bagal niyang gumalaw,\" sabi naman ni Elepante.\n\n\"Kahit mabagal siya ay hindi naman siya tumitigil,\" sabi ni Unggoy.\n\nKinabukasan, dumating ang lahat ng hayop upang manood ng paligsahan.",
+            },
+            {
+                "title": "Isang Kakaibang Araw",
+                "content": "Iba't ibang tao ang sumasakay sa jeepney ni Tatay. May mga estudyanteng papasok ng eskuwela. May aleng mamamalengke. May nanay na may kasamang anak.\n\nPero may isang taong sumakay na bukod-tangi. Ang suot niya'y makulay at maluwang na damit. Napakalaki ng sapatos niyang pula! Pula rin ang ilong niya. Puting-puti ang mukha niya at asul ang kulot niyang buhok.\n\nHindi ko siya mapigilang tingnan. Tinititigan din siya ng katabi niya.\n\nNgumiti siya sabay-labas ng limang bola mula sa kaniyang bulsa. Isa-isa niyang itinapon ang mga bola pataas at sinalo. Paulit-ulit niya itong ginawa. Napapalakpak kaming lahat!",
             }
         ],
     },
@@ -96,7 +106,7 @@ def validate_official_crla_payloads():
             warnings.append(f"{label} is incomplete: no official assessment items were loaded.")
 
         if key == "bosy_crla_pretest":
-            expected_titles = {"Isang Kakaibang Araw"}
+            expected_titles = {"Isang Kakaibang Araw", "Ang Pagong at ang Kuneho"}
             actual_titles = {
                 str(p.get("title") or "").strip()
                 for p in passages
@@ -114,12 +124,16 @@ def validate_official_crla_payloads():
 class Command(BaseCommand):
     help = "Seed the two official embedded CRLA assessments."
 
+    def _resolve_admin_user(self):
+        return User.objects.filter(role="admin", is_archived=False).order_by("id").first()
+
     @transaction.atomic
     def handle(self, *args, **options):
         warnings = validate_official_crla_payloads()
         for warning in warnings:
             self.stdout.write(self.style.WARNING(warning))
 
+        admin_user = self._resolve_admin_user()
         created = 0
         updated = 0
         for key, payload in OFFICIAL_CRLA_CONTENT.items():
@@ -140,9 +154,10 @@ class Command(BaseCommand):
                 system_assessment_key=key,
                 defaults={
                     "is_system_owned": True,
+                    "is_official_reading": True,
                     "system_assessment_period": payload["period"],
                     "system_assessment_phase": payload["phase"],
-                    "teacher": None,
+                    "teacher": admin_user,
                     "section": None,
                     "code": payload["code"],
                     "title": payload["title"],
@@ -168,7 +183,8 @@ class Command(BaseCommand):
                 f"CRLA payload ready: {key} period={payload['period']} phase={payload['phase']} items={len(ordered_items)} passages={len(payload['passages'])}"
             )
             obj.is_system_owned = True
-            obj.teacher = None
+            obj.is_official_reading = True
+            obj.teacher = admin_user
             obj.section = None
             obj.assessment_set = "crla"
             obj.assessment_kind = "crla"

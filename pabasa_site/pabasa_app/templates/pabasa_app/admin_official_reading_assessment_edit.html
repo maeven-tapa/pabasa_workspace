@@ -12,12 +12,25 @@
   .item-input-row textarea{min-height:44px;resize:vertical}
 </style>
 <div class="official-edit-wrap">
+  <div class="alert {% if override_authorized %}alert-success{% else %}alert-warning{% endif %} border-0 rounded-4">
+    <strong>{% if override_authorized %}Override Edit Mode - Official Assessment{% else %}Protected View-Only State{% endif %}</strong>
+    <div class="mt-1">
+      {% if override_authorized %}
+      Authorization has been verified for this specific assessment. Save will return it to protected view-only state.
+      {% else %}
+      This official assessment is protected. Use Override Edit and verify authorization to unlock editing for this assessment only.
+      {% endif %}
+    </div>
+  </div>
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
     <div>
       <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_official_reading_assessments' %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
       <h2 class="h3 fw-bold mb-1">{% if material and material.id %}Edit Official Reading Assessment{% else %}Add Official Reading Assessment{% endif %}</h2>
       <p class="text-secondary mb-0">Official reading assessments are available to all enrolled students and controlled by the School Calendar.</p>
     </div>
+    {% if not override_authorized and material and material.id %}
+    <a class="btn btn-outline-warning fw-bold" href="{% url 'admin_official_reading_assessments' %}"><i class="bi bi-lock me-1"></i>Request Integrity Override</a>
+    {% endif %}
   </div>
 
   <form method="post" enctype="multipart/form-data" id="officialAssessmentForm" class="official-edit-shell">
@@ -32,13 +45,13 @@
       <div class="row g-3">
         <div class="col-12 col-lg-6">
           <label class="form-label fw-bold">Title <span class="text-danger">*</span></label>
-          <input class="form-control {% if official_field_errors.title %}is-invalid{% endif %}" name="title" value="{{ material.title|default:'' }}" placeholder="e.g., English Pre-Assessment - Term 1" required>
+          <input class="form-control {% if official_field_errors.title %}is-invalid{% endif %}" name="title" value="{{ material.title|default:'' }}" placeholder="e.g., English Pre-Assessment - Term 1" required {% if not override_authorized and material and material.id %}disabled{% endif %}>
           {% if official_field_errors.title %}<div class="invalid-feedback">{{ official_field_errors.title }}</div>{% endif %}
         </div>
         <div class="col-12 col-md-6 col-lg-3">
           <label class="form-label fw-bold">School Year</label>
           {% if school_calendars|length > 1 %}
-          <select class="form-select" name="calendar_id" required>
+            <select class="form-select" name="calendar_id" required {% if not override_authorized and material and material.id %}disabled{% endif %}>
             {% for school_calendar in school_calendars %}
             <option value="{{ school_calendar.id }}" {% if not material and selected_calendar and selected_calendar.id == school_calendar.id %}selected{% endif %}>{{ school_calendar.school_year }}</option>
             {% endfor %}
@@ -49,7 +62,7 @@
         </div>
         <div class="col-12 col-md-6 col-lg-3">
           <label class="form-label fw-bold">Term <span class="text-danger">*</span></label>
-          <select class="form-select {% if official_field_errors.term %}is-invalid{% endif %}" name="term" required>
+          <select class="form-select {% if official_field_errors.term %}is-invalid{% endif %}" name="term" required {% if not override_authorized and material and material.id %}disabled{% endif %}>
             {% for value,label in term_options %}
             <option value="{{ value }}" {% if material and material.official_term == value %}selected{% elif not material and current_school_calendar and current_school_calendar.current_term == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
@@ -58,7 +71,7 @@
         </div>
         <div class="col-12 col-md-6 col-lg-6">
           <label class="form-label fw-bold">Assessment Type <span class="text-danger">*</span></label>
-          <select class="form-select" name="assessment_type">
+          <select class="form-select" name="assessment_type" {% if not override_authorized and material and material.id %}disabled{% endif %}>
             {% for value,label in assessment_type_options %}
             <option value="{{ value }}" {% if selected_assessment_type == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
@@ -66,7 +79,7 @@
         </div>
         <div class="col-12 col-md-6 col-lg-6">
           <label class="form-label fw-bold">Language <span class="text-danger">*</span></label>
-          <select class="form-select" name="language">
+          <select class="form-select" name="language" {% if not override_authorized and material and material.id %}disabled{% endif %}>
             {% for value,label in language_options %}
             <option value="{{ value }}" {% if material and material.language == value %}selected{% elif not material and value == "English" %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
@@ -88,8 +101,8 @@
       <div>
         <label class="form-label fw-bold">Reading Items <span class="text-danger">*</span></label>
         <div class="item-input-row mb-2">
-          <textarea id="officialItemInput" class="form-control" placeholder="Add word or phrase..."></textarea>
-          <button type="button" class="btn btn-primary" id="addOfficialItemBtn" style="min-width:52px"><i class="bi bi-plus-lg"></i></button>
+          <textarea id="officialItemInput" class="form-control" placeholder="Add word or phrase..." {% if not override_authorized and material and material.id %}disabled{% endif %}></textarea>
+          <button type="button" class="btn btn-primary" id="addOfficialItemBtn" style="min-width:52px" {% if not override_authorized and material and material.id %}disabled{% endif %}><i class="bi bi-plus-lg"></i></button>
         </div>
         {% if official_field_errors.content_items_json %}<div class="text-danger small mb-2">{{ official_field_errors.content_items_json }}</div>{% endif %}
         <div id="officialItemChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
@@ -109,13 +122,13 @@
       <div class="d-flex align-items-center gap-2 text-secondary small fw-bold text-uppercase"><i class="bi bi-3-circle"></i> Instructions</div>
       <div>
         <label class="form-label fw-bold">Instructions (Optional)</label>
-        <textarea class="form-control" name="instructions" rows="4" placeholder="Add instructions for students...">{{ material.content_json.instructions|default:'' }}</textarea>
+        <textarea class="form-control" name="instructions" rows="4" placeholder="Add instructions for students..." {% if not override_authorized and material and material.id %}disabled{% endif %}>{{ material.content_json.instructions|default:'' }}</textarea>
       </div>
     </div>
 
     <div class="d-flex justify-content-end gap-2">
       <a class="btn btn-outline-secondary" href="{% url 'admin_official_reading_assessments' %}">Cancel</a>
-      <button class="btn btn-primary px-4" type="submit"><i class="bi bi-check2 me-1"></i>Save Assessment</button>
+      <button class="btn btn-primary px-4" type="submit" {% if not override_authorized and material and material.id %}disabled{% endif %}><i class="bi bi-check2 me-1"></i>Save Assessment</button>
     </div>
   </form>
 </div>
@@ -128,6 +141,7 @@
   const hidden = document.getElementById('contentItemsJson');
   const empty = document.getElementById('officialEmptyItems');
   const form = document.getElementById('officialAssessmentForm');
+  const overrideAuthorized = {{ override_authorized|yesno:"true,false" }};
 
   let items = [];
   try {
@@ -154,6 +168,9 @@
     input.value = '';
     render();
   }
+  if (!overrideAuthorized) {
+    [input, btn].forEach((el) => { if (el) el.disabled = true; });
+  }
   chips.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-remove-chip]');
     if (!btn) return;
@@ -171,6 +188,7 @@
   });
   syncHidden();
   render();
+
 })();
 </script>
 {% endblock %}

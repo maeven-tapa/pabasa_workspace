@@ -67,6 +67,22 @@
         const liveItemType = (urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
         const liveLanguage = urlParams.get("language") || "";
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
+        let officialAssessmentData = null;
+        try {
+            const rawOfficialData = urlParams.get("official_assessment_data") || "";
+            if (rawOfficialData) officialAssessmentData = JSON.parse(rawOfficialData);
+        } catch (error) {
+            officialAssessmentData = null;
+        }
+        console.log("PABASA_OFFICIAL_TRACE", {
+            stage: "reader_url_params",
+            requested_assessment_type: urlParams.get("test") || "",
+            requested_system_assessment_key: urlParams.get("code") || "",
+            selected_material_id: materialId || "",
+            official_assessment_id: officialAssessmentId || "",
+            official_assessment_data: officialAssessmentData,
+            launch_url: window.location.href,
+        });
         const isReviewMode = viewMode === "view";
         const isRetakeMode = viewMode === "retake";
         const isPractice = false;
@@ -375,6 +391,24 @@
             return source.match(/\b[\w']+\b/g) || [];
         }
 
+        function parseOfficialAssessmentItems(data) {
+            if (!data || typeof data !== "object") return [];
+            const words = Array.isArray(data.words) ? data.words.map(item => String(item || "").trim()).filter(Boolean) : [];
+            const sentences = Array.isArray(data.sentences) ? data.sentences.map(item => String(item || "").trim()).filter(Boolean) : [];
+            const passages = Array.isArray(data.passages)
+                ? data.passages
+                    .map(item => {
+                        if (!item || typeof item !== "object") return "";
+                        const title = String(item.title || "").trim();
+                        const content = String(item.content || "").trim();
+                        return [title, content].filter(Boolean).join("\n");
+                    })
+                    .filter(Boolean)
+                : [];
+            const orderedItems = [...words, ...sentences, ...passages];
+            return orderedItems;
+        }
+
         function parsePersistedAssessmentItems(raw) {
             if (!Array.isArray(raw)) return [];
             return raw.map((item) => {
@@ -501,17 +535,70 @@
 
         function loadItems() {
             const isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
-            if (isOfficialAssessmentLaunch && liveContent) {
-                items = parseLiveContent(liveContent, liveItemType || mode);
-                itemTypes = new Array(items.length).fill(String(liveItemType || mode || 'word').toLowerCase());
+            if (isOfficialAssessmentLaunch && officialAssessmentData) {
+                const officialTitle = String(
+                    officialAssessmentData.official_title
+                    || officialAssessmentData.title
+                    || testTitle
+                    || "Assessment"
+                ).trim();
+                const officialCode = String(officialAssessmentData.official_code || officialAssessmentData.code || "OFFICIAL").trim();
+                const officialLanguage = String(officialAssessmentData.language || liveLanguage || "").trim();
+                const officialWords = Array.isArray(officialAssessmentData.words) ? officialAssessmentData.words.map(item => String(item || "").trim()).filter(Boolean) : [];
+                const officialSentences = Array.isArray(officialAssessmentData.sentences) ? officialAssessmentData.sentences.map(item => String(item || "").trim()).filter(Boolean) : [];
+                const officialPassages = Array.isArray(officialAssessmentData.passages)
+                    ? officialAssessmentData.passages
+                        .map(item => {
+                            if (!item || typeof item !== "object") return "";
+                            const title = String(item.title || "").trim();
+                            const content = String(item.content || "").trim();
+                            return [title, content].filter(Boolean).join("\n");
+                        })
+                        .filter(Boolean)
+                    : [];
+                const officialItemTypes = [
+                    ...new Array(Math.max(0, officialWords.length)).fill("word"),
+                    ...new Array(Math.max(0, officialSentences.length)).fill("sentence"),
+                    ...new Array(Math.max(0, officialPassages.length)).fill("paragraph"),
+                ];
+                const officialType = officialItemTypes[0] || "word";
+                items = [...officialWords, ...officialSentences, ...officialPassages];
+                console.log("PABASA_OFFICIAL_TRACE", {
+                    stage: "final_reader_assessment",
+                    requested_assessment_type: testTitle,
+                    requested_system_assessment_key: testCode,
+                    selected_material_id: officialAssessmentData.id || officialAssessmentId || "",
+                    selected_material_title: officialTitle,
+                    selected_material_system_assessment_key: officialAssessmentData.system_assessment_key || "",
+                    selected_material_is_official: true,
+                    selected_material_is_system_owned: true,
+                    official_assessment_data: officialAssessmentData,
+                    final_reader_assessment_title: officialTitle,
+                    final_reader_assessment_id: officialAssessmentData.id || officialAssessmentId || "",
+                    final_reader_item_count: items.length,
+                });
+                itemTypes = officialItemTypes.length ? officialItemTypes : new Array(items.length).fill(officialType);
                 itemPages = buildItemPages(items, itemTypes);
                 pageCorrectWordCounts = items.map(() => []);
-                currentMaterialLanguage = liveLanguage || "";
+                currentMaterialLanguage = officialLanguage || "";
                 correctWordCounts = new Array(items.length).fill(0);
                 if (items.length === 0) {
                     if (readingWord) readingWord.textContent = "No assessment items assigned.";
                     if (nextBtn) nextBtn.disabled = true;
                     return;
+                }
+                if (testMeta) {
+                    testMeta.textContent = officialTitle;
+                }
+                console.log("PABASA_OFFICIAL_TRACE", {
+                    stage: "final_reader_render",
+                    final_reader_assessment_title: officialTitle,
+                    final_reader_assessment_id: officialAssessmentData.id || officialAssessmentId || "",
+                    final_reader_item_count: items.length,
+                });
+                if (counter) {
+                    const label = officialType === "sentence" ? "Sentence" : officialType === "paragraph" || officialType === "para" ? "Paragraph" : "Word";
+                    counter.textContent = `${label} 1/${items.length}`;
                 }
                 currentIndex = 0;
                 currentPageIndex = 0;
@@ -526,6 +613,12 @@
                     try {
                         const persistedItems = parsePersistedAssessmentItems(JSON.parse(persistedRaw));
                         if (persistedItems.length > 0) {
+                            console.log("PABASA_OFFICIAL_TRACE", {
+                                stage: "legacy_persisted_fallback",
+                                persisted_items_count: persistedItems.length,
+                                requested_assessment_type: testTitle,
+                                requested_system_assessment_key: testCode,
+                            });
                             items = persistedItems.map(item => item.text);
                             itemTypes = persistedItems.map(item => item.type || mode);
                             itemPages = buildItemPages(items, itemTypes);
@@ -545,6 +638,13 @@
                 }
 
                 if (liveContent) {
+                    console.log("PABASA_OFFICIAL_TRACE", {
+                        stage: "live_content_fallback",
+                        live_content_preview: String(liveContent).slice(0, 120),
+                        live_item_type: liveItemType,
+                        requested_assessment_type: testTitle,
+                        requested_system_assessment_key: testCode,
+                    });
                     items = parseLiveContent(liveContent, liveItemType || mode);
                     itemTypes = new Array(items.length).fill(String(liveItemType || mode || 'word').toLowerCase());
                     itemPages = buildItemPages(items, itemTypes);
@@ -593,6 +693,16 @@
                             const matchesTarget = (materialId && mId === String(materialId).trim()) || (testTitle && material.title === testTitle);
                             
                             if (isAssessment && (matchesTarget || (!testTitle && !materialId && aggregatedItems.length === 0))) {
+                                console.log("PABASA_OFFICIAL_TRACE", {
+                                    stage: "legacy_class_readings_match",
+                                    requested_assessment_type: testTitle,
+                                    requested_system_assessment_key: testCode,
+                                    selected_material_id: mId || "",
+                                    selected_material_title: material.title || "",
+                                    selected_material_system_assessment_key: material.system_assessment_key || "",
+                                    selected_material_is_official: Boolean(material.is_official_reading),
+                                    selected_material_is_system_owned: Boolean(material.is_system_owned),
+                                });
                                 const parsedItems = parseItems(material, mode);
                                 aggregatedItems = aggregatedItems.concat(parsedItems);
                                 aggregatedTypes = aggregatedTypes.concat(new Array(parsedItems.length).fill(String(material.item_type || mode || 'word').toLowerCase()));
@@ -616,6 +726,14 @@
                 if (nextBtn) nextBtn.disabled = true;
                 return;
             }
+            console.log("PABASA_OFFICIAL_TRACE", {
+                stage: "final_reader_assessment",
+                requested_assessment_type: testTitle,
+                requested_system_assessment_key: testCode,
+                final_reader_assessment_title: testTitle,
+                final_reader_assessment_id: materialId || "",
+                final_reader_item_count: items.length,
+            });
             currentIndex = 0;
             currentPageIndex = 0;
             updateUI();

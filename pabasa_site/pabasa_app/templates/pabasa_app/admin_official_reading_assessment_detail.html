@@ -1,6 +1,10 @@
 {% extends "pabasa_app/admin_base.html" %}
 {% block content %}
 <div class="admin-panel">
+  <div class="alert alert-warning border-0 rounded-4 mb-4">
+    <strong>Official Reading Assessments - Protected</strong>
+    <div class="mt-1">This official assessment is view-only by default. Override Edit requires administrator authorization and applies only to this assessment.</div>
+  </div>
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
       <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_official_reading_assessments' %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
@@ -8,8 +12,9 @@
       <p class="text-secondary mb-0">Official Reading Assessment details</p>
     </div>
     <div class="d-flex gap-2">
-      <a class="btn btn-outline-primary" href="{% url 'admin_official_reading_assessment_edit' material.id %}">Edit</a>
-      <a class="btn btn-outline-secondary" href="{% url 'admin_official_reading_assessment_add' %}?duplicate={{ material.id }}">Duplicate</a>
+      <a class="btn btn-outline-warning fw-bold" href="{% url 'admin_official_reading_assessments' %}">
+        <i class="bi bi-lock me-1"></i>Request Integrity Override
+      </a>
     </div>
   </div>
   <div class="row g-3">

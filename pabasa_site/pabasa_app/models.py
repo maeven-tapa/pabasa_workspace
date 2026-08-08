@@ -1286,6 +1286,64 @@ class Note(models.Model):
         return f"Note by {self.teacher} for {self.student}"
 
 
+class OfficialReadingIntegrityOverrideRequest(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+        ("expired", "Expired"),
+        ("used", "Used"),
+    ]
+
+    request_id = models.CharField(max_length=40, unique=True)
+    requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="official_override_requests")
+    material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="official_override_requests")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    deped_reference = models.TextField()
+    material_change = models.TextField()
+    justification = models.TextField()
+    supporting_documentation = models.JSONField(default=list, blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_official_override_requests")
+    review_decision = models.CharField(max_length=20, blank=True, default="")
+    rejection_reason = models.TextField(blank=True, default="")
+    authorized_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    audit_payload = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "official_reading_integrity_override_requests"
+        ordering = ["-submitted_at", "-id"]
+
+
+class OfficialReadingIntegrityAuthorization(models.Model):
+    request = models.OneToOneField(OfficialReadingIntegrityOverrideRequest, on_delete=models.CASCADE, related_name="authorization")
+    material = models.ForeignKey("Material", on_delete=models.CASCADE, related_name="official_integrity_authorizations")
+    authorized_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="official_integrity_authorizations")
+    authorized_at = models.DateTimeField()
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    audit_payload = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "official_reading_integrity_authorizations"
+
+
+class OfficialReadingOverrideSecurityLockout(models.Model):
+    reviewer = models.OneToOneField(User, on_delete=models.CASCADE, related_name="official_override_security_lockout")
+    failed_attempt_count = models.PositiveSmallIntegerField(default=0)
+    last_failed_at = models.DateTimeField(null=True, blank=True)
+    lockout_expires_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    audit_payload = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "official_reading_override_security_lockouts"
+
+
 class Notification(models.Model):
     NOTIFICATION_TYPE_CHOICES = [
         ("info", "Info"),

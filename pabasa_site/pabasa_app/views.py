@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponse
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponse, HttpResponseNotAllowed
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.cache import never_cache
+from django.core.cache import cache
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMultiAlternatives
 from django.core import signing
@@ -15,7 +16,7 @@ from django.db import IntegrityError, transaction, OperationalError
 from django.db.models import Q
 from django.utils.text import slugify
 from functools import wraps
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import logging
 import json
 import os
@@ -34,7 +35,7 @@ import uuid
 import zipfile
 import csv
 from io import BytesIO
-from datetime import date
+from datetime import date, timedelta
 
 IMAGE_OCR_EMPTY_MESSAGE = (
     'No readable text could be recovered from that image. '
@@ -50,6 +51,7 @@ from django.db import transaction
 import re
 import traceback
 from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, AssessmentWindowSetting, SchoolCalendar, CalendarEvent
+from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, parse_assigned_week
 from .reading_stt import (
     analyze_reading,
@@ -81,6 +83,7 @@ from .scoring import (
     osps_multiplier,
     performance_interpretation,
 )
+from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
 from .utils.crla_export import export_crla_excel
 
 PRACTICE_LANGUAGE_CHOICES = [
@@ -255,42 +258,36 @@ def _aral_eligible_classification(label):
 def _reader_assessment_state(student):
     state = _get_user_state(student)
     classification = state.get('reader_classification') or getattr(student, 'reading_level', '') or ''
-    eligible = state.get('aral_eligible')
+    # Always re-evaluate eligibility from the current classification when we have one,
+    # so stale stored flags do not trap eligible students in the completed branch.
+    eligible = _aral_eligible_classification(classification) if classification else state.get('aral_eligible')
     if eligible is None:
-        eligible = _aral_eligible_classification(classification)
+        eligible = False
     return {
         'reader_classification': classification,
         'aral_eligible': bool(eligible),
         'pre_test_completed': bool(state.get('crla_pretest_completed')),
         'post_test_completed': bool(state.get('crla_posttest_completed')),
-        'current_phase': state.get('current_phase') or ('materials' if eligible else 'complete'),
+        'current_phase': state.get('current_phase') or ('materials' if eligible else 'pretest'),
     }
 
 
 def _assessment_workflow_context(student):
-    window = _assessment_window_choice()
-    period, phase = _assessment_window_parts(window)
     state = _reader_assessment_state(student)
     completed_pretest = state['pre_test_completed']
     completed_posttest = state['post_test_completed']
     eligible = state['aral_eligible']
-
-    if period == 'bosy':
-        stage = 'pretest' if not completed_pretest else ('materials' if eligible else 'completed')
-    elif period == 'mosy':
-        stage = 'materials' if eligible and completed_pretest else ('completed' if completed_pretest and not eligible else 'pretest_locked')
-    else:
-        stage = 'posttest' if eligible and completed_pretest and not completed_posttest else ('materials' if eligible else 'completed')
+    stage = 'pretest' if not completed_pretest else ('materials' if eligible else 'completed')
 
     return {
-        'active_window': window,
-        'active_window_label': _assessment_window_label(window),
-        'active_period': period,
-        'active_phase': phase,
+        'active_window': None,
+        'active_window_label': 'Reading Assessment',
+        'active_period': 'bosy',
+        'active_phase': 'pretest',
         'eligibility': state,
         'stage': stage,
-        'can_take_pretest': period == 'bosy' and phase == 'pretest' and not completed_pretest,
-        'can_take_posttest': period == 'eosy' and phase == 'posttest' and eligible and completed_pretest and not completed_posttest,
+        'can_take_pretest': not completed_pretest,
+        'can_take_posttest': eligible and completed_pretest and not completed_posttest,
     }
 
 
@@ -374,14 +371,27 @@ def _crla_creation_block_message(window=None, teacher_user=None):
 
 
 def _assessment_materials_for_student(student=None):
-    window = _assessment_window_choice()
-    kind_filters = Q(assessment_kind='regular')
-    if _assessment_window_allows_crla(window):
-        kind_filters |= Q(assessment_kind='crla')
-    return Material.objects.filter(
+    kind_filters = Q(assessment_kind='regular') | Q(assessment_kind='crla')
+    queryset = Material.objects.filter(
         is_active=True,
         type='assessment',
-    ).filter(kind_filters).order_by('created_at', 'id')
+    ).filter(kind_filters)
+    queryset = queryset.exclude(
+        Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True, system_assessment_key__in=['bosy_crla_pretest', 'eosy_crla_posttest'])
+    )
+    return queryset.order_by('created_at', 'id')
+
+
+def _official_crla_material_for_student(student, assessment_type):
+    if not student or getattr(student, 'role', '') != 'student':
+        return None
+
+    assessment_type = str(assessment_type or '').strip().lower()
+    if assessment_type not in {'pretest', 'posttest'}:
+        return None
+
+    assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
+    return _official_reading_materials_queryset().filter(system_assessment_key=assessment_key).order_by('updated_at', 'id').first()
 
 
 def _published_crla_material_for_student(student):
@@ -3642,6 +3652,311 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
+
+OFFICIAL_READING_OVERRIDE_SESSION_KEY = 'official_reading_edit_override'
+OFFICIAL_READING_OVERRIDE_TTL_SECONDS = 15 * 60
+OFFICIAL_READING_OVERRIDE_WINDOW_HOURS = 3
+OFFICIAL_READING_OVERRIDE_LOCKOUT_HOURS = 24
+OFFICIAL_READING_OVERRIDE_MAX_ATTEMPTS = 3
+OFFICIAL_READING_OVERRIDE_RATE_LIMIT_WINDOW_SECONDS = 60
+OFFICIAL_READING_OVERRIDE_RATE_LIMIT_MAX_REQUESTS = 6
+
+
+def _current_admin_user(request):
+    return User.objects.filter(id=request.session.get('user_id'), role='admin', is_archived=False).first()
+
+
+def _official_override_security_code():
+    code = (getattr(settings, 'PABASA_OVERRIDE_SECURITY_CODE', '') or '').strip()
+    return code
+
+
+def _official_override_lockout_cache_key(user_id):
+    return f'official_override_rate_limit:{user_id}'
+
+
+def _official_override_rate_limited(user_id):
+    cache_key = _official_override_lockout_cache_key(user_id)
+    state = cache.get(cache_key) or {'count': 0, 'window_started': timezone.now().timestamp()}
+    now_ts = timezone.now().timestamp()
+    window_started = float(state.get('window_started') or now_ts)
+    if (now_ts - window_started) > OFFICIAL_READING_OVERRIDE_RATE_LIMIT_WINDOW_SECONDS:
+        state = {'count': 0, 'window_started': now_ts}
+    state['count'] = int(state.get('count') or 0) + 1
+    cache.set(cache_key, state, OFFICIAL_READING_OVERRIDE_RATE_LIMIT_WINDOW_SECONDS)
+    return state['count'] > OFFICIAL_READING_OVERRIDE_RATE_LIMIT_MAX_REQUESTS
+
+
+def _get_official_override_lockout(reviewer_id):
+    return OfficialReadingOverrideSecurityLockout.objects.filter(reviewer_id=reviewer_id).first()
+
+
+def _official_override_lockout_active(reviewer_id):
+    lockout = _get_official_override_lockout(reviewer_id)
+    if not lockout or not lockout.lockout_expires_at:
+        return False
+    if lockout.lockout_expires_at <= timezone.now():
+        if lockout.failed_attempt_count or lockout.lockout_expires_at:
+            lockout.failed_attempt_count = 0
+            lockout.last_failed_at = None
+            lockout.lockout_expires_at = None
+            lockout.audit_payload = {'cleared_at': timezone.now().isoformat()}
+            lockout.save(update_fields=['failed_attempt_count', 'last_failed_at', 'lockout_expires_at', 'audit_payload', 'updated_at'])
+        return False
+    return True
+
+
+def _official_override_lockout_payload(lockout):
+    if not lockout:
+        return {}
+    return {
+        'failed_attempt_count': lockout.failed_attempt_count,
+        'last_failed_at': lockout.last_failed_at.isoformat() if lockout.last_failed_at else None,
+        'lockout_expires_at': lockout.lockout_expires_at.isoformat() if lockout.lockout_expires_at else None,
+    }
+
+
+def _official_override_record_failed_attempt(reviewer):
+    lockout, _ = OfficialReadingOverrideSecurityLockout.objects.get_or_create(reviewer=reviewer)
+    now = timezone.now()
+    failed_attempts = lockout.failed_attempt_count + 1
+    lockout.failed_attempt_count = failed_attempts
+    lockout.last_failed_at = now
+    if failed_attempts >= OFFICIAL_READING_OVERRIDE_MAX_ATTEMPTS:
+        lockout.lockout_expires_at = now + timedelta(hours=OFFICIAL_READING_OVERRIDE_LOCKOUT_HOURS)
+    lockout.audit_payload = {
+        'last_failed_at': now.isoformat(),
+        'lockout_triggered': failed_attempts >= OFFICIAL_READING_OVERRIDE_MAX_ATTEMPTS,
+    }
+    lockout.save()
+    return lockout
+
+
+def _official_override_reset_attempts(reviewer):
+    lockout = _get_official_override_lockout(reviewer.id)
+    if not lockout:
+        return
+    lockout.failed_attempt_count = 0
+    lockout.last_failed_at = None
+    lockout.lockout_expires_at = None
+    lockout.audit_payload = {'reset_at': timezone.now().isoformat()}
+    lockout.save(update_fields=['failed_attempt_count', 'last_failed_at', 'lockout_expires_at', 'audit_payload', 'updated_at'])
+
+
+def _official_reading_override_session(request):
+    payload = request.session.get(OFFICIAL_READING_OVERRIDE_SESSION_KEY)
+    if not isinstance(payload, dict):
+        return {}
+    material_id = payload.get('material_id')
+    authorized_by = payload.get('authorized_by')
+    authorized_at = payload.get('authorized_at')
+    if not str(material_id or '').isdigit() or not str(authorized_by or '').isdigit():
+        return {}
+    try:
+        authorized_at_value = float(authorized_at)
+    except (TypeError, ValueError):
+        return {}
+    if (time.time() - authorized_at_value) > OFFICIAL_READING_OVERRIDE_TTL_SECONDS:
+        return {}
+    return {
+        'material_id': int(material_id),
+        'authorized_by': int(authorized_by),
+        'authorized_at': authorized_at_value,
+    }
+
+
+def _official_reading_override_authorized(request, material):
+    active_auth = OfficialReadingIntegrityAuthorization.objects.filter(
+        material=material,
+        authorized_by_id=request.session.get('user_id'),
+        is_active=True,
+        revoked_at__isnull=True,
+        used_at__isnull=True,
+        expires_at__gt=timezone.now(),
+    ).first()
+    override = _official_reading_override_session(request)
+    return bool(
+        active_auth
+        or (
+        material
+        and override
+        and override.get('material_id') == getattr(material, 'id', None)
+        and override.get('authorized_by') == request.session.get('user_id')
+        )
+    )
+
+
+def _clear_official_reading_override(request):
+    request.session.pop(OFFICIAL_READING_OVERRIDE_SESSION_KEY, None)
+    request.session.modified = True
+
+
+def _store_official_reading_override(request, material):
+    request.session[OFFICIAL_READING_OVERRIDE_SESSION_KEY] = {
+        'material_id': material.id,
+        'authorized_by': request.session.get('user_id'),
+        'authorized_at': time.time(),
+    }
+    request.session.modified = True
+
+
+def _official_override_request_payload(request):
+    deped_reference = (request.POST.get('deped_reference') or '').strip()
+    material_change = (request.POST.get('material_change') or '').strip()
+    justification = (request.POST.get('justification') or '').strip()
+    supporting_links = []
+    errors = {}
+    if len(deped_reference) < 8:
+        errors['deped_reference'] = 'Enter a valid official DepEd source or reference.'
+    if len(material_change) < 8:
+        errors['material_change'] = 'Describe the specific material to be changed.'
+    if len(justification) < 20:
+        errors['justification'] = 'Provide a meaningful justification with at least a brief explanation.'
+    for idx in range(1, 4):
+        raw_value = (request.POST.get(f'supporting_link_{idx}') or '').strip()
+        if not raw_value:
+            continue
+        parsed = urlparse(raw_value)
+        if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
+            errors[f'supporting_link_{idx}'] = 'Enter a valid URL.'
+            continue
+        supporting_links.append(raw_value)
+    return deped_reference, material_change, justification, supporting_links[:3], errors
+
+
+@admin_required
+@csrf_protect
+@require_http_methods(["POST"])
+def admin_official_reading_assessment_override_authorize(request, material_id):
+    admin_user = _current_admin_user(request)
+    if not admin_user:
+        return JsonResponse({'success': False, 'error': 'Admin authorization required.'}, status=403)
+
+    reviewer = admin_user
+    if _official_override_lockout_active(reviewer.id):
+        return JsonResponse({
+            'success': False,
+            'error': 'Security verification is temporarily locked due to multiple failed attempts. Please try again after 24 hours.',
+            'locked_out': True,
+        }, status=423)
+
+    if _official_override_rate_limited(reviewer.id):
+        return JsonResponse({'success': False, 'error': 'Too many verification attempts. Please try again later.'}, status=429)
+
+    request_id = request.POST.get('request_id', '').strip()
+    security_code = request.POST.get('security_code', '')
+    override_request = OfficialReadingIntegrityOverrideRequest.objects.filter(
+        request_id=request_id,
+        material_id=material_id,
+    ).first()
+    if not override_request:
+        return JsonResponse({'success': False, 'error': 'Integrity Override Request not found.'}, status=404)
+    if override_request.status != 'pending':
+        return JsonResponse({'success': False, 'error': 'This request is no longer pending approval.'}, status=409)
+
+    configured_code = _official_override_security_code()
+    if not configured_code:
+        logger.error('Override security code is not configured in the environment.')
+        return JsonResponse({'success': False, 'error': 'Security verification is unavailable.'}, status=503)
+
+    if not security_code or security_code != configured_code:
+        lockout = _official_override_record_failed_attempt(reviewer)
+        logger.info(
+            'Integrity override verification failed for request %s by reviewer %s',
+            override_request.request_id,
+            reviewer.custom_id,
+        )
+        if lockout.lockout_expires_at and lockout.failed_attempt_count >= OFFICIAL_READING_OVERRIDE_MAX_ATTEMPTS:
+            return JsonResponse({
+                'success': False,
+                'error': 'Security verification is temporarily locked due to multiple failed attempts. Please try again after 24 hours.',
+                'locked_out': True,
+            }, status=423)
+        return JsonResponse({'success': False, 'error': 'Invalid security code. Approval was not completed.'}, status=400)
+
+    lockout = _get_official_override_lockout(reviewer.id)
+    if lockout and lockout.failed_attempt_count:
+        _official_override_reset_attempts(reviewer)
+
+    now = timezone.now()
+    expires_at = now + timedelta(hours=OFFICIAL_READING_OVERRIDE_WINDOW_HOURS)
+    override_request.status = 'approved'
+    override_request.reviewed_at = now
+    override_request.reviewed_by = reviewer
+    override_request.review_decision = 'approved'
+    override_request.authorized_at = now
+    override_request.expires_at = expires_at
+    override_request.audit_payload = {
+        'reviewed_by': reviewer.id,
+        'reviewed_by_custom_id': reviewer.custom_id,
+        'approved_at': now.isoformat(),
+        'expires_at': expires_at.isoformat(),
+    }
+    override_request.save(update_fields=['status', 'reviewed_at', 'reviewed_by', 'review_decision', 'authorized_at', 'expires_at', 'audit_payload'])
+
+    authorization, _ = OfficialReadingIntegrityAuthorization.objects.update_or_create(
+        request=override_request,
+        defaults={
+            'material': override_request.material,
+            'authorized_by': override_request.requested_by,
+            'authorized_at': now,
+            'expires_at': expires_at,
+            'revoked_at': None,
+            'used_at': None,
+            'is_active': True,
+            'audit_payload': {
+                'request_id': override_request.request_id,
+                'reviewed_by': reviewer.id,
+                'reviewed_by_custom_id': reviewer.custom_id,
+                'approved_at': now.isoformat(),
+                'expires_at': expires_at.isoformat(),
+                'verification_result': 'success',
+            },
+        },
+    )
+    _store_official_reading_override(request, override_request.material)
+    logger.info('Integrity override approved for request %s by reviewer %s', override_request.request_id, reviewer.custom_id)
+    return JsonResponse({'success': True, 'material_id': override_request.material_id, 'request_id': override_request.request_id, 'authorized_until': expires_at.isoformat()})
+
+
+@admin_required
+@csrf_protect
+@require_http_methods(["POST"])
+def admin_official_reading_override_request(request, material_id):
+    material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+    if not material:
+        return JsonResponse({'success': False, 'error': 'Official assessment not found.'}, status=404)
+    admin_user = _current_admin_user(request)
+    if not admin_user:
+        return JsonResponse({'success': False, 'error': 'Admin authorization required.'}, status=403)
+    deped_reference, material_change, justification, supporting_links, errors = _official_override_request_payload(request)
+    if errors:
+        return JsonResponse({'success': False, 'errors': errors, 'error': 'Please fix the highlighted fields.'}, status=400)
+    request_id = f"IR-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+    override_request = OfficialReadingIntegrityOverrideRequest.objects.create(
+        request_id=request_id,
+        requested_by=admin_user,
+        material=material,
+        status='pending',
+        deped_reference=deped_reference,
+        material_change=material_change,
+        justification=justification,
+        supporting_documentation=supporting_links,
+        audit_payload={'submitted_by': admin_user.custom_id},
+    )
+    supporting_lines = '\n'.join(f"{idx}. {link}" for idx, link in enumerate(supporting_links, start=1)) or 'No supporting documentation links provided.'
+    try:
+        send_mail(
+            '[PABASA] Official Assessment Integrity Override Request — Review Required',
+            f"Integrity Override Request\n\nRequest ID: {request_id}\nRequested by: {admin_user.first_name} {admin_user.last_name}\nAdmin account: {admin_user.custom_id} / {admin_user.email}\nDate/Time submitted: {timezone.localtime(override_request.submitted_at).strftime('%B %d, %Y %I:%M %p')}\nOfficial Material Set: {material.title}\n\nDepEd Source / Reference\n{deped_reference}\n\nMaterial to Be Changed\n{material_change}\n\nJustification\n{justification}\n\nSupporting Documentation\n{supporting_lines}\n\nStatus\nPending Review\n\nPlease review this request through the PABASA Admin interface and determine whether the requested integrity override should be authorized.",
+            settings.DEFAULT_FROM_EMAIL,
+            ['im.donapalacios@gmail.com'],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        logger.warning('Unable to send override request email for %s: %s', request_id, exc)
+    return JsonResponse({'success': True, 'request_id': request_id})
+
 @admin_required
 def admin_students(request):
     return render(request, 'pabasa_app/admin_students.html', _admin_users_context(request, 'student', 'Students'))
@@ -4880,10 +5195,21 @@ def admin_school_calendar(request):
 
 
 def _official_reading_materials_queryset():
-    return Material.objects.filter(is_official_reading=True).order_by('official_term', '-updated_at')
+    official_keys = list(OFFICIAL_CRLA_CONTENT.keys())
+    return Material.objects.filter(
+        is_official_reading=True,
+        is_system_owned=True,
+        system_assessment_key__in=official_keys,
+    ).order_by('system_assessment_period', 'system_assessment_phase', 'official_term', '-updated_at')
 
 
 def _official_reading_assessment_type(material):
+    key = str(getattr(material, 'system_assessment_key', '') or '').strip().lower()
+    if key in OFFICIAL_CRLA_CONTENT:
+        return 'pre_assessment' if key == 'bosy_crla_pretest' else 'post_assessment'
+    phase = str(getattr(material, 'system_assessment_phase', '') or '').strip().lower()
+    if phase in {'pretest', 'posttest'}:
+        return 'pre_assessment' if phase == 'pretest' else 'post_assessment'
     content_json = getattr(material, 'content_json', None) or {}
     if isinstance(content_json, dict):
         value = str(content_json.get('assessment_type') or '').strip().lower()
@@ -4906,6 +5232,126 @@ def _official_reading_material_for_term(term):
     return _official_reading_materials_queryset().filter(official_term=term).first()
 
 
+def _official_reading_item_sections(material):
+    content_json = getattr(material, 'content_json', None) or {}
+    words = []
+    sentences = []
+    passages = []
+    items = []
+
+    raw_items = content_json.get('items') if isinstance(content_json, dict) else None
+    if isinstance(raw_items, list):
+        for item in raw_items:
+            if isinstance(item, dict):
+                item_type = str(item.get('type') or '').strip().lower()
+                text = str(item.get('text') or item.get('content') or '').strip()
+                title = str(item.get('title') or '').strip()
+                if not text and title:
+                    text = title
+                if not text:
+                    continue
+                if item_type in {'word', 'vowel'}:
+                    words.append(text)
+                elif item_type == 'sentence':
+                    sentences.append(text)
+                elif item_type in {'paragraph', 'para', 'story'}:
+                    passages.append({'title': title, 'content': text})
+                items.append(text)
+            else:
+                text = str(item).strip()
+                if text:
+                    items.append(text)
+
+    if not items and not words and not sentences and not passages:
+        words = [str(item).strip() for item in (content_json.get('words') or []) if str(item).strip()]
+        sentences = [str(item).strip() for item in (content_json.get('sentences') or []) if str(item).strip()]
+        for passage in content_json.get('passages') or []:
+            if isinstance(passage, dict):
+                title = str(passage.get('title') or '').strip()
+                content = str(passage.get('content') or '').strip()
+                if title or content:
+                    passages.append({'title': title, 'content': content})
+        items = [str(item).strip() for item in (content_json.get('items') or []) if str(item).strip()]
+
+    if not words and not sentences and not passages and not items:
+        assessment_key = str(content_json.get('assessment_key') or getattr(material, 'system_assessment_key', '') or '').strip().lower()
+        seeded_payload = OFFICIAL_CRLA_CONTENT.get(assessment_key) if assessment_key else None
+        if not seeded_payload and OFFICIAL_CRLA_CONTENT:
+            seeded_payload = next(iter(OFFICIAL_CRLA_CONTENT.values()))
+        if seeded_payload:
+            words = [str(item).strip() for item in (seeded_payload.get('words') or []) if str(item).strip()]
+            sentences = [str(item).strip() for item in (seeded_payload.get('sentences') or []) if str(item).strip()]
+            for passage in seeded_payload.get('passages') or []:
+                if isinstance(passage, dict):
+                    title = str(passage.get('title') or '').strip()
+                    content = str(passage.get('content') or '').strip()
+                    if title or content:
+                        passages.append({'title': title, 'content': content})
+            items = [*words, *sentences, *[str(passage.get('content') or '').strip() for passage in passages if str(passage.get('content') or '').strip()]]
+
+    return {
+        'words': words,
+        'sentences': sentences,
+        'passages': passages,
+        'items': items,
+    }
+
+
+def _official_reading_catalog_sections(materials):
+    words = []
+    sentences = []
+    passages = []
+    seen_passage_keys = set()
+    source_materials = list(materials or [])
+    if not source_materials and OFFICIAL_CRLA_CONTENT:
+        # Fall back to the seeded official CRLA payloads so the admin view
+        # still reflects the complete canonical paragraph set.
+        source_materials = []
+        for payload in OFFICIAL_CRLA_CONTENT.values():
+            pseudo_material = type('OfficialPayload', (), {})()
+            setattr(pseudo_material, 'content_json', {
+                'words': payload.get('words') or [],
+                'sentences': payload.get('sentences') or [],
+                'passages': payload.get('passages') or [],
+            })
+            setattr(pseudo_material, 'system_assessment_key', '')
+            source_materials.append(pseudo_material)
+
+    for material in source_materials:
+        sections = _official_reading_item_sections(material)
+        for word in sections['words']:
+            if word not in words:
+                words.append(word)
+        for sentence in sections['sentences']:
+            if sentence not in sentences:
+                sentences.append(sentence)
+        for passage in sections['passages']:
+            title = str(passage.get('title') or '').strip()
+            content = str(passage.get('content') or '').strip()
+            key = (title, content)
+            if key in seen_passage_keys:
+                continue
+            seen_passage_keys.add(key)
+            passages.append({'title': title, 'content': content})
+    if OFFICIAL_CRLA_CONTENT and len(passages) < 2:
+        for payload in OFFICIAL_CRLA_CONTENT.values():
+            for passage in payload.get('passages') or []:
+                if not isinstance(passage, dict):
+                    continue
+                title = str(passage.get('title') or '').strip()
+                content = str(passage.get('content') or '').strip()
+                key = (title, content)
+                if key in seen_passage_keys:
+                    continue
+                seen_passage_keys.add(key)
+                passages.append({'title': title, 'content': content})
+    return {
+        'words': words,
+        'sentences': sentences,
+        'passages': passages,
+    }
+
+
 def _official_reading_material_available_now(term, school_calendar=None, on_date=None):
     active_calendar = school_calendar or _active_school_calendar()
     current_term = _calendar_current_term(active_calendar) if active_calendar else None
@@ -4918,57 +5364,43 @@ def _official_assessment_availability_for_student(student, request=None):
     if not student or getattr(student, 'role', '') != 'student':
         return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
 
-    selected_calendar, _, active_calendar = _selected_school_calendar(request)
-    active_calendar = selected_calendar or active_calendar
-    if not active_calendar:
-        return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
-
-    current_term = _calendar_current_term(active_calendar) or getattr(active_calendar, 'current_term', None)
-    if current_term not in {1, 2, 3, 4}:
-        return {'available': False, 'assessment_type': None, 'school_year': active_calendar.school_year, 'current_term': None, 'active_window': _assessment_window_choice()}
-
     joined_sections = [
         section
         for section in Section.objects.filter(is_active=True).only('id', 'students')
         if section.has_student(student, active_only=True)
     ]
     if not joined_sections:
-        return {
-            'available': False,
-            'assessment_type': None,
-            'school_year': active_calendar.school_year,
-            'current_term': current_term,
-            'active_window': _assessment_window_choice(),
-        }
+        return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
 
-    active_window = _assessment_window_choice()
-    period, phase = _assessment_window_parts(active_window)
-    if phase == 'pretest':
-        in_window = _calendar_is_in_preassessment_window(active_calendar, current_term)
-        assessment_type = 'pretest'
-    else:
-        in_window = _calendar_is_in_postassessment_window(active_calendar, current_term)
-        assessment_type = 'posttest'
+    state = _reader_assessment_state(student)
+    assessment_type = 'posttest' if state.get('pre_test_completed') else 'pretest'
+    target_key = 'eosy_crla_posttest' if assessment_type == 'posttest' else 'bosy_crla_pretest'
+    matching_materials = _official_reading_materials_queryset().filter(system_assessment_key=target_key)
+    if not matching_materials.exists():
+        return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
 
     return {
-        'available': bool(in_window),
-        'assessment_type': assessment_type if in_window else None,
-        'school_year': active_calendar.school_year,
-        'current_term': current_term,
-        'active_window': active_window,
+        'available': True,
+        'assessment_type': assessment_type,
+        'school_year': None,
+        'current_term': None,
+        'active_window': None,
     }
 
 
 def _official_reading_material_payload(material):
     content_json = getattr(material, 'content_json', None) or {}
-    items = content_json.get('items') if isinstance(content_json.get('items'), list) else []
+    sections = _official_reading_item_sections(material)
     content_text = content_json.get('content_text') or getattr(material, 'content_text', '') or ''
     return {
         'id': material.id,
         'title': material.title or '',
         'language': material.language or 'English',
         'instructions': content_json.get('instructions', ''),
-        'items': [str(item).strip() for item in items if str(item).strip()],
+        'items': sections['items'],
+        'words': sections['words'],
+        'sentences': sections['sentences'],
+        'passages': sections['passages'],
         'content': content_text,
         'code': getattr(material, 'code', '') or '',
         'item_type': getattr(material, 'item_type', '') or 'word',
@@ -4981,33 +5413,44 @@ def _official_reading_assessments_for_student(student, availability):
     if not availability or not availability.get('available'):
         return []
 
-    active_calendar = _active_school_calendar()
-    school_year_value = availability.get('school_year') or (active_calendar.school_year if active_calendar else '')
-    current_term = availability.get('current_term')
     assessment_type = str(availability.get('assessment_type') or '').strip().lower()
     if assessment_type not in {'pretest', 'posttest'}:
         return []
 
-    if not active_calendar or not school_year_value or len(school_year_value) < 9:
-        return []
-
-    start_year = int(school_year_value[:4])
-    end_year = int(school_year_value[5:])
-    school_year_materials = _official_reading_materials_queryset().filter(
-        created_at__date__gte=date(start_year, 6, 1),
-        created_at__date__lte=date(end_year, 5, 31),
-        official_term=current_term,
+    assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
+    school_year_materials = _official_reading_materials_queryset().filter(system_assessment_key=assessment_key)
+    print(
+        'PABASA_OFFICIAL_TRACE',
+        {
+            'stage': 'queryset',
+            'requested_assessment_type': assessment_type,
+            'requested_system_assessment_key': assessment_key,
+            'queryset_count': school_year_materials.count(),
+            'queryset_ids': list(school_year_materials.values_list('id', flat=True)),
+            'queryset_titles': list(school_year_materials.values_list('title', flat=True)),
+            'queryset_keys': list(school_year_materials.values_list('system_assessment_key', flat=True)),
+        }
     )
-    if assessment_type == 'pretest':
-        school_year_materials = school_year_materials.filter(content_json__assessment_type='pre_assessment')
-    else:
-        school_year_materials = school_year_materials.filter(content_json__assessment_type='post_assessment')
 
     subject_materials = {}
     for material in school_year_materials:
         key = _official_reading_subject(material)
         if key and key not in subject_materials:
             subject_materials[key] = material
+            print(
+                'PABASA_OFFICIAL_TRACE',
+                {
+                    'stage': 'selected_material',
+                    'requested_assessment_type': assessment_type,
+                    'requested_system_assessment_key': assessment_key,
+                    'selected_material_id': material.id,
+                    'selected_material_title': material.title,
+                    'selected_material_system_assessment_key': getattr(material, 'system_assessment_key', ''),
+                    'selected_material_is_official': bool(getattr(material, 'is_official_reading', False)),
+                    'selected_material_is_system_owned': bool(getattr(material, 'is_system_owned', False)),
+                    'selected_material_subject': key,
+                }
+            )
 
     joined_sections = [
         section
@@ -5036,16 +5479,55 @@ def _official_reading_assessments_for_student(student, availability):
             continue
         payload = _official_reading_material_payload(material)
         payload['subject'] = subject
-        payload['assessment_type'] = 'Pre-Assessment' if assessment_type == 'pretest' else 'Post-Assessment'
+        payload['assessment_type'] = assessment_type
         payload['assessment_type_key'] = assessment_type
+        payload['official_title'] = str(getattr(material, 'title', '') or '').strip() or payload['title']
+        payload['official_code'] = str(getattr(material, 'code', '') or '').strip() or payload['code']
+        official_assessment_data = {
+            'id': payload['id'],
+            'title': payload['official_title'],
+            'code': payload['official_code'],
+            'language': payload['language'] or '',
+            'assessment_type': payload.get('assessment_type_key') or assessment_type,
+            'item_type': payload['item_type'] or 'word',
+            'words': payload['words'],
+            'sentences': payload['sentences'],
+            'passages': payload['passages'],
+            'official_title': payload['official_title'],
+            'official_code': payload['official_code'],
+        }
+        official_assessment_data_json = quote(json.dumps(official_assessment_data, default=str, separators=(',', ':')))
+        print(
+            'PABASA_OFFICIAL_TRACE',
+            {
+                'stage': 'official_assessment_data',
+                'requested_assessment_type': assessment_type,
+                'requested_system_assessment_key': assessment_key,
+                'selected_material_id': payload['id'],
+                'selected_material_title': payload['title'],
+                'selected_material_system_assessment_key': getattr(material, 'system_assessment_key', ''),
+                'official_assessment_data': official_assessment_data,
+            }
+        )
         payload['launch_url'] = (
-            f"{reverse('reading_word_page')}?test={quote(payload['title'])}"
-            f"&code={quote(payload['code'] or 'OFFICIAL')}"
+            f"{reverse('reading_word_page')}?test={quote(payload['official_title'])}"
+            f"&code={quote(payload['official_code'])}"
             f"&id={payload['id']}"
+            f"&official_assessment_id={payload['id']}"
+            f"&official_assessment_data={official_assessment_data_json}"
             f"&content={quote(payload['content'] or '')}"
             f"&item_type={quote(payload['item_type'] or 'word')}"
             f"&language={quote(payload['language'] or '')}"
             f"&instructions={quote(payload['instructions'] or '')}"
+        )
+        print(
+            'PABASA_OFFICIAL_TRACE',
+            {
+                'stage': 'launch_url',
+                'requested_assessment_type': assessment_type,
+                'requested_system_assessment_key': assessment_key,
+                'launch_url': payload['launch_url'],
+            }
         )
         matching_assessments.append(payload)
 
@@ -5131,26 +5613,51 @@ def _official_reading_material_context(request):
     active_calendar = selected_calendar or active_calendar
     current_term = _calendar_current_term(active_calendar) or getattr(active_calendar, 'current_term', None)
     school_year_value = active_calendar.school_year if active_calendar else request.GET.get('school_year', '').strip()
-    school_year_materials = []
-    if active_calendar and school_year_value and len(school_year_value) >= 9:
-        start_year = int(school_year_value[:4])
-        end_year = int(school_year_value[5:])
-        school_year_materials = list(
-            _official_reading_materials_queryset().filter(
-                created_at__date__gte=date(start_year, 6, 1),
-                created_at__date__lte=date(end_year, 5, 31),
-            )
-        )
-    official_tabs = []
-    for material in school_year_materials:
+    official_materials = list(_official_reading_materials_queryset())
+    official_material_by_phase = {}
+    for material in official_materials:
         key = _official_reading_assessment_type(material)
+        if key not in official_material_by_phase:
+            official_material_by_phase[key] = material
+
+    def _material_card_payload(material):
+        if not material:
+            return {
+                'id': None,
+                'title': 'Official Reading Materials',
+                'language': 'Filipino',
+                'instructions': '',
+                'items': [],
+                'words': [],
+                'sentences': [],
+                'passages': [],
+                'content': '',
+                'code': '',
+                'item_type': 'word',
+                'status': 'draft',
+                'updated_at': None,
+                'term': current_term or 1,
+                'assessment_type': 'pre_assessment',
+            }
+        payload = _official_reading_material_payload(material)
+        payload['term'] = getattr(material, 'official_term', None) or current_term or 1
+        payload['assessment_type'] = _official_reading_assessment_type(material)
+        return payload
+
+    canonical_material = official_material_by_phase.get('pre_assessment') or official_material_by_phase.get('post_assessment')
+    material_payload = _material_card_payload(canonical_material)
+    sections = _official_reading_catalog_sections(official_materials)
+    official_tabs = []
+    for phase_key, phase_label in [('pre_assessment', 'Pre-Assessment'), ('post_assessment', 'Post-Assessment')]:
+        material = official_material_by_phase.get(phase_key) or canonical_material
+        if not material:
+            continue
         term_value = getattr(material, 'official_term', None) or current_term
-        opening = _calendar_preassessment_block(active_calendar, term_value) if key == 'pre_assessment' else None
-        content_json = getattr(material, 'content_json', None) or {}
-        items = content_json.get('items') if isinstance(content_json, dict) and isinstance(content_json.get('items'), list) else []
+        opening = _calendar_preassessment_block(active_calendar, term_value) if phase_key == 'pre_assessment' else None
+        phase_sections = _official_reading_item_sections(material)
         official_tabs.append({
-            'key': key,
-            'label': 'Pre-Assessment' if key == 'pre_assessment' else 'Post-Assessment',
+            'key': phase_key,
+            'label': phase_label,
             'material': _official_reading_material_payload(material),
             'material_obj': material,
             'term': term_value,
@@ -5160,8 +5667,15 @@ def _official_reading_material_context(request):
                 if opening else ''
             ),
             'subject': _official_reading_subject(material),
-            'reading_items_count': len(items),
+            'reading_items_count': len(phase_sections['items']) + len(phase_sections['words']) + len(phase_sections['sentences']) + len(phase_sections['passages']),
+            'item_sections': phase_sections,
         })
+    pending_override_requests = list(
+        OfficialReadingIntegrityOverrideRequest.objects.select_related('requested_by', 'material', 'reviewed_by')
+        .filter(status='pending')
+        .order_by('-submitted_at', '-id')
+    )
+    reviewer_lockout = _get_official_override_lockout(request.session.get('user_id')) if request.session.get('user_id') else None
     return {
         'page_title': 'Official Reading Assessments',
         'admin_username': request.session.get('custom_id', ''),
@@ -5173,11 +5687,21 @@ def _official_reading_material_context(request):
         'assessment_window_label': 'Pre-Assessment' if active_calendar and current_term and _calendar_is_in_preassessment_window(active_calendar, current_term) else 'No Active Assessment Window',
         'assessment_window_status': 'Active' if active_calendar and current_term and _calendar_is_in_preassessment_window(active_calendar, current_term) else 'Closed',
         'official_tabs': official_tabs,
+        'official_material_set': material_payload,
+        'official_material_set_summary': {
+            'words': len(sections['words']),
+            'sentences': len(sections['sentences']),
+            'stories': len(sections['passages']),
+        },
+        'official_material_sections': sections,
         'active_school_calendar': active_calendar,
         'school_calendars': calendars,
         'selected_calendar': selected_calendar,
         'materials_by_term_json': json.dumps({}, default=str),
         'language_options': [('English', 'English'), ('Filipino', 'Filipino')],
+        'official_material_sections_json': sections,
+        'pending_override_requests': pending_override_requests,
+        'reviewer_lockout': _official_override_lockout_payload(reviewer_lockout),
     }
 
 
@@ -5202,16 +5726,20 @@ def _official_assessment_edit_context(request, material=None):
         'selected_assessment_type': _official_reading_assessment_type(material) if material else 'pre_assessment',
         'reading_items': items,
         'reading_items_json': json.dumps(items, default=str),
+        'official_item_sections': _official_reading_item_sections(material) if material else {'words': [], 'sentences': [], 'passages': [], 'items': []},
         'school_year_value': school_year_value,
         'current_school_calendar': active_calendar,
         'selected_calendar': active_calendar,
         'school_calendars': calendars,
         'official_form_error': '',
         'official_field_errors': {},
+        'override_authorized': _official_reading_override_authorized(request, material),
     }
 
 
 def _save_official_reading_assessment(request, material=None):
+    if material and not _official_reading_override_authorized(request, material):
+        return None, {'non_field_error': 'Official assessments require an authorized override before editing.'}
     field_errors = {}
     term_raw = request.POST.get('term')
     try:
@@ -5282,38 +5810,7 @@ def _official_assessment_create_context(request):
 @admin_required
 @require_http_methods(["GET", "POST"])
 def admin_official_reading_assessment_add(request):
-    if request.method == 'POST':
-        saved_material, error_response = _save_official_reading_assessment(request, material=None)
-        if error_response:
-            context = _official_assessment_create_context(request)
-            posted_title = (request.POST.get('title') or '').strip()
-            posted_language = Material.normalize_language_value(request.POST.get('language'))
-            posted_term = request.POST.get('term')
-            posted_assessment_type = (request.POST.get('assessment_type') or 'pre_assessment').strip().lower()
-            posted_instructions = (request.POST.get('instructions') or '').strip()
-            if posted_title:
-                context['material'] = Material(title=posted_title)
-            else:
-                context['material'] = Material()
-            if posted_language:
-                context['material'].language = posted_language
-            if str(posted_term or '').isdigit():
-                context['material'].official_term = int(posted_term)
-            context['selected_assessment_type'] = posted_assessment_type if posted_assessment_type in {'pre_assessment', 'post_assessment'} else 'pre_assessment'
-            context['material'].content_json = {'instructions': posted_instructions}
-            context.update({
-                'official_form_error': error_response.get('non_field_error', 'Please fix the highlighted fields.'),
-                'official_field_errors': error_response.get('field_errors', {}),
-            })
-            context['reading_items_json'] = request.POST.get('content_items_json') or request.POST.get('reading_items_json') or '[]'
-            context['reading_items'] = json.loads(context['reading_items_json']) if context['reading_items_json'] else []
-            return render(request, 'pabasa_app/admin_official_reading_assessment_edit.html', context, status=400)
-        if not saved_material:
-            return HttpResponseForbidden("Unable to save official assessment.")
-        calendar_id = request.POST.get('calendar_id') or request.GET.get('calendar_id') or ''
-        suffix = f"?calendar_id={calendar_id}" if calendar_id else ''
-        return redirect(f"{reverse('admin_official_reading_assessments')}{suffix}")
-    return render(request, 'pabasa_app/admin_official_reading_assessment_edit.html', _official_assessment_create_context(request))
+    return HttpResponseForbidden("Official reading assessments are protected from normal creation.")
 
 
 @admin_required
@@ -5379,6 +5876,7 @@ def admin_official_reading_assessment_edit(request, material_id=None):
             return render(request, 'pabasa_app/admin_official_reading_assessment_edit.html', context, status=400)
         if not saved_material:
             return HttpResponseForbidden("Unable to save official assessment.")
+        _clear_official_reading_override(request)
         calendar_id = request.POST.get('calendar_id') or request.GET.get('calendar_id') or ''
         suffix = f"?calendar_id={calendar_id}" if calendar_id else ''
         return redirect(f"{reverse('admin_official_reading_assessments')}{suffix}")
@@ -5389,11 +5887,7 @@ def admin_official_reading_assessment_edit(request, material_id=None):
 @csrf_protect
 @require_http_methods(["POST"])
 def admin_official_reading_assessment_delete(request, material_id):
-    material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
-    if not material or not material.is_official_reading:
-        return redirect('admin_official_reading_assessments')
-    material.delete()
-    return redirect('admin_official_reading_assessments')
+    return HttpResponseNotAllowed(['POST'])
 
 def _practice_difficulty_values():
     return [value for value, _label in AdminPracticeMaterialForm.DIFFICULTY_CHOICES]
@@ -6052,37 +6546,21 @@ def assessment(request):
     ] if user and getattr(user, 'role', '') == 'student' else []
 
     state = workflow.get('eligibility') or _reader_assessment_state(user)
-    window = workflow.get('active_window') or _assessment_window_choice()
-    period = workflow.get('active_period') or _assessment_window_parts(window)[0]
     completed_pretest = bool(state.get('pre_test_completed'))
     completed_posttest = bool(state.get('post_test_completed'))
     eligible = bool(state.get('aral_eligible'))
 
-    if period == 'bosy':
-        stage = 'assessment' if not completed_pretest else 'complete'
-    elif period == 'mosy':
-        stage = 'original' if eligible else ('not_eligible' if completed_pretest else 'original')
-    elif period == 'eosy':
-        if eligible:
-            stage = 'posttest' if completed_pretest and not completed_posttest else 'original'
-        else:
-            stage = 'not_eligible'
-    else:
+    if not completed_pretest:
+        stage = 'assessment'
+    elif eligible:
         stage = 'original'
+    else:
+        stage = 'complete'
 
     workflow['stage'] = stage
 
-    official_calendar = _active_school_calendar()
-    official_availability = _official_assessment_availability_for_student(user, request)
-    if period == 'bosy' and not completed_pretest:
-        if official_availability.get('available'):
-            stage = 'assessment'
-            workflow['stage'] = stage
-        else:
-            stage = 'no_assessment'
-            workflow['stage'] = stage
-
     materials = _assessment_materials_for_student(user)
+    student_assessment_materials = []
     material_map = {}
     for material in materials:
         key = str(material.assessment_set or material.item_type).strip().lower()
@@ -6091,7 +6569,42 @@ def assessment(request):
         kind = _assessment_kind_value(material)
         if kind and kind not in material_map:
             material_map[kind] = material
+        content_json = getattr(material, 'content_json', None) or {}
+        items = content_json.get('items') if isinstance(content_json, dict) and isinstance(content_json.get('items'), list) else []
+        parsed_items = [str(item).strip() for item in items if str(item).strip()]
+        content_text = '\n'.join(parsed_items) if parsed_items else str(getattr(material, 'content_text', '') or '').strip()
+        item_type = str(getattr(material, 'item_type', '') or 'word').strip().lower() or 'word'
+        launch_url = (
+            f"{reverse('reading_word_page')}?test={quote(material.title or 'Reading Assessment')}"
+            f"&code={quote(getattr(material, 'code', '') or 'ASSESS')}"
+            f"&id={material.id}"
+            f"&content={quote(content_text)}"
+            f"&item_type={quote(item_type)}"
+            f"&language={quote(getattr(material, 'language', '') or '')}"
+        )
+        student_assessment_materials.append({
+            'id': material.id,
+            'title': material.title or 'Reading Assessment',
+            'code': getattr(material, 'code', '') or 'ASSESS',
+            'item_type': item_type,
+            'language': getattr(material, 'language', '') or '',
+            'content': content_text,
+            'items': parsed_items,
+            'launch_url': launch_url,
+            'status': getattr(material, 'status', '') or '',
+        })
+    context = _dashboard_context(request, 'student')
+    context.update(workflow)
+    official_calendar = _active_school_calendar()
+    official_availability = _official_assessment_availability_for_student(user, request)
+    context.update({
+        'official_assessment_available': bool(official_availability.get('available')),
+        'official_assessment_type': official_availability.get('assessment_type') or '',
+    })
     crla_material = material_map.get('crla')
+    official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
+    if official_crla_material:
+        crla_material = official_crla_material
     crla_items = 0
     crla_duration = 'Not set'
     crla_title = 'CRLA Assessment'
@@ -6101,21 +6614,22 @@ def assessment(request):
     crla_material_code = ''
     crla_material_language = ''
     crla_material_item_type = 'word'
+    crla_sections = {'words': [], 'sentences': [], 'passages': [], 'items': []}
     if crla_material:
         crla_title = crla_material.title or crla_title
         crla_material_id = crla_material.id
         crla_material_code = getattr(crla_material, 'code', '') or 'CRLA'
         crla_material_item_type = str(getattr(crla_material, 'item_type', '') or 'word').strip().lower() or 'word'
         content_json = getattr(crla_material, 'content_json', None) or {}
+        crla_sections = _official_reading_item_sections(crla_material)
         if isinstance(content_json, dict):
             crla_material_language = str(content_json.get('language') or '').strip()
-            items = content_json.get('items') if isinstance(content_json.get('items'), list) else []
-            if items:
-                crla_items_json = [str(item or '').strip() for item in items if str(item or '').strip()]
-                crla_content = '\n'.join(str(item or '').strip() for item in items if str(item or '').strip())
-                crla_items = len(crla_items_json)
-            elif content_json.get('content_text'):
-                crla_content = str(content_json.get('content_text') or '').strip()
+        if crla_sections['items']:
+            crla_items_json = [str(item or '').strip() for item in crla_sections['items'] if str(item or '').strip()]
+            crla_content = '\n'.join(str(item or '').strip() for item in crla_sections['items'] if str(item or '').strip())
+            crla_items = len(crla_items_json)
+        elif content_json.get('content_text'):
+            crla_content = str(content_json.get('content_text') or '').strip()
         if not crla_content:
             crla_content = str(getattr(crla_material, 'content_text', '') or '').strip()
         if crla_content and not crla_items:
@@ -6124,12 +6638,22 @@ def assessment(request):
         if crla_items:
             estimated_minutes = max(5, min(30, round(crla_items * 0.5)))
             crla_duration = f"{estimated_minutes} min"
-    context = _dashboard_context(request, 'student')
-    context.update(workflow)
-    context.update({
-        'official_assessment_available': bool(official_availability.get('available')),
-        'official_assessment_type': official_availability.get('assessment_type') or '',
-    })
+    crla_official_assessment_data = {}
+    if crla_material_id:
+        crla_assessment_type = 'pretest' if str(getattr(crla_material, 'system_assessment_key', '') or '').strip().lower() == 'bosy_crla_pretest' else 'posttest' if str(getattr(crla_material, 'system_assessment_key', '') or '').strip().lower() == 'eosy_crla_posttest' else 'pretest'
+        crla_official_assessment_data = {
+            'id': crla_material_id,
+            'title': crla_title,
+            'code': crla_material_code,
+            'language': crla_material_language or '',
+            'assessment_type': crla_assessment_type,
+            'item_type': crla_material_item_type or 'word',
+            'words': crla_sections['words'],
+            'sentences': crla_sections['sentences'],
+            'passages': crla_sections['passages'],
+            'official_title': crla_title,
+            'official_code': crla_material_code,
+        }
     official_assessments = _official_reading_assessments_for_student(user, official_availability)
     school_year_value = official_availability.get('school_year') or (official_calendar.school_year if official_calendar else '')
     enriched_official_assessments = []
@@ -6152,29 +6676,62 @@ def assessment(request):
         'crla_assessment_code': crla_material_code,
         'crla_assessment_language': crla_material_language,
         'crla_assessment_item_type': crla_material_item_type,
+        'crla_official_assessment_data': crla_official_assessment_data,
+        'crla_official_assessment_data_json': json.dumps(crla_official_assessment_data, default=str, separators=(',', ':')) if crla_official_assessment_data else '',
+        'crla_official_assessment_id': crla_material_id,
+        'student_assessment_materials': student_assessment_materials,
         'joined_sections_count': len(joined_sections),
         'active_school_calendar': official_calendar,
     })
+    try:
+        logger.warning(
+            "PABASA_OFFICIAL_TRACE assessment_page_context %s",
+            {
+                'selected_material_id': crla_material_id,
+                'selected_material_title': crla_title,
+                'selected_material_code': crla_material_code,
+                'selected_material_system_assessment_key': getattr(crla_material, 'system_assessment_key', '') if crla_material else '',
+                'official_assessment_id': crla_material_id,
+                'has_official_assessment_data': bool(crla_official_assessment_data),
+                'official_assessment_data': crla_official_assessment_data,
+            },
+        )
+    except Exception as exc:
+        logger.warning("PABASA_OFFICIAL_TRACE assessment_page_context logging_failed=%s", exc)
+    try:
+        logger.warning(
+            "PABASA_OFFICIAL_TRACE workflow_launch_context %s",
+            {
+                'selected_material_id': crla_material_id,
+                'selected_material_title': crla_title,
+                'selected_material_code': crla_material_code,
+                'selected_material_system_assessment_key': getattr(crla_material, 'system_assessment_key', '') if crla_material else '',
+                'official_assessment_id': crla_material_id,
+                'official_assessment_data': crla_official_assessment_data,
+                'generated_start_url': (
+                    f"{reverse('reading_word_page')}?test={quote(crla_official_assessment_data.get('official_title', crla_title) if crla_official_assessment_data else crla_title)}"
+                    f"&code={quote(crla_official_assessment_data.get('official_code', crla_material_code) if crla_official_assessment_data else crla_material_code)}"
+                    f"&id={crla_material_id}"
+                    f"&official_assessment_id={crla_material_id}"
+                    f"&official_assessment_data={quote(json.dumps(crla_official_assessment_data, default=str, separators=(',', ':')) if crla_official_assessment_data else '')}"
+                    f"&content={quote(crla_content or '')}"
+                    f"&item_type={quote(crla_material_item_type or 'word')}"
+                    f"&language={quote(crla_material_language or '')}"
+                ),
+            },
+        )
+    except Exception as exc:
+        logger.warning("PABASA_OFFICIAL_TRACE workflow_launch_context logging_failed=%s", exc)
     if stage == 'original':
         return render(request, 'pabasa_app/assessment.html', context)
 
     context['workflow_title'] = (
-        'No Reading Assessment Available'
-        if stage == 'no_assessment'
-        else 'Beginning of School Year Reading Assessment'
+        'Beginning of School Year Reading Assessment'
         if stage == 'assessment'
-        else 'CRLA Post-Test'
-        if stage == 'posttest'
         else 'Assessment Complete'
     )
-    if stage == 'no_assessment' and not joined_sections:
-        workflow_message = 'Join a class to access official reading assessments.'
-    elif stage == 'no_assessment':
-        workflow_message = 'No Reading Assessment Available.'
-    elif stage == 'assessment':
+    if stage == 'assessment':
         workflow_message = 'Complete the official BoSY CRLA Assessment prepared by your teacher.'
-    elif stage == 'posttest':
-        workflow_message = 'The learner will continue with the EoSY CRLA Post-Test using the same CRLA assessment materials.'
     else:
         workflow_message = 'The learner successfully completed the BoSY CRLA assessment but is not eligible for the ARAL Program.'
 
@@ -11129,9 +11686,13 @@ def get_class_materials(request):
         
         # Include materials directly linked to section, assigned via ManyToMany,
         # or attached to a Course that includes this section.
+        official_crla_keys = ['bosy_crla_pretest', 'eosy_crla_posttest']
         materials_qs = Material.objects.filter(
             Q(section=section) | Q(assigned_sections=section) | Q(courses__sections=section)
         ).distinct()
+        materials_qs = materials_qs.exclude(
+            Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True, system_assessment_key__in=official_crla_keys)
+        )
         # Avoid duplication: exclude assessments that are already represented by a Material record.
         # Material records act as the primary container for metadata like "Assigned Week".
         # Some assessment attempts are stored as Assessment rows tied to a Material via material_id,
@@ -11171,8 +11732,24 @@ def get_class_materials(request):
 
         # Build combined list sorted by created_at descending
         combined = []
+        seen_material_ids = set()
         for mat in materials_qs:
+            if mat.id in seen_material_ids:
+                continue
             combined.append(('material', mat))
+            seen_material_ids.add(mat.id)
+        if is_requesting_student:
+            official_materials_qs = Material.objects.filter(
+                is_active=True,
+                is_official_reading=True,
+                is_system_owned=True,
+                system_assessment_key__in=official_crla_keys,
+            ).exclude(status__iexact='archived').order_by('system_assessment_key', 'id')
+            for official_mat in official_materials_qs:
+                if official_mat.id in seen_material_ids:
+                    continue
+                combined.append(('material', official_mat))
+                seen_material_ids.add(official_mat.id)
         for a in assessments_qs:
             combined.append(('assessment', a))
         for p in practices_qs:

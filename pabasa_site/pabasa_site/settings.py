@@ -169,6 +169,14 @@ GOOGLE_CLOUD_PROJECT_ID = 'direct-outlet-499701-p6'
 GOOGLE_STT_LOCATION = 'us'
 GOOGLE_STT_MODEL = 'latest_short'
 GOOGLE_STT_CREDENTIALS_FILE = BASE_DIR / 'google-stt-service-account.json'
+PABASA_OVERRIDE_SECURITY_CODE = os.environ.get('PABASA_OVERRIDE_SECURITY_CODE', '')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'pabasa-default-cache',
+    }
+}
 
 # When a CSRF failure occurs, prefer a JSON response for AJAX requests so frontend can handle it.
 CSRF_FAILURE_VIEW = 'pabasa_app.views.csrf_failure'

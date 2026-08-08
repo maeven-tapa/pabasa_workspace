@@ -300,6 +300,81 @@ class AssessmentWorkflowStateTests(TestCase):
         self.assertEqual(response.context['stage'], "materials")
 
 
+class AssessmentPageFlowTests(TestCase):
+    def _login_student(self, student):
+        session = self.client.session
+        session['user_id'] = student.id
+        session['user_role'] = student.role
+        session['custom_id'] = student.custom_id
+        session['first_name'] = student.first_name
+        session['last_name'] = student.last_name
+        session['email'] = student.email
+        session.save()
+        return session
+
+    def test_assessment_page_allows_aral_materials_after_pretest_eligibility(self):
+        student = User.objects.create(
+            custom_id="STU-3001",
+            role="student",
+            first_name="Ari",
+            last_name="Reader",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="ari@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "crla_posttest_completed": False,
+                    "reader_classification": "Low Emerging Readers",
+                    "aral_eligible": True,
+                    "current_phase": "materials",
+                }
+            },
+        )
+        self._login_student(student)
+
+        response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['stage'], 'original')
+
+    def test_assessment_page_shows_completion_card_for_non_eligible_students_after_posttest(self):
+        student = User.objects.create(
+            custom_id="STU-3002",
+            role="student",
+            first_name="Mina",
+            last_name="Reader",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="mina@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "crla_posttest_completed": True,
+                    "reader_classification": "Readers at Grade Level",
+                    "aral_eligible": False,
+                    "current_phase": "complete",
+                }
+            },
+        )
+        self._login_student(student)
+
+        response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['stage'], 'complete')
+
+
 class TeacherSignupTemplateTests(TestCase):
     def test_teacher_signup_template_includes_privacy_step_and_consent_controls(self):
         template_path = Path(__file__).resolve().parent / "templates" / "pabasa_app" / "teacher_signup.html"
