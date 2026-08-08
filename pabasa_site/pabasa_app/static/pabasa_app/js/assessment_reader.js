@@ -11,6 +11,7 @@
         if (shell.classList.contains('reader-vowel')) mode = 'vowel';
 
         const readingWord = document.getElementById("readingWord");
+        const readingTitle = document.getElementById("readingTitle");
         const readingHelperText = document.getElementById("readingHelperText");
         const speechTranscript = document.getElementById("speechTranscript");
         const counter = document.getElementById("counter");
@@ -104,6 +105,7 @@
         let items = [];
         let itemTypes = [];
         let itemPages = [];
+        let itemTitles = [];
         let pageCorrectWordCounts = [];
         let currentIndex = 0;
         let currentPageIndex = 0;
@@ -469,6 +471,35 @@
             return pages.length ? pages : [source];
         }
 
+        function extractItemTitle(itemText, itemType) {
+            const normalizedType = String(itemType || mode || "").trim().toLowerCase();
+            if (!["paragraph", "para", "story"].includes(normalizedType)) return "";
+            const source = String(itemText || "").trim();
+            if (!source) return "";
+            const parts = source.split(/\n{2,}/).map(part => part.trim()).filter(Boolean);
+            return parts.length > 1 ? parts[0] : "";
+        }
+
+        function getCurrentItemTitle() {
+            return itemTitles[currentIndex] || "";
+        }
+
+        function escapeRegExp(value) {
+            return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        }
+
+        function splitDisplayTextByTitle(displayText, itemTitle) {
+            const title = String(itemTitle || "").trim();
+            const source = String(displayText || "").trim();
+            if (!title || !source) return { titleText: "", bodyText: source };
+            const titleRegex = new RegExp(`^${escapeRegExp(title)}([\r\n]{1,2})`);
+            if (titleRegex.test(source)) {
+                const bodyText = source.replace(titleRegex, "").trim();
+                return { titleText: title, bodyText: bodyText };
+            }
+            return { titleText: "", bodyText: source };
+        }
+
         function buildItemPages(sourceItems, sourceTypes) {
             return sourceItems.map((text, index) => splitTextIntoDisplayPages(text, sourceTypes[index] || mode));
         }
@@ -478,8 +509,7 @@
         }
 
         function getCurrentDisplayText() {
-            const pages = getCurrentItemPages();
-            return pages[Math.min(currentPageIndex, Math.max(0, pages.length - 1))] || "";
+            return getCurrentItemPages()[Math.min(currentPageIndex, Math.max(0, getCurrentItemPages().length - 1))] || "";
         }
 
         function isCurrentItemPaged() {
@@ -497,7 +527,7 @@
         }
 
         function goToPreviousPageOrItem() {
-            const pages = getCurrentItemPages();
+            const totalPages = getCurrentPageCount();
             if (currentPageIndex > 0) {
                 currentPageIndex -= 1;
                 updateUI();
@@ -510,8 +540,8 @@
         }
 
         function goToNextPageOrItem() {
-            const pages = getCurrentItemPages();
-            if (currentPageIndex < pages.length - 1) {
+            const totalPages = getCurrentPageCount();
+            if (currentPageIndex < totalPages - 1) {
                 currentPageIndex += 1;
                 updateUI();
                 animateCurrentItem();
@@ -527,7 +557,7 @@
         function syncItemCorrectWordCount(itemIndex) {
             const counts = pageCorrectWordCounts[itemIndex] || [];
             const total = counts.reduce((sum, count) => sum + Number(count || 0), 0);
-            correctWordCounts[itemIndex] = Math.min(total, readableWordCount(items[itemIndex]));
+            correctWordCounts[itemIndex] = Math.min(total, readableWordCount(items[itemIndex] || ""));
         }
 
         function syncAllItemCorrectWordCounts() {
@@ -547,16 +577,17 @@
                 const officialLanguage = String(officialAssessmentData.language || liveLanguage || "").trim();
                 const officialWords = Array.isArray(officialAssessmentData.words) ? officialAssessmentData.words.map(item => String(item || "").trim()).filter(Boolean) : [];
                 const officialSentences = Array.isArray(officialAssessmentData.sentences) ? officialAssessmentData.sentences.map(item => String(item || "").trim()).filter(Boolean) : [];
-                const officialPassages = Array.isArray(officialAssessmentData.passages)
-                    ? officialAssessmentData.passages
-                        .map(item => {
-                            if (!item || typeof item !== "object") return "";
-                            const title = String(item.title || "").trim();
-                            const content = String(item.content || "").trim();
-                            return [title, content].filter(Boolean).join("\n");
-                        })
-                        .filter(Boolean)
-                    : [];
+                const officialPassages = [];
+                if (Array.isArray(officialAssessmentData.passages)) {
+                    officialAssessmentData.passages.forEach(item => {
+                        if (!item || typeof item !== "object") return;
+                        const title = String(item.title || "").trim();
+                        const content = String(item.content || "").trim();
+                        const combined = [title, content].filter(Boolean).join("\n\n");
+                        if (!combined) return;
+                        officialPassages.push(combined);
+                    });
+                }
                 const officialItemTypes = [
                     ...new Array(Math.max(0, officialWords.length)).fill("word"),
                     ...new Array(Math.max(0, officialSentences.length)).fill("sentence"),
@@ -580,6 +611,7 @@
                 });
                 itemTypes = officialItemTypes.length ? officialItemTypes : new Array(items.length).fill(officialType);
                 itemPages = buildItemPages(items, itemTypes);
+                itemTitles = items.map((text, index) => extractItemTitle(text, itemTypes[index]));
                 pageCorrectWordCounts = items.map(() => []);
                 currentMaterialLanguage = officialLanguage || "";
                 correctWordCounts = new Array(items.length).fill(0);
@@ -589,7 +621,8 @@
                     return;
                 }
                 if (testMeta) {
-                    testMeta.textContent = officialTitle;
+                    // keep the top metadata as the assessment header, not the story title,
+                    // so the story title only appears once inside the reading card.
                 }
                 console.log("PABASA_OFFICIAL_TRACE", {
                     stage: "final_reader_render",
@@ -884,7 +917,7 @@
         }
 
         function appendPunctuationHelper(detail, wordsRead) {
-            const helper = punctuationHelperForProgress(items[currentIndex], wordsRead);
+            const helper = punctuationHelperForProgress(getCurrentDisplayText(), wordsRead);
             return helper ? `${detail} | ${helper}` : detail;
         }
 
@@ -1520,40 +1553,58 @@
 
         function renderSyllableDisplay(data, previousCorrectWords = 0) {
             if (!readingWord || !Array.isArray(data.words) || !Array.isArray(data.word_syllable_ranges)) return;
+            const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
+            const itemTitle = getCurrentItemTitle();
+            const { titleText, bodyText } = splitDisplayTextByTitle(displayText, itemTitle);
+            if (readingTitle) {
+                readingTitle.hidden = !itemTitle;
+                if (itemTitle) {
+                    readingTitle.textContent = "";
+                }
+            }
             readingWord.textContent = "";
+
             let readableWordIndex = 0;
             let animatedWordCount = 0;
             const shouldAnimate = true;
-            const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
-            const parts = displayText.split(/(\s+)/);
-            parts.forEach((part) => {
-                if (!part) return;
-                if (/^\s+$/.test(part)) {
-                    readingWord.appendChild(document.createTextNode(part));
-                    return;
-                }
-
-                if (isDisplayListMarker(part) || !normalizeDisplayWord(part)) {
-                    readingWord.appendChild(document.createTextNode(part));
-                    return;
-                }
-
-                const range = data.word_syllable_ranges[readableWordIndex] || [0, 0];
-                const span = document.createElement("span");
-                span.className = "syllable";
-                if (range[1] <= currentSyllableIndex) {
-                    span.classList.add("is-read");
-                    if (shouldAnimate && readableWordIndex >= previousCorrectWords) {
-                        span.classList.add("is-new-read");
-                        span.style.animationDelay = `${animatedWordCount * 130}ms`;
-                        animatedWordCount += 1;
+            const renderTextParts = (text, container) => {
+                const parts = String(text || "").split(/(\s+)/);
+                parts.forEach((part) => {
+                    if (!part) return;
+                    if (/^\s+$/.test(part)) {
+                        container.appendChild(document.createTextNode(part));
+                        return;
                     }
-                }
-                else if (range[0] <= currentSyllableIndex && currentSyllableIndex < range[1]) span.classList.add("is-current");
-                span.textContent = part;
-                readingWord.appendChild(span);
-                readableWordIndex += 1;
-            });
+
+                    if (isDisplayListMarker(part) || !normalizeDisplayWord(part)) {
+                        container.appendChild(document.createTextNode(part));
+                        return;
+                    }
+
+                    const range = data.word_syllable_ranges[readableWordIndex] || [0, 0];
+                    const span = document.createElement("span");
+                    span.className = "syllable";
+                    if (range[1] <= currentSyllableIndex) {
+                        span.classList.add("is-read");
+                        if (shouldAnimate && readableWordIndex >= previousCorrectWords) {
+                            span.classList.add("is-new-read");
+                            span.style.animationDelay = `${animatedWordCount * 130}ms`;
+                            animatedWordCount += 1;
+                        }
+                    } else if (range[0] <= currentSyllableIndex && currentSyllableIndex < range[1]) {
+                        span.classList.add("is-current");
+                    }
+                    span.textContent = part;
+                    container.appendChild(span);
+                    readableWordIndex += 1;
+                });
+            };
+
+            if (itemTitle && readingTitle) {
+                readingTitle.textContent = "";
+                renderTextParts(titleText, readingTitle);
+            }
+            renderTextParts(bodyText || displayText, readingWord);
             if (progressFill && typeof data.progress === "number") {
                 progressFill.style.width = `${((currentIndex + (data.progress / 100)) / items.length) * 100}%`;
             }
@@ -1607,7 +1658,16 @@
             stopReadAloud();
             setCurrentItemMode(itemTypes[currentIndex] || mode);
             const displayText = getCurrentDisplayText();
-            if (readingWord) readingWord.textContent = displayText;
+            const itemTitle = getCurrentItemTitle();
+            const { bodyText } = splitDisplayTextByTitle(displayText, itemTitle);
+            if (readingTitle) {
+                readingTitle.textContent = itemTitle;
+                readingTitle.hidden = !itemTitle;
+            }
+            if (readingWord) {
+                readingWord.textContent = bodyText || displayText;
+                readingWord.hidden = false;
+            }
             currentSyllableIndex = 0;
             resetSyllableStitching();
             pendingAudioChunk = null;

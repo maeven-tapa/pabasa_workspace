@@ -381,6 +381,23 @@
             width: 100%;
         }
 
+        .reading-title {
+            color: #1f2937;
+            font-family: "Nunito", "Segoe UI", sans-serif;
+            font-weight: 900;
+            font-size: clamp(1rem, 2.4vw, 1.25rem);
+            line-height: 1.1;
+            margin: 0 0 0.75rem;
+            max-width: min(840px, 92vw);
+            text-wrap: balance;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+
+        .reading-title[hidden] {
+            display: none;
+        }
+
         .reading-word {
             color: #2a2a25;
             font-family: "Nunito", "Segoe UI", sans-serif;
@@ -1939,6 +1956,7 @@
                     <span id="readingHelperText" aria-live="polite">{% block helper_text %}{% endblock %}</span>
                 </div>
                 <section class="word-stage" aria-live="polite" aria-atomic="true">
+                    <h2 class="reading-title" id="readingTitle" hidden></h2>
                     <h1 class="reading-word" id="readingWord">{% block initial_text %}{% endblock %}</h1>
                 </section>
                 <div class="speech-panel" id="speechPanel" hidden aria-hidden="true">
