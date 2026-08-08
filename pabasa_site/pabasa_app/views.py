@@ -277,17 +277,25 @@ def _assessment_workflow_context(student):
     completed_pretest = state['pre_test_completed']
     completed_posttest = state['post_test_completed']
     eligible = state['aral_eligible']
-    stage = 'pretest' if not completed_pretest else ('materials' if eligible else 'completed')
+    active_phase = _official_crla_assessment_phase(student)
+    official_crla_material = _official_crla_material_for_student(student, active_phase)
+
+    if active_phase == 'pretest':
+        stage = 'assessment' if official_crla_material else ('original' if eligible else 'complete')
+    elif active_phase == 'posttest':
+        stage = 'assessment' if official_crla_material and not completed_posttest else ('original' if eligible else 'complete')
+    else:
+        stage = 'original' if eligible else 'complete'
 
     return {
         'active_window': None,
         'active_window_label': 'Reading Assessment',
         'active_period': 'bosy',
-        'active_phase': 'pretest',
+        'active_phase': active_phase,
         'eligibility': state,
         'stage': stage,
-        'can_take_pretest': not completed_pretest,
-        'can_take_posttest': eligible and completed_pretest and not completed_posttest,
+        'can_take_pretest': active_phase == 'pretest' and not completed_pretest,
+        'can_take_posttest': active_phase == 'posttest' and not completed_posttest,
     }
 
 
@@ -298,6 +306,63 @@ def _assessment_kind_value(material):
 def _assessment_window_allows_crla(window=None):
     period, _phase = _assessment_window_parts(window)
     return period in {'bosy', 'eosy'}
+
+
+def _official_crla_assessment_phase(student=None, request=None, on_date=None):
+    check_date = on_date or date.today()
+    if not student or getattr(student, 'role', '') != 'student':
+        return 'intervention'
+
+    joined_sections = [
+        section
+        for section in Section.objects.filter(is_active=True).only('id', 'students')
+        if section.has_student(student, active_only=True)
+    ]
+    if not joined_sections:
+        return 'intervention'
+
+    active_calendar = _active_school_calendar(check_date)
+    current_term = _calendar_current_term(active_calendar, on_date=check_date) if active_calendar else None
+    current_term = current_term or getattr(active_calendar, 'current_term', None)
+    if active_calendar and current_term:
+        if _calendar_is_in_preassessment_window(active_calendar, current_term, on_date=check_date):
+            return 'pretest'
+        if _calendar_is_in_postassessment_window(active_calendar, current_term, on_date=check_date):
+            return 'posttest'
+
+        pre_block = _calendar_preassessment_block(active_calendar, current_term)
+        post_block = _calendar_postassessment_block(active_calendar, current_term)
+        if pre_block and post_block:
+            pre_end = getattr(pre_block, 'end_date', None) or getattr(pre_block, 'start_date', None)
+            post_start = getattr(post_block, 'start_date', None)
+            if pre_end and post_start and pre_end < check_date < post_start:
+                return 'intervention'
+
+    return 'intervention'
+
+
+def _official_crla_phase_to_key(assessment_type):
+    assessment_type = str(assessment_type or '').strip().lower()
+    if assessment_type == 'pretest':
+        return 'bosy_crla_pretest'
+    if assessment_type == 'posttest':
+        return 'eosy_crla_posttest'
+    return ''
+
+
+def _student_is_eosy_crla_eligible(student):
+    state = _reader_assessment_state(student)
+    return bool(state.get('crla_pretest_completed')) and bool(state.get('aral_eligible'))
+
+
+def _official_crla_materials_for_phase(assessment_type):
+    assessment_type = str(assessment_type or '').strip().lower()
+    if assessment_type not in {'pretest', 'posttest'}:
+        return Material.objects.none()
+    return _official_reading_materials_queryset().filter(
+        assessment_kind='crla',
+        system_assessment_phase=assessment_type,
+    )
 
 
 def _school_year_events(school_calendar):
@@ -311,8 +376,8 @@ def _school_year_events(school_calendar):
 
 def _school_year_bounds(school_calendar):
     events = _school_year_events(school_calendar)
-    start_event = events.get('start_of_classes')
-    end_event = events.get('end_of_classes')
+    start_event = events.get('start_of_classes') or events.get('school_opening')
+    end_event = events.get('end_of_classes') or events.get('school_closing')
     return start_event, end_event
 
 
@@ -377,7 +442,7 @@ def _assessment_materials_for_student(student=None):
         type='assessment',
     ).filter(kind_filters)
     queryset = queryset.exclude(
-        Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True, system_assessment_key__in=['bosy_crla_pretest', 'eosy_crla_posttest'])
+        Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True)
     )
     return queryset.order_by('created_at', 'id')
 
@@ -390,8 +455,7 @@ def _official_crla_material_for_student(student, assessment_type):
     if assessment_type not in {'pretest', 'posttest'}:
         return None
 
-    assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
-    return _official_reading_materials_queryset().filter(system_assessment_key=assessment_key).order_by('updated_at', 'id').first()
+    return _official_crla_materials_for_phase(assessment_type).order_by('updated_at', 'id').first()
 
 
 def _official_crla_assessment_labels(assessment_type):
@@ -402,12 +466,31 @@ def _official_crla_assessment_labels(assessment_type):
             'workflow_message': 'Complete the official EoSY CRLA Assessment prepared by your teacher.',
             'workflow_subtitle': 'End of School Year reading assessment',
         }
+    if assessment_type == 'pretest':
+        return {
+            'workflow_title': 'Beginning of School Year Reading Assessment',
+            'workflow_message': 'Complete the official BoSY CRLA Assessment prepared by your teacher.',
+            'workflow_subtitle': 'Beginning of School Year reading assessment',
+        }
 
     return {
-        'workflow_title': 'Beginning of School Year Reading Assessment',
-        'workflow_message': 'Complete the official BoSY CRLA Assessment prepared by your teacher.',
-        'workflow_subtitle': 'Beginning of School Year reading assessment',
+        'workflow_title': 'Reading Assessment',
+        'workflow_message': 'The current assessment window is not active. Continue with the intervention plan.',
+        'workflow_subtitle': 'Intervention period',
     }
+
+
+def _official_crla_material_keys_for_student(student, on_date=None):
+    if not student or getattr(student, 'role', '') != 'student':
+        return []
+
+    student_state = _reader_assessment_state(student)
+    active_phase = _official_crla_assessment_phase(student, on_date=on_date)
+    if active_phase == 'pretest':
+        return [key for key in _official_crla_materials_for_phase('pretest').values_list('system_assessment_key', flat=True) if key]
+    if active_phase == 'posttest' and _student_is_eosy_crla_eligible(student):
+        return [key for key in _official_crla_materials_for_phase('posttest').values_list('system_assessment_key', flat=True) if key]
+    return []
 
 
 def _published_crla_material_for_student(student):
@@ -4831,10 +4914,8 @@ def _calendar_term_blocks(school_calendar):
     return blocks
 
 
-def _calendar_current_term(school_calendar):
-    from datetime import date as _date
-
-    today = _date.today()
+def _calendar_current_term(school_calendar, on_date=None):
+    today = on_date or date.today()
     for term, block in _calendar_term_blocks(school_calendar).items():
         opening = block.get('opening')
         closing = block.get('closing')
@@ -4849,9 +4930,7 @@ def _calendar_instructional_events(school_calendar, base_events):
 
 
 def _active_school_calendar(on_date=None):
-    from datetime import date as _date
-
-    check_date = on_date or _date.today()
+    check_date = on_date or date.today()
     calendars = SchoolCalendar.objects.all().order_by('-updated_at', '-created_at')
     active = None
     best_start = None
@@ -4889,9 +4968,7 @@ def _calendar_postassessment_block(school_calendar, term):
 
 
 def _calendar_is_in_preassessment_window(school_calendar, term, on_date=None):
-    from datetime import date as _date
-
-    check_date = on_date or _date.today()
+    check_date = on_date or date.today()
     block = _calendar_preassessment_block(school_calendar, term)
     if not block:
         return False
@@ -4899,9 +4976,7 @@ def _calendar_is_in_preassessment_window(school_calendar, term, on_date=None):
 
 
 def _calendar_is_in_postassessment_window(school_calendar, term, on_date=None):
-    from datetime import date as _date
-
-    check_date = on_date or _date.today()
+    check_date = on_date or date.today()
     block = _calendar_postassessment_block(school_calendar, term)
     if not block:
         return False
@@ -5378,7 +5453,7 @@ def _official_reading_material_available_now(term, school_calendar=None, on_date
 
 def _official_assessment_availability_for_student(student, request=None):
     if not student or getattr(student, 'role', '') != 'student':
-        return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
+        return {'available': False, 'assessment_type': 'intervention', 'school_year': None, 'current_term': None, 'active_window': None}
 
     joined_sections = [
         section
@@ -5386,14 +5461,16 @@ def _official_assessment_availability_for_student(student, request=None):
         if section.has_student(student, active_only=True)
     ]
     if not joined_sections:
-        return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
+        return {'available': False, 'assessment_type': 'intervention', 'school_year': None, 'current_term': None, 'active_window': None}
 
-    state = _reader_assessment_state(student)
-    assessment_type = 'posttest' if state.get('pre_test_completed') else 'pretest'
+    assessment_type = _official_crla_assessment_phase(student, request=request)
+    if assessment_type not in {'pretest', 'posttest'}:
+        return {'available': False, 'assessment_type': assessment_type, 'school_year': None, 'current_term': None, 'active_window': None}
+
     target_key = 'eosy_crla_posttest' if assessment_type == 'posttest' else 'bosy_crla_pretest'
-    matching_materials = _official_reading_materials_queryset().filter(system_assessment_key=target_key)
+    matching_materials = _official_reading_materials_queryset().filter(system_assessment_key=target_key, system_assessment_phase=assessment_type)
     if not matching_materials.exists():
-        return {'available': False, 'assessment_type': None, 'school_year': None, 'current_term': None, 'active_window': None}
+        return {'available': False, 'assessment_type': assessment_type, 'school_year': None, 'current_term': None, 'active_window': None}
 
     return {
         'available': True,
@@ -5435,6 +5512,7 @@ def _official_reading_assessments_for_student(student, availability):
 
     assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
     school_year_materials = _official_reading_materials_queryset().filter(system_assessment_key=assessment_key)
+    school_year_materials = school_year_materials.filter(system_assessment_phase=assessment_type)
     print(
         'PABASA_OFFICIAL_TRACE',
         {
@@ -6565,13 +6643,16 @@ def assessment(request):
     completed_pretest = bool(state.get('pre_test_completed'))
     completed_posttest = bool(state.get('post_test_completed'))
     eligible = bool(state.get('aral_eligible'))
+    active_phase = workflow.get('active_phase') or _official_crla_assessment_phase(user)
+    official_availability = _official_assessment_availability_for_student(user, request)
+    official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
 
-    if not completed_pretest:
-        stage = 'assessment'
-    elif eligible:
-        stage = 'original'
+    if active_phase == 'pretest':
+        stage = 'assessment' if official_crla_material else ('original' if eligible else 'complete')
+    elif active_phase == 'posttest':
+        stage = 'assessment' if official_crla_material and not completed_posttest else ('original' if eligible else 'complete')
     else:
-        stage = 'complete'
+        stage = 'original' if eligible else 'complete'
 
     workflow['stage'] = stage
 
@@ -6612,7 +6693,6 @@ def assessment(request):
     context = _dashboard_context(request, 'student')
     context.update(workflow)
     official_calendar = _active_school_calendar()
-    official_availability = _official_assessment_availability_for_student(user, request)
     context.update({
         'official_assessment_available': bool(official_availability.get('available')),
         'official_assessment_type': official_availability.get('assessment_type') or '',
@@ -11700,12 +11780,14 @@ def get_class_materials(request):
         
         # Include materials directly linked to section, assigned via ManyToMany,
         # or attached to a Course that includes this section.
-        official_crla_keys = ['bosy_crla_pretest', 'eosy_crla_posttest']
         materials_qs = Material.objects.filter(
             Q(section=section) | Q(assigned_sections=section) | Q(courses__sections=section)
         ).distinct()
         materials_qs = materials_qs.exclude(
-            Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True, system_assessment_key__in=official_crla_keys)
+            Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True)
+        )
+        materials_qs = materials_qs.exclude(
+            Q(assessment_kind='crla') & Q(is_official_reading=True, is_system_owned=True)
         )
         # Avoid duplication: exclude assessments that are already represented by a Material record.
         # Material records act as the primary container for metadata like "Assigned Week".
@@ -11731,6 +11813,7 @@ def get_class_materials(request):
         teacher_user = User.objects.filter(id=user_id).first() if user_id else None
         # Requesting user (could be student or teacher) used to compute attempt counts
         request_user = User.objects.filter(id=user_id).first() if user_id else None
+        effective_date = date.today()
         is_requesting_student = bool(request_user and request_user.role == 'student')
         # Archived records should not appear in class/course readings, even for the owning teacher.
         materials_qs = materials_qs.filter(is_active=True).exclude(status__iexact='archived')
@@ -11753,16 +11836,56 @@ def get_class_materials(request):
             combined.append(('material', mat))
             seen_material_ids.add(mat.id)
         if is_requesting_student:
-            official_materials_qs = Material.objects.filter(
-                is_active=True,
-                is_official_reading=True,
-                is_system_owned=True,
-                system_assessment_key__in=official_crla_keys,
-            ).exclude(status__iexact='archived').order_by('system_assessment_key', 'id')
+            official_phase = _official_crla_assessment_phase(request_user, on_date=effective_date)
+            student_state = _reader_assessment_state(request_user)
+            allow_posttest = _student_is_eosy_crla_eligible(request_user)
+            print(
+                f"[CRLA DEBUG] request_user={{getattr(request_user, 'id', None)}} "
+                f"role={{getattr(request_user, 'role', None)}} "
+                f"effective_date={{effective_date}} "
+                f"official_phase={{official_phase}} "
+                f"allow_posttest={{allow_posttest}}"
+            )
+            official_materials_qs = Material.objects.none()
+            if official_phase == 'pretest':
+                official_materials_qs = Material.objects.filter(
+                    is_active=True,
+                    is_official_reading=True,
+                    is_system_owned=True,
+                    assessment_kind='crla',
+                    system_assessment_phase='pretest',
+                )
+            elif official_phase == 'posttest' and allow_posttest:
+                official_materials_qs = Material.objects.filter(
+                    is_active=True,
+                    is_official_reading=True,
+                    is_system_owned=True,
+                    assessment_kind='crla',
+                    system_assessment_phase='posttest',
+                )
+            official_materials_qs = official_materials_qs.exclude(status__iexact='archived').order_by('system_assessment_key', 'id')
+            official_qs_keys = list(official_materials_qs.values_list('system_assessment_key', flat=True))
+            print(f"[CRLA DEBUG] official_materials_qs keys={official_qs_keys}")
+            if official_qs_keys:
+                print(
+                    '[CRLA DEBUG] official_materials_qs rows=',
+                    list(
+                        official_materials_qs.values(
+                            'id',
+                            'title',
+                            'system_assessment_key',
+                            'is_active',
+                            'is_official_reading',
+                            'is_system_owned',
+                            'status',
+                        )
+                    ),
+                )
+            official_assessment_items = []
             for official_mat in official_materials_qs:
                 if official_mat.id in seen_material_ids:
                     continue
-                combined.append(('material', official_mat))
+                official_assessment_items.append(official_mat)
                 seen_material_ids.add(official_mat.id)
         for a in assessments_qs:
             combined.append(('assessment', a))
@@ -11772,6 +11895,55 @@ def get_class_materials(request):
 
         all_materials_flat = []
         materials = {'word': [], 'sentence': [], 'paragraph': [], 'vowel': []}
+        official_assessments = []
+
+        if is_requesting_student:
+            for official_mat in locals().get('official_assessment_items', []):
+                content_value = official_mat.content_text or official_mat.prompt_text or ''
+                title_value = official_mat.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
+                items_count = 1
+                if isinstance(official_mat.content_json, dict) and isinstance(official_mat.content_json.get('items'), list):
+                    items_count = len(official_mat.content_json.get('items'))
+
+                content_json = getattr(official_mat, 'content_json', None) or {}
+                language_value = ''
+                if isinstance(content_json, dict):
+                    language_value = str(content_json.get('language') or '').strip()
+                if not language_value:
+                    language_value = str(getattr(official_mat, 'language', '') or '').strip()
+
+                official_assessments.append({
+                    'id': f"material-{official_mat.id}",
+                    'raw_id': official_mat.id,
+                    'action_id': f"material-{official_mat.id}",
+                    'record_kind': 'material',
+                    'system_assessment_key': getattr(official_mat, 'system_assessment_key', '') or '',
+                    'is_official_reading': True,
+                    'is_system_owned': True,
+                    'assessment_id': official_mat.assessment_id,
+                    'code': official_mat.assessment.code if official_mat.assessment else None,
+                    'title': title_value,
+                    'item_type': official_mat.item_type,
+                    'type': official_mat.type,
+                    'source_type': official_mat.source_type,
+                    'content': content_value,
+                    'content_text': content_value,
+                    'status': 'archived' if not official_mat.is_active else (official_mat.status or 'published'),
+                    'schedule': timezone.localtime(official_mat.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(official_mat, 'scheduled_at', None) else None,
+                    'items': items_count,
+                    'created_at': official_mat.created_at.isoformat() if getattr(official_mat, 'created_at', None) else None,
+                    'attempt_count': 0,
+                    'completed_attempt_count': 0,
+                    'student_has_completed': False,
+                    'latest_time_score': None,
+                    'latest_attempt_summary': {},
+                    'assigned_sections': [s.class_code for s in official_mat.assigned_sections.all()] if hasattr(official_mat, 'assigned_sections') else [],
+                    'assigned_week': official_mat.assigned_week,
+                    'assigned_week_display': format_assigned_week_display(official_mat.assigned_week),
+                    'language': language_value,
+                    'content_json': content_json,
+                    'student_access': bool(getattr(official_mat, 'student_access', False)),
+                })
 
         for kind, obj in combined:
             if kind == 'material':
@@ -11819,6 +11991,9 @@ def get_class_materials(request):
                     'raw_id': m.id,
                     'action_id': f"material-{m.id}",
                     'record_kind': 'material',
+                    'system_assessment_key': getattr(m, 'system_assessment_key', '') or '',
+                    'is_official_reading': bool(getattr(m, 'is_official_reading', False)),
+                    'is_system_owned': bool(getattr(m, 'is_system_owned', False)),
                     'assessment_id': m.assessment_id,
                     'code': m.assessment.code if m.assessment else None,
                     'title': title_value,
@@ -11875,6 +12050,9 @@ def get_class_materials(request):
                     'id': f"assessment-{a.id}",
                     'code': a.code,
                     'title': title_value,
+                    'system_assessment_key': '',
+                    'is_official_reading': False,
+                    'is_system_owned': False,
                     'item_type': a.assessment_type,
                     'type': 'assessment',
                     'content': content_value,
@@ -11910,6 +12088,9 @@ def get_class_materials(request):
                     'id': f"practice-{p.id}",
                     'code': p.code,
                     'title': title_value,
+                    'system_assessment_key': '',
+                    'is_official_reading': False,
+                    'is_system_owned': False,
                     'item_type': p.item_type,
                     'type': 'practice',
                     'content': content_value,
@@ -11940,6 +12121,7 @@ def get_class_materials(request):
         return JsonResponse({
             'success': True,
             'materials': materials,
+            'official_assessments': official_assessments,
             'all_materials': all_materials_flat,
             'class_code': section.class_code,
             'class_name': section.class_name,

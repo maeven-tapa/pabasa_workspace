@@ -637,9 +637,26 @@
                 const response = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(classCode)}`);
                 const data = await response.json();
                 if (data.success) {
+                    const officialKeys = [];
+                    Object.values(data.materials || {}).forEach((list) => {
+                        (Array.isArray(list) ? list : []).forEach((material) => {
+                            if (material && material.system_assessment_key) {
+                                officialKeys.push(material.system_assessment_key);
+                            }
+                        });
+                    });
+                    console.log("PABASA_OFFICIAL_TRACE", {
+                        stage: "fetch_materials_response",
+                        class_code: classCode,
+                        official_keys: officialKeys,
+                        word_titles: (data.materials?.word || []).map((material) => material?.title || ""),
+                    });
                     // Sync to localStorage for components like sidebar badges
                     const readings = getStoredObject(readingsStorageKey);
-                    readings[classCode.toUpperCase()] = data.materials;
+                    readings[classCode.toUpperCase()] = {
+                        materials: data.materials,
+                        official_assessments: data.official_assessments || [],
+                    };
                     localStorage.setItem(readingsStorageKey, JSON.stringify(readings));
 
                     // Store class metadata to ensure titles match what the teacher set
@@ -708,11 +725,24 @@
                 
                 const readings = readingsMap[upperCode] || {};
                 const materials = {};
+                const officialAssessments = Array.isArray(readings.official_assessments) ? readings.official_assessments : [];
+                const officialAssessmentKeys = new Set(
+                    officialAssessments
+                        .map((item) => String(item?.system_assessment_key || '').trim().toLowerCase())
+                        .filter(Boolean)
+                );
+                const bucketedMaterials = readings.materials && typeof readings.materials === 'object' ? readings.materials : readings;
 
                 materialTypes.forEach((type) => {
                     // Support both singular and plural forms (word/words) for broader compatibility
-                    const list = Array.isArray(readings[type]) ? readings[type] : (Array.isArray(readings[type + 's']) ? readings[type + 's'] : []);
+                    const list = Array.isArray(bucketedMaterials[type]) ? bucketedMaterials[type] : (Array.isArray(bucketedMaterials[type + 's']) ? bucketedMaterials[type + 's'] : []);
                     materials[type] = list
+                        .filter((material) => {
+                            const materialKey = String(material?.system_assessment_key || '').trim().toLowerCase();
+                            if (material?.is_official_reading === true) return false;
+                            if (materialKey && officialAssessmentKeys.has(materialKey)) return false;
+                            return true;
+                        })
                         .filter((material) => material && material.type && (material.type.toLowerCase() === "assessment" || material.type.toLowerCase() === "both"))
                         .filter((material) => {
                             // Check if material is live (published or scheduled time passed)
@@ -723,7 +753,7 @@
                             return false;
                         });
                 });
-                return { classData, materials };
+                return { classData, materials, officialAssessments };
             });
         };
 
@@ -921,7 +951,7 @@
                 return aPriority - bPriority;
             });
 
-            grid.innerHTML = orderedClassMaterials.map(({ classData, materials }) => {
+            grid.innerHTML = orderedClassMaterials.map(({ classData, materials, officialAssessments = [] }) => {
                 const itemsToRender = [];
                 materialTypes.forEach(type => {
                     materials[type].forEach(m => {
@@ -937,63 +967,92 @@
                 }, {});
 
                 const sortedWeeks = Object.keys(groups).sort((a, b) => assignedWeekSortValue(a) - assignedWeekSortValue(b));
-
-                const contentHtml = (() => {
-                    const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}", vowel: "{% url 'reading_vowel_page' %}" };
-                    const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text', vowel: 'bi-soundwave' };
-                    const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading', vowel: 'Vowel Reading' };
-                    const buildOfficialAssessmentData = (material) => {
-                        let contentJson = material && material.content_json ? material.content_json : {};
-                        if (typeof contentJson === 'string') {
-                            try {
-                                contentJson = JSON.parse(contentJson);
-                            } catch (error) {
-                                contentJson = {};
-                            }
-                        }
-                        if (!contentJson || typeof contentJson !== 'object' || Array.isArray(contentJson)) {
+                const urlMap = { word: "{% url 'reading_word_page' %}", sentence: "{% url 'reading_sentence_page' %}", paragraph: "{% url 'reading_para_page' %}", vowel: "{% url 'reading_vowel_page' %}" };
+                const iconMap = { word: 'bi-type', sentence: 'bi-chat-left-text', paragraph: 'bi-card-text', vowel: 'bi-soundwave' };
+                const labelMap = { word: 'Word Reading', sentence: 'Sentence Reading', paragraph: 'Paragraph Reading', vowel: 'Vowel Reading' };
+                const officialAssessmentId = "{{ crla_official_assessment_id|default:''|escapejs }}";
+                const buildOfficialAssessmentData = (material) => {
+                    let contentJson = material && material.content_json ? material.content_json : {};
+                    if (typeof contentJson === 'string') {
+                        try {
+                            contentJson = JSON.parse(contentJson);
+                        } catch (error) {
                             contentJson = {};
                         }
-                        const rawItems = Array.isArray(contentJson.items) ? contentJson.items : [];
-                        const normalizedItems = rawItems
-                            .map((item) => {
-                                if (item && typeof item === 'object' && !Array.isArray(item)) {
-                                    return String(item.text || item.content || item.title || '').trim();
-                                }
-                                return String(item || '').trim();
-                            })
-                            .filter(Boolean);
-                        const normalizedType = String(material?.item_type || '').trim().toLowerCase();
-                        const assessmentType = normalizedType === 'sentence'
-                            ? 'sentence'
-                            : (normalizedType === 'paragraph' || normalizedType === 'story' || normalizedType === 'para')
-                                ? 'paragraph'
-                                : 'word';
-                        const data = {
-                            id: material?.id || '',
-                            title: material?.title || '',
-                            code: material?.code || '',
-                            language: material?.language || contentJson.language || '',
-                            assessment_type: assessmentType,
-                            item_type: normalizedType || 'word',
-                            words: [],
-                            sentences: [],
-                            passages: [],
-                        };
-
-                        if (assessmentType === 'sentence') {
-                            data.sentences = normalizedItems;
-                        } else if (assessmentType === 'paragraph') {
-                            data.passages = normalizedItems.map((text, index) => ({
-                                title: material?.title && normalizedItems.length === 1 ? material.title : `Passage ${index + 1}`,
-                                content: text,
-                            }));
-                        } else {
-                            data.words = normalizedItems;
-                        }
-
-                        return data;
+                    }
+                    if (!contentJson || typeof contentJson !== 'object' || Array.isArray(contentJson)) {
+                        contentJson = {};
+                    }
+                    const rawItems = Array.isArray(contentJson.items) ? contentJson.items : [];
+                    const normalizedItems = rawItems
+                        .map((item) => {
+                            if (item && typeof item === 'object' && !Array.isArray(item)) {
+                                return String(item.text || item.content || item.title || '').trim();
+                            }
+                            return String(item || '').trim();
+                        })
+                        .filter(Boolean);
+                    const normalizedType = String(material?.item_type || '').trim().toLowerCase();
+                    const assessmentType = normalizedType === 'sentence'
+                        ? 'sentence'
+                        : (normalizedType === 'paragraph' || normalizedType === 'story' || normalizedType === 'para')
+                            ? 'paragraph'
+                            : 'word';
+                    const data = {
+                        id: material?.id || '',
+                        title: material?.title || '',
+                        code: material?.code || '',
+                        language: material?.language || contentJson.language || '',
+                        assessment_type: assessmentType,
+                        item_type: normalizedType || 'word',
+                        words: [],
+                        sentences: [],
+                        passages: [],
                     };
+
+                    if (assessmentType === 'sentence') {
+                        data.sentences = normalizedItems;
+                    } else if (assessmentType === 'paragraph') {
+                        data.passages = normalizedItems.map((text, index) => ({
+                            title: material?.title && normalizedItems.length === 1 ? material.title : `Passage ${index + 1}`,
+                            content: text,
+                        }));
+                    } else {
+                        data.words = normalizedItems;
+                    }
+
+                    return data;
+                };
+                const buildOfficialAssessmentCard = (m) => {
+                    const officialLaunchPayload = buildOfficialAssessmentData(m);
+                    const officialLaunchPayloadJson = JSON.stringify(officialLaunchPayload);
+                    const isLocked = !Boolean(m.student_access);
+                    const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category || m.item_type || 'word']}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`;
+                    return `
+                        <div class="assessment-card-shell ${isLocked ? 'is-locked' : ''}" data-official-assessment="true">
+                            <a href="${generatedStartUrl}" class="assessment-type-link type-${m.category || m.item_type || 'word'} ${isLocked ? 'is-disabled is-locked' : ''}" data-class-code="${escapeHtml(classData.code)}" ${isLocked ? 'tabindex="-1" aria-disabled="true" onclick="return false;"' : ''}>
+                                <div class="type-meta">
+                                    <span class="type-icon"><i class="bi bi-shield-check"></i></span>
+                                    <div class="type-info">
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <strong>${escapeHtml(m.title || 'Official Assessment')}</strong>
+                                            ${getMaterialLanguageBadgeHtml(m)}
+                                        </div>
+                                        <span>Official CRLA Assessment</span>
+                                    </div>
+                                </div>
+                                <i class="bi bi-play-circle-fill text-primary"></i>
+                            </a>
+                        </div>
+                    `;
+                };
+                const officialAssessmentsHtml = officialAssessments.length ? `
+                    <div class="assessment-official-card-stack" style="margin-bottom: 1rem;">
+                        ${officialAssessments.map((m) => buildOfficialAssessmentCard(m)).join('')}
+                    </div>
+                ` : '';
+
+                const contentHtml = (() => {
                     const rowWeekGroups = chunkWeeksByRow(sortedWeeks, grid.clientWidth || grid.offsetWidth || window.innerWidth || 0);
                     const renderedRowGroups = rowWeekGroups.map((weekGroup) => {
                         const maxRows = weekGroup.reduce((max, week) => Math.max(max, groups[week].length), 0);
@@ -1112,6 +1171,7 @@
                         <span class="subject-code">${escapeHtml(classData.code)}</span>
                     </div>
                     
+                    ${officialAssessmentsHtml}
                     ${contentHtml || '<p class="text-center text-muted small my-3">No assessments assigned for this class.</p>'}
                 </div>`;
             }).join("");
