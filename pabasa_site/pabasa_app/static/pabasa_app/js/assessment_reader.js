@@ -428,7 +428,7 @@
             const source = String(text || "").trim();
             if (!source) return [""];
             const normalizedType = String(itemType || "").trim().toLowerCase();
-            if (normalizedType !== "paragraph") {
+            if (!["paragraph", "para", "story"].includes(normalizedType)) {
                 return [source];
             }
 
@@ -602,7 +602,7 @@
                     counter.textContent = `${label} 1/${items.length}`;
                 }
                 currentIndex = 0;
-                currentPageIndex = 0;
+                resetCurrentPageState();
                 updateUI();
                 animateCurrentItem();
                 return;
@@ -1314,6 +1314,13 @@
             };
         }
 
+        function resetCurrentPageState() {
+            currentPageIndex = 0;
+            currentSyllableIndex = 0;
+            itemResultVersion += 1;
+            resetSyllableStitching();
+        }
+
         function isCurrentSpeechContext(context) {
             return Boolean(
                 context
@@ -1517,7 +1524,8 @@
             let readableWordIndex = 0;
             let animatedWordCount = 0;
             const shouldAnimate = true;
-            const parts = String(items[currentIndex] || "").split(/(\s+)/);
+            const displayText = String(getCurrentDisplayText() || items[currentIndex] || "");
+            const parts = displayText.split(/(\s+)/);
             parts.forEach((part) => {
                 if (!part) return;
                 if (/^\s+$/.test(part)) {
@@ -2446,7 +2454,7 @@
             if (btnReadAloud) btnReadAloud.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading';
 
             const formData = new FormData();
-            formData.append("target_text", items[currentIndex]);
+            formData.append("target_text", getCurrentDisplayText() || items[currentIndex] || "");
             formData.append("mode", mode);
             formData.append("language", currentMaterialLanguage || "");
 
