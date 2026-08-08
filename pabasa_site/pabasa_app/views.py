@@ -5389,7 +5389,7 @@ def admin_official_reading_assessment_edit(request, material_id=None):
 @csrf_protect
 @require_http_methods(["POST"])
 def admin_official_reading_assessment_delete(request, material_id):
-    material = _get_managed_material(material_id)
+    material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
     if not material or not material.is_official_reading:
         return redirect('admin_official_reading_assessments')
     material.delete()
