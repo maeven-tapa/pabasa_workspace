@@ -394,6 +394,22 @@ def _official_crla_material_for_student(student, assessment_type):
     return _official_reading_materials_queryset().filter(system_assessment_key=assessment_key).order_by('updated_at', 'id').first()
 
 
+def _official_crla_assessment_labels(assessment_type):
+    assessment_type = str(assessment_type or '').strip().lower()
+    if assessment_type == 'posttest':
+        return {
+            'workflow_title': 'End of School Year Reading Assessment',
+            'workflow_message': 'Complete the official EoSY CRLA Assessment prepared by your teacher.',
+            'workflow_subtitle': 'End of School Year reading assessment',
+        }
+
+    return {
+        'workflow_title': 'Beginning of School Year Reading Assessment',
+        'workflow_message': 'Complete the official BoSY CRLA Assessment prepared by your teacher.',
+        'workflow_subtitle': 'Beginning of School Year reading assessment',
+    }
+
+
 def _published_crla_material_for_student(student):
     if not student or getattr(student, 'role', '') != 'student':
         return None
@@ -6601,6 +6617,7 @@ def assessment(request):
         'official_assessment_available': bool(official_availability.get('available')),
         'official_assessment_type': official_availability.get('assessment_type') or '',
     })
+    crla_labels = _official_crla_assessment_labels(official_availability.get('assessment_type'))
     crla_material = material_map.get('crla')
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
     if official_crla_material:
@@ -6725,15 +6742,12 @@ def assessment(request):
     if stage == 'original':
         return render(request, 'pabasa_app/assessment.html', context)
 
-    context['workflow_title'] = (
-        'Beginning of School Year Reading Assessment'
-        if stage == 'assessment'
-        else 'Assessment Complete'
-    )
+    context['workflow_title'] = crla_labels['workflow_title'] if stage == 'assessment' else 'Assessment Complete'
+    context['workflow_subtitle'] = crla_labels['workflow_subtitle']
     if stage == 'assessment':
-        workflow_message = 'Complete the official BoSY CRLA Assessment prepared by your teacher.'
+        workflow_message = crla_labels['workflow_message']
     else:
-        workflow_message = 'The learner successfully completed the BoSY CRLA assessment but is not eligible for the ARAL Program.'
+        workflow_message = 'The learner successfully completed the CRLA assessment but is not eligible for the ARAL Program.'
 
     context['workflow_message'] = workflow_message
     return render(request, 'pabasa_app/reading_assessment_workflow.html', context)

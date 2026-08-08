@@ -31,7 +31,7 @@ from .reading_stt import (
 )
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
-from .views import _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state
+from .views import _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state, _official_crla_assessment_labels
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -342,6 +342,85 @@ class AssessmentPageFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['stage'], 'original')
+
+    def test_assessment_page_pretest_landing_card_uses_bosy_labels(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-3001",
+            role="teacher",
+            first_name="Tara",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="tara@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-3003",
+            role="student",
+            first_name="Noah",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="noah@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": False,
+                    "crla_posttest_completed": False,
+                    "reader_classification": "",
+                    "aral_eligible": False,
+                    "current_phase": "pretest",
+                }
+            },
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-3001",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        Material.objects.create(
+            title="Official BoSY CRLA",
+            item_type="word",
+            content_text="read",
+            content_json={"items": ["read"]},
+            assessment_kind="crla",
+            assessment_set="crla",
+            type="assessment",
+            status="published",
+            student_access=True,
+            section=section,
+            teacher=teacher,
+            is_active=True,
+            is_official_reading=True,
+            is_system_owned=True,
+            system_assessment_key="bosy_crla_pretest",
+        )
+
+        self._login_student(student)
+        response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['stage'], 'assessment')
+        self.assertEqual(response.context['workflow_title'], 'Beginning of School Year Reading Assessment')
+        self.assertEqual(response.context['workflow_message'], 'Complete the official BoSY CRLA Assessment prepared by your teacher.')
+        self.assertEqual(response.context['workflow_subtitle'], 'Beginning of School Year reading assessment')
+
+    def test_official_crla_assessment_labels_return_posttest_copy(self):
+        labels = _official_crla_assessment_labels('posttest')
+        self.assertEqual(labels['workflow_title'], 'End of School Year Reading Assessment')
+        self.assertEqual(labels['workflow_message'], 'Complete the official EoSY CRLA Assessment prepared by your teacher.')
+        self.assertEqual(labels['workflow_subtitle'], 'End of School Year reading assessment')
 
     def test_assessment_page_shows_completion_card_for_non_eligible_students_after_posttest(self):
         student = User.objects.create(
