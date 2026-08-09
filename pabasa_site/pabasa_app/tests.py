@@ -1056,6 +1056,95 @@ class AssessmentPageFlowTests(TestCase):
         self.assertEqual(response.context['crla_official_assessment_data']['assessment_type'], 'posttest')
         self.assertEqual(response.context['crla_official_assessment_data']['official_title'], post_material.title)
 
+    def test_assessment_page_returns_no_official_crla_outside_calendar_windows(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-3104",
+            role="teacher",
+            first_name="Tia",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="tia4@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-3104",
+            role="student",
+            first_name="Pia",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="pia4@example.com",
+            password_hash=make_password("student-password"),
+            preference={"reading_assessment_state": {"crla_pretest_completed": False, "crla_posttest_completed": False}},
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-3104",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        self._create_official_crla_calendar(
+            pre_start=date(2026, 8, 1),
+            pre_end=date(2026, 8, 7),
+            post_start=date(2026, 8, 10),
+            post_end=date(2026, 8, 15),
+        )
+        Material.objects.create(
+            title="Beginning of School Year (BoSY) CRLA Pre-Test",
+            item_type="word",
+            content_text="read",
+            content_json={"items": ["read"]},
+            assessment_kind="crla",
+            assessment_set="crla",
+            type="assessment",
+            status="published",
+            student_access=True,
+            section=section,
+            teacher=teacher,
+            is_active=True,
+            is_official_reading=True,
+            is_system_owned=True,
+            system_assessment_key="bosy_crla_pretest",
+        )
+        Material.objects.create(
+            title="End of School Year (EoSY) CRLA Post-Test",
+            item_type="word",
+            content_text="read",
+            content_json={"items": ["read"]},
+            assessment_kind="crla",
+            assessment_set="crla",
+            type="assessment",
+            status="published",
+            student_access=True,
+            section=section,
+            teacher=teacher,
+            is_active=True,
+            is_official_reading=True,
+            is_system_owned=True,
+            system_assessment_key="eosy_crla_posttest",
+        )
+        self._login_student(student)
+
+        with patch('pabasa_app.views.date', wraps=date) as mock_date:
+            mock_date.today.return_value = date(2026, 8, 8)
+            response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['stage'], 'original')
+        self.assertFalse(response.context['official_assessment_available'])
+        self.assertEqual(response.context['crla_material_id'], '')
+
     def test_assessment_page_allows_aral_materials_after_pretest_eligibility(self):
         student = User.objects.create(
             custom_id="STU-3001",
@@ -5439,6 +5528,9 @@ class AdminSettingsRenderTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pabasa_app/admin_settings.html")
+        self.assertNotContains(response, "Assessment Window Management")
+        self.assertNotContains(response, "Active Assessment Window")
+        self.assertNotContains(response, "Save Window")
         self.assertContains(response, "Push Notifications")
         self.assertContains(response, "Enable Notifications")
         self.assertContains(response, "Email Notifications")

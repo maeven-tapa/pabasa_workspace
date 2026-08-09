@@ -50,7 +50,7 @@ from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, ensure_default_principal
 from django.db import transaction
 import re
 import traceback
-from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, AssessmentWindowSetting, SchoolCalendar, CalendarEvent
+from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
 from .reading_material_utils import format_assigned_week_display, parse_assigned_week
 from .reading_stt import (
@@ -217,30 +217,6 @@ def _set_user_state(user, state):
     user.save(update_fields=['preference', 'updated_at'])
 
 
-def _assessment_window_choice():
-    try:
-        return AssessmentWindowSetting.get_active_window()
-    except (OperationalError, Exception):
-        return "bosy:pretest"
-
-
-def _assessment_window_parts(window=None):
-    raw_window = str(window or _assessment_window_choice() or "").strip().lower()
-    period, phase = raw_window.split(":", 1) if ":" in raw_window else (raw_window, "pretest")
-    if period not in dict(AssessmentWindowSetting.PERIOD_CHOICES):
-        period = "bosy"
-    if phase not in dict(AssessmentWindowSetting.PHASE_CHOICES):
-        phase = "pretest"
-    return period, phase
-
-
-def _assessment_window_label(window):
-    period, phase = _assessment_window_parts(window)
-    period_label = dict(AssessmentWindowSetting.PERIOD_CHOICES).get(period, "Beginning of School Year")
-    phase_label = dict(AssessmentWindowSetting.PHASE_CHOICES).get(phase, "Pre-Test")
-    return f"{period_label} {phase_label}"
-
-
 def _aral_eligible_classification(label):
     normalized = str(label or "").strip().lower()
     return normalized in {
@@ -301,11 +277,6 @@ def _assessment_workflow_context(student):
 
 def _assessment_kind_value(material):
     return str(getattr(material, 'assessment_kind', '') or 'regular').strip().lower() or 'regular'
-
-
-def _assessment_window_allows_crla(window=None):
-    period, _phase = _assessment_window_parts(window)
-    return period in {'bosy', 'eosy'}
 
 
 def _official_crla_assessment_phase(student=None, request=None, on_date=None):
@@ -425,9 +396,12 @@ def _existing_crla_assessment_for_school_year(teacher_user=None):
     return qs.order_by('created_at', 'id').first(), label
 
 
-def _crla_creation_block_message(window=None, teacher_user=None):
-    active_period, _active_phase = _assessment_window_parts(window)
-    if active_period == 'mosy':
+def _crla_creation_block_message(teacher_user=None, on_date=None):
+    check_date = on_date or date.today()
+    active_calendar = _active_school_calendar(check_date)
+    current_term = _calendar_current_term(active_calendar, on_date=check_date) if active_calendar else None
+    current_term = current_term or getattr(active_calendar, 'current_term', None)
+    if current_term == 2:
         return 'This school is currently in the Middle of School Year (MoSY) assessment window. New CRLA Assessments cannot be created during this period.'
     existing, school_year = _existing_crla_assessment_for_school_year(teacher_user)
     if existing:
@@ -1625,12 +1599,12 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
     if not assessment_kind and material is not None:
         assessment_kind = str(getattr(material, 'assessment_set', '') or '').strip().lower()
 
-    window = _assessment_window_choice()
-    period, _phase = _assessment_window_parts(window)
+    active_calendar = _active_school_calendar()
+    current_term = _calendar_current_term(active_calendar) if active_calendar else None
     if assessment_kind == 'crla':
-        if period == 'bosy':
+        if current_term == 1:
             state['crla_pretest_completed'] = True
-        elif period == 'eosy':
+        elif current_term == 4:
             state['crla_posttest_completed'] = True
 
     state['current_phase'] = 'materials' if state.get('aral_eligible') else 'complete'
@@ -6588,27 +6562,10 @@ def admin_settings(request):
             _set_profile_dict(user, 'notification_settings', notification_settings)
             context['settings_success'] = 'Push notification preferences saved.'
 
-        elif action == 'save_assessment_window':
-            period = str(request.POST.get('active_period') or '').strip().lower()
-            phase = str(request.POST.get('active_phase') or '').strip().lower()
-            if period not in dict(AssessmentWindowSetting.PERIOD_CHOICES) or phase not in dict(AssessmentWindowSetting.PHASE_CHOICES):
-                context['settings_error'] = 'Select a valid assessment window.'
-            else:
-                window = f'{period}:{phase}'
-                AssessmentWindowSetting.set_active_window(window, updated_by=user)
-                context['settings_success'] = f'Active assessment window set to {_assessment_window_label(window)}.'
-
         else:
             context['settings_error'] = 'Unknown settings action.'
 
     context['notification_settings'] = notification_settings
-    try:
-        context['assessment_window_setting'] = AssessmentWindowSetting.get_active()
-    except OperationalError:
-        context['assessment_window_setting'] = type('FallbackWindowSetting', (), {'active_period': 'bosy', 'active_phase': 'pretest', 'active_window': 'bosy:pretest'})()
-        context['settings_error'] = context.get('settings_error') or 'Assessment window storage is not ready yet. Run database migrations to enable this feature.'
-    context['assessment_window_period_choices'] = AssessmentWindowSetting.PERIOD_CHOICES
-    context['assessment_window_phase_choices'] = AssessmentWindowSetting.PHASE_CHOICES
     return render(request, 'pabasa_app/admin_settings.html', context)
 
 def courses(request):
@@ -9134,17 +9091,13 @@ def course_teacher_view(request):
     if request.session.get('user_role') not in ['teacher', 'admin']:
         return redirect('auth')
     context = _dashboard_context(request, 'teacher')
-    window = _assessment_window_choice()
-    period, phase = _assessment_window_parts(window)
     teacher_user = User.objects.filter(id=request.session.get('user_id'), role='teacher').first()
     crla_existing, _school_year_label = _existing_crla_assessment_for_school_year(teacher_user)
+    active_calendar = _active_school_calendar()
+    current_term = _calendar_current_term(active_calendar) if active_calendar else None
     context.update({
-        'active_assessment_window': window,
-        'active_assessment_window_label': _assessment_window_label(window),
-        'active_assessment_period': period,
-        'active_assessment_phase': phase,
         'crla_assessment_exists': bool(crla_existing),
-        'crla_assessment_status_message': _crla_creation_block_message(window, teacher_user) if period == 'mosy' or crla_existing else '',
+        'crla_assessment_status_message': _crla_creation_block_message(teacher_user=teacher_user) if current_term == 2 or crla_existing else '',
     })
     return render(request, 'pabasa_app/courses.html', context)
 
@@ -13484,6 +13437,8 @@ def add_reading_material(request):
 
         # Teachers may only create assessment materials from this endpoint.
         usage_type = 'assessment'
+        user_id = request.session.get('user_id')
+        teacher_user = User.objects.filter(id=user_id).first()
 
         logger.debug(f"add_reading_material received: title={title}, status={status}, class_code={class_code}, source_type={source_type}")
 
@@ -13513,9 +13468,6 @@ def add_reading_material(request):
         reading_type = _detect_material_type(content, requested_reading_type)
         tokens = _split_material_content(content, reading_type, requested_reading_type)
 
-        # ── resolve teacher & class ─────────────────────────────────────────
-        user_id = request.session.get('user_id')
-        teacher_user = User.objects.filter(id=user_id).first()
         if not teacher_user or teacher_user.role != 'teacher':
             return JsonResponse({'success': False, 'error': 'Teacher not found.'}, status=404)
 

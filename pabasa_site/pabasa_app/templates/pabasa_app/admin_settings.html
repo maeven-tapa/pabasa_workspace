@@ -30,50 +30,6 @@
         <article class="admin-settings-card">
             <div class="admin-settings-card-header">
                 <span class="admin-settings-card-icon" aria-hidden="true">
-                    <i class="bi bi-calendar2-week"></i>
-                </span>
-                <div>
-                    <h3>Assessment Window Management</h3>
-                    <p>Set the school's active Reading Assessment window. Only one may be active at a time.</p>
-                </div>
-            </div>
-
-            <form method="post" class="d-grid gap-3">
-                {% csrf_token %}
-                <input type="hidden" name="settings_action" value="save_assessment_window">
-                <div>
-                    <label class="form-label small" for="activeWindow">Active Assessment Window</label>
-                    <div class="row g-2">
-                        <div class="col-12 col-md-6">
-                            <select class="form-select" id="activePeriod" name="active_period" required>
-                                {% for value, label in assessment_window_period_choices %}
-                                    <option value="{{ value }}" {% if assessment_window_setting.active_period == value %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <select class="form-select" id="activePhase" name="active_phase" required>
-                                {% for value, label in assessment_window_phase_choices %}
-                                    <option value="{{ value }}" {% if assessment_window_setting.active_phase == value %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <p class="text-muted small mb-0">All Reading Assessment pages automatically follow this setting. Students and teachers do not switch windows manually.</p>
-
-                <div class="admin-settings-actions">
-                    <button class="btn btn-primary" type="submit">
-                        <i class="bi bi-save" aria-hidden="true"></i>
-                        <span>Save Window</span>
-                    </button>
-                </div>
-            </form>
-        </article>
-
-        <article class="admin-settings-card">
-            <div class="admin-settings-card-header">
-                <span class="admin-settings-card-icon" aria-hidden="true">
                     <i class="bi bi-bell"></i>
                 </span>
                 <div>

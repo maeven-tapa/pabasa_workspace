@@ -1122,65 +1122,6 @@ class Material(models.Model):
         return result._serialize_attempt()
 
 
-class AssessmentWindowSetting(models.Model):
-    PERIOD_CHOICES = [
-        ("bosy", "Beginning of School Year"),
-        ("mosy", "Middle of School Year"),
-        ("eosy", "End of School Year"),
-    ]
-    PHASE_CHOICES = [
-        ("pretest", "Pre-Test"),
-        ("posttest", "Post-Test"),
-    ]
-
-    key = models.CharField(max_length=50, unique=True, default="assessment_window_active")
-    active_period = models.CharField(max_length=10, choices=PERIOD_CHOICES, default="bosy")
-    active_phase = models.CharField(max_length=10, choices=PHASE_CHOICES, default="pretest")
-    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="assessment_window_updates")
-    updated_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "assessment_window_settings"
-
-    def __str__(self):
-        return f"{self.get_active_period_display()} {self.get_active_phase_display()}"
-
-    @property
-    def active_window(self):
-        return f"{self.active_period}:{self.active_phase}"
-
-    @active_window.setter
-    def active_window(self, value):
-        period, phase = str(value or "").split(":", 1) if ":" in str(value or "") else (value, "pretest")
-        self.active_period = period or "bosy"
-        self.active_phase = phase or "pretest"
-
-    @classmethod
-    def get_active(cls):
-        setting, _ = cls.objects.get_or_create(key="assessment_window_active", defaults={"active_period": "bosy", "active_phase": "pretest"})
-        return setting
-
-    @classmethod
-    def get_active_window(cls):
-        active = cls.get_active()
-        return f"{active.active_period}:{active.active_phase}"
-
-    @classmethod
-    def set_active_window(cls, window, updated_by=None):
-        setting = cls.get_active()
-        period, phase = (window or "").split(":", 1) if ":" in str(window or "") else (window, "pretest")
-        if period not in dict(cls.PERIOD_CHOICES):
-            period = "bosy"
-        if phase not in dict(cls.PHASE_CHOICES):
-            phase = "pretest"
-        setting.active_period = period
-        setting.active_phase = phase
-        setting.updated_by = updated_by if getattr(updated_by, "id", None) else None
-        setting.save()
-        return setting
-
-
 # Assessment attempts are stored in the Assessment `attempts` JSONField.
 
 
