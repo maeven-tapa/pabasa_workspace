@@ -5668,6 +5668,28 @@ def _official_reading_material_payload(material):
     }
 
 
+def _official_reading_launch_data(material):
+    if not material:
+        return {}
+    payload = _official_reading_material_payload(material)
+    assessment_type = _official_reading_assessment_type(material)
+    official_title = str(getattr(material, 'title', '') or '').strip() or payload['title']
+    official_code = str(getattr(material, 'code', '') or '').strip() or payload['code']
+    return {
+        'id': payload['id'],
+        'title': official_title,
+        'code': official_code,
+        'language': payload['language'] or '',
+        'assessment_type': assessment_type,
+        'item_type': payload['item_type'] or 'word',
+        'words': payload['words'],
+        'sentences': payload['sentences'],
+        'passages': payload['passages'],
+        'official_title': official_title,
+        'official_code': official_code,
+    }
+
+
 def _official_reading_assessments_for_student(student, availability):
     if not availability or not availability.get('available'):
         return []
@@ -5743,20 +5765,7 @@ def _official_reading_assessments_for_student(student, availability):
         payload['assessment_type_key'] = assessment_type
         payload['official_title'] = str(getattr(material, 'title', '') or '').strip() or payload['title']
         payload['official_code'] = str(getattr(material, 'code', '') or '').strip() or payload['code']
-        official_assessment_data = {
-            'id': payload['id'],
-            'title': payload['official_title'],
-            'code': payload['official_code'],
-            'language': payload['language'] or '',
-            'assessment_type': payload.get('assessment_type_key') or assessment_type,
-            'item_type': payload['item_type'] or 'word',
-            'words': payload['words'],
-            'sentences': payload['sentences'],
-            'passages': payload['passages'],
-            'official_title': payload['official_title'],
-            'official_code': payload['official_code'],
-        }
-        official_assessment_data_json = quote(json.dumps(official_assessment_data, default=str, separators=(',', ':')))
+        official_assessment_data = _official_reading_launch_data(material)
         print(
             'PABASA_OFFICIAL_TRACE',
             {
@@ -5770,15 +5779,7 @@ def _official_reading_assessments_for_student(student, availability):
             }
         )
         payload['launch_url'] = (
-            f"{reverse('reading_word_page')}?test={quote(payload['official_title'])}"
-            f"&code={quote(payload['official_code'])}"
-            f"&id={payload['id']}"
-            f"&official_assessment_id={payload['id']}"
-            f"&official_assessment_data={official_assessment_data_json}"
-            f"&content={quote(payload['content'] or '')}"
-            f"&item_type={quote(payload['item_type'] or 'word')}"
-            f"&language={quote(payload['language'] or '')}"
-            f"&instructions={quote(payload['instructions'] or '')}"
+            f"{reverse('reading_word_page')}?official_assessment_id={payload['id']}"
         )
         print(
             'PABASA_OFFICIAL_TRACE',
@@ -6947,20 +6948,7 @@ def assessment(request):
             crla_duration = f"{estimated_minutes} min"
     crla_official_assessment_data = {}
     if crla_material_id:
-        crla_assessment_type = 'pretest' if str(getattr(crla_material, 'system_assessment_key', '') or '').strip().lower() == 'bosy_crla_pretest' else 'posttest' if str(getattr(crla_material, 'system_assessment_key', '') or '').strip().lower() == 'eosy_crla_posttest' else 'pretest'
-        crla_official_assessment_data = {
-            'id': crla_material_id,
-            'title': crla_title,
-            'code': crla_material_code,
-            'language': crla_material_language or '',
-            'assessment_type': crla_assessment_type,
-            'item_type': crla_material_item_type or 'word',
-            'words': crla_sections['words'],
-            'sentences': crla_sections['sentences'],
-            'passages': crla_sections['passages'],
-            'official_title': crla_title,
-            'official_code': crla_material_code,
-        }
+        crla_official_assessment_data = _official_reading_launch_data(crla_material)
     official_assessments = _official_reading_assessments_for_student(user, official_availability)
     enriched_official_assessments = []
     for assessment_payload in official_assessments:
@@ -7015,14 +7003,7 @@ def assessment(request):
                 'official_assessment_id': crla_material_id,
                 'official_assessment_data': crla_official_assessment_data,
                 'generated_start_url': (
-                    f"{reverse('reading_word_page')}?test={quote(crla_official_assessment_data.get('official_title', crla_title) if crla_official_assessment_data else crla_title)}"
-                    f"&code={quote(crla_official_assessment_data.get('official_code', crla_material_code) if crla_official_assessment_data else crla_material_code)}"
-                    f"&id={crla_material_id}"
-                    f"&official_assessment_id={crla_material_id}"
-                    f"&official_assessment_data={quote(json.dumps(crla_official_assessment_data, default=str, separators=(',', ':')) if crla_official_assessment_data else '')}"
-                    f"&content={quote(crla_content or '')}"
-                    f"&item_type={quote(crla_material_item_type or 'word')}"
-                    f"&language={quote(crla_material_language or '')}"
+                    f"{reverse('reading_word_page')}?official_assessment_id={crla_material_id}"
                 ),
             },
         )
@@ -7093,28 +7074,72 @@ def reading_word_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
-    return render(request, 'pabasa_app/reading_word_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
+    _, material_id = _parse_prefixed_id(official_assessment_id)
+    if material_id:
+        material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+        launch_data = _official_reading_launch_data(material) if material else {}
+        context.update({
+            'crla_official_assessment_id': material_id,
+            'crla_official_assessment_data': launch_data,
+            'crla_official_assessment_data_json': json.dumps(launch_data, default=str, separators=(',', ':')) if launch_data else '',
+        })
+    return render(request, 'pabasa_app/reading_word_page.html', context)
 
 @xframe_options_sameorigin
 def reading_sentence_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
-    return render(request, 'pabasa_app/reading_sentence_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
+    _, material_id = _parse_prefixed_id(official_assessment_id)
+    if material_id:
+        material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+        launch_data = _official_reading_launch_data(material) if material else {}
+        context.update({
+            'crla_official_assessment_id': material_id,
+            'crla_official_assessment_data': launch_data,
+            'crla_official_assessment_data_json': json.dumps(launch_data, default=str, separators=(',', ':')) if launch_data else '',
+        })
+    return render(request, 'pabasa_app/reading_sentence_page.html', context)
 
 @xframe_options_sameorigin
 def reading_para_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
-    return render(request, 'pabasa_app/reading_para_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
+    _, material_id = _parse_prefixed_id(official_assessment_id)
+    if material_id:
+        material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+        launch_data = _official_reading_launch_data(material) if material else {}
+        context.update({
+            'crla_official_assessment_id': material_id,
+            'crla_official_assessment_data': launch_data,
+            'crla_official_assessment_data_json': json.dumps(launch_data, default=str, separators=(',', ':')) if launch_data else '',
+        })
+    return render(request, 'pabasa_app/reading_para_page.html', context)
 
 @xframe_options_sameorigin
 def reading_vowel_page(request):
     access_response = _enforce_student_access_for_request(request)
     if access_response:
         return access_response
-    return render(request, 'pabasa_app/reading_vowel_page.html', _dashboard_context(request))
+    context = _dashboard_context(request)
+    official_assessment_id = request.GET.get('official_assessment_id') or request.GET.get('id') or ''
+    _, material_id = _parse_prefixed_id(official_assessment_id)
+    if material_id:
+        material = Material.objects.filter(pk=material_id, is_official_reading=True).first()
+        launch_data = _official_reading_launch_data(material) if material else {}
+        context.update({
+            'crla_official_assessment_id': material_id,
+            'crla_official_assessment_data': launch_data,
+            'crla_official_assessment_data_json': json.dumps(launch_data, default=str, separators=(',', ':')) if launch_data else '',
+        })
+    return render(request, 'pabasa_app/reading_vowel_page.html', context)
 
 
 @csrf_protect

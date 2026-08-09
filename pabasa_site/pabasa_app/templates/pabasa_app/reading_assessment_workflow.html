@@ -298,7 +298,7 @@
 
             <div class="workflow-actions">
                 {% if stage == "assessment" %}
-                    <a class="btn btn-primary workflow-button primary" id="startCrlaAssessmentBtn" href="{% url 'reading_word_page' %}?test={{ crla_official_assessment_data.official_title|default:crla_assessment_title|urlencode }}&code={{ crla_official_assessment_data.official_code|default:crla_assessment_code|default:'CRLA'|urlencode }}&id={{ crla_material_id|default:'' }}&official_assessment_id={{ crla_material_id|default:'' }}&official_assessment_data={{ crla_official_assessment_data_json|default:''|urlencode }}&content={{ crla_assessment_content|urlencode }}&item_type={{ crla_assessment_item_type|default:'word' }}&language={{ crla_assessment_language|default:''|urlencode }}"><i class="bi bi-play-fill"></i> Start Assessment</a>
+                    <a class="btn btn-primary workflow-button primary" id="startCrlaAssessmentBtn" href="{% url 'reading_word_page' %}?official_assessment_id={{ crla_material_id|default:'' }}"><i class="bi bi-play-fill"></i> Start Assessment</a>
                 {% endif %}
                 <a class="workflow-button secondary" href="{% url 'dashboard' %}"><i class="bi bi-arrow-left"></i> Return to Dashboard</a>
             </div>

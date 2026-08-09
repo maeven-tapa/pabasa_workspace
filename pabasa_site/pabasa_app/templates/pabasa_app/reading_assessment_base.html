@@ -1881,6 +1881,9 @@
 <link rel="stylesheet" href="{% static 'pabasa_app/ocean-theme.css' %}?v=storybook-ocean-1">
 </head>
 <body data-student-theme="{{ student_theme_slug|default:'sky' }}">
+    <script>
+        window.__PABASA_OFFICIAL_ASSESSMENT__ = {{ crla_official_assessment_data_json|default:'null'|safe }};
+    </script>
     {% include "pabasa_app/partials/_forest_world.html" %}
     <script>
         (function() {

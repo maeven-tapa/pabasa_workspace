@@ -68,13 +68,15 @@
         const liveItemType = (urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
         const liveLanguage = urlParams.get("language") || "";
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
-        let officialAssessmentData = null;
+        let officialAssessmentData = window.__PABASA_OFFICIAL_ASSESSMENT__ || null;
         let isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
-        try {
-            const rawOfficialData = urlParams.get("official_assessment_data") || "";
-            if (rawOfficialData) officialAssessmentData = JSON.parse(rawOfficialData);
-        } catch (error) {
-            officialAssessmentData = null;
+        if (!officialAssessmentData) {
+            try {
+                const rawOfficialData = urlParams.get("official_assessment_data") || "";
+                if (rawOfficialData) officialAssessmentData = JSON.parse(rawOfficialData);
+            } catch (error) {
+                officialAssessmentData = null;
+            }
         }
         console.log("PABASA_OFFICIAL_TRACE", {
             stage: "reader_url_params",
