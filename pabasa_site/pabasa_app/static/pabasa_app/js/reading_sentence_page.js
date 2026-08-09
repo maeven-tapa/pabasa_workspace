@@ -30,8 +30,9 @@
     const mode = 'sentence';
 
     const params = new URLSearchParams(window.location.search);
-    const testTitle = params.get("test") || "Assessment";
-    const testCode = params.get("code") || "TST-000";
+    const officialAssessmentData = window.__PABASA_OFFICIAL_ASSESSMENT__ || null;
+    const testTitle = (officialAssessmentData && officialAssessmentData.official_title) || params.get("test") || "Assessment";
+    const testCode = (officialAssessmentData && officialAssessmentData.official_code) || params.get("code") || "TST-000";
     const materialId = params.get("id");
     const viewMode = params.get("viewMode");
     const assistMode = params.get("assist") === "1";

@@ -285,6 +285,43 @@
                 <a class="btn btn-primary workflow-button primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Start Reading Practice</a>
                 <a class="btn btn-primary workflow-button primary" href="{% url 'dashboard' %}"><i class="bi bi-house-heart-fill"></i> Return to Dashboard</a>
             </div>
+        {% elif stage == "intervention" %}
+            <div class="workflow-center">
+                <span class="workflow-pill">ARAL Intervention Ready</span>
+                <span class="workflow-icon" aria-hidden="true"><i class="bi bi-lightning-fill"></i></span>
+                <div class="workflow-copy">
+                    <h1>ARAL support is ready.</h1>
+                    <p class="workflow-message">
+                        Your BoSY CRLA results show that you should continue with ARAL intervention activities instead of the regular teacher reading flow.
+                    </p>
+                    <p class="workflow-message">
+                        Begin the intervention activities to keep building your reading skills.
+                    </p>
+                </div>
+            </div>
+
+            <section class="workflow-summary" aria-label="Intervention summary">
+                <div class="workflow-summary-title">Assessment Summary</div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Reader Classification</span>
+                        <span class="summary-value">{{ eligibility.reader_classification|default:"Pending" }}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">ARAL Status</span>
+                        <span class="summary-value">Eligible</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">BoSY Pre-Test</span>
+                        <span class="summary-value">Completed &#10003;</span>
+                    </div>
+                </div>
+            </section>
+
+            <div class="workflow-actions">
+                <a class="btn btn-primary workflow-button primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Start ARAL Intervention</a>
+                <a class="btn btn-primary workflow-button primary" href="{% url 'dashboard' %}"><i class="bi bi-house-heart-fill"></i> Return to Dashboard</a>
+            </div>
         {% else %}
             <div class="workflow-center">
                 <span class="workflow-pill">Reading Assessment</span>

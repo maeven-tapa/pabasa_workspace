@@ -586,12 +586,36 @@ var getStudentClassData = window.getStudentClassData = function() {
                 console.error('Error fetching teacher classes:', error);
             });
         } else if (role === 'student') {
+            const studentBootstrapStartedAt = performance.now();
+            console.warn('PABASA_FRONTEND_PROFILE', {
+                stage: 'student_bootstrap_classes_fetch_start',
+                timestamp: Math.round(performance.now() * 100) / 100,
+            });
             fetch('/api/student/classes/', {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            }).then(r => r.json()).then(async function(data) {
+            }).then(async (r) => {
+                const fetchDoneAt = performance.now();
+                let jsonParseStartedAt = performance.now();
+                const data = await r.json();
+                const jsonParseDoneAt = performance.now();
+                console.warn('PABASA_FRONTEND_PROFILE', {
+                    stage: 'student_bootstrap_classes_fetch_complete',
+                    elapsed_ms: Math.round((fetchDoneAt - studentBootstrapStartedAt) * 100) / 100,
+                    json_parse_ms: Math.round((jsonParseDoneAt - jsonParseStartedAt) * 100) / 100,
+                    status: r.status,
+                    ok: r.ok,
+                    classes_count: Array.isArray(data?.classes) ? data.classes.length : null,
+                });
+                return data;
+            }).then(async function(data) {
                 if (data && data.success && Array.isArray(data.classes)) {
+                    console.warn("PABASA_DASHBOARD_PROFILE", {
+                        stage: 'student_bootstrap_classes_fetch_complete',
+                        elapsed_ms: Math.round((performance.now() - studentBootstrapStartedAt) * 100) / 100,
+                        classes_count: data.classes.length,
+                    });
                     const studentClassCodes = data.classes.map(cls => cls.code);
                     localStorage.setItem("pabasaStudentClassCodes", JSON.stringify(studentClassCodes));
                     localStorage.setItem("pabasa_student_joined_classes", JSON.stringify(data.classes));
@@ -609,10 +633,29 @@ var getStudentClassData = window.getStudentClassData = function() {
 
                     // Fetch materials for each joined class to keep pabasa_class_readings up-to-date
                     const readings = {};
+                    const materialsLoopStartedAt = performance.now();
                     for (const cls of data.classes) {
+                        const materialFetchStartedAt = performance.now();
+                        console.warn('PABASA_FRONTEND_PROFILE', {
+                            stage: 'student_bootstrap_class_materials_fetch_start',
+                            class_code: cls.code,
+                            timestamp: Math.round(materialFetchStartedAt * 100) / 100,
+                        });
                         try {
                             const materialResponse = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(cls.code)}`);
+                            const responseDoneAt = performance.now();
+                            let materialJsonStartedAt = performance.now();
                             const materialData = await materialResponse.json();
+                            const materialJsonDoneAt = performance.now();
+                            console.warn('PABASA_FRONTEND_PROFILE', {
+                                stage: 'student_bootstrap_class_materials_fetch_complete',
+                                class_code: cls.code,
+                                elapsed_fetch_ms: Math.round((responseDoneAt - materialFetchStartedAt) * 100) / 100,
+                                json_parse_ms: Math.round((materialJsonDoneAt - materialJsonStartedAt) * 100) / 100,
+                                status: materialResponse.status,
+                                ok: materialResponse.ok,
+                                materials_count: Array.isArray(materialData?.materials) ? materialData.materials.length : null,
+                            });
                             if (materialData.success) {
                                 readings[cls.code.toUpperCase()] = materialData.materials;
                             }
@@ -620,6 +663,11 @@ var getStudentClassData = window.getStudentClassData = function() {
                             console.error(`Error fetching materials for class ${cls.code}:`, e);
                         }
                     }
+                    console.warn("PABASA_DASHBOARD_PROFILE", {
+                        stage: 'student_bootstrap_materials_fetch_complete',
+                        elapsed_ms: Math.round((performance.now() - materialsLoopStartedAt) * 100) / 100,
+                        classes_count: data.classes.length,
+                    });
                     localStorage.setItem("pabasa_class_readings", JSON.stringify(readings));
                     
                     // Trigger updates for any components relying on these local storage keys
@@ -1000,10 +1048,35 @@ var getStudentClassData = window.getStudentClassData = function() {
         const isStudent = window.localStorage.getItem("pabasaStudentClassJoined") === "1";
 
         if (!isStudent && userRole === 'teacher') {
+            const notifFetchStartedAt = performance.now();
+            console.warn('PABASA_FRONTEND_PROFILE', {
+                stage: 'notifications_unread_count_fetch_start',
+                timestamp: Math.round(notifFetchStartedAt * 100) / 100,
+            });
             fetch('/api/notifications/unread-count/', {
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json' }
-            }).then(function (response) { return response.json(); }).then(function (data) {
+            }).then(async function (response) {
+                const responseDoneAt = performance.now();
+                let parseStart = performance.now();
+                const data = await response.json();
+                let parseEnd = performance.now();
+                console.warn('PABASA_FRONTEND_PROFILE', {
+                    stage: 'notifications_unread_count_fetch_complete',
+                    elapsed_fetch_ms: Math.round((responseDoneAt - notifFetchStartedAt) * 100) / 100,
+                    json_parse_ms: Math.round((parseEnd - parseStart) * 100) / 100,
+                    status: response.status,
+                    ok: response.ok,
+                });
+                console.warn('PABASA_DASHBOARD_PROFILE', {
+                    stage: 'notifications_unread_count_fetch_complete',
+                    elapsed_fetch_ms: Math.round((responseDoneAt - notifFetchStartedAt) * 100) / 100,
+                    json_parse_ms: Math.round((parseEnd - parseStart) * 100) / 100,
+                    status: response.status,
+                    ok: response.ok,
+                });
+                return data;
+            }).then(function (data) {
                 if (data && data.success) {
                     updateLinkBadge('/dashboard/notifications', data.unread_count || 0);
                 }

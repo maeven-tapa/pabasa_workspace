@@ -298,10 +298,14 @@
                     method: 'POST',
                     body: formData
                 });
+                console.warn('AUTH_LOGIN_PROFILE', { stage: 'fetch_resolved', status: response.status, ok: response.ok });
                 
                 const data = await response.json();
+                console.warn('AUTH_LOGIN_PROFILE', { stage: 'json_parsed', data });
                 
+                console.warn('AUTH_LOGIN_PROFILE', { stage: 'success_check', success: data?.success });
                 if (data.success) {
+                    console.warn('AUTH_LOGIN_PROFILE', { stage: 'about_to_redirect', redirect_url: data.redirect_url });
                     localStorage.setItem("pabasaCurrentUserId", data.custom_id);
 
                     // Clear old teacher class cache before switching accounts

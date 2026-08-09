@@ -58,15 +58,6 @@
         }
 
         const urlParams = new URLSearchParams(window.location.search);
-        const testTitle = urlParams.get("test") || "Assessment";
-        const testCode = urlParams.get("code") || "TST-000";
-        const materialId = urlParams.get("id");
-        const viewMode = urlParams.get("viewMode");
-        const isAssistMode = urlParams.get("assist") === "1";
-        const assistToken = urlParams.get("assist_token") || "";
-        const liveContent = urlParams.get("content") || "";
-        const liveItemType = (urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
-        const liveLanguage = urlParams.get("language") || "";
         const officialAssessmentId = urlParams.get("official_assessment_id") || "";
         let officialAssessmentData = window.__PABASA_OFFICIAL_ASSESSMENT__ || null;
         let isOfficialAssessmentLaunch = Boolean(officialAssessmentId);
@@ -78,6 +69,20 @@
                 officialAssessmentData = null;
             }
         }
+        const testTitle = (officialAssessmentData && officialAssessmentData.official_title) || urlParams.get("test") || "Assessment";
+        const testCode = (officialAssessmentData && officialAssessmentData.official_code) || urlParams.get("code") || "TST-000";
+        const materialId = (
+            (officialAssessmentData && (officialAssessmentData.id || officialAssessmentData.material_id)) ||
+            officialAssessmentId ||
+            urlParams.get("id") ||
+            ""
+        );
+        const viewMode = urlParams.get("viewMode");
+        const isAssistMode = urlParams.get("assist") === "1";
+        const assistToken = urlParams.get("assist_token") || "";
+        const liveContent = urlParams.get("content") || "";
+        const liveItemType = (urlParams.get("item_type") || urlParams.get("type") || "").toLowerCase();
+        const liveLanguage = urlParams.get("language") || "";
         console.log("PABASA_OFFICIAL_TRACE", {
             stage: "reader_url_params",
             requested_assessment_type: urlParams.get("test") || "",
@@ -87,6 +92,13 @@
             official_assessment_data: officialAssessmentData,
             launch_url: window.location.href,
         });
+        console.log("PABASA_OFFICIAL_TRACE", {
+            stage: "reader_identity_resolved",
+            resolved_material_id: materialId || "",
+            official_assessment_id: officialAssessmentId || "",
+            resolved_assessment_code: testCode || "",
+            resolved_assessment_title: testTitle || "",
+        });
         const isReviewMode = viewMode === "view";
         const isRetakeMode = viewMode === "retake";
         const isPractice = false;
@@ -94,7 +106,7 @@
             const displayLanguage = /filipino|fil\b/i.test(String(language || "")) ? "Filipino" : "English";
             if (testMeta) testMeta.textContent = `${testTitle} - ${testCode} · Language: ${displayLanguage}`;
         };
-        updateAssessmentLanguageLabel(liveLanguage);
+        updateAssessmentLanguageLabel((officialAssessmentData && officialAssessmentData.language) || liveLanguage);
 
         function isCurrentLiveAssessment() {
             if (isReviewMode || isRetakeMode) return false;
@@ -1013,6 +1025,11 @@
                 if (disclaimer) {
                     disclaimer.textContent = "Calculating your score breakdown...";
                 }
+                console.log("PABASA_COMPLETION_TRACE", {
+                    stage: "setCompletionLoadingState_enter",
+                    isLoading: true,
+                    minDurationMs,
+                });
                 return;
             }
 
@@ -1035,6 +1052,13 @@
             } else {
                 finishTransition();
             }
+            console.log("PABASA_COMPLETION_TRACE", {
+                stage: "setCompletionLoadingState_exit",
+                isLoading: false,
+                minDurationMs,
+                elapsed_ms: elapsed,
+                remaining_ms: remaining,
+            });
         }
 
         function renderScoreSummary(scores) {
@@ -1042,6 +1066,11 @@
             const disclaimer = document.getElementById("completionReadingLevelDisclaimer");
             if (!summary) return;
             const normalizedScores = normalizeCompletionScores(scores, {});
+            console.log("PABASA_COMPLETION_TRACE", {
+                stage: "renderScoreSummary",
+                score_keys: Object.keys(normalizedScores || {}),
+                scores: normalizedScores,
+            });
             summary.querySelectorAll("[data-score-tile]").forEach(tile => tile.remove());
             summary.classList.remove("is-visible");
             const readingTypeLabel = String(mode || "word").charAt(0).toUpperCase() + String(mode || "word").slice(1);
@@ -1741,6 +1770,8 @@
                 completionSubmitted,
                 isReviewMode,
                 materialId,
+                officialAssessmentId,
+                resolvedAssessmentCode: testCode,
             });
             stopReadAloud();
             stopSpeechRecognition();
@@ -1869,6 +1900,16 @@
             window.dispatchEvent(new Event('pabasa:notifications-updated'));
 
             const token = getCsrfToken();
+            console.log("PABASA_COMPLETION_TRACE", {
+                stage: "showCompletion.pre_submit_gate",
+                materialId,
+                officialAssessmentId,
+                has_token: Boolean(token),
+                token_length: token ? String(token).length : 0,
+                completionSubmitted,
+                isFullCompletion,
+                isReviewMode,
+            });
             if (materialId && token) {
                 setCompletionActionButtonsProcessing(true);
                 const elapsedSeconds = Math.max(1, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
@@ -1880,6 +1921,8 @@
                     activity_type: 'assessment',
                     class_code: testCode,
                     assessment_type: mode,
+                    official_assessment_id: officialAssessmentId || "",
+                    official_assessment_data: officialAssessmentData || null,
                     correct_words: completionMetrics.correct_words ?? completionMetrics.word_count ?? 0,
                     incorrect_words: completionMetrics.incorrect_words ?? 0,
                     skipped_words: completionMetrics.skipped_words ?? 0,
@@ -1938,6 +1981,16 @@
                     payload.assessment_id = normalizedId;
                 }
                 if (assistToken) payload.assist_token = assistToken;
+                console.log("PABASA_COMPLETION_TRACE", {
+                    stage: "record_completion_request_preflight",
+                    request_url: "/record-assessment-completion/",
+                    payload_keys: Object.keys(payload),
+                    payload,
+                    materialId,
+                    official_assessment_id: officialAssessmentId || "",
+                    official_assessment_code: testCode || "",
+                    assessment_type: mode,
+                });
 
                 if (isCurrentLiveAssessment()) {
                     const completionElapsedSeconds = Math.max(0, Math.round(((Date.now() - (startTime || Date.now())) / 1000) * 100) / 100);
@@ -1960,6 +2013,11 @@
                 }
 
                 traceEndSession('showCompletion.recordAssessmentCompletion.request', { payload });
+                console.log("PABASA_COMPLETION_TRACE", {
+                    stage: "record_completion_fetch_before",
+                    request_url: "/record-assessment-completion/",
+                    payload,
+                });
                 completionSavePromise = fetch('/record-assessment-completion/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token },
@@ -1972,6 +2030,17 @@
                         success: d.success,
                         error: d.error,
                         response: d,
+                    });
+                    console.log("PABASA_COMPLETION_TRACE", {
+                        stage: "record_completion_response",
+                        response_ok: r.ok,
+                        response_status: r.status,
+                        response_keys: Object.keys(d || {}),
+                        response_json: d,
+                    });
+                    console.log("PABASA_COMPLETION_TRACE", {
+                        stage: "record_completion_success_callback",
+                        response_keys: Object.keys(d || {}),
                     });
                     if (!r.ok || !d.success) {
                         throw new Error(d.error || `Completion save failed (${r.status})`);
@@ -2059,6 +2128,11 @@
                     setCompletionLoadingState(false);
                 });
             } else {
+                console.log("PABASA_COMPLETION_TRACE", {
+                    stage: "showCompletion.submit_skipped",
+                    materialId,
+                    has_token: Boolean(token),
+                });
                 setCompletionLoadingState(false);
             }
         }

@@ -2057,7 +2057,35 @@
 </script>
 
 <script>
+    window.PABASA_DASHBOARD_SCRIPT_START = performance.now();
+    window.PABASA_FRONTEND_PROFILE_START = performance.now();
+    console.warn('PABASA_FRONTEND_PROFILE', {
+        stage: 'dashboard_script_initialized',
+        timestamp: Math.round(window.PABASA_FRONTEND_PROFILE_START * 100) / 100,
+    });
     document.addEventListener("DOMContentLoaded", () => {
+        console.warn('PABASA_FRONTEND_PROFILE', {
+            stage: 'dashboard_domcontentloaded_start',
+            timestamp: Math.round(performance.now() * 100) / 100,
+            elapsed_since_script_start_ms: Math.round((performance.now() - window.PABASA_FRONTEND_PROFILE_START) * 100) / 100,
+        });
+        const perfStartedAt = performance.now();
+        const paintEntries = performance.getEntriesByType('paint');
+        const firstPaintEntry = paintEntries.find((entry) => entry.name === 'first-paint');
+        const fcpEntry = paintEntries.find((entry) => entry.name === 'first-contentful-paint');
+        console.warn('PABASA_DASHBOARD_PROFILE', {
+            stage: 'dashboard_paint_metrics',
+            first_paint_ms: firstPaintEntry ? Math.round(firstPaintEntry.startTime * 100) / 100 : null,
+            first_contentful_paint_ms: fcpEntry ? Math.round(fcpEntry.startTime * 100) / 100 : null,
+            elapsed_since_script_start_ms: Math.round((perfStartedAt - window.PABASA_DASHBOARD_SCRIPT_START) * 100) / 100,
+        });
+        const perfLog = (stage, extra = {}) => {
+            console.warn("PABASA_FRONTEND_PROFILE", Object.assign({
+                stage,
+                elapsed_ms: Math.round((performance.now() - perfStartedAt) * 100) / 100,
+            }, extra));
+        };
+
         const dashboard = document.querySelector("[data-student-dashboard]");
         const form = document.querySelector("[data-class-code-form]");
         const classCodeInput = document.getElementById("classCode");
@@ -2112,6 +2140,7 @@
         };
 
         if (!dashboard || !form || !classCodeInput || !classList) {
+            perfLog("dashboard_domcontentloaded_exit_early");
             return;
         }
 
@@ -2176,6 +2205,10 @@
             for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
             return weeks;
         };
+
+        perfLog("dashboard_domcontentloaded_ready", {
+            student_calendar_events_count: studentCalendarEvents.length,
+        });
 
         const getEventsForDay = (date) => {
             const iso = localIsoDate(date);
@@ -2545,11 +2578,17 @@
         // Fetch class details from database API instead of localStorage
         const fetchClassDetailsFromDatabase = async (codes) => {
             try {
+                const fetchStartedAt = performance.now();
                 const response = await fetch('/dashboard/student/classes/', {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                     }
+                });
+                perfLog("fetch_student_classes_complete", {
+                    elapsed_fetch_ms: Math.round((performance.now() - fetchStartedAt) * 100) / 100,
+                    status: response.status,
+                    ok: response.ok,
                 });
                 const data = await response.json();
                 if (data.success && Array.isArray(data.classes)) {
@@ -2569,6 +2608,10 @@
 
 
         const renderClassCards = async (codes) => {
+            const renderClassCardsStart = performance.now();
+            perfLog('render_class_cards_start', {
+                codes_count: codes.length,
+            });
             const classDetailsMap = await fetchClassDetailsFromDatabase(codes);
             const readings = JSON.parse(localStorage.getItem("pabasa_class_readings") || "{}");
             const seenIds = JSON.parse(localStorage.getItem("pabasa_seen_material_ids") || "[]").map(id => String(id).trim());
@@ -2735,6 +2778,10 @@
             window.requestAnimationFrame(() => {
                 renderProgressAndAchievements();
             });
+            perfLog('render_class_cards_complete', {
+                rendered_classes_count: validClasses.length,
+                elapsed_ms: Math.round((performance.now() - renderClassCardsStart) * 100) / 100,
+            });
         };
 
         const setJoinedState = async (codes = []) => {
@@ -2785,6 +2832,11 @@
 
         // Fetch student's enrolled classes directly from database API
         const fetchStudentClassesFromDatabase = async () => {
+            const classFetchStartedAt = performance.now();
+            console.warn('PABASA_FRONTEND_PROFILE', {
+                stage: 'dashboard_student_classes_fetch_start',
+                timestamp: Math.round(classFetchStartedAt * 100) / 100,
+            });
             try {
                 const response = await fetch('/dashboard/student/classes/', {
                     method: 'GET',
@@ -2792,13 +2844,29 @@
                         'X-Requested-With': 'XMLHttpRequest',
                     }
                 });
+                const responseDoneAt = performance.now();
                 const data = await response.json();
+                const jsonDoneAt = performance.now();
+                console.warn('PABASA_FRONTEND_PROFILE', {
+                    stage: 'dashboard_student_classes_fetch_complete',
+                    elapsed_fetch_ms: Math.round((responseDoneAt - classFetchStartedAt) * 100) / 100,
+                    json_parse_ms: Math.round((jsonDoneAt - responseDoneAt) * 100) / 100,
+                    status: response.status,
+                    ok: response.ok,
+                    classes_count: Array.isArray(data?.classes) ? data.classes.length : null,
+                });
                 if (data.success && Array.isArray(data.classes)) {
                     // Convert class objects to just codes for backward compatibility
                     return data.classes.map(cls => cls.code);
                 }
                 return [];
             } catch (error) {
+                const errorAt = performance.now();
+                console.warn('PABASA_FRONTEND_PROFILE', {
+                    stage: 'dashboard_student_classes_fetch_error',
+                    elapsed_ms: Math.round((errorAt - classFetchStartedAt) * 100) / 100,
+                    error: String(error),
+                });
                 console.error('Error fetching student classes from database:', error);
                 // Fallback: try localStorage as last resort
                 const saved = localStorage.getItem(classCodesKey);
@@ -2872,6 +2940,7 @@
                 // Get CSRF token from cookies (same method as unenroll)
                 const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
                 
+                const joinFetchStartedAt = performance.now();
                 const response = await fetch('/api/join-class/', {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -2881,6 +2950,11 @@
                         'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify({ class_code: code })
+                });
+                perfLog("fetch_join_class_complete", {
+                    elapsed_fetch_ms: Math.round((performance.now() - joinFetchStartedAt) * 100) / 100,
+                    status: response.status,
+                    ok: response.ok,
                 });
 
                 const data = await response.json();
@@ -2973,6 +3047,7 @@
             const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
 
             try {
+                const unenrollFetchStartedAt = performance.now();
                 const resp = await fetch('/dashboard/student/unenroll/', {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -2981,6 +3056,11 @@
                         'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify({ class_code: pendingUnenrollCode })
+                });
+                perfLog("fetch_unenroll_class_complete", {
+                    elapsed_fetch_ms: Math.round((performance.now() - unenrollFetchStartedAt) * 100) / 100,
+                    status: resp.status,
+                    ok: resp.ok,
                 });
 
                 const data = await resp.json();
@@ -3056,6 +3136,10 @@
         };
 
         // Removed: This event listener caused infinite recursion by calling setJoinedState, which itself dispatches this event.
+        perfLog('dashboard_domcontentloaded_complete', {
+            elapsed_since_script_start_ms: Math.round((performance.now() - window.PABASA_FRONTEND_PROFILE_START) * 100) / 100,
+            elapsed_domcontentloaded_ms: Math.round((performance.now() - perfStartedAt) * 100) / 100,
+        });
     });
 </script>
 {% endblock %}

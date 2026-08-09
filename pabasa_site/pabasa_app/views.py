@@ -12,7 +12,7 @@ from django.contrib.auth import authenticate, login
 from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
-from django.db import IntegrityError, transaction, OperationalError
+from django.db import IntegrityError, transaction, OperationalError, connection
 from django.db.models import Q
 from django.utils.text import slugify
 from functools import wraps
@@ -267,11 +267,11 @@ def _assessment_workflow_context(student):
     official_crla_material = _official_crla_material_for_student(student, active_phase)
 
     if active_phase == 'pretest':
-        stage = 'assessment' if official_crla_material and not completed_pretest else ('original' if eligible else 'complete')
+        stage = 'assessment' if official_crla_material and not completed_pretest else ('intervention' if eligible else 'complete')
     elif active_phase == 'posttest':
-        stage = 'assessment' if official_crla_material and not completed_posttest else ('original' if eligible else 'complete')
+        stage = 'assessment' if official_crla_material and not completed_posttest else ('intervention' if eligible else 'complete')
     else:
-        stage = 'original' if eligible else 'complete'
+        stage = 'intervention' if eligible else 'complete'
 
     try:
         logger.warning(
@@ -365,14 +365,56 @@ def _official_crla_materials_for_phase(assessment_type):
 def _school_year_events(school_calendar):
     if not school_calendar:
         return {}
-    events = {}
-    for event_type in {'start_of_classes', 'end_of_classes', 'school_opening', 'school_closing'}:
-        events[event_type] = school_calendar.events.filter(event_type=event_type).order_by('start_date', 'created_at').first()
+    perf_started_at = time.perf_counter()
+    query_start = len(connection.queries) if settings.DEBUG else None
+    all_events = _calendar_events_for_school_calendar(school_calendar)
+    event_loop_started_at = time.perf_counter()
+    events = {
+        'start_of_classes': None,
+        'end_of_classes': None,
+        'school_opening': None,
+        'school_closing': None,
+    }
+    for event in all_events:
+        if event.event_type not in events:
+            continue
+        current = events[event.event_type]
+        if current is None or (event.start_date, event.created_at) < (current.start_date, current.created_at):
+            events[event.event_type] = event
+    event_loop_elapsed_ms = round((time.perf_counter() - event_loop_started_at) * 1000, 2)
+    if getattr(settings, 'DEBUG', False):
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': '_school_year_events',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'event_loop_ms': event_loop_elapsed_ms,
+                'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                'events_total': len(all_events),
+                'calendar_id': getattr(school_calendar, 'id', None),
+            },
+        )
     return events
 
 
 def _school_year_bounds(school_calendar):
+    perf_started_at = time.perf_counter()
+    query_start = len(connection.queries) if settings.DEBUG else None
+    events_started_at = time.perf_counter()
     events = _school_year_events(school_calendar)
+    events_elapsed_ms = round((time.perf_counter() - events_started_at) * 1000, 2)
+    if getattr(settings, 'DEBUG', False):
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': '_school_year_bounds',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                'calendar_id': getattr(school_calendar, 'id', None) if school_calendar else None,
+                'has_start_event': bool(events.get('start_of_classes') or events.get('school_opening')),
+                'has_end_event': bool(events.get('end_of_classes') or events.get('school_closing')),
+            },
+        )
     start_event = events.get('start_of_classes') or events.get('school_opening')
     end_event = events.get('end_of_classes') or events.get('school_closing')
     return start_event, end_event
@@ -3429,7 +3471,31 @@ def _derive_dashboard_greeting_name(first_name='', full_name=''):
 
 # REPLACE the entire _dashboard_context function:
 def _dashboard_context(request, nav_role=None, extra=None):
+    perf_started_at = time.perf_counter()
+    perf_role = nav_role or request.session.get('user_role', 'student')
+    perf_enabled = perf_role == 'student'
+    perf_marks = {}
+
+    def perf_mark(label):
+        if perf_enabled:
+            perf_marks[label] = time.perf_counter()
+
+    def perf_log(label, start_label, extra_data=None):
+        if not perf_enabled:
+            return
+        start = perf_marks.get(start_label)
+        if start is None:
+            return
+        payload = {
+            'stage': label,
+            'elapsed_ms': round((time.perf_counter() - start) * 1000, 2),
+        }
+        if extra_data:
+            payload.update(extra_data)
+        logger.warning("PABASA_DASHBOARD_PROFILE %s", payload)
+
     user = User.objects.filter(id=request.session.get('user_id')).first()
+    perf_mark('after_user_load')
     first_name = user.first_name if user else request.session.get('first_name', '')
     last_name = user.last_name if user else request.session.get('last_name', '')
     _mi = user.middle_initial if user else ''
@@ -3457,18 +3523,55 @@ def _dashboard_context(request, nav_role=None, extra=None):
     joined_classes = []
     user_role = user.role if user else request.session.get('user_role', 'student')
     effective_role = nav_role or user_role
+    student_sections = []
 
     if user and user.role == 'student':
+        perf_mark('student_branch_start')
         student_user = user
-        classes = Section.objects.filter(is_active=True).order_by('class_name')
-        for cls in classes:
-            if not _section_has_student(cls, student_user):
-                continue
+        perf_mark('student_sections_query_start')
+
+        active_sections_count = Section.objects.filter(is_active=True).count()
+        custom_id = str(getattr(student_user, 'custom_id', '') or '').strip()
+
+        perf_mark('student_sections_query_execute_start')
+        table_name = Section._meta.db_table
+        student_id_text = str(student_user.id)
+        where_clause = (
+            f"EXISTS ("
+            f"SELECT 1 FROM json_each(\"{table_name}\".students) AS student_entry "
+            f"WHERE (CAST(json_extract(student_entry.value, '$.student_id') AS TEXT) = %s "
+            f"OR json_extract(student_entry.value, '$.custom_id') = %s) "
+            f"AND (json_extract(student_entry.value, '$.is_active') IS NULL "
+            f"OR json_extract(student_entry.value, '$.is_active') = 1)"
+            f")"
+        )
+        params = [student_id_text, custom_id or student_id_text]
+
+        student_sections = list(
+            Section.objects.filter(is_active=True)
+                .extra(where=[where_clause], params=params)
+                .order_by('class_name')
+        )
+        perf_log('student_sections_query_execute_complete', 'student_sections_query_execute_start', {
+            'student_sections_count': len(student_sections),
+        })
+
+        perf_log('student_sections_query_complete', 'student_sections_query_start', {
+            'active_sections_count': active_sections_count,
+            'student_sections_count': len(student_sections),
+            'student_section_query': 'sqlite_json_each_active',
+        })
+
+        perf_mark('joined_classes_start')
+        for cls in student_sections:
             joined_classes.append({
                 'code': cls.class_code,
                 'name': cls.class_name,
                 'student_count': _section_student_count(cls),
             })
+        perf_log('joined_classes_built', 'joined_classes_start', {
+            'joined_classes_count': len(joined_classes),
+        })
     # Catch anyone who is not a student (Teachers and Admins) so they can see 
     # the sections they have created/own in the sidebar and dashboard.
     elif user and (user.role in ['teacher', 'admin'] or effective_role in ['teacher', 'admin']):
@@ -3496,6 +3599,7 @@ def _dashboard_context(request, nav_role=None, extra=None):
         'joined_classes': joined_classes,
         'active_teacher_class_count': len(joined_classes),
     }
+    perf_mark('teacher_courses_start')
     # Include teacher-created courses for server-side rendering to avoid
     # a blank page while client-side JS fetches them.
     try:
@@ -3530,6 +3634,9 @@ def _dashboard_context(request, nav_role=None, extra=None):
     except Exception:
         teacher_courses = []
     context['teacher_courses'] = teacher_courses
+    perf_log('teacher_courses_built', 'teacher_courses_start', {
+        'teacher_courses_count': len(teacher_courses),
+    })
     # Compute an account activity status label + class for UI chips
     account_status_label = 'Unknown'
     account_status_class = ''
@@ -3579,17 +3686,19 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 # For students, use student user updated or enrollment timestamps
                 sp_user = user
                 if sp_user:
+                    perf_mark('student_activity_start')
                     has_activity = True
                     candidate_dates = [d for d in [getattr(sp_user, 'updated_at', None), getattr(sp_user, 'created_at', None)] if d]
-                    joined_sections = [
-                        cls for cls in Section.objects.filter(is_active=True)
-                        if _section_has_student(cls, sp_user)
-                    ]
-                    candidate_dates.extend(
-                        cls.updated_at for cls in joined_sections if getattr(cls, 'updated_at', None)
-                    )
+                    if student_sections:
+                        candidate_dates.extend(
+                            cls.updated_at for cls in student_sections if getattr(cls, 'updated_at', None)
+                        )
                     if candidate_dates:
                         last_activity = max(candidate_dates)
+                    perf_log('student_activity_built', 'student_activity_start', {
+                        'candidate_dates_count': len(candidate_dates),
+                        'student_sections_count': len(student_sections),
+                    })
 
             if not has_activity and not last_activity:
                 account_status_label = 'Pending'
@@ -3638,12 +3747,21 @@ def _dashboard_context(request, nav_role=None, extra=None):
             else 'sky'
         ),
     })
+    perf_mark('student_calendar_start')
     if nav_role == 'student':
+        print("BEFORE _selected_school_calendar")
         active_school_calendar, _, _ = _selected_school_calendar(request)
+        print("AFTER _selected_school_calendar")
+        print("BEFORE _calendar_current_term")
         current_term = _calendar_current_term(active_school_calendar) if active_school_calendar else None
+        print("AFTER _calendar_current_term")
+        print("BEFORE _calendar_month_view")
         calendar_widget = _calendar_month_view(active_school_calendar)
+        print("AFTER _calendar_month_view")
+        print("AFTER_CALENDAR_COMPLETE")
         student_calendar_events = []
         if active_school_calendar:
+            print("BEFORE student_calendar_events_query")
             student_calendar_events = [
                 _calendar_event_payload(event) | {
                     'title': _calendar_fixed_title(event.event_type, event.title),
@@ -3651,17 +3769,49 @@ def _dashboard_context(request, nav_role=None, extra=None):
                 }
                 for event in CalendarEvent.objects.filter(school_calendar=active_school_calendar).order_by('start_date', 'end_date', 'created_at')
             ]
-        context.update({
-            'active_school_calendar': active_school_calendar,
-            'student_calendar_school_year': _calendar_school_year_label(active_school_calendar),
-            'student_calendar_current_term': f"Term {current_term}" if current_term else (
-                f"Term {active_school_calendar.current_term}" if active_school_calendar and active_school_calendar.current_term else 'Not set'
-            ),
-            'student_calendar_events_json': json.dumps(student_calendar_events),
-            **calendar_widget,
+            print("AFTER student_calendar_events_query")
+        context['active_school_calendar'] = active_school_calendar
+        print("CONTEXT_KEY_DONE", "active_school_calendar")
+        context['student_calendar_school_year'] = _calendar_school_year_label(active_school_calendar)
+        print("CONTEXT_KEY_DONE", "student_calendar_school_year")
+        context['student_calendar_current_term'] = f"Term {current_term}" if current_term else (
+            f"Term {active_school_calendar.current_term}" if active_school_calendar and active_school_calendar.current_term else 'Not set'
+        )
+        print("CONTEXT_KEY_DONE", "student_calendar_current_term")
+        context['student_calendar_events_json'] = json.dumps(student_calendar_events)
+        print("CONTEXT_KEY_DONE", "student_calendar_events_json")
+        context['month_name'] = calendar_widget.get('month_name')
+        print("CONTEXT_KEY_DONE", "month_name")
+        context['month_year_label'] = calendar_widget.get('month_year_label')
+        print("CONTEXT_KEY_DONE", "month_year_label")
+        context['today'] = calendar_widget.get('today')
+        print("CONTEXT_KEY_DONE", "today")
+        context['month_weeks'] = calendar_widget.get('month_weeks')
+        print("CONTEXT_KEY_DONE", "month_weeks")
+        context['calendar_legend'] = calendar_widget.get('calendar_legend')
+        print("CONTEXT_KEY_DONE", "calendar_legend")
+        perf_log('student_calendar_built', 'student_calendar_start', {
+            'student_calendar_events_count': len(student_calendar_events),
         })
     if extra:
+        perf_mark('extra_context_start')
         context.update(extra)
+        perf_log('extra_context_built', 'extra_context_start', {
+            'extra_keys': sorted(list(extra.keys())) if isinstance(extra, dict) else [],
+        })
+        print("CONTEXT_KEY_DONE", "extra")
+    if perf_enabled:
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'dashboard_total',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'student_sections_count': len(student_sections),
+                'joined_classes_count': len(joined_classes),
+                'has_teacher_courses': bool(context.get('teacher_courses')),
+            },
+        )
+    print("CONTEXT_BUILD_COMPLETE")
     return context
 
 def home(request):
@@ -3718,12 +3868,116 @@ def student_signup(request):
     return render(request, 'pabasa_app/student_signup.html')
 
 def dashboard(request):
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': 'dashboard_view_entry',
+            'method': request.method,
+            'path': request.path,
+            'query': request.META.get('QUERY_STRING', ''),
+            'session_has_user_id': 'user_id' in request.session,
+            'session_user_role': request.session.get('user_role'),
+        },
+    )
+    render_started_at = time.perf_counter()
+
     if not _check_auth(request):
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'dashboard_redirect_unauthenticated',
+                'path': request.path,
+            },
+        )
         return redirect('auth')
     if request.session.get('user_role') != 'student':
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'dashboard_redirect_wrong_role',
+                'requested_role': request.session.get('user_role'),
+            },
+        )
         return redirect('auth')
-    
-    return render(request, 'pabasa_app/dashboard.html', _dashboard_context(request, 'student'))
+
+    context = None
+    try:
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'dashboard_context_start',
+            },
+        )
+        context = _dashboard_context(request, 'student')
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'dashboard_context_complete',
+                'context_keys': len(context) if isinstance(context, dict) else None,
+                'context_key_names': sorted(context.keys()) if isinstance(context, dict) else None,
+                'elapsed_ms': round((time.perf_counter() - render_started_at) * 1000, 2),
+            },
+        )
+    except Exception as exc:
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'dashboard_context_exception',
+                'elapsed_ms': round((time.perf_counter() - render_started_at) * 1000, 2),
+                'exception_type': type(exc).__name__,
+                'exception_message': str(exc),
+            },
+        )
+        raise
+
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': 'before_render_dashboard_html',
+            'elapsed_ms': round((time.perf_counter() - render_started_at) * 1000, 2),
+            'context_keys': len(context),
+            'template_name': 'pabasa_app/dashboard.html',
+        },
+    )
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': 'before_dashboard_render',
+            'elapsed_ms': round((time.perf_counter() - render_started_at) * 1000, 2),
+        },
+    )
+    try:
+        print("DASHBOARD_BEFORE_RENDER")
+        response = render(request, 'pabasa_app/dashboard.html', context)
+        print("DASHBOARD_AFTER_RENDER")
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'after_dashboard_render',
+                'elapsed_ms': round((time.perf_counter() - render_started_at) * 1000, 2),
+                'response_status': getattr(response, 'status_code', None),
+                'response_content_length': len(response.content) if hasattr(response, 'content') else None,
+            },
+        )
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'dashboard_total_render',
+                'elapsed_ms': round((time.perf_counter() - render_started_at) * 1000, 2),
+            },
+        )
+        return response
+    except Exception as exc:
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'dashboard_render_exception',
+                'elapsed_ms': round((time.perf_counter() - render_started_at) * 1000, 2),
+                'exception_type': type(exc).__name__,
+                'exception_message': str(exc),
+            },
+        )
+        raise
 
 def dashboard_teacher(request):
     if not _check_auth(request):
@@ -5012,24 +5266,119 @@ def _normalize_school_year_value(value):
 
 
 def _calendar_term_blocks(school_calendar):
+    perf_started_at = time.perf_counter()
+    query_start = len(connection.queries) if settings.DEBUG else None
     blocks = {}
     if not school_calendar:
         return blocks
+    all_events = _calendar_events_for_school_calendar(school_calendar)
+    term_loop_started_at = time.perf_counter()
     for term in (1, 2, 3, 4):
-        opening = school_calendar.events.filter(term=term, event_type='school_opening').order_by('start_date', 'created_at').first()
-        closing = school_calendar.events.filter(term=term, event_type='school_closing').order_by('start_date', 'created_at').first()
+        opening_candidates = [event for event in all_events if event.term == term and event.event_type == 'school_opening']
+        closing_candidates = [event for event in all_events if event.term == term and event.event_type == 'school_closing']
+        opening = min(opening_candidates, key=lambda event: (event.start_date, event.created_at)) if opening_candidates else None
+        closing = min(closing_candidates, key=lambda event: (event.start_date, event.created_at)) if closing_candidates else None
         blocks[term] = {'opening': opening, 'closing': closing}
+    term_loop_elapsed_ms = round((time.perf_counter() - term_loop_started_at) * 1000, 2)
+    if school_calendar and getattr(settings, 'DEBUG', False):
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': '_calendar_term_blocks',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                'term_loop_ms': term_loop_elapsed_ms,
+                'events_total': len(all_events),
+                'calendar_id': getattr(school_calendar, 'id', None),
+            },
+        )
     return blocks
 
 
+def _calendar_events_for_school_calendar(school_calendar):
+    if not school_calendar:
+        return []
+    perf_started_at = time.perf_counter()
+    query_start = len(connection.queries) if settings.DEBUG else None
+    try:
+        prefetched = getattr(school_calendar, '_prefetched_objects_cache', {}).get('events')
+        if prefetched is not None:
+            events = list(prefetched)
+            if getattr(settings, 'DEBUG', False):
+                logger.warning(
+                    "PABASA_DASHBOARD_PROFILE %s",
+                    {
+                        'stage': '_calendar_events_for_school_calendar',
+                        'source': 'prefetched',
+                        'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                        'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                        'events_count': len(events),
+                        'calendar_id': getattr(school_calendar, 'id', None),
+                    },
+                )
+            return events
+        query_eval_started_at = time.perf_counter()
+        events = list(school_calendar.events.all())
+        if getattr(settings, 'DEBUG', False):
+            logger.warning(
+                "PABASA_DASHBOARD_PROFILE %s",
+                {
+                    'stage': '_calendar_events_for_school_calendar',
+                    'source': 'query',
+                    'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                    'query_eval_ms': round((time.perf_counter() - query_eval_started_at) * 1000, 2),
+                    'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                    'events_count': len(events),
+                    'calendar_id': getattr(school_calendar, 'id', None),
+                },
+            )
+        return events
+    except Exception:
+        return []
+
+
 def _calendar_current_term(school_calendar, on_date=None):
+    perf_started_at = time.perf_counter()
+    query_start = len(connection.queries) if settings.DEBUG else None
     today = on_date or date.today()
-    for term, block in _calendar_term_blocks(school_calendar).items():
+    blocks_started_at = time.perf_counter()
+    blocks = _calendar_term_blocks(school_calendar)
+    blocks_elapsed_ms = round((time.perf_counter() - blocks_started_at) * 1000, 2)
+    term_loop_started_at = time.perf_counter()
+    for term, block in blocks.items():
         opening = block.get('opening')
         closing = block.get('closing')
         closing_end = getattr(closing, 'end_date', None) or getattr(closing, 'start_date', None)
         if opening and closing and opening.start_date <= today <= closing_end:
+            term_loop_elapsed_ms = round((time.perf_counter() - term_loop_started_at) * 1000, 2)
+            if getattr(settings, 'DEBUG', False):
+                logger.warning(
+                    "PABASA_DASHBOARD_PROFILE %s",
+                    {
+                        'stage': '_calendar_current_term',
+                        'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                        'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                        'blocks_elapsed_ms': blocks_elapsed_ms,
+                        'term_loop_ms': term_loop_elapsed_ms,
+                        'resolved_term': term,
+                        'calendar_id': getattr(school_calendar, 'id', None) if school_calendar else None,
+                    },
+                )
             return term
+    term_loop_elapsed_ms = round((time.perf_counter() - term_loop_started_at) * 1000, 2)
+    if getattr(settings, 'DEBUG', False):
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': '_calendar_current_term',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                'blocks_elapsed_ms': blocks_elapsed_ms,
+                'term_loop_ms': term_loop_elapsed_ms,
+                'resolved_term': None,
+                'calendar_id': getattr(school_calendar, 'id', None) if school_calendar else None,
+            },
+        )
     return None
 
 
@@ -5038,8 +5387,10 @@ def _calendar_instructional_events(school_calendar, base_events):
 
 
 def _active_school_calendar(on_date=None):
+    perf_started_at = time.perf_counter()
+    query_start = len(connection.queries) if settings.DEBUG else None
     check_date = on_date or date.today()
-    calendars = SchoolCalendar.objects.all().order_by('-updated_at', '-created_at')
+    calendars = list(SchoolCalendar.objects.prefetch_related('events').all().order_by('-updated_at', '-created_at'))
     active = None
     best_start = None
     for school_calendar in calendars:
@@ -5051,6 +5402,17 @@ def _active_school_calendar(on_date=None):
                 active = school_calendar
                 best_start = start_event.start_date
     if active:
+        if getattr(settings, 'DEBUG', False):
+            logger.warning(
+                "PABASA_DASHBOARD_PROFILE %s",
+                {
+                    'stage': '_active_school_calendar',
+                    'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                    'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                    'calendar_count': len(calendars),
+                    'resolved_calendar_id': getattr(active, 'id', None),
+                },
+            )
         return active
     upcoming = []
     for school_calendar in calendars:
@@ -5059,20 +5421,54 @@ def _active_school_calendar(on_date=None):
             upcoming.append((start_event.start_date, school_calendar))
     if upcoming:
         upcoming.sort(key=lambda item: item[0], reverse=True)
+        if getattr(settings, 'DEBUG', False):
+            logger.warning(
+                "PABASA_DASHBOARD_PROFILE %s",
+                {
+                    'stage': '_active_school_calendar',
+                    'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                    'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                    'calendar_count': len(upcoming),
+                    'resolved_calendar_id': getattr(upcoming[0][1], 'id', None),
+                },
+            )
         return upcoming[0][1]
+    if getattr(settings, 'DEBUG', False):
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': '_active_school_calendar',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                'calendar_count': 0,
+                'resolved_calendar_id': None,
+            },
+        )
     return None
 
 
 def _calendar_preassessment_block(school_calendar, term):
     if not school_calendar or term not in {1, 2, 3, 4}:
         return None
-    return school_calendar.events.filter(term=term, event_type='pre_assessment').order_by('start_date', 'created_at').first()
+    events = _calendar_events_for_school_calendar(school_calendar)
+    candidates = [
+        event for event in events
+        if event.term == term and event.event_type == 'pre_assessment'
+    ]
+    candidates.sort(key=lambda event: (event.start_date, event.created_at))
+    return candidates[0] if candidates else None
 
 
 def _calendar_postassessment_block(school_calendar, term):
     if not school_calendar or term not in {1, 2, 3, 4}:
         return None
-    return school_calendar.events.filter(term=term, event_type='post_assessment').order_by('start_date', 'created_at').first()
+    events = _calendar_events_for_school_calendar(school_calendar)
+    candidates = [
+        event for event in events
+        if event.term == term and event.event_type == 'post_assessment'
+    ]
+    candidates.sort(key=lambda event: (event.start_date, event.created_at))
+    return candidates[0] if candidates else None
 
 
 def _calendar_is_in_preassessment_window(school_calendar, term, on_date=None):
@@ -5098,12 +5494,29 @@ def _format_calendar_date(value):
 
 
 def _selected_school_calendar(request=None):
-    calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
-    active_calendar = _active_school_calendar()
+    perf_started_at = time.perf_counter()
+    query_start = len(connection.queries) if settings.DEBUG else None
+    calendars = list(SchoolCalendar.objects.order_by('school_year', 'created_at'))
+    active_calendar = None
+    best_start = None
+    check_date = date.today()
+    for school_calendar in calendars:
+        start_event, end_event = _school_year_bounds(school_calendar)
+        if not start_event or not end_event:
+            continue
+        if start_event.start_date <= check_date <= end_event.end_date:
+            if not active_calendar or start_event.start_date > best_start:
+                active_calendar = school_calendar
+                best_start = start_event.start_date
     selected_calendar = active_calendar
     selected_calendar_id = request.GET.get('calendar_id') if request else None
     if selected_calendar_id and str(selected_calendar_id).isdigit():
-        selected_calendar = SchoolCalendar.objects.filter(id=int(selected_calendar_id)).first() or active_calendar
+        selected_calendar = (
+            SchoolCalendar.objects.prefetch_related('events')
+            .filter(id=int(selected_calendar_id))
+            .first()
+            or active_calendar
+        )
     if not selected_calendar:
         selected_calendar = calendars[0] if calendars else None
     if not selected_calendar:
@@ -5121,6 +5534,23 @@ def _selected_school_calendar(request=None):
             except Exception:
                 pass
             selected_calendar = None
+    if selected_calendar and not getattr(selected_calendar, '_prefetched_objects_cache', {}).get('events'):
+        try:
+            selected_calendar = SchoolCalendar.objects.prefetch_related('events').get(id=selected_calendar.id)
+        except Exception:
+            pass
+    if request and request.session.get('user_role') == 'student':
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': '_selected_school_calendar',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                'calendar_count': len(calendars),
+                'has_active_calendar': bool(active_calendar),
+                'has_selected_calendar': bool(selected_calendar),
+            },
+        )
     return selected_calendar, calendars, active_calendar
 
 
@@ -5156,19 +5586,50 @@ def _calendar_context(request):
 
 
 def _calendar_month_view(school_calendar):
+    perf_started_at = time.perf_counter()
+    query_start = len(connection.queries) if settings.DEBUG else None
     from datetime import date as _date
     from datetime import timedelta as _timedelta
 
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': '_calendar_month_view_entry',
+            'calendar_id': getattr(school_calendar, 'id', None) if school_calendar else None,
+        },
+    )
     today = _date.today()
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': '_calendar_month_view_after_today',
+            'today': today.isoformat(),
+        },
+    )
     month_matrix = py_calendar.monthcalendar(today.year, today.month)
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': '_calendar_month_view_after_month_matrix',
+            'weeks_in_matrix': len(month_matrix),
+        },
+    )
     month_event_map = {}
     if school_calendar:
-        for event in CalendarEvent.objects.filter(school_calendar=school_calendar):
+        for event in _calendar_events_for_school_calendar(school_calendar):
             current = event.start_date
             while current <= event.end_date:
+                next_current = current + _timedelta(days=1)
                 if current.year == today.year and current.month == today.month:
                     month_event_map.setdefault(current.day, []).append(event)
-                    current += _timedelta(days=1)
+                current = next_current
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': '_calendar_month_view_after_event_map',
+            'mapped_days': len(month_event_map),
+        },
+    )
 
     weeks = []
     for week in month_matrix:
@@ -5192,13 +5653,43 @@ def _calendar_month_view(school_calendar):
                     }
                     for event in day_events
                 ],
-            })
+                })
         weeks.append(days)
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': '_calendar_month_view_after_weeks',
+            'weeks_built': len(weeks),
+        },
+    )
 
-    events = list(CalendarEvent.objects.filter(school_calendar=school_calendar).order_by('start_date', 'end_date', 'created_at')) if school_calendar else []
+    events = sorted(
+        _calendar_events_for_school_calendar(school_calendar),
+        key=lambda event: (event.start_date, event.end_date, event.created_at),
+    ) if school_calendar else []
     grouped_events = {}
     for event in events:
         grouped_events.setdefault(event.event_type, []).append(event)
+    if school_calendar:
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': '_calendar_month_view',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'query_count': (len(connection.queries) - query_start) if query_start is not None else None,
+                'calendar_id': getattr(school_calendar, 'id', None),
+                'calendar_events_count': len(events),
+                'grouped_event_types': len(grouped_events),
+            },
+        )
+    logger.warning(
+        "PABASA_DASHBOARD_PROFILE %s",
+        {
+            'stage': '_calendar_month_view_before_return',
+            'weeks_built': len(weeks),
+            'events_count': len(events),
+        },
+    )
 
     return {
         'month_name': today.strftime('%B'),
@@ -6805,6 +7296,16 @@ def assessment(request):
                 'stage_precomputed': workflow.get('stage'),
             },
         )
+        logger.warning(
+            "DEBUG: ASSESSMENT HUB HANDOFF %s",
+            {
+                'user_id': getattr(user, 'id', None),
+                'saved_reader_classification': state.get('reader_classification'),
+                'saved_aral_eligible': bool(state.get('aral_eligible')),
+                'saved_pre_test_completed': bool(state.get('pre_test_completed')),
+                'saved_post_test_completed': bool(state.get('post_test_completed')),
+            },
+        )
     except Exception as exc:
         logger.warning(
             "DEBUG: ASSESSMENT ROUTING STATE logging_failed user_id=%s error=%s",
@@ -6821,11 +7322,15 @@ def assessment(request):
     official_calendar = _active_school_calendar()
     school_year_value = official_availability.get('school_year') or (official_calendar.school_year if official_calendar else '')
     has_crla_completion_record = _official_crla_completion_exists(user, active_phase, school_year_value)
+    should_use_official_crla = bool(has_active_crla_window and official_crla_material)
 
     stage = 'complete'
     routing_reason = 'default_complete'
-    if eligible:
-        stage = 'original'
+    if should_use_official_crla:
+        stage = 'assessment'
+        routing_reason = 'active_official_crla_window'
+    elif eligible:
+        stage = 'intervention'
         routing_reason = 'eligible_student'
     elif not has_active_crla_window:
         stage = 'unavailable'
@@ -6856,7 +7361,17 @@ def assessment(request):
                 'has_active_crla_window': has_active_crla_window,
                 'has_crla_completion_record': has_crla_completion_record,
                 'official_crla_material': bool(official_crla_material),
+                'should_use_official_crla': should_use_official_crla,
                 'stage': stage,
+                'routing_reason': routing_reason,
+            },
+        )
+        logger.warning(
+            "DEBUG: ASSESSMENT HUB RESOLVED %s",
+            {
+                'user_id': getattr(user, 'id', None),
+                'resolved_stage': stage,
+                'selected_workflow_branch': stage,
                 'routing_reason': routing_reason,
             },
         )
@@ -6949,6 +7464,19 @@ def assessment(request):
     crla_official_assessment_data = {}
     if crla_material_id:
         crla_official_assessment_data = _official_reading_launch_data(crla_material)
+    logger.warning(
+        "PABASA_OFFICIAL_TRACE %s",
+        {
+            'stage': 'assessment_context_launch',
+            'selected_material_id': crla_material_id,
+            'selected_material_title': crla_title,
+            'selected_material_code': crla_material_code,
+            'selected_material_language': crla_material_language,
+            'selected_material_system_assessment_key': getattr(crla_material, 'system_assessment_key', '') if crla_material else '',
+            'official_assessment_id': crla_material_id,
+            'official_assessment_data': crla_official_assessment_data,
+        },
+    )
     official_assessments = _official_reading_assessments_for_student(user, official_availability)
     enriched_official_assessments = []
     for assessment_payload in official_assessments:
@@ -7061,6 +7589,18 @@ def assessment(request):
                 'selected_template': 'pabasa_app/reading_assessment_workflow.html',
                 'stage': stage,
                 'workflow_message': workflow_message,
+                'reader_classification': state.get('reader_classification'),
+                'aral_eligible': eligible,
+            },
+        )
+        logger.warning(
+            "DEBUG: ASSESSMENT FINAL CONTEXT %s",
+            {
+                'user_id': getattr(user, 'id', None),
+                'selected_template': 'pabasa_app/reading_assessment_workflow.html',
+                'final_stage': stage,
+                'workflow_branch': 'reading_assessment_workflow',
+                'workflow_title': context.get('workflow_title'),
                 'reader_classification': state.get('reader_classification'),
                 'aral_eligible': eligible,
             },
@@ -11942,6 +12482,7 @@ def get_student_joined_classes(request):
     This provides the authoritative source of truth for enrolled classes.
     """
     try:
+        perf_started_at = time.perf_counter()
         user_id = request.session.get('user_id')
         student_user = User.objects.filter(id=user_id).first()
         
@@ -11952,6 +12493,7 @@ def get_student_joined_classes(request):
             return JsonResponse({'success': False, 'error': 'Not a student account'}, status=403)
         
         # Get all active sections where this student is enrolled
+        section_scan_started_at = time.perf_counter()
         sections = Section.objects.filter(is_active=True).order_by('class_name')
         joined_classes = []
         
@@ -11970,7 +12512,15 @@ def get_student_joined_classes(request):
                     'created_at': section.created_at.isoformat(),
                 })
         
-        logger.debug(f"Retrieved {len(joined_classes)} joined classes for student {student_user.custom_id}")
+        logger.warning(
+            "PABASA_DASHBOARD_PROFILE %s",
+            {
+                'stage': 'get_student_joined_classes',
+                'elapsed_ms': round((time.perf_counter() - perf_started_at) * 1000, 2),
+                'section_scan_ms': round((time.perf_counter() - section_scan_started_at) * 1000, 2),
+                'joined_classes_count': len(joined_classes),
+            },
+        )
         
         return JsonResponse({'success': True, 'classes': joined_classes})
     
@@ -14169,6 +14719,20 @@ def record_assessment_completion(request):
     try:
         logger.warning("DEBUG: record_assessment_completion HIT")
         data = json.loads(request.body)
+        logger.warning(
+            "PABASA_COMPLETION_TRACE %s",
+            {
+                'stage': 'record_assessment_completion_enter',
+                'user_id': request.session.get('user_id'),
+                'user_role': request.session.get('user_role'),
+                'material_id': data.get('material_id') if isinstance(data, dict) else None,
+                'assessment_id': data.get('assessment_id') if isinstance(data, dict) else None,
+                'official_assessment_id': data.get('official_assessment_id') if isinstance(data, dict) else None,
+                'assessment_type': data.get('assessment_type') if isinstance(data, dict) else None,
+                'class_code': data.get('class_code') if isinstance(data, dict) else None,
+                'has_scores': isinstance(data.get('scores'), dict) if isinstance(data, dict) else False,
+            },
+        )
         _trace_live_end_flow(
             'record_assessment_completion_enter',
             None,
@@ -14198,7 +14762,37 @@ def record_assessment_completion(request):
             if access_response:
                 return access_response
 
+        logger.warning(
+            "PABASA_COMPLETION_TRACE %s",
+            {
+                'stage': 'record_assessment_completion_precomplete',
+                'material_id': data.get('material_id'),
+                'assessment_id': data.get('assessment_id'),
+                'official_assessment_id': data.get('official_assessment_id'),
+                'assessment_type': data.get('assessment_type'),
+                'class_code': data.get('class_code'),
+                'score_keys': sorted(list((data.get('scores') or {}).keys())) if isinstance(data.get('scores'), dict) else [],
+            },
+        )
         response = _complete_assessment_for_student(student_user, data=data, request=request, assist_context=assist_context)
+        try:
+            response_json = json.loads(response.content.decode('utf-8')) if hasattr(response, 'content') else {}
+        except Exception:
+            response_json = {}
+        logger.warning(
+            "PABASA_COMPLETION_TRACE %s",
+            {
+                'stage': 'record_assessment_completion_return',
+                'user_id': getattr(student_user, 'id', None),
+                'response_status': getattr(response, 'status_code', None),
+                'response_json': response_json,
+                'crla_classification': response_json.get('crla_classification'),
+                'aral_eligible': response_json.get('aral_eligible'),
+                'workflow_stage': response_json.get('stage'),
+                'next_url': response_json.get('next_url'),
+                'redirect_url': response_json.get('redirect_url'),
+            },
+        )
         _trace_live_end_flow(
             'record_assessment_completion_return',
             None,
