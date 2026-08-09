@@ -3127,6 +3127,8 @@ def resend_teacher_signup_otp(request):
 def verify_student_otp(request):
     try:
         otp = request.POST.get('otp', '').strip()
+        logger.debug("VERIFY STUDENT OTP DATA keys=%s", sorted(list(request.POST.keys())))
+        logger.debug("VERIFY STUDENT OTP SESSION KEYS=%s", sorted(list(request.session.keys())))
         if not otp:
             return JsonResponse({'success': False, 'error': 'OTP is required'}, status=400)
 
@@ -3157,34 +3159,48 @@ def verify_student_otp(request):
             return JsonResponse({'success': False, 'error': 'LRN is already registered'}, status=400)
 
         custom_id = generate_custom_id('student', pending.get('grade_level', ''))
-        user = User.objects.create(
-            custom_id=custom_id,
-            role='student',
-            first_name=pending['first_name'],
-            last_name=pending['last_name'],
-            email=pending['email'],
-            middle_initial=pending.get('middle_initial', ''),   
-            suffix=pending.get('suffix', ''),                  
-            sex=pending['sex'],
-            birth_month=pending['birth_month'],
-            birth_day=pending['birth_day'],
-            birth_year=pending['birth_year'],
-            password_hash=pending['password_hash'],
-            contact_no=pending.get('contact_no', ''),
-            lrn=lrn or None,
-            grade_level=pending.get('grade_level', ''),
-            section=pending.get('section', ''),
-            reading_level=pending.get('reading_level', ''),
-        )
+        logger.debug("VERIFY STUDENT OTP BEFORE USER CREATE custom_id=%s email=%s grade_level=%s lrn_present=%s",
+                     custom_id, pending.get('email'), pending.get('grade_level', ''), bool(lrn))
+        try:
+            user = User.objects.create(
+                custom_id=custom_id,
+                role='student',
+                first_name=pending['first_name'],
+                last_name=pending['last_name'],
+                email=pending['email'],
+                middle_initial=pending.get('middle_initial', ''),
+                suffix=pending.get('suffix', ''),
+                sex=pending['sex'],
+                birth_month=pending['birth_month'],
+                birth_day=pending['birth_day'],
+                birth_year=pending['birth_year'],
+                password_hash=pending['password_hash'],
+                contact_no=pending.get('contact_no', ''),
+                lrn=lrn or None,
+                grade_level=pending.get('grade_level', ''),
+                section=pending.get('section', ''),
+                reading_level=pending.get('reading_level', ''),
+            )
+        except IntegrityError as exc:
+            logger.exception("VERIFY STUDENT OTP IntegrityError during user create")
+            _clear_pending_student_signup(request)
+            return JsonResponse({'success': False, 'error': 'Unable to create student account because the email, LRN, or custom ID already exists.'}, status=400)
 
-        send_student_confirmation_email(request, user)
-        _notify_admins(
-            'New student account',
-            f'{user.first_name} {user.last_name} created a student account.',
-            'success',
-            reverse('admin_student_detail', args=[user.id]),
-            user,
-        )
+        logger.debug("VERIFY STUDENT OTP AFTER USER CREATE user_id=%s custom_id=%s", user.id, user.custom_id)
+        try:
+            send_student_confirmation_email(request, user)
+        except Exception:
+            logger.exception("VERIFY STUDENT OTP confirmation email failed for user_id=%s", user.id)
+        try:
+            _notify_admins(
+                'New student account',
+                f'{user.first_name} {user.last_name} created a student account.',
+                'success',
+                reverse('admin_student_detail', args=[user.id]),
+                user,
+            )
+        except Exception:
+            logger.exception("VERIFY STUDENT OTP admin notification failed for user_id=%s", user.id)
         _clear_pending_student_signup(request)
 
         return JsonResponse({
@@ -5476,6 +5492,38 @@ def _official_assessment_availability_for_student(student, request=None):
     }
 
 
+def _official_crla_completion_exists(student, assessment_type, school_year_value):
+    assessment_type = str(assessment_type or '').strip().lower()
+    if assessment_type not in {'pretest', 'posttest'}:
+        return False
+    if not student or not school_year_value:
+        return False
+
+    assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
+    matching_materials = _official_reading_materials_queryset().filter(
+        system_assessment_key=assessment_key,
+        system_assessment_phase=assessment_type,
+        is_official_reading=True,
+    )
+    if not matching_materials.exists():
+        return False
+
+    for material in matching_materials:
+        completion = _official_reading_completion_for_assessment(
+            student,
+            {
+                'id': material.id,
+                'assessment_type': assessment_type,
+                'subject': _official_reading_subject(material),
+                'language': getattr(material, 'language', ''),
+            },
+            school_year_value,
+        )
+        if completion.get('completed'):
+            return True
+    return False
+
+
 def _official_reading_material_payload(material):
     content_json = getattr(material, 'content_json', None) or {}
     sections = _official_reading_item_sections(material)
@@ -6624,11 +6672,19 @@ def assessment(request):
     active_phase = workflow.get('active_phase') or _official_crla_assessment_phase(user)
     official_availability = _official_assessment_availability_for_student(user, request)
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
+    has_active_crla_window = bool(official_availability.get('available'))
+    official_calendar = _active_school_calendar()
+    school_year_value = official_availability.get('school_year') or (official_calendar.school_year if official_calendar else '')
+    has_crla_completion_record = _official_crla_completion_exists(user, active_phase, school_year_value)
 
-    if active_phase == 'pretest':
-        stage = 'assessment' if official_crla_material and not completed_pretest else ('original' if eligible else 'complete')
+    if not has_active_crla_window:
+        stage = 'unavailable'
+    elif not has_crla_completion_record:
+        stage = 'assessment' if official_crla_material else 'assessment'
+    elif active_phase == 'pretest':
+        stage = 'original' if eligible else 'complete'
     elif active_phase == 'posttest':
-        stage = 'assessment' if official_crla_material and not completed_posttest else ('original' if eligible else 'complete')
+        stage = 'complete'
     else:
         stage = 'original' if eligible else 'complete'
 
@@ -6670,10 +6726,10 @@ def assessment(request):
         })
     context = _dashboard_context(request, 'student')
     context.update(workflow)
-    official_calendar = _active_school_calendar()
     context.update({
         'official_assessment_available': bool(official_availability.get('available')),
         'official_assessment_type': official_availability.get('assessment_type') or '',
+        'crla_assessment_available': has_active_crla_window,
     })
     crla_labels = _official_crla_assessment_labels(official_availability.get('assessment_type'))
     crla_material = material_map.get('crla')
@@ -6732,7 +6788,6 @@ def assessment(request):
             'official_code': crla_material_code,
         }
     official_assessments = _official_reading_assessments_for_student(user, official_availability)
-    school_year_value = official_availability.get('school_year') or (official_calendar.school_year if official_calendar else '')
     enriched_official_assessments = []
     for assessment_payload in official_assessments:
         completion = _official_reading_completion_for_assessment(user, assessment_payload, school_year_value)
@@ -6799,6 +6854,14 @@ def assessment(request):
         )
     except Exception as exc:
         logger.warning("PABASA_OFFICIAL_TRACE workflow_launch_context logging_failed=%s", exc)
+    if stage == 'unavailable':
+        context['workflow_title'] = 'CRLA Assessment Currently Unavailable'
+        context['workflow_subtitle'] = 'No active CRLA assessment window'
+        context['workflow_message'] = (
+            'There is currently no active assessment schedule. Please check back again once your assessment period is open. Thank you!'
+        )
+        return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
+
     if stage == 'original':
         return render(request, 'pabasa_app/assessment.html', context)
 
