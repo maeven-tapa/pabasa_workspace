@@ -204,6 +204,16 @@ def _get_user_state(user):
     if isinstance(preference, dict):
         state = preference.get('reading_assessment_state') or {}
         if isinstance(state, dict):
+            try:
+                logger.warning(
+                    "DEBUG: READ CRLA STATE %s",
+                    {
+                        'user_id': getattr(user, 'id', None),
+                        'reading_assessment_state': state,
+                    },
+                )
+            except Exception:
+                pass
             return state
     return {}
 
@@ -262,6 +272,22 @@ def _assessment_workflow_context(student):
         stage = 'assessment' if official_crla_material and not completed_posttest else ('original' if eligible else 'complete')
     else:
         stage = 'original' if eligible else 'complete'
+
+    try:
+        logger.warning(
+            "DEBUG: WORKFLOW CONTEXT %s",
+            {
+                'user_id': getattr(student, 'id', None),
+                'reader_classification': state.get('reader_classification'),
+                'aral_eligible': bool(eligible),
+                'pre_test_completed': completed_pretest,
+                'post_test_completed': completed_posttest,
+                'active_phase': active_phase,
+                'stage': stage,
+            },
+        )
+    except Exception:
+        pass
 
     return {
         'active_window': None,
@@ -1610,6 +1636,17 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
             assessment_phase = 'posttest'
 
     if assessment_kind == 'crla':
+        crla_windows = state.get('crla_windows')
+        if not isinstance(crla_windows, dict):
+            crla_windows = {}
+        current_window = crla_windows.get(assessment_phase, {})
+        if not isinstance(current_window, dict):
+            current_window = {}
+        current_window.update({
+            'completed': True,
+            'classification': normalized_classification,
+            'aral_eligible': bool(state['aral_eligible']),
+        })
         if assessment_phase == 'pretest':
             state['crla_pretest_completed'] = True
         elif assessment_phase == 'posttest':
@@ -1621,9 +1658,42 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
                 state['crla_pretest_completed'] = True
             elif current_term == 4:
                 state['crla_posttest_completed'] = True
+        if assessment_phase:
+            crla_windows[assessment_phase] = current_window
+            state['crla_windows'] = crla_windows
 
+    try:
+        logger.warning(
+            "DEBUG: BEFORE CRLA STATE SAVE %s",
+            {
+                'user_id': getattr(student_user, 'id', None),
+                'reader_classification': state.get('reader_classification'),
+                'aral_eligible': state.get('aral_eligible'),
+                'crla_pretest_completed': state.get('crla_pretest_completed'),
+                'crla_windows': state.get('crla_windows'),
+            },
+        )
+    except Exception:
+        pass
     state['current_phase'] = 'materials' if state.get('aral_eligible') else 'complete'
     _set_user_state(student_user, state)
+    try:
+        reloaded_user = User.objects.filter(pk=getattr(student_user, 'pk', None)).first()
+        reloaded_state = _get_user_state(reloaded_user)
+        logger.warning(
+            "DEBUG: AFTER CRLA STATE SAVE %s",
+            {
+                'user_id': getattr(student_user, 'id', None),
+                'user.preference["reading_assessment_state"]': getattr(reloaded_user, 'preference', None).get('reading_assessment_state') if getattr(reloaded_user, 'preference', None) else None,
+                'reloaded_state': reloaded_state,
+            },
+        )
+    except Exception as exc:
+        logger.warning(
+            "DEBUG: AFTER CRLA STATE SAVE logging_failed user_id=%s error=%s",
+            getattr(student_user, 'id', None),
+            exc,
+        )
 
 def _section_active_students(section):
     student_ids = [
@@ -6666,6 +6736,27 @@ def assessment(request):
     ] if user and getattr(user, 'role', '') == 'student' else []
 
     state = workflow.get('eligibility') or _reader_assessment_state(user)
+    try:
+        logger.warning(
+            "DEBUG: ASSESSMENT ROUTING STATE %s",
+            {
+                'user_id': getattr(user, 'id', None),
+                'user_pref_state': _get_user_state(user),
+                'workflow_state': workflow.get('eligibility'),
+                'resolved_state': state,
+                'resolved_reader_classification': state.get('reader_classification'),
+                'resolved_aral_eligible': bool(state.get('aral_eligible')),
+                'resolved_pretest_completed': bool(state.get('pre_test_completed')),
+                'resolved_posttest_completed': bool(state.get('post_test_completed')),
+                'stage_precomputed': workflow.get('stage'),
+            },
+        )
+    except Exception as exc:
+        logger.warning(
+            "DEBUG: ASSESSMENT ROUTING STATE logging_failed user_id=%s error=%s",
+            getattr(user, 'id', None),
+            exc,
+        )
     completed_pretest = bool(state.get('pre_test_completed'))
     completed_posttest = bool(state.get('post_test_completed'))
     eligible = bool(state.get('aral_eligible'))
@@ -6677,16 +6768,46 @@ def assessment(request):
     school_year_value = official_availability.get('school_year') or (official_calendar.school_year if official_calendar else '')
     has_crla_completion_record = _official_crla_completion_exists(user, active_phase, school_year_value)
 
-    if not has_active_crla_window:
+    stage = 'complete'
+    routing_reason = 'default_complete'
+    if eligible:
+        stage = 'original'
+        routing_reason = 'eligible_student'
+    elif not has_active_crla_window:
         stage = 'unavailable'
+        routing_reason = 'no_active_window'
     elif not has_crla_completion_record:
         stage = 'assessment' if official_crla_material else 'assessment'
+        routing_reason = 'pending_completion_record'
     elif active_phase == 'pretest':
-        stage = 'original' if eligible else 'complete'
+        stage = 'complete'
+        routing_reason = 'pretest_complete_not_eligible'
     elif active_phase == 'posttest':
         stage = 'complete'
+        routing_reason = 'posttest_complete'
     else:
-        stage = 'original' if eligible else 'complete'
+        stage = 'complete'
+        routing_reason = 'fallback_complete'
+
+    try:
+        logger.warning(
+            "DEBUG: ASSESSMENT TEMPLATE ROUTE %s",
+            {
+                'user_id': getattr(user, 'id', None),
+                'reader_classification': state.get('reader_classification'),
+                'aral_eligible': eligible,
+                'pre_test_completed': completed_pretest,
+                'post_test_completed': completed_posttest,
+                'active_phase': active_phase,
+                'has_active_crla_window': has_active_crla_window,
+                'has_crla_completion_record': has_crla_completion_record,
+                'official_crla_material': bool(official_crla_material),
+                'stage': stage,
+                'routing_reason': routing_reason,
+            },
+        )
+    except Exception:
+        pass
 
     workflow['stage'] = stage
 
@@ -6860,9 +6981,34 @@ def assessment(request):
         context['workflow_message'] = (
             'There is currently no active assessment schedule. Please check back again once your assessment period is open. Thank you!'
         )
+        try:
+            logger.warning(
+                "DEBUG: RENDER WORKFLOW TEMPLATE %s",
+                {
+                    'user_id': getattr(user, 'id', None),
+                    'selected_template': 'pabasa_app/reading_assessment_workflow.html',
+                    'stage': stage,
+                    'workflow_message': context.get('workflow_message'),
+                },
+            )
+        except Exception:
+            pass
         return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
 
     if stage == 'original':
+        try:
+            logger.warning(
+                "DEBUG: RENDER ASSESSMENT TEMPLATE %s",
+                {
+                    'user_id': getattr(user, 'id', None),
+                    'selected_template': 'pabasa_app/assessment.html',
+                    'stage': stage,
+                    'reader_classification': state.get('reader_classification'),
+                    'aral_eligible': eligible,
+                },
+            )
+        except Exception:
+            pass
         return render(request, 'pabasa_app/assessment.html', context)
 
     context['workflow_title'] = crla_labels['workflow_title'] if stage == 'assessment' else 'Assessment Complete'
@@ -6873,6 +7019,20 @@ def assessment(request):
         workflow_message = 'The learner successfully completed the CRLA assessment but is not eligible for the ARAL Program.'
 
     context['workflow_message'] = workflow_message
+    try:
+        logger.warning(
+            "DEBUG: RENDER WORKFLOW TEMPLATE %s",
+            {
+                'user_id': getattr(user, 'id', None),
+                'selected_template': 'pabasa_app/reading_assessment_workflow.html',
+                'stage': stage,
+                'workflow_message': workflow_message,
+                'reader_classification': state.get('reader_classification'),
+                'aral_eligible': eligible,
+            },
+        )
+    except Exception:
+        pass
     return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
 
 @xframe_options_sameorigin
@@ -14023,6 +14183,7 @@ def delete_reading_material(request):
 def record_assessment_completion(request):
     """Handles notification when student completes reading material."""
     try:
+        logger.warning("DEBUG: record_assessment_completion HIT")
         data = json.loads(request.body)
         _trace_live_end_flow(
             'record_assessment_completion_enter',
