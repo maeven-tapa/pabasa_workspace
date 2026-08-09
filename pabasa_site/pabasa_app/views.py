@@ -2661,6 +2661,10 @@ def _clear_pending_student_signup(request):
     """Clear student signup data from session"""
     _clear_pending_data(request, 'pending_student_signup', 'pending_student_signup_otp', 'pending_student_signup_otp_created')
 
+
+def _normalize_registration_value(value):
+    return str(value or '').strip()
+
 def _send_pabasa_otp_email(subject, text_message, recipient_email, first_name, otp, eyebrow, heading, intro, action_url=None, action_label="Open PABASA"):
     safe_name = escape(first_name or "PABASA user")
     safe_otp = escape(str(otp))
@@ -3059,6 +3063,14 @@ def register_student(request):
     """Register a new student"""
     try:
         data = request.POST
+        raw_email = _normalize_registration_value(data.get('email'))
+        raw_lrn = _normalize_registration_value(data.get('lrn'))
+        logger.debug(
+            "STUDENT REGISTRATION SUBMIT email=%s lrn=%s custom_id=%s",
+            raw_email,
+            raw_lrn,
+            _normalize_registration_value(data.get('custom_id')),
+        )
         
         # Validate required fields
         required_fields = ['first_name', 'last_name', 'email', 'password', 'confirm_password', 'lrn',
@@ -3072,19 +3084,24 @@ def register_student(request):
         if data.get('password') != data.get('confirm_password'):
             return JsonResponse({'success': False, 'error': 'Passwords do not match'}, status=400)
 
-        lrn = data.get('lrn', '').strip()
+        lrn = raw_lrn
         if not re.fullmatch(r'\d{12}', lrn):
             return JsonResponse({'success': False, 'error': 'LRN must contain exactly 12 digits.'}, status=400)
-        if User.objects.filter(lrn=lrn).exists():
+        lrn_matches = list(User.objects.filter(lrn__iexact=lrn).values('id', 'custom_id', 'email', 'is_archived', 'lrn'))
+        logger.debug("STUDENT REGISTRATION DUPLICATE CHECK lrn=%s matches=%s", lrn, lrn_matches)
+        if User.objects.filter(lrn__iexact=lrn, is_archived=False).exists():
             return JsonResponse({'success': False, 'error': 'LRN is already registered'}, status=400)
         
         # Check if email already exists
-        if User.objects.filter(email=data.get('email')).exists():
+        email_matches = list(User.objects.filter(email__iexact=raw_email).values('id', 'custom_id', 'email', 'is_archived'))
+        logger.debug("STUDENT REGISTRATION DUPLICATE CHECK email=%s matches=%s", raw_email, email_matches)
+        if User.objects.filter(email__iexact=raw_email, is_archived=False).exists():
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
         
         # Store pending signup and send OTP email (student must verify OTP to complete)
         otp = _store_pending_student_signup(request, data)
-        send_student_signup_otp_email(request, data.get('email'), otp, data.get('first_name'))
+        logger.debug("STUDENT REGISTRATION PENDING CREATED otp=%s session_keys=%s", otp, sorted(list(request.session.keys())))
+        send_student_signup_otp_email(request, raw_email, otp, data.get('first_name'))
 
         return JsonResponse({
             'success': True,
@@ -3205,9 +3222,15 @@ def verify_student_otp(request):
         pending = request.session.get('pending_student_signup')
         expected_otp = request.session.get('pending_student_signup_otp')
         otp_created = request.session.get('pending_student_signup_otp_created')
+        logger.debug(
+            "VERIFY STUDENT OTP LOOKUP pending=%s expected_otp_present=%s otp_created=%s",
+            bool(pending),
+            bool(expected_otp),
+            otp_created,
+        )
 
         if not pending or not expected_otp or not otp_created:
-            return JsonResponse({'success': False, 'error': 'No pending signup found. Please start registration again.'}, status=400)
+            return JsonResponse({'success': False, 'error': 'Your registration session expired or was not started. Please submit the signup form again to receive a new OTP.'}, status=400)
 
         if time.time() - otp_created > 10 * 60:
             _clear_pending_student_signup(request)
@@ -3216,15 +3239,25 @@ def verify_student_otp(request):
         if otp != expected_otp:
             return JsonResponse({'success': False, 'error': 'Invalid OTP. Please try again.'}, status=400)
 
-        if User.objects.filter(email=pending['email']).exists():
+        pending_email = _normalize_registration_value(pending.get('email'))
+        pending_lrn = _normalize_registration_value(pending.get('lrn'))
+        logger.debug(
+            "VERIFY STUDENT OTP PENDING email=%s lrn=%s grade_level=%s section=%s",
+            pending_email,
+            pending_lrn,
+            pending.get('grade_level', ''),
+            pending.get('section', ''),
+        )
+
+        if User.objects.filter(email__iexact=pending_email, is_archived=False).exists():
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'Email already registered'}, status=400)
 
-        lrn = str(pending.get('lrn') or '').strip()
+        lrn = pending_lrn
         if lrn and not re.fullmatch(r'\d{12}', lrn):
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'LRN must contain exactly 12 digits.'}, status=400)
-        if lrn and User.objects.filter(lrn=lrn).exists():
+        if lrn and User.objects.filter(lrn__iexact=lrn, is_archived=False).exists():
             _clear_pending_student_signup(request)
             return JsonResponse({'success': False, 'error': 'LRN is already registered'}, status=400)
 
@@ -5367,6 +5400,15 @@ def _official_reading_materials_queryset():
         is_system_owned=True,
         system_assessment_key__in=official_keys,
     ).order_by('system_assessment_period', 'system_assessment_phase', 'official_term', '-updated_at')
+
+
+def _is_official_crla_material(material):
+    if not material:
+        return False
+    if bool(getattr(material, 'is_official_reading', False)) and bool(getattr(material, 'is_system_owned', False)):
+        return True
+    key = str(getattr(material, 'system_assessment_key', '') or '').strip().lower()
+    return bool(key and key in OFFICIAL_CRLA_CONTENT)
 
 
 def _official_reading_assessment_type(material):
@@ -11983,10 +12025,11 @@ def get_class_materials(request):
             Q(section=section) | Q(assigned_sections=section) | Q(courses__sections=section)
         ).distinct()
         materials_qs = materials_qs.exclude(
-            Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True)
-        )
-        materials_qs = materials_qs.exclude(
-            Q(assessment_kind='crla') & Q(is_official_reading=True, is_system_owned=True)
+            Q(assessment_kind='crla')
+            | Q(is_official_reading=True)
+            | Q(is_system_owned=True)
+            | Q(system_assessment_key__in=list(OFFICIAL_CRLA_CONTENT.keys()))
+            | Q(system_assessment_phase__in=['pretest', 'posttest'])
         )
         # Avoid duplication: exclude assessments that are already represented by a Material record.
         # Material records act as the primary container for metadata like "Assigned Week".
@@ -12035,57 +12078,10 @@ def get_class_materials(request):
             combined.append(('material', mat))
             seen_material_ids.add(mat.id)
         if is_requesting_student:
-            official_phase = _official_crla_assessment_phase(request_user, on_date=effective_date)
-            student_state = _reader_assessment_state(request_user)
-            allow_posttest = _student_is_eosy_crla_eligible(request_user)
-            print(
-                f"[CRLA DEBUG] request_user={{getattr(request_user, 'id', None)}} "
-                f"role={{getattr(request_user, 'role', None)}} "
-                f"effective_date={{effective_date}} "
-                f"official_phase={{official_phase}} "
-                f"allow_posttest={{allow_posttest}}"
-            )
-            official_materials_qs = Material.objects.none()
-            if official_phase == 'pretest' and not (bool(student_state.get('pre_test_completed')) and bool(student_state.get('aral_eligible'))):
-                official_materials_qs = Material.objects.filter(
-                    is_active=True,
-                    is_official_reading=True,
-                    is_system_owned=True,
-                    assessment_kind='crla',
-                    system_assessment_phase='pretest',
-                )
-            elif official_phase == 'posttest' and allow_posttest:
-                official_materials_qs = Material.objects.filter(
-                    is_active=True,
-                    is_official_reading=True,
-                    is_system_owned=True,
-                    assessment_kind='crla',
-                    system_assessment_phase='posttest',
-                )
-            official_materials_qs = official_materials_qs.exclude(status__iexact='archived').order_by('system_assessment_key', 'id')
-            official_qs_keys = list(official_materials_qs.values_list('system_assessment_key', flat=True))
-            print(f"[CRLA DEBUG] official_materials_qs keys={official_qs_keys}")
-            if official_qs_keys:
-                print(
-                    '[CRLA DEBUG] official_materials_qs rows=',
-                    list(
-                        official_materials_qs.values(
-                            'id',
-                            'title',
-                            'system_assessment_key',
-                            'is_active',
-                            'is_official_reading',
-                            'is_system_owned',
-                            'status',
-                        )
-                    ),
-                )
+            # Intervention/class-material views must never surface official CRLA
+            # assessment materials. Those records are reserved for the dedicated
+            # assessment workflow and are filtered out above.
             official_assessment_items = []
-            for official_mat in official_materials_qs:
-                if official_mat.id in seen_material_ids:
-                    continue
-                official_assessment_items.append(official_mat)
-                seen_material_ids.add(official_mat.id)
         for a in assessments_qs:
             combined.append(('assessment', a))
         for p in practices_qs:
@@ -12095,54 +12091,6 @@ def get_class_materials(request):
         all_materials_flat = []
         materials = {'word': [], 'sentence': [], 'paragraph': [], 'vowel': []}
         official_assessments = []
-
-        if is_requesting_student:
-            for official_mat in locals().get('official_assessment_items', []):
-                content_value = official_mat.content_text or official_mat.prompt_text or ''
-                title_value = official_mat.title or (content_value[:150] + '...' if len(content_value) > 150 else content_value)
-                items_count = 1
-                if isinstance(official_mat.content_json, dict) and isinstance(official_mat.content_json.get('items'), list):
-                    items_count = len(official_mat.content_json.get('items'))
-
-                content_json = getattr(official_mat, 'content_json', None) or {}
-                language_value = ''
-                if isinstance(content_json, dict):
-                    language_value = str(content_json.get('language') or '').strip()
-                if not language_value:
-                    language_value = str(getattr(official_mat, 'language', '') or '').strip()
-
-                official_assessments.append({
-                    'id': f"material-{official_mat.id}",
-                    'raw_id': official_mat.id,
-                    'action_id': f"material-{official_mat.id}",
-                    'record_kind': 'material',
-                    'system_assessment_key': getattr(official_mat, 'system_assessment_key', '') or '',
-                    'is_official_reading': True,
-                    'is_system_owned': True,
-                    'assessment_id': official_mat.assessment_id,
-                    'code': official_mat.assessment.code if official_mat.assessment else None,
-                    'title': title_value,
-                    'item_type': official_mat.item_type,
-                    'type': official_mat.type,
-                    'source_type': official_mat.source_type,
-                    'content': content_value,
-                    'content_text': content_value,
-                    'status': 'archived' if not official_mat.is_active else (official_mat.status or 'published'),
-                    'schedule': timezone.localtime(official_mat.scheduled_at, timezone.get_default_timezone()).strftime('%Y-%m-%dT%H:%M') if getattr(official_mat, 'scheduled_at', None) else None,
-                    'items': items_count,
-                    'created_at': official_mat.created_at.isoformat() if getattr(official_mat, 'created_at', None) else None,
-                    'attempt_count': 0,
-                    'completed_attempt_count': 0,
-                    'student_has_completed': False,
-                    'latest_time_score': None,
-                    'latest_attempt_summary': {},
-                    'assigned_sections': [s.class_code for s in official_mat.assigned_sections.all()] if hasattr(official_mat, 'assigned_sections') else [],
-                    'assigned_week': official_mat.assigned_week,
-                    'assigned_week_display': format_assigned_week_display(official_mat.assigned_week),
-                    'language': language_value,
-                    'content_json': content_json,
-                    'student_access': bool(getattr(official_mat, 'student_access', False)),
-                })
 
         for kind, obj in combined:
             if kind == 'material':

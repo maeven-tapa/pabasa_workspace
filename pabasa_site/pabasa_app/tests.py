@@ -221,7 +221,7 @@ class ClassMaterialsApiTests(TestCase):
         session['email'] = student.email
         session.save()
 
-    def test_get_class_materials_returns_phase_specific_official_crla_and_keeps_teacher_materials(self):
+    def test_get_class_materials_keeps_teacher_materials_and_excludes_official_crla(self):
         teacher = User.objects.create(
             custom_id="TCHR-1001",
             role="teacher",
@@ -385,9 +385,7 @@ class ClassMaterialsApiTests(TestCase):
         self.assertFalse(any(item['raw_id'] == bosy.id for item in word_items))
 
         official_items = data['official_assessments']
-        self.assertTrue(any(item['raw_id'] == bosy.id for item in official_items))
-        self.assertTrue(any(item['title'] == bosy_payload['title'] for item in official_items))
-        self.assertFalse(any(item['raw_id'] == eosy.id for item in official_items))
+        self.assertEqual(official_items, [])
 
         eligible_student = User.objects.create(
             custom_id="STU-1002",
@@ -998,10 +996,98 @@ class AssessmentPageFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         data = response.json()
+        self.assertEqual(data['official_assessments'], [])
         word_items = data['materials']['word']
         self.assertTrue(any(item['title'] == 'Teacher Reading' for item in word_items))
         self.assertFalse(any(item['title'] == 'Beginning of School Year (BoSY) CRLA Pre-Test' for item in word_items))
         self.assertFalse(any(item['title'] == 'End of School Year (EoSY) CRLA Post-Test' for item in word_items))
+
+    def test_get_class_materials_never_surfaces_official_crla_for_fresh_student_account(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-1005",
+            role="teacher",
+            first_name="Tina",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="teacher1005@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-1005",
+            role="student",
+            first_name="Nina",
+            last_name="New",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="student1005@example.com",
+            password_hash=make_password("student-password"),
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-1005",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        self._create_official_crla_calendar(
+            pre_start=date(2026, 8, 1),
+            pre_end=date(2026, 8, 7),
+            post_start=date(2026, 8, 8),
+            post_end=date(2026, 8, 15),
+        )
+        Material.objects.create(
+            title="BoSY CRLA Pre-Test",
+            item_type="word",
+            content_text="official",
+            content_json={"items": ["official"]},
+            assessment_kind="crla",
+            assessment_set="crla",
+            type="assessment",
+            status="published",
+            student_access=True,
+            section=None,
+            teacher=teacher,
+            is_active=True,
+            is_official_reading=True,
+            is_system_owned=True,
+            system_assessment_key="bosy_crla_pretest",
+            system_assessment_period="bosy",
+            system_assessment_phase="pretest",
+        )
+        Material.objects.create(
+            title="Teacher Practice",
+            item_type="word",
+            content_text="alpha",
+            content_json={"items": ["alpha"]},
+            assessment_kind="regular",
+            assessment_set="word",
+            type="assessment",
+            status="published",
+            student_access=True,
+            section=section,
+            teacher=teacher,
+            is_active=True,
+        )
+        self._login_student(student)
+        with patch('pabasa_app.views.date', wraps=date) as mock_date:
+            mock_date.today.return_value = date(2026, 8, 3)
+            response = self.client.get(reverse('get_class_materials'), {'class_code': section.class_code})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['official_assessments'], [])
+        self.assertTrue(any(item['title'] == 'Teacher Practice' for item in payload['materials']['word']))
+        self.assertFalse(any(item['title'] == 'BoSY CRLA Pre-Test' for item in payload['materials']['word']))
 
     def test_assessment_page_routes_to_intervention_when_between_calendar_windows(self):
         teacher = User.objects.create(
@@ -2403,6 +2489,173 @@ class StudentLrnTests(TestCase):
         response = self.client.get(reverse("student_signup"))
         self.assertContains(response, 'name="lrn"')
         self.assertContains(response, 'pattern="[0-9]{12}"')
+
+
+class StudentSignupFlowTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.base_payload = {
+            "first_name": "Mia",
+            "last_name": "Rivera",
+            "email": "mia.new@example.com",
+            "password": "Student123",
+            "confirm_password": "Student123",
+            "lrn": "123456789012",
+            "sex": "female",
+            "birth_month": "1",
+            "birth_day": "5",
+            "birth_year": "2014",
+            "grade_level": "Grade 3",
+        }
+
+    @patch("pabasa_site.pabasa_app.views.send_student_signup_otp_email")
+    def test_new_student_signup_succeeds_and_creates_pending_otp(self, mock_email):
+        response = self.client.post(reverse("register_student"), self.base_payload)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["email"], self.base_payload["email"])
+        session = self.client.session
+        self.assertIn("pending_student_signup", session)
+        self.assertIn("pending_student_signup_otp", session)
+        self.assertIn("pending_student_signup_otp_created", session)
+
+    @patch("pabasa_site.pabasa_app.views.send_student_signup_otp_email")
+    def test_existing_email_blocks_registration(self, mock_email):
+        User.objects.create(
+            custom_id="STU-EXIST-1",
+            role="student",
+            first_name="Existing",
+            last_name="Email",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2014,
+            email="mia.new@example.com",
+            password_hash=make_password("student-password"),
+        )
+        payload = dict(self.base_payload)
+        payload["email"] = "mia.new@example.com"
+        payload["lrn"] = "123456789013"
+
+        response = self.client.post(reverse("register_student"), payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "Email already registered")
+
+    @patch("pabasa_site.pabasa_app.views.send_student_signup_otp_email")
+    def test_existing_lrn_blocks_registration(self, mock_email):
+        User.objects.create(
+            custom_id="STU-EXIST-2",
+            role="student",
+            first_name="Existing",
+            last_name="LRN",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2014,
+            email="existing-lrn@example.com",
+            password_hash=make_password("student-password"),
+            lrn="123456789012",
+        )
+        payload = dict(self.base_payload)
+        payload["email"] = "different@example.com"
+
+        response = self.client.post(reverse("register_student"), payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "LRN is already registered")
+
+    @patch("pabasa_site.pabasa_app.views.send_student_signup_otp_email")
+    def test_existing_custom_id_blocks_registration_via_otp_creation(self, mock_email):
+        User.objects.create(
+            custom_id="G3-0001",
+            role="student",
+            first_name="Existing",
+            last_name="Custom",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2014,
+            email="existing-custom@example.com",
+            password_hash=make_password("student-password"),
+            grade_level="Grade 3",
+        )
+        payload = dict(self.base_payload)
+        payload["email"] = "custom-check@example.com"
+
+        with patch("pabasa_site.pabasa_app.views.generate_custom_id", return_value="G3-0001"), patch(
+            "pabasa_site.pabasa_app.views.send_student_confirmation_email"
+        ), patch("pabasa_site.pabasa_app.views._notify_admins"):
+            session = self.client.session
+            session["pending_student_signup"] = {
+                "first_name": payload["first_name"],
+                "last_name": payload["last_name"],
+                "email": payload["email"],
+                "middle_initial": "",
+                "suffix": "",
+                "sex": payload["sex"],
+                "birth_month": int(payload["birth_month"]),
+                "birth_day": int(payload["birth_day"]),
+                "birth_year": int(payload["birth_year"]),
+                "password_hash": make_password(payload["password"]),
+                "contact_no": "",
+                "lrn": payload["lrn"],
+                "grade_level": payload["grade_level"],
+                "section": "",
+                "reading_level": "",
+            }
+            session["pending_student_signup_otp"] = "123456"
+            session["pending_student_signup_otp_created"] = timezone.now().timestamp()
+            session.save()
+            response = self.client.post(reverse("verify_student_otp"), {"otp": "123456"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("already exists", response.json()["error"])
+
+    @patch("pabasa_site.pabasa_app.views.send_student_confirmation_email")
+    @patch("pabasa_site.pabasa_app.views._notify_admins")
+    def test_verify_student_otp_succeeds_with_valid_pending_signup(self, mock_notify, mock_email):
+        session = self.client.session
+        session["pending_student_signup"] = {
+            "first_name": "Mia",
+            "last_name": "Rivera",
+            "email": "mia.verify@example.com",
+            "middle_initial": "",
+            "suffix": "",
+            "sex": "female",
+            "birth_month": 1,
+            "birth_day": 5,
+            "birth_year": 2014,
+            "password_hash": make_password("Student123"),
+            "contact_no": "",
+            "lrn": "123456789014",
+            "grade_level": "Grade 3",
+            "section": "",
+            "reading_level": "",
+        }
+        session["pending_student_signup_otp"] = "123456"
+        session["pending_student_signup_otp_created"] = timezone.now().timestamp()
+        session.save()
+
+        response = self.client.post(reverse("verify_student_otp"), {"otp": "123456"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertTrue(User.objects.filter(email="mia.verify@example.com").exists())
+
+    def test_verify_student_otp_reports_clear_error_when_pending_signup_is_missing(self):
+        response = self.client.post(reverse("verify_student_otp"), {"otp": "123456"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("registration session", response.json()["error"])
 
 
 class PracticeProgressionTests(TestCase):
