@@ -150,8 +150,8 @@ class Section(models.Model):
         if not isinstance(students, list):
             return []
         if active_only:
-            return [student for student in students if student.get('is_active', True)]
-        return students
+            return [student for student in students if isinstance(student, dict) and student.get('is_active', True)]
+        return [student for student in students if isinstance(student, dict)]
     
     def has_student(self, user, active_only=True):
         """Check if user is enrolled in this section"""
@@ -159,7 +159,7 @@ class Section(models.Model):
             return False
         
         for entry in self.get_enrolled_students(active_only=active_only):
-            if not entry:
+            if not isinstance(entry, dict) or not entry:
                 continue
             
             # Try multiple matching strategies
