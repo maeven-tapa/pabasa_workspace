@@ -5107,9 +5107,20 @@ def _selected_school_calendar(request=None):
     if not selected_calendar:
         selected_calendar = calendars[0] if calendars else None
     if not selected_calendar:
-        selected_calendar = SchoolCalendar.objects.create(school_year='2026-2027', current_term=1, is_active=True)
-        calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
-        active_calendar = selected_calendar
+        try:
+            # Attempt to create a fallback calendar only when safe. In some
+            # production environments the database user may be read-only or
+            # migrations may be unsynced; creation failures should not crash
+            # the student dashboard. Fall back to None when creation fails.
+            selected_calendar = SchoolCalendar.objects.create(school_year='2026-2027', current_term=1, is_active=True)
+            calendars = list(SchoolCalendar.objects.all().order_by('school_year', 'created_at'))
+            active_calendar = selected_calendar
+        except Exception:
+            try:
+                logger.exception("Failed to create fallback SchoolCalendar; proceeding without creating.")
+            except Exception:
+                pass
+            selected_calendar = None
     return selected_calendar, calendars, active_calendar
 
 
