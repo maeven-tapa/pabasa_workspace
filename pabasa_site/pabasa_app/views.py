@@ -252,6 +252,7 @@ def _reader_assessment_state(student):
     return {
         'reader_classification': classification,
         'aral_eligible': bool(eligible),
+        'aral_status': str(state.get('aral_status') or ('active' if state.get('current_phase') == 'materials' and eligible else 'pending')).strip().lower(),
         'pre_test_completed': bool(state.get('crla_pretest_completed')),
         'post_test_completed': bool(state.get('crla_posttest_completed')),
         'current_phase': state.get('current_phase') or ('materials' if eligible else 'pretest'),
@@ -7291,6 +7292,7 @@ def assessment(request):
                 'resolved_state': state,
                 'resolved_reader_classification': state.get('reader_classification'),
                 'resolved_aral_eligible': bool(state.get('aral_eligible')),
+                'resolved_aral_status': state.get('aral_status'),
                 'resolved_pretest_completed': bool(state.get('pre_test_completed')),
                 'resolved_posttest_completed': bool(state.get('post_test_completed')),
                 'stage_precomputed': workflow.get('stage'),
@@ -7302,6 +7304,7 @@ def assessment(request):
                 'user_id': getattr(user, 'id', None),
                 'saved_reader_classification': state.get('reader_classification'),
                 'saved_aral_eligible': bool(state.get('aral_eligible')),
+                'saved_aral_status': state.get('aral_status'),
                 'saved_pre_test_completed': bool(state.get('pre_test_completed')),
                 'saved_post_test_completed': bool(state.get('post_test_completed')),
             },
@@ -7315,6 +7318,7 @@ def assessment(request):
     completed_pretest = bool(state.get('pre_test_completed'))
     completed_posttest = bool(state.get('post_test_completed'))
     eligible = bool(state.get('aral_eligible'))
+    forced_workflow = str(request.GET.get('workflow') or request.GET.get('view') or '').strip().lower()
     active_phase = workflow.get('active_phase') or _official_crla_assessment_phase(user)
     official_availability = _official_assessment_availability_for_student(user, request)
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
@@ -7323,15 +7327,37 @@ def assessment(request):
     school_year_value = official_availability.get('school_year') or (official_calendar.school_year if official_calendar else '')
     has_crla_completion_record = _official_crla_completion_exists(user, active_phase, school_year_value)
     should_use_official_crla = bool(has_active_crla_window and official_crla_material)
+    crla_completion_state = {
+        'pretest_completed': completed_pretest,
+        'posttest_completed': completed_posttest,
+        'has_completion_record': has_crla_completion_record,
+        'current_phase': state.get('current_phase'),
+    }
+    classification_source = 'saved_state.reader_classification'
+    if not state.get('reader_classification') and getattr(user, 'reading_level', ''):
+        classification_source = 'user.reading_level'
+    elif not state.get('reader_classification') and not getattr(user, 'reading_level', ''):
+        classification_source = 'empty'
+    eligibility_source = 'saved_state.aral_eligible'
+    if state.get('reader_classification'):
+        eligibility_source = 'computed_from_saved_classification'
+    elif getattr(user, 'reading_level', ''):
+        eligibility_source = 'computed_from_user_reading_level'
 
     stage = 'complete'
     routing_reason = 'default_complete'
-    if should_use_official_crla:
-        stage = 'assessment'
-        routing_reason = 'active_official_crla_window'
+    if state.get('aral_status') == 'active':
+        stage = 'original'
+        routing_reason = 'active_aral_intervention'
+    elif forced_workflow == 'original':
+        stage = 'original'
+        routing_reason = 'forced_original_workflow'
     elif eligible:
         stage = 'intervention'
         routing_reason = 'eligible_student'
+    elif should_use_official_crla:
+        stage = 'assessment'
+        routing_reason = 'active_official_crla_window'
     elif not has_active_crla_window:
         stage = 'unavailable'
         routing_reason = 'no_active_window'
@@ -7353,12 +7379,19 @@ def assessment(request):
             "DEBUG: ASSESSMENT TEMPLATE ROUTE %s",
             {
                 'user_id': getattr(user, 'id', None),
+                'saved_crla_classification_source': classification_source,
+                'saved_eligibility_source': eligibility_source,
+                'saved_aral_status': state.get('aral_status'),
                 'reader_classification': state.get('reader_classification'),
                 'aral_eligible': eligible,
                 'pre_test_completed': completed_pretest,
                 'post_test_completed': completed_posttest,
                 'active_phase': active_phase,
+                'forced_workflow': forced_workflow,
+                'current_assessment_window_key': official_availability.get('assessment_type'),
                 'has_active_crla_window': has_active_crla_window,
+                'crla_completion_state': crla_completion_state,
+                'calculated_aral_eligibility': eligible,
                 'has_crla_completion_record': has_crla_completion_record,
                 'official_crla_material': bool(official_crla_material),
                 'should_use_official_crla': should_use_official_crla,
@@ -7370,6 +7403,13 @@ def assessment(request):
             "DEBUG: ASSESSMENT HUB RESOLVED %s",
             {
                 'user_id': getattr(user, 'id', None),
+                'saved_crla_classification_source': classification_source,
+                'saved_eligibility_source': eligibility_source,
+                'saved_aral_status': state.get('aral_status'),
+                'forced_workflow': forced_workflow,
+                'current_assessment_window_key': official_availability.get('assessment_type'),
+                'crla_completion_state': crla_completion_state,
+                'calculated_aral_eligibility': eligible,
                 'resolved_stage': stage,
                 'selected_workflow_branch': stage,
                 'routing_reason': routing_reason,
@@ -7608,6 +7648,28 @@ def assessment(request):
     except Exception:
         pass
     return render(request, 'pabasa_app/reading_assessment_workflow.html', context)
+
+
+@csrf_protect
+@require_http_methods(["POST"])
+@login_required(role='student')
+def activate_aral_intervention(request):
+    student_user = User.objects.filter(id=request.session.get('user_id')).first()
+    if not student_user:
+        return JsonResponse({'success': False, 'error': 'Student not found.'}, status=404)
+
+    state = _get_user_state(student_user)
+    classification = state.get('reader_classification') or getattr(student_user, 'reading_level', '') or ''
+    eligible = _aral_eligible_classification(classification) if classification else bool(state.get('aral_eligible'))
+    if not eligible:
+        return JsonResponse({'success': False, 'error': 'Student is not ARAL eligible.'}, status=400)
+
+    state['reader_classification'] = classification
+    state['aral_eligible'] = True
+    state['aral_status'] = 'active'
+    state['current_phase'] = 'materials'
+    _set_user_state(student_user, state)
+    return redirect(f"{reverse('assessment')}?workflow=original")
 
 @xframe_options_sameorigin
 def reading_word_page(request):

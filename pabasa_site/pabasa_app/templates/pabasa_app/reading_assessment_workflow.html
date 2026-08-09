@@ -319,7 +319,10 @@
             </section>
 
             <div class="workflow-actions">
-                <a class="btn btn-primary workflow-button primary" href="{% url 'practice' %}"><i class="bi bi-journal-text"></i> Start ARAL Intervention</a>
+                <form method="post" action="{% url 'activate_aral_intervention' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary workflow-button primary"><i class="bi bi-journal-text"></i> Start ARAL Intervention</button>
+                </form>
                 <a class="btn btn-primary workflow-button primary" href="{% url 'dashboard' %}"><i class="bi bi-house-heart-fill"></i> Return to Dashboard</a>
             </div>
         {% else %}

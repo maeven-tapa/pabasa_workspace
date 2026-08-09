@@ -1601,6 +1601,70 @@ class AssessmentPageFlowTests(TestCase):
         self.assertEqual(response.context['official_reading_assessments'], [])
         self.assertEqual(response.context['crla_assessment_title'], 'CRLA Assessment')
 
+    def test_activate_aral_intervention_persists_active_state_and_routes_to_original_workflow(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-3002A",
+            role="teacher",
+            first_name="Tara",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="tara2a@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-3004A",
+            role="student",
+            first_name="Iris",
+            last_name="Learner",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="iris2@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "crla_posttest_completed": False,
+                    "reader_classification": "Developing Readers",
+                    "aral_eligible": True,
+                    "current_phase": "materials",
+                    "aral_status": "pending",
+                }
+            },
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-3002A",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+
+        self._login_student(student)
+        response = self.client.post(reverse("activate_aral_intervention"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("assessment"), response.headers.get("Location", ""))
+        student.refresh_from_db()
+        state = student.preference.get("reading_assessment_state", {})
+        self.assertEqual(state.get("aral_status"), "active")
+        self.assertEqual(state.get("current_phase"), "materials")
+
+        with patch("pabasa_app.views._official_assessment_availability_for_student", return_value={"available": False, "assessment_type": "intervention", "school_year": None, "current_term": None, "active_window": None}):
+            followup = self.client.get(reverse("assessment"))
+
+        self.assertEqual(followup.status_code, 200)
+        self.assertEqual(followup.context["stage"], "original")
+
     def test_official_crla_assessment_labels_return_posttest_copy(self):
         labels = _official_crla_assessment_labels('posttest')
         self.assertEqual(labels['workflow_title'], 'End of School Year Reading Assessment')
@@ -6709,6 +6773,72 @@ class AssessmentCompletionNotificationTests(TestCase):
         self.assertEqual(profile["accuracy"], "88")
         self.assertEqual(profile["wpm"], "72")
         self.assertEqual(profile["crla_classification"], "Transitioning Readers")
+
+    def test_crla_completion_keeps_aral_eligible_students_on_completion_state(self):
+        self._login_student()
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "assessment_id": f"assessment-{self.assessment.id}",
+                "material_id": f"assessment-{self.assessment.id}",
+                "activity_type": "assessment",
+                "class_code": self.section.class_code,
+                "scores": {
+                    "fluency_score": 90,
+                    "accuracy": 88,
+                    "pronunciation_score": 86,
+                    "time_score": 94,
+                    "total_score": 89.5,
+                    "wpm": 72,
+                    "duration_seconds": 15,
+                    "word_count": 18,
+                },
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertNotIn("redirect_url", payload)
+        self.student.refresh_from_db()
+        self.assertEqual(
+            self.student.preference.get("reading_assessment_state", {}).get("current_phase"),
+            "materials",
+        )
+
+    def test_crla_completion_keeps_non_eligible_students_on_completion_state(self):
+        self._login_student()
+        response = self.client.post(
+            reverse("record_assessment_completion"),
+            data=json.dumps({
+                "assessment_id": f"assessment-{self.assessment.id}",
+                "material_id": f"assessment-{self.assessment.id}",
+                "activity_type": "assessment",
+                "class_code": self.section.class_code,
+                "scores": {
+                    "fluency_score": 18,
+                    "accuracy": 20,
+                    "pronunciation_score": 22,
+                    "time_score": 24,
+                    "total_score": 21,
+                    "wpm": 12,
+                    "duration_seconds": 15,
+                    "word_count": 18,
+                },
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertNotIn("redirect_url", payload)
+        self.student.refresh_from_db()
+        self.assertEqual(
+            self.student.preference.get("reading_assessment_state", {}).get("current_phase"),
+            "complete",
+        )
 
     def test_numeric_material_id_records_assessment_attempt_by_assessment_id(self):
         self._login_student()
