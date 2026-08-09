@@ -257,7 +257,7 @@ def _assessment_workflow_context(student):
     official_crla_material = _official_crla_material_for_student(student, active_phase)
 
     if active_phase == 'pretest':
-        stage = 'assessment' if official_crla_material else ('original' if eligible else 'complete')
+        stage = 'assessment' if official_crla_material and not completed_pretest else ('original' if eligible else 'complete')
     elif active_phase == 'posttest':
         stage = 'assessment' if official_crla_material and not completed_posttest else ('original' if eligible else 'complete')
     else:
@@ -1592,20 +1592,35 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
     state['aral_eligible'] = bool(_aral_eligible_classification(normalized_classification))
 
     assessment_kind = ''
+    assessment_phase = ''
     if assessment is not None:
         assessment_kind = str(getattr(assessment, 'assessment_kind', '') or '').strip().lower()
+        assessment_phase = str(getattr(assessment, 'system_assessment_phase', '') or '').strip().lower()
     if not assessment_kind and material is not None:
         assessment_kind = str(getattr(material, 'assessment_kind', '') or '').strip().lower()
+    if not assessment_phase and material is not None:
+        assessment_phase = str(getattr(material, 'system_assessment_phase', '') or '').strip().lower()
     if not assessment_kind and material is not None:
         assessment_kind = str(getattr(material, 'assessment_set', '') or '').strip().lower()
+    if not assessment_phase and material is not None:
+        system_key = str(getattr(material, 'system_assessment_key', '') or '').strip().lower()
+        if system_key == 'bosy_crla_pretest':
+            assessment_phase = 'pretest'
+        elif system_key == 'eosy_crla_posttest':
+            assessment_phase = 'posttest'
 
-    active_calendar = _active_school_calendar()
-    current_term = _calendar_current_term(active_calendar) if active_calendar else None
     if assessment_kind == 'crla':
-        if current_term == 1:
+        if assessment_phase == 'pretest':
             state['crla_pretest_completed'] = True
-        elif current_term == 4:
+        elif assessment_phase == 'posttest':
             state['crla_posttest_completed'] = True
+        else:
+            active_calendar = _active_school_calendar()
+            current_term = _calendar_current_term(active_calendar) if active_calendar else None
+            if current_term == 1:
+                state['crla_pretest_completed'] = True
+            elif current_term == 4:
+                state['crla_posttest_completed'] = True
 
     state['current_phase'] = 'materials' if state.get('aral_eligible') else 'complete'
     _set_user_state(student_user, state)
@@ -5438,6 +5453,12 @@ def _official_assessment_availability_for_student(student, request=None):
         return {'available': False, 'assessment_type': 'intervention', 'school_year': None, 'current_term': None, 'active_window': None}
 
     assessment_type = _official_crla_assessment_phase(student, request=request)
+    state = _reader_assessment_state(student)
+    if assessment_type == 'pretest' and bool(state.get('crla_pretest_completed')) and bool(state.get('aral_eligible')):
+        # Once BoSY is completed and the learner is eligible, the current
+        # materials branch should stay on intervention materials only. The
+        # official BoSY card must no longer be exposed as a current assessment.
+        assessment_type = 'intervention'
     if assessment_type not in {'pretest', 'posttest'}:
         return {'available': False, 'assessment_type': assessment_type, 'school_year': None, 'current_term': None, 'active_window': None}
 
@@ -6605,7 +6626,7 @@ def assessment(request):
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
 
     if active_phase == 'pretest':
-        stage = 'assessment' if official_crla_material else ('original' if eligible else 'complete')
+        stage = 'assessment' if official_crla_material and not completed_pretest else ('original' if eligible else 'complete')
     elif active_phase == 'posttest':
         stage = 'assessment' if official_crla_material and not completed_posttest else ('original' if eligible else 'complete')
     else:
@@ -6657,8 +6678,10 @@ def assessment(request):
     crla_labels = _official_crla_assessment_labels(official_availability.get('assessment_type'))
     crla_material = material_map.get('crla')
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
-    if official_crla_material:
+    if stage == 'assessment' and official_crla_material:
         crla_material = official_crla_material
+    elif stage != 'assessment':
+        crla_material = None
     crla_items = 0
     crla_duration = 'Not set'
     crla_title = 'CRLA Assessment'
@@ -11800,7 +11823,7 @@ def get_class_materials(request):
                 f"allow_posttest={{allow_posttest}}"
             )
             official_materials_qs = Material.objects.none()
-            if official_phase == 'pretest':
+            if official_phase == 'pretest' and not (bool(student_state.get('pre_test_completed')) and bool(student_state.get('aral_eligible'))):
                 official_materials_qs = Material.objects.filter(
                     is_active=True,
                     is_official_reading=True,

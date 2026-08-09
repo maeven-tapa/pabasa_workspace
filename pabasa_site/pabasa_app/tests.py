@@ -32,7 +32,7 @@ from .reading_stt import (
 from .hunt_scoring import classify_speech, normalize_speech, stars_for_points
 from .test_accounts import PRINCIPAL_DEFAULT_CUSTOM_ID, PRINCIPAL_DEFAULT_PASSWORD
 from .management.commands.seed_official_crla_assessments import OFFICIAL_CRLA_CONTENT
-from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state, _official_crla_assessment_labels
+from .views import _active_school_calendar, _apply_progression_unlock_override, _aral_eligible_classification, _create_notification, _notify_principals, _material_response_payload, _fallback_material_items_from_text, _build_material_items_from_ocr_layout, _build_image_upload_debug_info, _adapted_reading_level_from_attempts, _adapted_reading_level_label, _assessment_fluency_score, _assessment_score_payload, _build_reading_report_pdf, _derive_dashboard_greeting_name, _display_reading_level, _build_latest_reading_level_payload, _save_admin_practice_material, _sync_assessment_workflow_state, _official_crla_assessment_labels, _official_assessment_availability_for_student
 from .weekly_digest import send_weekly_digest
 from .scoring import build_assessment_score_payload
 
@@ -85,6 +85,75 @@ class ClassMaterialsApiTests(TestCase):
         self.assertEqual(len(data["materials"]["vowel"]), 1)
         self.assertEqual(data["materials"]["vowel"][0]["id"], f"material-{material.id}")
         self.assertEqual(data["materials"]["vowel"][0]["item_type"], "vowel")
+
+    def test_get_class_materials_hides_bosy_official_card_for_eligible_completed_student(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-1002",
+            role="teacher",
+            first_name="Tina",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="teacher1002@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-1002",
+            role="student",
+            first_name="Sam",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="male",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="student1002@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "crla_posttest_completed": False,
+                    "reader_classification": "Developing Readers",
+                    "aral_eligible": True,
+                    "current_phase": "materials",
+                }
+            },
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-1002",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        Material.objects.create(
+            title="Teacher Intervention Text",
+            item_type="word",
+            content_text="read",
+            content_json={"items": ["read"]},
+            type="assessment",
+            status="published",
+            section=section,
+            teacher=teacher,
+            is_active=True,
+        )
+        self._login_student(student)
+
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"):
+            response = self.client.get(reverse("get_class_materials"), {"class_code": section.class_code})
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["official_assessments"], [])
+        word_titles = [item["title"] for item in data["materials"]["word"]]
+        self.assertIn("Teacher Intervention Text", word_titles)
+        self.assertFalse(any("BoSY" in title for title in word_titles))
 
     def _create_official_crla_calendar(self, *, pre_start, pre_end, post_start, post_end):
         calendar = SchoolCalendar.objects.create(
@@ -593,6 +662,62 @@ class AssessmentWorkflowStateTests(TestCase):
         self.assertEqual(response.context['student_profile']['last_assessment_at'], "2026-08-05T10:00:00+00:00")
         self.assertEqual(response.context['student_profile']['total_score'], 72)
         self.assertEqual(response.context['stage'], "materials")
+
+    def test_bosy_completion_persists_pretest_completed_and_eligibility(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-2003",
+            role="teacher",
+            first_name="Tara",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="tara3@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-2003",
+            role="student",
+            first_name="Iris",
+            last_name="Reader",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="iris3@example.com",
+            password_hash=make_password("student-password"),
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-2003",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        material = Material.objects.filter(system_assessment_key="bosy_crla_pretest").first()
+        self.assertIsNotNone(material)
+
+        _sync_assessment_workflow_state(
+            student,
+            score_payload={
+                "crla_classification": "Developing Readers",
+                "classification": "Developing Readers",
+            },
+            material=material,
+        )
+
+        student.refresh_from_db()
+        state = student.preference.get("reading_assessment_state", {})
+        self.assertTrue(state.get("crla_pretest_completed"))
+        self.assertTrue(state.get("aral_eligible"))
+        self.assertEqual(state.get("reader_classification"), "Developing Readers")
+        self.assertEqual(state.get("current_phase"), "materials")
 
 
 class AssessmentPageFlowTests(TestCase):
@@ -1222,26 +1347,14 @@ class AssessmentPageFlowTests(TestCase):
             is_active=True,
         )
         section.add_student(student)
-        Material.objects.create(
-            title="Official BoSY CRLA",
-            item_type="word",
-            content_text="read",
-            content_json={"items": ["read"]},
-            assessment_kind="crla",
-            assessment_set="crla",
-            type="assessment",
-            status="published",
-            student_access=True,
-            section=section,
-            teacher=teacher,
-            is_active=True,
-            is_official_reading=True,
-            is_system_owned=True,
-            system_assessment_key="bosy_crla_pretest",
-        )
+        pre_material = Material.objects.filter(system_assessment_key="bosy_crla_pretest").first()
+        self.assertIsNotNone(pre_material)
 
         self._login_student(student)
-        response = self.client.get(reverse('assessment'))
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"), patch(
+            "pabasa_app.views._official_crla_material_for_student", return_value=pre_material
+        ):
+            response = self.client.get(reverse('assessment'))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['stage'], 'assessment')
@@ -1249,11 +1362,150 @@ class AssessmentPageFlowTests(TestCase):
         self.assertEqual(response.context['workflow_message'], 'Complete the official BoSY CRLA Assessment prepared by your teacher.')
         self.assertEqual(response.context['workflow_subtitle'], 'Beginning of School Year reading assessment')
 
+    def test_assessment_page_routes_eligible_bosy_completion_to_intervention(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-3002",
+            role="teacher",
+            first_name="Tara",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="tara2@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-3004",
+            role="student",
+            first_name="Iris",
+            last_name="Learner",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="iris@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "crla_posttest_completed": False,
+                    "reader_classification": "Developing Readers",
+                    "aral_eligible": True,
+                    "current_phase": "materials",
+                }
+            },
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-3002",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        pre_material = Material.objects.filter(system_assessment_key="bosy_crla_pretest").first()
+        self.assertIsNotNone(pre_material)
+
+        self._login_student(student)
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="pretest"), patch(
+            "pabasa_app.views._official_crla_material_for_student", return_value=pre_material
+        ):
+            response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['stage'], 'original')
+        self.assertEqual(response.context['official_reading_assessments'], [])
+        self.assertEqual(response.context['crla_assessment_title'], 'CRLA Assessment')
+
     def test_official_crla_assessment_labels_return_posttest_copy(self):
         labels = _official_crla_assessment_labels('posttest')
         self.assertEqual(labels['workflow_title'], 'End of School Year Reading Assessment')
         self.assertEqual(labels['workflow_message'], 'Complete the official EoSY CRLA Assessment prepared by your teacher.')
         self.assertEqual(labels['workflow_subtitle'], 'End of School Year reading assessment')
+
+    def test_official_assessment_availability_hides_bosy_after_eligible_completion(self):
+        student = User.objects.create(
+            custom_id="STU-3005",
+            role="student",
+            first_name="Iris",
+            last_name="Learner",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="iris5@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "crla_posttest_completed": False,
+                    "reader_classification": "Developing Readers",
+                    "aral_eligible": True,
+                    "current_phase": "materials",
+                }
+            },
+        )
+        availability = _official_assessment_availability_for_student(student)
+        self.assertFalse(availability["available"])
+        self.assertEqual(availability["assessment_type"], "intervention")
+
+    def test_official_assessment_availability_returns_eosy_when_posttest_window_is_active(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-3005",
+            role="teacher",
+            first_name="Tara",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="tara5@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-3006",
+            role="student",
+            first_name="Iris",
+            last_name="Reader",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="iris6@example.com",
+            password_hash=make_password("student-password"),
+            preference={
+                "reading_assessment_state": {
+                    "crla_pretest_completed": True,
+                    "crla_posttest_completed": False,
+                    "reader_classification": "Developing Readers",
+                    "aral_eligible": True,
+                    "current_phase": "materials",
+                }
+            },
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class",
+            class_code="READ-3006",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        with patch("pabasa_app.views._official_crla_assessment_phase", return_value="posttest"):
+            availability = _official_assessment_availability_for_student(student)
+        self.assertTrue(availability["available"])
+        self.assertEqual(availability["assessment_type"], "posttest")
 
     def test_assessment_page_shows_completion_card_for_non_eligible_students_after_posttest(self):
         student = User.objects.create(
