@@ -127,7 +127,7 @@
     .class-card-stats {
         display: grid;
         gap: 0.65rem;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         margin-top: auto;
     }
 
@@ -1749,18 +1749,19 @@
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle {
         background: #e2e8f0;
         border: 1px solid #cbd5e1;
-        border-radius: 24px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border-radius: 9999px;
+        display: flex;
+        flex-direction: row;
         min-height: 44px;
         padding: 3px;
         position: relative;
         width: min(100%, 420px);
+        overflow: hidden;
     }
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle::before {
         background: linear-gradient(135deg, #cffafe, #bfdbfe);
-        border-radius: 18px;
+        border-radius: 9999px;
         box-shadow: 0 8px 18px rgba(59, 130, 246, 0.14);
         content: "";
         height: calc(100% - 6px);
@@ -1768,11 +1769,19 @@
         position: absolute;
         top: 3px;
         transition: left 0.2s ease;
-        width: calc(50% - 6px);
+        width: calc((100% - 6px) / 3);
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle.active-template::before {
+        left: 0.35rem;
+    }
+
+    .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle.active-personal::before {
+        left: calc((100% - 0.7rem) / 3 + 0.35rem);
     }
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-toggle.active-other::before {
-        left: calc(50% + 3px);
+        left: calc(((100% - 0.7rem) / 3) * 2 + 0.35rem);
     }
 
     .course-inline-dialog-host[data-inline-modal-id="addMaterialModal"] .material-source-option {
@@ -6945,32 +6954,41 @@
 }
 #addMaterialModal .material-source-toggle {
     position: relative;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: row;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     width: 100%;
     max-width: 560px;
     padding: 3px;
-    border-radius: 24px;
+    border-radius: 9999px;
     background: #E2E8F0;
     border: 1px solid #CBD5E1;
     min-height: 42px;
+    overflow: hidden;
 }
 #addMaterialModal .material-source-toggle::before {
     content: '';
     position: absolute;
     top: 3px;
     left: 3px;
-    width: calc(50% - 6px);
+    width: calc((100% - 6px) / 3);
     height: calc(100% - 6px);
-    border-radius: 18px;
+    border-radius: 9999px;
     background: linear-gradient(135deg, #CFFAFE, #BFDBFE);
     box-shadow: 0 10px 22px rgba(59,130,246,0.14);
     transition: left 0.2s ease, background 0.2s ease;
 }
+#addMaterialModal .material-source-toggle.active-template::before {
+    left: 0.35rem;
+}
+#addMaterialModal .material-source-toggle.active-personal::before {
+    left: calc((100% - 0.7rem) / 3 + 0.35rem);
+}
 #addMaterialModal .material-source-toggle.active-other::before {
-    left: calc(50% + 3px);
+    left: calc(((100% - 0.7rem) / 3) * 2 + 0.35rem);
 }
 #addMaterialModal .material-source-toggle button {
+    flex: 1 1 0;
     position: relative;
     z-index: 1;
     width: 100%;
@@ -7790,15 +7808,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                     <div class="col-12">
                         <div class="d-flex justify-content-center py-3">
-                            <div class="rounded-4 shadow-sm p-3 bg-white border" style="border-color: rgba(31,111,139,0.12); min-width: 100%; max-width: 560px;">
-                                <div class="text-center mb-2">
-                                    <div class="fw-semibold">Reading Material Source</div>
-                                    <div class="small text-muted">Choose a source for your reading material. Select Personal to use your own content or Shared to browse materials provided by others..</div>
-                                </div>
-                                <div class="d-flex justify-content-center">
+                            <div class="text-center w-100">
+                                <div class="fw-semibold">Reading Material Source</div>
+                                <div class="small text-muted">Choose a source for your reading material. Use a <strong>Template</strong>, select from <strong>your own materials</strong>, or browse <strong>other available materials</strong>.</div>
+                                <div class="d-flex justify-content-center mt-2">
                                     <div class="material-source-toggle active-personal" id="addMaterialModeToggle" role="group" aria-label="Material source toggle">
-                                        <button type="button" class="material-source-option active" id="materialModePersonal" data-mode="personal">Personal</button>
-                                        <button type="button" class="material-source-option" id="materialModeOther" data-mode="other">Other</button>
+                                        <button type="button" class="material-source-option" id="materialModeTemplate" data-mode="template">Template</button>
+                                        <button type="button" class="material-source-option active" id="materialModePersonal" data-mode="personal">My Materials</button>
+                                        <button type="button" class="material-source-option" id="materialModeOther" data-mode="other">Others</button>
                                     </div>
                                 </div>
                             </div>
@@ -7842,7 +7859,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         </tr>
                                     </thead>
                                     <tbody id="otherMaterialTableBody">
-                                        <tr><td colspan="5" class="text-center text-muted py-4">No materials visible. Select Other to load shared items.</td></tr>
+                                        <tr><td colspan="5" class="text-center text-muted py-4">No materials visible. Select Template or Other to load materials.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -9193,7 +9210,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     console.log('✓ Loaded shared courses from server:', sharedTeacherCourses.length);
                     const otherMaterialPanel = document.getElementById('otherMaterialPanel');
                     if (otherMaterialPanel && !otherMaterialPanel.classList.contains('d-none')) {
-                        renderOtherMaterialPanel();
+                        renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other');
                     }
                     return true;
                 }
@@ -13244,6 +13261,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const uploadPageCountLabel = document.getElementById('uploadPageCountLabel');
         const uploadPagePreviewList = document.getElementById('uploadPagePreviewList');
         const confirmUploadSelectionBtn = document.getElementById('confirmUploadSelectionBtn');
+        const materialModeTemplateBtn = document.getElementById('materialModeTemplate');
         const materialModePersonalBtn = document.getElementById('materialModePersonal');
         const materialModeOtherBtn = document.getElementById('materialModeOther');
         const addMaterialModeToggle = document.getElementById('addMaterialModeToggle');
@@ -13860,30 +13878,33 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function setAddMaterialMode(mode) {
             if (!mode) return;
+            const showTemplate = mode === 'template';
             const showPersonal = mode === 'personal';
             const showOther = mode === 'other';
 
+            materialModeTemplateBtn?.classList.toggle('active', showTemplate);
             materialModePersonalBtn?.classList.toggle('active', showPersonal);
             materialModeOtherBtn?.classList.toggle('active', showOther);
+            addMaterialModeToggle?.classList.toggle('active-template', showTemplate);
             addMaterialModeToggle?.classList.toggle('active-other', showOther);
             addMaterialModeToggle?.classList.toggle('active-personal', showPersonal);
 
             personalMaterialSections.forEach(section => {
-                if (section) section.classList.toggle('d-none', showOther);
+                if (section) section.classList.toggle('d-none', showTemplate || showOther);
             });
 
             if (otherMaterialPanel) {
-                otherMaterialPanel.classList.toggle('d-none', !showOther);
-                if (showOther) {
+                otherMaterialPanel.classList.toggle('d-none', !(showTemplate || showOther));
+                if (showTemplate || showOther) {
                     // Clear search and filters to show all materials
                     if (otherMaterialSearchInput) otherMaterialSearchInput.value = '';
                     if (otherMaterialAuthorSelect) otherMaterialAuthorSelect.value = '';
                     if (otherMaterialSortSelect) otherMaterialSortSelect.value = 'date_desc';
                     
                     if (sharedTeacherCourses === null) {
-                        loadSharedTeacherCoursesFromServer().finally(() => renderOtherMaterialPanel());
+                        loadSharedTeacherCoursesFromServer().finally(() => renderOtherMaterialPanel(mode));
                     } else {
-                        renderOtherMaterialPanel();
+                        renderOtherMaterialPanel(mode);
                     }
                 }
             }
@@ -13906,8 +13927,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return false;
         }
 
-        function getOtherMaterialsSource() {
+        function getOtherMaterialsSource(mode = 'other') {
             const items = [];
+            if (mode === 'template') {
+                const templateItems = window.templateMaterials || window.sharedTemplateMaterials || window.courseTemplates || [];
+                return Array.isArray(templateItems) ? templateItems.map(item => Object.assign({}, item, { source_mode: 'template' })) : [];
+            }
             const sourceCourses = sharedTeacherCourses !== null ? sharedTeacherCourses : teacherCourses;
             (sourceCourses || []).forEach(course => {
                 const authors = [];
@@ -13985,13 +14010,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return getUsedOtherMaterialIds().includes(String(materialId));
         }
 
-        function renderOtherMaterialPanel() {
+        function renderOtherMaterialPanel(mode = 'other') {
             if (!otherMaterialTableBody) return;
             const search = (otherMaterialSearchInput?.value || '').trim().toLowerCase();
             const selectedAuthor = (otherMaterialAuthorSelect?.value || '').trim().toLowerCase();
             const sortMode = (otherMaterialSortSelect?.value || 'date_desc');
 
-            const allItems = getOtherMaterialsSource();
+            const allItems = getOtherMaterialsSource(mode);
             const filtered = allItems.filter(item => {
                 const matchesSearch = !search || String(item.title || '').toLowerCase().includes(search);
                 const matchesAuthor = !selectedAuthor || String(item.author || '').toLowerCase() === selectedAuthor;
@@ -14093,8 +14118,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return words;
         }
 
-        function useOtherMaterial(materialId) {
-            const materials = getOtherMaterialsSource();
+        function useOtherMaterial(materialId, mode = 'other') {
+            const materials = getOtherMaterialsSource(mode);
             const record = materials.find(item => String(item.id) === String(materialId));
             if (!record) return;
             const material = record.material || record;
@@ -14175,25 +14200,26 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function attachOtherMaterialHandlers() {
+            materialModeTemplateBtn?.addEventListener('click', () => setAddMaterialMode('template'));
             materialModePersonalBtn?.addEventListener('click', () => setAddMaterialMode('personal'));
             materialModeOtherBtn?.addEventListener('click', () => setAddMaterialMode('other'));
-            otherMaterialSearchInput?.addEventListener('input', renderOtherMaterialPanel);
-            otherMaterialAuthorSelect?.addEventListener('change', renderOtherMaterialPanel);
-            otherMaterialSortSelect?.addEventListener('change', renderOtherMaterialPanel);
+            otherMaterialSearchInput?.addEventListener('input', () => renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other'));
+            otherMaterialAuthorSelect?.addEventListener('change', () => renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other'));
+            otherMaterialSortSelect?.addEventListener('change', () => renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other'));
             otherMaterialTableBody?.addEventListener('click', function(event) {
                 const btn = event.target.closest('.use-other-material-btn');
                 if (!btn) return;
-                useOtherMaterial(btn.dataset.materialId);
+                useOtherMaterial(btn.dataset.materialId, addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other');
             });
             otherMaterialCardGrid?.addEventListener('click', function(event) {
                 const btn = event.target.closest('.use-other-material-btn');
                 if (btn) {
-                    useOtherMaterial(btn.dataset.materialId);
+                    useOtherMaterial(btn.dataset.materialId, addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other');
                     return;
                 }
                 const card = event.target.closest('.other-material-card');
                 if (card && card.dataset.materialId) {
-                    useOtherMaterial(card.dataset.materialId);
+                    useOtherMaterial(card.dataset.materialId, addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other');
                 }
             });
             otherMaterialCardGrid?.addEventListener('keydown', function(event) {
@@ -14201,7 +14227,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const card = event.target.closest('.other-material-card');
                     if (card && card.dataset.materialId) {
                         event.preventDefault();
-                        useOtherMaterial(card.dataset.materialId);
+                        useOtherMaterial(card.dataset.materialId, addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other');
                     }
                 }
             });
@@ -14215,7 +14241,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     console.warn('Could not refresh teacher data after materials update', e);
                 }
                 if (otherMaterialPanel && !otherMaterialPanel.classList.contains('d-none')) {
-                    renderOtherMaterialPanel();
+                    renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other');
                 }
             });
         }
