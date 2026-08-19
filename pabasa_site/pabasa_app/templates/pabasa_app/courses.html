@@ -6217,9 +6217,9 @@
                                 </div>
 
                                 <nav class="nav flex-column nav-pills course-side-nav" role="tablist" aria-orientation="vertical">
-                                    <button class="nav-link active" id="side-materials-tab" data-bs-toggle="tab" data-bs-target="#materialsPane" type="button" role="tab" aria-controls="materialsPane" aria-selected="true"><i class="bi bi-book"></i><span class="course-tab-label-full">Readings</span><span class="course-tab-label-short">Readings</span></button>
+                                    <button class="nav-link active" id="side-materials-tab" data-bs-toggle="tab" data-bs-target="#materialsPane" type="button" role="tab" aria-controls="materialsPane" aria-selected="true"><i class="bi bi-book"></i><span class="course-tab-label-full">Materials</span><span class="course-tab-label-short">Materials</span></button>
                                     <button class="nav-link" id="side-students-tab" data-bs-toggle="tab" data-bs-target="#studentsPane" type="button" role="tab" aria-controls="studentsPane" aria-selected="false"><i class="bi bi-people"></i><span class="course-tab-label-full">Students</span><span class="course-tab-label-short">Students</span></button>
-                                    <button class="nav-link" id="side-assessments-tab" data-bs-toggle="tab" data-bs-target="#assessmentsPane" type="button" role="tab" aria-controls="assessmentsPane" aria-selected="false"><i class="bi bi-clipboard2-check"></i><span class="course-tab-label-full">Assessments</span><span class="course-tab-label-short">Assess.</span></button>
+                                    <button class="nav-link" id="side-assessments-tab" data-bs-toggle="tab" data-bs-target="#assessmentsPane" type="button" role="tab" aria-controls="assessmentsPane" aria-selected="false"><i class="bi bi-clipboard2-check"></i><span class="course-tab-label-full">Results</span><span class="course-tab-label-short">Results</span></button>
                                     <button class="nav-link" id="side-reports-tab" data-bs-toggle="tab" data-bs-target="#reportsPane" type="button" role="tab" aria-controls="reportsPane" aria-selected="false"><i class="bi bi-bar-chart"></i><span class="course-tab-label-full">Reports & Updates</span><span class="course-tab-label-short">Reports</span></button>
                                 </nav>
                             </div>
@@ -9016,9 +9016,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </div>
                         <a class="course-assessment-export-btn"
                            href="/assessment/${assessmentId}/export-crla/"
-                           title="Export all learners for this assessment to CRLA"
-                           aria-label="Export CRLA for ${escapeHtml(assessment.title || 'assessment')}">
-                            <i class="bi bi-file-earmark-spreadsheet"></i>Export CRLA
+                           title="Export"
+                           aria-label="Export">
+                            <i class="bi bi-file-earmark-spreadsheet"></i>Export
                         </a>
                     </div>
                 `;
@@ -12656,10 +12656,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     </div>
                 </div>
                 <div class="assessment-actions">
-                    <a class="material-btn" title="Export CRLA" aria-label="Export CRLA"
+                    <a class="material-btn" title="Export" aria-label="Export"
                        href="/assessment/${assessment.id}/export-crla/">
                         <i class="bi bi-file-earmark-spreadsheet"></i>
-                        <span>Export CRLA</span>
+                        <span>Export</span>
                     </a>
                     <button class="material-btn" title="Preview" data-assessment-action="preview">
                         <i class="bi bi-eye"></i>
