@@ -2764,6 +2764,129 @@
         padding: 0;
     }
 
+    .template-landing-panel {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .template-landing-hero {
+        background: linear-gradient(135deg, rgba(31, 111, 139, 0.12), rgba(56, 189, 248, 0.08));
+        border: 1px solid rgba(31, 111, 139, 0.14);
+        border-radius: 22px;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+        padding: 1.1rem 1.2rem;
+    }
+
+    .template-landing-hero h5 {
+        color: var(--dash-ink);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.15rem;
+        font-weight: 900;
+        margin: 0 0 0.25rem;
+    }
+
+    .template-landing-hero p {
+        color: var(--dash-muted);
+        margin: 0;
+    }
+
+    #templateActivityGrid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+    }
+
+    #templateActivityGrid .template-card {
+        background: var(--surface-glass-strong);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+        border-radius: 20px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        min-height: 100%;
+        padding: 1rem;
+        position: relative;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    #templateActivityGrid .template-card:hover {
+        border-color: rgba(31, 111, 139, 0.26);
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.1);
+        transform: translateY(-2px);
+    }
+
+    #templateActivityGrid .template-card-header {
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    #templateActivityGrid .template-card-number {
+        align-items: center;
+        background: rgba(31, 111, 139, 0.08);
+        border-radius: 999px;
+        color: var(--dash-primary-deep);
+        display: inline-flex;
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        padding: 0.35rem 0.65rem;
+        width: fit-content;
+    }
+
+    #templateActivityGrid .template-card-title {
+        color: var(--dash-ink);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 1.08rem;
+        font-weight: 900;
+        line-height: 1.25;
+        margin: 0;
+    }
+
+    #templateActivityGrid .template-card-lesson {
+        color: var(--dash-primary-deep);
+        font-family: "Nunito", "Segoe UI", sans-serif;
+        font-size: 0.8rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    #templateActivityGrid .template-card-description {
+        color: var(--dash-ink-soft);
+        flex: 1 1 auto;
+        font-family: "Quattrocento Sans", "Segoe UI", sans-serif;
+        font-size: 0.95rem;
+        line-height: 1.55;
+        margin: 0;
+    }
+
+    #templateActivityGrid .template-card-actions {
+        display: flex;
+        margin-top: auto;
+    }
+
+    #templateActivityGrid .template-card-actions .btn {
+        border-radius: 999px;
+        font-weight: 800;
+        min-height: 42px;
+        width: 100%;
+    }
+
+    .template-builder-placeholder {
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px dashed rgba(31, 111, 139, 0.18);
+        border-radius: 18px;
+        color: var(--dash-muted);
+        display: none;
+        padding: 1rem 1.1rem;
+    }
+
+    .template-builder-placeholder.is-visible {
+        display: block;
+    }
+
     .reading-section-title {
         font-size: 1.05rem;
         font-weight: 800;
@@ -7867,6 +7990,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         </div>
                     </div>
 
+                    <div id="templateLandingPanel" class="col-12 d-none">
+                        <div class="template-landing-panel">
+                            <div class="template-landing-hero">
+                                <h5>ARAL Activity Templates</h5>
+                                <p>Choose an activity type to create learning material for your students.</p>
+                            </div>
+                            <div id="templateActivityGrid"></div>
+                            <div id="templateBuilderPlaceholder" class="template-builder-placeholder">
+                                Template builder placeholder selected. The full activity creation form will be added here next.
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Content Section -->
                     <div class="col-lg-7 personal-material-section">
                         <div class="d-flex flex-column gap-3 h-100 p-3 rounded-4 shadow-sm" style="background: rgba(248, 250, 252, 0.5); border: 1px solid #f1f5f9;">
@@ -9208,9 +9344,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const key = sharedTeacherCoursesKey();
                     if (key) localStorage.setItem(key, JSON.stringify(sharedTeacherCourses));
                     console.log('✓ Loaded shared courses from server:', sharedTeacherCourses.length);
-                    const otherMaterialPanel = document.getElementById('otherMaterialPanel');
-                    if (otherMaterialPanel && !otherMaterialPanel.classList.contains('d-none')) {
-                        renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other');
+                    const currentMode = addMaterialModeToggle?.classList.contains('active-other')
+                        ? 'other'
+                        : addMaterialModeToggle?.classList.contains('active-template')
+                            ? 'template'
+                            : 'personal';
+                    if (currentMode === 'other') {
+                        renderOtherMaterialPanel('other');
                     }
                     return true;
                 }
@@ -13267,6 +13407,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const addMaterialModeToggle = document.getElementById('addMaterialModeToggle');
         const editMaterialAssessmentKindInput = document.getElementById('editMaterialAssessmentKind');
         const otherMaterialPanel = document.getElementById('otherMaterialPanel');
+        const templateLandingPanel = document.getElementById('templateLandingPanel');
+        const templateActivityGrid = document.getElementById('templateActivityGrid');
+        const templateBuilderPlaceholder = document.getElementById('templateBuilderPlaceholder');
+        const otherMaterialView = document.getElementById('otherMaterialView');
+        const otherMaterialTableWrapper = document.getElementById('otherMaterialTableWrapper');
         const otherMaterialSearchInput = document.getElementById('otherMaterialSearchInput');
         const otherMaterialAuthorSelect = document.getElementById('otherMaterialAuthorSelect');
         const otherMaterialSortSelect = document.getElementById('otherMaterialSortSelect');
@@ -13275,6 +13420,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const personalMaterialSections = Array.from(document.querySelectorAll('.personal-material-section'));
         const materialCustomDropdowns = new WeakMap();
         const openMaterialDropdowns = new Set();
+        function setNodeVisibility(node, visible) {
+            if (!node) return;
+            node.hidden = !visible;
+            node.classList.toggle('d-none', !visible);
+            node.style.display = visible ? '' : 'none';
+        }
 
         function setCourseMaterialDropdownOpen(state, isOpen) {
             if (!state || (isOpen && state.trigger.disabled)) return;
@@ -13889,25 +14040,86 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             addMaterialModeToggle?.classList.toggle('active-other', showOther);
             addMaterialModeToggle?.classList.toggle('active-personal', showPersonal);
 
+            if (templateLandingPanel) {
+                setNodeVisibility(templateLandingPanel, showTemplate);
+            }
+            if (templateBuilderPlaceholder) {
+                templateBuilderPlaceholder.classList.toggle('is-visible', false);
+            }
+
             personalMaterialSections.forEach(section => {
                 if (section) section.classList.toggle('d-none', showTemplate || showOther);
             });
 
+            if (otherMaterialView) {
+                setNodeVisibility(otherMaterialView, showOther);
+            }
             if (otherMaterialPanel) {
-                otherMaterialPanel.classList.toggle('d-none', !(showTemplate || showOther));
-                if (showTemplate || showOther) {
+                setNodeVisibility(otherMaterialPanel, showOther);
+            }
+            if (otherMaterialTableBody?.parentElement?.parentElement) {
+                setNodeVisibility(otherMaterialTableBody.parentElement.parentElement, showOther);
+            }
+            if (otherMaterialTableWrapper) {
+                setNodeVisibility(otherMaterialTableWrapper, showOther);
+            }
+            if (otherMaterialCardGrid) {
+                setNodeVisibility(otherMaterialCardGrid, showOther);
+            }
+
+            if (showTemplate || showOther) {
+                if (showTemplate && templateActivityGrid) {
+                    renderTemplateActivities();
+                }
                     // Clear search and filters to show all materials
                     if (otherMaterialSearchInput) otherMaterialSearchInput.value = '';
                     if (otherMaterialAuthorSelect) otherMaterialAuthorSelect.value = '';
                     if (otherMaterialSortSelect) otherMaterialSortSelect.value = 'date_desc';
-                    
-                    if (sharedTeacherCourses === null) {
-                        loadSharedTeacherCoursesFromServer().finally(() => renderOtherMaterialPanel(mode));
-                    } else {
-                        renderOtherMaterialPanel(mode);
+
+                    if (showOther) {
+                        if (sharedTeacherCourses === null) {
+                            loadSharedTeacherCoursesFromServer().finally(() => renderOtherMaterialPanel('other'));
+                        } else {
+                            renderOtherMaterialPanel('other');
+                        }
+                    } else if (sharedTeacherCourses === null) {
+                        loadSharedTeacherCoursesFromServer();
                     }
-                }
             }
+        }
+
+        function renderTemplateActivities() {
+            if (!templateActivityGrid) return;
+            const templates = [
+                ['01', 'Letter & Sound Matching', 'Phonics', 'Match letters with their corresponding sounds.'],
+                ['02', 'Sound Detective', 'Phonological Awareness', 'Identify, recognize, and manipulate sounds in words.'],
+                ['03', 'Match the Letter to Its Sound', 'Letter-Sound Correspondence', 'Match each letter with its correct sound.'],
+                ['04', 'Clap & Count Syllables', 'Syllable Awareness', 'Clap and count the syllables in words.'],
+                ['05', 'Blend the Syllables', 'Syllable Blending', 'Combine syllables to form complete words.'],
+                ['06', 'Picture-Word Matching', 'Word Recognition', 'Match pictures with the words they represent.'],
+                ['07', 'Decode the Word', 'Word Decoding', 'Sound out unfamiliar words and identify the correct word.'],
+                ['08', 'Word Meaning Match', 'Vocabulary Development', 'Match words with their meanings, pictures, or phrases.'],
+                ['09', 'Phrase Reading Practice', 'Phrase Reading', 'Read phrases smoothly without treating each word separately.'],
+                ['10', 'Sentence Reading Practice', 'Sentence Reading', 'Read complete sentences accurately and clearly.'],
+                ['11', 'Fluency Reading', 'Reading Fluency', 'Read smoothly, accurately, and without unnecessary pauses or word breaks.'],
+                ['12', 'Story Reading', 'Story Reading', 'Read a short story with appropriate accuracy and fluency.'],
+                ['13', '5W\'s Story Questions', 'Reading Comprehension', 'Answer who, what, when, where, and why questions about a story.'],
+                ['14', 'Retell the Story', 'Story Retelling', 'Retell the story using their own words and key details.'],
+                ['15', 'Story Response', 'Response to Story', 'Give a personal response, interpretation, or reflection about the story.']
+            ];
+            templateActivityGrid.innerHTML = templates.map(([num, title, lesson, description]) => `
+                <article class="template-card">
+                    <div class="template-card-header">
+                        <div class="template-card-number">${escapeHtml(num)}</div>
+                        <h6 class="template-card-title">${escapeHtml(title)}</h6>
+                        <div class="template-card-lesson">Lesson: ${escapeHtml(lesson)}</div>
+                    </div>
+                    <p class="template-card-description">${escapeHtml(description)}</p>
+                    <div class="template-card-actions">
+                        <button type="button" class="btn btn-primary template-create-btn" data-template-title="${escapeHtml(title)}">Create Activity</button>
+                    </div>
+                </article>
+            `).join('');
         }
 
         function getSelectedAssessmentKind() {
@@ -14203,6 +14415,14 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             materialModeTemplateBtn?.addEventListener('click', () => setAddMaterialMode('template'));
             materialModePersonalBtn?.addEventListener('click', () => setAddMaterialMode('personal'));
             materialModeOtherBtn?.addEventListener('click', () => setAddMaterialMode('other'));
+            templateActivityGrid?.addEventListener('click', function(event) {
+                const btn = event.target.closest('.template-create-btn');
+                if (!btn) return;
+                if (templateBuilderPlaceholder) {
+                    templateBuilderPlaceholder.textContent = `Template builder placeholder selected for "${btn.dataset.templateTitle || 'activity'}". The full activity creation form will be added here next.`;
+                    templateBuilderPlaceholder.classList.add('is-visible');
+                }
+            });
             otherMaterialSearchInput?.addEventListener('input', () => renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other'));
             otherMaterialAuthorSelect?.addEventListener('change', () => renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other'));
             otherMaterialSortSelect?.addEventListener('change', () => renderOtherMaterialPanel(addMaterialModeToggle?.classList.contains('active-template') ? 'template' : 'other'));
