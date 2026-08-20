@@ -8757,6 +8757,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function getMaterialAssignedWeekLabel(material) {
         if (!material) return 'Unassigned';
+        if (material.assigned_weeks_display) return material.assigned_weeks_display;
         if (material.assigned_week_display) return material.assigned_week_display;
         const week = material.assigned_week ?? material.assignedWeek ?? material.week;
         if (week === null || week === undefined || week === '' || week === 'Unassigned') {
@@ -9906,6 +9907,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 materialsContainer.innerHTML = '';
 
                 const courseMaterials = Array.isArray(course.materials) ? course.materials : [];
+                console.log('[materials trace] course detail open', {
+                    courseId: course.id,
+                    hehehehExists: courseMaterials.some(item => String(item.title || '').trim().toLowerCase() === 'heheheh'),
+                    sourceTypes: courseMaterials.map(item => String(item.source_type || item.material_source || '').trim().toLowerCase()).filter(Boolean),
+                    count: courseMaterials.length
+                });
                 const assignedSection = document.createElement('section');
                 assignedSection.className = 'section-panel assigned-section';
                 assignedSection.innerHTML = `
@@ -12401,6 +12408,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         // When materials change, re-sync overview and class readings
         window.addEventListener('pabasa:materials-updated', async function(e) {
             if (typeof refreshTeacherData === 'function') await refreshTeacherData();
+            console.log('[materials trace] pabasa:materials-updated', {
+                detail: e?.detail || null,
+                openCourseId: document.getElementById('courseDetailModal')?.dataset?.courseId || null
+            });
             try {
                 const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
                 if (openCourseId) {
@@ -12475,11 +12486,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         try {
             const response = await fetch(`/api/class/materials/?class_code=${encodeURIComponent(classCode)}`);
+            console.log('[materials trace] API request', { classCode, url: `/api/class/materials/?class_code=${encodeURIComponent(classCode)}` });
             if (!response.ok) {
                 console.warn(`Failed to fetch materials for class ${classCode}:`, response.status);
                 return null;
             }
             const data = await response.json();
+            console.log('[materials trace] API response', {
+                classCode,
+                success: data?.success,
+                hehehehExists: JSON.stringify(data || '').includes('heheheh'),
+                payload: data
+            });
             if (data.success && data.materials) {
                 // Convert API response to localStorage format for compatibility
                 const materials = {
@@ -12488,6 +12506,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     paragraph: activeRecords(data.materials.paragraph || []),
                     vowel: activeRecords(data.materials.vowel || [])
                 };
+                const flat = [...materials.word, ...materials.sentence, ...materials.paragraph, ...materials.vowel];
+                console.log('[materials trace] course.materials candidate from API', {
+                    classCode,
+                    hehehehExists: flat.some(item => String(item.title || '').trim().toLowerCase() === 'heheheh'),
+                    sourceTypes: flat.map(item => String(item.source_type || item.material_source || '').trim().toLowerCase()).filter(Boolean)
+                });
                 // Fix: Sync local cache variable so View/Edit handlers find the data
                 if (classCode) {
                     classReadings[classCode] = materials;
@@ -13603,13 +13627,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const openMaterialDropdowns = new Set();
         const TEMPLATE_DEFINITIONS = {
             'Letter & Sound Matching': { lesson: 'Phonics', hint: 'Match letters with their corresponding sounds.', fields: [{ key: 'letter', label: 'Letter', type: 'text', placeholder: 'Letter A' }, { key: 'sound', label: 'Corresponding sound', type: 'text', placeholder: '/a/' }], addLabel: 'Add Item' },
-            'Sound Detective': { lesson: 'Phonological Awareness', hint: 'Identify and locate sounds inside words.', fields: [{ key: 'word', label: 'Word', type: 'text', placeholder: 'apple' }, { key: 'targetSound', label: 'Target sound', type: 'text', placeholder: '/a/' }, { key: 'position', label: 'Position of sound', type: 'select', options: ['Beginning', 'Middle', 'End'] }], addLabel: 'Add Item' },
+            'Sound Detective': { lesson: 'Phonological Awareness', hint: 'Identify and locate sounds inside words.', fields: [{ key: 'word', label: 'Word', type: 'text', placeholder: 'mata' }, { key: 'targetSound', label: 'Target sound', type: 'text', placeholder: '/m/' }, { key: 'position', label: 'Position of sound', type: 'select', options: ['Beginning', 'Middle', 'End'] }], addLabel: 'Add Item' },
             'Match the Letter to Its Sound': { lesson: 'Letter-Sound Correspondence', hint: 'Match each letter to the sound it makes.', fields: [{ key: 'letter', label: 'Letter', type: 'text' }, { key: 'sound', label: 'Sound', type: 'text' }], addLabel: 'Add Item' },
             'Clap & Count Syllables': { lesson: 'Syllable Awareness', hint: 'Count the syllables in each word.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'syllables', label: 'Expected syllable count', type: 'number', min: 1 }], addLabel: 'Add Item' },
             'Blend the Syllables': { lesson: 'Syllable Blending', hint: 'Combine syllables to form complete words.', fields: [{ key: 'syllables', label: 'Syllables', type: 'text', placeholder: 'ba + ha' }, { key: 'answer', label: 'Complete word', type: 'text', placeholder: 'baha' }], addLabel: 'Add Item' },
             'Picture-Word Matching': { lesson: 'Word Recognition', hint: 'Upload or choose a picture and match it to a word.', fields: [{ key: 'image', label: 'Image upload/selection', type: 'file' }, { key: 'word', label: 'Corresponding word', type: 'text' }], addLabel: 'Add Item' },
             'Decode the Word': { lesson: 'Word Decoding', hint: 'Break a word into sounds and decode it.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'prompt', label: 'Decoding prompt', type: 'text', placeholder: 'Say the sounds then blend them.' }], addLabel: 'Add Item' },
-            'Word Meaning Match': { lesson: 'Vocabulary Development', hint: 'Connect words with meanings, pictures, or phrases.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'meaning', label: 'Meaning/picture/phrase', type: 'text' }], addLabel: 'Add Item' },
+            'Word Meaning Match': { lesson: 'Vocabulary Development', hint: 'Connect words with meanings, pictures, or phrases.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'meaning', label: 'Meaning / picture / phrase', type: 'text' }], addLabel: 'Add Item' },
             'Phrase Reading Practice': { lesson: 'Phrase Reading', hint: 'Create short phrases for reading practice.', fields: [{ key: 'phrase', label: 'Phrase', type: 'text' }], addLabel: 'Add Phrase' },
             'Sentence Reading Practice': { lesson: 'Sentence Reading', hint: 'Create complete sentences for reading practice.', fields: [{ key: 'sentence', label: 'Sentence', type: 'text' }], addLabel: 'Add Sentence' },
             'Fluency Reading': { lesson: 'Reading Fluency', hint: 'Provide passages for smooth, accurate reading.', fields: [{ key: 'passage', label: 'Reading passage', type: 'textarea' }], addLabel: 'Add Passage' },
@@ -13635,7 +13659,21 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             ['14', 'Retell the Story', 'Story Retelling'],
             ['15', 'Story Response', 'Response to Story']
         ];
+        const TEMPLATE_ITEM_LIST_TYPES = new Set([
+            'Letter & Sound Matching',
+            'Sound Detective',
+            'Clap & Count Syllables',
+            'Picture-Word Matching',
+            'Word Meaning Match',
+            'Phrase Reading Practice',
+            'Sentence Reading Practice'
+        ]);
+        const TEMPLATE_ITEM_TITLE_KEYS = {
+            'Phrase Reading Practice': 'phrase',
+            'Sentence Reading Practice': 'sentence'
+        };
         let activeTemplateActivity = null;
+        let activeTemplateItemEditIndex = null;
         let createdTemplateActivities = [];
         function setNodeVisibility(node, visible) {
             if (!node) return;
@@ -13731,8 +13769,158 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return escapeHtml(String(value ?? '')).replace(/"/g, '&quot;');
         }
 
+        function isTemplateItemListType(title) {
+            return TEMPLATE_ITEM_LIST_TYPES.has(title);
+        }
+
+        function getTemplateItemTitleField(title) {
+            return TEMPLATE_ITEM_TITLE_KEYS[title] || null;
+        }
+
+        function getTemplateItemLabel(title) {
+            const key = getTemplateItemTitleField(title);
+            if (key === 'phrase') return 'Phrase';
+            if (key === 'sentence') return 'Sentence';
+            return 'Item';
+        }
+
+        function getTemplateItemFields(title) {
+            return (getTemplateDefinition(title)?.fields || []).filter(field => field.key !== 'phrase' && field.key !== 'sentence');
+        }
+
+        function getTemplateItemPreview(item, title) {
+            if (!item) return '';
+            if (title === 'Letter & Sound Matching' || title === 'Match the Letter to Its Sound') return `${item.letter || ''} → ${item.sound || ''}`.trim();
+            if (title === 'Sound Detective') return `${item.word || ''} — ${item.targetSound || ''} — ${item.position || ''}`.trim();
+            if (title === 'Clap & Count Syllables') return `${item.word || ''} — ${item.syllables || ''} syllables`.trim();
+            if (title === 'Picture-Word Matching') return `${item.word || ''}`.trim();
+            if (title === 'Word Meaning Match') return `${item.word || ''} → ${item.meaning || ''}`.trim();
+            if (title === 'Phrase Reading Practice') return `${item.phrase || ''}`.trim();
+            if (title === 'Sentence Reading Practice') return `${item.sentence || ''}`.trim();
+            return Object.values(item).filter(Boolean).join(' — ');
+        }
+
+        function normalizeTemplateItem(field, value) {
+            const text = String(value ?? '').trim();
+            if (field.key === 'syllables') {
+                const num = parseInt(text, 10);
+                return Number.isFinite(num) ? String(num) : '';
+            }
+            return text;
+        }
+
+        function getTemplateBuilderState() {
+            if (!activeTemplateActivity) return [];
+            if (!Array.isArray(activeTemplateActivity.items)) activeTemplateActivity.items = [];
+            return activeTemplateActivity.items;
+        }
+
+        function clearTemplateItemInputs() {
+            const root = document.getElementById('templateDynamicFields');
+            Array.from(root?.querySelectorAll('.template-item-field') || []).forEach(field => {
+                if (field.type === 'file') field.value = '';
+                else if (field.tagName === 'SELECT') field.selectedIndex = 0;
+                else field.value = '';
+            });
+            activeTemplateItemEditIndex = null;
+            const addBtn = document.getElementById('templateAddItemBtn');
+            if (addBtn) addBtn.textContent = activeTemplateActivity ? (activeTemplateActivity.templateTitle === 'Phrase Reading Practice' ? 'Add Phrase' : activeTemplateActivity.templateTitle === 'Sentence Reading Practice' ? 'Add Sentence' : 'Add Item') : 'Add Item';
+        }
+
+        function renderTemplateItemList(title) {
+            const container = document.getElementById('templateItemList');
+            if (!container || !activeTemplateActivity) return;
+            const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+            if (!items.length) {
+                container.innerHTML = `<div class="text-muted small">No items added yet.</div>`;
+                return;
+            }
+            container.innerHTML = items.map((item, index) => {
+                const preview = getTemplateItemPreview(item, title);
+                const imageHtml = title === 'Picture-Word Matching' && item.imagePreview
+                    ? `<img src="${escapeAttr(item.imagePreview)}" alt="" class="rounded border" style="width:42px;height:42px;object-fit:cover;">`
+                    : '';
+                return `
+                    <div class="d-flex align-items-center justify-content-between gap-2 border rounded-3 bg-white px-3 py-2 mb-2" data-template-item-index="${index}">
+                        <div class="d-flex align-items-center gap-3 min-w-0">
+                            ${imageHtml}
+                            <div class="min-w-0">
+                                <div class="fw-semibold text-truncate">${index + 1}. ${escapeHtml(preview)}</div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                            <button type="button" class="btn btn-link btn-sm p-0 template-item-edit-btn" data-index="${index}" aria-label="Edit item ${index + 1}"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-danger template-item-delete-btn" data-index="${index}" aria-label="Delete item ${index + 1}"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTemplateItemEditor(title, values = {}) {
+            const def = getTemplateDefinition(title);
+            const titleFieldKey = getTemplateItemTitleField(title);
+            const itemFields = getTemplateItemFields(title);
+            const mainField = def.fields.find(field => field.key === titleFieldKey);
+            const mainInput = titleFieldKey ? `
+                <div class="col-12">
+                    <label class="form-label fw-bold" for="templateMainItemInput">${escapeHtml(mainField?.label || getTemplateItemLabel(title))}</label>
+                    <input type="text" id="templateMainItemInput" class="form-control template-item-field" data-field-key="${escapeAttr(titleFieldKey)}" placeholder="${escapeAttr(mainField?.placeholder || (title === 'Phrase Reading Practice' ? 'ang mabait na bata' : 'Si Ana ay nagbabasa ng libro.'))}" value="${escapeAttr(values[titleFieldKey] || '')}">
+                </div>
+            ` : '';
+            const secondaryFields = itemFields.filter(field => field.key !== titleFieldKey).map((field, index) => {
+                const id = `templateField_${field.key}_${index}`;
+                if (field.type === 'select') {
+                    return `<div class="col-12 col-md-6"><label class="form-label fw-bold" for="${id}">${escapeHtml(field.label)}</label><select id="${id}" class="form-select template-item-field" data-field-key="${escapeAttr(field.key)}">${(field.options || []).map(opt => `<option value="${escapeAttr(opt)}">${escapeHtml(opt)}</option>`).join('')}</select></div>`;
+                }
+                if (field.type === 'file') {
+                    return `<div class="col-12 col-md-6"><label class="form-label fw-bold" for="${id}">${escapeHtml(field.label)}</label><input id="${id}" type="file" accept="image/*" class="form-control template-item-field" data-field-key="${escapeAttr(field.key)}"></div>`;
+                }
+                return `<div class="col-12 col-md-6"><label class="form-label fw-bold" for="${id}">${escapeHtml(field.label)}</label><input id="${id}" type="${field.type === 'number' ? 'number' : 'text'}" class="form-control template-item-field" data-field-key="${escapeAttr(field.key)}" placeholder="${escapeAttr(field.placeholder || '')}"${field.min ? ` min="${field.min}"` : ''} value="${escapeAttr(values[field.key] || '')}"></div>`;
+            }).join('');
+            templateDynamicFields.innerHTML = `
+                <div class="row g-3">
+                    ${mainInput}
+                    ${secondaryFields}
+                    <div class="col-12">
+                        <button type="button" class="btn btn-primary" id="templateAddItemBtn">${escapeHtml(def.addLabel || 'Add Item')}</button>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                        <h6 class="mb-0 fw-bold">${title === 'Phrase Reading Practice' ? 'Added Phrases' : title === 'Sentence Reading Practice' ? 'Added Sentences' : 'Added Items'}</h6>
+                        <small class="text-muted">Add as many items as needed.</small>
+                    </div>
+                    <div id="templateItemList"></div>
+                </div>
+            `;
+            renderTemplateItemList(title);
+        }
+
         function getTemplateDefinition(title) {
             return TEMPLATE_DEFINITIONS[title] || TEMPLATE_DEFINITIONS['Picture-Word Matching'];
+        }
+
+        function getTemplateReadingType(title) {
+            const t = String(title || '').trim();
+            const templateMap = {
+                'Letter & Sound Matching': 'word',
+                'Sound Detective': 'word',
+                'Match the Letter to Its Sound': 'word',
+                'Clap & Count Syllables': 'word',
+                'Blend the Syllables': 'word',
+                'Picture-Word Matching': 'word',
+                'Decode the Word': 'word',
+                'Word Meaning Match': 'word',
+                'Phrase Reading Practice': 'sentence',
+                'Sentence Reading Practice': 'sentence',
+                'Fluency Reading': 'paragraph',
+                'Story Reading': 'paragraph',
+                "5W's Story Questions": 'paragraph',
+                'Retell the Story': 'paragraph',
+                'Story Response': 'paragraph'
+            };
+            return templateMap[t] || 'word';
         }
 
         function renderTemplateWeeks(selectedWeeks = []) {
@@ -13761,6 +13949,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (templateBuilderSubtitle) templateBuilderSubtitle.textContent = `${title} · Lesson: ${def.lesson}`;
             if (templateBuilderLessonPill) templateBuilderLessonPill.textContent = def.lesson;
             if (templateActivityContentHint) templateActivityContentHint.textContent = def.hint;
+            if (isTemplateItemListType(title)) {
+                renderTemplateItemEditor(title, values);
+                return;
+            }
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
                     ${def.fields.map((field, index) => {
@@ -13783,11 +13975,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function renderTemplatePreview() {
             if (!templatePreviewPanel || !activeTemplateActivity) return;
-            const content = {};
-            Array.from(templateDynamicFields?.querySelectorAll('.template-content-field') || []).forEach(field => {
-                const key = field.dataset.fieldKey;
-                content[key] = field.type === 'file' ? (field.files?.[0]?.name || '') : field.value;
-            });
+            const content = isTemplateItemListType(activeTemplateActivity.templateTitle)
+                ? { items: Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [] }
+                : (() => {
+                    const block = {};
+                    Array.from(templateDynamicFields?.querySelectorAll('.template-content-field') || []).forEach(field => {
+                        const key = field.dataset.fieldKey;
+                        block[key] = field.type === 'file' ? (field.files?.[0]?.name || '') : field.value;
+                    });
+                    return block;
+                })();
             const weeks = getTemplateWeeks();
             templatePreviewPanel.innerHTML = `
                 <div class="fw-bold mb-1">${escapeHtml(activeTemplateActivity.title)}</div>
@@ -13807,8 +14004,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 language: 'English',
                 instructions: '',
                 weeks: [],
-                content: {}
+                content: {},
+                items: []
             };
+            activeTemplateItemEditIndex = null;
             setNodeVisibility(templateActivityGrid, false);
             setNodeVisibility(templateBuilderPanel, true);
             if (templateActivityTitle) templateActivityTitle.value = '';
@@ -13834,9 +14033,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getTemplateFormValues() {
             const content = {};
-            Array.from(templateDynamicFields?.querySelectorAll('.template-content-field') || []).forEach(field => {
-                content[field.dataset.fieldKey] = field.type === 'file' ? (field.files?.[0]?.name || '') : field.value.trim();
-            });
+            if (isTemplateItemListType(activeTemplateActivity?.templateTitle)) {
+                content.items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+            } else {
+                Array.from(templateDynamicFields?.querySelectorAll('.template-content-field') || []).forEach(field => {
+                    content[field.dataset.fieldKey] = field.type === 'file' ? (field.files?.[0]?.name || '') : field.value.trim();
+                });
+            }
             return {
                 title: (templateActivityTitle?.value || '').trim(),
                 language: Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || '',
@@ -13851,33 +14054,241 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!values.title) return 'Activity Title is required.';
             if (!values.language) return 'Language is required.';
             if (!values.instructions) return 'Instructions are required.';
-            const hasContent = Object.values(values.content || {}).some(value => String(value || '').trim());
-            if (!hasContent) return `${def.addLabel || 'Content'} is required.`;
+            if (isTemplateItemListType(activeTemplateActivity?.templateTitle)) {
+                if (!Array.isArray(values.content?.items) || !values.content.items.length) return `${def.addLabel || 'Content'} is required.`;
+            } else {
+                const hasContent = Object.values(values.content || {}).some(value => String(value || '').trim());
+                if (!hasContent) return `${def.addLabel || 'Content'} is required.`;
+            }
             if (!values.weeks.length) return 'Select at least one week.';
             return '';
         }
 
+        function readTemplateItemValues(title) {
+            const values = {};
+            const root = document.getElementById('templateDynamicFields');
+            Array.from(root?.querySelectorAll('.template-item-field') || []).forEach(field => {
+                const key = field.dataset.fieldKey;
+                if (field.type === 'file') {
+                    const file = field.files?.[0];
+                    if (file) {
+                        values.imageName = file.name;
+                        values.imagePreview = URL.createObjectURL(file);
+                    }
+                    return;
+                }
+                values[key] = field.value.trim();
+            });
+            if (title === 'Clap & Count Syllables' && values.syllables) {
+                values.syllables = String(parseInt(values.syllables, 10) || '');
+            }
+            return values;
+        }
+
+        function addOrUpdateTemplateItem() {
+            if (!activeTemplateActivity || !isTemplateItemListType(activeTemplateActivity.templateTitle)) return;
+            const title = activeTemplateActivity.templateTitle;
+            const values = readTemplateItemValues(title);
+            const requiredKeys = getTemplateItemFields(title).map(field => field.key);
+            const hasRequired = requiredKeys.every(key => {
+                if (key === 'image') return Boolean(values.imageName || values.imagePreview);
+                return String(values[key] || '').trim().length > 0;
+            });
+            if (!hasRequired) return;
+            const items = getTemplateBuilderState();
+            const item = {};
+            getTemplateItemFields(title).forEach(field => {
+                if (field.type === 'file') {
+                    item.imageName = values.imageName || '';
+                    item.imagePreview = values.imagePreview || '';
+                } else {
+                    item[field.key] = normalizeTemplateItem(field, values[field.key]);
+                }
+            });
+            if (activeTemplateItemEditIndex !== null && items[activeTemplateItemEditIndex]) {
+                if (items[activeTemplateItemEditIndex].imagePreview && items[activeTemplateItemEditIndex].imagePreview.startsWith('blob:')) {
+                    try { URL.revokeObjectURL(items[activeTemplateItemEditIndex].imagePreview); } catch (e) { /* ignore */ }
+                }
+                items[activeTemplateItemEditIndex] = item;
+            } else {
+                items.push(item);
+            }
+            clearTemplateItemInputs();
+            renderTemplateItemList(title);
+            renderTemplatePreview();
+        }
+
+        function populateTemplateItemForEdit(index) {
+            if (!activeTemplateActivity || !isTemplateItemListType(activeTemplateActivity.templateTitle)) return;
+            const items = getTemplateBuilderState();
+            const item = items[index];
+            if (!item) return;
+            activeTemplateItemEditIndex = index;
+            const title = activeTemplateActivity.templateTitle;
+            const fields = getTemplateItemFields(title);
+            fields.forEach(field => {
+                const el = document.querySelector(`#templateDynamicFields [data-field-key="${field.key}"]`);
+                if (!el) return;
+                if (field.type === 'file') {
+                    el.value = '';
+                } else {
+                    el.value = item[field.key] ?? '';
+                }
+            });
+            const addBtn = document.getElementById('templateAddItemBtn');
+            if (addBtn) addBtn.textContent = 'Update Item';
+        }
+
+        function deleteTemplateItem(index) {
+            if (!activeTemplateActivity || !Array.isArray(activeTemplateActivity.items)) return;
+            const item = activeTemplateActivity.items[index];
+            if (item?.imagePreview && item.imagePreview.startsWith('blob:')) {
+                try { URL.revokeObjectURL(item.imagePreview); } catch (e) { /* ignore */ }
+            }
+            activeTemplateActivity.items.splice(index, 1);
+            if (activeTemplateItemEditIndex === index) {
+                activeTemplateItemEditIndex = null;
+                clearTemplateItemInputs();
+            }
+            renderTemplateItemList(activeTemplateActivity.templateTitle);
+            renderTemplatePreview();
+        }
+
         function saveTemplateActivity(assignOnly = false) {
             const values = getTemplateFormValues();
+            console.log('[CREATE ACTIVITY] Save clicked', { assignOnly, values, activeTemplateActivity });
             const error = validateTemplateActivityForm(values);
             if (templateValidationError) {
                 templateValidationError.textContent = error || '';
                 templateValidationError.classList.toggle('d-none', !error);
             }
-            if (error) return;
-            const payload = Object.assign({}, activeTemplateActivity, values, {
-                assignOnly,
-                savedAt: new Date().toISOString(),
-                id: `template-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-            });
-            createdTemplateActivities.unshift(payload);
-            try {
-                window.createdTemplateActivities = createdTemplateActivities;
-                localStorage.setItem('pabasa_created_template_activities', JSON.stringify(createdTemplateActivities));
-            } catch (e) { /* ignore */ }
-            if (templateValidationError) templateValidationError.classList.add('d-none');
-            hideTemplateBuilder();
-            if (addMaterialModal) bootstrap.Modal.getOrCreateInstance(addMaterialModal).hide();
+            if (error) {
+                console.log('[CREATE ACTIVITY] Validation blocked save', error);
+                return;
+            }
+            (async () => {
+                try {
+                    const csrfToken = await ensureCsrfToken();
+                    if (!csrfToken) throw new Error('CSRF token missing. Please reload and try again.');
+                    const contentPayload = Object.assign({}, values.content || {}, {
+                        template_title: activeTemplateActivity?.templateTitle || '',
+                        template_lesson: activeTemplateActivity?.lesson || '',
+                        template_type: activeTemplateActivity?.templateTitle || '',
+                        template_source: 'template',
+                        items: Array.isArray(activeTemplateActivity?.items) ? activeTemplateActivity.items : [],
+                    });
+                    const saveClassCode = currentClassCode || (() => {
+                        const attachedCourseId = Number(window.courseAttachTarget || window.currentCourseId || 0);
+                        const attachedCourse = attachedCourseId ? findCourseById(attachedCourseId) : null;
+                        return attachedCourse?.sections?.[0]?.code || '';
+                    })();
+                    const payload = {
+                        title: values.title,
+                        reading_type: getTemplateReadingType(activeTemplateActivity?.templateTitle),
+                        content: JSON.stringify(contentPayload),
+                        status: 'published',
+                        usage_type: 'assessment',
+                        class_code: saveClassCode,
+                        scheduled_at: null,
+                        assigned_week: values.weeks?.[0] || null,
+                        assigned_weeks: values.weeks || [],
+                        language: values.language,
+                        randomize_order: false,
+                        assessment_kind: 'regular',
+                        source_type: 'template',
+                        source_material_id: null,
+                        template_title: activeTemplateActivity?.templateTitle || '',
+                        template_lesson: activeTemplateActivity?.lesson || '',
+                    };
+                    console.log('[CREATE ACTIVITY] Payload:', payload);
+                    console.log('[CREATE ACTIVITY] POST URL:', '/dashboard/teacher/add-material/');
+                    const response = await fetch('/dashboard/teacher/add-material/', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    console.log('[CREATE ACTIVITY] Response status:', response.status);
+                    if (!response.ok) {
+                        const text = await response.text();
+                        console.log('[CREATE ACTIVITY] Response body:', text);
+                        let message = text;
+                        try {
+                            const parsed = JSON.parse(text);
+                            message = parsed.error || parsed.message || JSON.stringify(parsed.errors || parsed);
+                        } catch (e) {}
+                        throw new Error(message || `Save failed (${response.status})`);
+                    }
+                    const data = await response.json();
+                    console.log('[CREATE ACTIVITY] Response body:', data);
+                    if (!data.success) throw new Error(data.error || data.message || 'Save failed.');
+                    const stored = Object.assign({}, values, {
+                        assignOnly,
+                        savedAt: new Date().toISOString(),
+                        id: data.material?.id || `material-${Date.now()}`,
+                        source_type: 'template',
+                        material_id: data.material?.id || null,
+                        assigned_weeks: values.weeks || [],
+                    });
+                    createdTemplateActivities.unshift(stored);
+                    try {
+                        window.createdTemplateActivities = createdTemplateActivities;
+                        localStorage.setItem('pabasa_created_template_activities', JSON.stringify(createdTemplateActivities));
+                    } catch (e) { /* ignore */ }
+                    const attachCourseId = Number(window.courseAttachTarget || window.currentCourseId || 0);
+                    if (templateValidationError) templateValidationError.classList.add('d-none');
+                    hideTemplateBuilder();
+                    if (addMaterialModal) bootstrap.Modal.getOrCreateInstance(addMaterialModal).hide();
+                    window.dispatchEvent(new CustomEvent('pabasa:materials-updated', { detail: { material_id: data.material?.id || '', class_code: currentClassCode } }));
+                    try {
+                        const createdMaterialId = data.material?.raw_id ?? data.material?.id ?? data.material?.material_id ?? null;
+                        if (attachCourseId && createdMaterialId !== null && createdMaterialId !== undefined && createdMaterialId !== '') {
+                            const attachToken = await ensureCsrfToken();
+                            const attachResp = await fetch('/dashboard/teacher/course/add-material/', {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': attachToken,
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: JSON.stringify({ course_id: attachCourseId, material_id: Number(createdMaterialId) })
+                            });
+                            let attachData = {};
+                            try { attachData = await attachResp.json(); } catch (e) { attachData = {}; }
+                            console.log('[CREATE ACTIVITY] Attach response:', attachResp.status, attachData);
+                            if (attachResp.ok && attachData.success) {
+                                try { await refreshCourseCardsFromServer(); } catch (e) { console.warn('Could not refresh course cards after template attach', e); }
+                                try { await refreshOpenCourseAfterAssessmentChange({ courseId: attachCourseId, classCode: currentClassCode }); } catch (e) { console.warn('Could not refresh open course after template attach', e); }
+                                const openCourseModal = document.getElementById('courseDetailModal');
+                                if (openCourseModal && openCourseModal.classList.contains('show')) {
+                                    try { await openCourseDetail(attachCourseId); } catch (e) { console.warn('Could not reopen course after template attach', e); }
+                                }
+                            }
+                        }
+                    } catch (attachErr) {
+                        console.warn('Template material attach to course failed', attachErr);
+                    }
+                    if (typeof refreshTeacherData === 'function') {
+                        try { await refreshTeacherData(); } catch (refreshErr) { console.warn('refreshTeacherData after template save failed', refreshErr); }
+                    }
+                    const openCourseId = document.getElementById('courseDetailModal')?.dataset?.courseId;
+                    if (openCourseId) {
+                        try { await loadTeacherCoursesFromServer(); } catch (e) { console.warn('Could not reload teacher courses after template save', e); }
+                        try { openCourseDetail(openCourseId); } catch (e) { console.warn('Could not reopen course detail after template save', e); }
+                    }
+                } catch (err) {
+                    if (templateValidationError) {
+                        templateValidationError.textContent = err?.message || 'Unable to save activity.';
+                        templateValidationError.classList.remove('d-none');
+                    }
+                    console.error('saveTemplateActivity failed', err);
+                }
+            })();
         }
 
         function focusCourseMaterialOption(options, currentButton, offset) {
@@ -14797,6 +15208,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 renderTemplatePreview();
             });
             templateDynamicFields?.addEventListener('input', renderTemplatePreview);
+            templateDynamicFields?.addEventListener('click', function (event) {
+                const addBtn = event.target.closest('#templateAddItemBtn');
+                if (addBtn) {
+                    addOrUpdateTemplateItem();
+                    return;
+                }
+                const editBtn = event.target.closest('.template-item-edit-btn');
+                if (editBtn) {
+                    populateTemplateItemForEdit(parseInt(editBtn.dataset.index, 10));
+                    return;
+                }
+                const deleteBtn = event.target.closest('.template-item-delete-btn');
+                if (deleteBtn) {
+                    deleteTemplateItem(parseInt(deleteBtn.dataset.index, 10));
+                }
+            });
             templateActivityTitle?.addEventListener('input', renderTemplatePreview);
             templateActivityInstructions?.addEventListener('input', renderTemplatePreview);
             Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
@@ -15090,9 +15517,44 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         // Open the Add Material modal pre-filled for editing an existing material
         window.openAddMaterialForEdit = function(material) {
             try {
-                resetAddMaterialModalState({ clearEditing: false, clearAttachTarget: true });
                 const usage = (material.usage || material.usage_type || material.type || '').toString();
                 const sourceType = String(material.source_type || material.material_source || 'personal').trim().toLowerCase();
+                if (sourceType === 'template') {
+                    resetAddMaterialModalState({ clearEditing: false, clearAttachTarget: true });
+                    const templateTitle = String(material.template_title || material.templateType || material.template_type || material.title || 'Picture-Word Matching').trim() || 'Picture-Word Matching';
+                    const def = getTemplateDefinition(templateTitle);
+                    const currentContent = material.content_json && typeof material.content_json === 'object'
+                        ? Object.assign({}, material.content_json)
+                        : {};
+                    const weeks = Array.isArray(material.assigned_weeks) && material.assigned_weeks.length
+                        ? material.assigned_weeks
+                        : (material.assigned_week ? [material.assigned_week] : []);
+                    activeTemplateActivity = {
+                        templateTitle,
+                        lesson: material.template_lesson || material.lesson || def.lesson,
+                        title: material.title || '',
+                        language: material.language || currentContent.language || 'English',
+                        instructions: material.instructions || currentContent.instructions || '',
+                        weeks,
+                        content: currentContent,
+                        items: Array.isArray(currentContent.items) ? currentContent.items : []
+                    };
+                    activeTemplateItemEditIndex = null;
+                    setNodeVisibility(templateActivityGrid, false);
+                    setNodeVisibility(templateBuilderPanel, true);
+                    if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title || '';
+                    if (templateActivityInstructions) templateActivityInstructions.value = activeTemplateActivity.instructions || '';
+                    renderTemplateDynamicFields(templateTitle);
+                    renderTemplateWeeks();
+                    renderTemplatePreview();
+                    window.__addMaterialDefaultMode = 'template';
+                    window._pendingSharedMaterialOrigin = false;
+                    window._pendingSharedMaterialSourceId = null;
+                    window.courseAttachTarget = null;
+                    new bootstrap.Modal(addMaterialModal).show();
+                    return;
+                }
+                resetAddMaterialModalState({ clearEditing: false, clearAttachTarget: true });
                 const fallbackKind = usage.toLowerCase() === 'practice' && String(material.id || '').startsWith('practice-') ? 'practice' : 'material';
                 const normalizedMaterialId = materialRecordId(material, fallbackKind);
                 // mark editing target so submit handler performs update instead of create
@@ -15579,6 +16041,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             window.renderedReadingsByContainer = window.renderedReadingsByContainer || {};
             window.renderedReadingsByContainer[containerId] = Array.isArray(allMaterials) ? allMaterials : [];
             container.dataset.readingsContainerId = containerId;
+            console.log('[materials trace] rendered materials input', {
+                containerId,
+                hehehehExists: (Array.isArray(allMaterials) ? allMaterials : []).some(item => String(item.title || '').trim().toLowerCase() === 'heheheh'),
+                count: Array.isArray(allMaterials) ? allMaterials.length : 0
+            });
 
             if (allMaterials.length === 0) {
                 container.innerHTML = `
@@ -15609,6 +16076,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             container.innerHTML = sortedWeeks.map(week => {
                 const weekItems = groups[week];
                 weekItems.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                if ((weekItems || []).some(item => String(item.title || '').trim().toLowerCase() === 'heheheh')) {
+                    console.log('[materials trace] heheheh reached render group', { containerId, week });
+                }
 
                 const itemsHtml = weekItems.map(reading => {
                     const typeMap = { 'practice': 'practice', 'assessment': 'assessment', 'both': 'both' };
@@ -15692,6 +16162,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 ...(readings.paragraph || []),
                 ...(readings.vowel || [])
             ]);
+            console.log('[materials trace] loadReadings combined', {
+                classCode,
+                hehehehExists: allMaterials.some(item => String(item.title || '').trim().toLowerCase() === 'heheheh'),
+                count: allMaterials.length
+            });
 
             // Ensure renderAllReadingsList is available (may be defined later)
             try { syncClassBannerMaterialCounts(classCode); } catch (e) { console.warn('Failed to sync banner counts from live class data', e); }

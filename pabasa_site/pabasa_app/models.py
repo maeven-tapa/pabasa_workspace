@@ -872,6 +872,7 @@ class Material(models.Model):
     SOURCE_TYPE_CHOICES = [
         ("personal", "Personal"),
         ("shared", "Shared"),
+        ("template", "Template"),
     ]
 
     STATUS_CHOICES = [
@@ -927,10 +928,7 @@ class Material(models.Model):
     difficulty_level = models.CharField(max_length=50, blank=True)
     source_type = models.CharField(
         max_length=20,
-        choices=[
-            ("personal", "Personal"),
-            ("shared", "Shared"),
-        ],
+        choices=SOURCE_TYPE_CHOICES,
         default="personal",
     )
     # Optional week assignment (1-99) for grouping materials by week
@@ -939,6 +937,7 @@ class Material(models.Model):
         blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(99)],
     )
+    assigned_weeks = models.JSONField(default=list, blank=True)
     student_access = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

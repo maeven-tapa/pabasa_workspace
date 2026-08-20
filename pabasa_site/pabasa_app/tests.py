@@ -4832,6 +4832,213 @@ class MaterialCreationTests(TestCase):
             "average_progress": 100.0,
         })
 
+    def test_template_material_uses_shared_teacher_and_student_pipeline(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0013",
+            role="teacher",
+            first_name="Template",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="template.teacher@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        student = User.objects.create(
+            custom_id="STU-0013",
+            role="student",
+            first_name="Template",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=2015,
+            email="template.student@example.com",
+            password_hash="hashed-password",
+        )
+        section = Section.objects.create(
+            class_code="TPL-1001",
+            class_name="Template Class",
+            header="Reading Class",
+            description="",
+            teacher=teacher,
+            subject="Reading",
+        )
+        section.students = [{
+            "student_id": student.id,
+            "custom_id": student.custom_id,
+            "first_name": student.first_name,
+            "last_name": student.last_name,
+            "email": student.email,
+            "is_active": True,
+        }]
+        section.save(update_fields=["students"])
+        course = Course.objects.create(
+            code="TPL-C1",
+            title="Template Course",
+            description="",
+            teacher=teacher,
+        )
+        course.sections.add(section)
+
+        teacher_session = self.client.session
+        teacher_session["user_id"] = teacher.id
+        teacher_session["user_role"] = teacher.role
+        teacher_session["first_name"] = teacher.first_name
+        teacher_session["last_name"] = teacher.last_name
+        teacher_session["email"] = teacher.email
+        teacher_session["custom_id"] = teacher.custom_id
+        teacher_session.save()
+
+        create_response = self.client.post(
+            reverse("add_reading_material"),
+            json.dumps({
+                "title": "Template Reading",
+                "content": json.dumps({
+                    "template_title": "Letter & Sound Matching",
+                    "template_lesson": "Lesson 1",
+                    "template_type": "template",
+                    "template_source": "template",
+                    "items": ["A", "B"],
+                }),
+                "reading_type": "word",
+                "status": "published",
+                "usage_type": "assessment",
+                "class_code": section.class_code,
+                "assigned_week": 3,
+                "assigned_weeks": [3],
+                "language": "Tagalog",
+                "randomize_order": False,
+                "assessment_kind": "regular",
+                "source_type": "template",
+                "template_title": "Letter & Sound Matching",
+                "template_lesson": "Lesson 1",
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(create_response.status_code, 200)
+        create_payload = create_response.json()
+        self.assertTrue(create_payload["success"])
+        material_id = create_payload["material"]["raw_id"]
+        material = Material.objects.get(id=material_id)
+        self.assertEqual(material.source_type, "template")
+        self.assertEqual(material.teacher_id, teacher.id)
+        self.assertEqual(material.section_id, section.id)
+        self.assertEqual(material.status, "published")
+        self.assertEqual(material.assigned_weeks, [3])
+        self.assertEqual(material.assigned_week, 3)
+        self.assertFalse(material.student_access)
+
+        attach_response = self.client.post(
+            reverse("add_material_to_course"),
+            json.dumps({"course_id": course.id, "material_id": material.id}),
+            content_type="application/json",
+        )
+        self.assertEqual(attach_response.status_code, 200)
+        self.assertTrue(attach_response.json()["success"])
+
+        course_response = self.client.get(reverse("get_teacher_courses_api"))
+        self.assertEqual(course_response.status_code, 200)
+        course_payload = next(item for item in course_response.json()["courses"] if item["id"] == course.id)
+        course_material = next(item for item in course_payload["materials"] if item["id"] == material.id)
+        self.assertEqual(course_material["source_type"], "template")
+        self.assertEqual(course_material["assigned_weeks"], [3])
+        self.assertEqual(course_material["status"], "published")
+
+        toggle_response = self.client.post(
+            reverse("toggle_material_student_access"),
+            json.dumps({"material_id": material.id, "student_access": True}),
+            content_type="application/json",
+        )
+        self.assertEqual(toggle_response.status_code, 200)
+        self.assertTrue(toggle_response.json()["success"])
+
+        material.refresh_from_db()
+        self.assertTrue(material.student_access)
+
+        student_session = self.client.session
+        student_session["user_id"] = student.id
+        student_session["user_role"] = student.role
+        student_session["current_week"] = 3
+        student_session.save()
+
+        assessment_response = self.client.get(reverse("assessment"))
+        self.assertEqual(assessment_response.status_code, 200)
+        student_materials = assessment_response.context["student_assessment_materials"]
+        self.assertTrue(any(item["id"] == material.id for item in student_materials))
+        matched = next(item for item in student_materials if item["id"] == material.id)
+        self.assertEqual(matched["title"], "Template Reading")
+
+    def test_class_materials_api_includes_template_material(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0014",
+            role="teacher",
+            first_name="API",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="api.teacher@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        section = Section.objects.create(
+            class_code="FCNG-648",
+            class_name="API Class",
+            header="Reading Class",
+            description="",
+            teacher=teacher,
+            subject="Reading",
+        )
+        course = Course.objects.create(
+            code="API-C1",
+            title="API Course",
+            description="",
+            teacher=teacher,
+        )
+        course.sections.add(section)
+        material = Material.objects.create(
+            teacher=teacher,
+            section=section,
+            title="heheheh",
+            item_type="word",
+            content_text="heheheh",
+            content_json={"items": ["heheheh"], "language": "English"},
+            type="assessment",
+            source_type="template",
+            status="published",
+            assigned_week=3,
+            assigned_weeks=[3],
+            student_access=False,
+            is_active=True,
+        )
+        course.materials.add(material)
+
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.get(reverse("get_class_materials"), {"class_code": section.class_code})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertIn("all_materials", payload)
+        self.assertTrue(any(item["title"] == "heheheh" and item["source_type"] == "template" for item in payload["all_materials"]))
+
     def test_teacher_courses_api_preserves_saved_material_language(self):
         teacher = User.objects.create(
             custom_id="TCH-0012",

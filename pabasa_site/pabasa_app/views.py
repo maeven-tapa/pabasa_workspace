@@ -52,7 +52,7 @@ import re
 import traceback
 from .models import User, Section, Assessment, Material, Practice, Note, Notification, Course, LiveAssessmentSession, HuntStarAward, SchoolCalendar, CalendarEvent
 from .models import OfficialReadingIntegrityOverrideRequest, OfficialReadingIntegrityAuthorization, OfficialReadingOverrideSecurityLockout
-from .reading_material_utils import format_assigned_week_display, parse_assigned_week
+from .reading_material_utils import format_assigned_week_display, format_assigned_weeks_display, parse_assigned_week, parse_assigned_weeks
 from .reading_stt import (
     analyze_reading,
     language_code_for,
@@ -488,6 +488,88 @@ def _assessment_materials_for_student(student=None):
         Q(assessment_kind='crla') & ~Q(is_official_reading=True, is_system_owned=True)
     )
     return queryset.order_by('created_at', 'id')
+
+
+def _material_week_values(material):
+    weeks = []
+    assigned_weeks = getattr(material, 'assigned_weeks', None)
+    if isinstance(assigned_weeks, list):
+        for week in assigned_weeks:
+            try:
+                week_num = int(week)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= week_num <= 10:
+                weeks.append(week_num)
+    assigned_week = getattr(material, 'assigned_week', None)
+    if assigned_week not in (None, ''):
+        try:
+            week_num = int(assigned_week)
+            if 1 <= week_num <= 10:
+                weeks.append(week_num)
+        except (TypeError, ValueError):
+            pass
+    return sorted(set(weeks))
+
+
+def _material_available_for_week(material, current_week):
+    if current_week in (None, ''):
+        return True
+    try:
+        current_week = int(current_week)
+    except (TypeError, ValueError):
+        return True
+    week_values = _material_week_values(material)
+    return not week_values or current_week in week_values
+
+
+def _template_reading_type(template_title):
+    template_title = str(template_title or '').strip()
+    template_map = {
+        'Letter & Sound Matching': 'word',
+        'Sound Detective': 'word',
+        'Match the Letter to Its Sound': 'word',
+        'Clap & Count Syllables': 'word',
+        'Blend the Syllables': 'word',
+        'Picture-Word Matching': 'word',
+        'Decode the Word': 'word',
+        'Word Meaning Match': 'word',
+        'Phrase Reading Practice': 'sentence',
+        'Sentence Reading Practice': 'sentence',
+        'Fluency Reading': 'paragraph',
+        'Story Reading': 'paragraph',
+        "5W's Story Questions": 'paragraph',
+        'Retell the Story': 'paragraph',
+        'Story Response': 'paragraph',
+    }
+    return template_map.get(template_title, 'word')
+
+
+def _student_current_week(request=None, student=None):
+    candidates = []
+    if request is not None:
+        candidates.extend([
+            request.GET.get('week'),
+            request.GET.get('current_week'),
+            request.session.get('current_week'),
+        ])
+    if student is not None:
+        state = _get_user_state(student)
+        candidates.extend([
+            state.get('current_week'),
+            state.get('week'),
+            state.get('assigned_week'),
+        ])
+    for candidate in candidates:
+        if candidate in (None, ''):
+            continue
+        try:
+            week_num = int(candidate)
+        except (TypeError, ValueError):
+            continue
+        if 1 <= week_num <= 10:
+            return week_num
+    return None
 
 
 def _official_crla_material_for_student(student, assessment_type):
@@ -7420,10 +7502,13 @@ def assessment(request):
 
     workflow['stage'] = stage
 
+    current_week = _student_current_week(request, user)
     materials = _assessment_materials_for_student(user)
     student_assessment_materials = []
     material_map = {}
     for material in materials:
+        if not _material_available_for_week(material, current_week):
+            continue
         key = str(material.assessment_set or material.item_type).strip().lower()
         if key and key not in material_map:
             material_map[key] = material
@@ -11518,6 +11603,8 @@ def get_teacher_courses_api(request):
                     'assigned_sections': [s.class_code for s in m.assigned_sections.all()] if hasattr(m, 'assigned_sections') else [],
                     'assigned_week': m.assigned_week,
                     'assigned_week_display': format_assigned_week_display(m.assigned_week),
+                    'assigned_weeks': _material_week_values(m),
+                    'assigned_weeks_display': format_assigned_weeks_display(_material_week_values(m)),
                     'source_type': getattr(m, 'source_type', 'personal') or 'personal',
                     'material_source': getattr(m, 'source_type', 'personal') or 'personal',
                     'is_shared_material': is_shared_material,
@@ -12309,6 +12396,17 @@ def add_material_to_course(request):
                 return JsonResponse({'success': False, 'error': 'You do not have permission to use this material'}, status=403)
 
         course.materials.add(material)
+        course_section = course.sections.filter(is_active=True).first()
+        if course_section and material.section_id != course_section.id:
+            material.section = course_section
+            update_fields = ['section', 'updated_at']
+            if not material.assigned_sections.filter(id=course_section.id).exists():
+                material.save(update_fields=update_fields)
+                material.assigned_sections.add(course_section)
+            else:
+                material.save(update_fields=update_fields)
+        elif course_section and not material.assigned_sections.filter(id=course_section.id).exists():
+            material.assigned_sections.add(course_section)
         # If material has an attached Assessment, also link it for convenience
         if getattr(material, 'assessment', None):
             try:
@@ -14147,6 +14245,8 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
         'assigned_sections': [section.class_code] if section else [s.class_code for s in material.assigned_sections.all()],
         'assigned_week': material.assigned_week,
         'assigned_week_display': format_assigned_week_display(material.assigned_week),
+        'assigned_weeks': _material_week_values(material),
+        'assigned_weeks_display': format_assigned_weeks_display(_material_week_values(material)),
         'content_json': content_json,
         'randomize_order': bool(content_json.get('randomize_order')),
         'student_access': bool(getattr(material, 'student_access', False)),
@@ -14256,12 +14356,11 @@ def add_reading_material(request):
     try:
         data = json.loads(request.body)
         title        = (data.get('title') or '').strip()
-        content      = (data.get('content') or '').strip()
         requested_reading_type = (data.get('reading_type') or '').strip().lower()
         status       = (data.get('status') or 'published').strip()          # published | draft | scheduled
         requested_usage_type = (data.get('usage_type') or 'assessment').strip()        # practice | assessment | both
         requested_source_type = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
-        source_type = requested_source_type if requested_source_type in ('personal', 'shared') else 'shared'
+        source_type = requested_source_type if requested_source_type in ('personal', 'shared', 'template') else 'shared'
         class_code   = (data.get('class_code') or '').strip()
         language     = Material.normalize_language_value(data.get('language'))
         requested_assessment_kind = str(data.get('assessment_kind') or 'regular').strip().lower()
@@ -14269,12 +14368,47 @@ def add_reading_material(request):
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
         assigned_week_raw = data.get('assigned_week')
         assigned_week, week_error = parse_assigned_week(assigned_week_raw)
+        assigned_weeks_raw = data.get('assigned_weeks')
+        assigned_weeks, assigned_weeks_error = parse_assigned_weeks(assigned_weeks_raw, minimum=1, maximum=10)
         source_material_id = data.get('source_material_id')
         randomize_order_raw = data.get('randomize_order')
         randomize_order = str(randomize_order_raw).strip().lower() in ('1', 'true', 'yes', 'on')
         student_access = str(data.get('student_access', False)).strip().lower() in ('1', 'true', 'yes', 'on')
+        template_payload = None
+        content = (data.get('content') or '').strip()
+        if source_type == 'template':
+            try:
+                template_payload = json.loads(content) if content else {}
+            except Exception:
+                template_payload = {}
+            if isinstance(template_payload, dict):
+                if isinstance(template_payload.get('items'), list):
+                    template_items = template_payload.get('items') or []
+                    item_lines = []
+                    for item in template_items:
+                        if isinstance(item, dict):
+                            item_lines.append(' | '.join(str(value).strip() for value in item.values() if str(value).strip()))
+                        elif item is not None:
+                            item_lines.append(str(item).strip())
+                    content = '\n'.join(line for line in item_lines if line.strip()) or title
+                else:
+                    content_parts = []
+                    for key, value in template_payload.items():
+                        if key in {'template_title', 'template_lesson', 'template_type', 'template_source'}:
+                            continue
+                        if isinstance(value, list):
+                            joined = ', '.join(str(entry).strip() for entry in value if str(entry).strip())
+                            if joined:
+                                content_parts.append(f"{key}: {joined}")
+                        elif isinstance(value, dict):
+                            nested = ', '.join(f"{nested_key}: {nested_value}" for nested_key, nested_value in value.items() if str(nested_value).strip())
+                            if nested:
+                                content_parts.append(f"{key}: {nested}")
+                        elif str(value).strip():
+                            content_parts.append(f"{key}: {str(value).strip()}")
+                    content = '\n'.join(content_parts) or title
 
-        if source_type not in ('personal', 'shared'):
+        if source_type not in ('personal', 'shared', 'template'):
             source_type = 'shared'
 
         # Teachers may only create assessment materials from this endpoint.
@@ -14292,12 +14426,14 @@ def add_reading_material(request):
             errors['content'] = 'Material content is required.'
         if status not in ('published', 'draft', 'scheduled'):
             errors['status'] = 'Status is required.'
-        if source_type and source_type not in ('personal', 'shared'):
+        if source_type and source_type not in ('personal', 'shared', 'template'):
             errors['source_type'] = 'Invalid source type.'
         if status == 'scheduled' and not scheduled_at_str:
             errors['scheduled_at'] = 'Scheduled date & time is required.'
         if week_error:
             errors['assigned_week'] = week_error
+        if assigned_weeks_error:
+            errors['assigned_weeks'] = assigned_weeks_error
         if assessment_kind == 'crla':
             crla_block = _crla_creation_block_message(teacher_user=teacher_user)
             if crla_block:
@@ -14307,7 +14443,8 @@ def add_reading_material(request):
             logger.warning(f"add_reading_material validation failed: {errors}")
             return JsonResponse({'success': False, 'errors': errors}, status=400)
 
-        reading_type = _detect_material_type(content, requested_reading_type)
+        template_title = str(data.get('template_title') or '').strip()
+        reading_type = _template_reading_type(template_title) if source_type == 'template' else _detect_material_type(content, requested_reading_type)
         tokens = _split_material_content(content, reading_type, requested_reading_type)
 
         if not teacher_user or teacher_user.role != 'teacher':
@@ -14420,7 +14557,16 @@ def add_reading_material(request):
                 title=material_title,
                 prompt_text=(tokens[0] if tokens else material_title) or material_title,
                 content_text=content,
-                content_json={'items': tokens, 'language': language, 'randomize_order': randomize_order},
+                content_json={
+                    'items': tokens,
+                    'language': language,
+                    'randomize_order': randomize_order,
+                    'template_source': 'template' if source_type == 'template' else '',
+                    'template_title': data.get('template_title') or '',
+                    'template_lesson': data.get('template_lesson') or '',
+                    'assigned_weeks': assigned_weeks if assigned_weeks else ([assigned_week] if assigned_week else []),
+                    'source_type': source_type,
+                },
                 type=usage_type,
                 assessment_kind=assessment_kind,
                 source_type=source_type,
@@ -14428,6 +14574,7 @@ def add_reading_material(request):
                 scheduled_at=scheduled_at if status == 'scheduled' else None,
                 difficulty_level='',
                 assigned_week=assigned_week,
+                assigned_weeks=assigned_weeks if assigned_weeks else ([assigned_week] if assigned_week else []),
                 student_access=student_access,
                 is_active=(status in ['published', 'scheduled'])
             )
@@ -14446,7 +14593,7 @@ def add_reading_material(request):
                 source_type,
                 status,
             )
-            return JsonResponse({
+            response_payload = {
                 'success': True,
                 'message': 'Reading material(s) created successfully.',
                 'material_ids': created_ids,
@@ -14456,7 +14603,8 @@ def add_reading_material(request):
                 'type': reading_type,
                 'status': status,
                 'created_at': m.created_at.isoformat() if getattr(m, 'created_at', None) else None,
-            })
+            }
+            return HttpResponse(json.dumps(response_payload, default=str), content_type='application/json', status=200)
 
     except json.JSONDecodeError as e:
         logger.error(f"add_reading_material JSON decode error: {e}")
@@ -14510,7 +14658,7 @@ def teacher_update_material(request):
             material.student_access = str(data.get('student_access')).strip().lower() in ('1', 'true', 'yes', 'on')
 
         source_type = (data.get('source_type') or material.source_type).strip().lower()
-        if source_type in ('personal', 'shared'):
+        if source_type in ('personal', 'shared', 'template'):
             material.source_type = source_type
 
         if requested_assessment_kind == 'crla' and previous_assessment_kind != 'crla':
@@ -14524,6 +14672,13 @@ def teacher_update_material(request):
             if week_error:
                 return JsonResponse({'success': False, 'errors': {'assigned_week': week_error}}, status=400)
             material.assigned_week = assigned_week
+        if 'assigned_weeks' in data:
+            assigned_weeks, weeks_error = parse_assigned_weeks(data.get('assigned_weeks'), minimum=1, maximum=10)
+            if weeks_error:
+                return JsonResponse({'success': False, 'errors': {'assigned_weeks': weeks_error}}, status=400)
+            material.assigned_weeks = assigned_weeks
+            if assigned_weeks and not material.assigned_week:
+                material.assigned_week = assigned_weeks[0]
         
         material.is_active = (material.status in ['published', 'scheduled'])
         # current teacher for any potential Assessment creation
