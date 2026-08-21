@@ -8142,12 +8142,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         <div class="template-builder-section">
                                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                                                 <h6 class="mb-0 fw-bold">Preview Activity</h6>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="templatePreviewBtn">
-                                                    <i class="bi bi-eye me-1"></i>Preview
-                                                </button>
                                             </div>
                                             <div id="templatePreviewPanel" class="template-preview-panel text-muted small">
-                                                Fill in the fields above to preview the activity.
+                                                Select content above to preview the activity.
                                             </div>
                                         </div>
 
@@ -13633,7 +13630,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const templateDynamicFields = document.getElementById('templateDynamicFields');
         const templateWeeksGrid = document.getElementById('templateWeeksGrid');
         const templatePreviewPanel = document.getElementById('templatePreviewPanel');
-        const templatePreviewBtn = document.getElementById('templatePreviewBtn');
         const templateValidationError = document.getElementById('templateValidationError');
         const templateSaveBtn = document.getElementById('templateSaveBtn');
         const templateSaveAssignBtn = document.getElementById('templateSaveAssignBtn');
@@ -13658,9 +13654,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Decode the Word': { lesson: 'Word Decoding', hint: 'Break a word into sounds and decode it.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'prompt', label: 'Decoding prompt', type: 'text', placeholder: 'Say the sounds then blend them.' }], addLabel: 'Add Item' },
             'Word Meaning Match': { lesson: 'Vocabulary Development', hint: 'Connect words with meanings, pictures, or phrases.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'meaning', label: 'Meaning / picture / phrase', type: 'text' }], addLabel: 'Add Item' },
             'Phrase Reading Practice': { lesson: 'Phrase Reading', hint: 'Create short phrases for reading practice.', fields: [{ key: 'phrase', label: 'Phrase', type: 'text' }], addLabel: 'Add Phrase' },
-            'Sentence Reading Practice': { lesson: 'Sentence Reading', hint: 'Create complete sentences for reading practice.', fields: [{ key: 'sentence', label: 'Sentence', type: 'text' }], addLabel: 'Add Sentence' },
+            'Sentence Reading Practice': { lesson: 'Sentence Reading', hint: 'Select a prescribed sentence set for reading practice.', fields: [], addLabel: 'Select Sentence Set' },
             'Fluency Reading': { lesson: 'Reading Fluency', hint: 'Provide passages for smooth, accurate reading.', fields: [{ key: 'passage', label: 'Reading passage', type: 'textarea' }], addLabel: 'Add Passage' },
-            'Story Reading': { lesson: 'Story Reading', hint: 'Add a story title and passage text.', fields: [{ key: 'storyTitle', label: 'Story title', type: 'text' }, { key: 'storyText', label: 'Story/passage text', type: 'textarea' }], addLabel: 'Add Story' },
+            'Story Reading': { lesson: 'Story Reading', hint: 'Select a prescribed story for reading practice.', fields: [], addLabel: 'Select Story' },
             "5W's Story Questions": { lesson: 'Reading Comprehension', hint: 'Build questions around a story or passage.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'question', label: 'Question', type: 'text' }, { key: 'questionType', label: 'Question type / 5W category', type: 'select', options: ['Who', 'What', 'When', 'Where', 'Why', 'How'] }, { key: 'answer', label: 'Answer or answer choices', type: 'textarea' }], addLabel: 'Add Question' },
             'Retell the Story': { lesson: 'Story Retelling', hint: 'Guide students to retell the story in their own words.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'instructions', label: 'Retelling instructions', type: 'textarea' }, { key: 'guideQuestions', label: 'Optional guide questions', type: 'textarea' }], addLabel: 'Add Prompt' },
             'Story Response': { lesson: 'Response to Story', hint: 'Prompt students for a response or reflection.', fields: [{ key: 'story', label: 'Story/passage', type: 'textarea' }, { key: 'prompt', label: 'Response question/prompt', type: 'textarea' }, { key: 'guidance', label: 'Optional response guidance', type: 'textarea' }], addLabel: 'Add Prompt' }
@@ -13694,6 +13690,52 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const TEMPLATE_ITEM_TITLE_KEYS = {
             'Phrase Reading Practice': 'phrase',
             'Sentence Reading Practice': 'sentence'
+        };
+        const PHRASE_READING_SYSTEM_SETS = {
+            Tagalog: [
+                { key: 'tagalog-phrase-1', label: 'Tagalog Phrase 1', items: ['Sina Tina at Tim', 'May bola si', 'ang tuta', 'Sina Tina at Tim', 'May bola si', 'salamin ni Ana', 'may mais si', 'mais at mani', 'salamin ni Ana', 'may mais si'] },
+                { key: 'tagalog-phrase-2', label: 'Tagalog Phrase 2', items: ['Ang walis may', 'Sawa sa lawa', 'Yaman sa', 'May kawa', 'Ang yoyo', 'Nasa mesa', 'Si tatay ay', 'Sina nanay at tatay', 'Matamis ang', 'Yema ni'] },
+                { key: 'tagalog-phrase-3', label: 'Tagalog Phrase 3 - Mga Gawain', items: ['Si Ana ay nagbasa', 'Si Ben ay tumalon', 'Si Lito ay tumakbo', 'Si Mia ay kumain', 'Si Ana ay nagsulat', 'Si Ben ay naglakad', 'Si Lito ay naglaro', 'Si Mia ay umawit', 'Si Ana ay gumuhit', 'Si Ben ay natulog'] },
+                { key: 'tagalog-phrase-4', label: 'Tagalog Phrase 4 - Mga Tao at Bagay', items: ['si Nanay', 'si Tatay', 'si Ana', 'ang bata', 'ang aso', 'ang pusa', 'ang bola', 'ang libro', 'ang mesa', 'ang bahay'] },
+                { key: 'tagalog-phrase-5', label: 'Tagalog Phrase 5 - Mga Paglalarawan', items: ['malaking aso', 'maliit na pusa', 'pulang bola', 'asul na bag', 'magandang bulaklak', 'mataas na puno', 'mabait na bata', 'maliit na bahay', 'mahabang lapis', 'bagong libro'] },
+                { key: 'tagalog-phrase-6', label: 'Tagalog Phrase 6 - Karaniwang Parirala', items: ['magandang umaga', 'magandang gabi', 'salamat po', 'opo, Nanay', 'opo, Tatay', 'halika dito', 'umupo ka', 'tumayo ka', 'buksan ang pinto', 'isara ang pinto'] },
+                { key: 'tagalog-phrase-7', label: 'Tagalog Phrase 7 - Bahay at Paaralan', items: ['sa bahay', 'sa paaralan', 'sa silid-aralan', 'sa mesa', 'sa upuan', 'sa harap ng bahay', 'sa tabi ng puno', 'ang aking bag', 'ang aking libro', 'ang aking lapis'] },
+                { key: 'tagalog-phrase-8', label: 'Tagalog Phrase 8 - Pagkain', items: ['may kanin', 'may gatas', 'may tubig', 'may tinapay', 'may itlog', 'kumain ng kanin', 'uminom ng tubig', 'kumain ng tinapay', 'mainit na pagkain', 'masarap na pagkain'] }
+            ],
+            English: [
+                { key: 'english-phrase-1', label: 'English Phrase 1 - Basic Phrases', items: ['the big dog', 'a red ball', 'my little cat', 'the blue bag', 'a small house', 'the tall tree', 'the red hat', 'a happy boy', 'three birds', 'the green book'] },
+                { key: 'english-phrase-2', label: 'English Phrase 2 - Everyday Phrases', items: ['good morning', 'come here', 'sit down', 'open the door', 'wash your hands', 'drink some water', 'read the book', 'go to school', 'eat your lunch', 'close the door'] },
+                { key: 'english-phrase-3', label: 'English Phrase 3 - Descriptive Phrases', items: ['a little girl', 'a big brown dog', 'the yellow flower', 'a tall green tree', 'three small birds', 'a happy little boy', 'a red school bag', 'the blue toy car', 'a clean white shirt', 'a warm sunny day'] },
+                { key: 'english-phrase-4', label: 'English Phrase 4 - People and Things', items: ['the little boy', 'the young girl', 'my mother', 'my father', 'the teacher', 'the school bag', 'the story book', 'the red pencil', 'the small table', 'the new chair'] },
+                { key: 'english-phrase-5', label: 'English Phrase 5 - Actions', items: ['the boy runs', 'the girl reads', 'the baby sleeps', 'the dog jumps', 'the cat sits', 'the boy eats', 'the girl writes', 'the children play', 'the teacher reads', 'the baby smiles'] },
+                { key: 'english-phrase-6', label: 'English Phrase 6 - School', items: ['at school', 'in the classroom', 'on the table', 'in my bag', 'my school book', 'my red pencil', 'the school door', 'the reading book', 'a clean classroom', 'a new school bag'] }
+            ]
+        };
+        const SENTENCE_READING_SYSTEM_SETS = {
+            Tagalog: [
+                { key: 'tagalog-sentence-1', label: 'Sentence Reading 1', items: ['Ang aso ay isasama.', 'Si Mimi ay sasama sa ama.'] },
+                { key: 'tagalog-sentence-2', label: 'Sentence Reading 2', items: ['Uubo si Bibo.', 'Bibo ang bibe.', 'Ibaba ang babae.', 'Buo ang bao.'] },
+                { key: 'tagalog-sentence-3', label: 'Sentence Reading 3', items: ['Si Lili ay may laso.', 'Ang laso ay Lila.', 'Ang laso ay luma.', 'Baka kay lola ang laso ni Lili.', 'May keso sa mesa.', 'May kuko ang isa.', 'Ang lata ni Koko.'] },
+                { key: 'tagalog-sentence-4', label: 'Sentence Reading 4', items: ['May mais si Tim.', 'Sina Tina at Tim ay may tuta.', 'Nakita ni Tina ang salamin ni Ana.', 'Mais at mani ang baon ni Tina.', 'Si ate ay sasama kay tita sa misa.'] },
+                { key: 'tagalog-sentence-5', label: 'Sentence Reading 5', items: ['Si Tala ay may yoyo.', 'Matamis ang yema ni Tim.', 'May kawa sa mesa nila Tala.', 'Ang walis tambo ay nasa mesa.', 'Sina nanay at tatay ay mayaman.', 'Sasama sina nanay at tatay kay Tala.'] }
+            ]
+        };
+        const STORY_READING_SYSTEM_STORIES = {
+            English: [
+                {
+                    key: 'story-1-ben-and-the-little-pet',
+                    title: 'Ben and the Little Pet',
+                    label: 'Story 1 — Ben and the Little Pet',
+                    sentences: [
+                        'Ben has a pet.',
+                        'It is a little pet.',
+                        'The pet is on a mat.',
+                        'Ben pats the pet.',
+                        'The pet is happy.',
+                        'Ben is happy too.'
+                    ]
+                }
+            ]
         };
         let activeTemplateActivity = null;
         let activeTemplateItemEditIndex = null;
@@ -13796,6 +13838,186 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return TEMPLATE_ITEM_LIST_TYPES.has(title);
         }
 
+        function isPhraseReadingTemplate(title) {
+            return title === 'Phrase Reading Practice';
+        }
+
+        function isSentenceReadingTemplate(title) {
+            return title === 'Sentence Reading Practice';
+        }
+
+        function normalizeSentenceReadingLanguage(language) {
+            return language === 'Filipino' ? 'Tagalog' : language;
+        }
+
+        function isStoryReadingTemplate(title) {
+            return title === 'Story Reading';
+        }
+
+        function getPhraseReadingLanguage() {
+            const raw = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || 'Tagalog';
+            return raw === 'Filipino' ? 'Tagalog' : raw;
+        }
+
+        function getPhraseReadingSets(language) {
+            return PHRASE_READING_SYSTEM_SETS[language] || PHRASE_READING_SYSTEM_SETS.Tagalog;
+        }
+
+        function getSentenceReadingSets(language) {
+            return SENTENCE_READING_SYSTEM_SETS[normalizeSentenceReadingLanguage(language)] || [];
+        }
+
+        function updateSentenceReadingLanguageAvailability() {
+            const languageRadios = Array.from(document.querySelectorAll('input[name="templateLanguage"]'));
+            const englishRadio = languageRadios.find(input => input.value === 'English');
+            const tagalogRadio = languageRadios.find(input => input.value === 'Filipino');
+            const englishAvailable = getSentenceReadingSets('English').length > 0;
+            const tagalogAvailable = getSentenceReadingSets('Tagalog').length > 0;
+            if (englishRadio) {
+                englishRadio.disabled = !englishAvailable;
+                englishRadio.parentElement?.classList.toggle('opacity-50', !englishAvailable);
+                englishRadio.parentElement?.setAttribute('title', englishAvailable ? '' : 'No prescribed English sentence sets available yet.');
+            }
+            if (tagalogRadio) {
+                tagalogRadio.disabled = !tagalogAvailable;
+                tagalogRadio.parentElement?.classList.toggle('opacity-50', !tagalogAvailable);
+                tagalogRadio.parentElement?.setAttribute('title', tagalogAvailable ? '' : 'No prescribed Tagalog sentence sets available yet.');
+            }
+        }
+
+        function syncSentenceReadingItems() {
+            if (!activeTemplateActivity || !isSentenceReadingTemplate(activeTemplateActivity.templateTitle)) return;
+            const language = normalizeSentenceReadingLanguage(Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || 'Tagalog');
+            const sets = getSentenceReadingSets(language);
+            const current = activeTemplateActivity.sentenceReading || {};
+            const selectedSet = sets.find(set => set.key === current.setKey) || sets[0] || null;
+            const fallbackIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
+            const selectedIndices = Array.isArray(current.selectedIndices)
+                ? current.selectedIndices.filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length)
+                : fallbackIndices;
+            activeTemplateActivity.sentenceReading = {
+                language,
+                setKey: selectedSet?.key || '',
+                selectedIndices
+            };
+            activeTemplateActivity.items = selectedSet
+                ? selectedIndices.map(index => ({
+                    sentence: selectedSet.items[index],
+                    sourceSetKey: selectedSet.key,
+                    sourceLanguage: language,
+                    sourceIndex: index
+                }))
+                : [];
+        }
+
+        function setSentenceReadingSelection(selectedIndices) {
+            if (!activeTemplateActivity || !isSentenceReadingTemplate(activeTemplateActivity.templateTitle)) return;
+            const language = activeTemplateActivity.sentenceReading?.language || 'Tagalog';
+            const sets = getSentenceReadingSets(language);
+            const selectedSet = sets.find(set => set.key === activeTemplateActivity.sentenceReading?.setKey) || sets[0] || null;
+            const normalized = Array.from(new Set((selectedIndices || []).map(index => Number(index)).filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length))).sort((a, b) => a - b);
+            activeTemplateActivity.sentenceReading = {
+                language,
+                setKey: selectedSet?.key || '',
+                selectedIndices: normalized
+            };
+            syncSentenceReadingItems();
+        }
+
+        function getStoryReadingStories(language) {
+            return STORY_READING_SYSTEM_STORIES[language] || [];
+        }
+
+        function updateStoryReadingLanguageAvailability() {
+            const languageRadios = Array.from(document.querySelectorAll('input[name="templateLanguage"]'));
+            const languageLabels = languageRadios.map(input => input.nextElementSibling).filter(Boolean);
+            const englishRadio = languageRadios.find(input => input.value === 'English');
+            const filipinoRadio = languageRadios.find(input => input.value === 'Filipino');
+            const englishAvailable = getStoryReadingStories('English').length > 0;
+            const filipinoAvailable = getStoryReadingStories('Filipino').length > 0;
+            languageRadios.forEach(input => {
+                input.disabled = false;
+                input.parentElement?.classList.remove('opacity-50');
+                input.parentElement?.setAttribute('title', '');
+            });
+            if (englishRadio) {
+                englishRadio.disabled = !englishAvailable;
+                englishRadio.parentElement?.classList.toggle('opacity-50', !englishAvailable);
+                englishRadio.parentElement?.setAttribute('title', englishAvailable ? '' : 'No prescribed English stories available.');
+            }
+            if (filipinoRadio) {
+                filipinoRadio.disabled = !filipinoAvailable;
+                filipinoRadio.parentElement?.classList.toggle('opacity-50', !filipinoAvailable);
+                filipinoRadio.parentElement?.setAttribute('title', filipinoAvailable ? '' : 'No prescribed Filipino stories available yet.');
+            }
+            if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                const checked = languageRadios.find(input => input.checked && !input.disabled);
+                if (!checked && englishRadio && !englishRadio.disabled) {
+                    englishRadio.checked = true;
+                }
+            }
+            void languageLabels;
+        }
+
+        function syncStoryReadingSelection() {
+            if (!activeTemplateActivity || !isStoryReadingTemplate(activeTemplateActivity.templateTitle)) return;
+            const language = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || 'English';
+            const stories = getStoryReadingStories(language);
+            const current = activeTemplateActivity.storyReading || {};
+            const selectedStory = stories.find(story => story.key === current.storyKey) || stories[0] || null;
+            activeTemplateActivity.storyReading = {
+                language,
+                storyKey: selectedStory?.key || ''
+            };
+            activeTemplateActivity.content = selectedStory
+                ? {
+                    storyTitle: selectedStory.title,
+                    storyText: selectedStory.sentences.join('\n\n'),
+                    sourceLanguage: language,
+                    sourceStoryKey: selectedStory.key
+                }
+                : {};
+        }
+
+        function syncPhraseReadingItems() {
+            if (!activeTemplateActivity || !isPhraseReadingTemplate(activeTemplateActivity.templateTitle)) return;
+            const language = getPhraseReadingLanguage();
+            const sets = getPhraseReadingSets(language);
+            const current = activeTemplateActivity.phraseReading || {};
+            const selectedSet = sets.find(set => set.key === current.setKey) || sets[0] || null;
+            const fallbackIndices = selectedSet ? selectedSet.items.map((_, index) => index) : [];
+            const selectedIndices = Array.isArray(current.selectedIndices)
+                ? current.selectedIndices.filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length)
+                : fallbackIndices;
+            activeTemplateActivity.phraseReading = {
+                language,
+                setKey: selectedSet?.key || '',
+                selectedIndices
+            };
+            activeTemplateActivity.items = selectedSet
+                ? selectedIndices.map(index => ({
+                    phrase: selectedSet.items[index],
+                    sourceSetKey: selectedSet.key,
+                    sourceLanguage: language,
+                    sourceIndex: index
+                }))
+                : [];
+        }
+
+        function setPhraseReadingSelection(selectedIndices) {
+            if (!activeTemplateActivity || !isPhraseReadingTemplate(activeTemplateActivity.templateTitle)) return;
+            const language = activeTemplateActivity.phraseReading?.language || getPhraseReadingLanguage();
+            const sets = getPhraseReadingSets(language);
+            const selectedSet = sets.find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || sets[0] || null;
+            const normalized = Array.from(new Set((selectedIndices || []).map(index => Number(index)).filter(index => Number.isInteger(index) && selectedSet && index >= 0 && index < selectedSet.items.length))).sort((a, b) => a - b);
+            activeTemplateActivity.phraseReading = {
+                language,
+                setKey: selectedSet?.key || '',
+                selectedIndices: normalized
+            };
+            syncPhraseReadingItems();
+        }
+
         function getTemplateItemTitleField(title) {
             return TEMPLATE_ITEM_TITLE_KEYS[title] || null;
         }
@@ -13851,6 +14073,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function renderTemplateItemList(title) {
+            if (isPhraseReadingTemplate(title)) return;
+            if (isStoryReadingTemplate(title)) return;
+            if (isSentenceReadingTemplate(title)) return;
             const container = document.getElementById('templateItemList');
             if (!container || !activeTemplateActivity) return;
             const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
@@ -13881,6 +14106,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function renderTemplateItemEditor(title, values = {}) {
+            if (isPhraseReadingTemplate(title)) return;
+            if (isStoryReadingTemplate(title)) return;
+            if (isSentenceReadingTemplate(title)) return;
             const def = getTemplateDefinition(title);
             const titleFieldKey = getTemplateItemTitleField(title);
             const itemFields = getTemplateItemFields(title);
@@ -13918,6 +14146,95 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 </div>
             `;
             renderTemplateItemList(title);
+        }
+
+        function renderPhraseReadingSelector(title) {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            syncPhraseReadingItems();
+            const language = activeTemplateActivity.phraseReading?.language || getPhraseReadingLanguage();
+            const sets = getPhraseReadingSets(language);
+            const selectedSet = sets.find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || sets[0] || null;
+            const selectedIndices = new Set(activeTemplateActivity.phraseReading?.selectedIndices || []);
+            const allSelected = Boolean(selectedSet && selectedSet.items.length && selectedIndices.size === selectedSet.items.length);
+            templateDynamicFields.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="alert alert-info border-0 small mb-0">
+                            Select a prescribed phrase set. Teachers can choose content, but cannot create or edit the phrases.
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Activity Content</label>
+                        <div class="small text-muted mb-2">Select a prescribed phrase set.</div>
+                        <div class="row g-3">
+                            ${sets.map(set => `
+                                <div class="col-12 col-lg-6">
+                                    <div class="border rounded-3 p-3 h-100 ${selectedSet?.key === set.key ? 'border-primary bg-light' : ''}">
+                                        <div class="d-flex align-items-start justify-content-between gap-3">
+                                            <div>
+                                                <div class="fw-bold">${escapeHtml(set.label)}</div>
+                                                <div class="text-muted small">${set.items.length} items</div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm ${selectedSet?.key === set.key ? 'btn-primary' : 'btn-outline-primary'}" data-phrase-set-select="${escapeAttr(set.key)}">Select</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ${selectedSet ? `
+                        <div class="col-12">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <h6 class="mb-0 fw-bold">Selected Prescribed Items</h6>
+                                <small class="text-muted">Choose the whole set or individual items.</small>
+                            </div>
+                            <div class="border rounded-3 p-3 bg-white">
+                                <label class="d-flex align-items-center gap-2 py-1 fw-semibold">
+                                    <input type="checkbox" class="form-check-input mt-0" data-phrase-select-all ${allSelected ? 'checked' : ''}>
+                                    <span>Select All (${selectedSet.items.length} items)</span>
+                                </label>
+                                <div class="border-top my-2"></div>
+                                ${selectedSet.items.map((item, index) => `
+                                    <label class="d-flex align-items-center gap-2 py-1">
+                                        <input type="checkbox" class="form-check-input mt-0" data-phrase-item-index="${index}" ${selectedIndices.has(index) ? 'checked' : ''}>
+                                        <span>${index + 1}. ${escapeHtml(item)}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            Array.from(templateDynamicFields.querySelectorAll('[data-phrase-set-select]')).forEach(button => {
+                button.addEventListener('click', () => {
+                    activeTemplateActivity.phraseReading = {
+                        language,
+                        setKey: button.getAttribute('data-phrase-set-select') || '',
+                        selectedIndices: []
+                    };
+                    syncPhraseReadingItems();
+                    renderTemplateDynamicFields(title);
+                    renderTemplatePreview();
+                });
+            });
+            Array.from(templateDynamicFields.querySelectorAll('[data-phrase-item-index]')).forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const index = Number(checkbox.getAttribute('data-phrase-item-index'));
+                    const current = new Set(activeTemplateActivity.phraseReading?.selectedIndices || []);
+                    if (checkbox.checked) current.add(index);
+                    else current.delete(index);
+                    setPhraseReadingSelection(Array.from(current).sort((a, b) => a - b));
+                    renderTemplateDynamicFields(title);
+                    renderTemplatePreview();
+                });
+            });
+            const selectAllCheckbox = templateDynamicFields.querySelector('[data-phrase-select-all]');
+            selectAllCheckbox?.addEventListener('change', () => {
+                const indices = selectAllCheckbox.checked && selectedSet ? selectedSet.items.map((_, index) => index) : [];
+                setPhraseReadingSelection(indices);
+                renderTemplateDynamicFields(title);
+                renderTemplatePreview();
+            });
         }
 
         function getTemplateDefinition(title) {
@@ -13965,6 +14282,79 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return Array.from(templateWeeksGrid?.querySelectorAll('input[type="checkbox"]:checked') || []).map(input => input.value);
         }
 
+        function getTemplateContentSelectionSummary() {
+            if (!activeTemplateActivity) return { title: '', meta: '', body: [], emptyMessage: 'Select content to see a preview.' };
+
+            const templateTitle = activeTemplateActivity.templateTitle;
+            const language = isStoryReadingTemplate(templateTitle)
+                ? (activeTemplateActivity.storyReading?.language || activeTemplateActivity.language || 'English')
+                : isSentenceReadingTemplate(templateTitle)
+                ? (activeTemplateActivity.sentenceReading?.language || activeTemplateActivity.language || 'Tagalog')
+                : isPhraseReadingTemplate(templateTitle)
+                ? (activeTemplateActivity.phraseReading?.language || activeTemplateActivity.language || 'Tagalog')
+                : activeTemplateActivity.language || '';
+
+            if (isPhraseReadingTemplate(templateTitle)) {
+                const selectedSet = getPhraseReadingSets(language).find(set => set.key === activeTemplateActivity.phraseReading?.setKey) || null;
+                const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+                return {
+                    title: selectedSet?.label || activeTemplateActivity.title || 'Phrase Reading',
+                    meta: `${language} · Phrase Reading`,
+                    body: items.map(item => item.phrase || '').filter(Boolean),
+                    emptyMessage: 'No phrases selected yet.'
+                };
+            }
+
+            if (isSentenceReadingTemplate(templateTitle)) {
+                const selectedSet = getSentenceReadingSets(language).find(set => set.key === activeTemplateActivity.sentenceReading?.setKey) || null;
+                const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+                return {
+                    title: selectedSet?.label || activeTemplateActivity.title || 'Sentence Reading',
+                    meta: `${language} · Sentence Reading`,
+                    body: items.map(item => item.sentence || '').filter(Boolean),
+                    emptyMessage: 'No sentences selected yet.'
+                };
+            }
+
+            if (isStoryReadingTemplate(templateTitle)) {
+                const selectedStory = getStoryReadingStories(language).find(story => story.key === activeTemplateActivity.storyReading?.storyKey) || null;
+                const passage = (selectedStory?.sentences || []).join(' ').replace(/\s+/g, ' ').trim();
+                return {
+                    title: selectedStory?.title || activeTemplateActivity.title || 'Story Reading',
+                    meta: `${language} · Story Reading`,
+                    body: passage ? [passage] : [],
+                    emptyMessage: 'No story selected yet.'
+                };
+            }
+
+            if (isTemplateItemListType(templateTitle)) {
+                const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+                const body = items.map((item, index) => {
+                    const preview = getTemplateItemPreview(item, templateTitle);
+                    return preview ? `${index + 1}. ${preview}` : '';
+                }).filter(Boolean);
+                return {
+                    title: activeTemplateActivity.title || templateTitle,
+                    meta: `${language} · ${getTemplateDefinition(templateTitle)?.lesson || templateTitle}`,
+                    body,
+                    emptyMessage: 'No items selected yet.'
+                };
+            }
+
+            const values = {};
+            Array.from(templateDynamicFields?.querySelectorAll('.template-content-field') || []).forEach(field => {
+                const key = field.dataset.fieldKey;
+                values[key] = field.type === 'file' ? (field.files?.[0]?.name || '') : field.value.trim();
+            });
+            const body = Object.entries(values).map(([key, value]) => value ? `${key}: ${value}` : '').filter(Boolean);
+            return {
+                title: activeTemplateActivity.title || templateTitle,
+                meta: `${language} · ${getTemplateDefinition(templateTitle)?.lesson || templateTitle}`,
+                body,
+                emptyMessage: 'Select content to see a preview.'
+            };
+        }
+
         function renderTemplateDynamicFields(title, values = {}) {
             if (!templateDynamicFields) return;
             const def = getTemplateDefinition(title);
@@ -13972,6 +14362,22 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (templateBuilderSubtitle) templateBuilderSubtitle.textContent = `${title} · Lesson: ${def.lesson}`;
             if (templateBuilderLessonPill) templateBuilderLessonPill.textContent = def.lesson;
             if (templateActivityContentHint) templateActivityContentHint.textContent = def.hint;
+            updateStoryReadingLanguageAvailability();
+            updateSentenceReadingLanguageAvailability();
+            if (isPhraseReadingTemplate(title)) {
+                renderPhraseReadingSelector(title);
+                return;
+            }
+            if (isStoryReadingTemplate(title)) {
+                syncStoryReadingSelection();
+                renderStoryReadingSelector(title);
+                return;
+            }
+            if (isSentenceReadingTemplate(title)) {
+                syncSentenceReadingItems();
+                renderSentenceReadingSelector(title);
+                return;
+            }
             if (isTemplateItemListType(title)) {
                 renderTemplateItemEditor(title, values);
                 return;
@@ -13998,24 +14404,172 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function renderTemplatePreview() {
             if (!templatePreviewPanel || !activeTemplateActivity) return;
-            const content = isTemplateItemListType(activeTemplateActivity.templateTitle)
-                ? { items: Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [] }
-                : (() => {
-                    const block = {};
-                    Array.from(templateDynamicFields?.querySelectorAll('.template-content-field') || []).forEach(field => {
-                        const key = field.dataset.fieldKey;
-                        block[key] = field.type === 'file' ? (field.files?.[0]?.name || '') : field.value;
-                    });
-                    return block;
-                })();
+            const summary = getTemplateContentSelectionSummary();
             const weeks = getTemplateWeeks();
             templatePreviewPanel.innerHTML = `
-                <div class="fw-bold mb-1">${escapeHtml(activeTemplateActivity.title)}</div>
-                <div class="small text-muted mb-2">${escapeHtml(activeTemplateActivity.language)} · ${escapeHtml(activeTemplateActivity.lesson)}</div>
-                <div class="mb-2">${escapeHtml(activeTemplateActivity.instructions)}</div>
+                <div class="fw-bold mb-1">${escapeHtml(summary.title || activeTemplateActivity.title || 'Activity Preview')}</div>
+                <div class="small text-muted mb-2">${escapeHtml(summary.meta || `${activeTemplateActivity.language || ''} · ${activeTemplateActivity.lesson || ''}`)}</div>
+                ${activeTemplateActivity.instructions ? `<div class="mb-2">${escapeHtml(activeTemplateActivity.instructions)}</div>` : ''}
                 <div class="mb-2"><strong>Weeks:</strong> ${weeks.length ? weeks.map(escapeHtml).join(', ') : 'None selected'}</div>
-                <div class="small"><strong>Content:</strong> ${escapeHtml(JSON.stringify(content, null, 2))}</div>
+                ${summary.body.length ? `
+                    <div class="mt-3">
+                        <div class="fw-semibold mb-2">${isStoryReadingTemplate(activeTemplateActivity.templateTitle) ? 'Story' : isSentenceReadingTemplate(activeTemplateActivity.templateTitle) ? 'Sentences' : isPhraseReadingTemplate(activeTemplateActivity.templateTitle) ? 'Phrases' : 'Content'}</div>
+                        ${isStoryReadingTemplate(activeTemplateActivity.templateTitle)
+                            ? `<div class="bg-white border rounded-3 px-3 py-3 lh-lg">${escapeHtml(summary.body[0] || '')}</div>`
+                            : `<div class="d-grid gap-2">
+                                ${summary.body.map((line, index) => `<div class="bg-white border rounded-3 px-3 py-2">${escapeHtml(line) ? `${index + 1}. ${escapeHtml(line)}` : ''}</div>`).join('')}
+                            </div>
+                            ${isSentenceReadingTemplate(activeTemplateActivity.templateTitle) ? `<div class="small text-muted mt-2">${summary.body.length} sentence${summary.body.length === 1 ? '' : 's'} selected</div>` : ''}`
+                        }
+                    </div>
+                ` : `<div class="text-muted small">${escapeHtml(summary.emptyMessage)}</div>`}
             `;
+        }
+
+        function renderStoryReadingSelector(title) {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            const language = activeTemplateActivity.storyReading?.language || 'English';
+            const stories = getStoryReadingStories(language);
+            const selectedStory = stories.find(story => story.key === activeTemplateActivity.storyReading?.storyKey) || stories[0] || null;
+            const passageText = (selectedStory?.sentences || []).join(' ').replace(/\s+/g, ' ').trim();
+            templateDynamicFields.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="alert alert-info border-0 small mb-0">
+                            Select a prescribed story. Teachers can choose content, but cannot create or edit the story.
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Activity Content</label>
+                        <div class="small text-muted mb-2">Select a prescribed story.</div>
+                        ${stories.length ? stories.map(story => `
+                            <div class="border rounded-3 p-3 mb-3 ${selectedStory?.key === story.key ? 'border-primary bg-light' : ''}">
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                                    <div>
+                                        <div class="fw-bold">${escapeHtml(story.label)}</div>
+                                        <div class="text-muted small">${escapeHtml(language)}</div>
+                                        <div class="text-muted small">${story.sentences.length} sentences</div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm ${selectedStory?.key === story.key ? 'btn-primary' : 'btn-outline-primary'}" data-story-select="${escapeAttr(story.key)}">Select</button>
+                                </div>
+                            </div>
+                        `).join('') : `
+                            <div class="alert alert-warning border-0 small mb-0">
+                                No prescribed stories are available for this language yet.
+                            </div>
+                        `}
+                    </div>
+                    ${selectedStory ? `
+                        <div class="col-12">
+                            <div class="border rounded-3 bg-white p-3">
+                                <div class="fw-bold mb-2">${escapeHtml(selectedStory.title)}</div>
+                                <div class="small text-muted mb-2">${escapeHtml(language)} · ${selectedStory.sentences.length} sentences</div>
+                                <div class="mb-0 lh-lg">${escapeHtml(passageText)}</div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            Array.from(templateDynamicFields.querySelectorAll('[data-story-select]')).forEach(button => {
+                button.addEventListener('click', () => {
+                    activeTemplateActivity.storyReading = {
+                        language,
+                        storyKey: button.getAttribute('data-story-select') || ''
+                    };
+                    syncStoryReadingSelection();
+                    renderTemplateDynamicFields(title);
+                    renderTemplatePreview();
+                });
+            });
+        }
+
+        function renderSentenceReadingSelector(title) {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            syncSentenceReadingItems();
+            const language = activeTemplateActivity.sentenceReading?.language || 'Tagalog';
+            const sets = getSentenceReadingSets(language);
+            const selectedSet = sets.find(set => set.key === activeTemplateActivity.sentenceReading?.setKey) || sets[0] || null;
+            const selectedIndices = new Set(activeTemplateActivity.sentenceReading?.selectedIndices || []);
+            const allSelected = Boolean(selectedSet && selectedSet.items.length && selectedIndices.size === selectedSet.items.length);
+            templateDynamicFields.innerHTML = `
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="alert alert-info border-0 small mb-0">
+                            Select a prescribed sentence set. Teachers can choose content, but cannot create or edit the sentences.
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Activity Content</label>
+                        <div class="small text-muted mb-2">Select a prescribed sentence set.</div>
+                        <div class="row g-3">
+                            ${sets.map(set => `
+                                <div class="col-12 col-lg-6">
+                                    <div class="border rounded-3 p-3 h-100 ${selectedSet?.key === set.key ? 'border-primary bg-light' : ''}">
+                                        <div class="d-flex align-items-start justify-content-between gap-3">
+                                            <div>
+                                                <div class="fw-bold">${escapeHtml(set.label)}</div>
+                                                <div class="text-muted small">${set.items.length} sentences</div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm ${selectedSet?.key === set.key ? 'btn-primary' : 'btn-outline-primary'}" data-sentence-set-select="${escapeAttr(set.key)}">Select</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ${selectedSet ? `
+                        <div class="col-12">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <h6 class="mb-0 fw-bold">Selected Prescribed Items</h6>
+                                <small class="text-muted">Choose the whole set or individual items.</small>
+                            </div>
+                            <div class="border rounded-3 p-3 bg-white">
+                                <label class="d-flex align-items-center gap-2 py-1 fw-semibold">
+                                    <input type="checkbox" class="form-check-input mt-0" data-sentence-select-all ${allSelected ? 'checked' : ''}>
+                                    <span>Select All (${selectedSet.items.length} sentences)</span>
+                                </label>
+                                <div class="border-top my-2"></div>
+                                ${selectedSet.items.map((item, index) => `
+                                    <label class="d-flex align-items-center gap-2 py-1">
+                                        <input type="checkbox" class="form-check-input mt-0" data-sentence-item-index="${index}" ${selectedIndices.has(index) ? 'checked' : ''}>
+                                        <span>${index + 1}. ${escapeHtml(item)}</span>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            Array.from(templateDynamicFields.querySelectorAll('[data-sentence-set-select]')).forEach(button => {
+                button.addEventListener('click', () => {
+                    activeTemplateActivity.sentenceReading = {
+                        language,
+                        setKey: button.getAttribute('data-sentence-set-select') || '',
+                        selectedIndices: []
+                    };
+                    syncSentenceReadingItems();
+                    renderTemplateDynamicFields(title);
+                    renderTemplatePreview();
+                });
+            });
+            Array.from(templateDynamicFields.querySelectorAll('[data-sentence-item-index]')).forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const index = Number(checkbox.getAttribute('data-sentence-item-index'));
+                    const current = new Set(activeTemplateActivity.sentenceReading?.selectedIndices || []);
+                    if (checkbox.checked) current.add(index);
+                    else current.delete(index);
+                    setSentenceReadingSelection(Array.from(current).sort((a, b) => a - b));
+                    renderTemplateDynamicFields(title);
+                    renderTemplatePreview();
+                });
+            });
+            const selectAllCheckbox = templateDynamicFields.querySelector('[data-sentence-select-all]');
+            selectAllCheckbox?.addEventListener('change', () => {
+                const indices = selectAllCheckbox.checked && selectedSet ? selectedSet.items.map((_, index) => index) : [];
+                setSentenceReadingSelection(indices);
+                renderTemplateDynamicFields(title);
+                renderTemplatePreview();
+            });
         }
 
         function showTemplateBuilder(templateTitle) {
@@ -14030,6 +14584,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 content: {},
                 items: []
             };
+            if (isStoryReadingTemplate(templateTitle)) {
+                activeTemplateActivity.storyReading = {
+                    language: 'English',
+                    storyKey: 'story-1-ben-and-the-little-pet'
+                };
+            }
+            if (isSentenceReadingTemplate(templateTitle)) {
+                activeTemplateActivity.sentenceReading = {
+                    language: 'Tagalog',
+                    setKey: 'tagalog-sentence-1',
+                    selectedIndices: []
+                };
+            }
             activeTemplateItemEditIndex = null;
             setNodeVisibility(templateActivityGrid, false);
             setNodeVisibility(templateBuilderPanel, true);
@@ -14056,7 +14623,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getTemplateFormValues() {
             const content = {};
+            if (isPhraseReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                syncPhraseReadingItems();
+            }
+            if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                syncStoryReadingSelection();
+            }
+            if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                syncSentenceReadingItems();
+            }
+            const language = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || '';
+            const normalizedLanguage = isStoryReadingTemplate(activeTemplateActivity?.templateTitle) && language === 'Filipino' ? 'English' : language;
+            const normalizedSentenceLanguage = isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)
+                ? normalizeSentenceReadingLanguage(language)
+                : language;
             if (isTemplateItemListType(activeTemplateActivity?.templateTitle)) {
+                content.items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
+            } else if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                Object.assign(content, activeTemplateActivity.content || {});
+            } else if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
                 content.items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
             } else {
                 Array.from(templateDynamicFields?.querySelectorAll('.template-content-field') || []).forEach(field => {
@@ -14065,7 +14650,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             return {
                 title: (templateActivityTitle?.value || '').trim(),
-                language: Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || '',
+                language: isSentenceReadingTemplate(activeTemplateActivity?.templateTitle) ? normalizedSentenceLanguage : (isPhraseReadingTemplate(activeTemplateActivity?.templateTitle) && language === 'Filipino' ? 'Tagalog' : normalizedLanguage),
                 instructions: (templateActivityInstructions?.value || '').trim(),
                 weeks: getTemplateWeeks(),
                 content
@@ -14077,6 +14662,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!values.title) return 'Activity Title is required.';
             if (!values.language) return 'Language is required.';
             if (!values.instructions) return 'Instructions are required.';
+            if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                if (values.language !== 'Tagalog') return 'Sentence Reading currently has prescribed content only for Tagalog.';
+                if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'Select at least one prescribed sentence item.';
+            }
+            if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                if (values.language !== 'English') return 'Story Reading currently has prescribed content only for English.';
+                if (!values.content?.storyTitle || !values.content?.storyText) return 'Select a prescribed story.';
+            }
+            if (isPhraseReadingTemplate(activeTemplateActivity?.templateTitle)) {
+                if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'Select at least one prescribed phrase item.';
+            }
             if (isTemplateItemListType(activeTemplateActivity?.templateTitle)) {
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return `${def.addLabel || 'Content'} is required.`;
             } else {
@@ -15223,7 +15819,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 hideTemplateBuilder();
                 bootstrap.Modal.getInstance(addMaterialModal)?.hide();
             });
-            templatePreviewBtn?.addEventListener('click', renderTemplatePreview);
             templateSaveBtn?.addEventListener('click', function () { saveTemplateActivity(false); });
             templateSaveAssignBtn?.addEventListener('click', function () { saveTemplateActivity(true); });
             templateWeeksGrid?.addEventListener('change', function () {
@@ -15250,7 +15845,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             templateActivityTitle?.addEventListener('input', renderTemplatePreview);
             templateActivityInstructions?.addEventListener('input', renderTemplatePreview);
             Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
-                input.addEventListener('change', renderTemplatePreview);
+                input.addEventListener('change', () => {
+                    if (activeTemplateActivity?.templateTitle === 'Phrase Reading Practice') {
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (activeTemplateActivity?.templateTitle === 'Story Reading') {
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (activeTemplateActivity?.templateTitle === 'Sentence Reading Practice') {
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    }
+                    renderTemplatePreview();
+                });
             });
             templateActivityForm?.addEventListener('submit', function (e) {
                 e.preventDefault();
