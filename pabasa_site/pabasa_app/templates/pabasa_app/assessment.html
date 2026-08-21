@@ -998,15 +998,18 @@
                     if (!contentJson || typeof contentJson !== 'object' || Array.isArray(contentJson)) {
                         contentJson = {};
                     }
+                    const normalizeDisplayItem = (item) => {
+                        if (item === null || item === undefined) return '';
+                        if (item && typeof item === 'object' && !Array.isArray(item)) {
+                            return String(item.text || item.content || item.title || item.sentence || item.paragraph || item.word || '').trim();
+                        }
+                        const text = String(item || '').trim();
+                        if (!text) return '';
+                        const parts = text.split(/\s*\|\s*/).map(part => part.trim()).filter(Boolean);
+                        return parts[0] || text;
+                    };
                     const rawItems = Array.isArray(contentJson.items) ? contentJson.items : [];
-                    const normalizedItems = rawItems
-                        .map((item) => {
-                            if (item && typeof item === 'object' && !Array.isArray(item)) {
-                                return String(item.text || item.content || item.title || '').trim();
-                            }
-                            return String(item || '').trim();
-                        })
-                        .filter(Boolean);
+                    const normalizedItems = rawItems.map(normalizeDisplayItem).filter(Boolean);
                     const normalizedType = String(material?.item_type || '').trim().toLowerCase();
                     const assessmentType = normalizedType === 'sentence'
                         ? 'sentence'

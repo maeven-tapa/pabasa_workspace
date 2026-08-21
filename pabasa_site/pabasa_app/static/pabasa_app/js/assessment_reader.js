@@ -371,12 +371,22 @@
         }
 
         function parseItems(material, currentMode) {
+            const normalizeDisplayItem = (item) => {
+                if (item === null || item === undefined) return '';
+                if (typeof item === 'object') {
+                    return item.text || item.content || item.title || item.sentence || item.paragraph || item.word || '';
+                }
+                const text = String(item || '').trim();
+                if (!text) return '';
+                const parts = text.split(/\s*\|\s*/).map(part => part.trim()).filter(Boolean);
+                return parts[0] || text;
+            };
             const originalItems = Array.isArray(material.items)
                 ? material.items.slice()
                 : (material.content_json && Array.isArray(material.content_json.items))
                     ? material.content_json.items.slice()
                     : [];
-            const normalizedItems = originalItems.map(item => String(item || '').trim()).filter(Boolean);
+            const normalizedItems = originalItems.map(normalizeDisplayItem).map(item => String(item || '').trim()).filter(Boolean);
             if (material.content_json && material.content_json.randomize_order && normalizedItems.length > 0) {
                 const seedSource = `${String(material.raw_id || material.id || '')}|${String(window.PABASA_USER_NAME || window.localStorage.getItem('pabasaUserName') || window.PABASA_USER_EMAIL || '').toLowerCase().trim()}`;
                 const seed = hashString(seedSource);

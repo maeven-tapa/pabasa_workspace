@@ -14366,6 +14366,7 @@ def add_reading_material(request):
         requested_assessment_kind = str(data.get('assessment_kind') or 'regular').strip().lower()
         assessment_kind = requested_assessment_kind if requested_assessment_kind in {'regular', 'crla'} else 'regular'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
+        instructions = (data.get('instructions') or '').strip()
         assigned_week_raw = data.get('assigned_week')
         assigned_week, week_error = parse_assigned_week(assigned_week_raw)
         assigned_weeks_raw = data.get('assigned_weeks')
@@ -14382,14 +14383,25 @@ def add_reading_material(request):
             except Exception:
                 template_payload = {}
             if isinstance(template_payload, dict):
+                def _template_item_text(item, template_title_value=''):
+                    if not isinstance(item, dict):
+                        return str(item).strip() if item is not None else ''
+                    template_title_normalized = str(template_title_value or '').strip()
+                    if template_title_normalized == 'Phrase Reading Practice':
+                        return str(item.get('phrase') or '').strip()
+                    if template_title_normalized == 'Sentence Reading Practice':
+                        return str(item.get('sentence') or '').strip()
+                    if template_title_normalized in ('Fluency Reading', 'Story Reading', "5W's Story Questions", 'Retell the Story', 'Story Response'):
+                        return str(item.get('storyText') or item.get('content') or item.get('paragraph') or '').strip()
+                    return str(item.get('text') or item.get('content') or item.get('title') or item.get('sentence') or item.get('paragraph') or item.get('word') or '').strip()
+
                 if isinstance(template_payload.get('items'), list):
                     template_items = template_payload.get('items') or []
                     item_lines = []
                     for item in template_items:
-                        if isinstance(item, dict):
-                            item_lines.append(' | '.join(str(value).strip() for value in item.values() if str(value).strip()))
-                        elif item is not None:
-                            item_lines.append(str(item).strip())
+                        item_text = _template_item_text(item, template_payload.get('template_title') or template_payload.get('template_lesson') or '')
+                        if item_text:
+                            item_lines.append(item_text)
                     content = '\n'.join(line for line in item_lines if line.strip()) or title
                 else:
                     content_parts = []
@@ -14549,6 +14561,21 @@ def add_reading_material(request):
             if source_type == 'shared' and needs_duplicate:
                 material_title = _build_updated_shared_material_title(title)
 
+            template_content_json = {
+                'items': tokens,
+                'language': language,
+                'randomize_order': randomize_order,
+                'template_source': 'template' if source_type == 'template' else '',
+                'template_title': data.get('template_title') or '',
+                'template_lesson': data.get('template_lesson') or '',
+                'instructions': instructions,
+                'assigned_weeks': assigned_weeks if assigned_weeks else ([assigned_week] if assigned_week else []),
+                'source_type': source_type,
+            }
+            if source_type == 'template' and isinstance(template_payload, dict):
+                template_content_json.update(template_payload)
+                template_content_json['instructions'] = instructions or str(template_payload.get('instructions') or '').strip()
+
             m = Material.objects.create(
                 assessment=None,
                 section=section,
@@ -14557,16 +14584,7 @@ def add_reading_material(request):
                 title=material_title,
                 prompt_text=(tokens[0] if tokens else material_title) or material_title,
                 content_text=content,
-                content_json={
-                    'items': tokens,
-                    'language': language,
-                    'randomize_order': randomize_order,
-                    'template_source': 'template' if source_type == 'template' else '',
-                    'template_title': data.get('template_title') or '',
-                    'template_lesson': data.get('template_lesson') or '',
-                    'assigned_weeks': assigned_weeks if assigned_weeks else ([assigned_week] if assigned_week else []),
-                    'source_type': source_type,
-                },
+                content_json=template_content_json,
                 type=usage_type,
                 assessment_kind=assessment_kind,
                 source_type=source_type,

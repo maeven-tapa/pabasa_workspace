@@ -8695,26 +8695,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function getMaterialContentItems(material) {
         if (!material) return [];
+        const normalizeDisplayItem = (item) => {
+            if (item === null || item === undefined) return '';
+            if (typeof item === 'object') {
+                return item.content || item.text || item.word || item.sentence || item.paragraph || item.phrase || item.title || JSON.stringify(item);
+            }
+            const text = String(item).trim();
+            if (!text) return '';
+            const parts = text.split(/\s*\|\s*/).map(part => part.trim()).filter(Boolean);
+            return parts[0] || text;
+        };
         const contentJsonItems = material && material.content_json && Array.isArray(material.content_json.items)
             ? material.content_json.items
             : null;
         if (Array.isArray(contentJsonItems)) {
-            return contentJsonItems.map(item => {
-                if (item === null || item === undefined) return '';
-                if (typeof item === 'object') {
-                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
-                }
-                return item;
-            }).map(item => String(item).trim()).filter(Boolean);
+            return contentJsonItems.map(normalizeDisplayItem).map(item => String(item).trim()).filter(Boolean);
         }
         if (Array.isArray(material.items)) {
-            return material.items.map(item => {
-                if (item === null || item === undefined) return '';
-                if (typeof item === 'object') {
-                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
-                }
-                return item;
-            }).map(item => String(item).trim()).filter(Boolean);
+            return material.items.map(normalizeDisplayItem).map(item => String(item).trim()).filter(Boolean);
         }
 
         const raw = String(material.content || material.content_text || material.prompt_text || '').trim();
@@ -8737,26 +8735,47 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
     function getMaterialContentItemsForEdit(material) {
         if (!material) return [];
-        const contentJsonItems = material && material.content_json && Array.isArray(material.content_json.items)
-            ? material.content_json.items
-            : null;
-        if (Array.isArray(contentJsonItems)) {
-            return contentJsonItems.map(item => {
-                if (item === null || item === undefined) return '';
-                if (typeof item === 'object') {
-                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
+        const normalizeDisplayItem = (item) => {
+            if (item === null || item === undefined) return '';
+            if (typeof item === 'object') {
+                return item.content || item.text || item.word || item.sentence || item.paragraph || item.phrase || item.title || JSON.stringify(item);
+            }
+            const text = String(item).trim();
+            if (!text) return '';
+            const parts = text.split(/\s*\|\s*/).map(part => part.trim()).filter(Boolean);
+            return parts[0] || text;
+        };
+        const contentJson = material && typeof material.content_json === 'object' && material.content_json
+            ? material.content_json
+            : {};
+        const templateActivity = String(
+                material.template_title
+                || material.template_activity_name
+                || contentJson.template_title
+                || contentJson.template_activity_name
+                || contentJson.template_type
+                || material.template_type
+                || ''
+            ).trim();
+            if (templateActivity) {
+                if (Array.isArray(contentJson.items)) {
+                    return contentJson.items.map(normalizeDisplayItem).map(item => String(item).trim()).filter(Boolean);
                 }
-                return item;
-            }).map(item => String(item).trim()).filter(Boolean);
+                if (Array.isArray(contentJson.sentences)) {
+                    return contentJson.sentences.map(item => String(item || '').trim()).filter(Boolean);
+                }
+                if (Array.isArray(contentJson.phrases)) {
+                    return contentJson.phrases.map(item => String(item || '').trim()).filter(Boolean);
+                }
+            }
+            const contentJsonItems = material && material.content_json && Array.isArray(material.content_json.items)
+                ? material.content_json.items
+                : null;
+        if (Array.isArray(contentJsonItems)) {
+            return contentJsonItems.map(normalizeDisplayItem).map(item => String(item).trim()).filter(Boolean);
         }
         if (Array.isArray(material.items)) {
-            return material.items.map(item => {
-                if (item === null || item === undefined) return '';
-                if (typeof item === 'object') {
-                    return item.content || item.text || item.word || item.sentence || item.paragraph || item.title || JSON.stringify(item);
-                }
-                return item;
-            }).map(item => String(item).trim()).filter(Boolean);
+            return material.items.map(normalizeDisplayItem).map(item => String(item).trim()).filter(Boolean);
         }
 
         const raw = String(material.content || material.content_text || material.prompt_text || material.prompt || '').trim();
@@ -13850,6 +13869,25 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return language === 'Filipino' ? 'Tagalog' : language;
         }
 
+        function applyTemplateLanguageSelection(language, templateTitle) {
+            const radios = Array.from(document.querySelectorAll('input[name="templateLanguage"]'));
+            if (!radios.length) return;
+
+            const normalizedLanguage = isSentenceReadingTemplate(templateTitle)
+                ? normalizeSentenceReadingLanguage(language || 'Tagalog')
+                : (language || 'English');
+
+            const preferredLanguage = String(language || '').trim() || normalizedLanguage;
+            const targetRadio = radios.find(input => input.value === preferredLanguage)
+                || radios.find(input => input.value === normalizedLanguage)
+                || radios.find(input => input.value === 'English')
+                || radios[0];
+
+            radios.forEach(input => {
+                input.checked = input === targetRadio;
+            });
+        }
+
         function isStoryReadingTemplate(title) {
             return title === 'Story Reading';
         }
@@ -13863,26 +13901,135 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return PHRASE_READING_SYSTEM_SETS[language] || PHRASE_READING_SYSTEM_SETS.Tagalog;
         }
 
+        function updatePhraseReadingLanguageAvailability() {
+            Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
+                input.disabled = false;
+                input.parentElement?.classList.remove('opacity-50');
+                input.parentElement?.setAttribute('title', '');
+            });
+        }
+
         function getSentenceReadingSets(language) {
             return SENTENCE_READING_SYSTEM_SETS[normalizeSentenceReadingLanguage(language)] || [];
         }
 
+        function restoreTemplateSetSelection(savedItems, sets) {
+            const normalizedItems = Array.isArray(savedItems)
+                ? savedItems
+                    .map(item => String(item || '').trim())
+                    .filter(Boolean)
+                : [];
+            if (!normalizedItems.length || !Array.isArray(sets) || !sets.length) {
+                return { setKey: '', selectedIndices: [] };
+            }
+
+            for (const set of sets) {
+                if (!set || !Array.isArray(set.items) || !set.items.length) continue;
+                const indices = [];
+                const itemMap = new Map(set.items.map((value, index) => [String(value || '').trim(), index]));
+                let matches = 0;
+                for (const savedItem of normalizedItems) {
+                    if (!itemMap.has(savedItem)) continue;
+                    matches += 1;
+                    indices.push(itemMap.get(savedItem));
+                }
+                if (matches === normalizedItems.length && indices.length === normalizedItems.length) {
+                    return {
+                        setKey: set.key || '',
+                        selectedIndices: Array.from(new Set(indices)).sort((a, b) => a - b)
+                    };
+                }
+            }
+
+            return { setKey: '', selectedIndices: [] };
+        }
+
+        function restoreTemplateActivityState(material) {
+            const contentJson = material && typeof material.content_json === 'object' && material.content_json
+                ? Object.assign({}, material.content_json)
+                : {};
+            const normalizeWeekLabel = (week) => {
+                if (week === null || week === undefined || week === '') return '';
+                const text = String(week).trim();
+                if (!text) return '';
+                const match = text.match(/^(?:week\s*)?(\d{1,2})$/i);
+                if (match) return `Week ${parseInt(match[1], 10)}`;
+                return text;
+            };
+            const templateTitle = String(
+                material?.template_title
+                || material?.templateType
+                || material?.template_type
+                || contentJson.template_title
+                || contentJson.template_activity_name
+                || contentJson.template_type
+                || material?.title
+                || 'Picture-Word Matching'
+            ).trim() || 'Picture-Word Matching';
+            const def = getTemplateDefinition(templateTitle) || {};
+            const rawWeeks = Array.isArray(material?.assigned_weeks) && material.assigned_weeks.length
+                ? material.assigned_weeks
+                : Array.isArray(contentJson.assigned_weeks) && contentJson.assigned_weeks.length
+                    ? contentJson.assigned_weeks
+                    : (material?.assigned_week ? [material.assigned_week] : []);
+            const weeks = rawWeeks.map(normalizeWeekLabel).filter(Boolean);
+            const restoredItems = Array.isArray(contentJson.items)
+                ? contentJson.items
+                : (Array.isArray(material?.items) ? material.items : []);
+            const restoredLanguage = String(
+                material?.language
+                || contentJson.language
+                || (isSentenceReadingTemplate(templateTitle) ? 'Tagalog' : isStoryReadingTemplate(templateTitle) ? 'English' : 'English')
+            ).trim() || 'English';
+            const restoredPhraseSelection = isPhraseReadingTemplate(templateTitle)
+                ? (contentJson.phraseReading && typeof contentJson.phraseReading === 'object'
+                    ? Object.assign({}, contentJson.phraseReading, {
+                        language: String(contentJson.phraseReading.language || contentJson.language || restoredLanguage || 'Tagalog').trim() || 'Tagalog'
+                    })
+                    : restoreTemplateSetSelection(restoredItems.map(item => item?.phrase ?? item), getPhraseReadingSets(restoredLanguage)))
+                : null;
+            const restoredSentenceSelection = isSentenceReadingTemplate(templateTitle)
+                ? (contentJson.sentenceReading && typeof contentJson.sentenceReading === 'object'
+                    ? Object.assign({}, contentJson.sentenceReading, {
+                        language: normalizeSentenceReadingLanguage(String(contentJson.sentenceReading.language || contentJson.language || restoredLanguage || 'Tagalog').trim() || 'Tagalog')
+                    })
+                    : restoreTemplateSetSelection(restoredItems.map(item => item?.sentence ?? item), getSentenceReadingSets(restoredLanguage)))
+                : null;
+            const restoredStoryReading = isStoryReadingTemplate(templateTitle)
+                ? (contentJson.storyReading && typeof contentJson.storyReading === 'object'
+                    ? Object.assign({}, contentJson.storyReading, {
+                        language: String(contentJson.storyReading.language || contentJson.language || restoredLanguage || 'English').trim() || 'English'
+                    })
+                    : {
+                        language: String(contentJson.sourceLanguage || contentJson.language || restoredLanguage || 'English').trim() || 'English',
+                        storyKey: String(contentJson.sourceStoryKey || contentJson.storyKey || '').trim(),
+                        storyTitle: String(contentJson.storyTitle || '').trim(),
+                        storyText: String(contentJson.storyText || contentJson.content_text || material?.content_text || '').trim()
+                    })
+                : null;
+
+            return {
+                templateTitle,
+                lesson: material?.template_lesson || material?.lesson || def.lesson || '',
+                title: material?.title || '',
+                language: restoredLanguage,
+                instructions: String(material?.instructions || contentJson.instructions || '').trim(),
+                weeks,
+                content: contentJson,
+                items: restoredItems,
+                phraseReading: restoredPhraseSelection,
+                sentenceReading: restoredSentenceSelection,
+                storyReading: restoredStoryReading,
+                mode: 'edit'
+            };
+        }
+
         function updateSentenceReadingLanguageAvailability() {
-            const languageRadios = Array.from(document.querySelectorAll('input[name="templateLanguage"]'));
-            const englishRadio = languageRadios.find(input => input.value === 'English');
-            const tagalogRadio = languageRadios.find(input => input.value === 'Filipino');
-            const englishAvailable = getSentenceReadingSets('English').length > 0;
-            const tagalogAvailable = getSentenceReadingSets('Tagalog').length > 0;
-            if (englishRadio) {
-                englishRadio.disabled = !englishAvailable;
-                englishRadio.parentElement?.classList.toggle('opacity-50', !englishAvailable);
-                englishRadio.parentElement?.setAttribute('title', englishAvailable ? '' : 'No prescribed English sentence sets available yet.');
-            }
-            if (tagalogRadio) {
-                tagalogRadio.disabled = !tagalogAvailable;
-                tagalogRadio.parentElement?.classList.toggle('opacity-50', !tagalogAvailable);
-                tagalogRadio.parentElement?.setAttribute('title', tagalogAvailable ? '' : 'No prescribed Tagalog sentence sets available yet.');
-            }
+            Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
+                input.disabled = false;
+                input.parentElement?.classList.remove('opacity-50');
+                input.parentElement?.setAttribute('title', '');
+            });
         }
 
         function syncSentenceReadingItems() {
@@ -13930,33 +14077,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function updateStoryReadingLanguageAvailability() {
             const languageRadios = Array.from(document.querySelectorAll('input[name="templateLanguage"]'));
-            const languageLabels = languageRadios.map(input => input.nextElementSibling).filter(Boolean);
-            const englishRadio = languageRadios.find(input => input.value === 'English');
-            const filipinoRadio = languageRadios.find(input => input.value === 'Filipino');
-            const englishAvailable = getStoryReadingStories('English').length > 0;
-            const filipinoAvailable = getStoryReadingStories('Filipino').length > 0;
             languageRadios.forEach(input => {
                 input.disabled = false;
                 input.parentElement?.classList.remove('opacity-50');
                 input.parentElement?.setAttribute('title', '');
             });
-            if (englishRadio) {
-                englishRadio.disabled = !englishAvailable;
-                englishRadio.parentElement?.classList.toggle('opacity-50', !englishAvailable);
-                englishRadio.parentElement?.setAttribute('title', englishAvailable ? '' : 'No prescribed English stories available.');
-            }
-            if (filipinoRadio) {
-                filipinoRadio.disabled = !filipinoAvailable;
-                filipinoRadio.parentElement?.classList.toggle('opacity-50', !filipinoAvailable);
-                filipinoRadio.parentElement?.setAttribute('title', filipinoAvailable ? '' : 'No prescribed Filipino stories available yet.');
-            }
-            if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
-                const checked = languageRadios.find(input => input.checked && !input.disabled);
-                if (!checked && englishRadio && !englishRadio.disabled) {
-                    englishRadio.checked = true;
-                }
-            }
-            void languageLabels;
         }
 
         function syncStoryReadingSelection() {
@@ -14159,28 +14284,31 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
                     <div class="col-12">
-                        <div class="alert alert-info border-0 small mb-0">
-                            Select a prescribed phrase set. Teachers can choose content, but cannot create or edit the phrases.
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Activity Content</label>
-                        <div class="small text-muted mb-2">Select a prescribed phrase set.</div>
-                        <div class="row g-3">
-                            ${sets.map(set => `
-                                <div class="col-12 col-lg-6">
-                                    <div class="border rounded-3 p-3 h-100 ${selectedSet?.key === set.key ? 'border-primary bg-light' : ''}">
-                                        <div class="d-flex align-items-start justify-content-between gap-3">
-                                            <div>
-                                                <div class="fw-bold">${escapeHtml(set.label)}</div>
-                                                <div class="text-muted small">${set.items.length} items</div>
+                        ${sets.length ? `
+                            <div class="alert alert-info border-0 small mb-0">
+                                Select a prescribed phrase set. Teachers can choose content, but cannot create or edit the phrases.
+                            </div>
+                            <div class="small text-muted mb-2">Select a prescribed phrase set.</div>
+                            <div class="row g-3">
+                                ${sets.map(set => `
+                                    <div class="col-12 col-lg-6">
+                                        <div class="border rounded-3 p-3 h-100 ${selectedSet?.key === set.key ? 'border-primary bg-light' : ''}">
+                                            <div class="d-flex align-items-start justify-content-between gap-3">
+                                                <div>
+                                                    <div class="fw-bold">${escapeHtml(set.label)}</div>
+                                                    <div class="text-muted small">${set.items.length} items</div>
+                                                </div>
+                                                <button type="button" class="btn btn-sm ${selectedSet?.key === set.key ? 'btn-primary' : 'btn-outline-primary'}" data-phrase-set-select="${escapeAttr(set.key)}">Select</button>
                                             </div>
-                                            <button type="button" class="btn btn-sm ${selectedSet?.key === set.key ? 'btn-primary' : 'btn-outline-primary'}" data-phrase-set-select="${escapeAttr(set.key)}">Select</button>
                                         </div>
                                     </div>
-                                </div>
-                            `).join('')}
-                        </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <div class="alert alert-warning border-0 small mb-0">
+                                No prescribed content is set for this language yet.
+                            </div>
+                        `}
                     </div>
                     ${selectedSet ? `
                         <div class="col-12">
@@ -14358,12 +14486,20 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         function renderTemplateDynamicFields(title, values = {}) {
             if (!templateDynamicFields) return;
             const def = getTemplateDefinition(title);
-            if (templateBuilderTitle) templateBuilderTitle.textContent = 'Create Activity';
-            if (templateBuilderSubtitle) templateBuilderSubtitle.textContent = `${title} · Lesson: ${def.lesson}`;
+            const isEditMode = Boolean(window.__templateEditStateRestored || activeTemplateActivity?.mode === 'edit');
+            if (templateBuilderTitle) templateBuilderTitle.textContent = isEditMode ? 'Edit Activity' : 'Create Activity';
+            if (templateBuilderSubtitle) {
+                templateBuilderSubtitle.textContent = isEditMode
+                    ? `${title} · Lesson: ${def.lesson} · Editing existing configuration`
+                    : `${title} · Lesson: ${def.lesson}`;
+            }
             if (templateBuilderLessonPill) templateBuilderLessonPill.textContent = def.lesson;
             if (templateActivityContentHint) templateActivityContentHint.textContent = def.hint;
             updateStoryReadingLanguageAvailability();
             updateSentenceReadingLanguageAvailability();
+            if (isPhraseReadingTemplate(title)) {
+                updatePhraseReadingLanguageAvailability();
+            }
             if (isPhraseReadingTemplate(title)) {
                 renderPhraseReadingSelector(title);
                 return;
@@ -14435,14 +14571,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
                     <div class="col-12">
-                        <div class="alert alert-info border-0 small mb-0">
-                            Select a prescribed story. Teachers can choose content, but cannot create or edit the story.
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Activity Content</label>
-                        <div class="small text-muted mb-2">Select a prescribed story.</div>
-                        ${stories.length ? stories.map(story => `
+                        ${stories.length ? `
+                            <div class="alert alert-info border-0 small mb-0">
+                                Select a prescribed story. Teachers can choose content, but cannot create or edit the story.
+                            </div>
+                            <div class="small text-muted mb-2">Select a prescribed story.</div>
+                            ${stories.map(story => `
                             <div class="border rounded-3 p-3 mb-3 ${selectedStory?.key === story.key ? 'border-primary bg-light' : ''}">
                                 <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
                                     <div>
@@ -14453,9 +14587,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     <button type="button" class="btn btn-sm ${selectedStory?.key === story.key ? 'btn-primary' : 'btn-outline-primary'}" data-story-select="${escapeAttr(story.key)}">Select</button>
                                 </div>
                             </div>
-                        `).join('') : `
+                        `).join('')}
+                        ` : `
                             <div class="alert alert-warning border-0 small mb-0">
-                                No prescribed stories are available for this language yet.
+                                No prescribed content is set for this language yet.
                             </div>
                         `}
                     </div>
@@ -14494,28 +14629,31 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             templateDynamicFields.innerHTML = `
                 <div class="row g-3">
                     <div class="col-12">
-                        <div class="alert alert-info border-0 small mb-0">
-                            Select a prescribed sentence set. Teachers can choose content, but cannot create or edit the sentences.
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold">Activity Content</label>
-                        <div class="small text-muted mb-2">Select a prescribed sentence set.</div>
-                        <div class="row g-3">
-                            ${sets.map(set => `
-                                <div class="col-12 col-lg-6">
-                                    <div class="border rounded-3 p-3 h-100 ${selectedSet?.key === set.key ? 'border-primary bg-light' : ''}">
-                                        <div class="d-flex align-items-start justify-content-between gap-3">
-                                            <div>
-                                                <div class="fw-bold">${escapeHtml(set.label)}</div>
-                                                <div class="text-muted small">${set.items.length} sentences</div>
+                        ${sets.length ? `
+                            <div class="alert alert-info border-0 small mb-0">
+                                Select a prescribed sentence set. Teachers can choose content, but cannot create or edit the sentences.
+                            </div>
+                            <div class="small text-muted mb-2">Select a prescribed sentence set.</div>
+                            <div class="row g-3">
+                                ${sets.map(set => `
+                                    <div class="col-12 col-lg-6">
+                                        <div class="border rounded-3 p-3 h-100 ${selectedSet?.key === set.key ? 'border-primary bg-light' : ''}">
+                                            <div class="d-flex align-items-start justify-content-between gap-3">
+                                                <div>
+                                                    <div class="fw-bold">${escapeHtml(set.label)}</div>
+                                                    <div class="text-muted small">${set.items.length} sentences</div>
+                                                </div>
+                                                <button type="button" class="btn btn-sm ${selectedSet?.key === set.key ? 'btn-primary' : 'btn-outline-primary'}" data-sentence-set-select="${escapeAttr(set.key)}">Select</button>
                                             </div>
-                                            <button type="button" class="btn btn-sm ${selectedSet?.key === set.key ? 'btn-primary' : 'btn-outline-primary'}" data-sentence-set-select="${escapeAttr(set.key)}">Select</button>
                                         </div>
                                     </div>
-                                </div>
-                            `).join('')}
-                        </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <div class="alert alert-warning border-0 small mb-0">
+                                No prescribed content is set for this language yet.
+                            </div>
+                        `}
                     </div>
                     ${selectedSet ? `
                         <div class="col-12">
@@ -14794,8 +14932,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         template_lesson: activeTemplateActivity?.lesson || '',
                         template_type: activeTemplateActivity?.templateTitle || '',
                         template_source: 'template',
+                        instructions: values.instructions || '',
+                        weeks: values.weeks || [],
                         items: Array.isArray(activeTemplateActivity?.items) ? activeTemplateActivity.items : [],
                     });
+                    if (activeTemplateActivity?.storyReading) {
+                        contentPayload.storyReading = activeTemplateActivity.storyReading;
+                    }
+                    if (activeTemplateActivity?.sentenceReading) {
+                        contentPayload.sentenceReading = activeTemplateActivity.sentenceReading;
+                    }
+                    if (activeTemplateActivity?.phraseReading) {
+                        contentPayload.phraseReading = activeTemplateActivity.phraseReading;
+                    }
                     const saveClassCode = currentClassCode || (() => {
                         const attachedCourseId = Number(window.courseAttachTarget || window.currentCourseId || 0);
                         const attachedCourse = attachedCourseId ? findCourseById(attachedCourseId) : null;
@@ -14818,6 +14967,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         source_material_id: null,
                         template_title: activeTemplateActivity?.templateTitle || '',
                         template_lesson: activeTemplateActivity?.lesson || '',
+                        instructions: values.instructions || '',
                     };
                     console.log('[CREATE ACTIVITY] Payload:', payload);
                     console.log('[CREATE ACTIVITY] POST URL:', '/dashboard/teacher/add-material/');
@@ -15402,6 +15552,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             syncCourseMaterialDropdowns();
             window._pendingSharedMaterialOrigin = false;
             window._pendingSharedMaterialSourceId = null;
+            window.__templateEditStateRestored = false;
 
             const addHeader = document.querySelector('#addMaterialModal .modal-header h4');
             if (addHeader) addHeader.textContent = 'Add Reading Material';
@@ -15423,8 +15574,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 resetAddMaterialModalState();
             });
             addMaterialModal.addEventListener('shown.bs.modal', function() {
+                if (window.__templateEditStateRestored && window.__addMaterialDefaultMode === 'template') {
+                    return;
+                }
                 setAddMaterialMode(window.__addMaterialDefaultMode || 'template');
-                renderTemplateLanding();
                 window.__addMaterialDefaultMode = window.__addMaterialDefaultMode || 'template';
             });
         }
@@ -15495,6 +15648,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (showTemplate || showOther) {
                 if (showTemplate && templateActivityGrid) {
                     renderTemplateLanding();
+                    requestAnimationFrame(() => {
+                        if (templateActivityGrid && addMaterialModeToggle?.classList.contains('active-template')) {
+                            renderTemplateLanding();
+                        }
+                    });
                 }
                     // Clear search and filters to show all materials
                     if (otherMaterialSearchInput) otherMaterialSearchInput.value = '';
@@ -16148,33 +16306,19 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 const sourceType = String(material.source_type || material.material_source || 'personal').trim().toLowerCase();
                 if (sourceType === 'template') {
                     resetAddMaterialModalState({ clearEditing: false, clearAttachTarget: true });
-                    const templateTitle = String(material.template_title || material.templateType || material.template_type || material.title || 'Picture-Word Matching').trim() || 'Picture-Word Matching';
-                    const def = getTemplateDefinition(templateTitle);
-                    const currentContent = material.content_json && typeof material.content_json === 'object'
-                        ? Object.assign({}, material.content_json)
-                        : {};
-                    const weeks = Array.isArray(material.assigned_weeks) && material.assigned_weeks.length
-                        ? material.assigned_weeks
-                        : (material.assigned_week ? [material.assigned_week] : []);
-                    activeTemplateActivity = {
-                        templateTitle,
-                        lesson: material.template_lesson || material.lesson || def.lesson,
-                        title: material.title || '',
-                        language: material.language || currentContent.language || 'English',
-                        instructions: material.instructions || currentContent.instructions || '',
-                        weeks,
-                        content: currentContent,
-                        items: Array.isArray(currentContent.items) ? currentContent.items : []
-                    };
+                    activeTemplateActivity = restoreTemplateActivityState(material);
                     activeTemplateItemEditIndex = null;
+                    setAddMaterialMode('template');
                     setNodeVisibility(templateActivityGrid, false);
                     setNodeVisibility(templateBuilderPanel, true);
+                    applyTemplateLanguageSelection(activeTemplateActivity.language, activeTemplateActivity.templateTitle);
                     if (templateActivityTitle) templateActivityTitle.value = activeTemplateActivity.title || '';
                     if (templateActivityInstructions) templateActivityInstructions.value = activeTemplateActivity.instructions || '';
-                    renderTemplateDynamicFields(templateTitle);
-                    renderTemplateWeeks();
+                    renderTemplateDynamicFields(activeTemplateActivity.templateTitle, activeTemplateActivity.content);
+                    renderTemplateWeeks(activeTemplateActivity.weeks);
                     renderTemplatePreview();
                     window.__addMaterialDefaultMode = 'template';
+                    window.__templateEditStateRestored = true;
                     window._pendingSharedMaterialOrigin = false;
                     window._pendingSharedMaterialSourceId = null;
                     window.courseAttachTarget = null;
@@ -16244,8 +16388,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 new bootstrap.Modal(addMaterialModal).show();
             } catch (err) {
                 console.warn('openAddMaterialForEdit failed', err);
-            }
-        };
+                }
+            };
 
         if (addItemBtn && itemInput) {
             addItemBtn.addEventListener('click', function() {
@@ -16872,6 +17016,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         const material = getMaterialById(materialId);
 
                         if (!material) return;
+
+                        if (typeof window.openAddMaterialForEdit === 'function') {
+                            window.openAddMaterialForEdit(material);
+                            return;
+                        }
 
                         // Prefill the Add Material modal fields so edit UI matches Add UI exactly
                         const addModalEl = document.getElementById('addMaterialModal');
