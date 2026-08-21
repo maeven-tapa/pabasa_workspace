@@ -1,4 +1,4 @@
-{% extends "pabasa_app/base_dashboard.html" %}
+﻿{% extends "pabasa_app/base_dashboard.html" %}
 {% load static %}
 
 {% block extra_head %}
@@ -8673,6 +8673,29 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             .replace(/\b\w/g, char => char.toUpperCase());
     }
 
+    function getMaterialActivityName(material) {
+        if (!material) return '';
+        const sourceType = String(material.source_type || material.material_source || '').trim().toLowerCase();
+        if (sourceType !== 'template') return '';
+        return String(
+            material.template_title
+            || material.template_activity_name
+            || material.template_type
+            || material.content_json?.template_title
+            || material.content_json?.template_activity_name
+            || ''
+        ).trim();
+    }
+
+    function getMaterialLogicalItemCount(material) {
+        const activityName = getMaterialActivityName(material);
+        if (activityName === 'Letter & Sound Matching' || activityName === 'Match the Letter to Its Sound') {
+            const items = material?.content_json?.items;
+            return Array.isArray(items) ? items.length : Number(material?.template_items_count || material?.items_count || 0);
+        }
+        return Number(material?.items_count ?? material?.items?.length ?? material?.items ?? 0);
+    }
+
     function getMaterialContentItems(material) {
         if (!material) return [];
         const contentJsonItems = material && material.content_json && Array.isArray(material.content_json.items)
@@ -9939,7 +9962,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         item.className = 'material-card-modern course-readings-card';
                         item.dataset.materialId = courseMaterialActionId(m);
 
-                        const typeLabel = m.item_type || m.type || '';
+                        const typeLabel = getMaterialActivityName(m) || m.item_type || m.type || '';
                         const typeSlug = String(typeLabel || '').toLowerCase().replace(/\s+/g, '-');
 
                         item.innerHTML = `
@@ -16082,7 +16105,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                 const itemsHtml = weekItems.map(reading => {
                     const typeMap = { 'practice': 'practice', 'assessment': 'assessment', 'both': 'both' };
-                    const badgeType = typeMap[reading.type] || reading.type;
+                    const sourceType = String(reading.source_type || reading.material_source || '').trim().toLowerCase();
+                    const templateTag = String(reading.template_lesson || reading.template_title || reading.template_type || reading.title || '').trim();
+                    const badgeType = sourceType === 'template' && templateTag ? 'template' : (typeMap[reading.type] || reading.type);
                     let displayStatus = reading.status || 'published';
                     if (displayStatus === 'scheduled' && reading.schedule) {
                         if (new Date(reading.schedule).getTime() <= Date.now()) displayStatus = 'published';
@@ -16090,9 +16115,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const iconMap = { word: 'bi-spellcheck', sentence: 'bi-chat-left-text', paragraph: 'bi-file-text' };
                     const weekLabel = reading.assigned_week_display || formatAssignedWeek(reading.assigned_week);
                     const contentText = reading.content_text || reading.content || '';
-                    const itemCount = (typeof reading.items_count === 'number')
-                        ? reading.items_count
-                        : (Array.isArray(reading.items) ? reading.items.length : (Number(reading.items) || 0));
+                    const itemCount = getMaterialLogicalItemCount(reading);
 
                     return `
                         <div class="material-card-modern mb-2" data-material-id="${escapeHtml(reading.id)}" data-reading-type="${escapeHtml(reading.item_type)}"
@@ -16110,7 +16133,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                     <p class="material-preview">${escapeHtml(contentText)}</p>
                                     <p class="material-meta">
                                         <span>${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
-                                        <span class="material-type-badge ${escapeHtml(badgeType)}">${escapeHtml(reading.type || '')}</span>
+                                        <span class="material-type-badge ${escapeHtml(badgeType)}">${escapeHtml(sourceType === 'template' && templateTag ? templateTag : (reading.type || ''))}</span>
                                         <span class="material-type-badge status-${escapeHtml(displayStatus)}">${escapeHtml(displayStatus.toUpperCase())}</span>
                                         <span class="material-type-badge week-badge">${escapeHtml(weekLabel)}</span>
                                         ${isAssessmentMaterial(reading) ? getMaterialStudentAccessBadge(reading) : ''}

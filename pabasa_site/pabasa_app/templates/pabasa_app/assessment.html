@@ -618,6 +618,21 @@
             return `<span class="badge rounded-pill px-2 py-1" style="${styles} font-size: 0.65rem; font-weight: 700; letter-spacing: 0.02em;">${escapeHtml(label)}</span>`;
         };
 
+        const getMaterialActivityLabel = (material) => {
+            const sourceType = String(material?.source_type || material?.material_source || '').trim().toLowerCase();
+            if (sourceType !== 'template') return '';
+            return String(
+                material?.template_lesson
+                || material?.template_title
+                || material?.template_type
+                || material?.content_json?.template_lesson
+                || material?.content_json?.template_title
+                || material?.content_json?.template_type
+                || material?.title
+                || ''
+            ).trim();
+        };
+
         const getStoredArray = (key) => {
             try {
                 const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
@@ -1103,6 +1118,17 @@
                             const officialLaunchPayload = buildOfficialAssessmentData(m);
                             const officialLaunchPayloadJson = JSON.stringify(officialLaunchPayload);
                             const generatedStartUrl = isLocked ? '#' : `${urlMap[m.category]}?test=${encodeURIComponent(m.title)}&code=${encodeURIComponent(m.code || classData.code)}&id=${encodeURIComponent(m.id)}${officialAssessmentId ? `&official_assessment_id=${encodeURIComponent(officialAssessmentId)}` : ''}${officialLaunchPayloadJson ? `&official_assessment_data=${encodeURIComponent(officialLaunchPayloadJson)}` : ''}&content=${encodeURIComponent(m.content || '')}&item_type=${encodeURIComponent(m.item_type || m.category || 'word')}&language=${encodeURIComponent(m.language || '')}`;
+                            const materialSourceType = String(m.source_type || m.material_source || '').trim().toLowerCase();
+                            const templateActivityName = materialSourceType === 'template'
+                                ? String(
+                                    m.template_title
+                                    || m.template_type
+                                    || m.content_json?.template_title
+                                    || m.content_json?.template_type
+                                    || m.title
+                                    || ''
+                                ).trim()
+                                : '';
                             console.log("PABASA_OFFICIAL_TRACE", {
                                 stage: "assessment_card_link",
                                 selected_material_id: mId || "",
@@ -1122,11 +1148,11 @@
                                         <div class="type-meta">
                                             <span class="type-icon"><i class="bi ${iconMap[m.category]}"></i></span>
                                             <div class="type-info">
-                                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                    <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
-                                                    ${getMaterialLanguageBadgeHtml(m)}
-                                                </div>
-                                                <span>${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items</span>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <strong>${escapeHtml(m.title)} ${isDone ? '<span class="badge bg-success ms-1 assessment-done-pill" style="font-size: 0.6rem;">DONE</span>' : ''}</strong>
+                                            ${getMaterialLanguageBadgeHtml(m)}
+                                        </div>
+                                                <span>${templateActivityName || `${labelMap[m.category]} - ${Array.isArray(m.items) ? m.items.length : (m.items || 0)} items`}</span>
                                                 ${timeScoreMarkup}
                                             </div>
                                         </div>
