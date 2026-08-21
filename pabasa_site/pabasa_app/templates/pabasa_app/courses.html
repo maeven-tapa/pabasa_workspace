@@ -14747,8 +14747,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function hideTemplateBuilder() {
             activeTemplateActivity = null;
-            setNodeVisibility(templateBuilderPanel, false);
-            setNodeVisibility(templateActivityGrid, true);
+            setAddMaterialMode('template');
+            if (templateActivityGrid) {
+                setNodeVisibility(templateActivityGrid, true);
+            }
             if (templateValidationError) templateValidationError.classList.add('d-none');
         }
 
@@ -15647,9 +15649,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
             if (showTemplate || showOther) {
                 if (showTemplate && templateActivityGrid) {
+                    setNodeVisibility(templateActivityGrid, true);
                     renderTemplateLanding();
                     requestAnimationFrame(() => {
                         if (templateActivityGrid && addMaterialModeToggle?.classList.contains('active-template')) {
+                            setNodeVisibility(templateActivityGrid, true);
                             renderTemplateLanding();
                         }
                     });
