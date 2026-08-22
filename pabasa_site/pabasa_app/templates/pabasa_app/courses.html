@@ -13848,17 +13848,6 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 item.setKey
             ].join(' ').toLowerCase()
         }));
-        PICTURE_WORD_CUSTOM_LIBRARY.sort((a, b) => {
-            const aWord = String(a.englishWord || '').toLowerCase();
-            const bWord = String(b.englishWord || '').toLowerCase();
-            if (aWord < bWord) return -1;
-            if (aWord > bWord) return 1;
-            const aFilipino = String(a.filipinoWord || '').toLowerCase();
-            const bFilipino = String(b.filipinoWord || '').toLowerCase();
-            if (aFilipino < bFilipino) return -1;
-            if (aFilipino > bFilipino) return 1;
-            return String(a.image || '').localeCompare(String(b.image || ''));
-        });
         const TEMPLATE_ITEM_TITLE_KEYS = {
             'Phrase Reading Practice': 'phrase',
             'Sentence Reading Practice': 'sentence'
@@ -14075,6 +14064,24 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return language === 'Filipino' ? item.filipinoWord : item.englishWord;
         }
 
+        function comparePictureWordCustomItems(a, b, language) {
+            const collator = new Intl.Collator(undefined, {
+                usage: 'sort',
+                sensitivity: 'base',
+                ignorePunctuation: false,
+                numeric: false
+            });
+            const aLabel = getPictureWordMatchingWord(a, language) || '';
+            const bLabel = getPictureWordMatchingWord(b, language) || '';
+            const primary = collator.compare(aLabel, bLabel);
+            if (primary !== 0) return primary;
+            const aEnglish = String(a.englishWord || '');
+            const bEnglish = String(b.englishWord || '');
+            const secondary = collator.compare(aEnglish, bEnglish);
+            if (secondary !== 0) return secondary;
+            return collator.compare(String(a.image || ''), String(b.image || ''));
+        }
+
         function getPictureWordMatchingPreviewImage(item, setKey) {
             if (String(setKey || '').trim() === 'Custom') {
                 return `/static/pabasa_app/images/picture_word/Custom/${item.image}`;
@@ -14131,6 +14138,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return PICTURE_WORD_CUSTOM_LIBRARY.filter(item => item.searchText.includes(term));
         }
 
+        function getSortedPictureWordCustomLibrary(language, query = '') {
+            return searchPictureWordLibrary(query).slice().sort((a, b) => comparePictureWordCustomItems(a, b, language));
+        }
+
         function renderPictureWordCustomGallery(title) {
             if (!templateDynamicFields || !activeTemplateActivity) return;
             const language = getPictureWordMatchingSelectedLanguage();
@@ -14140,7 +14151,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             const startBtn = templateDynamicFields.querySelector('[data-picture-word-start-activity]');
             const query = String(activeTemplateActivity.pictureWordMatchingCustom?.searchQuery || '').trim();
             const customItems = getPictureWordCustomSelection();
-            const results = searchPictureWordLibrary(query);
+            const results = getSortedPictureWordCustomLibrary(language, query);
             const selectedCount = customItems.length;
             const canAddMore = selectedCount < PICTURE_WORD_CUSTOM_MAX_ITEMS;
             if (selectedCountLabel) selectedCountLabel.textContent = `${selectedCount}/${PICTURE_WORD_CUSTOM_MAX_ITEMS} selected`;
@@ -14732,7 +14743,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
             const customItems = getPictureWordCustomSelection();
             const query = String(activeTemplateActivity.pictureWordMatchingCustom?.searchQuery || '').trim();
-            const results = searchPictureWordLibrary(query);
+            const results = getSortedPictureWordCustomLibrary(language, query);
             const selectedCount = customItems.length;
             const canAddMore = selectedCount < PICTURE_WORD_CUSTOM_MAX_ITEMS;
             const sets = getPictureWordMatchingSets();
