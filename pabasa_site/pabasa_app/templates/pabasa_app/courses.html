@@ -13669,7 +13669,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Match the Letter to Its Sound': { lesson: 'Letter-Sound Correspondence', hint: 'Match each letter to the sound it makes.', fields: [{ key: 'letter', label: 'Letter', type: 'text' }, { key: 'sound', label: 'Sound', type: 'text' }], addLabel: 'Add Item' },
             'Clap & Count Syllables': { lesson: 'Syllable Awareness', hint: 'Count the syllables in each word.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'syllables', label: 'Expected syllable count', type: 'number', min: 1 }], addLabel: 'Add Item' },
             'Blend the Syllables': { lesson: 'Syllable Blending', hint: 'Combine syllables to form complete words.', fields: [{ key: 'syllables', label: 'Syllables', type: 'text', placeholder: 'ba + ha' }, { key: 'answer', label: 'Complete word', type: 'text', placeholder: 'baha' }], addLabel: 'Add Item' },
-            'Picture-Word Matching': { lesson: 'Word Recognition', hint: 'Upload or choose a picture and match it to a word.', fields: [{ key: 'image', label: 'Image upload/selection', type: 'file' }, { key: 'word', label: 'Corresponding word', type: 'text' }], addLabel: 'Add Item' },
+            'Picture-Word Matching': { lesson: 'Word Recognition', hint: 'Choose a prescribed language and set, then preview the ready-made picture-word pairs.', fields: [], addLabel: 'Select Prescribed Set' },
             'Decode the Word': { lesson: 'Word Decoding', hint: 'Break a word into sounds and decode it.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'prompt', label: 'Decoding prompt', type: 'text', placeholder: 'Say the sounds then blend them.' }], addLabel: 'Add Item' },
             'Word Meaning Match': { lesson: 'Vocabulary Development', hint: 'Connect words with meanings, pictures, or phrases.', fields: [{ key: 'word', label: 'Word', type: 'text' }, { key: 'meaning', label: 'Meaning / picture / phrase', type: 'text' }], addLabel: 'Add Item' },
             'Phrase Reading Practice': { lesson: 'Phrase Reading', hint: 'Create short phrases for reading practice.', fields: [{ key: 'phrase', label: 'Phrase', type: 'text' }], addLabel: 'Add Phrase' },
@@ -13701,11 +13701,164 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             'Letter & Sound Matching',
             'Sound Detective',
             'Clap & Count Syllables',
-            'Picture-Word Matching',
             'Word Meaning Match',
             'Phrase Reading Practice',
             'Sentence Reading Practice'
         ]);
+        const PICTURE_WORD_MATCHING_SYSTEM_SETS = {
+            A: [
+                { image: 'jaw.png', filipinoWord: 'Panga', englishWord: 'Jaw' },
+                { image: 'medicine.png', filipinoWord: 'Gamot', englishWord: 'Medicine' },
+                { image: 'branch.png', filipinoWord: 'Sanga', englishWord: 'Branch' },
+                { image: 'fruit.png', filipinoWord: 'Bunga', englishWord: 'Fruit' },
+                { image: 'RubberBand.png', filipinoWord: 'Goma', englishWord: 'Rubber Band' }
+            ],
+            B: [
+                { image: 'robot.png', filipinoWord: 'Robot', englishWord: 'Robot' },
+                { image: 'umbrella.png', filipinoWord: 'Payong', englishWord: 'Umbrella' },
+                { image: 'wallet.png', filipinoWord: 'Pitaka', englishWord: 'Wallet' },
+                { image: 'railway.png', filipinoWord: 'Riles', englishWord: 'Railway' },
+                { image: 'heart.png', filipinoWord: 'Puso', englishWord: 'Heart' }
+            ],
+            C: [
+                { image: 'Pet.png', filipinoWord: 'Alaga', englishWord: 'Pet' },
+                { image: 'Mat.png', filipinoWord: 'Banig', englishWord: 'Mat' },
+                { image: 'Pat.png', filipinoWord: 'Tapik', englishWord: 'Pat' },
+                { image: 'Little.png', filipinoWord: 'Maliit', englishWord: 'Little' },
+                { image: 'Happy.png', filipinoWord: 'Masaya', englishWord: 'Happy' }
+            ],
+            D: [
+                { image: 'Dog.png', filipinoWord: 'Aso', englishWord: 'Dog' },
+                { image: 'Cat.png', filipinoWord: 'Pusa', englishWord: 'Cat' },
+                { image: 'Bird.png', filipinoWord: 'Ibon', englishWord: 'Bird' },
+                { image: 'Fish.png', filipinoWord: 'Isda', englishWord: 'Fish' },
+                { image: 'Rabbit.png', filipinoWord: 'Kuneho', englishWord: 'Rabbit' }
+            ],
+            E: [
+                { image: 'Apple.png', filipinoWord: 'Mansanas', englishWord: 'Apple' },
+                { image: 'Banana.png', filipinoWord: 'Saging', englishWord: 'Banana' },
+                { image: 'Orange.png', filipinoWord: 'Orange', englishWord: 'Orange' },
+                { image: 'Mango.png', filipinoWord: 'Mangga', englishWord: 'Mango' },
+                { image: 'Watermelon.png', filipinoWord: 'Pakwan', englishWord: 'Watermelon' }
+            ],
+            F: [
+                { image: 'Desk.png', filipinoWord: 'Mesa', englishWord: 'Desk' },
+                { image: 'Chair.png', filipinoWord: 'Upuan', englishWord: 'Chair' },
+                { image: 'Book.png', filipinoWord: 'Libro', englishWord: 'Book' },
+                { image: 'Pencil.png', filipinoWord: 'Lapis', englishWord: 'Pencil' },
+                { image: 'Eraser.png', filipinoWord: 'Pambura', englishWord: 'Eraser' }
+            ],
+            G: [
+                { image: 'Doctor.png', filipinoWord: 'Doktor', englishWord: 'Doctor' },
+                { image: 'Teacher.png', filipinoWord: 'Guro', englishWord: 'Teacher' },
+                { image: 'Nurse.png', filipinoWord: 'Nars', englishWord: 'Nurse' },
+                { image: 'Police.png', filipinoWord: 'Pulis', englishWord: 'Police Officer' },
+                { image: 'FIrefighter.png', filipinoWord: 'Bumbero', englishWord: 'Firefighter' }
+            ]
+        };
+        const PICTURE_WORD_MATCHING_SET_KEYS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+        const PICTURE_WORD_CUSTOM_MAX_ITEMS = 5;
+        const PICTURE_WORD_CUSTOM_STORAGE_KEY = 'pabasa_picture_word_custom_selection';
+        const PICTURE_WORD_CUSTOM_EXTRA_ITEMS = [
+            { image: 'Horse.png', englishWord: 'Horse', filipinoWord: 'Kabayo' },
+            { image: 'Cow.png', englishWord: 'Cow', filipinoWord: 'Baka' },
+            { image: 'Chicken.png', englishWord: 'Chicken', filipinoWord: 'Manok' },
+            { image: 'Frog.png', englishWord: 'Frog', filipinoWord: 'Palaka' },
+            { image: 'Butterflyy.png', englishWord: 'Butterfly', filipinoWord: 'Paruparo' },
+            { image: 'Bread.png', englishWord: 'Bread', filipinoWord: 'Tinapay' },
+            { image: 'Rice.png', englishWord: 'Rice', filipinoWord: 'Kanin' },
+            { image: 'Egg.png', englishWord: 'Egg', filipinoWord: 'Itlog' },
+            { image: 'Milk.png', englishWord: 'Milk', filipinoWord: 'Gatas' },
+            { image: 'Cake.png', englishWord: 'Cake', filipinoWord: 'Keyk' },
+            { image: 'Ruler.png', englishWord: 'Ruler', filipinoWord: 'Ruler' },
+            { image: 'Bag.png', englishWord: 'Bag', filipinoWord: 'Bag' },
+            { image: 'Crayon.png', englishWord: 'Crayon', filipinoWord: 'Krayola' },
+            { image: 'Classroom.png', englishWord: 'Classroom', filipinoWord: 'Silid-aralan' },
+            { image: 'Board.png', englishWord: 'Board', filipinoWord: 'Pisara' },
+            { image: 'Farmer.png', englishWord: 'Farmer', filipinoWord: 'Magsasaka' },
+            { image: 'Chef.png', englishWord: 'Chef', filipinoWord: 'Kusinero' },
+            { image: 'Dentist.png', englishWord: 'Dentist', filipinoWord: 'Dentista' },
+            { image: 'Pilot.png', englishWord: 'Pilot', filipinoWord: 'Piloto' },
+            { image: 'Carpenter.png', englishWord: 'Carpenter', filipinoWord: 'Karpintero' },
+            { image: 'Flag.png', englishWord: 'Flag', filipinoWord: 'Watawat' },
+            { image: 'Sun.png', englishWord: 'Sun', filipinoWord: 'Araw' },
+            { image: 'Flower.png', englishWord: 'Flower', filipinoWord: 'Bulaklak' },
+            { image: 'Pillow.png', englishWord: 'Pillow', filipinoWord: 'Unan' },
+            { image: 'Star.png', englishWord: 'Star', filipinoWord: 'Bituin' },
+            { image: 'Moon.png', englishWord: 'Moon', filipinoWord: 'Buwan' },
+            { image: 'Computer.png', englishWord: 'Computer', filipinoWord: 'Kompyuter' },
+            { image: 'Notebook.png', englishWord: 'Notebook', filipinoWord: 'Kwaderno' },
+            { image: 'Car.png', englishWord: 'Car', filipinoWord: 'Sasakyan' },
+            { image: 'Bicycle.png', englishWord: 'Bicycle', filipinoWord: 'Bisikleta' },
+            { image: 'Plate.png', englishWord: 'Plate', filipinoWord: 'Plato' },
+            { image: 'Cloud.png', englishWord: 'Cloud', filipinoWord: 'Ulap' },
+            { image: 'House.png', englishWord: 'House', filipinoWord: 'Bahay' },
+            { image: 'Tear.png', englishWord: 'Tear', filipinoWord: 'Luha' },
+            { image: 'Church.png', englishWord: 'Church', filipinoWord: 'Simbahan' },
+            { image: 'Leaf.png', englishWord: 'Leaf', filipinoWord: 'Dahon' },
+            { image: 'Mountain.png', englishWord: 'Mountain', filipinoWord: 'Bundok' },
+            { image: 'Rain.png', englishWord: 'Rain', filipinoWord: 'Ulan' },
+            { image: 'River.png', englishWord: 'River', filipinoWord: 'Ilog' },
+            { image: 'Boy.png', englishWord: 'Boy', filipinoWord: 'Lalaki' },
+            { image: 'Girl.png', englishWord: 'Girl', filipinoWord: 'Babae' },
+            { image: 'Mother.png', englishWord: 'Mother', filipinoWord: 'Nanay' },
+            { image: 'Father.png', englishWord: 'Father', filipinoWord: 'Tatay' },
+            { image: 'School.png', englishWord: 'School', filipinoWord: 'Paaralan' },
+            { image: 'Park.png', englishWord: 'Park', filipinoWord: 'Parke' },
+            { image: 'Library.png', englishWord: 'Library', filipinoWord: 'Silid-Aklatan' },
+            { image: 'Farm.png', englishWord: 'Farm', filipinoWord: 'Bukid' },
+            { image: 'Restaurant.png', englishWord: 'Restaurant', filipinoWord: 'Restawran' },
+            { image: 'Bus.png', englishWord: 'Bus', filipinoWord: 'Bus' },
+            { image: 'Jeepney.png', englishWord: 'Jeepney', filipinoWord: 'Dyip' },
+            { image: 'Motorcycle.png', englishWord: 'Motorcycle', filipinoWord: 'Motor' },
+            { image: 'Truck.png', englishWord: 'Truck', filipinoWord: 'Trak' },
+            { image: 'Train.png', englishWord: 'Train', filipinoWord: 'Tren' },
+            { image: 'Airplane.png', englishWord: 'Airplane', filipinoWord: 'Eroplano' },
+            { image: 'Boat.png', englishWord: 'Boat', filipinoWord: 'Bangka' },
+            { image: 'Water.png', englishWord: 'Water', filipinoWord: 'Tubig' },
+            { image: 'Soap.png', englishWord: 'Soap', filipinoWord: 'Sabon' },
+            { image: 'Ball.png', englishWord: 'Ball', filipinoWord: 'Bola' },
+            { image: 'Cap.png', englishWord: 'Cap', filipinoWord: 'Sumbrero' },
+            { image: 'Singer.png', englishWord: 'Singer', filipinoWord: 'Mang-aawit' },
+            { image: 'Tree.png', englishWord: 'Tree', filipinoWord: 'Puno' },
+            { image: 'Door.png', englishWord: 'Door', filipinoWord: 'Pinto' },
+            { image: 'Window.png', englishWord: 'Window', filipinoWord: 'Bintana' },
+            { image: 'Shoes.png', englishWord: 'Shoe', filipinoWord: 'Sapatos' },
+            { image: 'Mirror.png', englishWord: 'Mirror', filipinoWord: 'Salamin' }
+        ];
+        const PICTURE_WORD_CUSTOM_LIBRARY = [
+            ...Object.entries(PICTURE_WORD_MATCHING_SYSTEM_SETS).flatMap(([setKey, items]) => (items || []).map(item => ({
+                setKey,
+                image: item.image,
+                englishWord: item.englishWord,
+                filipinoWord: item.filipinoWord
+            }))),
+            ...PICTURE_WORD_CUSTOM_EXTRA_ITEMS.map(item => ({
+                setKey: 'Custom',
+                image: item.image,
+                englishWord: item.englishWord,
+                filipinoWord: item.filipinoWord
+            }))
+        ].map(item => ({
+            ...item,
+            searchText: [
+                item.englishWord,
+                item.filipinoWord,
+                item.image?.replace(/\.[^.]+$/, '') || '',
+                item.setKey
+            ].join(' ').toLowerCase()
+        }));
+        PICTURE_WORD_CUSTOM_LIBRARY.sort((a, b) => {
+            const aWord = String(a.englishWord || '').toLowerCase();
+            const bWord = String(b.englishWord || '').toLowerCase();
+            if (aWord < bWord) return -1;
+            if (aWord > bWord) return 1;
+            const aFilipino = String(a.filipinoWord || '').toLowerCase();
+            const bFilipino = String(b.filipinoWord || '').toLowerCase();
+            if (aFilipino < bFilipino) return -1;
+            if (aFilipino > bFilipino) return 1;
+            return String(a.image || '').localeCompare(String(b.image || ''));
+        });
         const TEMPLATE_ITEM_TITLE_KEYS = {
             'Phrase Reading Practice': 'phrase',
             'Sentence Reading Practice': 'sentence'
@@ -13865,6 +14018,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             return title === 'Sentence Reading Practice';
         }
 
+        function isPictureWordMatchingTemplate(title) {
+            return title === 'Picture-Word Matching';
+        }
+
         function normalizeSentenceReadingLanguage(language) {
             return language === 'Filipino' ? 'Tagalog' : language;
         }
@@ -13899,6 +14056,122 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
         function getPhraseReadingSets(language) {
             return PHRASE_READING_SYSTEM_SETS[language] || PHRASE_READING_SYSTEM_SETS.Tagalog;
+        }
+
+        function getPictureWordMatchingSelectedLanguage() {
+            const raw = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || 'English';
+            return raw === 'Filipino' ? 'Filipino' : 'English';
+        }
+
+        function getPictureWordMatchingSets() {
+            return PICTURE_WORD_MATCHING_SET_KEYS.map(key => ({
+                key,
+                label: `Set ${key}`,
+                items: PICTURE_WORD_MATCHING_SYSTEM_SETS[key] || []
+            }));
+        }
+
+        function getPictureWordMatchingWord(item, language) {
+            return language === 'Filipino' ? item.filipinoWord : item.englishWord;
+        }
+
+        function getPictureWordMatchingPreviewImage(item, setKey) {
+            if (String(setKey || '').trim() === 'Custom') {
+                return `/static/pabasa_app/images/picture_word/Custom/${item.image}`;
+            }
+            return `/static/pabasa_app/images/picture_word/Set ${setKey}/${item.image}`;
+        }
+
+        function normalizePictureWordMatchingSelection(setKey, language) {
+            const normalizedSetKey = PICTURE_WORD_MATCHING_SYSTEM_SETS[setKey] ? setKey : 'A';
+            return {
+                setKey: normalizedSetKey,
+                language: language === 'Filipino' ? 'Filipino' : 'English'
+            };
+        }
+
+        function getPictureWordMatchingMode() {
+            return activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
+        }
+
+        function normalizePictureWordCustomItem(item) {
+            if (!item) return null;
+            const setKey = String(item.setKey || '').trim().toUpperCase();
+            const sourceSet = PICTURE_WORD_MATCHING_SYSTEM_SETS[setKey] || [];
+            const image = String(item.image || '').trim();
+            const sourceItem = sourceSet.find(entry => String(entry.image || '').trim() === image) || null;
+            const englishWord = String(item.englishWord || sourceItem?.englishWord || '').trim();
+            const filipinoWord = String(item.filipinoWord || sourceItem?.filipinoWord || '').trim();
+            if (!image || !englishWord || !filipinoWord) return null;
+            return { setKey, image, englishWord, filipinoWord };
+        }
+
+        function getPictureWordCustomSelection() {
+            return Array.isArray(activeTemplateActivity?.pictureWordMatchingCustom?.items)
+                ? activeTemplateActivity.pictureWordMatchingCustom.items
+                : [];
+        }
+
+        function setPictureWordCustomSelection(items) {
+            if (!activeTemplateActivity) return;
+            const normalized = Array.from(new Map((items || []).map(item => {
+                const normalizedItem = normalizePictureWordCustomItem(item);
+                return normalizedItem ? [`${normalizedItem.setKey}:${normalizedItem.image}`, normalizedItem] : null;
+            }).filter(Boolean)).values()).slice(0, PICTURE_WORD_CUSTOM_MAX_ITEMS);
+            activeTemplateActivity.pictureWordMatchingCustom = { items: normalized };
+        }
+
+        function isPictureWordCustomSelected(item) {
+            return getPictureWordCustomSelection().some(selected => selected.setKey === item.setKey && selected.image === item.image);
+        }
+
+        function searchPictureWordLibrary(query) {
+            const term = String(query || '').trim().toLowerCase();
+            if (!term) return PICTURE_WORD_CUSTOM_LIBRARY;
+            return PICTURE_WORD_CUSTOM_LIBRARY.filter(item => item.searchText.includes(term));
+        }
+
+        function renderPictureWordCustomGallery(title) {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            const language = getPictureWordMatchingSelectedLanguage();
+            const gallery = templateDynamicFields.querySelector('[data-picture-word-gallery]');
+            const selectedList = templateDynamicFields.querySelector('[data-picture-word-selected-list]');
+            const selectedCountLabel = templateDynamicFields.querySelector('[data-picture-word-selected-count]');
+            const startBtn = templateDynamicFields.querySelector('[data-picture-word-start-activity]');
+            const query = String(activeTemplateActivity.pictureWordMatchingCustom?.searchQuery || '').trim();
+            const customItems = getPictureWordCustomSelection();
+            const results = searchPictureWordLibrary(query);
+            const selectedCount = customItems.length;
+            const canAddMore = selectedCount < PICTURE_WORD_CUSTOM_MAX_ITEMS;
+            if (selectedCountLabel) selectedCountLabel.textContent = `${selectedCount}/${PICTURE_WORD_CUSTOM_MAX_ITEMS} selected`;
+            if (startBtn) startBtn.disabled = selectedCount !== PICTURE_WORD_CUSTOM_MAX_ITEMS;
+            if (gallery) {
+                gallery.innerHTML = results.length ? results.map(item => {
+                    const imagePath = getPictureWordMatchingPreviewImage(item, item.setKey);
+                    const selected = isPictureWordCustomSelected(item);
+                    return `
+                        <article class="picture-word-result-card">
+                            <img src="${escapeAttr(imagePath)}" alt="${escapeAttr(item.englishWord)}" loading="lazy">
+                            <div class="p-2 text-center">
+                                <div class="fw-semibold text-truncate">${escapeHtml(getPictureWordMatchingWord(item, language))}</div>
+                                <button type="button" class="btn btn-sm ${selected ? 'btn-outline-danger' : 'btn-primary'} w-100 mt-2" data-picture-word-custom-toggle="${escapeAttr(`${item.setKey}:${item.image}`)}" ${!selected && !canAddMore ? 'disabled' : ''}>
+                                    ${selected ? 'Selected' : 'Add'}
+                                </button>
+                            </div>
+                        </article>
+                    `;
+                }).join('') : '<div class="text-muted small">No matching pictures found.</div>';
+            }
+            if (selectedList) {
+                selectedList.innerHTML = customItems.length ? customItems.map(item => `
+                    <span class="picture-word-selected-chip">
+                        <span>${escapeHtml(item.englishWord)}</span>
+                        <button type="button" class="btn btn-sm btn-link p-0 text-danger" aria-label="Remove ${escapeAttr(item.englishWord)}" data-picture-word-custom-remove="${escapeAttr(`${item.setKey}:${item.image}`)}">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </span>
+                `).join('') : '<div class="text-muted small">No items selected yet.</div>';
+            }
         }
 
         function updatePhraseReadingLanguageAvailability() {
@@ -13942,6 +14215,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             }
 
             return { setKey: '', selectedIndices: [] };
+        }
+
+        function restorePictureWordMatchingSelection(contentJson) {
+            const rawSetKey = String(contentJson?.pictureWordMatching?.setKey || contentJson?.picture_word_matching?.setKey || contentJson?.assessment_set || '').trim().toUpperCase();
+            const rawLanguage = String(contentJson?.pictureWordMatching?.language || contentJson?.language || 'English').trim();
+            return normalizePictureWordMatchingSelection(rawSetKey || 'A', rawLanguage);
         }
 
         function restoreTemplateActivityState(material) {
@@ -13988,6 +14267,16 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     })
                     : restoreTemplateSetSelection(restoredItems.map(item => item?.phrase ?? item), getPhraseReadingSets(restoredLanguage)))
                 : null;
+            const restoredPictureWordMatching = isPictureWordMatchingTemplate(templateTitle)
+                ? restorePictureWordMatchingSelection(contentJson)
+                : null;
+            const restoredPictureWordCustom = isPictureWordMatchingTemplate(templateTitle)
+                ? {
+                    items: Array.isArray(contentJson.pictureWordMatchingCustom?.items)
+                        ? contentJson.pictureWordMatchingCustom.items.map(normalizePictureWordCustomItem).filter(Boolean)
+                        : []
+                }
+                : null;
             const restoredSentenceSelection = isSentenceReadingTemplate(templateTitle)
                 ? (contentJson.sentenceReading && typeof contentJson.sentenceReading === 'object'
                     ? Object.assign({}, contentJson.sentenceReading, {
@@ -14018,6 +14307,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 content: contentJson,
                 items: restoredItems,
                 phraseReading: restoredPhraseSelection,
+                pictureWordMatching: restoredPictureWordMatching,
+                pictureWordMatchingCustom: restoredPictureWordCustom,
                 sentenceReading: restoredSentenceSelection,
                 storyReading: restoredStoryReading,
                 mode: 'edit'
@@ -14201,6 +14492,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isPhraseReadingTemplate(title)) return;
             if (isStoryReadingTemplate(title)) return;
             if (isSentenceReadingTemplate(title)) return;
+            if (isPictureWordMatchingTemplate(title)) return;
             const container = document.getElementById('templateItemList');
             if (!container || !activeTemplateActivity) return;
             const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
@@ -14234,6 +14526,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isPhraseReadingTemplate(title)) return;
             if (isStoryReadingTemplate(title)) return;
             if (isSentenceReadingTemplate(title)) return;
+            if (isPictureWordMatchingTemplate(title)) return;
             const def = getTemplateDefinition(title);
             const titleFieldKey = getTemplateItemTitleField(title);
             const itemFields = getTemplateItemFields(title);
@@ -14365,6 +14658,380 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             });
         }
 
+        function renderPictureWordMatchingSelector(title) {
+            if (!templateDynamicFields || !activeTemplateActivity) return;
+            if (!templateDynamicFields.dataset.pictureWordCustomBound) {
+                templateDynamicFields.dataset.pictureWordCustomBound = 'true';
+                templateDynamicFields.addEventListener('click', event => {
+                    const modeButton = event.target.closest('[data-picture-word-mode]');
+                    if (modeButton) return;
+                    const setButton = event.target.closest('[data-picture-word-set-select]');
+                    if (setButton) {
+                        activeTemplateActivity.pictureWordMatching.mode = 'prescribed';
+                        activeTemplateActivity.pictureWordMatching = normalizePictureWordMatchingSelection(setButton.getAttribute('data-picture-word-set-select') || 'A', getPictureWordMatchingSelectedLanguage());
+                        renderTemplateDynamicFields(title);
+                        renderTemplatePreview();
+                        return;
+                    }
+                    const customButton = event.target.closest('[data-picture-word-custom-toggle], [data-picture-word-custom-remove]');
+                    if (customButton) {
+                        const key = String(customButton.getAttribute('data-picture-word-custom-toggle') || customButton.getAttribute('data-picture-word-custom-remove') || '').trim();
+                        const [setKey, image] = key.split(':');
+                        const item = PICTURE_WORD_CUSTOM_LIBRARY.find(entry => entry.setKey === setKey && entry.image === image);
+                        if (!item) return;
+                        const currentItems = getPictureWordCustomSelection();
+                        const exists = currentItems.some(selected => selected.setKey === item.setKey && selected.image === item.image);
+                        const nextItems = exists
+                            ? currentItems.filter(selected => !(selected.setKey === item.setKey && selected.image === item.image))
+                            : [...currentItems, item];
+                        setPictureWordCustomSelection(nextItems);
+                        activeTemplateActivity.pictureWordMatching.mode = 'custom';
+                        activeTemplateActivity.pictureWordMatchingCustom = { items: getPictureWordCustomSelection(), searchQuery: activeTemplateActivity.pictureWordMatchingCustom?.searchQuery || '' };
+                        renderPictureWordCustomGallery(title);
+                        renderTemplatePreview();
+                        return;
+                    }
+                    const startButton = event.target.closest('[data-picture-word-start-activity]');
+                    if (startButton) {
+                        const selectedItems = getPictureWordCustomSelection();
+                        if (selectedItems.length !== PICTURE_WORD_CUSTOM_MAX_ITEMS) return;
+                        activeTemplateActivity.pictureWordMatching.mode = 'custom';
+                        activeTemplateActivity.items = selectedItems.map(item => ({
+                            image: item.image,
+                            imagePreview: getPictureWordMatchingPreviewImage(item, item.setKey),
+                            word: item.englishWord,
+                            englishWord: item.englishWord,
+                            filipinoWord: item.filipinoWord,
+                            sourceSetKey: item.setKey,
+                            sourceImage: item.image,
+                            sourceType: 'custom'
+                        }));
+                        activeTemplateActivity.content = {
+                            assessment_set: 'custom',
+                            pictureWordMatching: {
+                                mode: 'custom',
+                                items: selectedItems,
+                                searchQuery: activeTemplateActivity.pictureWordMatchingCustom?.searchQuery || ''
+                            },
+                            items: activeTemplateActivity.items
+                        };
+                        renderTemplatePreview();
+                    }
+                });
+            }
+            const language = getPictureWordMatchingSelectedLanguage();
+            const currentMode = getPictureWordMatchingMode();
+            const current = normalizePictureWordMatchingSelection(activeTemplateActivity.pictureWordMatching?.setKey || 'A', language);
+            if (currentMode !== 'custom') {
+                activeTemplateActivity.pictureWordMatching = Object.assign({}, current, { mode: 'prescribed' });
+            } else if (!activeTemplateActivity.pictureWordMatching?.mode) {
+                activeTemplateActivity.pictureWordMatching.mode = 'custom';
+            }
+            if (!activeTemplateActivity.pictureWordMatchingCustom) {
+                activeTemplateActivity.pictureWordMatchingCustom = { items: loadPictureWordCustomSelection(), searchQuery: '' };
+            }
+            const customItems = getPictureWordCustomSelection();
+            const query = String(activeTemplateActivity.pictureWordMatchingCustom?.searchQuery || '').trim();
+            const results = searchPictureWordLibrary(query);
+            const selectedCount = customItems.length;
+            const canAddMore = selectedCount < PICTURE_WORD_CUSTOM_MAX_ITEMS;
+            const sets = getPictureWordMatchingSets();
+            templateDynamicFields.innerHTML = `
+                <style>
+                    .picture-word-mode-toggle .btn-check:checked + .btn {
+                        background: var(--bs-primary);
+                        border-color: var(--bs-primary);
+                        color: #fff;
+                    }
+                    .picture-word-custom-search {
+                        border: 1px solid rgba(0,0,0,.12);
+                        border-radius: 1rem;
+                        background: linear-gradient(180deg, rgba(13,110,253,.04), rgba(255,255,255,.95));
+                        padding: 1rem;
+                    }
+                    .picture-word-gallery-scroll {
+                        max-height: min(58vh, 620px);
+                        overflow-y: auto;
+                        overflow-x: hidden;
+                        padding-right: 0.25rem;
+                    }
+                    .picture-word-result-grid {
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 0.65rem;
+                        justify-content: stretch;
+                        align-content: start;
+                    }
+                    .picture-word-result-card {
+                        border: 1px solid rgba(0,0,0,.12);
+                        border-radius: 1rem;
+                        background: #fff;
+                        overflow: hidden;
+                        display: flex;
+                        flex-direction: column;
+                        width: 100%;
+                        max-width: 116px;
+                        justify-self: center;
+                    }
+                    .picture-word-result-card img {
+                        width: 100%;
+                        aspect-ratio: 1 / 1;
+                        object-fit: contain;
+                        padding: 0.35rem;
+                        display: block;
+                        background: #f8f9fa;
+                    }
+                    .picture-word-result-card .fw-semibold,
+                    .picture-word-result-card .text-muted {
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+                    @media (min-width: 576px) {
+                        .picture-word-result-card { width: 112px; }
+                        .picture-word-result-card { max-width: 112px; }
+                        .picture-word-result-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+                    }
+                    @media (min-width: 768px) {
+                        .picture-word-result-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+                    }
+                    @media (min-width: 992px) {
+                        .picture-word-result-card { max-width: 116px; }
+                        .picture-word-result-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+                    }
+                    .picture-word-selected-list {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 0.5rem;
+                    }
+                    .picture-word-selected-chip {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.4rem;
+                        border: 1px solid rgba(0,0,0,.12);
+                        border-radius: 999px;
+                        padding: 0.45rem 0.7rem;
+                        background: #fff;
+                    }
+                    .picture-word-carousel-shell {
+                        position: relative;
+                        max-width: 100%;
+                        overflow: hidden;
+                    }
+                    .picture-word-carousel {
+                        display: flex;
+                        gap: 1rem;
+                        overflow-x: auto;
+                        scroll-snap-type: x mandatory;
+                        scroll-behavior: smooth;
+                        padding: 0.25rem 0.1rem 0.5rem;
+                        scrollbar-width: none;
+                        overscroll-behavior-x: contain;
+                        width: 100%;
+                        max-width: 100%;
+                        min-width: 0;
+                    }
+                    .picture-word-carousel::-webkit-scrollbar { display: none; width: 0; height: 0; }
+                    .picture-word-card {
+                        flex: 0 0 100%;
+                        min-width: 0;
+                        scroll-snap-align: start;
+                        min-height: 360px;
+                        box-sizing: border-box;
+                        border: 1px solid rgba(0,0,0,.12);
+                        border-radius: 1rem;
+                        background: #fff;
+                        padding: 1rem;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.75rem;
+                    }
+                    .picture-word-card.is-selected { border-color: var(--bs-primary); box-shadow: 0 0 0 2px rgba(13,110,253,.12); background: rgba(13,110,253,.04); }
+                    .picture-word-card-images {
+                        display: grid;
+                        grid-template-columns: repeat(3, minmax(0, 1fr));
+                        gap: 0.5rem;
+                    }
+                    .picture-word-thumb {
+                        margin: 0;
+                        aspect-ratio: 1 / 1;
+                        border: 1px solid rgba(0,0,0,.12);
+                        border-radius: 0.75rem;
+                        overflow: hidden;
+                        background: #fff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .picture-word-thumb img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        display: block;
+                    }
+                    .picture-word-card-words {
+                        min-height: 2.5rem;
+                        font-size: 0.875rem;
+                        color: var(--bs-secondary-color);
+                        line-height: 1.35;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                    }
+                    .picture-word-dot {
+                        width: 0.6rem;
+                        height: 0.6rem;
+                        border-radius: 999px;
+                        background: rgba(0,0,0,.2);
+                        display: inline-block;
+                    }
+                    .picture-word-dot.is-active { background: var(--bs-primary); transform: scale(1.15); }
+                    @media (min-width: 768px) {
+                        .picture-word-card { flex-basis: calc((100% - 1rem) / 2); }
+                    }
+                    @media (min-width: 992px) {
+                        .picture-word-card { flex-basis: calc((100% - 2rem) / 3); }
+                    }
+                    @media (max-width: 575.98px) {
+                        .picture-word-card { min-height: 330px; }
+                        .picture-word-card-images { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                    }
+                </style>
+                <div class="d-flex flex-column gap-3">
+                    <div class="picture-word-mode-toggle btn-group" role="group" aria-label="Picture-word mode">
+                        <input type="radio" class="btn-check" name="pictureWordMode" id="pictureWordModePrescribed" value="prescribed" ${currentMode !== 'custom' ? 'checked' : ''}>
+                        <label class="btn btn-outline-primary" for="pictureWordModePrescribed">Prescribed Sets</label>
+                        <input type="radio" class="btn-check" name="pictureWordMode" id="pictureWordModeCustom" value="custom" ${currentMode === 'custom' ? 'checked' : ''}>
+                        <label class="btn btn-outline-primary" for="pictureWordModeCustom">Custom Set</label>
+                    </div>
+                    <div class="picture-word-carousel-shell ${currentMode === 'custom' ? 'd-none' : ''}" data-picture-word-prescribed-panel>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                        <div>
+                            <div class="small text-muted text-uppercase">Prescribed Sets</div>
+                            <div class="fw-semibold">Browse the available sets</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-picture-word-carousel-prev aria-label="Previous sets"><i class="bi bi-chevron-left"></i></button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-picture-word-carousel-next aria-label="Next sets"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="picture-word-carousel" data-picture-word-carousel>
+                        ${sets.map(set => {
+                            const items = set.items || [];
+                            const isSelected = current.setKey === set.key;
+                            return `
+                                <article class="picture-word-card ${isSelected ? 'is-selected' : ''}" data-picture-word-card="${escapeAttr(set.key)}">
+                                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                        <div class="min-w-0">
+                                            <h6 class="mb-1 fw-bold text-truncate">${escapeHtml(`Set ${set.key}`)}</h6>
+                                            <div class="text-muted small">5 items</div>
+                                        </div>
+                                        <span class="badge ${isSelected ? 'text-bg-primary' : 'text-bg-light'}">${isSelected ? 'Selected' : 'Ready'}</span>
+                                    </div>
+                                    <div class="picture-word-card-images">
+                                        ${items.map(item => {
+                                            const word = getPictureWordMatchingWord(item, language);
+                                            const imagePath = getPictureWordMatchingPreviewImage(item, set.key);
+                                            return `
+                                                <figure class="picture-word-thumb">
+                                                    <img src="${escapeAttr(imagePath)}" alt="${escapeAttr(word)}" loading="lazy">
+                                                </figure>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                    <div class="picture-word-card-words" title="${escapeAttr(items.map(item => getPictureWordMatchingWord(item, language)).join(' • '))}">
+                                        ${escapeHtml(items.map(item => getPictureWordMatchingWord(item, language)).join(' • '))}
+                                    </div>
+                                    <button type="button" class="btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-primary'} w-100" data-picture-word-set-select="${escapeAttr(set.key)}">${isSelected ? 'Selected' : `Use Set ${set.key}`}</button>
+                                </article>
+                            `;
+                        }).join('')}
+                    </div>
+                    <div class="alert alert-info border-0 small mt-3 mb-0">
+                        Select a prescribed picture-word set. The pictures stay the same, and the displayed word follows the selected language.
+                    </div>
+                </div>
+                    <div class="${currentMode === 'custom' ? '' : 'd-none'}" data-picture-word-custom-panel>
+                        <div class="picture-word-custom-search">
+                            <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                                <div>
+                                    <div class="small text-muted text-uppercase">Custom Picture-Word Set</div>
+                                    <div class="fw-semibold">Search existing materials and build your own set</div>
+                                </div>
+                                <span class="badge text-bg-light">${selectedCount}/${PICTURE_WORD_CUSTOM_MAX_ITEMS} selected</span>
+                            </div>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                                <input type="search" class="form-control" placeholder="Search pictures..." value="${escapeAttr(query)}" data-picture-word-search>
+                            </div>
+                            <div class="picture-word-gallery-scroll mb-3" data-picture-word-gallery-scroll>
+                                <div class="picture-word-result-grid" data-picture-word-gallery>
+                                    ${results.map(item => {
+                                        const imagePath = getPictureWordMatchingPreviewImage(item, item.setKey);
+                                        const selected = isPictureWordCustomSelected(item);
+                                    return `
+                                            <article class="picture-word-result-card">
+                                                <img src="${escapeAttr(imagePath)}" alt="${escapeAttr(item.englishWord)}" loading="lazy">
+                                                <div class="p-2 text-center">
+                                                    <div class="fw-semibold text-truncate">${escapeHtml(getPictureWordMatchingWord(item, language))}</div>
+                                                    <button type="button" class="btn btn-sm ${selected ? 'btn-outline-danger' : 'btn-primary'} w-100 mt-2" data-picture-word-custom-toggle="${escapeAttr(`${item.setKey}:${item.image}`)}" ${!selected && !canAddMore ? 'disabled' : ''}>
+                                                        ${selected ? 'Selected' : 'Add'}
+                                                    </button>
+                                                </div>
+                                            </article>
+                                        `;
+                                    }).join('') || '<div class="text-muted small">No matching pictures found.</div>'}
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <div class="fw-semibold">My Custom Set</div>
+                                <div class="text-muted small" data-picture-word-selected-count>${selectedCount} items selected</div>
+                            </div>
+                            <div class="picture-word-selected-list mb-3" data-picture-word-selected-list>
+                                ${customItems.length ? customItems.map(item => `
+                                    <span class="picture-word-selected-chip">
+                                        <span>${escapeHtml(item.englishWord)}</span>
+                                        <button type="button" class="btn btn-sm btn-link p-0 text-danger" aria-label="Remove ${escapeAttr(item.englishWord)}" data-picture-word-custom-remove="${escapeAttr(`${item.setKey}:${item.image}`)}">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </span>
+                                `).join('') : '<div class="text-muted small">No items selected yet.</div>'}
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <button type="button" class="btn btn-primary" data-picture-word-start-activity ${selectedCount === PICTURE_WORD_CUSTOM_MAX_ITEMS ? '' : 'disabled'}>Start Activity</button>
+                                <div class="small text-muted">${selectedCount === PICTURE_WORD_CUSTOM_MAX_ITEMS ? 'Ready to launch.' : `Select ${PICTURE_WORD_CUSTOM_MAX_ITEMS} items to continue.`}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            Array.from(templateDynamicFields.querySelectorAll('input[name="pictureWordMode"]')).forEach(input => {
+                input.addEventListener('change', () => {
+                    activeTemplateActivity.pictureWordMatching.mode = input.value === 'custom' ? 'custom' : 'prescribed';
+                    if (input.value === 'custom') {
+                        activeTemplateActivity.pictureWordMatchingCustom = { items: getPictureWordCustomSelection() };
+                    }
+                    renderTemplateDynamicFields(title);
+                    renderTemplatePreview();
+                });
+            });
+            templateDynamicFields.querySelector('[data-picture-word-search]')?.addEventListener('input', event => {
+                activeTemplateActivity.pictureWordMatchingCustom = Object.assign({}, activeTemplateActivity.pictureWordMatchingCustom || {}, {
+                    items: getPictureWordCustomSelection(),
+                    searchQuery: event.target.value
+                });
+                renderPictureWordCustomGallery(title);
+            });
+            const carousel = templateDynamicFields.querySelector('[data-picture-word-carousel]');
+            templateDynamicFields.querySelector('[data-picture-word-carousel-prev]')?.addEventListener('click', () => {
+                carousel?.scrollBy({ left: -carousel.clientWidth * 0.85, behavior: 'smooth' });
+            });
+            templateDynamicFields.querySelector('[data-picture-word-carousel-next]')?.addEventListener('click', () => {
+                carousel?.scrollBy({ left: carousel.clientWidth * 0.85, behavior: 'smooth' });
+            });
+        }
+
         function getTemplateDefinition(title) {
             return TEMPLATE_DEFINITIONS[title] || TEMPLATE_DEFINITIONS['Picture-Word Matching'];
         }
@@ -14455,6 +15122,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 };
             }
 
+            if (isPictureWordMatchingTemplate(templateTitle) && activeTemplateActivity?.pictureWordMatching?.mode === 'custom') {
+                const items = Array.isArray(activeTemplateActivity.pictureWordMatchingCustom?.items)
+                    ? activeTemplateActivity.pictureWordMatchingCustom.items
+                    : [];
+                return {
+                    title: activeTemplateActivity.title || 'Custom Picture-Word Set',
+                    meta: `${language || 'English'} · Custom Picture-Word`,
+                    body: items.map((item, index) => `${index + 1}. ${item.englishWord} — ${item.filipinoWord}`).filter(Boolean),
+                    emptyMessage: 'No custom items selected yet.'
+                };
+            }
+
             if (isTemplateItemListType(templateTitle)) {
                 const items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
                 const body = items.map((item, index) => {
@@ -14509,6 +15188,15 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 renderStoryReadingSelector(title);
                 return;
             }
+            if (isPictureWordMatchingTemplate(title)) {
+                Array.from(document.querySelectorAll('input[name="templateLanguage"]')).forEach(input => {
+                    input.disabled = false;
+                    input.parentElement?.classList.remove('opacity-50');
+                    input.parentElement?.setAttribute('title', '');
+                });
+                renderPictureWordMatchingSelector(title);
+                return;
+            }
             if (isSentenceReadingTemplate(title)) {
                 syncSentenceReadingItems();
                 renderSentenceReadingSelector(title);
@@ -14542,6 +15230,12 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!templatePreviewPanel || !activeTemplateActivity) return;
             const summary = getTemplateContentSelectionSummary();
             const weeks = getTemplateWeeks();
+            const selectionSummary = isPictureWordMatchingTemplate(activeTemplateActivity.templateTitle)
+                ? {
+                    summary: `Set ${activeTemplateActivity.pictureWordMatching?.setKey || 'A'} • ${activeTemplateActivity.pictureWordMatching?.language || getPictureWordMatchingSelectedLanguage()}`,
+                    emptyMessage: 'Select a prescribed picture-word set.'
+                }
+                : summary;
             templatePreviewPanel.innerHTML = `
                 <div class="fw-bold mb-1">${escapeHtml(summary.title || activeTemplateActivity.title || 'Activity Preview')}</div>
                 <div class="small text-muted mb-2">${escapeHtml(summary.meta || `${activeTemplateActivity.language || ''} · ${activeTemplateActivity.lesson || ''}`)}</div>
@@ -14558,7 +15252,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                             ${isSentenceReadingTemplate(activeTemplateActivity.templateTitle) ? `<div class="small text-muted mt-2">${summary.body.length} sentence${summary.body.length === 1 ? '' : 's'} selected</div>` : ''}`
                         }
                     </div>
-                ` : `<div class="text-muted small">${escapeHtml(summary.emptyMessage)}</div>`}
+                ` : `<div class="text-muted small">${escapeHtml(selectionSummary.emptyMessage)}</div>`}
             `;
         }
 
@@ -14722,6 +15416,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 content: {},
                 items: []
             };
+            if (isPictureWordMatchingTemplate(templateTitle)) {
+                activeTemplateActivity.pictureWordMatching = Object.assign({}, normalizePictureWordMatchingSelection('A', 'English'), { mode: 'prescribed' });
+                activeTemplateActivity.pictureWordMatchingCustom = { items: [], searchQuery: '' };
+            }
             if (isStoryReadingTemplate(templateTitle)) {
                 activeTemplateActivity.storyReading = {
                     language: 'English',
@@ -14773,11 +15471,42 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 syncSentenceReadingItems();
             }
             const language = Array.from(document.querySelectorAll('input[name="templateLanguage"]')).find(input => input.checked)?.value || '';
-            const normalizedLanguage = isStoryReadingTemplate(activeTemplateActivity?.templateTitle) && language === 'Filipino' ? 'English' : language;
-            const normalizedSentenceLanguage = isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)
-                ? normalizeSentenceReadingLanguage(language)
-                : language;
-            if (isTemplateItemListType(activeTemplateActivity?.templateTitle)) {
+            if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+                const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
+                content.language = language || 'English';
+                if (mode === 'custom') {
+                    const selectedItems = getPictureWordCustomSelection();
+                    content.items = selectedItems.map(item => ({
+                        image: item.image,
+                        set: `Custom Set`,
+                        filipino_word: item.filipinoWord,
+                        english_word: item.englishWord,
+                        word: getPictureWordMatchingWord(item, content.language),
+                        image_asset: item.image,
+                        image_path: getPictureWordMatchingPreviewImage(item, item.setKey)
+                    }));
+                    content.pictureWordMatching = {
+                        mode: 'custom',
+                        language: content.language,
+                        items: selectedItems
+                    };
+                    content.assessment_set = 'custom';
+                } else {
+                    const selection = normalizePictureWordMatchingSelection(activeTemplateActivity?.pictureWordMatching?.setKey || 'A', language || 'English');
+                    const items = (PICTURE_WORD_MATCHING_SYSTEM_SETS[selection.setKey] || []).map(item => ({
+                        image: item.image,
+                        set: `Set ${selection.setKey}`,
+                        filipino_word: item.filipinoWord,
+                        english_word: item.englishWord,
+                        word: getPictureWordMatchingWord(item, selection.language),
+                        image_asset: item.image,
+                        image_path: getPictureWordMatchingPreviewImage(item, selection.setKey)
+                    }));
+                    content.items = items;
+                    content.pictureWordMatching = selection;
+                    content.assessment_set = selection.setKey;
+                }
+            } else if (isTemplateItemListType(activeTemplateActivity?.templateTitle)) {
                 content.items = Array.isArray(activeTemplateActivity.items) ? activeTemplateActivity.items : [];
             } else if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
                 Object.assign(content, activeTemplateActivity.content || {});
@@ -14788,6 +15517,10 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     content[field.dataset.fieldKey] = field.type === 'file' ? (field.files?.[0]?.name || '') : field.value.trim();
                 });
             }
+            const normalizedLanguage = isStoryReadingTemplate(activeTemplateActivity?.templateTitle) && language === 'Filipino' ? 'English' : language;
+            const normalizedSentenceLanguage = isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)
+                ? normalizeSentenceReadingLanguage(language)
+                : language;
             return {
                 title: (templateActivityTitle?.value || '').trim(),
                 language: isSentenceReadingTemplate(activeTemplateActivity?.templateTitle) ? normalizedSentenceLanguage : (isPhraseReadingTemplate(activeTemplateActivity?.templateTitle) && language === 'Filipino' ? 'Tagalog' : normalizedLanguage),
@@ -14805,6 +15538,18 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
                 if (values.language !== 'Tagalog') return 'Sentence Reading currently has prescribed content only for Tagalog.';
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'Select at least one prescribed sentence item.';
+            }
+            if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+                if (!values.language) return 'Language is required.';
+                const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
+                if (mode === 'custom') {
+                    if (!Array.isArray(activeTemplateActivity?.pictureWordMatchingCustom?.items) || activeTemplateActivity.pictureWordMatchingCustom.items.length !== PICTURE_WORD_CUSTOM_MAX_ITEMS) {
+                        return `Select ${PICTURE_WORD_CUSTOM_MAX_ITEMS} custom items before starting the activity.`;
+                    }
+                } else {
+                    if (!values.content?.assessment_set) return 'Choose a prescribed set.';
+                    if (!Array.isArray(values.content?.items) || values.content.items.length !== 5) return 'Select a prescribed set with 5 items.';
+                }
             }
             if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
                 if (values.language !== 'English') return 'Story Reading currently has prescribed content only for English.';
@@ -14824,6 +15569,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function readTemplateItemValues(title) {
+            if (isPictureWordMatchingTemplate(title)) return {};
             const values = {};
             const root = document.getElementById('templateDynamicFields');
             Array.from(root?.querySelectorAll('.template-item-field') || []).forEach(field => {
@@ -14845,7 +15591,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function addOrUpdateTemplateItem() {
-            if (!activeTemplateActivity || !isTemplateItemListType(activeTemplateActivity.templateTitle)) return;
+            if (!activeTemplateActivity || !isTemplateItemListType(activeTemplateActivity.templateTitle) || isPictureWordMatchingTemplate(activeTemplateActivity.templateTitle)) return;
             const title = activeTemplateActivity.templateTitle;
             const values = readTemplateItemValues(title);
             const requiredKeys = getTemplateItemFields(title).map(field => field.key);
@@ -14878,7 +15624,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function populateTemplateItemForEdit(index) {
-            if (!activeTemplateActivity || !isTemplateItemListType(activeTemplateActivity.templateTitle)) return;
+            if (!activeTemplateActivity || !isTemplateItemListType(activeTemplateActivity.templateTitle) || isPictureWordMatchingTemplate(activeTemplateActivity.templateTitle)) return;
             const items = getTemplateBuilderState();
             const item = items[index];
             if (!item) return;
@@ -14899,7 +15645,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         }
 
         function deleteTemplateItem(index) {
-            if (!activeTemplateActivity || !Array.isArray(activeTemplateActivity.items)) return;
+            if (!activeTemplateActivity || !Array.isArray(activeTemplateActivity.items) || isPictureWordMatchingTemplate(activeTemplateActivity.templateTitle)) return;
             const item = activeTemplateActivity.items[index];
             if (item?.imagePreview && item.imagePreview.startsWith('blob:')) {
                 try { URL.revokeObjectURL(item.imagePreview); } catch (e) { /* ignore */ }
@@ -14938,6 +15684,32 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         weeks: values.weeks || [],
                         items: Array.isArray(activeTemplateActivity?.items) ? activeTemplateActivity.items : [],
                     });
+                    if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
+                        const mode = activeTemplateActivity?.pictureWordMatching?.mode === 'custom' ? 'custom' : 'prescribed';
+                        if (mode === 'custom') {
+                            const selectedItems = getPictureWordCustomSelection();
+                            contentPayload.pictureWordMatching = {
+                                mode: 'custom',
+                                language: values.language || 'English',
+                                items: selectedItems
+                            };
+                            contentPayload.assessment_set = 'custom';
+                            contentPayload.items = selectedItems.map(item => ({
+                                image: item.image,
+                                word: item.englishWord,
+                                englishWord: item.englishWord,
+                                filipinoWord: item.filipinoWord,
+                                imagePreview: getPictureWordMatchingPreviewImage(item, item.setKey),
+                                sourceSetKey: item.setKey,
+                                sourceImage: item.image,
+                                sourceType: 'custom'
+                            }));
+                        } else {
+                            contentPayload.pictureWordMatching = activeTemplateActivity.pictureWordMatching || normalizePictureWordMatchingSelection('A', values.language || 'English');
+                            contentPayload.assessment_set = contentPayload.pictureWordMatching.setKey;
+                            contentPayload.items = values.content?.items || [];
+                        }
+                    }
                     if (activeTemplateActivity?.storyReading) {
                         contentPayload.storyReading = activeTemplateActivity.storyReading;
                     }
@@ -16013,6 +16785,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     } else if (activeTemplateActivity?.templateTitle === 'Story Reading') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     } else if (activeTemplateActivity?.templateTitle === 'Sentence Reading Practice') {
+                        renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
+                    } else if (activeTemplateActivity?.templateTitle === 'Picture-Word Matching') {
                         renderTemplateDynamicFields(activeTemplateActivity.templateTitle);
                     }
                     renderTemplatePreview();
