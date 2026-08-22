@@ -13879,6 +13879,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 { key: 'tagalog-sentence-3', label: 'Sentence Reading 3', items: ['Si Lili ay may laso.', 'Ang laso ay Lila.', 'Ang laso ay luma.', 'Baka kay lola ang laso ni Lili.', 'May keso sa mesa.', 'May kuko ang isa.', 'Ang lata ni Koko.'] },
                 { key: 'tagalog-sentence-4', label: 'Sentence Reading 4', items: ['May mais si Tim.', 'Sina Tina at Tim ay may tuta.', 'Nakita ni Tina ang salamin ni Ana.', 'Mais at mani ang baon ni Tina.', 'Si ate ay sasama kay tita sa misa.'] },
                 { key: 'tagalog-sentence-5', label: 'Sentence Reading 5', items: ['Si Tala ay may yoyo.', 'Matamis ang yema ni Tim.', 'May kawa sa mesa nila Tala.', 'Ang walis tambo ay nasa mesa.', 'Sina nanay at tatay ay mayaman.', 'Sasama sina nanay at tatay kay Tala.'] }
+            ],
+            English: [
+                { key: 'english-sentence-1', label: 'Sentence Reading 1', items: ['The moon is bright tonight.', 'Ben looks at the sky.', 'He sees many stars.'] },
+                { key: 'english-sentence-2', label: 'Sentence Reading 2', items: ['Sara has a yellow umbrella.', 'It starts to rain.', 'Sara walks home slowly.', 'She stays dry under her umbrella.'] },
+                { key: 'english-sentence-3', label: 'Sentence Reading 3', items: ['A farmer works on the farm.', 'He plants small seeds.', 'He gives the plants water.', 'The plants grow tall.'] },
+                { key: 'english-sentence-4', label: 'Sentence Reading 4', items: ['Carlo finds a kitten outside.', 'The kitten is cold and wet.', 'Carlo gives it a soft towel.', 'He gives the kitten some milk.', 'The kitten feels warm and safe.'] },
+                { key: 'english-sentence-5', label: 'Sentence Reading 5', items: ['Nina visits her grandmother on Sunday.', 'Her grandmother makes a warm meal.', 'Nina helps set the table.', 'They eat together in the kitchen.', 'After lunch, Nina helps wash the plates.', 'Her grandmother thanks her for helping.'] }
             ]
         };
         const STORY_READING_SYSTEM_STORIES = {
@@ -15666,7 +15673,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             if (!values.language) return 'Language is required.';
             if (!values.instructions) return 'Instructions are required.';
             if (isSentenceReadingTemplate(activeTemplateActivity?.templateTitle)) {
-                if (values.language !== 'Tagalog') return 'Sentence Reading currently has prescribed content only for Tagalog.';
+                if (!['Tagalog', 'English'].includes(values.language)) return 'Sentence Reading currently has prescribed content only for Tagalog and English.';
                 if (!Array.isArray(values.content?.items) || !values.content.items.length) return 'Select at least one prescribed sentence item.';
             }
             if (isPictureWordMatchingTemplate(activeTemplateActivity?.templateTitle)) {
