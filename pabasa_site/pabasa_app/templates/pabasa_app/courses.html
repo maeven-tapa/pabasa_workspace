@@ -13895,6 +13895,125 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         'The pet is happy.',
                         'Ben is happy too.'
                     ]
+                },
+                {
+                    key: 'story-2-mia-and-the-red-ball',
+                    title: 'Mia and the Red Ball',
+                    label: 'Story 2 — Mia and the Red Ball',
+                    sentences: [
+                        'Mia has a red ball.',
+                        'She plays with the ball.',
+                        'The ball rolls away.',
+                        'Mia runs after it.',
+                        'She gets the ball back.',
+                        'Mia is happy.'
+                    ]
+                },
+                {
+                    key: 'story-3-sams-big-hat',
+                    title: "Sam's Big Hat",
+                    label: "Story 3 — Sam's Big Hat",
+                    sentences: [
+                        'Sam has a big hat.',
+                        'The hat is blue.',
+                        'Sam puts it on.',
+                        'He goes outside.',
+                        'The sun is hot.',
+                        'Sam likes his hat.'
+                    ]
+                },
+                {
+                    key: 'story-4-the-little-fish',
+                    title: 'The Little Fish',
+                    label: 'Story 4 — The Little Fish',
+                    sentences: [
+                        'A little fish is in a pond.',
+                        'The fish swims in the water.',
+                        'It sees a green leaf.',
+                        'The fish swims under it.',
+                        'Then it swims away.',
+                        'The little fish is safe.'
+                    ]
+                },
+                {
+                    key: 'story-5-anas-new-book',
+                    title: "Ana's New Book",
+                    label: "Story 5 — Ana's New Book",
+                    sentences: [
+                        'Ana has a new book.',
+                        'The book has many pictures.',
+                        'Ana sits on a mat.',
+                        'She opens the book.',
+                        'She reads each page.',
+                        'Ana likes her new book.'
+                    ]
+                }
+            ],
+            Filipino: [
+                {
+                    key: 'story-1-ang-umaga-ni-lito',
+                    title: 'Ang Umaga ni Lito',
+                    label: 'Story 1 — Ang Umaga ni Lito',
+                    sentences: [
+                        'Maagang gumising si Lito.',
+                        'Naghilamos siya ng mukha.',
+                        'Nagsipilyo siya ng ngipin.',
+                        'Kumain siya ng almusal.',
+                        'Isinuot niya ang uniporme.',
+                        'Pumasok si Lito sa paaralan.'
+                    ]
+                },
+                {
+                    key: 'story-2-si-nena-at-ang-bulaklak',
+                    title: 'Si Nena at ang Bulaklak',
+                    label: 'Story 2 — Si Nena at ang Bulaklak',
+                    sentences: [
+                        'May nakita si Nena na bulaklak.',
+                        'Maliwanag ang kulay nito.',
+                        'Diniligan niya ang bulaklak.',
+                        'Lumaki ito araw-araw.',
+                        'Masaya si Nena sa kanyang halaman.',
+                        'Inalagaan niya ito.'
+                    ]
+                },
+                {
+                    key: 'story-3-ang-masayang-araw',
+                    title: 'Ang Masayang Araw',
+                    label: 'Story 3 — Ang Masayang Araw',
+                    sentences: [
+                        'Maaraw noong araw na iyon.',
+                        'Lumabas sina Carlo at Ana.',
+                        'Naglalaro sila sa parke.',
+                        'Tumakbo si Carlo sa damuhan.',
+                        'Umupo si Ana sa ilalim ng puno.',
+                        'Masaya silang umuwi.'
+                    ]
+                },
+                {
+                    key: 'story-4-ang-baon-ni-rosa',
+                    title: 'Ang Baon ni Rosa',
+                    label: 'Story 4 — Ang Baon ni Rosa',
+                    sentences: [
+                        'May baon na tinapay si Rosa.',
+                        'May dala rin siyang gatas.',
+                        'Umupo siya sa tabi ng kanyang kaibigan.',
+                        'Ibinahagi niya ang kanyang tinapay.',
+                        'Nagpasalamat ang kanyang kaibigan.',
+                        'Masaya silang kumain.'
+                    ]
+                },
+                {
+                    key: 'story-5-ang-nawalang-lapis',
+                    title: 'Ang Nawalang Lapis',
+                    label: 'Story 5 — Ang Nawalang Lapis',
+                    sentences: [
+                        'Hinahanap ni Joel ang kanyang lapis.',
+                        'Tumingin siya sa kanyang mesa.',
+                        'Tumingin din siya sa kanyang bag.',
+                        'Nakita niya ito sa ilalim ng libro.',
+                        'Kinuha niya ang lapis.',
+                        'Nagpatuloy siya sa pagsusulat.'
+                    ]
                 }
             ]
         };
@@ -15563,7 +15682,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                 }
             }
             if (isStoryReadingTemplate(activeTemplateActivity?.templateTitle)) {
-                if (values.language !== 'English') return 'Story Reading currently has prescribed content only for English.';
+                if (!['English', 'Filipino'].includes(values.language)) return 'Story Reading currently has prescribed content only for English and Filipino.';
                 if (!values.content?.storyTitle || !values.content?.storyText) return 'Select a prescribed story.';
             }
             if (isPhraseReadingTemplate(activeTemplateActivity?.templateTitle)) {
