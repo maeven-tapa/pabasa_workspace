@@ -3,7 +3,17 @@
     <div class="sidebar-top-section flex-shrink-0 mb-4">
         <a class="sidebar-logo-link" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
             <img class="sidebar-logo-img" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
+            {% if nav_role == 'teacher' %}
+            <span class="sidebar-logo-text teacher-sidebar-logo-letters" aria-hidden="true">
+                <span class="logo-letter-yellow">A</span>
+                <span class="logo-letter-blue">B</span>
+                <span class="logo-letter-yellow">A</span>
+                <span class="logo-letter-blue">S</span>
+                <span class="logo-letter-yellow">A</span>
+            </span>
+            {% else %}
             <span class="sidebar-logo-text">PABASA</span>
+            {% endif %}
         </a>
 
         <div class="sidebar-brand-row sidebar-profile-card d-flex align-items-center justify-content-between gap-2 mt-3">
