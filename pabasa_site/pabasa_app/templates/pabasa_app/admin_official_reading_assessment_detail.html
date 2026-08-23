@@ -1,26 +1,75 @@
 {% extends "pabasa_app/admin_base.html" %}
 {% block content %}
 <div class="admin-panel">
-  <div class="alert alert-warning border-0 rounded-4 mb-4">
-    <strong>Official Reading Assessments - Protected</strong>
-    <div class="mt-1">This official assessment is view-only by default. Override Edit requires administrator authorization and applies only to this assessment.</div>
+  <div class="alert alert-info border-0 rounded-4 mb-4">
+    <strong>Official Reading Assessment</strong>
+    <div class="mt-1">Read-only details. The only allowed changes are archive and unarchive.</div>
   </div>
+
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
     <div>
       <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_official_reading_assessments' %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
       <h2 class="h4 fw-bold mb-1">{{ material.title }}</h2>
-      <p class="text-secondary mb-0">Official Reading Assessment details</p>
+      <p class="text-secondary mb-0">{{ assessment_type_label }} · {{ system_status_label }} · {{ material_status_label }}</p>
     </div>
-    <div class="d-flex gap-2">
-      <a class="btn btn-outline-warning fw-bold" href="{% url 'admin_official_reading_assessments' %}">
-        <i class="bi bi-lock me-1"></i>Request Integrity Override
-      </a>
+    <div class="d-flex flex-wrap gap-2">
+      {% if material.is_active %}
+      <form method="post" action="{% url 'admin_official_reading_assessment_archive' material.id %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-secondary fw-bold" type="submit">Archive</button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'admin_official_reading_assessment_unarchive' material.id %}">
+        {% csrf_token %}
+        <button class="btn btn-success fw-bold" type="submit">Unarchive</button>
+      </form>
+      {% endif %}
     </div>
   </div>
+
   <div class="row g-3">
-    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">School Year</div><strong>{{ school_year_value }}</strong></div></div>
-    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">Term</div><strong>{{ material.official_term }}</strong></div></div>
-    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">Status</div><strong>{{ selected_assessment_type|title }}</strong></div></div>
+    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">Assessment Type</div><strong>{{ assessment_type_label }}</strong></div></div>
+    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">System Badge</div><strong>{{ system_status_label }}</strong></div></div>
+    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">Status</div><strong>{{ material_status_label }}</strong></div></div>
+    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">School Year</div><strong>{{ school_year_value|default:'Not set' }}</strong></div></div>
+    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">Words</div><strong>{{ reading_words|length }}</strong></div></div>
+    <div class="col-12 col-md-4"><div class="bg-white border rounded-4 p-3"><div class="small text-secondary fw-bold text-uppercase">Sentences</div><strong>{{ reading_sentences|length }}</strong></div></div>
+  </div>
+
+  <div class="mt-4 bg-white border rounded-4 p-3">
+    <div class="small text-secondary fw-bold text-uppercase mb-2">Words</div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for item in reading_words %}
+      <span class="badge text-bg-light border">{{ item }}</span>
+      {% empty %}
+      <span class="text-secondary">No word items stored.</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="mt-4 bg-white border rounded-4 p-3">
+    <div class="small text-secondary fw-bold text-uppercase mb-2">Sentences</div>
+    <div class="d-grid gap-2">
+      {% for item in reading_sentences %}
+      <div class="border rounded-3 p-2">{{ item }}</div>
+      {% empty %}
+      <span class="text-secondary">No sentence items stored.</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="mt-4 bg-white border rounded-4 p-3">
+    <div class="small text-secondary fw-bold text-uppercase mb-2">Paragraphs</div>
+    <div class="d-grid gap-2">
+      {% for item in reading_passages %}
+      <div class="border rounded-3 p-3">
+        <div class="fw-bold">{{ item.title|default:"Untitled Paragraph" }}</div>
+        <div class="text-secondary">{{ item.text|default:'' }}</div>
+      </div>
+      {% empty %}
+      <span class="text-secondary">No paragraph items stored.</span>
+      {% endfor %}
+    </div>
   </div>
 </div>
 {% endblock %}

@@ -2,655 +2,104 @@
 {% block content %}
 <style>
   .ora-shell{display:grid;gap:1rem}
-  .ora-hero,.ora-card,.ora-note,.ora-modal-card{background:#fff;border:1px solid rgba(16,70,110,.09);border-radius:24px;box-shadow:0 16px 38px rgba(16,70,110,.08)}
+  .ora-hero,.ora-card{background:#fff;border:1px solid rgba(16,70,110,.09);border-radius:24px;box-shadow:0 16px 38px rgba(16,70,110,.08)}
   .ora-hero{padding:1.2rem 1.25rem}
   .ora-kicker{font-size:.76rem;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#6b7f94}
   .ora-title{font-weight:900;color:#102f57}
   .ora-subtitle{color:#5d7288}
-  .ora-tabs{display:inline-flex;gap:.35rem;padding:.35rem;background:#eef4fb;border-radius:999px}
-  .ora-tab{border:0;background:transparent;padding:.72rem 1rem;border-radius:999px;font-weight:800;color:#40556f;line-height:1}
-  .ora-tab.active{background:#2f6fd1;color:#fff;box-shadow:0 10px 18px rgba(47,111,209,.22)}
-  .ora-panel{padding:1.15rem}
-  .ora-material{padding:1.4rem 1.4rem 1.25rem}
-  .ora-material-wide{width:100%}
-  .ora-disclaimer{margin-top:.6rem;padding:.8rem 1rem;border-left:3px solid #2f6fd1;background:#f6f9fe;border-radius:14px;color:#35506c;font-size:.92rem;line-height:1.45}
-  .ora-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0}
-  .ora-stat{padding:1rem 1.1rem;min-height:118px}
-  .ora-stat+.ora-stat{border-left:1px solid rgba(16,70,110,.10)}
-  .ora-stat-label{font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#6b7f94}
-  .ora-stat-value{font-size:1.8rem;font-weight:900;color:#102f57;line-height:1.02;margin:.25rem 0 .1rem}
-  .ora-stat-sub{font-size:.83rem;color:#65788f}
+  .ora-phase{padding:1.15rem}
+  .ora-material{border:1px solid rgba(16,70,110,.08);border-radius:20px;padding:1rem;background:#fafdff}
+  .ora-material.active{background:#f2fff7;border-color:rgba(22,101,52,.18)}
+  .ora-meta{font-size:.84rem;color:#64748b}
   .ora-badge{display:inline-flex;align-items:center;padding:.32rem .7rem;border-radius:999px;font-size:.78rem;font-weight:900;line-height:1}
   .b-active{background:rgba(34,197,94,.12);color:#166534}
-  .b-closed{background:rgba(239,68,68,.12);color:#b91c1c}
-  .b-upcoming{background:rgba(148,163,184,.18);color:#475569}
+  .b-archived{background:rgba(148,163,184,.18);color:#475569}
+  .b-system{background:rgba(37,99,235,.12);color:#1d4ed8}
+  .b-custom{background:rgba(249,115,22,.12);color:#c2410c}
+  .ora-list{display:grid;gap:.75rem}
+  .ora-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.8rem;align-items:flex-start;padding-top:.2rem}
+  .ora-actions{display:flex;flex-wrap:wrap;gap:.5rem}
   .ora-divider{height:1px;background:rgba(16,70,110,.08);margin:1rem 0}
-  .ora-muted{color:#6b7f94}
-  .ora-list{display:grid;gap:.65rem}
-  .ora-list-item{padding:.9rem 1rem;border:1px solid rgba(16,70,110,.08);border-radius:16px;background:#fff}
-  .ora-list-item-title{font-weight:900;color:#102f57}
-  .ora-list-item-body{white-space:pre-wrap;color:#334155}
-  .ora-story-card{display:grid;gap:.35rem;padding:.95rem 1rem;border:1px solid rgba(16,70,110,.08);border-radius:16px;background:#fff}
-  .ora-story-title{font-weight:900;color:#102f57}
-  .ora-story-meta{font-size:.82rem;color:#6b7f94}
-  .ora-action-row{display:flex;flex-wrap:wrap;gap:.6rem}
-  .ora-modal-backdrop{position:fixed;inset:0;background:rgba(8,20,35,.56);display:none;align-items:center;justify-content:center;padding:1rem;z-index:1050}
-  .ora-modal-backdrop.is-open{display:flex}
-  .ora-modal-card{width:min(920px,100%);max-height:min(86vh,900px);overflow:auto;padding:1.15rem}
-  .ora-modal-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}
-  .ora-modal-section{padding-top:1rem}
-  .ora-request-grid{display:grid;gap:.85rem}
-  .ora-request-card{padding:1rem 1.05rem;border:1px solid rgba(16,70,110,.08);border-radius:18px;background:#fff;display:grid;gap:.55rem}
-  .ora-request-meta{font-size:.83rem;color:#6b7f94}
-  @media (max-width: 992px){.ora-stat-grid{grid-template-columns:1fr}.ora-stat+.ora-stat{border-left:0;border-top:1px solid rgba(16,70,110,.10)}}
 </style>
 
 <div class="ora-shell">
   <section class="ora-hero">
     <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
       <div>
-        <div class="ora-kicker mb-1">Protected Admin View</div>
+        <div class="ora-kicker mb-1">Official Reading Assessment Management</div>
         <h1 class="h3 fw-black mb-2">Official Reading Assessments</h1>
+        <div class="ora-subtitle">Manage the official Pre-Assessment and Post-Assessment materials used by the reading assessment workflow.</div>
       </div>
       <div class="d-flex align-items-center gap-2">
         <span class="badge rounded-pill text-bg-primary px-3 py-2">{{ assessment_window_status }}</span>
+        <a class="btn btn-primary fw-bold" href="{% url 'admin_official_reading_assessment_add' %}"><i class="bi bi-plus-lg me-1"></i>Add Assessment</a>
       </div>
     </div>
   </section>
 
-  <section class="ora-panel">
-    <div class="ora-card ora-material ora-material-wide">
-      <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
-        <div>
-          <div class="ora-kicker mb-1">Official Material Set</div>
-          <h2 class="h4 fw-black mb-1">ARAL · Term {{ official_material_set.term|default:selected_term }}</h2>
-          <div class="ora-disclaimer">System-defined standardized materials shared across Pre-Assessment and Post-Assessment. These materials are READ-ONLY by default.</div>
-        </div>
-      </div>
-
-      <div class="ora-divider"></div>
-
-      <div class="ora-stat-grid">
-        <div class="ora-stat">
-          <div class="ora-stat-label">Words</div>
-          <div class="ora-stat-value">{{ official_material_set_summary.words }}</div>
-          <div class="ora-stat-sub">loaded items</div>
-        </div>
-        <div class="ora-stat">
-          <div class="ora-stat-label">Sentences</div>
-          <div class="ora-stat-value">{{ official_material_set_summary.sentences }}</div>
-          <div class="ora-stat-sub">loaded items</div>
-        </div>
-        <div class="ora-stat">
-          <div class="ora-stat-label">Paragraphs</div>
-          <div class="ora-stat-value">{{ official_material_set_summary.stories }}</div>
-          <div class="ora-stat-sub">loaded paragraphs</div>
-        </div>
-      </div>
-
-      <div class="ora-divider"></div>
-
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <button type="button" class="btn btn-primary fw-bold px-4" id="openOfficialMaterials">
-          <i class="bi bi-journal-text me-1"></i>View Materials
-        </button>
-        <button type="button" class="btn btn-outline-secondary fw-bold" id="requestIntegrityOverrideBtn" data-material-id="{{ official_material_set.id|default:'' }}">
-          <i class="bi bi-lock me-1"></i>Request Integrity Override
-        </button>
-      </div>
-    </div>
-  </section>
-</div>
-
-<section class="ora-panel mt-3">
-  <div class="ora-card ora-material">
-    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
+  {% for group in official_groups %}
+  <section class="ora-card ora-phase">
+    <div class="d-flex flex-wrap justify-content-between gap-2 align-items-start">
       <div>
-        <div class="ora-kicker mb-1">Pending Reviews</div>
-        <h2 class="h5 fw-black mb-1">Integrity Override Requests</h2>
-        <div class="ora-subtitle">A reviewer must verify the security code server-side before approving a request.</div>
+        <div class="ora-kicker mb-1">{{ group.phase_label }}</div>
+        <h2 class="h5 fw-black mb-1">Current active material</h2>
       </div>
     </div>
     <div class="ora-divider"></div>
-    <div class="ora-request-grid">
-      {% for override_request in pending_override_requests %}
-      <div class="ora-request-card">
-        <div class="d-flex flex-wrap justify-content-between gap-2 align-items-start">
+    {% if group.active_material %}
+      <div class="ora-material active">
+        <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
           <div>
-            <div class="fw-black text-primary">{{ override_request.request_id }}</div>
-            <div class="ora-request-meta">Requested by {{ override_request.requested_by.first_name }} {{ override_request.requested_by.last_name }} ({{ override_request.requested_by.custom_id }})</div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span class="ora-badge b-active">ACTIVE</span>
+              <span class="ora-badge {% if group.active_material.is_system_owned %}b-system{% else %}b-custom{% endif %}">{% if group.active_material.is_system_owned %}SYSTEM OFFICIAL{% else %}CUSTOM{% endif %}</span>
+            </div>
+            <h3 class="h6 fw-black mb-1">{{ group.active_material.title }}</h3>
+            <div class="ora-meta">{{ group.phase_label }} · {{ group.active_material.get_status_display }} · {% if group.active_material.is_active %}Active{% else %}Archived{% endif %}</div>
           </div>
-          <span class="badge text-bg-warning rounded-pill px-3 py-2">Pending</span>
+          <div class="ora-actions">
+            <a class="btn btn-outline-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_detail' group.active_material.id %}">View</a>
+            <form method="post" action="{% url 'admin_official_reading_assessment_archive' group.active_material.id %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-secondary btn-sm fw-bold" type="submit">Archive</button>
+            </form>
+          </div>
         </div>
-        <div class="ora-request-meta">Material: {{ override_request.material.title }}</div>
-        <div class="ora-request-meta">Submitted: {{ override_request.submitted_at|date:"F d, Y h:i A" }}</div>
-        <div class="d-flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="btn btn-sm btn-primary fw-bold approve-override-btn"
-            data-request-id="{{ override_request.request_id }}"
-            data-material-id="{{ override_request.material_id }}"
-            data-request-title="{{ override_request.material.title|escapejs }}"
-          >
-            Approve
-          </button>
+      </div>
+    {% else %}
+      <div class="text-secondary">No active {{ group.phase_label|lower }} material is currently set.</div>
+    {% endif %}
+
+    <div class="ora-divider"></div>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div class="fw-bold text-secondary">Archived Materials ({{ group.archived_materials|length }})</div>
+    </div>
+    <div class="ora-list">
+      {% for material in group.archived_materials %}
+      <div class="ora-material">
+        <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
+          <div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span class="ora-badge b-archived">ARCHIVED</span>
+              <span class="ora-badge {% if material.is_system_owned %}b-system{% else %}b-custom{% endif %}">{% if material.is_system_owned %}SYSTEM OFFICIAL{% else %}CUSTOM{% endif %}</span>
+            </div>
+            <h3 class="h6 fw-black mb-1">{{ material.title }}</h3>
+            <div class="ora-meta">{{ group.phase_label }} · {% if material.is_active %}Active{% else %}Archived{% endif %}</div>
+          </div>
+          <div class="ora-actions">
+            <a class="btn btn-outline-primary btn-sm fw-bold" href="{% url 'admin_official_reading_assessment_detail' material.id %}">View</a>
+            <form method="post" action="{% url 'admin_official_reading_assessment_unarchive' material.id %}">
+              {% csrf_token %}
+              <button class="btn btn-outline-success btn-sm fw-bold" type="submit">Unarchive</button>
+            </form>
+          </div>
         </div>
       </div>
       {% empty %}
-      <div class="text-secondary">No pending integrity override requests.</div>
+      <div class="text-secondary">No archived materials yet.</div>
       {% endfor %}
     </div>
-  </div>
-</section>
-
-<div class="ora-modal-backdrop" id="officialMaterialsBackdrop" aria-hidden="true">
-  <div class="ora-modal-card" style="width:min(1040px,100%);">
-    <div class="ora-modal-head">
-      <div>
-          <h5 class="fw-black mb-1">Official Reading Materials</h5>
-          <div class="ora-subtitle">Filipino · Term {{ official_material_set.term|default:selected_term }}</div>
-        </div>
-      </div>
-
-    <div class="ora-modal-section">
-      <div class="ora-kicker mb-2">Words</div>
-      <div class="ora-list">
-        {% for word in official_material_sections.words %}
-        <div class="ora-list-item"><div class="ora-list-item-title">{{ forloop.counter }}. {{ word }}</div></div>
-        {% empty %}
-        <div class="text-secondary">No words available.</div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="ora-modal-section">
-      <div class="ora-kicker mb-2">Sentences</div>
-      <div class="ora-list">
-        {% for sentence in official_material_sections.sentences %}
-        <div class="ora-list-item"><div class="ora-list-item-title">{{ forloop.counter }}.</div><div class="ora-list-item-body mt-1">{{ sentence }}</div></div>
-        {% empty %}
-        <div class="text-secondary">No sentences available.</div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="ora-modal-section">
-      <div class="ora-kicker mb-2">Paragraphs</div>
-      <div class="ora-list">
-        {% for story in official_material_sections.passages %}
-        <div class="ora-story-card">
-          <div class="ora-story-title">{{ forloop.counter }}. {{ story.title|default:"Untitled Story" }}</div>
-          <div class="ora-story-meta">{{ story.content|truncatechars:120 }}</div>
-          <div>
-            <button type="button" class="btn btn-sm btn-outline-primary fw-bold story-view-btn" data-story-index="{{ forloop.counter0 }}">View Story Items</button>
-          </div>
-        </div>
-        {% empty %}
-        <div class="text-secondary">No paragraphs available.</div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="d-flex justify-content-end mt-3">
-      <button type="button" class="btn btn-outline-secondary" id="closeOfficialMaterialsBottom">Close</button>
-    </div>
-  </div>
+  </section>
+  {% endfor %}
 </div>
-
-{{ official_material_sections_json|json_script:"officialMaterialSectionsJson" }}
-
-<div class="ora-modal-backdrop" id="officialStoryBackdrop" aria-hidden="true">
-  <div class="ora-modal-card" style="width:min(980px,100%);">
-    <div class="ora-modal-head">
-      <div>
-        <h5 class="fw-black mb-1" id="officialStoryViewTitle">Paragraph Items</h5>
-        <div class="ora-subtitle">Read-only story content from the canonical student assessment dataset.</div>
-      </div>
-      <button type="button" class="btn btn-outline-secondary" id="closeOfficialStory">Close</button>
-    </div>
-    <div class="ora-modal-section">
-      <pre class="mb-0" id="officialStoryViewContent" style="white-space:pre-wrap;font-family:inherit;"></pre>
-    </div>
-  </div>
-</div>
-
-<div class="ora-modal-backdrop" id="integrityRequestBackdrop" aria-hidden="true">
-  <div class="ora-modal-card" style="width:min(900px,100%);">
-    <div class="ora-modal-head">
-      <div>
-        <h5 class="fw-black mb-1">Request Integrity Override</h5>
-        <div class="ora-subtitle">Official reading assessment materials are protected system-defined materials shared across Pre-Assessment and Post-Assessment. Editing them requires a valid justification, supporting DepEd documentation, and review by an authorized PABASA administrator.</div>
-      </div>
-      <button type="button" class="btn-close" id="closeIntegrityRequest" aria-label="Close"></button>
-    </div>
-
-    <div class="ora-modal-section" id="integrityRequestNotice">
-      <div class="alert alert-info border-0 rounded-4 mb-3">
-        <strong>Override is NOT a second way of loading materials.</strong> It is an authorized exception used when the default materials need to be replaced, corrected, or updated because the official material has become outdated or requires customization for a <strong>LEGITIMATE REASON</strong>.
-        <div class="mt-2">You will be required to submit a form detailing the reason for your override request. The request will be reviewed by an authorized PABASA personnel.</div>
-      </div>
-      <div class="d-flex flex-wrap justify-content-end gap-2">
-        <button type="button" class="btn btn-outline-secondary fw-bold" id="exitIntegrityRequest">Exit</button>
-        <button type="button" class="btn btn-primary fw-bold" id="proceedIntegrityRequest">Proceed</button>
-      </div>
-    </div>
-
-    <form id="integrityRequestForm" class="ora-modal-section d-none">
-      {% csrf_token %}
-      <input type="hidden" id="integrityRequestMaterialId" value="{{ official_material_set.id|default:'' }}">
-      <div class="mb-3">
-        <label class="form-label fw-bold">What official DepEd source authorizes this change?</label>
-        <div class="form-text mb-2">Enter the applicable DepEd Order, memorandum, issuance, or other official reference supporting the requested modification.</div>
-        <textarea class="form-control" id="depedReference" rows="3" placeholder="DepEd Order No. XX, s. 20XX"></textarea>
-        <div class="invalid-feedback d-block d-none" id="depedReferenceError"></div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label fw-bold">What specific material needs to be changed?</label>
-        <div class="form-text mb-2">Identify the exact assessment category and item(s) affected by the requested modification.</div>
-        <textarea class="form-control" id="materialChange" rows="3" placeholder="Paragraphs → Ang Pagong at ang Kuneho → correction to story text"></textarea>
-        <div class="invalid-feedback d-block d-none" id="materialChangeError"></div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label fw-bold">Why is this change necessary?</label>
-        <div class="form-text mb-2">Explain why the official material must be modified and provide a brief explanation of the supporting evidence or documentation.</div>
-        <textarea class="form-control" id="justification" rows="4" placeholder="Provide a meaningful justification."></textarea>
-        <div class="invalid-feedback d-block d-none" id="justificationError"></div>
-      </div>
-      <div class="mb-3">
-        <label class="form-label fw-bold">Supporting Documentation</label>
-        <div class="form-text mb-2">Provide links to the official DepEd documentation, issuance, memorandum, order, or other authoritative source supporting this requested change. Up to 3 links may be provided.</div>
-        <div class="mb-2">
-          <label class="form-label small fw-bold mb-1" for="supportingLink1">Documentation Link</label>
-          <input type="url" class="form-control" id="supportingLink1" placeholder="https://">
-          <div class="invalid-feedback d-block d-none" id="supportingLink1Error"></div>
-        </div>
-        <div class="mb-2">
-          <label class="form-label small fw-bold mb-1" for="supportingLink2">Documentation Link</label>
-          <input type="url" class="form-control" id="supportingLink2" placeholder="https://">
-          <div class="invalid-feedback d-block d-none" id="supportingLink2Error"></div>
-        </div>
-        <div class="mb-1">
-          <label class="form-label small fw-bold mb-1" for="supportingLink3">Documentation Link</label>
-          <input type="url" class="form-control" id="supportingLink3" placeholder="https://">
-          <div class="invalid-feedback d-block d-none" id="supportingLink3Error"></div>
-        </div>
-      </div>
-      <div class="alert alert-success d-none" id="integrityRequestSuccess"></div>
-      <div class="d-flex flex-wrap justify-content-end gap-2">
-        <button type="button" class="btn btn-outline-secondary" id="backToIntegrityNotice">Back</button>
-        <button type="button" class="btn btn-primary fw-bold" id="sendIntegrityRequestBtn">Send Request for Review</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="ora-modal-backdrop" id="overrideApprovalBackdrop" aria-hidden="true">
-  <div class="ora-modal-card" style="width:min(680px,100%);">
-    <div class="ora-modal-head">
-      <div>
-        <h5 class="fw-black mb-1">Security Verification</h5>
-        <div class="ora-subtitle">Enter the authorization security code to approve this Integrity Override Request.</div>
-      </div>
-      <button type="button" class="btn-close" id="closeOverrideApproval" aria-label="Close"></button>
-    </div>
-    <form id="overrideApprovalForm" class="ora-modal-section">
-      {% csrf_token %}
-      <input type="hidden" id="overrideApprovalRequestId" value="">
-      <input type="hidden" id="overrideApprovalMaterialId" value="">
-      <div class="mb-3">
-        <label class="form-label fw-bold" for="overrideSecurityCode">Security code</label>
-        <input type="password" class="form-control" id="overrideSecurityCode" autocomplete="off" spellcheck="false" inputmode="text" />
-      </div>
-      <div class="alert alert-danger d-none" id="overrideApprovalError" role="alert"></div>
-      <div class="alert alert-warning d-none" id="overrideApprovalLockout" role="alert"></div>
-      <div class="d-flex flex-wrap justify-content-end gap-2">
-        <button type="button" class="btn btn-outline-secondary" id="cancelOverrideApproval">Cancel</button>
-        <button type="submit" class="btn btn-primary fw-bold" id="submitOverrideApproval">Verify & Approve</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script>
-(() => {
-  const adminLogoutModal = document.getElementById('adminLogoutModal');
-  if (adminLogoutModal && !adminLogoutModal.classList.contains('show')) {
-    adminLogoutModal.style.display = 'none';
-    adminLogoutModal.style.pointerEvents = 'none';
-  }
-  const backdrop = document.getElementById('officialMaterialsBackdrop');
-  const openButton = document.getElementById('openOfficialMaterials');
-  const closeBottomButton = document.getElementById('closeOfficialMaterialsBottom');
-  const openBackdrop = () => backdrop?.classList.add('is-open');
-  const closeBackdrop = () => backdrop?.classList.remove('is-open');
-  openButton?.addEventListener('click', openBackdrop);
-  closeBottomButton?.addEventListener('click', closeBackdrop);
-  backdrop?.addEventListener('click', (event) => {
-    if (event.target === backdrop) closeBackdrop();
-  });
-
-  const storyBackdrop = document.getElementById('officialStoryBackdrop');
-  const storyTitle = document.getElementById('officialStoryViewTitle');
-  const storyContent = document.getElementById('officialStoryViewContent');
-  let officialStories = [];
-  try {
-    officialStories = JSON.parse(document.getElementById('officialMaterialSectionsJson')?.textContent || '{}')?.passages || [];
-  } catch (error) {
-    officialStories = [];
-  }
-  const openStoryBackdrop = () => storyBackdrop?.classList.add('is-open');
-  const closeStoryBackdrop = () => storyBackdrop?.classList.remove('is-open');
-  document.getElementById('closeOfficialStory')?.addEventListener('click', closeStoryBackdrop);
-  storyBackdrop?.addEventListener('click', (event) => {
-    if (event.target === storyBackdrop) closeStoryBackdrop();
-  });
-  document.querySelectorAll('.story-view-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      if (!storyTitle || !storyContent) return;
-      const index = Number(button.getAttribute('data-story-index'));
-      const story = Number.isFinite(index) ? officialStories[index] : null;
-      storyTitle.textContent = story?.title || 'Paragraph Items';
-      storyContent.textContent = story?.content || 'No items available.';
-      openStoryBackdrop();
-    });
-  });
-
-  const requestButton = document.getElementById('requestIntegrityOverrideBtn');
-  const requestBackdrop = document.getElementById('integrityRequestBackdrop');
-  const requestClose = document.getElementById('closeIntegrityRequest');
-  const requestNotice = document.getElementById('integrityRequestNotice');
-  const proceedRequestBtn = document.getElementById('proceedIntegrityRequest');
-  const exitRequestBtn = document.getElementById('exitIntegrityRequest');
-  const backToNoticeBtn = document.getElementById('backToIntegrityNotice');
-  const requestForm = document.getElementById('integrityRequestForm');
-  const requestSuccess = document.getElementById('integrityRequestSuccess');
-  const sendRequestBtn = document.getElementById('sendIntegrityRequestBtn');
-  const approvalBackdrop = document.getElementById('overrideApprovalBackdrop');
-  const approvalForm = document.getElementById('overrideApprovalForm');
-  const approvalClose = document.getElementById('closeOverrideApproval');
-  const approvalCancel = document.getElementById('cancelOverrideApproval');
-  const approvalError = document.getElementById('overrideApprovalError');
-  const approvalLockout = document.getElementById('overrideApprovalLockout');
-  const approvalCode = document.getElementById('overrideSecurityCode');
-  const approvalRequestId = document.getElementById('overrideApprovalRequestId');
-  const approvalMaterialId = document.getElementById('overrideApprovalMaterialId');
-  const approvalSubmit = document.getElementById('submitOverrideApproval');
-  const materialIdField = document.getElementById('integrityRequestMaterialId');
-  const depedReference = document.getElementById('depedReference');
-  const materialChange = document.getElementById('materialChange');
-  const justification = document.getElementById('justification');
-  const supportingLink1 = document.getElementById('supportingLink1');
-  const supportingLink2 = document.getElementById('supportingLink2');
-  const supportingLink3 = document.getElementById('supportingLink3');
-  const depedReferenceError = document.getElementById('depedReferenceError');
-  const materialChangeError = document.getElementById('materialChangeError');
-  const justificationError = document.getElementById('justificationError');
-  const supportingLink1Error = document.getElementById('supportingLink1Error');
-  const supportingLink2Error = document.getElementById('supportingLink2Error');
-  const supportingLink3Error = document.getElementById('supportingLink3Error');
-  const materialIdValue = requestButton?.getAttribute('data-material-id') || '';
-  if (materialIdField) materialIdField.value = materialIdValue;
-  let activeApprovalButton = null;
-  const approvalUrlTemplate = "{% url 'admin_official_reading_assessment_override_authorize' 0 %}";
-
-  const fieldState = [
-    ['deped_reference', depedReference, depedReferenceError, 8],
-    ['material_change', materialChange, materialChangeError, 8],
-    ['justification', justification, justificationError, 20],
-  ];
-
-  const setFieldError = (fieldEl, errorEl, message) => {
-    if (!fieldEl || !errorEl) return;
-    const hasMessage = Boolean(message);
-    errorEl.textContent = hasMessage ? String(message) : '';
-    errorEl.classList.toggle('d-none', !hasMessage);
-    fieldEl.classList.toggle('is-invalid', hasMessage);
-  };
-
-  const clearFieldErrors = () => {
-    fieldState.forEach(([, fieldEl, errorEl]) => setFieldError(fieldEl, errorEl, ''));
-    setFieldError(supportingLink1, supportingLink1Error, '');
-    setFieldError(supportingLink2, supportingLink2Error, '');
-    setFieldError(supportingLink3, supportingLink3Error, '');
-  };
-
-  fieldState.forEach(([, fieldEl, errorEl]) => {
-    fieldEl?.addEventListener('input', () => setFieldError(fieldEl, errorEl, ''));
-  });
-  [
-    [supportingLink1, supportingLink1Error],
-    [supportingLink2, supportingLink2Error],
-    [supportingLink3, supportingLink3Error],
-  ].forEach(([fieldEl, errorEl]) => {
-    fieldEl?.addEventListener('input', () => setFieldError(fieldEl, errorEl, ''));
-  });
-
-  const openRequestBackdrop = () => {
-    requestSuccess?.classList.add('d-none');
-    requestSuccess && (requestSuccess.textContent = '');
-    clearFieldErrors();
-    requestNotice?.classList.remove('d-none');
-    requestForm?.classList.add('d-none');
-    requestBackdrop?.classList.add('is-open');
-  };
-  const closeRequestBackdrop = () => requestBackdrop?.classList.remove('is-open');
-  const openRequestForm = () => {
-    requestNotice?.classList.add('d-none');
-    requestForm?.classList.remove('d-none');
-  };
-  const exitRequestFlow = () => {
-    requestSuccess?.classList.add('d-none');
-    requestSuccess && (requestSuccess.textContent = '');
-    clearFieldErrors();
-    closeRequestBackdrop();
-  };
-  requestButton?.addEventListener('click', (event) => {
-    event.preventDefault();
-    openRequestBackdrop();
-  });
-  proceedRequestBtn?.addEventListener('click', openRequestForm);
-  exitRequestBtn?.addEventListener('click', exitRequestFlow);
-  backToNoticeBtn?.addEventListener('click', () => {
-    requestForm?.classList.add('d-none');
-    requestNotice?.classList.remove('d-none');
-  });
-  requestClose?.addEventListener('click', closeRequestBackdrop);
-  requestBackdrop?.addEventListener('click', (event) => {
-    if (event.target === requestBackdrop) closeRequestBackdrop();
-  });
-
-  const clearApprovalState = () => {
-    if (approvalError) {
-      approvalError.classList.add('d-none');
-      approvalError.textContent = '';
-    }
-    if (approvalLockout) {
-      approvalLockout.classList.add('d-none');
-      approvalLockout.textContent = '';
-    }
-    if (approvalCode) approvalCode.value = '';
-  };
-  const openApprovalBackdrop = (requestId, materialId) => {
-    clearApprovalState();
-    if (approvalRequestId) approvalRequestId.value = requestId || '';
-    if (approvalMaterialId) approvalMaterialId.value = materialId || '';
-    approvalBackdrop?.classList.add('is-open');
-    setTimeout(() => approvalCode?.focus(), 0);
-  };
-  const closeApprovalBackdrop = () => {
-    clearApprovalState();
-    approvalBackdrop?.classList.remove('is-open');
-    activeApprovalButton = null;
-  };
-  document.querySelectorAll('.approve-override-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      activeApprovalButton = button;
-      openApprovalBackdrop(button.getAttribute('data-request-id') || '', button.getAttribute('data-material-id') || '');
-    });
-  });
-  approvalClose?.addEventListener('click', closeApprovalBackdrop);
-  approvalCancel?.addEventListener('click', closeApprovalBackdrop);
-  approvalBackdrop?.addEventListener('click', (event) => {
-    if (event.target === approvalBackdrop) closeApprovalBackdrop();
-  });
-  approvalCode?.addEventListener('input', () => {
-    if (approvalError) {
-      approvalError.classList.add('d-none');
-      approvalError.textContent = '';
-    }
-    if (approvalLockout) {
-      approvalLockout.classList.add('d-none');
-      approvalLockout.textContent = '';
-    }
-  });
-  approvalForm?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const requestId = String(approvalRequestId?.value || '').trim();
-    const materialId = String(approvalMaterialId?.value || '').trim();
-    const securityCode = String(approvalCode?.value || '');
-    if (!requestId || !materialId) return;
-    approvalSubmit.disabled = true;
-    approvalSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Verifying...';
-    try {
-      const response = await fetch(approvalUrlTemplate.replace('/0/', `/${encodeURIComponent(materialId)}/`), {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': approvalForm.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '',
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        },
-        credentials: 'same-origin',
-        body: new URLSearchParams({
-          request_id: requestId,
-          security_code: securityCode,
-        }).toString(),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) {
-        if (approvalCode) approvalCode.value = '';
-        if (data.locked_out) {
-          if (approvalLockout) {
-            approvalLockout.textContent = data.error || 'Security verification is temporarily locked due to multiple failed attempts. Please try again after 24 hours.';
-            approvalLockout.classList.remove('d-none');
-          }
-        } else if (approvalError) {
-          approvalError.textContent = data.error || 'Invalid security code. Approval was not completed.';
-          approvalError.classList.remove('d-none');
-        }
-        return;
-      }
-      closeApprovalBackdrop();
-      if (activeApprovalButton) {
-        const card = activeApprovalButton.closest('.ora-request-card');
-        if (card) card.remove();
-      }
-    } catch (error) {
-      if (approvalError) {
-        approvalError.textContent = 'Invalid security code. Approval was not completed.';
-        approvalError.classList.remove('d-none');
-      }
-      if (approvalCode) approvalCode.value = '';
-    } finally {
-      approvalSubmit.disabled = false;
-      approvalSubmit.innerHTML = 'Verify & Approve';
-    }
-  });
-
-  sendRequestBtn?.addEventListener('click', async () => {
-    const payload = new FormData();
-    payload.append('csrfmiddlewaretoken', requestForm.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '');
-    payload.append('deped_reference', depedReference?.value || '');
-    payload.append('material_change', materialChange?.value || '');
-    payload.append('justification', justification?.value || '');
-    payload.append('supporting_link_1', supportingLink1?.value || '');
-    payload.append('supporting_link_2', supportingLink2?.value || '');
-    payload.append('supporting_link_3', supportingLink3?.value || '');
-
-    const invalid = {};
-    fieldState.forEach(([key, el, errorEl, minLength]) => {
-      const value = String(el?.value || '').trim();
-      if (value.length < minLength) {
-        invalid[key] = key === 'justification' ? 'Please provide a more detailed justification.' : 'This field is required.';
-      } else {
-        setFieldError(el, errorEl, '');
-      }
-    });
-    if (Object.keys(invalid).length) {
-      fieldState.forEach(([key, el, errorEl]) => {
-        if (invalid[key]) setFieldError(el, errorEl, invalid[key]);
-      });
-      [supportingLink1, supportingLink2, supportingLink3].forEach((fieldEl, idx) => {
-        const value = String(fieldEl?.value || '').trim();
-        const errorEl = [supportingLink1Error, supportingLink2Error, supportingLink3Error][idx];
-        if (!value) return;
-        try {
-          new URL(value);
-          setFieldError(fieldEl, errorEl, '');
-        } catch (error) {
-          setFieldError(fieldEl, errorEl, 'Enter a valid URL.');
-        }
-      });
-      return;
-    }
-    let linkValidationFailed = false;
-    [supportingLink1, supportingLink2, supportingLink3].forEach((fieldEl, idx) => {
-      const value = String(fieldEl?.value || '').trim();
-      const errorEl = [supportingLink1Error, supportingLink2Error, supportingLink3Error][idx];
-      if (!value) return;
-      try {
-        new URL(value);
-        setFieldError(fieldEl, errorEl, '');
-      } catch (error) {
-        setFieldError(fieldEl, errorEl, 'Enter a valid URL.');
-        linkValidationFailed = true;
-      }
-    });
-    if (linkValidationFailed) return;
-
-    sendRequestBtn.disabled = true;
-    sendRequestBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Sending...';
-    try {
-      const response = await fetch(`{% url 'admin_official_reading_override_request' official_tabs.0.material_obj.id %}`, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': payload.get('csrfmiddlewaretoken'),
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        },
-        credentials: 'same-origin',
-        body: new URLSearchParams({
-          deped_reference: payload.get('deped_reference'),
-          material_change: payload.get('material_change'),
-          justification: payload.get('justification'),
-          supporting_link_1: payload.get('supporting_link_1'),
-          supporting_link_2: payload.get('supporting_link_2'),
-          supporting_link_3: payload.get('supporting_link_3'),
-        }).toString(),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.success) {
-        const backendErrors = data.errors || {};
-        fieldState.forEach(([key, el, errorEl]) => {
-          if (backendErrors[key]) {
-            setFieldError(el, errorEl, backendErrors[key]);
-          }
-        });
-        if (backendErrors.supporting_link_1) setFieldError(supportingLink1, supportingLink1Error, backendErrors.supporting_link_1);
-        if (backendErrors.supporting_link_2) setFieldError(supportingLink2, supportingLink2Error, backendErrors.supporting_link_2);
-        if (backendErrors.supporting_link_3) setFieldError(supportingLink3, supportingLink3Error, backendErrors.supporting_link_3);
-        return;
-      }
-      clearFieldErrors();
-      if (requestSuccess) {
-        requestSuccess.textContent = `Request submitted successfully. Request ID: ${data.request_id}`;
-        requestSuccess.classList.remove('d-none');
-      }
-      setTimeout(closeRequestBackdrop, 1200);
-    } catch (error) {
-      clearFieldErrors();
-    } finally {
-      sendRequestBtn.disabled = false;
-      sendRequestBtn.innerHTML = 'Send Request for Review';
-    }
-  });
-})();
-</script>
 {% endblock %}

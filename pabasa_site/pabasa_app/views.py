@@ -357,9 +357,11 @@ def _official_crla_materials_for_phase(assessment_type):
     assessment_type = str(assessment_type or '').strip().lower()
     if assessment_type not in {'pretest', 'posttest'}:
         return Material.objects.none()
-    return _official_reading_materials_queryset().filter(
+    return _official_reading_active_materials_queryset().filter(
         assessment_kind='crla',
-        system_assessment_phase=assessment_type,
+    ).filter(
+        Q(system_assessment_phase=assessment_type) |
+        Q(content_json__assessment_type='both')
     )
 
 
@@ -5979,12 +5981,14 @@ def admin_school_calendar(request):
 
 
 def _official_reading_materials_queryset():
-    official_keys = list(OFFICIAL_CRLA_CONTENT.keys())
     return Material.objects.filter(
         is_official_reading=True,
-        is_system_owned=True,
-        system_assessment_key__in=official_keys,
+        assessment_kind='crla',
     ).order_by('system_assessment_period', 'system_assessment_phase', 'official_term', '-updated_at')
+
+
+def _official_reading_active_materials_queryset():
+    return _official_reading_materials_queryset().filter(is_active=True)
 
 
 def _is_official_crla_material(material):
@@ -6001,13 +6005,13 @@ def _official_reading_assessment_type(material):
     if key in OFFICIAL_CRLA_CONTENT:
         return 'pre_assessment' if key == 'bosy_crla_pretest' else 'post_assessment'
     phase = str(getattr(material, 'system_assessment_phase', '') or '').strip().lower()
-    if phase in {'pretest', 'posttest'}:
-        return 'pre_assessment' if phase == 'pretest' else 'post_assessment'
     content_json = getattr(material, 'content_json', None) or {}
     if isinstance(content_json, dict):
         value = str(content_json.get('assessment_type') or '').strip().lower()
-        if value in {'pre_assessment', 'post_assessment'}:
+        if value in {'pre_assessment', 'post_assessment', 'both'}:
             return value
+    if phase in {'pretest', 'posttest'}:
+        return 'pre_assessment' if phase == 'pretest' else 'post_assessment'
     title = str(getattr(material, 'title', '') or '').strip().lower()
     if 'post' in title:
         return 'post_assessment'
@@ -6176,7 +6180,10 @@ def _official_assessment_availability_for_student(student, request=None):
         return {'available': False, 'assessment_type': assessment_type, 'school_year': None, 'current_term': None, 'active_window': None}
 
     target_key = 'eosy_crla_posttest' if assessment_type == 'posttest' else 'bosy_crla_pretest'
-    matching_materials = _official_reading_materials_queryset().filter(system_assessment_key=target_key, system_assessment_phase=assessment_type)
+    matching_materials = _official_reading_active_materials_queryset().filter(
+        Q(system_assessment_key=target_key, system_assessment_phase=assessment_type) |
+        Q(content_json__assessment_type='both')
+    )
     if not matching_materials.exists():
         return {'available': False, 'assessment_type': assessment_type, 'school_year': None, 'current_term': None, 'active_window': None}
 
@@ -6197,9 +6204,9 @@ def _official_crla_completion_exists(student, assessment_type, school_year_value
         return False
 
     assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
-    matching_materials = _official_reading_materials_queryset().filter(
-        system_assessment_key=assessment_key,
-        system_assessment_phase=assessment_type,
+    matching_materials = _official_reading_active_materials_queryset().filter(
+        Q(system_assessment_key=assessment_key, system_assessment_phase=assessment_type) |
+        Q(content_json__assessment_type='both'),
         is_official_reading=True,
     )
     if not matching_materials.exists():
@@ -6273,8 +6280,10 @@ def _official_reading_assessments_for_student(student, availability):
         return []
 
     assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
-    school_year_materials = _official_reading_materials_queryset().filter(system_assessment_key=assessment_key)
-    school_year_materials = school_year_materials.filter(system_assessment_phase=assessment_type)
+    school_year_materials = _official_reading_active_materials_queryset().filter(
+        Q(system_assessment_key=assessment_key, system_assessment_phase=assessment_type) |
+        Q(content_json__assessment_type='both')
+    )
     print(
         'PABASA_OFFICIAL_TRACE',
         {
@@ -6452,7 +6461,10 @@ def _official_reading_material_context(request):
     official_material_by_phase = {}
     for material in official_materials:
         key = _official_reading_assessment_type(material)
-        if key not in official_material_by_phase:
+        if key == 'both':
+            official_material_by_phase.setdefault('pre_assessment', material)
+            official_material_by_phase.setdefault('post_assessment', material)
+        elif key not in official_material_by_phase:
             official_material_by_phase[key] = material
 
     def _material_card_payload(material):
@@ -6505,12 +6517,21 @@ def _official_reading_material_context(request):
             'reading_items_count': len(phase_sections['items']) + len(phase_sections['words']) + len(phase_sections['sentences']) + len(phase_sections['passages']),
             'item_sections': phase_sections,
         })
-    pending_override_requests = list(
-        OfficialReadingIntegrityOverrideRequest.objects.select_related('requested_by', 'material', 'reviewed_by')
-        .filter(status='pending')
-        .order_by('-submitted_at', '-id')
-    )
-    reviewer_lockout = _get_official_override_lockout(request.session.get('user_id')) if request.session.get('user_id') else None
+    official_groups = []
+    for phase_key, phase_label in [('pretest', 'Pre-Assessment'), ('posttest', 'Post-Assessment')]:
+        phase_materials = [
+            m for m in official_materials
+            if _official_reading_assessment_type(m) in {('pre_assessment' if phase_key == 'pretest' else 'post_assessment'), 'both'}
+        ]
+        active_material = next((m for m in phase_materials if m.is_active), None)
+        archived_materials = [m for m in phase_materials if not m.is_active]
+        official_groups.append({
+            'phase_key': phase_key,
+            'phase_label': phase_label,
+            'active_material': active_material,
+            'archived_materials': archived_materials,
+            'all_materials': phase_materials,
+        })
     return {
         'page_title': 'Official Reading Assessments',
         'admin_username': request.session.get('custom_id', ''),
@@ -6521,7 +6542,7 @@ def _official_reading_material_context(request):
         'current_term_label': f'Term {current_term}' if current_term else 'No Active Term',
         'assessment_window_label': 'Pre-Assessment' if active_calendar and current_term and _calendar_is_in_preassessment_window(active_calendar, current_term) else 'No Active Assessment Window',
         'assessment_window_status': 'Active' if active_calendar and current_term and _calendar_is_in_preassessment_window(active_calendar, current_term) else 'Closed',
-        'official_tabs': official_tabs,
+        'official_groups': official_groups,
         'official_material_set': material_payload,
         'official_material_set_summary': {
             'words': len(sections['words']),
@@ -6535,8 +6556,6 @@ def _official_reading_material_context(request):
         'materials_by_term_json': json.dumps({}, default=str),
         'language_options': [('English', 'English'), ('Filipino', 'Filipino')],
         'official_material_sections_json': sections,
-        'pending_override_requests': pending_override_requests,
-        'reviewer_lockout': _official_override_lockout_payload(reviewer_lockout),
     }
 
 
@@ -6546,7 +6565,17 @@ def _official_assessment_edit_context(request, material=None):
     current_term = _calendar_current_term(active_calendar) or getattr(active_calendar, 'current_term', None) or 1
     school_year_value = active_calendar.school_year if active_calendar else ''
     content_json = getattr(material, 'content_json', None) or {}
-    items = content_json.get('items') if isinstance(content_json, dict) and isinstance(content_json.get('items'), list) else []
+    words = content_json.get('words') if isinstance(content_json, dict) and isinstance(content_json.get('words'), list) else []
+    sentences = content_json.get('sentences') if isinstance(content_json, dict) and isinstance(content_json.get('sentences'), list) else []
+    passages = content_json.get('passages') if isinstance(content_json, dict) and isinstance(content_json.get('passages'), list) else []
+    passages = [
+        {
+            'title': str(passage.get('title') or '').strip(),
+            'text': str(passage.get('text') or passage.get('content') or '').strip(),
+        }
+        for passage in passages
+        if isinstance(passage, dict)
+    ]
     return {
         'page_title': 'Official Reading Assessments',
         'admin_username': request.session.get('custom_id', ''),
@@ -6556,11 +6585,17 @@ def _official_assessment_edit_context(request, material=None):
         'school_year_value': school_year_value,
         'current_term_label': f'Term {current_term}' if current_term else 'No Active Term',
         'term_options': [(1, 'Term 1'), (2, 'Term 2'), (3, 'Term 3')],
-        'assessment_type_options': [('pre_assessment', 'Pre-Assessment'), ('post_assessment', 'Post-Assessment')],
+        'assessment_type_options': [('pre_assessment', 'Pre-Assessment'), ('post_assessment', 'Post-Assessment'), ('both', 'Both')],
         'language_options': [('English', 'English'), ('Filipino', 'Filipino')],
         'selected_assessment_type': _official_reading_assessment_type(material) if material else 'pre_assessment',
-        'reading_items': items,
-        'reading_items_json': json.dumps(items, default=str),
+        'reading_words': words,
+        'reading_sentences': sentences,
+        'reading_passages': passages,
+        'reading_items_json': json.dumps({
+            'words': words,
+            'sentences': sentences,
+            'passages': passages,
+        }, default=str),
         'official_item_sections': _official_reading_item_sections(material) if material else {'words': [], 'sentences': [], 'passages': [], 'items': []},
         'school_year_value': school_year_value,
         'current_school_calendar': active_calendar,
@@ -6568,14 +6603,13 @@ def _official_assessment_edit_context(request, material=None):
         'school_calendars': calendars,
         'official_form_error': '',
         'official_field_errors': {},
-        'override_authorized': _official_reading_override_authorized(request, material),
+        'is_read_only': bool(material and getattr(material, 'pk', None)),
     }
 
 
 def _save_official_reading_assessment(request, material=None):
-    if material and not _official_reading_override_authorized(request, material):
-        return None, {'non_field_error': 'Official assessments require an authorized override before editing.'}
     field_errors = {}
+    calendar_id_raw = request.POST.get('calendar_id')
     term_raw = request.POST.get('term')
     try:
         term = int(term_raw)
@@ -6586,21 +6620,61 @@ def _save_official_reading_assessment(request, material=None):
 
     title = (request.POST.get('title') or '').strip()
     language = Material.normalize_language_value(request.POST.get('language'))
-    instructions = (request.POST.get('instructions') or '').strip()
     assessment_type = (request.POST.get('assessment_type') or 'pre_assessment').strip().lower()
-    content_items_raw = request.POST.get('content_items_json') or request.POST.get('reading_items_json') or '[]'
+    content_items_raw = request.POST.get('content_items_json') or request.POST.get('reading_items_json') or '{}'
 
-    if assessment_type not in {'pre_assessment', 'post_assessment'}:
+    if assessment_type not in {'pre_assessment', 'post_assessment', 'both'}:
         assessment_type = 'pre_assessment'
     if not title:
         field_errors['title'] = 'Title is required.'
+    selected_calendar = None
+    school_year_value = ''
+    try:
+        calendar_id = int(calendar_id_raw)
+    except (TypeError, ValueError):
+        calendar_id = None
+    if calendar_id:
+        selected_calendar = SchoolCalendar.objects.filter(pk=calendar_id).first()
+        if selected_calendar:
+            school_year_value = str(getattr(selected_calendar, 'school_year', '') or '').strip()
+    if not school_year_value:
+        _, calendars, active_calendar = _selected_school_calendar(request)
+        school_year_value = str(getattr(active_calendar, 'school_year', '') or '').strip()
+        if not school_year_value and calendars:
+            school_year_value = str(getattr(calendars[0], 'school_year', '') or '').strip()
     try:
         content_items = json.loads(content_items_raw)
-        if not isinstance(content_items, list):
-            content_items = []
+        if not isinstance(content_items, dict):
+            content_items = {}
     except Exception:
-        content_items = []
-    content_items = [str(item).strip() for item in content_items if str(item).strip()]
+        content_items = {}
+
+    def _clean_list(values):
+        if not isinstance(values, list):
+            return []
+        return [str(item).strip() for item in values if str(item).strip()]
+
+    words = _clean_list(content_items.get('words'))
+    sentences = _clean_list(content_items.get('sentences'))
+    passages = []
+    if isinstance(content_items.get('passages'), list):
+        for passage in content_items.get('passages'):
+            if isinstance(passage, dict):
+                title_value = str(passage.get('title') or '').strip()
+                content_value = str(passage.get('text') or passage.get('content') or '').strip()
+                if title_value or content_value:
+                    passages.append({
+                        'title': title_value,
+                        'text': content_value,
+                        'content': content_value,
+                    })
+
+    if len(words) < 10:
+        field_errors['words'] = 'Add at least 10 word items.'
+    if len(sentences) < 3:
+        field_errors['sentences'] = 'Add at least 3 sentence items.'
+    if not passages:
+        field_errors['passages'] = 'Add at least one paragraph item.'
 
     if field_errors:
         return None, {'field_errors': field_errors, 'non_field_error': 'Please fix the highlighted fields.'}
@@ -6610,27 +6684,73 @@ def _save_official_reading_assessment(request, material=None):
             target = material
         else:
             target = Material()
+        passage_texts = [str(p.get('text') or p.get('content') or '').strip() for p in passages if isinstance(p, dict)]
         target.is_official_reading = True
+        target.is_system_owned = bool(getattr(target, 'is_system_owned', False))
         target.official_term = term
         target.title = title
         target.language = language
         target.type = 'assessment'
-        target.assessment_kind = 'regular'
+        target.assessment_kind = 'crla'
+        target.assessment_set = 'crla'
+        target.system_assessment_phase = '' if assessment_type == 'both' else ('pretest' if assessment_type == 'pre_assessment' else 'posttest')
+        target.system_assessment_period = '' if assessment_type == 'both' else ('bosy' if assessment_type == 'pre_assessment' else 'eosy')
         target.source_type = 'personal'
         target.is_active = True
-        target.content_text = '\n'.join(content_items)
+        target.content_text = '\n'.join([*words, *sentences, *passage_texts])
         target.content_json = {
             'official_reading': True,
             'term': term,
-            'instructions': instructions,
             'assessment_type': assessment_type,
-            'items': content_items,
+            'school_year': school_year_value,
+            'school_year_label': school_year_value,
+            'calendar_id': selected_calendar.id if selected_calendar else None,
+            'words': words,
+            'sentences': sentences,
+            'passages': passages,
+            'items': [*words, *sentences, *passage_texts],
         }
+        if assessment_type == 'both':
+            target.system_assessment_key = ''
+        elif not target.is_system_owned and not getattr(target, 'system_assessment_key', None):
+            target.system_assessment_key = None
         target.status = 'published' if _official_reading_material_available_now(term) else 'draft'
         target.is_active = True
         target.save()
+        if target.is_active:
+            _archive_conflicting_official_materials(target)
 
     return target, None
+
+
+def _official_material_phase(material):
+    phase = str(getattr(material, 'system_assessment_phase', '') or '').strip().lower()
+    if phase in {'pretest', 'posttest'}:
+        return phase
+    assessment_type = _official_reading_assessment_type(material)
+    return 'pretest' if assessment_type == 'pre_assessment' else 'posttest' if assessment_type == 'post_assessment' else ''
+
+
+def _archive_conflicting_official_materials(material):
+    phase = _official_material_phase(material)
+    if phase not in {'pretest', 'posttest'} or not bool(getattr(material, 'is_active', False)):
+        return
+    conflicting = _official_reading_materials_queryset().filter(system_assessment_phase=phase, is_active=True).exclude(pk=getattr(material, 'pk', None))
+    conflicting.update(is_active=False)
+
+
+def _toggle_official_material_state(material, activate):
+    if not material or not material.is_official_reading:
+        return False
+    with transaction.atomic():
+        material = Material.objects.select_for_update().get(pk=material.pk)
+        if activate:
+            _archive_conflicting_official_materials(material)
+            material.is_active = True
+        else:
+            material.is_active = False
+        material.save(update_fields=['is_active', 'updated_at'])
+    return True
 
 
 def _official_assessment_create_context(request):
@@ -6645,77 +6765,106 @@ def _official_assessment_create_context(request):
 @admin_required
 @require_http_methods(["GET", "POST"])
 def admin_official_reading_assessment_add(request):
-    return HttpResponseForbidden("Official reading assessments are protected from normal creation.")
+    if request.method == 'POST':
+        saved_material, error_response = _save_official_reading_assessment(request, material=None)
+        if error_response:
+            return render(request, 'pabasa_app/admin_official_reading_assessment_add.html', dict(_official_assessment_edit_context(request, None), **{
+                'official_form_error': error_response.get('non_field_error', 'Please fix the highlighted fields.'),
+                'official_field_errors': error_response.get('field_errors', {}),
+            }), status=400)
+        if not saved_material:
+            return HttpResponseForbidden("Unable to save official assessment.")
+        return redirect(reverse('admin_official_reading_assessment_detail', args=[saved_material.id]))
+    return render(request, 'pabasa_app/admin_official_reading_assessment_add.html', _official_assessment_edit_context(request, None))
 
 
 @admin_required
 @csrf_protect
 def admin_official_reading_assessments(request):
     if request.method == 'POST':
+        action = str(request.POST.get('action') or '').strip().lower()
         material_id = request.POST.get('material_id')
         material = _get_managed_material(material_id) if str(material_id or '').isdigit() else None
-        if material and not material.is_official_reading:
-            material = None
-        saved_material, error_response = _save_official_reading_assessment(request, material=material)
-        if error_response:
-            return render(request, 'pabasa_app/admin_official_reading_assessments.html', dict(_official_reading_material_context(request), **{
-                'official_form_error': error_response.get('non_field_error', 'Please fix the highlighted fields.'),
-                'official_field_errors': error_response.get('field_errors', {}),
-            }), status=400)
-        if not saved_material:
-            return HttpResponseForbidden("Unable to save official assessment.")
-        calendar_id = request.POST.get('calendar_id') or request.GET.get('calendar_id') or ''
-        suffix = f"?calendar_id={calendar_id}" if calendar_id else ''
-        return redirect(f"{reverse('admin_official_reading_assessments')}{suffix}")
+        if not material or not material.is_official_reading:
+            return HttpResponseForbidden("Unable to update official assessment.")
+        if action == 'archive':
+            _toggle_official_material_state(material, False)
+        elif action == 'unarchive':
+            _toggle_official_material_state(material, True)
+        else:
+            return HttpResponseBadRequest("Unsupported action.")
+        return redirect(reverse('admin_official_reading_assessments'))
 
     return render(request, 'pabasa_app/admin_official_reading_assessments.html', _official_reading_material_context(request))
 
 
 @admin_required
 def admin_official_reading_assessment_detail(request, material_id):
-    material = _get_managed_material(material_id)
-    if not material or not material.is_official_reading:
+    material = _get_official_reading_material(material_id)
+    if not material:
         return redirect('admin_official_reading_assessments')
-    return render(request, 'pabasa_app/admin_official_reading_assessment_detail.html', _official_assessment_edit_context(request, material))
+    return render(request, 'pabasa_app/admin_official_reading_assessment_detail.html', _official_assessment_detail_context(request, material))
+
+
+def _official_assessment_detail_context(request, material):
+    selected_calendar, calendars, active_calendar = _selected_school_calendar(request)
+    content_json = getattr(material, 'content_json', None) or {}
+    words = content_json.get('words') if isinstance(content_json, dict) and isinstance(content_json.get('words'), list) else []
+    sentences = content_json.get('sentences') if isinstance(content_json, dict) and isinstance(content_json.get('sentences'), list) else []
+    passages = content_json.get('passages') if isinstance(content_json, dict) and isinstance(content_json.get('passages'), list) else []
+    passages = [
+        {
+            'title': str(passage.get('title') or '').strip(),
+            'text': str(passage.get('text') or passage.get('content') or '').strip(),
+        }
+        for passage in passages
+        if isinstance(passage, dict)
+    ]
+    return {
+        'page_title': 'Official Reading Assessments',
+        'admin_username': request.session.get('custom_id', ''),
+        'first_name': request.session.get('first_name', ''),
+        'last_name': request.session.get('last_name', ''),
+        'material': material,
+        'selected_assessment_type': _official_reading_assessment_type(material),
+        'school_year_value': getattr(active_calendar, 'school_year', '') or '',
+        'current_term_label': f"Term {getattr(active_calendar, 'current_term', '')}" if active_calendar else 'No Active Term',
+        'selected_calendar': selected_calendar,
+        'school_calendars': calendars,
+        'current_school_calendar': active_calendar,
+        'assessment_type_label': {'pre_assessment': 'Pre-Assessment', 'post_assessment': 'Post-Assessment', 'both': 'Both'}.get(_official_reading_assessment_type(material), 'Pre-Assessment'),
+        'material_status_label': 'Active' if material.is_active else 'Archived',
+        'system_status_label': 'SYSTEM OFFICIAL' if material.is_system_owned else 'CUSTOM',
+        'reading_words': words,
+        'reading_sentences': sentences,
+        'reading_passages': passages,
+        'official_item_sections': _official_reading_item_sections(material),
+        'school_year_value': str(content_json.get('school_year') or content_json.get('school_year_label') or _material_school_year_label(material) or '').strip(),
+    }
+
+
+def _get_official_reading_material(material_id):
+    return Material.objects.filter(pk=material_id, is_official_reading=True).first()
 
 
 @admin_required
-@require_http_methods(["GET", "POST"])
-def admin_official_reading_assessment_edit(request, material_id=None):
-    material = get_object_or_404(Material, pk=material_id, is_official_reading=True)
-    if request.method == 'POST':
-        saved_material, error_response = _save_official_reading_assessment(request, material=material)
-        if error_response:
-            context = _official_assessment_edit_context(request, material)
-            posted_title = (request.POST.get('title') or '').strip()
-            posted_language = Material.normalize_language_value(request.POST.get('language'))
-            posted_term = request.POST.get('term')
-            posted_assessment_type = (request.POST.get('assessment_type') or 'pre_assessment').strip().lower()
-            posted_instructions = (request.POST.get('instructions') or '').strip()
-            if posted_title:
-                context['material'].title = posted_title
-            if posted_language:
-                context['material'].language = posted_language
-            if str(posted_term or '').isdigit():
-                context['material'].official_term = int(posted_term)
-            context['selected_assessment_type'] = posted_assessment_type if posted_assessment_type in {'pre_assessment', 'post_assessment'} else 'pre_assessment'
-            context['material'].content_json = dict(context['material'].content_json or {})
-            context['material'].content_json['instructions'] = posted_instructions
-            context.update({
-                'official_form_error': error_response.get('non_field_error', 'Please fix the highlighted fields.'),
-                'official_field_errors': error_response.get('field_errors', {}),
-                'material': material,
-            })
-            context['reading_items_json'] = request.POST.get('content_items_json') or request.POST.get('reading_items_json') or '[]'
-            context['reading_items'] = json.loads(context['reading_items_json']) if context['reading_items_json'] else []
-            return render(request, 'pabasa_app/admin_official_reading_assessment_edit.html', context, status=400)
-        if not saved_material:
-            return HttpResponseForbidden("Unable to save official assessment.")
-        _clear_official_reading_override(request)
-        calendar_id = request.POST.get('calendar_id') or request.GET.get('calendar_id') or ''
-        suffix = f"?calendar_id={calendar_id}" if calendar_id else ''
-        return redirect(f"{reverse('admin_official_reading_assessments')}{suffix}")
-    return render(request, 'pabasa_app/admin_official_reading_assessment_edit.html', _official_assessment_edit_context(request, material))
+@require_http_methods(["POST"])
+def admin_official_reading_assessment_archive(request, material_id):
+    material = _get_official_reading_material(material_id)
+    if not material:
+        return redirect('admin_official_reading_assessments')
+    _toggle_official_material_state(material, False)
+    return redirect(reverse('admin_official_reading_assessments'))
+
+
+@admin_required
+@require_http_methods(["POST"])
+def admin_official_reading_assessment_unarchive(request, material_id):
+    material = _get_official_reading_material(material_id)
+    if not material:
+        return redirect('admin_official_reading_assessments')
+    _toggle_official_material_state(material, True)
+    return redirect(reverse('admin_official_reading_assessments'))
 
 
 @admin_required

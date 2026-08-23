@@ -1,0 +1,396 @@
+{% extends "pabasa_app/admin_base.html" %}
+{% block content %}
+<style>
+  .official-edit-wrap{display:grid;gap:1rem}
+  .official-edit-shell{background:#fff;border:1px solid rgba(16,70,110,.08);border-radius:24px;box-shadow:0 16px 38px rgba(16,70,110,.08);padding:1rem}
+  .official-edit-section{display:grid;gap:1rem;background:#fff;border:1px solid rgba(16,70,110,.08);border-radius:20px;padding:1rem}
+  .step-card{border:1px solid rgba(16,70,110,.12);border-radius:18px;padding:1rem;background:#f8fbff}
+  .step-card.locked{opacity:.55;filter:saturate(.75)}
+  .step-card.current{border-color:rgba(47,111,209,.45);box-shadow:0 8px 22px rgba(47,111,209,.10)}
+  .step-card.completed{background:#f3fff7;border-color:rgba(22,101,52,.18)}
+  .step-head{display:flex;justify-content:space-between;gap:.75rem;align-items:center}
+  .step-kicker{font-size:.76rem;font-weight:900;letter-spacing:.11em;text-transform:uppercase;color:#6b7f94}
+  .step-state{font-size:.72rem;font-weight:900;border-radius:999px;padding:.3rem .6rem}
+  .state-locked{background:rgba(148,163,184,.18);color:#475569}
+  .state-current{background:rgba(47,111,209,.12);color:#1d4ed8}
+  .state-completed{background:rgba(34,197,94,.12);color:#166534}
+  .item-chip{display:inline-flex;align-items:center;gap:.4rem;border-radius:999px;padding:.45rem .7rem;background:rgba(16,70,110,.08);color:#10466E;font-weight:800}
+  .item-chip button{border:0;background:transparent;color:#10466E}
+  .item-box{min-height:96px;border:1px solid rgba(16,70,110,.12);border-radius:16px;padding:1rem;background:#fafdff}
+  .item-input-row{display:flex;gap:.5rem;align-items:flex-start}
+  .item-input-row textarea{min-height:52px;resize:vertical}
+  .locked-hint{font-size:.88rem;color:#64748b}
+</style>
+
+<div class="official-edit-wrap">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div>
+      <a class="btn btn-sm btn-outline-secondary mb-3" href="{% url 'admin_official_reading_assessments' %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
+      <h2 class="h3 fw-bold mb-1">Add Official Reading Assessment</h2>
+      <p class="text-secondary mb-0">Create a new official assessment as a separate record. Existing official assessments remain read-only.</p>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" id="officialAssessmentForm" class="official-edit-shell">
+    {% csrf_token %}
+    <input type="hidden" name="content_items_json" id="contentItemsJson" value="{{ reading_items_json|default:'{}' }}">
+
+    <div class="official-edit-section">
+      <div class="d-flex align-items-center gap-2 text-secondary small fw-bold text-uppercase"><i class="bi bi-1-circle"></i> Setup</div>
+      {% if official_form_error %}
+      <div class="alert alert-danger mb-0 rounded-3" role="alert">{{ official_form_error }}</div>
+      {% endif %}
+
+      <div class="step-card current" id="stepTitle">
+        <div class="step-head mb-2">
+          <div class="step-kicker">Step 1</div>
+          <span class="step-state state-current">Current</span>
+        </div>
+        <label class="form-label fw-bold mb-1">Title <span class="text-danger">*</span></label>
+        <input class="form-control {% if official_field_errors.title %}is-invalid{% endif %}" id="titleInput" name="title" value="{{ material.title|default:'' }}" placeholder="e.g., English Pre-Assessment - Term 1" required>
+        {% if official_field_errors.title %}<div class="invalid-feedback">{{ official_field_errors.title }}</div>{% endif %}
+      </div>
+
+      <div class="step-card locked" id="stepType">
+        <div class="step-head mb-2">
+          <div class="step-kicker">Step 2</div>
+          <span class="step-state state-locked" id="typeState">Locked</span>
+        </div>
+        <label class="form-label fw-bold mb-1">Assessment Type <span class="text-danger">*</span></label>
+        <select class="form-select" id="assessmentTypeInput" name="assessment_type" disabled>
+          {% for value,label in assessment_type_options %}
+          <option value="{{ value }}" {% if selected_assessment_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div class="locked-hint mt-2">Complete the title first to unlock the assessment type.</div>
+      </div>
+
+      <div class="step-card locked" id="stepMaterials">
+        <div class="step-head mb-2">
+          <div class="step-kicker">Step 3</div>
+          <span class="step-state state-locked" id="materialsState">Locked</span>
+        </div>
+        <div class="locked-hint mb-2" id="materialsHint">Choose the assessment type to unlock the reading materials editor.</div>
+
+        <div class="official-edit-section p-0 border-0 bg-transparent">
+          <div class="step-card locked p-3" id="wordStep">
+            <div class="step-head mb-2">
+              <div class="step-kicker">Step 4</div>
+              <span class="step-state state-locked" id="wordState">Locked</span>
+            </div>
+            <label class="form-label fw-bold">Word <span class="text-danger">*</span></label>
+            <div class="item-input-row mb-2">
+              <textarea id="wordInput" class="form-control" placeholder="Add word items..." disabled></textarea>
+              <button type="button" class="btn btn-primary" id="addWordBtn" style="min-width:52px" disabled><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="locked-hint" id="wordProgress">Minimum: 10 words</div>
+            </div>
+            <div id="wordChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
+              {% for item in reading_words %}
+              <span class="item-chip" data-word-chip="{{ forloop.counter0 }}">{{ item }} <button type="button" aria-label="Remove word" data-remove-word="{{ forloop.counter0 }}">&times;</button></span>
+              {% empty %}
+              <div class="text-center w-100 text-secondary py-3" id="wordEmpty">No word items added yet.</div>
+              {% endfor %}
+            </div>
+            {% if official_field_errors.words %}<div class="text-danger small mt-2">{{ official_field_errors.words }}</div>{% endif %}
+          </div>
+
+          <div class="step-card locked p-3 mt-3" id="sentenceStep">
+            <div class="step-head mb-2">
+              <div class="step-kicker">Step 5</div>
+              <span class="step-state state-locked" id="sentenceState">Locked</span>
+            </div>
+            <label class="form-label fw-bold">Sentence <span class="text-danger">*</span></label>
+            <div class="item-input-row mb-2">
+              <textarea id="sentenceInput" class="form-control" placeholder="Add sentence items..." disabled></textarea>
+              <button type="button" class="btn btn-primary" id="addSentenceBtn" style="min-width:52px" disabled><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="locked-hint" id="sentenceProgress">Minimum: 3 sentences</div>
+            </div>
+            <div id="sentenceChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
+              {% for item in reading_sentences %}
+              <span class="item-chip" data-sentence-chip="{{ forloop.counter0 }}">{{ item }} <button type="button" aria-label="Remove sentence" data-remove-sentence="{{ forloop.counter0 }}">&times;</button></span>
+              {% empty %}
+              <div class="text-center w-100 text-secondary py-3" id="sentenceEmpty">No sentence items added yet.</div>
+              {% endfor %}
+            </div>
+            {% if official_field_errors.sentences %}<div class="text-danger small mt-2">{{ official_field_errors.sentences }}</div>{% endif %}
+          </div>
+
+          <div class="step-card locked p-3 mt-3" id="paragraphStep">
+            <div class="step-head mb-2">
+              <div class="step-kicker">Step 6</div>
+              <span class="step-state state-locked" id="paragraphState">Locked</span>
+            </div>
+            <label class="form-label fw-bold">Paragraph <span class="text-danger">*</span></label>
+            <div class="item-input-row mb-2">
+              <textarea id="paragraphTitleInput" class="form-control" placeholder="Paragraph title..." disabled></textarea>
+            </div>
+            <div class="item-input-row mb-2">
+              <textarea id="paragraphContentInput" class="form-control" placeholder="Add paragraph text..." disabled></textarea>
+              <button type="button" class="btn btn-primary" id="addParagraphBtn" style="min-width:52px" disabled><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="locked-hint" id="paragraphProgress">Available after 3 sentences</div>
+            </div>
+            <div id="paragraphChips" class="item-box d-flex flex-wrap gap-2 align-content-start">
+              {% for item in reading_passages %}
+              <span class="item-chip" data-paragraph-chip="{{ forloop.counter0 }}">
+                <span>{{ item.title|default:'Untitled Paragraph' }}</span>
+                <span class="small fw-normal d-block" style="max-width:320px;white-space:normal;">{{ item.text|default:item.content|truncatechars:120 }}</span>
+                <button type="button" aria-label="Remove paragraph" data-remove-paragraph="{{ forloop.counter0 }}">&times;</button>
+              </span>
+              {% empty %}
+              <div class="text-center w-100 text-secondary py-3" id="paragraphEmpty">No paragraph items added yet.</div>
+              {% endfor %}
+            </div>
+            {% if official_field_errors.passages %}<div class="text-danger small mt-2">{{ official_field_errors.passages }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="official-edit-section">
+      <div class="d-flex align-items-center gap-2 text-secondary small fw-bold text-uppercase"><i class="bi bi-2-circle"></i> Publication</div>
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-bold">School Year</label>
+          {% if school_calendars|length > 1 %}
+            <select class="form-select" name="calendar_id" required>
+            {% for school_calendar in school_calendars %}
+            <option value="{{ school_calendar.id }}" {% if not material and selected_calendar and selected_calendar.id == school_calendar.id %}selected{% endif %}>{{ school_calendar.school_year }}</option>
+            {% endfor %}
+          </select>
+          {% else %}
+          <input class="form-control" value="{{ school_year_value|default:'Current school year' }}" readonly>
+          {% endif %}
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label fw-bold">Term <span class="text-danger">*</span></label>
+          <select class="form-select {% if official_field_errors.term %}is-invalid{% endif %}" name="term" required>
+            {% for value,label in term_options %}
+            <option value="{{ value }}" {% if not material and current_school_calendar and current_school_calendar.current_term == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% if official_field_errors.term %}<div class="invalid-feedback">{{ official_field_errors.term }}</div>{% endif %}
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-bold">Language <span class="text-danger">*</span></label>
+          <select class="form-select" name="language">
+            {% for value,label in language_options %}
+            <option value="{{ value }}" {% if value == "English" %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="alert alert-info mb-0">The save button becomes available only after Title, Assessment Type, Word, Sentence, and Paragraph are completed.</div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'admin_official_reading_assessments' %}">Cancel</a>
+      <button class="btn btn-primary px-4" id="saveBtn" type="submit" disabled><i class="bi bi-check2 me-1"></i>Create Assessment</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(() => {
+  const titleInput = document.getElementById('titleInput');
+  const assessmentTypeInput = document.getElementById('assessmentTypeInput');
+  const saveBtn = document.getElementById('saveBtn');
+  const wordInput = document.getElementById('wordInput');
+  const sentenceInput = document.getElementById('sentenceInput');
+  const paragraphTitleInput = document.getElementById('paragraphTitleInput');
+  const paragraphContentInput = document.getElementById('paragraphContentInput');
+  const addWordBtn = document.getElementById('addWordBtn');
+  const addSentenceBtn = document.getElementById('addSentenceBtn');
+  const addParagraphBtn = document.getElementById('addParagraphBtn');
+  const wordChips = document.getElementById('wordChips');
+  const sentenceChips = document.getElementById('sentenceChips');
+  const paragraphChips = document.getElementById('paragraphChips');
+  const hidden = document.getElementById('contentItemsJson');
+  const typeState = document.getElementById('typeState');
+  const materialsState = document.getElementById('materialsState');
+  const wordState = document.getElementById('wordState');
+  const sentenceState = document.getElementById('sentenceState');
+  const paragraphState = document.getElementById('paragraphState');
+  const wordProgress = document.getElementById('wordProgress');
+  const sentenceProgress = document.getElementById('sentenceProgress');
+  const paragraphProgress = document.getElementById('paragraphProgress');
+  const materialsHint = document.getElementById('materialsHint');
+  const stepTitle = document.getElementById('stepTitle');
+  const stepType = document.getElementById('stepType');
+  const stepMaterials = document.getElementById('stepMaterials');
+  const wordStep = document.getElementById('wordStep');
+  const sentenceStep = document.getElementById('sentenceStep');
+  const paragraphStep = document.getElementById('paragraphStep');
+
+  const state = { words: [], sentences: [], passages: [] };
+  let typeCommitted = false;
+  try {
+    const initial = JSON.parse(hidden.value || '{}');
+    if (initial && typeof initial === 'object') {
+      if (Array.isArray(initial.words)) state.words = initial.words.filter(Boolean).map(v => String(v).trim()).filter(Boolean);
+      if (Array.isArray(initial.sentences)) state.sentences = initial.sentences.filter(Boolean).map(v => String(v).trim()).filter(Boolean);
+      if (Array.isArray(initial.passages)) state.passages = initial.passages.filter(Boolean).map(v => ({
+        title: String(v?.title || '').trim(),
+        text: String(v?.text || v?.content || '').trim(),
+      })).filter(v => v.title || v.text);
+    }
+  } catch (e) {}
+
+  function syncHidden() {
+    hidden.value = JSON.stringify(state);
+  }
+  function renderList(container, items, emptyText, removeAttr, factory) {
+    if (!items.length) {
+      container.innerHTML = `<div class="text-center w-100 text-secondary py-3">${emptyText}</div>`;
+      return;
+    }
+    container.innerHTML = items.map((item, index) => factory(item, index)).join('');
+  }
+  function render() {
+    renderList(wordChips, state.words, 'No word items added yet.', 'data-remove-word', (item, index) => `<span class="item-chip" data-word-chip="${index}">${item} <button type="button" aria-label="Remove word" data-remove-word="${index}">&times;</button></span>`);
+    renderList(sentenceChips, state.sentences, 'No sentence items added yet.', 'data-remove-sentence', (item, index) => `<span class="item-chip" data-sentence-chip="${index}">${item} <button type="button" aria-label="Remove sentence" data-remove-sentence="${index}">&times;</button></span>`);
+    renderList(paragraphChips, state.passages, 'No paragraph items added yet.', 'data-remove-paragraph', (item, index) => `<span class="item-chip" data-paragraph-chip="${index}"><span>${item.title || 'Untitled Paragraph'}</span><span class="small fw-normal d-block" style="max-width:320px;white-space:normal;">${item.text || ''}</span><button type="button" aria-label="Remove paragraph" data-remove-paragraph="${index}">&times;</button></span>`);
+    syncHidden();
+
+    const titleReady = Boolean(titleInput.value.trim());
+    const typeEnabled = titleReady;
+    const typeReady = typeEnabled && typeCommitted;
+    const wordsReady = state.words.length >= 10;
+    const sentencesReady = state.sentences.length >= 3;
+    const passagesReady = sentencesReady && state.passages.length > 0;
+    const materialsComplete = wordsReady && sentencesReady && passagesReady;
+
+    assessmentTypeInput.disabled = !typeEnabled;
+    wordInput.disabled = !typeReady;
+    addWordBtn.disabled = !typeReady;
+    sentenceInput.disabled = !wordsReady;
+    addSentenceBtn.disabled = !wordsReady;
+    paragraphTitleInput.disabled = !sentencesReady;
+    paragraphContentInput.disabled = !sentencesReady;
+    addParagraphBtn.disabled = !sentencesReady;
+    saveBtn.disabled = !(titleReady && typeReady && wordsReady && sentencesReady && passagesReady);
+
+    const wordCount = state.words.length;
+    const sentenceCount = state.sentences.length;
+
+    stepTitle.className = `step-card ${titleReady ? 'completed' : 'current'}`;
+    stepType.className = `step-card ${titleReady ? (typeReady ? 'completed' : 'current') : 'locked'}`;
+    stepMaterials.className = `step-card ${typeReady ? (materialsComplete ? 'completed' : 'current') : 'locked'}`;
+    wordStep.className = `step-card p-3 ${typeReady ? (wordsReady ? 'completed' : 'current') : 'locked'}`;
+    sentenceStep.className = `step-card p-3 mt-3 ${wordsReady ? (sentencesReady ? 'completed' : 'current') : 'locked'}`;
+    paragraphStep.className = `step-card p-3 mt-3 ${sentencesReady ? (passagesReady ? 'completed' : 'current') : 'locked'}`;
+
+    typeState.className = `step-state ${titleReady ? (typeReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
+    materialsState.className = `step-state ${typeReady ? (materialsComplete ? 'state-completed' : 'state-current') : 'state-locked'}`;
+    wordState.className = `step-state ${typeReady ? (wordsReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
+    sentenceState.className = `step-state ${wordsReady ? (sentencesReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
+    paragraphState.className = `step-state ${sentencesReady ? (passagesReady ? 'state-completed' : 'state-current') : 'state-locked'}`;
+
+    stepTitle.querySelector('.step-state').className = `step-state ${titleReady ? 'state-completed' : 'state-current'}`;
+    stepTitle.querySelector('.step-state').textContent = titleReady ? 'Completed' : 'Current';
+    typeState.textContent = titleReady ? (typeReady ? 'Completed' : 'Current') : 'Locked';
+    materialsState.textContent = typeReady ? (materialsComplete ? 'Completed' : 'Current') : 'Locked';
+    wordState.textContent = typeReady ? (wordsReady ? 'Completed' : 'Current') : 'Locked';
+    sentenceState.textContent = wordsReady ? (sentencesReady ? 'Completed' : 'Current') : 'Locked';
+    paragraphState.textContent = sentencesReady ? (passagesReady ? 'Completed' : 'Current') : 'Locked';
+
+    wordProgress.textContent = wordCount >= 10 ? `${wordCount} / 10 words ✓` : `${wordCount} / 10 words`;
+    sentenceProgress.textContent = sentenceCount >= 3 ? `${sentenceCount} / 3 sentences ✓` : `${sentenceCount} / 3 sentences`;
+    paragraphProgress.textContent = sentencesReady ? 'Paragraphs are now available' : 'Available after 3 sentences';
+    materialsHint.textContent = !titleReady
+      ? 'Choose the assessment type to unlock the reading materials editor.'
+      : (materialsComplete
+        ? 'All required reading materials have been completed.'
+        : 'Complete the Word, Sentence, and Paragraph requirements.');
+  }
+
+  function addWord() {
+    const value = String(wordInput.value || '').trim();
+    if (!value) return;
+    state.words.push(value);
+    wordInput.value = '';
+    render();
+  }
+  function addSentence() {
+    const value = String(sentenceInput.value || '').trim();
+    if (!value) return;
+    state.sentences.push(value);
+    sentenceInput.value = '';
+    render();
+  }
+  function addParagraph() {
+    const title = String(paragraphTitleInput.value || '').trim();
+    const text = String(paragraphContentInput.value || '').trim();
+    if (!title && !text) return;
+    state.passages.push({ title, text });
+    paragraphTitleInput.value = '';
+    paragraphContentInput.value = '';
+    render();
+  }
+
+  wordChips.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-remove-word]');
+    if (!btn) return;
+    state.words.splice(Number(btn.getAttribute('data-remove-word')), 1);
+    render();
+  });
+  sentenceChips.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-remove-sentence]');
+    if (!btn) return;
+    state.sentences.splice(Number(btn.getAttribute('data-remove-sentence')), 1);
+    render();
+  });
+  paragraphChips.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-remove-paragraph]');
+    if (!btn) return;
+    state.passages.splice(Number(btn.getAttribute('data-remove-paragraph')), 1);
+    render();
+  });
+
+  addWordBtn.addEventListener('click', addWord);
+  addSentenceBtn.addEventListener('click', addSentence);
+  addParagraphBtn.addEventListener('click', addParagraph);
+  titleInput.addEventListener('input', render);
+  assessmentTypeInput.addEventListener('change', () => {
+    if (!assessmentTypeInput.disabled && titleInput.value.trim()) {
+      typeCommitted = true;
+    }
+    render();
+  });
+  wordInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      addWord();
+    }
+  });
+  sentenceInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      addSentence();
+    }
+  });
+  [paragraphTitleInput, paragraphContentInput].forEach((el) => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && e.target === paragraphContentInput) {
+        e.preventDefault();
+        addParagraph();
+      }
+    });
+  });
+  document.getElementById('officialAssessmentForm').addEventListener('submit', (e) => {
+    render();
+    if (saveBtn.disabled) e.preventDefault();
+  });
+
+  if (titleInput.value.trim() && assessmentTypeInput.value.trim() && !assessmentTypeInput.disabled) {
+    typeCommitted = Boolean(assessmentTypeInput.dataset.prefilledCommitted === 'true');
+  }
+  render();
+})();
+</script>
+{% endblock %}
