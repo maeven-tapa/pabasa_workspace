@@ -1,0 +1,37 @@
+<svg class="{% if logo_class %}{{ logo_class }}{% else %}pabasa-logo-svg{% endif %}" viewBox="0 0 230 260" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <radialGradient id="{% if pnb_id %}{{ pnb_id }}{% else %}pnb{% endif %}" cx="40%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#8CE0FF"/>
+            <stop offset="70%" stop-color="#4ABBEB"/>
+            <stop offset="100%" stop-color="#2199CC"/>
+        </radialGradient>
+        <radialGradient id="{% if pnbk_id %}{{ pnbk_id }}{% else %}pnbk{% endif %}" cx="40%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#FFD447"/>
+            <stop offset="100%" stop-color="#E6630B"/>
+        </radialGradient>
+    </defs>
+    <path d="M110,45 C175,45 175,130 115,135 L115,185 C115,198 102,206 90,206 C78,206 65,198 65,185 L65,95 C65,62 82,45 110,45 Z" fill="url(#{% if pnb_id %}{{ pnb_id }}{% else %}pnb{% endif %})" stroke="#10466E" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M75,100 C55,112 55,148 72,162 C86,150 90,120 75,100 Z" fill="url(#{% if pnb_id %}{{ pnb_id }}{% else %}pnb{% endif %})" stroke="#10466E" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M90,48 C84,30 96,18 108,30 C120,18 132,30 126,44" fill="url(#{% if pnb_id %}{{ pnb_id }}{% else %}pnb{% endif %})"/>
+    <path d="M92,48 C135,48 152,78 145,112 C132,135 88,135 76,112 C68,85 75,48 92,48 Z" fill="#FFFCE6"/>
+    <circle cx="112" cy="85" r="24" fill="#FFFFFF" stroke="#10466E" stroke-width="3"/>
+    <circle cx="116" cy="87" r="16" fill="#113857"/>
+    <circle cx="110" cy="79" r="6" fill="#FFFFFF"/>
+    <circle cx="124" cy="95" r="3" fill="#FFFFFF"/>
+    <circle cx="124" cy="79" r="2" fill="#FFFFFF"/>
+    <circle cx="86" cy="114" r="9" fill="#FF5C8A" opacity="0.5"/>
+    <circle cx="134" cy="114" r="7" fill="#FF5C8A" opacity="0.4"/>
+    <path d="M136,82 C162,82 170,96 162,112 C154,126 136,124 130,110 Z" fill="url(#{% if pnbk_id %}{{ pnbk_id }}{% else %}pnbk{% endif %})" stroke="#10466E" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M136,102 C150,102 152,110 146,118 C140,122 134,116 134,108" fill="#660011"/>
+    <circle cx="114" cy="85" r="28" fill="none" stroke="#FFAE00" stroke-width="7"/>
+    <rect x="142" y="80" width="22" height="7" rx="3" fill="#FFAE00"/>
+    <path d="M165,40 L168,46 L174,47 L169,52 L171,58 L165,54 L159,58 L161,52 L156,47 L162,46 Z" fill="#FFD639"/>
+    <path d="M60,65 L62,69 L66,70 L63,73 L64,77 L60,75 L56,77 L57,73 L54,70 L58,69 Z" fill="#FF7FA6"/>
+</svg>
+<span class="{% if letters_class %}{{ letters_class }}{% else %}pabasa-logo-letters{% endif %}" aria-hidden="true">
+    <span class="{% if letter_yellow_class %}{{ letter_yellow_class }}{% else %}lc-yellow{% endif %}">A</span>
+    <span class="{% if letter_blue_class %}{{ letter_blue_class }}{% else %}lc-blue{% endif %}">B</span>
+    <span class="{% if letter_yellow_class %}{{ letter_yellow_class }}{% else %}lc-yellow{% endif %}">A</span>
+    <span class="{% if letter_blue_class %}{{ letter_blue_class }}{% else %}lc-blue{% endif %}">S</span>
+    <span class="{% if letter_yellow_class %}{{ letter_yellow_class }}{% else %}lc-yellow{% endif %}">A</span>
+</span>

@@ -1370,14 +1370,14 @@
         }
 
         .sidebar-logo-img {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 10px 24px rgba(6, 23, 38, 0.2);
-            flex: 0 0 54px;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            flex: 0 0 auto;
             height: 54px;
             object-fit: contain;
-            padding: 0.35rem;
-            width: 54px;
+            padding: 0;
+            width: auto;
         }
 
         .sidebar-logo-text {
@@ -1392,7 +1392,7 @@
             white-space: nowrap;
         }
 
-        .teacher-sidebar-logo-letters {
+        .pabasa-logo-letters {
             align-items: center;
             display: flex;
             gap: 0;
@@ -1401,10 +1401,10 @@
             overflow: visible;
         }
 
-        .teacher-sidebar-logo-letters span {
+        .pabasa-logo-letters span {
             display: inline-block;
             filter: drop-shadow(0 2px 0 rgba(16, 70, 110, 0.18));
-            font-family: "Coiny", cursive;
+            font-family: 'Coiny', var(--font-display), cursive;
             font-size: clamp(1.35rem, 2vw, 1.75rem);
             letter-spacing: -1px;
             line-height: 1;
@@ -1412,11 +1412,11 @@
             -webkit-text-stroke: 3px #10466e;
         }
 
-        .teacher-sidebar-logo-letters .logo-letter-blue {
+        .lc-blue {
             color: #54c2f0;
         }
 
-        .teacher-sidebar-logo-letters .logo-letter-yellow {
+        .lc-yellow {
             color: #ffd639;
         }
 

@@ -364,24 +364,41 @@
         }
 
         .admin-logo-img {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 10px 24px rgba(6, 23, 38, 0.2);
-            flex: 0 0 54px;
+            width: 64px;
             height: 54px;
-            object-fit: contain;
-            padding: 0.35rem;
-            width: 54px;
+            flex-shrink: 0;
         }
 
-        .admin-logo-text {
-            color: #fff;
-            font-size: 1.1rem;
-            font-weight: 900;
+        .pabasa-logo-letters {
+            display: flex;
+            align-items: center;
+            margin-left: -20px;
+            margin-top: 4px;
+        }
+
+        .pabasa-logo-letters span {
+            font-family: 'Coiny', cursive;
+            font-size: 2.1rem;
+            display: inline-block;
+            -webkit-text-stroke: 5px #10466E;
+            paint-order: stroke fill;
+            letter-spacing: -2px;
+            filter: drop-shadow(0px 2px 0px rgba(16,70,110,0.18));
             line-height: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        }
+
+        .lc-blue   { color: #54C2F0; }
+        .lc-yellow { color: #FFD639; }
+
+        .modern-brand-panel .pabasa-logo-letters {
+            margin-left: -0.68rem;
+            margin-top: 0.1rem;
+        }
+
+        .modern-brand-panel .pabasa-logo-letters span {
+            font-size: clamp(1.35rem, 2vw, 1.75rem);
+            -webkit-text-stroke: 3px #10466E;
+            letter-spacing: -1px;
         }
 
         .admin-brand-link {
@@ -2270,11 +2287,10 @@
     <aside class="admin-sidebar">
         <div class="d-flex flex-column h-100">
             <div class="admin-sidebar-top">
-                <div class="admin-logo-row">
-                    <a class="admin-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                        <img class="admin-logo-img" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
-                        <span class="admin-logo-text">PABASA</span>
-                    </a>
+                    <div class="admin-logo-row">
+                        <a class="admin-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
+                            {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="admin-logo-img" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin" pnbk_id="pnbk-admin" %}
+                        </a>
 
                     <button class="btn btn-sm sidebar-collapse-btn d-none d-lg-inline-flex" type="button" data-admin-collapse-btn aria-label="Collapse sidebar" title="Collapse sidebar">
                         <i class="bi bi-chevron-left"></i>
@@ -2326,8 +2342,7 @@
                     <div class="admin-sidebar-top">
                         <div class="admin-logo-row">
                             <a class="admin-logo-link" href="{% url 'dashboard_admin' %}" aria-label="Go to admin dashboard">
-                                <img class="admin-logo-img" src="{% static 'pabasa_app/images/pabasalogo.png' %}" alt="PABASA">
-                                <span class="admin-logo-text">PABASA</span>
+                                {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="admin-logo-img" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-admin-mobile" pnbk_id="pnbk-admin-mobile" %}
                             </a>
                         </div>
 
