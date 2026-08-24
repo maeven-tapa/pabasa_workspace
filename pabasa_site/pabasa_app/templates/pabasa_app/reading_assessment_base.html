@@ -370,6 +370,29 @@
             flex: 0 0 auto;
         }
 
+        /* Official assessments have no persistent reading button, so the helper
+           confirms when the microphone is actively hearing the learner. */
+        .reader-shell.is-hearing .read-helper {
+            color: #15803d;
+            animation: pabasaHelperListening 0.85s ease-in-out infinite;
+        }
+
+        .reader-shell.is-hearing .helper-dot {
+            background: #22c55e;
+            box-shadow: 22px 0 0 #f7c86a, 44px 0 0 #38bdf8, 0 0 0 7px rgba(34, 197, 94, 0.16), 0 0 22px rgba(34, 197, 94, 0.58);
+        }
+
+        @keyframes pabasaHelperListening {
+            0%, 100% { opacity: 0.72; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.045); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .reader-shell.is-hearing .read-helper {
+                animation: none;
+            }
+        }
+
         .word-stage {
             display: grid;
             place-items: center;
@@ -547,13 +570,20 @@
         }
 
         .content-word .reading-word {
-            font-size: clamp(1.8rem, 6vw, 3.8rem);
+            font-size: clamp(2.5rem, 8vw, 5.5rem);
             letter-spacing: 0.03em;
         }
 
         .content-sentence .reading-word {
-            font-size: clamp(1.2rem, 3.5vw, 2.4rem);
-            line-height: 1.14;
+            font-size: clamp(1.65rem, 4.5vw, 3.25rem);
+            line-height: 1.2;
+        }
+
+        /* Vowels are short, isolated sounds, so make them especially prominent. */
+        .content-vowel .reading-word {
+            font-size: clamp(4rem, 14vw, 8rem);
+            letter-spacing: 0.08em;
+            line-height: 1;
         }
 
         .content-paragraph .reading-word {
@@ -1805,7 +1835,15 @@
         }
 
         .content-word .reading-word {
-            font-size: clamp(2.8rem, 14vw, 5.2rem);
+            font-size: clamp(3.3rem, 16vw, 6.2rem);
+        }
+
+        .content-sentence .reading-word {
+            font-size: clamp(2rem, 7vw, 3rem);
+        }
+
+        .content-vowel .reading-word {
+            font-size: clamp(5.5rem, 25vw, 8rem);
         }
 
         .completion-summary {
