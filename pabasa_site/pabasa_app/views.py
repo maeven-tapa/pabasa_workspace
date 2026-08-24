@@ -586,7 +586,7 @@ def _official_crla_material_for_student(student, assessment_type):
         return None
 
     assessment_type = str(assessment_type or '').strip().lower()
-    if assessment_type not in {'pretest', 'posttest'}:
+    if assessment_type not in {'pretest', 'midtest', 'posttest'}:
         return None
 
     return _official_crla_materials_for_phase(assessment_type).order_by('updated_at', 'id').first()
@@ -1138,6 +1138,75 @@ def _assessment_fluency_score(ratio, accuracy):
 
 def _crla_classification(total_score):
     return crla_classification(total_score)
+
+
+def _crla_grade2_next_stage(assessment_type, score_payload=None):
+    assessment_type = str(assessment_type or '').strip().lower()
+    score_payload = score_payload if isinstance(score_payload, dict) else {}
+    def _to_int(value):
+        try:
+            if value in (None, ''):
+                return None
+            return int(float(value))
+        except (TypeError, ValueError):
+            return None
+
+    def _to_float(value):
+        try:
+            if value in (None, ''):
+                return None
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    if assessment_type == 'word':
+        correct_words = _to_int(
+            score_payload.get('correct_words')
+            or score_payload.get('word_count')
+            or score_payload.get('items_completed')
+        )
+        return 'sentences_low' if correct_words is not None and int(correct_words) <= 6 else 'sentences_high'
+    if assessment_type == 'sentence':
+        return 'story'
+    if assessment_type == 'paragraph':
+        story_read_percent = _to_float(
+            score_payload.get('story_read_percent')
+            or score_payload.get('story_percent')
+            or score_payload.get('read_percent')
+            or score_payload.get('progress_percent'),
+        )
+        if story_read_percent is None:
+            progress_value = score_payload.get('progress')
+            if progress_value is not None:
+                try:
+                    progress_value = float(progress_value)
+                    story_read_percent = progress_value * 100 if progress_value <= 1 else progress_value
+                except (TypeError, ValueError):
+                    story_read_percent = None
+        correct_answers = _to_int(
+            score_payload.get('correct_answers')
+            or score_payload.get('comprehension_correct')
+            or score_payload.get('correct_items')
+            or score_payload.get('items_correct')
+        )
+        if not isinstance(story_read_percent, (int, float)) or not isinstance(correct_answers, int):
+            return 'completed_grade_level'
+        if story_read_percent < 25 and correct_answers == 0:
+            return 'completed_high_emerging'
+        if 26 <= story_read_percent <= 50 and 1 <= correct_answers <= 2:
+            return 'completed_developing'
+        if 51 <= story_read_percent <= 75 and 3 <= correct_answers <= 4:
+            return 'completed_transitioning'
+        if 76 <= story_read_percent <= 100 and 5 <= correct_answers <= 6:
+            return 'completed_grade_level'
+        if story_read_percent < 25:
+            return 'completed_high_emerging'
+        if story_read_percent <= 50:
+            return 'completed_developing'
+        if story_read_percent <= 75:
+            return 'completed_transitioning'
+        return 'completed_grade_level'
+    return ''
 
 
 def _osps_multiplier(assessment_type):
@@ -1760,6 +1829,7 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
 
     assessment_kind = ''
     assessment_phase = ''
+    assessment_type = str(score_payload.get('assessment_type') or '').strip().lower()
     if assessment is not None:
         assessment_kind = str(getattr(assessment, 'assessment_kind', '') or '').strip().lower()
         assessment_phase = str(getattr(assessment, 'system_assessment_phase', '') or '').strip().lower()
@@ -1804,6 +1874,39 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
         if assessment_phase:
             crla_windows[assessment_phase] = current_window
             state['crla_windows'] = crla_windows
+
+    if assessment_type in {'word', 'sentence', 'paragraph'}:
+        student_end_state = state.get('student_end_assessment_state')
+        if not isinstance(student_end_state, dict):
+            student_end_state = {}
+        next_stage = _crla_grade2_next_stage(assessment_type, score_payload)
+        def _safe_int(value):
+            try:
+                if value in (None, ''):
+                    return None
+                return int(float(value))
+            except (TypeError, ValueError):
+                return None
+        student_end_state.update({
+            'assessment_type': assessment_type,
+            'score': score_payload.get('final_score') or score_payload.get('total_score') or score_payload.get('overall_raw_score'),
+            'correct_words': score_payload.get('correct_words') or score_payload.get('word_count') or score_payload.get('items_completed'),
+            'classification': normalized_classification,
+            'updated_at': timezone.now().isoformat(),
+            'next_stage': next_stage,
+        })
+        if assessment_type == 'word':
+            student_end_state['stage'] = next_stage or 'words'
+            student_end_state['branch'] = 'words'
+            student_end_state['routing_score'] = _safe_int(student_end_state.get('correct_words'))
+        elif assessment_type == 'sentence':
+            student_end_state['stage'] = next_stage or 'sentences'
+            student_end_state['branch'] = 'sentences'
+        elif assessment_type == 'paragraph':
+            student_end_state['stage'] = next_stage or 'story'
+            student_end_state['branch'] = 'story'
+            student_end_state['routing_score'] = score_payload.get('story_read_percent') or score_payload.get('story_percent') or score_payload.get('read_percent')
+        state['student_end_assessment_state'] = student_end_state
 
     try:
         logger.warning(
@@ -7950,10 +8053,11 @@ def assessment(request):
         'crla_assessment_available': has_active_crla_window,
     })
     crla_labels = _official_crla_assessment_labels(official_availability.get('assessment_type'))
-    crla_material = material_map.get('crla')
+    crla_phase = str(official_availability.get('assessment_type') or '').strip().lower()
+    crla_material = material_map.get(_official_crla_phase_to_key(crla_phase)) or material_map.get('crla')
     official_crla_material = _official_crla_material_for_student(user, official_availability.get('assessment_type'))
-    if stage == 'assessment' and official_crla_material:
-        crla_material = official_crla_material
+    if stage == 'assessment':
+        crla_material = official_crla_material or crla_material
     elif stage != 'assessment':
         crla_material = None
     crla_items = 0
