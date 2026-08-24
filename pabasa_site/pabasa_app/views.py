@@ -14834,6 +14834,28 @@ def _material_response_payload(material, tokens=None, section=None, is_shared_ma
     }
 
 
+def _material_language_from_subject(subject):
+    subject_value = str(subject or '').strip().lower()
+    if subject_value == 'filipino':
+        return 'Filipino'
+    return 'English'
+
+
+def _material_language_for_section(material=None, section=None):
+    section_obj = section or getattr(material, 'section', None)
+    if section_obj and getattr(section_obj, 'subject', None):
+        return _material_language_from_subject(section_obj.subject)
+
+    if material and hasattr(material, 'assigned_sections'):
+        assigned_section = material.assigned_sections.filter(is_active=True).first()
+        if assigned_section and getattr(assigned_section, 'subject', None):
+            return _material_language_from_subject(assigned_section.subject)
+
+    if material:
+        return Material.normalize_language_value(getattr(material, 'language', '') or '')
+    return 'English'
+
+
 def _requested_material_from_request(request):
     raw_material_id = (
         request.GET.get('material_id')
@@ -14942,7 +14964,6 @@ def add_reading_material(request):
         requested_source_type = (data.get('source_type') or data.get('origin') or 'shared').strip().lower()
         source_type = requested_source_type if requested_source_type in ('personal', 'shared', 'template') else 'shared'
         class_code   = (data.get('class_code') or '').strip()
-        language     = Material.normalize_language_value(data.get('language'))
         requested_assessment_kind = str(data.get('assessment_kind') or 'regular').strip().lower()
         assessment_kind = requested_assessment_kind if requested_assessment_kind in {'regular', 'crla'} else 'regular'
         scheduled_at_str = (data.get('scheduled_at') or '').strip()
@@ -15051,6 +15072,7 @@ def add_reading_material(request):
             ).first()
             if not section:
                 return JsonResponse({'success': False, 'error': 'Class not found or does not belong to you.'}, status=404)
+        language = _material_language_from_subject(getattr(section, 'subject', '') if section else '')
 
         # ── parse scheduled_at datetime if provided ─────────────────────────
         scheduled_at = None
@@ -15244,7 +15266,6 @@ def teacher_update_material(request):
         material.title = data.get('title', material.title).strip()
         content = data.get('content', material.content_text).strip()
         requested_reading_type = (data.get('reading_type') or '').strip().lower()
-        language = Material.normalize_language_value(data.get('language'))
         material.status = data.get('status', material.status)
         material.type = 'assessment'
         previous_assessment_kind = str(getattr(material, 'assessment_kind', 'regular') or 'regular').strip().lower()
@@ -15283,6 +15304,8 @@ def teacher_update_material(request):
         teacher_user = User.objects.filter(id=user_id).first()
         if material.teacher_id is None and teacher_user:
             material.teacher = teacher_user
+
+        language = _material_language_for_section(material)
 
         # Handle schedule update
         if material.status == 'scheduled':
