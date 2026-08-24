@@ -2,7 +2,7 @@
 <div class="sidebar-inner d-flex flex-column p-3 p-xl-4{% if nav_role == 'student' %} student-sidebar{% endif %}">
     <div class="sidebar-top-section flex-shrink-0 mb-4">
         <a class="sidebar-logo-link" href="{% if nav_role == 'teacher' %}{% url 'dashboard_teacher' %}{% else %}{% url 'dashboard' %}{% endif %}" aria-label="Go to dashboard">
-            {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="sidebar-logo-img" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" pnb_id="pnb-sidebar" pnbk_id="pnbk-sidebar" %}
+            {% include "pabasa_app/partials/_pabasa_logo.html" with logo_class="pabasa-logo-svg" letters_class="pabasa-logo-letters" letter_yellow_class="lc-yellow" letter_blue_class="lc-blue" %}
         </a>
 
         <div class="sidebar-brand-row sidebar-profile-card d-flex align-items-center justify-content-between gap-2 mt-3">

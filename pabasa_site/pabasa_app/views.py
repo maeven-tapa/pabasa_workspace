@@ -12160,6 +12160,12 @@ def get_teacher_courses_api(request):
                     student_id = _normalized_student_entry_id(entry)
                     if student_id:
                         unique_student_ids.add(student_id)
+            try:
+                for student_id in (c.metadata or {}).get('student_ids') or []:
+                    if str(student_id).isdigit():
+                        unique_student_ids.add(int(student_id))
+            except Exception:
+                pass
 
             average_progress = _compute_course_average_progress(c)
 
@@ -12181,6 +12187,7 @@ def get_teacher_courses_api(request):
                 'materials': materials_list,
                 'practices': practices_list,
                 'metrics': metrics,
+                'metadata': c.metadata or {},
             })
 
         return JsonResponse({'success': True, 'courses': course_list})
@@ -13002,43 +13009,87 @@ def teacher_add_student(request):
     try:
         data = json.loads(request.body)
         class_code = data.get('class_code')
+        course_id = data.get('course_id')
         student_id = data.get('student_id')
         
         user_id = request.session.get('user_id')
-        section = Section.objects.filter(class_code=class_code, teacher_id=user_id).first()
+        teacher_user = User.objects.filter(id=user_id).first()
+        section = Section.objects.filter(class_code=class_code, teacher_id=user_id).first() if class_code else None
         student = User.objects.filter(id=student_id, role='student').first()
         
-        if not section or not student:
+        if not student:
             return JsonResponse({'success': False, 'error': 'Class or Student not found'}, status=404)
-        
-        if section.add_student(student):
-            student_name = f"{student.first_name} {student.last_name}"
-            _create_notification(
-                student,
-                'Added to class',
-                f'You were added to {section.class_name}.',
-                'success',
-                reverse('dashboard'),
-                section.teacher,
-            )
-            _create_notification(
-                section.teacher,
-                'Student Enrolled in a Class',
-                f'• {student_name} joined {section.class_name}.',
-                'success',
-                f"{reverse('class_management')}?code={section.class_code}",
-                section.teacher,
-            )
-            _notify_admins(
-                'Student joined a class',
-                f'{student_name} was added to {section.class_name} ({section.class_code}).',
-                'info',
-                reverse('admin_class_detail', args=[section.id]),
-                section.teacher,
-            )
-            return JsonResponse({'success': True})
-        else:
+
+        if section:
+            if section.add_student(student):
+                student_name = f"{student.first_name} {student.last_name}"
+                _create_notification(
+                    student,
+                    'Added to class',
+                    f'You were added to {section.class_name}.',
+                    'success',
+                    reverse('dashboard'),
+                    section.teacher,
+                )
+                _create_notification(
+                    section.teacher,
+                    'Student Enrolled in a Class',
+                    f'• {student_name} joined {section.class_name}.',
+                    'success',
+                    f"{reverse('class_management')}?code={section.class_code}",
+                    section.teacher,
+                )
+                _notify_admins(
+                    'Student joined a class',
+                    f'{student_name} was added to {section.class_name} ({section.class_code}).',
+                    'info',
+                    reverse('admin_class_detail', args=[section.id]),
+                    section.teacher,
+                )
+                return JsonResponse({'success': True})
             return JsonResponse({'success': False, 'error': 'Student is already enrolled.'})
+
+        if not course_id or not teacher_user or teacher_user.role != 'teacher':
+            return JsonResponse({'success': False, 'error': 'Course or Student not found'}, status=404)
+
+        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
+        if not course:
+            return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+
+        metadata = dict(course.metadata or {})
+        student_ids = metadata.get('student_ids') or []
+        if student.id in [int(sid) for sid in student_ids if str(sid).isdigit()]:
+            return JsonResponse({'success': False, 'error': 'Student is already enrolled.'})
+        student_ids.append(student.id)
+        metadata['student_ids'] = sorted({int(sid) for sid in student_ids if str(sid).isdigit()})
+        course.metadata = metadata
+        course.save(update_fields=['metadata', 'updated_at'])
+
+        student_name = f"{student.first_name} {student.last_name}"
+        _create_notification(
+            student,
+            'Added to course',
+            f'You were added to {course.title}.',
+            'success',
+            reverse('dashboard'),
+            teacher_user,
+        )
+        _create_notification(
+            teacher_user,
+            'Student Enrolled in a Course',
+            f'• {student_name} joined {course.title}.',
+            'success',
+            reverse('courses'),
+            teacher_user,
+        )
+        _notify_admins(
+            'Student joined a course',
+            f'{student_name} was added to {course.title} ({course.code}).',
+            'info',
+            reverse('courses'),
+            teacher_user,
+        )
+        return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
@@ -13050,33 +13101,55 @@ def teacher_remove_student(request):
     try:
         data = json.loads(request.body)
         class_code = data.get('class_code')
+        course_id = data.get('course_id')
         student_id_val = data.get('student_id')
         
         user_id = request.session.get('user_id')
         teacher_user = User.objects.filter(id=user_id).first()
-        section = Section.objects.filter(class_code=class_code, teacher=teacher_user, is_active=True).first()
-        
-        if not section:
-            return JsonResponse({'success': False, 'error': 'Class not found'}, status=404)
-        
+        section = Section.objects.filter(class_code=class_code, teacher=teacher_user, is_active=True).first() if class_code else None
         # Match by internal database ID or the custom Pabasa ID
         student = User.objects.filter(Q(id=student_id_val) | Q(custom_id=student_id_val), role='student').first()
         
         if not student:
             return JsonResponse({'success': False, 'error': 'Student not found'}, status=404)
 
-        if section.deactivate_student(student):
-            _create_notification(
-                student,
-                'Removed from class',
-                f'You were removed from {section.class_name} by your teacher.',
-                'warning',
-                reverse('dashboard'),
-                teacher_user,
-            )
-            return JsonResponse({'success': True})
-        else:
+        if section:
+            if section.deactivate_student(student):
+                _create_notification(
+                    student,
+                    'Removed from class',
+                    f'You were removed from {section.class_name} by your teacher.',
+                    'warning',
+                    reverse('dashboard'),
+                    teacher_user,
+                )
+                return JsonResponse({'success': True})
+            else:
+                return JsonResponse({'success': False, 'error': 'Student is not enrolled or already removed.'})
+
+        if not course_id:
+            return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+
+        course = Course.objects.filter(id=course_id, teacher=teacher_user, is_active=True).first()
+        if not course:
+            return JsonResponse({'success': False, 'error': 'Course not found'}, status=404)
+
+        metadata = dict(course.metadata or {})
+        student_ids = [int(sid) for sid in (metadata.get('student_ids') or []) if str(sid).isdigit()]
+        if student.id not in student_ids:
             return JsonResponse({'success': False, 'error': 'Student is not enrolled or already removed.'})
+        metadata['student_ids'] = [sid for sid in student_ids if sid != student.id]
+        course.metadata = metadata
+        course.save(update_fields=['metadata', 'updated_at'])
+        _create_notification(
+            student,
+            'Removed from course',
+            f'You were removed from {course.title} by your teacher.',
+            'warning',
+            reverse('dashboard'),
+            teacher_user,
+        )
+        return JsonResponse({'success': True})
     except Exception as e:
         logger.error(f"Error removing student from class: {e}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)

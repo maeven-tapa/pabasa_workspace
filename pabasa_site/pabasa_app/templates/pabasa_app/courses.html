@@ -896,6 +896,11 @@
         line-height: 1.5;
     }
 
+    .course-info-note {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(31, 111, 139, 0.12);
+    }
+
     #createCourseModal .form-label {
         color: var(--dash-ink);
         font-family: "Nunito", "Segoe UI", sans-serif;
@@ -1319,7 +1324,7 @@
             border-bottom: 1px solid rgba(27, 26, 23, 0.08);
             border-right: 0;
             gap: 0.5rem;
-            padding: 0.45rem 0.8rem 0.55rem;
+            padding: 0.8rem 0.85rem 0.9rem;
         }
 
         .course-sidebar > div:first-child {
@@ -6618,6 +6623,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <div id="addCourseStudentCourseFallback" class="mb-3 d-none"></div>
                 <div class="card rounded-4 p-3">
                     <div class="table-responsive">
                         <table class="table table-borderless align-middle mb-0">
@@ -8560,7 +8566,11 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                 <div class="mb-2">
                                     <strong>Course Info</strong>
                                 </div>
-                                <p class="small text-muted">Courses group assessments and materials across multiple sections. Select the sections you want included in this course.</p>
+                                <p class="small text-muted mb-3">Create the course first, then attach classes later if needed.</p>
+                                <div class="course-info-note rounded-3 p-3">
+                                    <div class="fw-semibold mb-1">Optional classes</div>
+                                    <div class="small text-muted mb-0">You can save an empty course and add students later from the course details.</div>
+                                </div>
                             </div>
                             <div class="course-tab-content">
                                 <form id="createCourseForm" onsubmit="return false;">
@@ -8573,7 +8583,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                                         <textarea id="courseDescription" class="form-control" rows="3" placeholder="Optional description"></textarea>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="courseSectionsList" class="form-label">Sections</label>
+                                        <label for="courseSectionsList" class="form-label">Classes</label>
+                                        <div class="small text-muted mb-2">Leave this blank if you want to add classes later.</div>
                                         <div id="courseSectionsList" class="course-sections-list"></div>
                                     </div>
                                 </form>
@@ -11640,6 +11651,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
 
                 const sectionCodes = (course.sections || []).map(s => s.code).filter(Boolean);
                 const sectionNames = (course.sections || []).map(s => s.name).filter(Boolean);
+                const directStudentIds = new Set((Array.isArray(course?.metadata?.student_ids) ? course.metadata.student_ids : []).map(id => String(id)));
                 const grid = document.getElementById('courseStudentsGrid');
                 if (!grid) return;
                 grid.innerHTML = `<div class="students-empty-card"><span class="spinner-border spinner-border-sm me-2"></span>Loading students...</div>`;
@@ -11661,7 +11673,8 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                     const classes = Array.isArray(s.classes) ? s.classes : [];
                     const byCode = codes.some(c => sectionCodes.includes(c));
                     const byName = classes.some(n => sectionNames.includes(n));
-                    return (byCode || byName);
+                    const byDirectCourse = directStudentIds.has(String(s.id));
+                    return (byCode || byName || byDirectCourse);
                 }).map(student => ({ ...student, _courseSectionCodes: sectionCodes }));
 
                 currentCourseStudents = courseStudents;
@@ -12197,12 +12210,13 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
                         const courseCodes = (course?.sections || []).map(s => s.code).filter(Boolean);
                         const courseNames = (course?.sections || []).map(s => s.name).filter(Boolean);
+                        const directStudentIds = new Set((Array.isArray(course?.metadata?.student_ids) ? course.metadata.student_ids : []).map(id => String(id)));
 
-                        // Fetch students not currently in any of the course sections
+                        // Fetch students not currently in any of the course sections or directly attached to the course
                         const available = students.filter(s => {
                             const codes = Array.isArray(s.class_codes) ? s.class_codes : [];
                             const classes = Array.isArray(s.classes) ? s.classes : [];
-                            const inCourse = codes.some(c => courseCodes.includes(c)) || classes.some(n => courseNames.includes(n));
+                            const inCourse = codes.some(c => courseCodes.includes(c)) || classes.some(n => courseNames.includes(n)) || directStudentIds.has(String(s.id));
                             return !inCourse;
                         });
 
@@ -12718,13 +12732,17 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
             `<p>Remove <strong>${escapeHtml(studentName || 'this student')}</strong> from this course?</p><p class="text-muted small mt-2 mb-0">Their account will remain active, but they will no longer appear in this course's Students tab.</p>`,
             async () => {
                 try {
+                    const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
+                    const hasSections = Array.isArray(course?.sections) && course.sections.length > 0;
                     const response = await fetch('/dashboard/teacher/remove-student-from-class/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': document.querySelector("[name=csrfmiddlewaretoken]")?.value || ""
                         },
-                        body: JSON.stringify({ class_code: sectionCode || currentClassCode, student_id: studentId })
+                        body: JSON.stringify(hasSections
+                            ? { class_code: sectionCode || currentClassCode, student_id: studentId }
+                            : { course_id: courseId, student_id: studentId })
                     });
                     const data = await response.json();
                     if (data.success) {
@@ -13403,7 +13421,7 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
         const course = (teacherCourses || []).find(c => String(c.id) === String(courseId));
         const targetSections = (course?.sections || []).map(s => s.code).filter(Boolean);
         const targetClassCode = targetSections[0] || null;
-        if (!targetClassCode) return showToast('Course has no associated section code', 'error');
+        const directCourseId = !targetClassCode ? String(courseId) : null;
 
         const loadingModalEl = document.getElementById('addCourseStudentLoadingModal');
         const loadingDialogEl = loadingModalEl?.querySelector('.course-student-add-loading-dialog');
@@ -13439,7 +13457,9 @@ body.dark-theme #addMaterialModal #itemChipsContainer .btn-close {
                         method: 'POST',
                         credentials: 'same-origin',
                         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                        body: JSON.stringify({ class_code: targetClassCode, student_id: studentId })
+                        body: JSON.stringify(targetClassCode
+                            ? { class_code: targetClassCode, student_id: studentId }
+                            : { course_id: directCourseId, student_id: studentId })
                     });
                     const data = await res.json();
                     if (res.ok && data.success) {

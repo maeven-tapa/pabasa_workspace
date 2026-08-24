@@ -5529,6 +5529,45 @@ class MaterialCreationTests(TestCase):
         self.assertFalse(material.refresh_from_db().is_active)
         self.assertFalse(assessment.refresh_from_db().is_active)
 
+    def test_create_course_allows_empty_sections(self):
+        teacher = User.objects.create(
+            custom_id="TCH-0013",
+            role="teacher",
+            first_name="Empty",
+            last_name="Course",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=1,
+            birth_year=1990,
+            email="empty-course@example.com",
+            password_hash="hashed-password",
+            teacher_role="Teacher",
+        )
+        session = self.client.session
+        session["user_id"] = teacher.id
+        session["user_role"] = teacher.role
+        session["first_name"] = teacher.first_name
+        session["last_name"] = teacher.last_name
+        session["email"] = teacher.email
+        session["custom_id"] = teacher.custom_id
+        session.save()
+
+        response = self.client.post(
+            reverse("create_course"),
+            json.dumps({"title": "Empty Course", "description": "No classes yet", "sections": []}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        course = Course.objects.get(id=payload["course"]["id"])
+        self.assertEqual(course.title, "Empty Course")
+        self.assertEqual(course.description, "No classes yet")
+        self.assertEqual(course.sections.count(), 0)
+
     def test_delete_course_accepts_prefixed_course_id(self):
         teacher = User.objects.create(
             custom_id="TCH-0015",
