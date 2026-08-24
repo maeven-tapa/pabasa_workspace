@@ -1151,6 +1151,7 @@ class CalendarEvent(models.Model):
         ("school_opening", "Opening Block"),
         ("school_closing", "End-of-Term Block"),
         ("pre_assessment", "Pre-Assessment Week"),
+        ("midline_assessment", "Midline Assessment Week"),
         ("post_assessment", "Post-Assessment Week"),
         ("holiday", "Holiday"),
         ("examination", "Examination Week"),

@@ -258,6 +258,7 @@
         school_opening: '#22c55e',
         school_closing: '#ef4444',
         pre_assessment: '#3b82f6',
+        midline_assessment: '#14b8a6',
         post_assessment: '#a855f7',
         holiday: '#f59e0b',
         examination: '#f97316',
@@ -402,7 +403,7 @@
         }
 
         function syncTitleField() {
-            const hideTitle = ['start_of_classes', 'end_of_classes', 'school_opening', 'school_closing', 'pre_assessment', 'post_assessment', 'examination'].includes(eventTypeInput.value);
+            const hideTitle = ['start_of_classes', 'end_of_classes', 'school_opening', 'school_closing', 'pre_assessment', 'midline_assessment', 'post_assessment', 'examination'].includes(eventTypeInput.value);
             const titleRequired = ['holiday', 'other'].includes(eventTypeInput.value);
             eventTitleWrap.classList.toggle('d-none', hideTitle);
             eventTitleWrap.hidden = hideTitle;
@@ -654,7 +655,7 @@
             const selectedTerm = eventTermInput.value;
             const startValue = eventStartInput.value;
             const endValue = eventEndInput.value || eventStartInput.value;
-            if (['pre_assessment', 'post_assessment', 'examination'].includes(selectedEventType)) {
+            if (['pre_assessment', 'midline_assessment', 'post_assessment', 'examination'].includes(selectedEventType)) {
                 const { opening, closing } = getTermWindow(selectedTerm);
                 const startTime = dateToComparable(startValue);
                 const endTime = dateToComparable(endValue);

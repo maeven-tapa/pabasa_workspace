@@ -269,6 +269,8 @@ def _assessment_workflow_context(student):
 
     if active_phase == 'pretest':
         stage = 'assessment' if official_crla_material and not completed_pretest else ('intervention' if eligible else 'complete')
+    elif active_phase == 'midtest':
+        stage = 'assessment' if official_crla_material else ('intervention' if eligible else 'complete')
     elif active_phase == 'posttest':
         stage = 'assessment' if official_crla_material and not completed_posttest else ('intervention' if eligible else 'complete')
     else:
@@ -293,11 +295,12 @@ def _assessment_workflow_context(student):
     return {
         'active_window': None,
         'active_window_label': 'Reading Assessment',
-        'active_period': 'bosy',
+        'active_period': 'midline' if active_phase == 'midtest' else 'bosy',
         'active_phase': active_phase,
         'eligibility': state,
         'stage': stage,
         'can_take_pretest': active_phase == 'pretest' and not completed_pretest,
+        'can_take_midtest': active_phase == 'midtest',
         'can_take_posttest': active_phase == 'posttest' and not completed_posttest,
     }
 
@@ -325,6 +328,8 @@ def _official_crla_assessment_phase(student=None, request=None, on_date=None):
     if active_calendar and current_term:
         if _calendar_is_in_preassessment_window(active_calendar, current_term, on_date=check_date):
             return 'pretest'
+        if _calendar_is_in_midlineassessment_window(active_calendar, current_term, on_date=check_date):
+            return 'midtest'
         if _calendar_is_in_postassessment_window(active_calendar, current_term, on_date=check_date):
             return 'posttest'
 
@@ -343,6 +348,8 @@ def _official_crla_phase_to_key(assessment_type):
     assessment_type = str(assessment_type or '').strip().lower()
     if assessment_type == 'pretest':
         return 'bosy_crla_pretest'
+    if assessment_type == 'midtest':
+        return 'midline_crla_midtest'
     if assessment_type == 'posttest':
         return 'eosy_crla_posttest'
     return ''
@@ -355,7 +362,7 @@ def _student_is_eosy_crla_eligible(student):
 
 def _official_crla_materials_for_phase(assessment_type):
     assessment_type = str(assessment_type or '').strip().lower()
-    if assessment_type not in {'pretest', 'posttest'}:
+    if assessment_type not in {'pretest', 'midtest', 'posttest'}:
         return Material.objects.none()
     return _official_reading_active_materials_queryset().filter(
         assessment_kind='crla',
@@ -587,6 +594,12 @@ def _official_crla_material_for_student(student, assessment_type):
 
 def _official_crla_assessment_labels(assessment_type):
     assessment_type = str(assessment_type or '').strip().lower()
+    if assessment_type == 'midtest':
+        return {
+            'workflow_title': 'Midline Reading Assessment',
+            'workflow_message': 'Complete the official Midline CRLA Assessment prepared by your teacher.',
+            'workflow_subtitle': 'Midline reading assessment',
+        }
     if assessment_type == 'posttest':
         return {
             'workflow_title': 'End of School Year Reading Assessment',
@@ -611,10 +624,11 @@ def _official_crla_material_keys_for_student(student, on_date=None):
     if not student or getattr(student, 'role', '') != 'student':
         return []
 
-    student_state = _reader_assessment_state(student)
     active_phase = _official_crla_assessment_phase(student, on_date=on_date)
     if active_phase == 'pretest':
         return [key for key in _official_crla_materials_for_phase('pretest').values_list('system_assessment_key', flat=True) if key]
+    if active_phase == 'midtest':
+        return [key for key in _official_crla_materials_for_phase('midtest').values_list('system_assessment_key', flat=True) if key]
     if active_phase == 'posttest' and _student_is_eosy_crla_eligible(student):
         return [key for key in _official_crla_materials_for_phase('posttest').values_list('system_assessment_key', flat=True) if key]
     return []
@@ -5546,6 +5560,18 @@ def _calendar_preassessment_block(school_calendar, term):
     return candidates[0] if candidates else None
 
 
+def _calendar_midlineassessment_block(school_calendar, term):
+    if not school_calendar or term not in {1, 2, 3, 4}:
+        return None
+    events = _calendar_events_for_school_calendar(school_calendar)
+    candidates = [
+        event for event in events
+        if event.term == term and event.event_type == 'midline_assessment'
+    ]
+    candidates.sort(key=lambda event: (event.start_date, event.created_at))
+    return candidates[0] if candidates else None
+
+
 def _calendar_postassessment_block(school_calendar, term):
     if not school_calendar or term not in {1, 2, 3, 4}:
         return None
@@ -5561,6 +5587,14 @@ def _calendar_postassessment_block(school_calendar, term):
 def _calendar_is_in_preassessment_window(school_calendar, term, on_date=None):
     check_date = on_date or date.today()
     block = _calendar_preassessment_block(school_calendar, term)
+    if not block:
+        return False
+    return block.start_date <= check_date <= block.end_date
+
+
+def _calendar_is_in_midlineassessment_window(school_calendar, term, on_date=None):
+    check_date = on_date or date.today()
+    block = _calendar_midlineassessment_block(school_calendar, term)
     if not block:
         return False
     return block.start_date <= check_date <= block.end_date
@@ -5787,6 +5821,7 @@ def _calendar_month_view(school_calendar):
             ('start_of_classes', 'Start of Classes'),
             ('end_of_classes', 'End of Classes'),
             ('pre_assessment', 'Pre-Assessment Week'),
+            ('midline_assessment', 'Midline Assessment Week'),
             ('post_assessment', 'Post-Assessment Week'),
             ('examination', 'Examination Week'),
             ('holiday', 'Holiday'),
@@ -5894,6 +5929,7 @@ def admin_school_calendar(request):
                 'school_opening': 'School Opening',
                 'school_closing': 'School Closing',
                 'pre_assessment': 'Pre-Assessment Week',
+                'midline_assessment': 'Midline Assessment Week',
                 'post_assessment': 'Post-Assessment Week',
                 'examination': 'Examination Week',
             }
@@ -6191,10 +6227,10 @@ def _official_assessment_availability_for_student(student, request=None):
         # materials branch should stay on intervention materials only. The
         # official BoSY card must no longer be exposed as a current assessment.
         assessment_type = 'intervention'
-    if assessment_type not in {'pretest', 'posttest'}:
+    if assessment_type not in {'pretest', 'midtest', 'posttest'}:
         return {'available': False, 'assessment_type': assessment_type, 'school_year': None, 'current_term': None, 'active_window': None}
 
-    target_key = 'eosy_crla_posttest' if assessment_type == 'posttest' else 'bosy_crla_pretest'
+    target_key = _official_crla_phase_to_key(assessment_type)
     matching_materials = _official_reading_active_materials_queryset().filter(
         Q(system_assessment_key=target_key, system_assessment_phase=assessment_type) |
         Q(content_json__assessment_type='both')
@@ -6213,12 +6249,12 @@ def _official_assessment_availability_for_student(student, request=None):
 
 def _official_crla_completion_exists(student, assessment_type, school_year_value):
     assessment_type = str(assessment_type or '').strip().lower()
-    if assessment_type not in {'pretest', 'posttest'}:
+    if assessment_type not in {'pretest', 'midtest', 'posttest'}:
         return False
     if not student or not school_year_value:
         return False
 
-    assessment_key = 'bosy_crla_pretest' if assessment_type == 'pretest' else 'eosy_crla_posttest'
+    assessment_key = _official_crla_phase_to_key(assessment_type)
     matching_materials = _official_reading_active_materials_queryset().filter(
         Q(system_assessment_key=assessment_key, system_assessment_phase=assessment_type) |
         Q(content_json__assessment_type='both'),
@@ -7795,6 +7831,9 @@ def assessment(request):
     elif forced_workflow == 'original':
         stage = 'original'
         routing_reason = 'forced_original_workflow'
+    elif active_phase == 'midtest' and should_use_official_crla:
+        stage = 'assessment'
+        routing_reason = 'active_midline_crla_window'
     elif eligible:
         stage = 'intervention'
         routing_reason = 'eligible_student'
@@ -7810,6 +7849,9 @@ def assessment(request):
     elif active_phase == 'pretest':
         stage = 'complete'
         routing_reason = 'pretest_complete_not_eligible'
+    elif active_phase == 'midtest':
+        stage = 'complete'
+        routing_reason = 'midtest_complete'
     elif active_phase == 'posttest':
         stage = 'complete'
         routing_reason = 'posttest_complete'

@@ -155,6 +155,81 @@ class ClassMaterialsApiTests(TestCase):
         self.assertIn("Teacher Intervention Text", word_titles)
         self.assertFalse(any("BoSY" in title for title in word_titles))
 
+
+class SchoolCalendarAdminTests(TestCase):
+    def _login_admin(self, admin):
+        session = self.client.session
+        session["user_id"] = admin.id
+        session["user_role"] = admin.role
+        session["custom_id"] = admin.custom_id
+        session["first_name"] = admin.first_name
+        session["last_name"] = admin.last_name
+        session["email"] = admin.email
+        session.save()
+
+    def test_admin_school_calendar_can_save_midline_assessment_week_event(self):
+        admin = User.objects.create(
+            custom_id="ADM-1001",
+            role="admin",
+            first_name="Ava",
+            last_name="Admin",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1985,
+            email="admin1001@example.com",
+            password_hash=make_password("admin-password"),
+        )
+        calendar = SchoolCalendar.objects.create(
+            school_year="2026-2027",
+            current_term=1,
+            is_active=True,
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Opening Block",
+            event_type="school_opening",
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 31),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="End-of-Term Block",
+            event_type="school_closing",
+            start_date=date(2027, 5, 1),
+            end_date=date(2027, 5, 31),
+        )
+        self._login_admin(admin)
+
+        response = self.client.post(
+            reverse("admin_school_calendar"),
+            {
+                "action": "save_event",
+                "calendar_id": calendar.id,
+                "term": 1,
+                "event_type": "midline_assessment",
+                "title": "",
+                "start_date": "2026-11-09",
+                "end_date": "2026-11-13",
+                "description": "Midline assessment week",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        event = CalendarEvent.objects.get(school_calendar=calendar, event_type="midline_assessment")
+        self.assertEqual(event.title, "Midline Assessment Week")
+        self.assertEqual(event.start_date, date(2026, 11, 9))
+        self.assertEqual(event.end_date, date(2026, 11, 13))
+
+        page = self.client.get(reverse("admin_school_calendar"), {"calendar_id": calendar.id})
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Midline Assessment Week")
+        self.assertContains(page, '"event_type": "midline_assessment"')
+
     def _create_official_crla_calendar(self, *, pre_start, pre_end, post_start, post_end):
         calendar = SchoolCalendar.objects.create(
             school_year='2026-2027',
@@ -874,6 +949,211 @@ class AssessmentPageFlowTests(TestCase):
         self.assertEqual(response.context['crla_material_id'], pre_material.id)
         self.assertEqual(response.context['crla_official_assessment_data']['assessment_type'], 'pretest')
         self.assertEqual(response.context['crla_official_assessment_data']['official_title'], pre_material.title)
+
+    def test_assessment_page_uses_calendar_midline_window_for_official_crla(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-3102",
+            role="teacher",
+            first_name="Tia",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="tia3102@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-3102",
+            role="student",
+            first_name="Pia",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="pia3102@example.com",
+            password_hash=make_password("student-password"),
+            preference={"reading_assessment_state": {"crla_pretest_completed": False, "crla_posttest_completed": False}},
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class 2",
+            class_code="READ-3102",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        calendar = SchoolCalendar.objects.create(
+            school_year="2026-2027",
+            current_term=1,
+            is_active=True,
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Start of Classes",
+            event_type="start_of_classes",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 1),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="End of Classes",
+            event_type="end_of_classes",
+            start_date=date(2027, 5, 31),
+            end_date=date(2027, 5, 31),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Opening Block",
+            event_type="school_opening",
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 31),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Closing Block",
+            event_type="school_closing",
+            start_date=date(2027, 3, 1),
+            end_date=date(2027, 3, 31),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Midline Assessment Week",
+            event_type="midline_assessment",
+            start_date=date(2026, 11, 9),
+            end_date=date(2026, 11, 13),
+        )
+        mid_material = Material.objects.create(
+            title="Midline CRLA Mid-Test",
+            item_type="word",
+            content_text="write",
+            content_json={"items": ["write"]},
+            assessment_kind="crla",
+            assessment_set="crla",
+            type="assessment",
+            status="published",
+            student_access=True,
+            section=section,
+            teacher=teacher,
+            is_active=True,
+            is_official_reading=True,
+            is_system_owned=True,
+            system_assessment_key="midline_crla_midtest",
+        )
+        self._login_student(student)
+
+        with patch('pabasa_app.views.date', wraps=date) as mock_date:
+            mock_date.today.return_value = date(2026, 11, 10)
+            response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['active_phase'], 'midtest')
+        self.assertEqual(response.context['crla_material_id'], mid_material.id)
+        self.assertEqual(response.context['crla_official_assessment_data']['assessment_type'], 'midtest')
+        self.assertEqual(response.context['crla_official_assessment_data']['official_title'], mid_material.title)
+
+    def test_assessment_page_does_not_activate_midline_outside_window(self):
+        teacher = User.objects.create(
+            custom_id="TCHR-3103",
+            role="teacher",
+            first_name="Tia",
+            last_name="Teacher",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=1990,
+            email="tia3103@example.com",
+            password_hash=make_password("teacher-password"),
+        )
+        student = User.objects.create(
+            custom_id="STU-3103",
+            role="student",
+            first_name="Pia",
+            last_name="Student",
+            middle_initial="",
+            suffix="",
+            sex="female",
+            birth_month=1,
+            birth_day=2,
+            birth_year=2012,
+            email="pia3103@example.com",
+            password_hash=make_password("student-password"),
+            preference={"reading_assessment_state": {"crla_pretest_completed": False, "crla_posttest_completed": False}},
+        )
+        section = Section.objects.create(
+            teacher=teacher,
+            class_name="Reading Class 3",
+            class_code="READ-3103",
+            subject="Reading",
+            is_active=True,
+        )
+        section.add_student(student)
+        calendar = SchoolCalendar.objects.create(
+            school_year="2026-2027",
+            current_term=1,
+            is_active=True,
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Start of Classes",
+            event_type="start_of_classes",
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 1),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="End of Classes",
+            event_type="end_of_classes",
+            start_date=date(2027, 5, 31),
+            end_date=date(2027, 5, 31),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Opening Block",
+            event_type="school_opening",
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 31),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Closing Block",
+            event_type="school_closing",
+            start_date=date(2027, 3, 1),
+            end_date=date(2027, 3, 31),
+        )
+        CalendarEvent.objects.create(
+            school_calendar=calendar,
+            term=1,
+            title="Midline Assessment Week",
+            event_type="midline_assessment",
+            start_date=date(2026, 11, 9),
+            end_date=date(2026, 11, 13),
+        )
+        self._login_student(student)
+
+        with patch('pabasa_app.views.date', wraps=date) as mock_date:
+            mock_date.today.return_value = date(2026, 11, 20)
+            response = self.client.get(reverse('assessment'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.context['active_phase'], 'midtest')
+        self.assertNotEqual(response.context['crla_official_assessment_data'].get('assessment_type'), 'midtest')
 
     def test_active_school_calendar_recognizes_school_opening_and_closing_bounds(self):
         calendar = self._create_official_crla_calendar(
