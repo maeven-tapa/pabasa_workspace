@@ -275,6 +275,7 @@ class Assessment(models.Model):
     SYSTEM_ASSESSMENT_CHOICES = [
         ("", "Teacher Owned"),
         ("bosy_crla_pretest", "BoSY CRLA Pre-Test"),
+        ("midline_crla_midtest", "Midline CRLA Mid-Test"),
         ("eosy_crla_posttest", "EoSY CRLA Post-Test"),
     ]
 

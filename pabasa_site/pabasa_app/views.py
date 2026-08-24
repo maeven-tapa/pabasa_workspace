@@ -1759,6 +1759,8 @@ def _sync_assessment_workflow_state(student_user, score_payload=None, assessment
         system_key = str(getattr(material, 'system_assessment_key', '') or '').strip().lower()
         if system_key == 'bosy_crla_pretest':
             assessment_phase = 'pretest'
+        elif system_key == 'midline_crla_midtest':
+            assessment_phase = 'midtest'
         elif system_key == 'eosy_crla_posttest':
             assessment_phase = 'posttest'
 
@@ -6003,12 +6005,16 @@ def _is_official_crla_material(material):
 def _official_reading_assessment_type(material):
     key = str(getattr(material, 'system_assessment_key', '') or '').strip().lower()
     if key in OFFICIAL_CRLA_CONTENT:
-        return 'pre_assessment' if key == 'bosy_crla_pretest' else 'post_assessment'
+        return {
+            'bosy_crla_pretest': 'pre_assessment',
+            'midline_crla_midtest': 'midline_assessment',
+            'eosy_crla_posttest': 'post_assessment',
+        }.get(key, 'pre_assessment')
     phase = str(getattr(material, 'system_assessment_phase', '') or '').strip().lower()
     content_json = getattr(material, 'content_json', None) or {}
     if isinstance(content_json, dict):
         value = str(content_json.get('assessment_type') or '').strip().lower()
-        if value in {'pre_assessment', 'post_assessment', 'both'}:
+        if value in {'pre_assessment', 'midline_assessment', 'post_assessment', 'both'}:
             return value
     if phase in {'pretest', 'posttest'}:
         return 'pre_assessment' if phase == 'pretest' else 'post_assessment'
@@ -6016,6 +6022,15 @@ def _official_reading_assessment_type(material):
     if 'post' in title:
         return 'post_assessment'
     return 'pre_assessment'
+
+
+def _official_reading_assessment_applicable_phases(assessment_type):
+    assessment_type = str(assessment_type or '').strip().lower()
+    if assessment_type == 'both':
+        return {'pre_assessment', 'midline_assessment', 'post_assessment'}
+    if assessment_type in {'pre_assessment', 'midline_assessment', 'post_assessment'}:
+        return {assessment_type}
+    return {'pre_assessment'}
 
 
 def _official_reading_subject(material):
@@ -6253,6 +6268,8 @@ def _official_reading_launch_data(material):
     if not material:
         return {}
     payload = _official_reading_material_payload(material)
+    content_json = getattr(material, 'content_json', None) or {}
+    story_qas = content_json.get('story_qas') if isinstance(content_json, dict) and isinstance(content_json.get('story_qas'), list) else []
     assessment_type = _official_reading_assessment_type(material)
     official_title = str(getattr(material, 'title', '') or '').strip() or payload['title']
     official_code = str(getattr(material, 'code', '') or '').strip() or payload['code']
@@ -6266,6 +6283,8 @@ def _official_reading_launch_data(material):
         'words': payload['words'],
         'sentences': payload['sentences'],
         'passages': payload['passages'],
+        'stories': [{'title': str(passage.get('title') or '').strip(), 'content': str(passage.get('content') or '').strip()} for passage in payload['passages'] if isinstance(passage, dict)],
+        'story_qas': story_qas,
         'official_title': official_title,
         'official_code': official_code,
     }
@@ -6458,11 +6477,17 @@ def _official_reading_material_context(request):
     current_term = _calendar_current_term(active_calendar) or getattr(active_calendar, 'current_term', None)
     school_year_value = active_calendar.school_year if active_calendar else request.GET.get('school_year', '').strip()
     official_materials = list(_official_reading_materials_queryset())
+    phase_config = [
+        ('pretest', 'Pre-Assessment', {'pre_assessment'}, {'bosy_crla_pretest'}),
+        ('midline', 'Midline Assessment', {'midline_assessment'}, {'midline_crla_midtest'}),
+        ('posttest', 'Post-Assessment', {'post_assessment'}, {'eosy_crla_posttest'}),
+    ]
     official_material_by_phase = {}
     for material in official_materials:
         key = _official_reading_assessment_type(material)
         if key == 'both':
             official_material_by_phase.setdefault('pre_assessment', material)
+            official_material_by_phase.setdefault('midline_assessment', material)
             official_material_by_phase.setdefault('post_assessment', material)
         elif key not in official_material_by_phase:
             official_material_by_phase[key] = material
@@ -6518,12 +6543,26 @@ def _official_reading_material_context(request):
             'item_sections': phase_sections,
         })
     official_groups = []
-    for phase_key, phase_label in [('pretest', 'Pre-Assessment'), ('posttest', 'Post-Assessment')]:
+    for phase_key, phase_label, phase_types, phase_keys in phase_config:
         phase_materials = [
             m for m in official_materials
-            if _official_reading_assessment_type(m) in {('pre_assessment' if phase_key == 'pretest' else 'post_assessment'), 'both'}
+            if _official_reading_assessment_type(m) in phase_types
+            or str(getattr(m, 'system_assessment_key', '') or '').strip().lower() in phase_keys
+            or _official_reading_assessment_type(m) == 'both'
         ]
-        active_material = next((m for m in phase_materials if m.is_active), None)
+        active_material = next(
+            (
+                m for m in phase_materials
+                if m.is_active and str(getattr(m, 'status', '') or '').strip().lower() == 'published'
+            ),
+            None,
+        ) or next(
+            (
+                m for m in phase_materials
+                if m.is_active or str(getattr(m, 'status', '') or '').strip().lower() == 'published'
+            ),
+            None,
+        ) or next((m for m in phase_materials if str(getattr(m, 'system_assessment_key', '') or '').strip().lower() in phase_keys), None)
         archived_materials = [m for m in phase_materials if not m.is_active]
         official_groups.append({
             'phase_key': phase_key,
@@ -6568,14 +6607,58 @@ def _official_assessment_edit_context(request, material=None):
     words = content_json.get('words') if isinstance(content_json, dict) and isinstance(content_json.get('words'), list) else []
     sentences = content_json.get('sentences') if isinstance(content_json, dict) and isinstance(content_json.get('sentences'), list) else []
     passages = content_json.get('passages') if isinstance(content_json, dict) and isinstance(content_json.get('passages'), list) else []
+    story_qas = content_json.get('story_qas') if isinstance(content_json, dict) and isinstance(content_json.get('story_qas'), list) else []
+    qas_by_story = {}
+    if story_qas and isinstance(story_qas[0], dict) and isinstance(story_qas[0].get('questions'), list):
+        normalized_story_qas = []
+        for story in story_qas:
+            if not isinstance(story, dict):
+                continue
+            story_title = str(story.get('story_title') or story.get('title') or '').strip()
+            questions = story.get('questions') if isinstance(story.get('questions'), list) else []
+            if not story_title:
+                continue
+            for qa in questions:
+                if not isinstance(qa, dict):
+                    continue
+                question = str(qa.get('question') or '').strip()
+                answer = str(qa.get('answer') or '').strip()
+                if not question or not answer:
+                    continue
+                normalized_story_qas.append({
+                    'story_title': story_title,
+                    'question': question,
+                    'answer': answer,
+                })
+        story_qas = normalized_story_qas
+    for qa in story_qas:
+        if not isinstance(qa, dict):
+            continue
+        story_title = str(qa.get('story_title') or '').strip()
+        question = str(qa.get('question') or '').strip()
+        answer = str(qa.get('answer') or '').strip()
+        if not story_title or not question or not answer:
+            continue
+        qas_by_story.setdefault(story_title, []).append({
+            'question': question,
+            'answer': answer,
+        })
     passages = [
         {
             'title': str(passage.get('title') or '').strip(),
             'text': str(passage.get('text') or passage.get('content') or '').strip(),
+            'story_qas': qas_by_story.get(str(passage.get('title') or '').strip(), []),
         }
         for passage in passages
         if isinstance(passage, dict)
     ]
+    if not passages and qas_by_story:
+        for story_title, qa_items in qas_by_story.items():
+            passages.append({
+                'title': story_title,
+                'text': '',
+                'story_qas': qa_items,
+            })
     return {
         'page_title': 'Official Reading Assessments',
         'admin_username': request.session.get('custom_id', ''),
@@ -6585,7 +6668,12 @@ def _official_assessment_edit_context(request, material=None):
         'school_year_value': school_year_value,
         'current_term_label': f'Term {current_term}' if current_term else 'No Active Term',
         'term_options': [(1, 'Term 1'), (2, 'Term 2'), (3, 'Term 3')],
-        'assessment_type_options': [('pre_assessment', 'Pre-Assessment'), ('post_assessment', 'Post-Assessment'), ('both', 'Both')],
+        'assessment_type_options': [
+            ('pre_assessment', 'Pre-Assessment'),
+            ('midline_assessment', 'Midline Assessment'),
+            ('post_assessment', 'Post-Assessment'),
+            ('both', 'All Assessments'),
+        ],
         'language_options': [('English', 'English'), ('Filipino', 'Filipino')],
         'selected_assessment_type': _official_reading_assessment_type(material) if material else 'pre_assessment',
         'reading_words': words,
@@ -6595,6 +6683,8 @@ def _official_assessment_edit_context(request, material=None):
             'words': words,
             'sentences': sentences,
             'passages': passages,
+            'stories': passages,
+            'story_qas': story_qas,
         }, default=str),
         'official_item_sections': _official_reading_item_sections(material) if material else {'words': [], 'sentences': [], 'passages': [], 'items': []},
         'school_year_value': school_year_value,
@@ -6623,7 +6713,7 @@ def _save_official_reading_assessment(request, material=None):
     assessment_type = (request.POST.get('assessment_type') or 'pre_assessment').strip().lower()
     content_items_raw = request.POST.get('content_items_json') or request.POST.get('reading_items_json') or '{}'
 
-    if assessment_type not in {'pre_assessment', 'post_assessment', 'both'}:
+    if assessment_type not in {'pre_assessment', 'midline_assessment', 'post_assessment', 'both'}:
         assessment_type = 'pre_assessment'
     if not title:
         field_errors['title'] = 'Title is required.'
@@ -6948,7 +7038,12 @@ def _official_assessment_detail_context(request, material):
         'selected_calendar': selected_calendar,
         'school_calendars': calendars,
         'current_school_calendar': active_calendar,
-        'assessment_type_label': {'pre_assessment': 'Pre-Assessment', 'post_assessment': 'Post-Assessment', 'both': 'Both'}.get(_official_reading_assessment_type(material), 'Pre-Assessment'),
+        'assessment_type_label': {
+            'pre_assessment': 'Pre-Assessment',
+            'midline_assessment': 'Midline Assessment',
+            'post_assessment': 'Post-Assessment',
+            'both': 'All Assessments',
+        }.get(_official_reading_assessment_type(material), 'Pre-Assessment'),
         'material_status_label': 'Active' if material.is_active else 'Archived',
         'system_status_label': 'SYSTEM OFFICIAL' if material.is_system_owned else 'CUSTOM',
         'reading_words': words,
